@@ -27,7 +27,6 @@
 - party commands (maybe, still in talks with mods if its allowed)
 - pet hider
 - emote wheel (executing /emote)
-- ligthbender optimal range visualizer
 - optimal raid buff to take for each build (maybe)
 - disable explosions
 - render images sent in chat
