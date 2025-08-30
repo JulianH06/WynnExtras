@@ -1,7 +1,7 @@
 # 🌟 FEATURES
 - Custom Bank Overlay (WIP)
 
-  <img src="https://github.com/user-attachments/assets/98002b99-14f7-41ae-b58a-49f574b4f8e3" width="600px" alt="Showcase"/>
+  <img src="https://github.com/user-attachments/assets/ce5fd2d5-344d-42a9-b70d-9d27c847c1fa" width="600px" alt="Showcase"/>
 
 - Get custom notifications for chat messages (or block them)!
 
