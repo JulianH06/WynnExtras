@@ -21,11 +21,11 @@ public class Command {
 
     private final List<ArgumentBuilder<FabricClientCommandSource, ?>> arguments = new ArrayList<>();
 
-    public Command(String name, String description, Function<CommandContext<FabricClientCommandSource>, Integer> onExecute, Command subCommand, ArgumentBuilder<FabricClientCommandSource, ?> arg) {
+    public Command(String name, String description, Function<CommandContext<FabricClientCommandSource>, Integer> onExecute, List<Command> subCommands, ArgumentBuilder<FabricClientCommandSource, ?> arg) {
         this.name = name;
         this.description = description;
         this.onExecute = onExecute;
-        subCommands.add(subCommand);
+        if(subCommands != null) this.subCommands.addAll(subCommands);
         arguments.add(arg);
 
         COMMAND_LIST.add(this);

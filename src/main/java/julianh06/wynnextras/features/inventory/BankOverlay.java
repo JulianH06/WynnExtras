@@ -39,6 +39,7 @@ public class BankOverlay {
 
     private static final WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
 
+    public static String Bankname = "\uDAFF\uDFF0\uE00F\uDAFF\uDF68\uF000";
 
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
@@ -48,7 +49,6 @@ public class BankOverlay {
     }
 
     public static void registerBankOverlay() {
-        String Bankname = "\uDAFF\uDFF0\uE00F\uDAFF\uDF68\uF000";
         String Bucketname = "\uDAFF\uDFF0\uE00F\uDAFF\uDF68"; //
         String Tomename = "\uDAFF\uDFF0\uE00F\uDAFF\uDF68"; //both currently broken i think
         WynnExtras.LOGGER.info("Registering Bankoverlay for " + WynnExtras.MOD_ID);

@@ -1,20 +1,38 @@
 package julianh06.wynnextras.mixin.BankOverlay;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.wynntils.core.components.Handlers;
 import com.wynntils.core.components.Models;
+import com.wynntils.core.components.Services;
 import com.wynntils.core.persisted.config.Config;
-import com.wynntils.features.inventory.ItemHighlightFeature;
+import com.wynntils.core.text.StyledText;
+import com.wynntils.features.inventory.*;
+import com.wynntils.functions.InventoryFunctions;
+import com.wynntils.handlers.item.GameItemAnnotator;
 import com.wynntils.handlers.item.ItemAnnotation;
 import com.wynntils.handlers.item.ItemHandler;
+import com.wynntils.mc.extension.ItemStackExtension;
+import com.wynntils.models.emeralds.type.EmeraldUnits;
 import com.wynntils.models.items.WynnItem;
+import com.wynntils.models.items.WynnItemData;
+import com.wynntils.models.items.annotators.game.TeleportScrollAnnotator;
+import com.wynntils.models.items.items.game.*;
 import com.wynntils.models.items.properties.DurableItemProperty;
 import com.wynntils.services.itemfilter.statproviders.RarityStatProvider;
+import com.wynntils.services.itemrecord.type.SavedItem;
+import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.mc.TooltipUtils;
+import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.Texture;
+import com.wynntils.utils.render.type.HorizontalAlignment;
+import com.wynntils.utils.render.type.TextShadow;
+import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.CappedValue;
+import com.wynntils.utils.wynn.InventoryUtils;
+import com.wynntils.utils.wynn.ItemUtils;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -26,8 +44,7 @@ import julianh06.wynnextras.features.inventory.BankOverlayButtons.*;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
 import julianh06.wynnextras.mixin.Accessor.PersonalStorageUtilitiesFeatureAccessor;
 import julianh06.wynnextras.mixin.Accessor.SlotAccessor;
-import julianh06.wynnextras.mixin.Invoker.HandledScreenInvoker;
-import julianh06.wynnextras.mixin.Invoker.ItemHighlightFeatureInvoker;
+import julianh06.wynnextras.mixin.Invoker.*;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -35,6 +52,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.Item;
@@ -64,9 +82,6 @@ import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 @WEModule
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenMixin {
-    private static final WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
-
-
     @Unique
     private static ItemStack heldItem = Items.AIR.getDefaultStack();
 
@@ -150,14 +165,17 @@ public abstract class HandledScreenMixin {
     @Unique
     String buyPageStageText = "NOT BOUGHT";
 
-
     @Unique
     BankOverlayData Pages;
+
+    @Unique
+    Map<Integer, List<ItemAnnotation>> annotationCache = new HashMap<>();
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (BankOverlayData.INSTANCE == null) return;
         if (Pages == null) Pages = BankOverlayData.INSTANCE;
+
 
         if (BankPageNameInputs.isEmpty()) {
             for (int i = 0; i < 20; i++) {
@@ -165,9 +183,11 @@ public abstract class HandledScreenMixin {
             }
         }
 
+        hoveredInvIndex = -1;
+
         int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
         int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
-        xFitAmount = Math.min(3, Math.floorDiv(screenWidth, 162)); //Max amount is 3
+        xFitAmount = Math.min(3, Math.floorDiv(screenWidth - 84 /*112?*/, 162)); //Max amount is 3
         yFitAmount = Math.min(4, Math.floorDiv(screenHeight, 104));
         int playerInvIndex = xFitAmount * yFitAmount - xFitAmount;
         int xRemain = screenWidth - xFitAmount * 162 - (xFitAmount - 1) * 4;
@@ -184,6 +204,20 @@ public abstract class HandledScreenMixin {
         if (BankOverlay.isBank) {
             if (MinecraftClient.getInstance() != null) {
                 RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+                int xStart = xRemain / 2 - 2;
+                int yStart = yRemain / 2 - 2;
+
+                FontRenderer.getInstance().renderText(
+                        context.getMatrices(),
+                        StyledText.fromString("If you see this text something went wrong, close the menu and try again"),
+                        (float) xStart,
+                        (float) yStart,
+                        CustomColor.fromHexString("ff0000"),
+                        HorizontalAlignment.LEFT,
+                        VerticalAlignment.TOP,
+                        TextShadow.NORMAL,
+                        1.0f
+                );
             }
 
 
@@ -225,9 +259,14 @@ public abstract class HandledScreenMixin {
             }
 
             canScrollFurther = (xFitAmount * yFitAmount - (xFitAmount - 1) + scrollOffset) < 21;
-
-
             int i = indexWithOffset - scrollOffset;
+
+            if(i == 0) {
+                int x = xRemain / 2 - 10;
+                int y = yRemain / 2 - 10;
+                drawEmeraldOverlay(context, x - 28, y - 5);
+            }
+
             //int inventoryOffsetX = (int) ((offsetX - (i % 3) * 175 * 3 * widthFactor) * scale);
             //int inventoryOffsetY = (int) ((offsetY - Math.floorDiv(i, 3) * 100 * 3 * widthFactor) * scale);
             //int baseWidth = (int)(screenWidth * 0.45); // z. B. 45 % der Breite
@@ -236,14 +275,15 @@ public abstract class HandledScreenMixin {
             if (indexWithOffset == activeInv && activeInv != playerInvIndex + scrollOffset) {
                 List<Slot> invslots = BankOverlay.activeInvSlots;
                 if (invslots.isEmpty()) {
-                    McUtils.sendErrorToClient("[WynnExtras] Error with Bank Overlay. Closing Menu, try again");
-                    if (McUtils.mc().currentScreen != null) {
-                        McUtils.mc().currentScreen.close();
-                        return;
-                    }
-                    for (int k = 0; k < 45; k++) {
-                        inv.add(Items.AIR.getDefaultStack());
-                    }
+                    return;
+//                    McUtils.sendErrorToClient("[WynnExtras] Error with Bank Overlay. Closing Menu, try again");
+//                    if (McUtils.mc().currentScreen != null) {
+//                        McUtils.mc().currentScreen.close();
+//                        return;
+//                    }
+//                    for (int k = 0; k < 45; k++) {
+//                        inv.add(Items.AIR.getDefaultStack());
+//                    }
                 } else if (invslots.size() < 45) {
                     invslots.clear();
                 } else {
@@ -310,10 +350,27 @@ public abstract class HandledScreenMixin {
                 }
             }
 //            List<SavedItem> savedItems = new ArrayList<>();
+            List<ItemAnnotation> annotations = annotationCache.computeIfAbsent(indexWithOffset, k -> new ArrayList<>(Collections.nCopies(inv.size(), null)));
             int stackIndex = 0;
             for (ItemStack stack : inv) {
-                if (stack == null) {
-                    stack = new ItemStack(Items.AIR);
+                if(i != playerInvIndex) {
+                    if (stack == null) {
+                        stack = new ItemStack(Items.AIR);
+                        annotations.add(null);
+                    } else if (annotations.size() > stackIndex && i != playerInvIndex) {
+                        ItemAnnotation annotation = annotations.get(stackIndex);
+                        if (annotation == null) {
+                            StyledText name = StyledText.fromComponent(stack.getName());
+                            annotation = ((ItemHandlerInvoker) (Object) Handlers.Item).invokeCalculateAnnotation(stack, name);
+
+                            ((ItemStackExtension) (Object) stack).setAnnotation(annotation);
+                            annotations.set(stackIndex, annotation);
+                        }
+
+                        if (annotation != null) {
+                            ((ItemStackExtension) (Object) stack).setAnnotation(annotation);
+                        }
+                    }
                 }
                 int x = xRemain / 2 + 18 * (stackIndex % 9) + (i % xFitAmount) * (162 + 4);
                 int y = yRemain / 2 + 18 * Math.floorDiv(stackIndex, 9) + Math.floorDiv(i, xFitAmount) * (90 + 4 + 10);
@@ -358,6 +415,23 @@ public abstract class HandledScreenMixin {
                         );
                     }
                     RenderUtils.drawTexturedRect(context.getMatrices(), bankTexture, xStart, yStart, 164, 92, 164, 92);
+
+                    boolean hovered =
+                            mouseX >= xStart &&
+                                    mouseX < xStart + 162 &&
+                                    mouseY >= yStart &&
+                                    mouseY < yStart + 92;
+
+                    if(hovered) {
+                        hoveredInvIndex = indexWithOffset;
+                        if(stackIndex == 0 && hoveredInvIndex != activeInv && Searchbar.getInput().isEmpty()) {
+                            RenderUtils.drawRect(
+                                    context.getMatrices(),
+                                    CustomColor.fromHSV(0, 0, 1000, 0.25f),
+                                    xStart, yStart, 0, 164, 92
+                            );
+                        }
+                    }
                 }
 
                 Optional<DurableItemProperty> durableItemOpt = Models.Item.asWynnItemProperty(stack, DurableItemProperty.class);
@@ -371,13 +445,49 @@ public abstract class HandledScreenMixin {
                     RenderSystem.disableDepthTest();
                 }
 
+                Optional<EmeraldPouchItem> optionalItem = Models.Item.asWynnItem(stack, EmeraldPouchItem.class);
+                if (!optionalItem.isEmpty()) {
+                    CappedValue capacity = new CappedValue(((EmeraldPouchItem)optionalItem.get()).getValue(), ((EmeraldPouchItem)optionalItem.get()).getCapacity());
+                    float capacityFraction = (float)capacity.current() / (float)capacity.max();
+                    int colorInt = MathHelper.hsvToRgb((1.0F - capacityFraction) / 3.0F, 1.0F, 1.0F);
+                    CustomColor color = CustomColor.fromInt(colorInt).withAlpha(160);
+                    float ringFraction = Math.min(1.0F, capacityFraction);
+                    RenderSystem.enableDepthTest();
+                    RenderUtils.drawArc(context.getMatrices(), color, (float)(x - 2), (float)(y - 2), 100.0F, ringFraction, 8, 10);
+                    RenderSystem.disableDepthTest();
+                }
+
                 RarityStatProvider statProvider = new RarityStatProvider();
                 Optional<WynnItem> item = Optional.empty();
                 if (stack.getItem() != null) {
                     if (!stack.getItem().equals(Items.AIR)) {
+                        //Handlers.Item.updateItem(stack, new WynnItem(), StyledText.fromComponent(stack.getName()));
                         item = asWynnItem(stack);
                     }
                 }
+//                List<WynnItem> pageWynnItemList = BankOverlayData.INSTANCE.BankPagesAsWynnItems.get(indexWithOffset);
+//                if(stack.getItem() != null) {
+//                    if (!pageWynnItemList.isEmpty() && pageWynnItemList.size() > stackIndex) {
+//                        WynnItem savedItem = pageWynnItemList.get(stackIndex);
+//                        if (savedItem != null) {
+//                            item = Optional.ofNullable(savedItem);
+//                        } else if (!stack.getItem().equals(Items.AIR)) {
+//                            item = asWynnItem(stack);
+//                            if(item.isPresent()) {
+//                                while(pageWynnItemList.size() <= 21) pageWynnItemList.add(null);
+//                                pageWynnItemList.set(stackIndex, item.get());
+//                                BankOverlayData.INSTANCE.BankPagesAsWynnItems.put(indexWithOffset, pageWynnItemList);
+//                            }
+//                        }
+//                    } else if (!stack.getItem().equals(Items.AIR)) {
+//                        item = asWynnItem(stack);
+//                        if(item.isPresent()) {
+//                            while(pageWynnItemList.size() <= 21) pageWynnItemList.add(null);
+//                            pageWynnItemList.set(stackIndex, item.get());
+//                            BankOverlayData.INSTANCE.BankPagesAsWynnItems.put(indexWithOffset, pageWynnItemList);
+//                        }
+//                    }
+//                }
 
 
 //                Optional<WynnItem> item;
@@ -404,35 +514,25 @@ public abstract class HandledScreenMixin {
                     }
                     CustomColor color = CustomColor.NONE;
                     color = ((ItemHighlightFeatureInvoker) itemHighlightFeature).invokeGetHighlightColor(stack, false);
-                    RenderUtils.drawTexturedRectWithColor(
-                            context.getMatrices(),
-                            Texture.HIGHLIGHT.resource(),
-                            color.withAlpha(100),
-                            x - 1,
-                            y - 1,
-                            100,
-                            18,
-                            18,
-                            highlightTexture.get().ordinal() * 18 + 18, //currently always circle transparent
-                            0,                                                  //TODO: make it sync with the users wynntils config
-                            18,
-                            18,
-                            Texture.HIGHLIGHT.width(),
-                            Texture.HIGHLIGHT.height()
-                    );
+                    if(!Objects.equals(color, new CustomColor(255, 255, 255))) {
+                        RenderUtils.drawTexturedRectWithColor(
+                                context.getMatrices(),
+                                Texture.HIGHLIGHT.resource(),
+                                color.withAlpha(100),
+                                x - 1,
+                                y - 1,
+                                100,
+                                18,
+                                18,
+                                highlightTexture.get().ordinal() * 18 + 18, //currently always circle transparent
+                                0,                                                  //TODO: make it sync with the users wynntils config
+                                18,
+                                18,
+                                Texture.HIGHLIGHT.width(),
+                                Texture.HIGHLIGHT.height()
+                        );
+                    }
                 }
-
-
-                @Nullable String amountString = null;
-                if (stack.getCount() != 1) {
-                    amountString = String.valueOf(stack.getCount());
-                }
-                ((HandledScreenInvoker) screen).invokeDrawItem(context, stack, x, y, amountString);
-
-
-                //338: standardOffsetX 113: standardOffsetY 131 148 pixel height: 16/2 = 8 (but it needs to be 9 for some reason)
-                //int slotX = (int) (BankOverlay.firstBankSlot.x + 338 * 3 * widthFactor - inventoryOffsetX + 8 + (stackIndex % 9) * 16 * 3 * widthFactor  + (stackIndex % 9) * 2);
-                //int slotY = (int) (BankOverlay.firstBankSlot.y + 113 * 3 * widthFactor  - inventoryOffsetY + 8 + Math.floorDiv(stackIndex, 9) * 16 * 3 * widthFactor  + Math.floorDiv(stackIndex, 9) * 2); //rundet nicht richti gab glaub ich
 
                 boolean hovered =
                         mouseX >= x - 1 &&
@@ -446,8 +546,38 @@ public abstract class HandledScreenMixin {
                     hoveredX = x;
                     hoveredY = y;
                     hoveredIndex = stackIndex;
-                    hoveredInvIndex = i;
+                    hoveredInvIndex = indexWithOffset;
                 }
+
+
+                @Nullable String amountString = null;
+                if (stack.getCount() != 1) {
+                    amountString = String.valueOf(stack.getCount());
+                }
+                ((HandledScreenInvoker) screen).invokeDrawItem(context, stack, x, y, amountString);
+
+                if(item.isPresent()) {
+                    if (item.get() instanceof ItemAnnotation) {
+                        if(item.get() instanceof TeleportScrollItem ||
+                                item.get() instanceof AmplifierItem ||
+                                item.get() instanceof DungeonKeyItem ||
+                                item.get() instanceof EmeraldPouchItem ||
+                                item.get() instanceof GatheringToolItem ||
+                                item.get() instanceof HorseItem ||
+                                item.get() instanceof PowderItem
+                        ) {
+                            context.getMatrices().push();
+                            context.getMatrices().translate(0, 0, 100);
+                            ((ItemTextOverlayFeatureMixin) new ItemTextOverlayFeature()).invokeDrawTextOverlay(context.getMatrices(), stack, x, y, false);
+                            context.getMatrices().pop();
+                        }
+                    }
+                    ((UnidentifiedItemIconFeatureInvoker) new UnidentifiedItemIconFeature()).invokeDrawIcon(context.getMatrices(), stack, x, y, 100);
+                }
+                //338: standardOffsetX 113: standardOffsetY 131 148 pixel height: 16/2 = 8 (but it needs to be 9 for some reason)
+                //int slotX = (int) (BankOverlay.firstBankSlot.x + 338 * 3 * widthFactor - inventoryOffsetX + 8 + (stackIndex % 9) * 16 * 3 * widthFactor  + (stackIndex % 9) * 2);
+                //int slotY = (int) (BankOverlay.firstBankSlot.y + 113 * 3 * widthFactor  - inventoryOffsetY + 8 + Math.floorDiv(stackIndex, 9) * 16 * 3 * widthFactor  + Math.floorDiv(stackIndex, 9) * 2); //rundet nicht richti gab glaub ich
+
 
                 stackIndex++;
 
@@ -470,7 +600,7 @@ public abstract class HandledScreenMixin {
                         RenderUtils.drawRect(
                                 context.getMatrices(),
                                 CustomColor.fromHSV(0, 0, 0, 0.75f),
-                                x - 1, y - 1, 1000,
+                                x - 1, y - 1, 0,
                                 18, 18
                         );
                     }
@@ -489,6 +619,9 @@ public abstract class HandledScreenMixin {
 //            if (indexWithOffset != activeInv) {
 //                WynnarschConfig.INSTANCE.BankPagesSavedItems.put(indexWithOffset, savedItems);
 //            }
+
+
+
 
             int playerInvOffset = i == playerInvIndex ? (162 + 4) : 0;
             int xStart = xRemain / 2 - 2 + (i % xFitAmount) * (162 + 4) + playerInvOffset;
@@ -525,6 +658,20 @@ public abstract class HandledScreenMixin {
 //                }
                 if (indexWithOffset < 20) {
                     drawDynamicNameSign(context, BankPageNameInputs.get(indexWithOffset).getInput(), xStart, yStart);
+                }
+                if(indexWithOffset != activeInv && Searchbar.getInput().isEmpty() && indexWithOffset != hoveredInvIndex) {
+                    RenderUtils.drawRect(
+                            context.getMatrices(),
+                            CustomColor.fromHSV(0, 0, 0, 0.25f),
+                            xStart, yStart, 0, 164, 92
+                    );
+                } else if(indexWithOffset == activeInv) {
+                    RenderUtils.drawRectBorders(
+                            context.getMatrices(),
+                            CustomColor.fromHexString("FFFF00"),
+                            xStart, yStart,
+                            xStart + 164, yStart + 92, 0, 1
+                    );
                 }
                 //RenderUtils.drawTexturedRect(context.getMatrices(), Identifier.of("wynnextras", "textures/gui/bankoverlay/signtest3.png"), xStart/* + 54*/, yStart - 13, 55, 15, 55, 15);
 //                context.drawBorder(
@@ -723,15 +870,17 @@ public abstract class HandledScreenMixin {
             if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
                 actionType = SlotActionType.QUICK_MOVE;
             }
-            System.out.println("Click in: " + (hoveredInvIndex + scrollOffset) + " playerInvIndex " + playerInvIndex + " activeInv " + activeInv);
-            if (hoveredInvIndex + scrollOffset == activeInv) {
+            System.out.println("Click in: " + (hoveredInvIndex) + " playerInvIndex " + playerInvIndex + " activeInv " + activeInv);
+            if (hoveredInvIndex == activeInv) {
+                annotationCache.get(activeInv).clear();
                 heldItem = getHeldItem(hoveredIndex, actionType, button); //heldItem = McUtils.mc().player.currentScreenHandler.slots.get(hoveredIndex).getStack().copy();
                 //System.out.println("Clicked: " + heldItem.getName() + " hoveredIndex: " + hoveredInvIndex);
                 MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, hoveredIndex, button, actionType, MinecraftClient.getInstance().player);
                 lastClickedSlot = hoveredIndex;
                 cir.cancel();
                 return;
-            } else if (hoveredInvIndex + scrollOffset == playerInvIndex + scrollOffset) { //i know this is ugly i wanted to do it with a variable but that somehow didnt work dont ask me why
+            } else if (hoveredInvIndex == playerInvIndex + scrollOffset) { //i know this is ugly i wanted to do it with a variable but that somehow didnt work dont ask me why
+                annotationCache.get(playerInvIndex).clear();
                 System.out.println("playerinv click");
                 heldItem = getHeldItem(hoveredIndex + 54, actionType, button); //McUtils.mc().player.currentScreenHandler.slots.get(hoveredIndex + 54).getStack().copy();
                 //System.out.println("Clicked: " + heldItem.getName() + " hoveredIndex: " + hoveredInvIndex);
@@ -740,14 +889,18 @@ public abstract class HandledScreenMixin {
                 cir.cancel();
                 return;
             } else {
-                int clickedPage = hoveredInvIndex + scrollOffset + 1;
+                if(heldItem.getItem() != Items.AIR) {
+                    cir.cancel();
+                    return;
+                }
+                int clickedPage = hoveredInvIndex + 1;
                 if (clickedPage <= lastPage) {
                     List<ItemStack> stacks = new ArrayList<>();
                     for (Slot slot : BankOverlay.activeInvSlots) {
                         stacks.add(slot.getStack());
                     }
                     Pages.BankPages.put(activeInv, stacks);
-                    activeInv = hoveredInvIndex + scrollOffset;
+                    activeInv = hoveredInvIndex;
                     BankOverlay.PersonalStorageUtils.jumpToDestination(clickedPage);
                 } else {
                     System.out.println("NOT BOUGHT");
@@ -1033,9 +1186,18 @@ public abstract class HandledScreenMixin {
 
     @Unique
     public <T extends WynnItem> Optional<T> asWynnItem(ItemStack itemStack) {
+
         Optional<ItemAnnotation> annotationOpt = ItemHandler.getItemStackAnnotation(itemStack);
+        if(annotationOpt.isEmpty()) return Optional.empty();
+//        if (annotationOpt.isEmpty()) {
+//            ItemAnnotation calculatedAnnotation = ((ItemHandlerInvoker) (Object) Handlers.Item).invokeCalculateAnnotation(itemStack, StyledText.fromComponent(itemStack.getName()).getNormalized());
+//            if(calculatedAnnotation == null) return Optional.empty();
+//            annotationOpt = Optional.of(calculatedAnnotation);
+//        }
+        //Optional<ItemAnnotation> annotationOpt = Optional.ofNullable(((ItemHandlerInvoker) (Object) Handlers.Item).invokeCalculateAnnotation(itemStack, StyledText.fromComponent(itemStack.getName())));
+
         //if (annotationOpt.isEmpty()) annotationOpt = Optional.ofNullable(((ItemHandlerInvoker) (Object) Handlers.Item).invokeCalculateAnnotation(itemStack, StyledText.fromComponent(itemStack.getName())));
-        if (annotationOpt.isEmpty()) return Optional.empty();
+
         if (!(annotationOpt.get() instanceof WynnItem wynnItem)) return Optional.empty();
         return Optional.of((T) wynnItem);
     }
@@ -1080,6 +1242,8 @@ public abstract class HandledScreenMixin {
 
         String InventoryTitle = currScreen.getTitle().getString();
         if (InventoryTitle.equals("\uDAFF\uDFF0\uE00F\uDAFF\uDF68\uF000")) {
+            heldItem = Items.AIR.getDefaultStack();
+
             List<ItemStack> stacks = new ArrayList<>();
             for (Slot slot : BankOverlay.activeInvSlots) {
                 stacks.add(slot.getStack());
@@ -1090,7 +1254,74 @@ public abstract class HandledScreenMixin {
         }
     }
 
+    @Unique
+    void drawEmeraldOverlay(DrawContext context, int x, int y) {
+        InventoryEmeraldCountFeature emeraldCountFeature = new InventoryEmeraldCountFeature();
+        int emeraldAmountInt = Models.Emerald.getAmountInContainer();
+        String[] emeraldAmounts = ((InventoryEmeraldCountFeatureInvoker) emeraldCountFeature).invokeGetRenderableEmeraldAmounts(emeraldAmountInt);
+
+        y += (3 * 28);
+
+        MatrixStack poseStack = context.getMatrices();
+
+        for (int i = emeraldAmounts.length - 1; i >= 0; i--) {
+            String emeraldAmount = emeraldAmounts[i];
+
+            if (emeraldAmount.equals("0")) continue;
+
+            RenderUtils.drawTexturedRect(
+                    poseStack,
+                    Texture.EMERALD_COUNT_BACKGROUND.resource(),
+                    x,
+                    y - (i * 28),
+                    0,
+                    28,
+                    28,
+                    0,
+                    0,
+                    Texture.EMERALD_COUNT_BACKGROUND.width(),
+                    Texture.EMERALD_COUNT_BACKGROUND.height(),
+                    Texture.EMERALD_COUNT_BACKGROUND.width(),
+                    Texture.EMERALD_COUNT_BACKGROUND.height());
+
+            poseStack.push();
+            poseStack.translate(0, 0, 200);
+            context.drawItem(EmeraldUnits.values()[i].getItemStack(), x + 6, y + 6 - (i * 28));
+
+            if (EmeraldUnits.values()[i].getSymbol().equals("stx")) { // Make stx not look like normal LE
+                context.drawItem(EmeraldUnits.values()[i].getItemStack(), x + 3, y + 4 - (i * 28));
+                context.drawItem(EmeraldUnits.values()[i].getItemStack(), x + 6, y + 6 - (i * 28));
+                context.drawItem(EmeraldUnits.values()[i].getItemStack(), x + 9, y + 8 - (i * 28));
+            } else {
+                // This needs to be separate since Z levels are determined by order here
+                context.drawItem(EmeraldUnits.values()[i].getItemStack(), x + 6, y + 6 - (i * 28));
+            }
+
+
+            FontRenderer.getInstance()
+                    .renderAlignedTextInBox(
+                            poseStack,
+                            StyledText.fromString(emeraldAmount),
+                            x,
+                            x + 28 - 2,
+                            y - (i * 28),
+                            y + 28 - 2  - (i * 28),
+                            0,
+                            CommonColors.WHITE,
+                            HorizontalAlignment.RIGHT,
+                            VerticalAlignment.BOTTOM,
+                            TextShadow.OUTLINE);
+            poseStack.pop();
+        }
+    }
+
+        //int[] emeraldsInUnits = Models.Emerald.emeraldsPerUnit(emeraldAmount);
+        //System.out.println(emerandsInUnits[3] + "stx " + emerandsInUnits[2] + "le " + emerandsInUnits[1] + "eb " + emerandsInUnits[0] + "em");
+        //emeraldCountFeature.renderTexturedCount()
+
+}
+
 
     //TODO: Cleanup
     //TODO: WYNNTILS TOOLTIPS ANZEIGEN
-}
+

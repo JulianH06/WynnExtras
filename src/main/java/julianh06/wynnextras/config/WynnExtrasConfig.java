@@ -64,6 +64,10 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Excluded
     public boolean printDebugToConsole = false;
 
+    @ConfigEntry.Category(Categories.playerHider)
+    @ConfigEntry.Text
+    public String playerHiderCmdInfo = "Run \"/WynnExtras (/we) playerhider\" to add/remove players or to toggle the feature.";
+
 
     //CHAT NOTIFIER
 
@@ -144,7 +148,7 @@ public class WynnExtrasConfig implements ConfigData {
 
     @ConfigEntry.Category(Categories.chatNotifier)
     @ConfigEntry.Text
-    public String notifierCmdInfo = "Run \"/WynnExtras notifiertest\" to test out the notifier.";
+    public String notifierCmdInfo = "Run \"/WynnExtras (/we) notifiertest\" to test out the notifier.";
 
 
     //CHAT BLOCKER
@@ -165,7 +169,7 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Category(Categories.bankOverlay)
     @ConfigEntry.Text
     public String bankInfo = "This Feature is still Work in Progress, bugs can (and probably will) occur. " +
-                                    "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras Discord\". " +
+                                    "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras (/we) Discord\". " +
                                     "The feature is currently only available for the account bank but implementations for character banks, " +
                                     "the tome shelf and the misc bucket are planned. Buying pages is possible but it's a bit buggy so it's " +
                                     "recommended to disable the feature to buy pages.";
@@ -182,8 +186,80 @@ public class WynnExtrasConfig implements ConfigData {
     public int totemRange = 10;
 
     @ConfigEntry.Category(Categories.totemRangeVisualizer)
+    @ConfigEntry.Dropdown(values = {
+            "WHITE",
+            "BLACK",
+            "AQUA",
+            "RED",
+            "YELLOW",
+            "BLUE",
+            "GREEN",
+            "DARK_BLUE",
+            "DARK_GREEN",
+            "DARK_AQUA",
+            "DARK_RED",
+            "DARK_PURPLE",
+            "LIGHT_PURPLE",
+            "GRAY",
+            "DARK_GRAY",
+            "GOLD"
+    })
+    @ConfigEntry.Name("Totem circle color")
+    public String totemColor = "WHITE";
+
+    @ConfigEntry.Category(Categories.totemRangeVisualizer)
     @ConfigEntry.Name("Eldritchcall range")
     public int eldritchCallRange = 15;
+
+    @ConfigEntry.Category(Categories.totemRangeVisualizer)
+    @ConfigEntry.Dropdown(values = {
+            "WHITE",
+            "BLACK",
+            "AQUA",
+            "RED",
+            "YELLOW",
+            "BLUE",
+            "GREEN",
+            "DARK_BLUE",
+            "DARK_GREEN",
+            "DARK_AQUA",
+            "DARK_RED",
+            "DARK_PURPLE",
+            "LIGHT_PURPLE",
+            "GRAY",
+            "DARK_GRAY",
+            "GOLD"
+    })
+    @ConfigEntry.Name("Eldritchcall circle color")
+    public String eldritchCallColor = "WHITE";
+
+    //Provoke Timer
+
+    @ConfigEntry.Category(Categories.provokeTimer)
+    @ConfigEntry.Name("Toggle Provoke Timer")
+    public boolean provokeTimerToggle = true;
+
+    @ConfigEntry.Category(Categories.provokeTimer)
+    @ConfigEntry.Dropdown(values = {
+            "WHITE",
+            "BLACK",
+            "AQUA",
+            "RED",
+            "YELLOW",
+            "BLUE",
+            "GREEN",
+            "DARK_BLUE",
+            "DARK_GREEN",
+            "DARK_AQUA",
+            "DARK_RED",
+            "DARK_PURPLE",
+            "LIGHT_PURPLE",
+            "GRAY",
+            "DARK_GRAY",
+            "GOLD"
+    })
+    @ConfigEntry.Name("Provoke timer color")
+    public String provokeTimerColor = "WHITE";
 
 //    //Hider
 //    public boolean partyMemberHide = true;

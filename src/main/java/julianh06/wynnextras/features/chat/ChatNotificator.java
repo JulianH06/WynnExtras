@@ -20,24 +20,30 @@ import net.neoforged.bus.api.SubscribeEvent;
 
 @WEModule
 public class ChatNotificator {
-    private static final WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+    private static WynnExtrasConfig config;
 
-    private static Command testCmd = new Command(
-            "notifiertest",
-            "",
-            context -> {
-//                CustomColor textColor = CustomColor.fromHexString(config.TextColor);
-                ChatUtils.displayTitle("test", "", config.TextDurationInMs/50, Formatting.byName(config.TextColor));
-                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.Sound)), config.SoundVolume, config.SoundPitch);
-//                System.out.println(Formatting.byColorIndex(textColor.asInt()));
-                return 1;
-            },
-            null,
-            null
-    );
+    private static Command testCmd;
 
     @SubscribeEvent
     void recieveMessageGame(ChatEvent event) {
+        if(config == null) {
+            config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        }
+        if(testCmd == null) {
+            testCmd = new Command(
+                    "notifiertest",
+                    "",
+                    context -> {
+//                CustomColor textColor = CustomColor.fromHexString(config.TextColor);
+                        ChatUtils.displayTitle("test", "", config.TextDurationInMs/50, Formatting.byName(config.TextColor));
+                        McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.Sound)), config.SoundVolume, config.SoundPitch);
+//                System.out.println(Formatting.byColorIndex(textColor.asInt()));
+                        return 1;
+                    },
+                    null,
+                    null
+            );
+        }
         notify(event.message);
     }
 

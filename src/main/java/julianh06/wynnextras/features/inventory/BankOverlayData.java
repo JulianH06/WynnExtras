@@ -5,6 +5,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
+import com.wynntils.handlers.item.ItemAnnotation;
+import com.wynntils.models.items.WynnItem;
+import com.wynntils.services.itemrecord.type.SavedItem;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.annotations.ConfigEntry;
 import julianh06.wynnextras.features.misc.ItemStackDeserializer;
@@ -20,12 +23,14 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
 public class BankOverlayData {
     public HashMap<Integer, List<ItemStack>> BankPages = new HashMap<>();
+//    public HashMap<Integer, List<SavedItem>> SavedItems = new HashMap<>();
 
     public HashMap<Integer, String> BankPageNames = new HashMap<>();
 

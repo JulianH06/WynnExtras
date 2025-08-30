@@ -3,13 +3,25 @@
 	"id": "wynnextras",
 	"version": "${version}",
 	"name": "WynnExtras",
-	"description": "Special thanks to Mikecraft1224 for helping me!",
+	"accessWidener": "wynnextras.accesswidener",
+	"description": "The second best Wynncraft mod you'll probably find!",
 	"authors": [
 		"JulianH06"
 	],
+	"contributors": [
+		"Mikecraft1224",
+		"elwood24"
+	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/JulianH06/wynnarsch-1.21.4"
+		"issues": "https://discord.gg/UbC6vZDaD5",
+		"sources": "github.com/JulianH06/WynnExtras"
+	},
+	"custom": {
+		"modmenu": {
+			"links": {
+				"modmenu.discord": "https://discord.gg/UbC6vZDaD5"
+			}
+		}
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/wynnextras/wynnextras.png",

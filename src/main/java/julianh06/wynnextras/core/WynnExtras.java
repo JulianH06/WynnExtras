@@ -1,5 +1,6 @@
 package julianh06.wynnextras.core;
 
+import com.wynntils.models.items.WynnItem;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
@@ -31,6 +32,9 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWKeyCallbackI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 // TODO: Use WELogger instead of normal logger
@@ -88,6 +92,11 @@ public class WynnExtras implements ClientModInitializer {
 		PlayerHider.registerBossPlayerHider();
 		BankOverlay.registerBankOverlay();
 		ProvokeTimer.init();
+
+		ArrayList<WynnItem> tempList = new ArrayList<>();
+		for (int i = 0; i < 54; i++) {
+			tempList.add(null);
+		}
 
 		BankOverlayData.load();
 	}

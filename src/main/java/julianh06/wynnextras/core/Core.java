@@ -9,15 +9,6 @@ import net.fabricmc.loader.api.ModContainer;
 import java.util.Optional;
 
 public class Core {
-    private static Command openConfigCommand = new Command(
-            "open",
-            "Opens the WynnExtras config screen.",
-            context -> {
-                //WynnExtrasConfig.openConfigScreen();
-                return 1;
-            }
-    );
-
     public static WELogger LOGGER;
 
     public static Optional<ModContainer> INSTANCE;

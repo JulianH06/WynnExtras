@@ -55,8 +55,18 @@ public class SimpleConfig {
         return (ConfigHolder<T>) holders.get(configClass);
     }
 
+    public static void save(Class<?> configClass) {
+        Objects.requireNonNull(configClass);
+
+        if(!holders.containsKey(configClass)) {
+            throw new RuntimeException(String.format("Config '%s' not registered (in save method)", configClass));
+        }
+
+        holders.get(configClass).save();
+    }
+
     public static <T extends ConfigData> T getInstance(Class<T> configClass) {
-        return getConfigHolder(configClass).getConfig();
+        return getConfigHolder(configClass).getConfig(); //TODO: hier fehler crash dies das
     }
 
     @Environment(EnvType.CLIENT)

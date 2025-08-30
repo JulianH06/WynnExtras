@@ -10,12 +10,15 @@ import java.util.Set;
 import java.util.UUID;
 
 public class PlayerRenderFilter {
-    private static final WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+    private static WynnExtrasConfig config;
 
 
     private static final Set<UUID> hiddenPlayers = new HashSet<>();
 
     public static void hide(PlayerEntity player) {
+        if(config == null) {
+            config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        }
         if(config.printDebugToConsole) {
             System.out.println(player.getName() + " is now hidden");
         }
@@ -23,6 +26,9 @@ public class PlayerRenderFilter {
     }
 
     public static void show(PlayerEntity player) {
+        if(config == null) {
+            config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        }
         if(config.printDebugToConsole) {
             System.out.println(player.getName() + " is now shown");
         }
@@ -30,6 +36,9 @@ public class PlayerRenderFilter {
     }
 
     public static boolean isHidden(PlayerEntity player) {
+        if(config == null) {
+            config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        }
         return hiddenPlayers.contains(player.getUuid());
     }
 }

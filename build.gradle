@@ -29,6 +29,10 @@ repositories {
 	}
 }
 
+loom {
+	accessWidenerPath = file("src/main/resources/wynnextras.accesswidener")
+}
+
 configurations {
 	shadowImpl
 	shadowModImpl
