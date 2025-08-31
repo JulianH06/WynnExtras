@@ -37,6 +37,7 @@ public class WynnExtrasConfig implements ConfigData {
         String bankOverlay = "Bank Overlay";
         String totemRangeVisualizer = "Totem Range Visualizer";
         String provokeTimer = "Provoke Timer";
+        String raidTimestamps = "Raid Timestamps";
     }
 
 
@@ -260,6 +261,12 @@ public class WynnExtrasConfig implements ConfigData {
     })
     @ConfigEntry.Name("Provoke timer color")
     public String provokeTimerColor = "WHITE";
+
+
+
+    @ConfigEntry.Category(Categories.raidTimestamps)
+       @ConfigEntry.Name("Raid timestamps toggle")
+       public boolean toggleRaidTimestamps = true;
 
 //    //Hider
 //    public boolean partyMemberHide = true;

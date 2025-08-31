@@ -49,6 +49,7 @@ public class ChatNotificator {
 
     public static void onPlayerChatReceived(Text message) {
         notify(message);
+        RaidChatNotifier.handleMessage(message);
     }
 
     private static void notify(Text message) {
