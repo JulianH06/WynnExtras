@@ -17,11 +17,15 @@ public class MessageFilterFeatureMixin {
 
     @Inject(method = "onMessage", at = @At("TAIL"), remap = false)
     void blockMessage(ChatMessageReceivedEvent e, CallbackInfo ci) {
+
         if(config == null) {
             config = SimpleConfig.getInstance(WynnExtrasConfig.class);
         }
+
+        String msgLower = e.getStyledText().getString().toLowerCase();
+
         for(String blockedWord : config.blockedWords) {
-            if (e.getStyledText().getString().toLowerCase().contains(blockedWord.toLowerCase())) {
+            if (msgLower.contains(blockedWord.toLowerCase())) {
                 e.setCanceled(true);
             }
         }

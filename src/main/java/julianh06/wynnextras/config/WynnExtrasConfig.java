@@ -2,6 +2,7 @@ package julianh06.wynnextras.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.wynntils.models.raid.type.RaidRoomInfo;
 import julianh06.wynnextras.config.simpleconfig.ConfigData;
 import julianh06.wynnextras.config.simpleconfig.ConfigHolder;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
@@ -37,6 +38,7 @@ public class WynnExtrasConfig implements ConfigData {
         String bankOverlay = "Bank Overlay";
         String totemRangeVisualizer = "Totem Range Visualizer";
         String provokeTimer = "Provoke Timer";
+        String raidTimestamps = "Raid Timestamps";
     }
 
 
@@ -260,6 +262,12 @@ public class WynnExtrasConfig implements ConfigData {
     })
     @ConfigEntry.Name("Provoke timer color")
     public String provokeTimerColor = "WHITE";
+
+
+
+    @ConfigEntry.Category(Categories.raidTimestamps)
+       @ConfigEntry.Name("Raid timestamps toggle")
+       public boolean toggleRaidTimestamps = true;
 
 //    //Hider
 //    public boolean partyMemberHide = true;
