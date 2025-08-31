@@ -3,23 +3,17 @@ package julianh06.wynnextras.mixin.BankOverlay;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.wynntils.core.components.Handlers;
 import com.wynntils.core.components.Models;
-import com.wynntils.core.components.Services;
 import com.wynntils.core.persisted.config.Config;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.features.inventory.*;
-import com.wynntils.functions.InventoryFunctions;
-import com.wynntils.handlers.item.GameItemAnnotator;
 import com.wynntils.handlers.item.ItemAnnotation;
 import com.wynntils.handlers.item.ItemHandler;
 import com.wynntils.mc.extension.ItemStackExtension;
 import com.wynntils.models.emeralds.type.EmeraldUnits;
 import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.WynnItemData;
-import com.wynntils.models.items.annotators.game.TeleportScrollAnnotator;
 import com.wynntils.models.items.items.game.*;
 import com.wynntils.models.items.properties.DurableItemProperty;
 import com.wynntils.services.itemfilter.statproviders.RarityStatProvider;
-import com.wynntils.services.itemrecord.type.SavedItem;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
@@ -31,12 +25,8 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.CappedValue;
-import com.wynntils.utils.wynn.InventoryUtils;
-import com.wynntils.utils.wynn.ItemUtils;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.features.inventory.*;
@@ -650,7 +640,7 @@ public abstract class HandledScreenMixin {
                 //if(i == 0) {
                 BankPageNameInputs.get(indexWithOffset).setX(xStart); //+ 62);
                 BankPageNameInputs.get(indexWithOffset).setY(yStart - 10);
-                if (!BankPageNameInputs.get(indexWithOffset).getActive() && BankPageNameInputs.get(indexWithOffset).getInput().isEmpty()) {
+                if (!BankPageNameInputs.get(indexWithOffset).isActive() && BankPageNameInputs.get(indexWithOffset).getInput().isEmpty()) {
                     BankPageNameInputs.get(indexWithOffset).setInput(pageString);
                 }
 //                } else {
@@ -814,8 +804,8 @@ public abstract class HandledScreenMixin {
             return;
         }
 
-        if ((!Searchbar.getActive() && Searchbar.isClickInBounds((int) mouseX, (int) mouseY))
-                || Searchbar.getActive() && !Searchbar.isClickInBounds((int) mouseX, (int) mouseY)) {
+        if ((!Searchbar.isActive() && Searchbar.isClickInBounds((int) mouseX, (int) mouseY))
+                || Searchbar.isActive() && !Searchbar.isClickInBounds((int) mouseX, (int) mouseY)) {
             Searchbar.click();
             return;
         }
@@ -823,8 +813,8 @@ public abstract class HandledScreenMixin {
         boolean clickedAnyNameInput = false;
         for (int i = scrollOffset; i < xFitAmount * yFitAmount - (xFitAmount - 1) + scrollOffset - 1; i++) {
             if (i > 19) break;
-            if ((!BankPageNameInputs.get(i).getActive() && BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY))
-                    || BankPageNameInputs.get(i).getActive() && !BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY)) {
+            if ((!BankPageNameInputs.get(i).isActive() && BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY))
+                    || BankPageNameInputs.get(i).isActive() && !BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY)) {
                 BankPageNameInputs.get(i).click();
                 if (BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY)) {
                     clickedAnyNameInput = true;

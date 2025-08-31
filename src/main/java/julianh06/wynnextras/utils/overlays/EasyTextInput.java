@@ -2,35 +2,29 @@ package julianh06.wynnextras.utils.overlays;
 
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.RenderUtils;
-import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.KeyInputEvent;
-import julianh06.wynnextras.event.RenderWorldEvent;
-import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.inventory.BankOverlay;
-import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.util.Identifier;
-import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWKeyCallbackI;
 
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class EasyTextInput extends EasyElement{
-    boolean isActive = false;
-    CustomColor color = CustomColor.fromHexString("FFFFFF");
-    String input = "";
+    protected boolean isActive = false;
+    protected CustomColor color = CustomColor.fromHexString("FFFFFF");
+    protected String input = "";
 
-    private int DEBOUNCE_DELAY_MS = 100;
-    HashMap<Long, Long> lastCharTime = new HashMap<>();
-    HashMap<Integer, Integer> cooldowns = new HashMap<>();
-    int cursorPos = 0;
+    protected int DEBOUNCE_DELAY_MS = 100;
+    protected HashMap<Long, Long> lastCharTime = new HashMap<>();
+    protected HashMap<Integer, Integer> cooldowns = new HashMap<>();
+    protected int cursorPos = 0;
 
-    long lastBlink = 0;
-    boolean blinkToggle = true;
+    protected long lastBlink = 0;
+    protected boolean blinkToggle = true;
 
     public EasyTextInput() {
         super(-1, -1, 0, 0);
@@ -111,7 +105,7 @@ public class EasyTextInput extends EasyElement{
         color = CustomColor.fromHexString("FFFFFF");
     }
 
-    public boolean getActive() {
+    public boolean isActive() {
         return isActive;
     }
 
@@ -125,6 +119,22 @@ public class EasyTextInput extends EasyElement{
 
     public void setInput(String value) {
         input = value;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int value) {
+        height = value;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int value) {
+        width = value;
     }
 
     public void clearInput() {
