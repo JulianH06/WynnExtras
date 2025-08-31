@@ -14,6 +14,9 @@ import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayData;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
+import julianh06.wynnextras.features.raid.RaidList;
+import julianh06.wynnextras.features.raid.RaidListData;
+import julianh06.wynnextras.features.raid.RaidListScreen;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.api.ClientModInitializer;
@@ -99,6 +102,7 @@ public class WynnExtras implements ClientModInitializer {
 		}
 
 		BankOverlayData.load();
+		RaidListData.load();
 	}
 
 	@SubscribeEvent

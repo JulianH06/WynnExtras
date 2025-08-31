@@ -22,12 +22,7 @@ public class MessageFilterFeatureMixin {
             config = SimpleConfig.getInstance(WynnExtrasConfig.class);
         }
 
- String msgLower = e.getStyledText().getString().toLowerCase();
-
-        if (msgLower.contains("to the tower! [")) {
-                e.setCanceled(true);
-                return;
-            }
+        String msgLower = e.getStyledText().getString().toLowerCase();
 
         for(String blockedWord : config.blockedWords) {
             if (msgLower.contains(blockedWord.toLowerCase())) {

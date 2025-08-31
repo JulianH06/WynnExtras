@@ -22,37 +22,35 @@ import net.neoforged.bus.api.SubscribeEvent;
 public class ChatNotificator {
     private static WynnExtrasConfig config;
 
-    private static Command testCmd;
+    private static Command testCmd = new Command(
+            "notifiertest",
+            "",
+            context -> {
+//                CustomColor textColor = CustomColor.fromHexString(config.TextColor);
+                ChatUtils.displayTitle("test", "", config.TextDurationInMs/50, Formatting.byName(config.TextColor));
+                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.Sound)), config.SoundVolume, config.SoundPitch);
+//                System.out.println(Formatting.byColorIndex(textColor.asInt()));
+                return 1;
+            },
+            null,
+            null
+    );
 
     @SubscribeEvent
     void recieveMessageGame(ChatEvent event) {
         if(config == null) {
             config = SimpleConfig.getInstance(WynnExtrasConfig.class);
         }
-        if(testCmd == null) {
-            testCmd = new Command(
-                    "notifiertest",
-                    "",
-                    context -> {
-//                CustomColor textColor = CustomColor.fromHexString(config.TextColor);
-                        ChatUtils.displayTitle("test", "", config.TextDurationInMs/50, Formatting.byName(config.TextColor));
-                        McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.Sound)), config.SoundVolume, config.SoundPitch);
-//                System.out.println(Formatting.byColorIndex(textColor.asInt()));
-                        return 1;
-                    },
-                    null,
-                    null
-            );
-        }
         notify(event.message);
     }
 
     public static void onPlayerChatReceived(Text message) {
         notify(message);
-        RaidChatNotifier.handleMessage(message);
+        //RaidChatNotifier.handleMessage(message);
     }
 
     private static void notify(Text message) {
+        if(config == null) return;
         for(String notificator : config.notifierWords) {
             if(!notificator.contains("|")) return;
             String[] parts = notificator.split("\\|");
