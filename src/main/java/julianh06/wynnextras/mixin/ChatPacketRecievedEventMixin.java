@@ -14,6 +14,6 @@ public class ChatPacketRecievedEventMixin {
     @Inject(method = "<init>", at = @At("TAIL"), remap = false)
     public void started (Text message, CallbackInfo ci) {
         new ChatEvent(message).post();
-        ChatNotificator.onPlayerChatReceived(message);
+        //ChatNotificator.onPlayerChatReceived(message);
     }
 }

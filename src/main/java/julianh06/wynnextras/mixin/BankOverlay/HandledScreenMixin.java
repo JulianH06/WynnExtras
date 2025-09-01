@@ -859,22 +859,23 @@ public abstract class HandledScreenMixin {
 
             if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
                 actionType = SlotActionType.QUICK_MOVE;
+                annotationCache.get(activeInv).clear();
             }
             System.out.println("Click in: " + (hoveredInvIndex) + " playerInvIndex " + playerInvIndex + " activeInv " + activeInv);
             if (hoveredInvIndex == activeInv) {
-                annotationCache.get(activeInv).clear();
                 heldItem = getHeldItem(hoveredIndex, actionType, button); //heldItem = McUtils.mc().player.currentScreenHandler.slots.get(hoveredIndex).getStack().copy();
                 //System.out.println("Clicked: " + heldItem.getName() + " hoveredIndex: " + hoveredInvIndex);
                 MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, hoveredIndex, button, actionType, MinecraftClient.getInstance().player);
+                annotationCache.get(activeInv).clear();
                 lastClickedSlot = hoveredIndex;
                 cir.cancel();
                 return;
             } else if (hoveredInvIndex == playerInvIndex + scrollOffset) { //i know this is ugly i wanted to do it with a variable but that somehow didnt work dont ask me why
-                annotationCache.get(playerInvIndex).clear();
                 System.out.println("playerinv click");
                 heldItem = getHeldItem(hoveredIndex + 54, actionType, button); //McUtils.mc().player.currentScreenHandler.slots.get(hoveredIndex + 54).getStack().copy();
                 //System.out.println("Clicked: " + heldItem.getName() + " hoveredIndex: " + hoveredInvIndex);
                 MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, hoveredIndex + 54, button, actionType, MinecraftClient.getInstance().player);
+                annotationCache.get(playerInvIndex).clear();
                 lastClickedSlot = hoveredIndex + 54;
                 cir.cancel();
                 return;
@@ -985,20 +986,25 @@ public abstract class HandledScreenMixin {
                     currentStack.setCount(newAmount);
                     heldItem = currentStack;
                 }
+                case SlotActionType.QUICK_MOVE -> {
+                    heldItem = Items.AIR.getDefaultStack();
+                }
             }
         } else { //Right Click
             heldItem = HandledScreenMixin.heldItem;
-            if (heldItem != null && heldItem.getItem() == Items.AIR) {
-                heldItem = McUtils.mc().player.currentScreenHandler.slots.get(index).getStack().copy();
-                if (heldItem.getCount() % 2 == 0) {
-                    heldItem.setCount(heldItem.getCount() / 2);
+            if(heldItem != null) {
+                if (heldItem.getItem() == Items.AIR) {
+                    heldItem = McUtils.mc().player.currentScreenHandler.slots.get(index).getStack().copy();
+                    if (heldItem.getCount() % 2 == 0) {
+                        heldItem.setCount(heldItem.getCount() / 2);
+                    } else {
+                        heldItem.setCount(heldItem.getCount() / 2 + 1);
+                    }
+                } else if (heldItem.getCount() == 1) {
+                    heldItem = Items.AIR.getDefaultStack();
                 } else {
-                    heldItem.setCount(heldItem.getCount() / 2 + 1);
+                    heldItem.setCount(heldItem.getCount() - 1);
                 }
-            } else if (heldItem.getCount() == 1) {
-                heldItem = Items.AIR.getDefaultStack();
-            } else {
-                heldItem.setCount(heldItem.getCount() - 1);
             }
         }
         return heldItem;

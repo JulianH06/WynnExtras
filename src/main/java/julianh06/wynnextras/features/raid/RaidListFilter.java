@@ -1,32 +1,35 @@
 package julianh06.wynnextras.features.raid;
 
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.event.KeyInputEvent;
-import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-public class PlayerFilter extends EasyTextInput {
-    public PlayerFilter(int x, int y, int height, int width) {
+public class RaidListFilter extends EasyTextInput {
+    public RaidListFilter(int x, int y, int height, int width) {
         super(x, y, height, width);
     }
 
-    @Override
-    public void click() {
-        isActive = true;
-        cursorPos = input.length();
-        color = CustomColor.fromHexString("FFEA00");
+    public void setSearchText(String value) {
+        super.searchText = value;
     }
 
+    @Override
     public void onInput(KeyInputEvent event) {
-        //long handle = MinecraftClient.getInstance().getWindow().getHandle();
+        if(!isActive) return;
+
         AtomicLong now = new AtomicLong();
         int action = event.getAction();
         int key = event.getKey();
         int scancode = event.getScanCode();
+        //char character = event.getCharacter();
 
         now.set(System.currentTimeMillis());
 
@@ -40,7 +43,8 @@ public class PlayerFilter extends EasyTextInput {
                 DEBOUNCE_DELAY_MS = 10;
             }
 
-            if (isActive && now.get() - lastCharTime.getOrDefault((long) key, 0L) >= cooldowns.getOrDefault(key, DEBOUNCE_DELAY_MS)) {
+            System.out.println("ISACTIVE: " + this.isActive);
+            if (now.get() - lastCharTime.getOrDefault((long) key, 0L) >= cooldowns.getOrDefault(key, DEBOUNCE_DELAY_MS)) {
                 if (isValidKey(key)) {
                     if (key == GLFW.GLFW_KEY_SPACE) {
                         input = insertAt(cursorPos, " ", input);
@@ -66,36 +70,22 @@ public class PlayerFilter extends EasyTextInput {
         }
     }
 
-    private boolean isValidKey(int key) {
-        if(key == 32) return true;
-        if(key == 39) return true;
-        if(key >= 44 && key <= 57) return true;
-        if(key == 59) return true;
-        if(key == 61) return true;
-        if(key >= 65 && key <= 93) return true;
-        return false;
-    }
-
-    private String insertAt(int i, String value, String src) {
-        //Inserts AFTER index
-        if(i < 0) {
-            return null;
+    @Override
+    public void drawWithTexture(DrawContext context, Identifier texture) {
+        long now = System.currentTimeMillis();
+        RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, 0.0f, width, height, width, height);
+        if(input.isEmpty() && !isActive) {
+            context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 4, y + 3, CustomColor.fromHexString("FFFFFF").asInt());
+        } else {
+            if(cursorPos > input.length()) {
+                cursorPos = input.length();
+            }
+            context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, input, x + 4, y + 3, CustomColor.fromHexString("FFFFFF").asInt());
+            if(now - lastBlink > 500) {
+                blinkToggle = !blinkToggle;
+                lastBlink = now;
+            }
+            if(blinkToggle && isActive) RenderUtils.drawLine(context.getMatrices(), CustomColor.fromHexString("FFFFFF"), x + 4 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 2, x + 4 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 11, 0, 1);
         }
-        if(i >= src.length()) {
-            src += value;
-            return src;
-        }
-        String leftSub = src.substring(0, i);
-        String rightSub = src.substring(i);
-        return leftSub + value + rightSub;
-    }
-
-    private String removeAt(int i, String src) {
-        if(i < 0 || i > src.length() || src.isEmpty()){
-            return src;
-        }
-        String leftSub = src.substring(0, i - 1);
-        String rightSub = src.substring(i);
-        return leftSub + rightSub;
     }
 }

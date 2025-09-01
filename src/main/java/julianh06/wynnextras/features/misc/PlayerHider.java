@@ -93,7 +93,7 @@ public class PlayerHider {
                         "add",
                         "",
                         context -> {
-                            String arg = StringArgumentType.getString(context, "added");
+                            String arg = StringArgumentType.getString(context, "player");
                             if(arg.isEmpty()) {
                                 McUtils.sendMessageToClient(Text.of("Name argument is empty! Usage: /WynnExtras playerhider add <player>"));
                                 return 1;
@@ -111,7 +111,7 @@ public class PlayerHider {
                         "remove",
                         "",
                         context -> {
-                            String arg = StringArgumentType.getString(context, "removed");
+                            String arg = StringArgumentType.getString(context, "player");
                             if(arg.isEmpty()) {
                                 McUtils.sendMessageToClient(Text.of("Name argument is empty! Usage: /WynnExtras playerhider remove <player>"));
                                 return 1;

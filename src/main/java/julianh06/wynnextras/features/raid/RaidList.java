@@ -115,7 +115,7 @@ public class RaidList {
                 //INSTANCE.raids.clear();
                 RaidInfo info = new RaidInfo(getRandomRaid());
                 Long raidEndTime = ((RaidInfoAccessor) info).getRaidStartTime() + info.getTimeInRaid();
-                INSTANCE.raids.addFirst(new RaidData(info, List.of("1", "2", "3", "4"), raidEndTime, getRandomFailed()));
+                INSTANCE.raids.add(new RaidData(info, List.of("Teslanator", "elwood24", "LegendaryVirus", "JulianH06"), raidEndTime, getRandomFailed()));
 
                 //convertTime(raidStartTime);
                 RaidListData.save();
@@ -132,12 +132,12 @@ public class RaidList {
         McUtils.sendMessageToClient(Text.of("[Wynnextras] Raid ended."));
         if(event instanceof RaidEndedEvent.Completed) {
             Long raidEndTime = ((RaidInfoAccessor) event.getRaid()).getRaidStartTime() + event.getRaid().getTimeInRaid();
-            INSTANCE.raids.addFirst(new RaidData(event.getRaid(), members, raidEndTime, true));
+            INSTANCE.raids.add(new RaidData(event.getRaid(), members, raidEndTime, true));
             RaidListData.save();
         }
         if(event instanceof RaidEndedEvent.Failed) {
             Long raidEndTime = ((RaidInfoAccessor) event.getRaid()).getRaidStartTime() + event.getRaid().getTimeInRaid();
-            INSTANCE.raids.addFirst(new RaidData(event.getRaid(), members, raidEndTime, false));
+            INSTANCE.raids.add(new RaidData(event.getRaid(), members, raidEndTime, false));
             RaidListData.save();
         }
     }

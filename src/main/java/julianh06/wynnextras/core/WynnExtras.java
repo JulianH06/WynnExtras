@@ -4,7 +4,6 @@ import com.wynntils.models.items.WynnItem;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.config.WynnExtrasModMenuApiImpl;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.KeyInputEvent;
@@ -14,30 +13,30 @@ import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayData;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
-import julianh06.wynnextras.features.raid.RaidList;
 import julianh06.wynnextras.features.raid.RaidListData;
-import julianh06.wynnextras.features.raid.RaidListScreen;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.api.ClientModInitializer;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.collection.DefaultedList;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
+import org.apache.logging.log4j.core.net.Priority;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWCharCallbackI;
 import org.lwjgl.glfw.GLFWKeyCallbackI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 // TODO: Use WELogger instead of normal logger
@@ -82,6 +81,7 @@ public class WynnExtras implements ClientModInitializer {
 	public static int testBackgroundHeight;
 
 	GLFWKeyCallbackI previousCallback;
+	GLFWCharCallbackI previousCharCallback;
 
 	@Override
 	public void onInitializeClient() {
@@ -105,14 +105,35 @@ public class WynnExtras implements ClientModInitializer {
 		RaidListData.load();
 	}
 
-	@SubscribeEvent
+//
+//	AtomicReference<Character> character = new AtomicReference<>((char) 0);
+//	boolean charEventInit = false;
+//
+//	@SubscribeEvent(priority = EventPriority.HIGHEST)
+//	public void onCharEvent(TickEvent event) {
+//		if(charEventInit || MinecraftClient.getInstance().getWindow() == null) return;
+//		previousCharCallback = GLFW.glfwSetCharCallback(MinecraftClient.getInstance().getWindow().getHandle(), (window, codepoint) -> {
+//			if (!KeyInputEvent.initialized) {
+//				KeyInputEvent.init();
+//			}
+//
+//			character.set((char) codepoint);
+//
+//			if (previousCharCallback != null) {
+//				previousCharCallback.invoke(window, codepoint);
+//			}
+//		});
+//		charEventInit = true;
+//	}
+
+	@SubscribeEvent(priority = EventPriority.LOWEST)
 	public void initKeyInputEvent(TickEvent event) {
 		if(!KeyInputEvent.initialized && MinecraftClient.getInstance().getWindow() != null) {
 			KeyInputEvent.init();
 
 			previousCallback = GLFW.glfwSetKeyCallback(MinecraftClient.getInstance().getWindow().getHandle(), (window, key, scancode, action, mods) -> {
 				if (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT || action == GLFW.GLFW_RELEASE) {
-					new KeyInputEvent(key, scancode, action, mods).post();
+					new KeyInputEvent(key, scancode, action, mods).post();//, character.get()).post();
 				}
 
 				if(BankOverlay.isBank && BankOverlay.activeTextInput != null && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;

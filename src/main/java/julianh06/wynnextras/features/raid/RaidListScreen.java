@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.raid;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.models.raid.raids.*;
 import com.wynntils.models.raid.type.RaidRoomInfo;
+import com.wynntils.screens.base.widgets.TextInputBoxWidget;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.SkinUtils;
 import com.wynntils.utils.render.FontRenderer;
@@ -14,7 +15,6 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.mixin.Accessor.RaidInfoAccessor;
 import julianh06.wynnextras.utils.SkinManager;
-import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -48,14 +48,12 @@ public class RaidListScreen extends Screen {
     RaidFilterButton TNAFilterButton = new RaidFilterButton(-1, -1, 40, 40);
     RaidFilterButton PBFilterButton = new RaidFilterButton(-1, -1, 40, 40);
 
-    PlayerFilter playerFilter1 = new PlayerFilter(-1, -1, -1, -1);
-    PlayerFilter playerFilter2 = new PlayerFilter(-1, -1, -1, -1);
-    PlayerFilter playerFilter3 = new PlayerFilter(-1, -1, -1, -1);
-    PlayerFilter playerFilter4 = new PlayerFilter(-1, -1, -1, -1);
+    RaidListFilter Filter = new RaidListFilter(-1, -1, -1, -1);
 
-    List<PlayerFilter> playerFilters = List.of(playerFilter1, playerFilter2, playerFilter3, playerFilter4);
-
-    Identifier ButtonTexture = Identifier.of("wynnextras", "textures/gui/bankoverlay/button.png");
+    Identifier InputFieldTexture = Identifier.of("wynnextras", "textures/gui/bankoverlay/button.png");
+    Identifier ButtonBackgroundLeftTexture = Identifier.of("wynnextras", "textures/gui/raid/buttonbackgroundleft.png");
+    Identifier ButtonBackgroundMidTexture = Identifier.of("wynnextras", "textures/gui/raid/buttonbackgroundmid.png");
+    Identifier ButtonBackgroundRightTexture = Identifier.of("wynnextras", "textures/gui/raid/buttonbackgroundright.png");
     Identifier NOTGTexture = Identifier.of("wynnextras", "textures/gui/raid/raidicons/nestofthegrootslangs-small.png");
     Identifier NOLTexture = Identifier.of("wynnextras", "textures/gui/raid/raidicons/orphionsnexusoflight-small.png");
     Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/raid/raidicons/thecanyoncolossus-small.png");
@@ -132,44 +130,11 @@ public class RaidListScreen extends Screen {
         //super.render(context, mouseX, mouseY, delta);
         int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
         int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
-        int width = (int) Math.max(screenWidth * 0.5, 350);
+        int width = (int) Math.max(screenWidth * 0.5, 400);
         int xStart = screenWidth / 2 - width / 2;
         int yStart = screenWidth / 2;
 
         RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
-
-        NOTGFilterButton.setX(xStart);
-        NOTGFilterButton.setY(5);
-        NOLFilterButton.setX(xStart + 40);
-        PBFilterButton.setX(xStart + width / 2 - 20);
-        PBFilterButton.setY(5);
-        NOLFilterButton.setY(5);
-        TCCFilterButton.setX(xStart + width - 80);
-        TCCFilterButton.setY(5);
-        TNAFilterButton.setX(xStart + width - 40);
-        TNAFilterButton.setY(5);
-        {
-            int i = 0;
-            for (PlayerFilter filter : playerFilters) {
-                filter.setHeight(12);
-                filter.setWidth((width - 200) / 2);
-                filter.setX(xStart + 80 + Math.floorDiv(i, 2) * (filter.getWidth() + 40));
-                filter.setY(9 + (i % 2) * 20);
-                i++;
-                filter.draw(context);
-            }
-        }
-
-        if(NOTGFilterButton.isActive) NOTGFilterButton.drawWithTexture(context, NOTGTexture);
-        else NOTGFilterButton.drawWithTexture(context, NOTGTextureBW);
-        if(NOLFilterButton.isActive) NOLFilterButton.drawWithTexture(context, NOLTexture);
-        else NOLFilterButton.drawWithTexture(context, NOLTextureBW);
-        if(TCCFilterButton.isActive) TCCFilterButton.drawWithTexture(context, TCCTexture);
-        else TCCFilterButton.drawWithTexture(context, TCCTextureBW);
-        if(TNAFilterButton.isActive) TNAFilterButton.drawWithTexture(context, TNATexture);
-        else TNAFilterButton.drawWithTexture(context, TNATextureBW);
-        if(PBFilterButton.isActive) PBFilterButton.drawWithTexture(context, PBTexture);
-        else PBFilterButton.drawWithTexture(context, PBTextureBW);
 
 //        RenderUtils.drawTexturedRect(context.getMatrices(), NOTGTexture, xStart, 0, 0, 30, 30, 30, 30);
 //        RenderUtils.drawTexturedRect(context.getMatrices(), NOLTexture, xStart + 30, 0, 0, 30, 30, 30, 30);
@@ -180,7 +145,7 @@ public class RaidListScreen extends Screen {
         List<RaidData> sortedList = sort(filteredList);
         int i = 0;
         for(RaidData raid : sortedList) {
-            float yPos = 40 + 10 + 50 * i - scrollOffset;
+            float yPos = 80 + 10 + 50 * i - scrollOffset;
             boolean isCollapsed = currentCollapsed == i || lastCollapsed == i;
             if(!isCollapsed) listElements.get(i).setHeight(40);
             if(currentCollapsed != -1 && currentCollapsed < i) {
@@ -190,7 +155,7 @@ public class RaidListScreen extends Screen {
             }
 
 
-            if (yPos + 40 + (isCollapsed ? 1 : 0) * currentCollapsedProgress >= 0 && yPos <= screenHeight) {
+            if (yPos + 80 + (isCollapsed ? 1 : 0) * currentCollapsedProgress >= 0 && yPos <= screenHeight) {
                 Identifier raidTexture = getTexture(raid.raidInfo.getRaidKind());
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureTopLeft, xStart, yPos, 0, 12, 20, 12, 20);
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureTopMid, xStart + 12, yPos, 0, width - 24, 20, width - 24, 20);
@@ -206,11 +171,12 @@ public class RaidListScreen extends Screen {
                     for (int j = 0; j < 4; j++) {
                         boolean partyError = false;
                         String name;
-                        if(j > raid.players.size()) {
+                        if(j >= raid.players.size()) {
                             name = "Player " + j;
                             partyError = true;
+                        } else {
+                            name = raid.players.get(j);
                         }
-                        name = raid.players.get(j);
 
 //                        Identifier skin = null;
 //                        try {
@@ -250,6 +216,7 @@ public class RaidListScreen extends Screen {
                                 RaidRoomInfo room = challenges.get(j + 1);
                                 if (room == null) continue;
                                 long roomDuration = room.getRoomTotalTime();
+                                if(room.getRoomEndTime() == -1) roomDuration = -1;
                                 String roomString = room.getRoomName() + ": " + formatDuration(roomDuration);
                                 FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 28, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                             }
@@ -260,18 +227,58 @@ public class RaidListScreen extends Screen {
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomMid, xStart + 12, yPos + 20 + (isCollapsed ? 1 : 0) * currentCollapsedProgress, 0, width - 24, 20, width - 24, 20);
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomRight, xStart - 12 + width, yPos + 20 + (isCollapsed ? 1 : 0) * currentCollapsedProgress, 0, 12, 20, 12, 20);
                 RenderUtils.drawTexturedRect(context.getMatrices(), raidTexture, xStart + width / 2 - 15, yPos - 5, 0, 30, 30, 30, 30);
-                context.drawText(MinecraftClient.getInstance().textRenderer, raid.raidInfo.getRaidKind().getRaidName(), xStart + 10, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF").asInt(), true);
-                context.drawText(MinecraftClient.getInstance().textRenderer, convertTime(raid.raidEndTime), xStart + width - textRenderer.getWidth(convertTime(raid.raidEndTime)) - 8, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF").asInt(), true);
-                context.drawText(MinecraftClient.getInstance().textRenderer, formatDuration(raid.duration), xStart + width - textRenderer.getWidth(formatDuration(raid.duration)) - 8, (int) (yPos + 26 + (isCollapsed ? 1 : 0) * currentCollapsedProgress), CustomColor.fromHexString("FFFFFF").asInt(), true);
+                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(raid.raidInfo.getRaidKind().getRaidName()), xStart + 10, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(convertTime(raid.raidEndTime)), xStart + width - textRenderer.getWidth(convertTime(raid.raidEndTime)) - 8, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(formatDuration(raid.duration)), xStart + width - textRenderer.getWidth(formatDuration(raid.duration)) - 8, (int) (yPos + 26 + (isCollapsed ? 1 : 0) * currentCollapsedProgress), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 if(raid.completed) {
-                    context.drawText(MinecraftClient.getInstance().textRenderer, "Completed", xStart + 10, (int) (yPos + 26 + (isCollapsed ? 1 : 0) * currentCollapsedProgress), CustomColor.fromHexString("FFFFFF").asInt(), true);
+                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString("Completed"), xStart + 10, (int) (yPos + 26 + (isCollapsed ? 1 : 0) * currentCollapsedProgress), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 } else {
-                    context.drawText(MinecraftClient.getInstance().textRenderer, "FAILED", xStart + 10, (int) (yPos + 26 + (isCollapsed ? 1 : 0) * currentCollapsedProgress), CustomColor.fromHexString("FF0000").asInt(), true);
+                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString("FAILED"), xStart + 10, (int) (yPos + 26 + (isCollapsed ? 1 : 0) * currentCollapsedProgress), CustomColor.fromHexString("FF0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 }
                 //listElements.get(i).draw(context);
             }
             i++;
         }
+
+        int MidButtonBackgroundWidth = width - 80;
+
+        RenderUtils.drawTexturedRect(context.getMatrices(), ButtonBackgroundLeftTexture,  xStart - 70, 0, 0, 120, 80, 120, 80);
+        RenderUtils.drawTexturedRect(context.getMatrices(), ButtonBackgroundMidTexture, xStart + 40, 0, 0, MidButtonBackgroundWidth, 80, MidButtonBackgroundWidth, 80);
+        RenderUtils.drawTexturedRect(context.getMatrices(), ButtonBackgroundRightTexture, xStart + width - 50, 0, 0, 120, 80, 120, 80);
+
+        NOTGFilterButton.setX(xStart + width / 2 - 180);
+        NOTGFilterButton.setY(16);
+        NOLFilterButton.setX(xStart + width / 2 - 100);
+        NOLFilterButton.setY(16);
+        PBFilterButton.setX(xStart + width / 2 - 20);
+        PBFilterButton.setY(16);
+        TCCFilterButton.setX(xStart + width / 2 + 60);
+        TCCFilterButton.setY(16);
+        TNAFilterButton.setX(xStart + width / 2 + 140);
+        TNAFilterButton.setY(16);
+
+        Filter.setHeight(14);
+        Filter.setWidth(width);
+        Filter.setX(xStart);
+        Filter.setY(2);
+        Filter.setSearchText("Example: from:-7d until:31/01/25:23:59 with:player1,player2,player3");
+        Filter.drawWithTexture(context, InputFieldTexture);
+
+        if(NOTGFilterButton.isActive) NOTGFilterButton.drawWithTexture(context, NOTGTexture);
+        else NOTGFilterButton.drawWithTexture(context, NOTGTextureBW);
+        if(NOLFilterButton.isActive) NOLFilterButton.drawWithTexture(context, NOLTexture);
+        else NOLFilterButton.drawWithTexture(context, NOLTextureBW);
+        if(TCCFilterButton.isActive) TCCFilterButton.drawWithTexture(context, TCCTexture);
+        else TCCFilterButton.drawWithTexture(context, TCCTextureBW);
+        if(TNAFilterButton.isActive) TNAFilterButton.drawWithTexture(context, TNATexture);
+        else TNAFilterButton.drawWithTexture(context, TNATextureBW);
+        if(PBFilterButton.isActive) PBFilterButton.drawWithTexture(context, PBTexture);
+        else PBFilterButton.drawWithTexture(context, PBTextureBW);
+
+        String totalString = "Total: " + sortedList.size();
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(totalString), xStart + (float) width / 2 - textRenderer.getWidth(totalString) * 0.5f, 57, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+
+
         if(currentCollapsed != -1) {
             if(currentCollapsedProgress < 80) {
                 currentCollapsedProgress += 2;
@@ -321,18 +328,11 @@ public class RaidListScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        boolean clickedTextInput = false;
-        for(EasyTextInput input : playerFilters) {
-            if(input.isClickInBounds((int) mouseX, (int) mouseY)) {
-                input.click();
-                System.out.println("IN BOUNDS");
-                clickedTextInput = true;
-            } else {
-                System.out.println("NOT IN BOUNDS");
-                input.setActive(false);
-            }
+        if ((!Filter.isActive() && Filter.isClickInBounds((int) mouseX, (int) mouseY))
+                || Filter.isActive() && !Filter.isClickInBounds((int) mouseX, (int) mouseY)) {
+            Filter.click();
+            return true;
         }
-        if(clickedTextInput) return true;
 
         if(NOTGFilterButton.isClickInBounds((int) mouseX, (int) mouseY)) {
             NOTGFilterButton.click();
@@ -375,7 +375,7 @@ public class RaidListScreen extends Screen {
     }
 
     private int getElementY(int index) {
-        int y = 40;
+        int y = 70;
 
         if (currentCollapsed != -1 && index > currentCollapsed) {
             y += currentCollapsedProgress;
@@ -385,6 +385,7 @@ public class RaidListScreen extends Screen {
     }
 
     public static String formatDuration(long durationMs) {
+        if(durationMs == -1) return "§cFAILED";
         long minutes = durationMs / 60000;
         long seconds = (durationMs % 60000) / 1000;
         long millis = durationMs % 1000;
@@ -396,7 +397,9 @@ public class RaidListScreen extends Screen {
         List<RaidData> result = new ArrayList<>();
 
         for(RaidData raid : rawList) {
-
+            if(PBFilterButton.isActive && !raid.completed) {
+                continue;
+            }
 
             if(NOTGFilterButton.isActive && raid.raidInfo.getRaidKind() instanceof NestOfTheGrootslangsRaid) {
                 result.add(raid);
@@ -427,12 +430,6 @@ public class RaidListScreen extends Screen {
 
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
-        System.out.println("a");
-        for(PlayerFilter filter : playerFilters) {
-            if(filter.isActive()) {
-                onInput(event);
-                return;
-            }
-        }
+        Filter.onInput(event);
     }
 }

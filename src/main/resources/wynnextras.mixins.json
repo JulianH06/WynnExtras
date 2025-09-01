@@ -30,6 +30,7 @@
     "Invoker.ItemHandlerInvoker",
     "Invoker.ItemHighlightFeatureInvoker",
     "Invoker.ItemTextOverlayFeatureMixin",
+    "Invoker.RaidInfoInvoker",
     "Invoker.UnidentifiedItemIconFeatureInvoker",
     "Raid.RaidEndedEventCompletedMixin",
     "Raid.RaidEndedEventFailedMixin",

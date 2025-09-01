@@ -13,13 +13,14 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import net.neoforged.bus.api.SubscribeEvent;
 
+@WEModule
 public class RaidChatNotifier {
 
     private static final WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
 
 
     @SubscribeEvent
-    public static void handleMessage(ChatEvent event) {
+    public void handleMessage(ChatEvent event) {
         Text message = event.message;
         if (!config.toggleRaidTimestamps) {
               return; //
@@ -220,7 +221,7 @@ public class RaidChatNotifier {
             "§2[WynnExtras] §bDescend §c@ "
         ),
         new StaticMessageDetector(
-            "Upper Level must kill the Slime Chomper!",
+            "Upper Level must kill the Slime Chomper",
             "§2[WynnExtras] §bSlime Chomper Spawned §c@ "
         ),
         new StaticMessageDetector(

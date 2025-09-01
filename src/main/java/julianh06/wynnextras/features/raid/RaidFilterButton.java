@@ -12,6 +12,7 @@ public class RaidFilterButton extends EasyButton {
     @Override
     public void click() {
         RaidListScreen.currentCollapsed = -1;
+        //RaidListScreen.scrollOffset = 0;
         isActive = !isActive;
     }
 }

@@ -20,7 +20,6 @@ public abstract class EasyElement {
         if(y < this.y) return false;
         if(x > this.x + width) return false;
         if(y > this.y + height) return false;
-        System.out.println("click worked!");
         return true;
     }
 

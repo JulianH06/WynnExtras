@@ -17,6 +17,7 @@ public class EasyTextInput extends EasyElement{
     protected boolean isActive = false;
     protected CustomColor color = CustomColor.fromHexString("FFFFFF");
     protected String input = "";
+    protected String searchText = "Search...";
 
     protected int DEBOUNCE_DELAY_MS = 100;
     protected HashMap<Long, Long> lastCharTime = new HashMap<>();
@@ -42,7 +43,7 @@ public class EasyTextInput extends EasyElement{
         long now = System.currentTimeMillis();
         RenderUtils.drawRect(context.getMatrices(), color, x, y, 0.0f, width, height);
         if(input.isEmpty() && !isActive) {
-            context.drawText(MinecraftClient.getInstance().textRenderer, "Search...", x + 1, y + 3, CustomColor.fromHexString("000000").asInt(), false);
+            context.drawText(MinecraftClient.getInstance().textRenderer, searchText, x + 1, y + 3, CustomColor.fromHexString("000000").asInt(), false);
         } else {
             if(cursorPos > input.length()) {
                 cursorPos = input.length();
@@ -59,7 +60,7 @@ public class EasyTextInput extends EasyElement{
     public void drawWithoutBackground(DrawContext context, CustomColor color) {
         long now = System.currentTimeMillis();
         if(input.isEmpty() && !isActive) {
-            //context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, "Search...", x + 3, y + 1, CustomColor.fromHexString("FFFFFF").asInt());
+            //context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 3, y + 1, CustomColor.fromHexString("FFFFFF").asInt());
         } else {
             if(cursorPos > input.length()) {
                 cursorPos = input.length();
@@ -77,7 +78,7 @@ public class EasyTextInput extends EasyElement{
         long now = System.currentTimeMillis();
         RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, 0.0f, width, height, width, height);
         if(input.isEmpty() && !isActive) {
-            context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, "Search...", x + 2, y + 3, CustomColor.fromHexString("FFFFFF").asInt());
+            context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 2, y + 3, CustomColor.fromHexString("FFFFFF").asInt());
         } else {
             if(cursorPos > input.length()) {
                 cursorPos = input.length();
@@ -143,13 +144,13 @@ public class EasyTextInput extends EasyElement{
     }
 
     public void onInput(KeyInputEvent event) {
-        System.out.println("input");
         if(!isActive || !BankOverlay.isBank) return;
         //long handle = MinecraftClient.getInstance().getWindow().getHandle();
         AtomicLong now = new AtomicLong();
         int action = event.getAction();
         int key = event.getKey();
         int scancode = event.getScanCode();
+        //char character = event.getCharacter();
 
         now.set(System.currentTimeMillis());
 
@@ -189,7 +190,7 @@ public class EasyTextInput extends EasyElement{
         }
     }
 
-    private boolean isValidKey(int key) {
+    protected boolean isValidKey(int key) {
         if(key == 32) return true;
         if(key == 39) return true;
         if(key >= 44 && key <= 57) return true;
@@ -199,7 +200,7 @@ public class EasyTextInput extends EasyElement{
         return false;
     }
 
-    private String insertAt(int i, String value, String src) {
+    protected String insertAt(int i, String value, String src) {
         //Inserts AFTER index
         if(i < 0) {
             return null;
@@ -213,7 +214,7 @@ public class EasyTextInput extends EasyElement{
         return leftSub + value + rightSub;
     }
 
-    private String removeAt(int i, String src) {
+    protected String removeAt(int i, String src) {
         if(i < 0 || i > src.length() || src.isEmpty()){
             return src;
         }
