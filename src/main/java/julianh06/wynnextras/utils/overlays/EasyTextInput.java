@@ -2,6 +2,7 @@ package julianh06.wynnextras.utils.overlays;
 
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.RenderUtils;
+import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import net.minecraft.client.MinecraftClient;
@@ -145,7 +146,7 @@ public class EasyTextInput extends EasyElement{
 
     public void onInput(KeyInputEvent event) {
         if(!isActive || !BankOverlay.isBank) return;
-        //long handle = MinecraftClient.getInstance().getWindow().getHandle();
+
         AtomicLong now = new AtomicLong();
         int action = event.getAction();
         int key = event.getKey();
@@ -157,38 +158,72 @@ public class EasyTextInput extends EasyElement{
         if (action == GLFW.GLFW_RELEASE) {
             cooldowns.remove(key);
         } else {
-            if(action == GLFW.GLFW_PRESS) {
-                DEBOUNCE_DELAY_MS = 100;
-
-            } else if (action == GLFW.GLFW_REPEAT) {
-                DEBOUNCE_DELAY_MS = 10;
+            // Backspace
+            if (key == GLFW.GLFW_KEY_BACKSPACE && cursorPos > 0) {
+                input = removeAt(cursorPos, input);
+                cursorPos--;
             }
+            // Delete
+            else if (key == GLFW.GLFW_KEY_DELETE && cursorPos < input.length()) {
+                input = removeAt(cursorPos + 1, input);
+            }
+            // left arrow
+            else if (key == GLFW.GLFW_KEY_LEFT && cursorPos > 0) {
+                cursorPos--;
+            }
+            // right arrow
+            else if (key == GLFW.GLFW_KEY_RIGHT && cursorPos < input.length()) {
+                cursorPos++;
+            }
+        }
 
-            if (isActive && now.get() - lastCharTime.getOrDefault((long) key, 0L) >= cooldowns.getOrDefault(key, DEBOUNCE_DELAY_MS)) {
-                if (isValidKey(key)) {
-                    if (key == GLFW.GLFW_KEY_SPACE) {
-                        input = insertAt(cursorPos, " ", input);
-                        //input += " ";
-                    } else {
-                        input = insertAt(cursorPos, InputUtil.fromKeyCode(key, scancode).getLocalizedText().getLiteralString(), input);
-                        //input += InputUtil.fromKeyCode(key, scancode).getLocalizedText().getLiteralString();
-                    }
-                    cursorPos++;
-                } else if (key == GLFW.GLFW_KEY_BACKSPACE && !input.isEmpty() && cursorPos > 0) {
-                    input = removeAt(cursorPos, input);
-                    cursorPos--;
-                } else if (key == GLFW.GLFW_KEY_DELETE && !input.isEmpty()) {
-                    input = removeAt(cursorPos + 1, input);
-                } else if (key == GLFW.GLFW_KEY_LEFT) {
-                    cursorPos--;
-                } else if (key == GLFW.GLFW_KEY_RIGHT) {
-                    cursorPos++;
-                }
-                lastCharTime.put((long) key, now.get());
-                cooldowns.putIfAbsent(key, DEBOUNCE_DELAY_MS);
+//        if (action == GLFW.GLFW_RELEASE) {
+//            cooldowns.remove(key);
+//        } else {
+//            if(action == GLFW.GLFW_PRESS) {
+//                DEBOUNCE_DELAY_MS = 100;
+//
+//            } else if (action == GLFW.GLFW_REPEAT) {
+//                DEBOUNCE_DELAY_MS = 10;
+//            }
+//
+//            if (isActive && now.get() - lastCharTime.getOrDefault((long) key, 0L) >= cooldowns.getOrDefault(key, DEBOUNCE_DELAY_MS)) {
+//                if (isValidKey(key)) {
+//                    if (key == GLFW.GLFW_KEY_SPACE) {
+//                        input = insertAt(cursorPos, " ", input);
+//                        //input += " ";
+//                    } else {
+//                        input = insertAt(cursorPos, InputUtil.fromKeyCode(key, scancode).getLocalizedText().getLiteralString(), input);
+//                        //input += InputUtil.fromKeyCode(key, scancode).getLocalizedText().getLiteralString();
+//                    }
+//                    cursorPos++;
+//                } else if (key == GLFW.GLFW_KEY_BACKSPACE && !input.isEmpty() && cursorPos > 0) {
+//                    input = removeAt(cursorPos, input);
+//                    cursorPos--;
+//                } else if (key == GLFW.GLFW_KEY_DELETE && !input.isEmpty()) {
+//                    input = removeAt(cursorPos + 1, input);
+//                } else if (key == GLFW.GLFW_KEY_LEFT) {
+//                    cursorPos--;
+//                } else if (key == GLFW.GLFW_KEY_RIGHT) {
+//                    cursorPos++;
+//                }
+//                lastCharTime.put((long) key, now.get());
+//                cooldowns.putIfAbsent(key, DEBOUNCE_DELAY_MS);
+//            }
+//        }
+    }
+
+    public void onCharInput(CharInputEvent event) {
+        EasyTextInput ti = this;
+        if (ti != null && ti.isActive()) {
+            char c = event.getCharacter();
+            // nur druckbare Zeichen akzeptieren
+            if (!Character.isISOControl(c)) {
+                ti.insertCharAtCursor(c);
             }
         }
     }
+
 
     protected boolean isValidKey(int key) {
         if(key == 32) return true;
@@ -213,6 +248,13 @@ public class EasyTextInput extends EasyElement{
         String rightSub = src.substring(i);
         return leftSub + value + rightSub;
     }
+
+    public void insertCharAtCursor(char c) {
+        // Einfügen an der Cursor‐Position
+        input = insertAt(cursorPos, String.valueOf(c), input);
+        cursorPos++;
+    }
+
 
     protected String removeAt(int i, String src) {
         if(i < 0 || i > src.length() || src.isEmpty()){

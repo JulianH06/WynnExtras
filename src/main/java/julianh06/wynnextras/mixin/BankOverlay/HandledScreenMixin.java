@@ -863,8 +863,18 @@ public abstract class HandledScreenMixin {
             }
             System.out.println("Click in: " + (hoveredInvIndex) + " playerInvIndex " + playerInvIndex + " activeInv " + activeInv);
             if (hoveredInvIndex == activeInv) {
+                ItemStack oldHeld = heldItem;
                 heldItem = getHeldItem(hoveredIndex, actionType, button); //heldItem = McUtils.mc().player.currentScreenHandler.slots.get(hoveredIndex).getStack().copy();
+                if(oldHeld != null) {
+                    if ((oldHeld.getItem() == Items.EMERALD ||
+                            oldHeld.getItem() == Items.EMERALD_BLOCK ||
+                            oldHeld.getItem() == Items.EXPERIENCE_BOTTLE) &&
+                            heldItem.getCustomName().getString().contains("Pouch")) {
+                        heldItem = null;
+                    }
+                }
                 //System.out.println("Clicked: " + heldItem.getName() + " hoveredIndex: " + hoveredInvIndex);
+
                 MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, hoveredIndex, button, actionType, MinecraftClient.getInstance().player);
                 annotationCache.get(activeInv).clear();
                 lastClickedSlot = hoveredIndex;
@@ -872,9 +882,20 @@ public abstract class HandledScreenMixin {
                 return;
             } else if (hoveredInvIndex == playerInvIndex + scrollOffset) { //i know this is ugly i wanted to do it with a variable but that somehow didnt work dont ask me why
                 System.out.println("playerinv click");
+                ItemStack oldHeld = heldItem;
                 heldItem = getHeldItem(hoveredIndex + 54, actionType, button); //McUtils.mc().player.currentScreenHandler.slots.get(hoveredIndex + 54).getStack().copy();
+                if(oldHeld != null) {
+                    if ((oldHeld.getItem() == Items.EMERALD ||
+                            oldHeld.getItem() == Items.EMERALD_BLOCK ||
+                            oldHeld.getItem() == Items.EXPERIENCE_BOTTLE) &&
+                            heldItem.getCustomName().getString().contains("Pouch")) {
+                        heldItem = null;
+                    }
+                }
                 //System.out.println("Clicked: " + heldItem.getName() + " hoveredIndex: " + hoveredInvIndex);
+
                 MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, hoveredIndex + 54, button, actionType, MinecraftClient.getInstance().player);
+
                 annotationCache.get(playerInvIndex).clear();
                 lastClickedSlot = hoveredIndex + 54;
                 cir.cancel();
@@ -955,7 +976,7 @@ public abstract class HandledScreenMixin {
                 case SlotActionType.PICKUP -> {
                     heldItem = McUtils.mc().player.currentScreenHandler.slots.get(index).getStack().copy();
                     if (heldItem != null && HandledScreenMixin.heldItem != null) {
-                        if (heldItem.getItem() == HandledScreenMixin.heldItem.getItem()) {
+                        if (ItemStack.areItemsAndComponentsEqual(heldItem, HandledScreenMixin.heldItem)) {
                             if (HandledScreenMixin.heldItem.getCount() + heldItem.getCount() <= heldItem.getMaxCount()) {
                                 heldItem = Items.AIR.getDefaultStack();
                             } else {
@@ -974,7 +995,7 @@ public abstract class HandledScreenMixin {
                     }
                     int newAmount = HandledScreenMixin.heldItem.getCount();
                     for (Slot slot : McUtils.mc().player.currentScreenHandler.slots) {
-                        if (slot.getStack().getItem() == currentStack.getItem()) {
+                        if (ItemStack.areItemsAndComponentsEqual(slot.getStack(), currentStack)) {
                             newAmount += slot.getStack().getCount();
                             System.out.println("new amount is " + newAmount);
                             if (newAmount > currentStack.getMaxCount()) {
@@ -1217,6 +1238,11 @@ public abstract class HandledScreenMixin {
         }
         RenderUtils.drawTexturedRect(context.getMatrices(), signRight, x + 10 + 10 * amount/* + 54*/, y - 13, 10, 15, 10, 15);
 
+    }
+
+    @Inject(method = "init", at = @At("HEAD"))
+    public void onInit(CallbackInfo ci) {
+        heldItem = Items.AIR.getDefaultStack();
     }
 
     @Inject(method = "close", at = @At("HEAD"))

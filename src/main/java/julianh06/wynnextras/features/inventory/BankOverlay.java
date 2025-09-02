@@ -6,6 +6,7 @@ import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -45,6 +46,13 @@ public class BankOverlay {
     public void onInput(KeyInputEvent event) {
         if(activeTextInput != null) {
             activeTextInput.onInput(event);
+        }
+    }
+
+    @SubscribeEvent
+    public void onChar(CharInputEvent event) {
+        if(activeTextInput != null) {
+            activeTextInput.onCharInput(event);
         }
     }
 

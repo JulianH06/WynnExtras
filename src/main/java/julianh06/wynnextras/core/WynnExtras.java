@@ -6,6 +6,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.core.loader.WELoader;
@@ -142,6 +143,10 @@ public class WynnExtras implements ClientModInitializer {
 				if (previousCallback != null) {
 					previousCallback.invoke(window, key, scancode, action, mods);
 				}
+			});
+
+			GLFW.glfwSetCharCallback(MinecraftClient.getInstance().getWindow().getHandle(), (win, codepoint) -> {
+				new CharInputEvent((char) codepoint).post();
 			});
 
 		}

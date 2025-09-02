@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.raid;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.event.KeyInputEvent;
+import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -36,36 +37,22 @@ public class RaidListFilter extends EasyTextInput {
         if (action == GLFW.GLFW_RELEASE) {
             cooldowns.remove(key);
         } else {
-            if(action == GLFW.GLFW_PRESS) {
-                DEBOUNCE_DELAY_MS = 100;
-
-            } else if (action == GLFW.GLFW_REPEAT) {
-                DEBOUNCE_DELAY_MS = 10;
+            // Backspace
+            if (key == GLFW.GLFW_KEY_BACKSPACE && cursorPos > 0) {
+                input = removeAt(cursorPos, input);
+                cursorPos--;
             }
-
-            System.out.println("ISACTIVE: " + this.isActive);
-            if (now.get() - lastCharTime.getOrDefault((long) key, 0L) >= cooldowns.getOrDefault(key, DEBOUNCE_DELAY_MS)) {
-                if (isValidKey(key)) {
-                    if (key == GLFW.GLFW_KEY_SPACE) {
-                        input = insertAt(cursorPos, " ", input);
-                        //input += " ";
-                    } else {
-                        input = insertAt(cursorPos, InputUtil.fromKeyCode(key, scancode).getLocalizedText().getLiteralString(), input);
-                        //input += InputUtil.fromKeyCode(key, scancode).getLocalizedText().getLiteralString();
-                    }
-                    cursorPos++;
-                } else if (key == GLFW.GLFW_KEY_BACKSPACE && !input.isEmpty() && cursorPos > 0) {
-                    input = removeAt(cursorPos, input);
-                    cursorPos--;
-                } else if (key == GLFW.GLFW_KEY_DELETE && !input.isEmpty()) {
-                    input = removeAt(cursorPos + 1, input);
-                } else if (key == GLFW.GLFW_KEY_LEFT) {
-                    cursorPos--;
-                } else if (key == GLFW.GLFW_KEY_RIGHT) {
-                    cursorPos++;
-                }
-                lastCharTime.put((long) key, now.get());
-                cooldowns.putIfAbsent(key, DEBOUNCE_DELAY_MS);
+            // Delete
+            else if (key == GLFW.GLFW_KEY_DELETE && cursorPos < input.length()) {
+                input = removeAt(cursorPos + 1, input);
+            }
+            // left arrow
+            else if (key == GLFW.GLFW_KEY_LEFT && cursorPos > 0) {
+                cursorPos--;
+            }
+            // right arrow
+            else if (key == GLFW.GLFW_KEY_RIGHT && cursorPos < input.length()) {
+                cursorPos++;
             }
         }
     }

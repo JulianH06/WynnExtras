@@ -3,7 +3,6 @@ package julianh06.wynnextras.features.raid;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.models.raid.raids.*;
 import com.wynntils.models.raid.type.RaidRoomInfo;
-import com.wynntils.screens.base.widgets.TextInputBoxWidget;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.SkinUtils;
 import com.wynntils.utils.render.FontRenderer;
@@ -12,6 +11,7 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.mixin.Accessor.RaidInfoAccessor;
 import julianh06.wynnextras.utils.SkinManager;
@@ -26,6 +26,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -36,9 +37,9 @@ public class RaidListScreen extends Screen {
     public static int scrollOffset = 0;
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 0; // in ms
-    public static int currentCollapsed = -1;
-    private static float currentCollapsedProgress = 0;
-    private static int lastCollapsed = -1;
+    public static List<Boolean> currentCollapsed = new ArrayList<>();
+    private static List<Float> currentCollapsedProgress = new ArrayList<>();
+//    private static int lastCollapsed = -1;
 
     public static List<RaidListElement> listElements = new ArrayList<>();
 
@@ -91,7 +92,7 @@ public class RaidListScreen extends Screen {
 //        }
 
         listElements.clear();
-        currentCollapsed = -1;
+        //currentCollapsed = -1;
         int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
         int width = (int) (screenWidth * 0.5);
         int xStart = screenWidth / 2 - width / 2;
@@ -145,29 +146,35 @@ public class RaidListScreen extends Screen {
         List<RaidData> sortedList = sort(filteredList);
         int i = 0;
         for(RaidData raid : sortedList) {
-            float yPos = 80 + 10 + 50 * i - scrollOffset;
-            boolean isCollapsed = currentCollapsed == i || lastCollapsed == i;
-            if(!isCollapsed) listElements.get(i).setHeight(40);
-            if(currentCollapsed != -1 && currentCollapsed < i) {
-                yPos += currentCollapsedProgress;
-            } else if(lastCollapsed < i && lastCollapsed != -1) {
-                yPos += currentCollapsedProgress;
-            }
+            while (i >= currentCollapsedProgress.size()) currentCollapsedProgress.add(0f);
+            while (i >= currentCollapsed.size()) currentCollapsed.add(false);
+
+//            float yPos = 80 + 10 + 50 * i - scrollOffset;
+            boolean isCollapsed = currentCollapsed.get(i);
+//            if(!isCollapsed) listElements.get(i).setHeight(40);
+//            if(currentCollapsed != -1 && currentCollapsed < i) {
+//                yPos += currentCollapsedProgress.get(i);
+//            } else if(lastCollapsed < i && lastCollapsed != -1) {
+//                yPos += currentCollapsedProgress.get(i);
+//            }
+            float yPos = getElementY(i);
+            yPos += 10 - scrollOffset;
+            yPos += 50 * i;
 
 
-            if (yPos + 80 + (isCollapsed ? 1 : 0) * currentCollapsedProgress >= 0 && yPos <= screenHeight) {
+            if (yPos + 80 + currentCollapsedProgress.get(i) >= 0 && yPos <= screenHeight) {
                 Identifier raidTexture = getTexture(raid.raidInfo.getRaidKind());
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureTopLeft, xStart, yPos, 0, 12, 20, 12, 20);
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureTopMid, xStart + 12, yPos, 0, width - 24, 20, width - 24, 20);
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureTopRight, xStart - 12 + width, yPos, 0, 12, 20, 12, 20);
-                if(isCollapsed) RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddle, xStart, yPos + 20, 0, width, 20, width, 20);
-                if(isCollapsed && currentCollapsedProgress >= 20)
+                if(currentCollapsedProgress.get(i) >= 0) RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddle, xStart, yPos + 20, 0, width, 20, width, 20);
+                if(currentCollapsedProgress.get(i) >= 20)
                     RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddle, xStart, yPos + 40, 0, width, 20, width, 20);
-                if(isCollapsed && currentCollapsedProgress >= 40)
+                if(currentCollapsedProgress.get(i) >= 40)
                     RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddle, xStart, yPos + 60, 0, width, 20, width, 20);
-                if(isCollapsed && currentCollapsedProgress >= 60)
+                if(currentCollapsedProgress.get(i) >= 60)
                     RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddle, xStart, yPos + 80, 0, width, 20, width, 20);
-                if(isCollapsed) {
+
                     for (int j = 0; j < 4; j++) {
                         boolean partyError = false;
                         String name;
@@ -193,7 +200,7 @@ public class RaidListScreen extends Screen {
 //                            RenderUtils.drawTexturedRect(context.getMatrices(), DefaultSkinHelper.getTexture(), xStart + 25, yPos + 22 + j * 20, 0, 16, 16, 8, 8, 8, 8, 64, 64);
 //                        }
 
-                         if(currentCollapsedProgress >= 20 * j) {
+                         if(currentCollapsedProgress.get(i) >= 20 * j) {
                              Identifier Skin;
                              if (partyError) {
                                 Skin = DefaultSkinHelper.getTexture();
@@ -212,7 +219,7 @@ public class RaidListScreen extends Screen {
                     Map<Integer, RaidRoomInfo> challenges = ((RaidInfoAccessor)raid.raidInfo).getChallenges();
                     if(challenges != null) {
                         for(int j = 0; j < challenges.size(); j++) {
-                            if(currentCollapsedProgress >= 20 * j) {
+                            if(currentCollapsedProgress.get(i) >= 20 * j) {
                                 RaidRoomInfo room = challenges.get(j + 1);
                                 if (room == null) continue;
                                 long roomDuration = room.getRoomTotalTime();
@@ -222,18 +229,18 @@ public class RaidListScreen extends Screen {
                             }
                         }
                     }
-                }
-                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomLeft, xStart, yPos + 20 + (isCollapsed ? 1 : 0) * currentCollapsedProgress, 0, 12, 20, 12, 20);
-                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomMid, xStart + 12, yPos + 20 + (isCollapsed ? 1 : 0) * currentCollapsedProgress, 0, width - 24, 20, width - 24, 20);
-                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomRight, xStart - 12 + width, yPos + 20 + (isCollapsed ? 1 : 0) * currentCollapsedProgress, 0, 12, 20, 12, 20);
+
+                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomLeft, xStart, yPos + 20 + currentCollapsedProgress.get(i), 0, 12, 20, 12, 20);
+                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomMid, xStart + 12, yPos + 20 + currentCollapsedProgress.get(i), 0, width - 24, 20, width - 24, 20);
+                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomRight, xStart - 12 + width, yPos + 20 + currentCollapsedProgress.get(i), 0, 12, 20, 12, 20);
                 RenderUtils.drawTexturedRect(context.getMatrices(), raidTexture, xStart + width / 2 - 15, yPos - 5, 0, 30, 30, 30, 30);
                 FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(raid.raidInfo.getRaidKind().getRaidName()), xStart + 10, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(convertTime(raid.raidEndTime)), xStart + width - textRenderer.getWidth(convertTime(raid.raidEndTime)) - 8, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(formatDuration(raid.duration)), xStart + width - textRenderer.getWidth(formatDuration(raid.duration)) - 8, (int) (yPos + 26 + (isCollapsed ? 1 : 0) * currentCollapsedProgress), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(formatDuration(raid.duration)), xStart + width - textRenderer.getWidth(formatDuration(raid.duration)) - 8, (int) (yPos + 26 + currentCollapsedProgress.get(i)), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 if(raid.completed) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString("Completed"), xStart + 10, (int) (yPos + 26 + (isCollapsed ? 1 : 0) * currentCollapsedProgress), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString("Completed"), xStart + 10, (int) (yPos + 26 + currentCollapsedProgress.get(i)), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 } else {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString("FAILED"), xStart + 10, (int) (yPos + 26 + (isCollapsed ? 1 : 0) * currentCollapsedProgress), CustomColor.fromHexString("FF0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString("FAILED"), xStart + 10, (int) (yPos + 26 + currentCollapsedProgress.get(i)), CustomColor.fromHexString("FF0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 }
                 //listElements.get(i).draw(context);
             }
@@ -261,7 +268,7 @@ public class RaidListScreen extends Screen {
         Filter.setWidth(width);
         Filter.setX(xStart);
         Filter.setY(2);
-        Filter.setSearchText("Example: from:-7d until:31/01/25:23:59 with:player1,player2,player3");
+        Filter.setSearchText("Example: from:-7d4h until:2025-01-31/23:59 players:player1,player2,player3");
         Filter.drawWithTexture(context, InputFieldTexture);
 
         if(NOTGFilterButton.isActive) NOTGFilterButton.drawWithTexture(context, NOTGTexture);
@@ -279,22 +286,26 @@ public class RaidListScreen extends Screen {
         FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(totalString), xStart + (float) width / 2 - textRenderer.getWidth(totalString) * 0.5f, 57, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
 
 
-        if(currentCollapsed != -1) {
-            if(currentCollapsedProgress < 80) {
-                currentCollapsedProgress += 2;
-                RaidListElement currentElement = listElements.get(currentCollapsed);
-                currentElement.setHeight(currentElement.getHeight() + 2);
-            } else {
-                currentCollapsedProgress = 80;
-            }
-        } else {
-            if(lastCollapsed != -1) {
-                if (currentCollapsedProgress > 0) {
-                    currentCollapsedProgress -= 2;
-                    RaidListElement currentElement = listElements.get(lastCollapsed);
-                    currentElement.setHeight(currentElement.getHeight() - 2);
+        for (int j = 0; j < listElements.size(); j++) {
+            if(currentCollapsed.get(j)) {
+                while (j >= currentCollapsedProgress.size()) currentCollapsedProgress.add(0f);
+                if(currentCollapsedProgress.get(j) < 80) {
+                    currentCollapsedProgress.set(j, currentCollapsedProgress.get(j) + 2);
+                    listElements.get(j).setHeight(listElements.get(j).getHeight() + 2);
                 } else {
-                    lastCollapsed = -1;
+                    currentCollapsedProgress.set(j, 80f);
+                    listElements.get(j).setHeight(120);
+                }
+            } else {
+                while (j >= currentCollapsedProgress.size()) currentCollapsedProgress.add(0f);
+                if (currentCollapsedProgress.get(j) > 0) {
+                    currentCollapsedProgress.set(j, currentCollapsedProgress.get(j) - 2);
+                    RaidListElement currentElement = listElements.get(j);
+                    listElements.get(j).setHeight(listElements.get(j).getHeight() - 2);
+                } else {
+                    currentCollapsed.set(j, false);
+                    currentCollapsedProgress.set(j, 0f);
+                    listElements.get(j).setHeight(40);
                 }
             }
         }
@@ -364,10 +375,13 @@ public class RaidListScreen extends Screen {
             int yPos = getElementY(i);
 
             if (element.isClickInBounds((int) mouseX, (int) mouseY - yPos + scrollOffset)) {
-                currentCollapsed = (currentCollapsed == i) ? -1 : i;
-                if(currentCollapsed == -1) lastCollapsed = i;
-                element.click();
-                System.out.println("NEW COLLAPSED: " + currentCollapsed);
+                if(currentCollapsed.get(i)) {
+                    currentCollapsed.set(i, false);
+                } else {
+                    element.click();
+                    currentCollapsed.set(i, true);
+                    currentCollapsedProgress.set(i, 0f);
+                }
                 return true;
             }
         }
@@ -375,10 +389,14 @@ public class RaidListScreen extends Screen {
     }
 
     private int getElementY(int index) {
-        int y = 70;
+        int y = 80;
 
-        if (currentCollapsed != -1 && index > currentCollapsed) {
-            y += currentCollapsedProgress;
+        for (int i = 0; i < listElements.size(); i++) {
+            if(index <= i) break;
+            while (i >= currentCollapsedProgress.size()) currentCollapsedProgress.add(0f);
+            while (i >= currentCollapsed.size()) currentCollapsed.add(false);
+
+            y += currentCollapsedProgress.get(i);
         }
 
         return y;
@@ -396,7 +414,45 @@ public class RaidListScreen extends Screen {
     public List<RaidData> filterList(List<RaidData> rawList) {
         List<RaidData> result = new ArrayList<>();
 
+        RaidParser parsed = RaidParser.parse(Filter.getInput());
+
+        LocalDateTime from = parsed.from;
+        ZoneId zoneId = ZoneId.systemDefault(); // or: ZoneId.of("Europe/Oslo");
+        long fromEpoch = 0;
+        if(from != null) {
+            fromEpoch = from.atZone(zoneId).toEpochSecond() * 1000;
+        }
+        LocalDateTime until = parsed.until;
+        long untilEpoch = 0;
+        if(until != null) {
+            untilEpoch = until.atZone(zoneId).toEpochSecond() * 1000;
+        }
+        List<String> players = parsed.players;
+
         for(RaidData raid : rawList) {
+            if(from != null && fromEpoch != 0) {
+                if(raid.raidEndTime < fromEpoch) {
+                    continue;
+                }
+            }
+
+            if(until != null && untilEpoch != 0) {
+                if(raid.raidEndTime > untilEpoch) {
+                    continue;
+                }
+            }
+
+            if(!players.isEmpty()) {
+                boolean playerNotContained = false;
+                for (String player : players) {
+                    if(raid.players.stream().noneMatch(p -> p.equalsIgnoreCase(player))) {
+                        playerNotContained = true;
+                        break;
+                    }
+                }
+                if(playerNotContained) continue;
+            }
+
             if(PBFilterButton.isActive && !raid.completed) {
                 continue;
             }
@@ -431,5 +487,10 @@ public class RaidListScreen extends Screen {
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
         Filter.onInput(event);
+    }
+
+    @SubscribeEvent
+    public void onChar(CharInputEvent event) {
+        Filter.onCharInput(event);
     }
 }
