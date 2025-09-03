@@ -286,7 +286,7 @@ public abstract class HandledScreenMixin {
 //                            System.out.println("Should wait!");
 //                        }
                         if (j == 0) {
-                            String rawText = invslots.get(52).getStack().getName().getString();
+                            String rawText = McUtils.containerMenu().getSlot(52).getStack().getName().getString();
                             String cleanedText = rawText.replaceAll("§[0-9a-fk-or]", "");
                             if (!cleanedText.contains("Page " + (activeInv + 2))) {
                                 shouldWait = true;
