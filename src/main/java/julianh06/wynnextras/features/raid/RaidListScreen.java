@@ -201,19 +201,19 @@ public class RaidListScreen extends Screen {
 //                        }
 
                          if(currentCollapsedProgress.get(i) >= 20 * j) {
-                             Identifier Skin;
-                             if (partyError) {
-                                Skin = DefaultSkinHelper.getTexture();
-                             } else
-                                 try {
-                                     Skin = SkinUtils.getSkin(SkinManager.getUUIDFromUsernameCached(name));
-                                 } catch (IOException e) {
-                                     Skin = DefaultSkinHelper.getTexture();
-                                 }
+//                             Identifier Skin;
+//                             if (partyError) {
+//                                Skin = DefaultSkinHelper.getTexture();
+//                             } else
+//                                 try {
+//                                     Skin = SkinUtils.getSkin(SkinManager.getUUIDFromUsernameCached(name));
+//                                 } catch (IOException e) {
+//                                     Skin = DefaultSkinHelper.getTexture();
+//                                 }
+//
+//                             RenderUtils.drawTexturedRect(context.getMatrices(), Skin, xStart + 25, yPos + 22 + j * 20, 0, 16, 16, 8, 8, 8, 8, 64, 64);
 
-                             RenderUtils.drawTexturedRect(context.getMatrices(), Skin, xStart + 25, yPos + 22 + j * 20, 0, 16, 16, 8, 8, 8, 8, 64, 64);
-
-                             FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(name), xStart + 45, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                             FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(name), xStart + 25, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                         }
                     }
                     Map<Integer, RaidRoomInfo> challenges = ((RaidInfoAccessor)raid.raidInfo).getChallenges();

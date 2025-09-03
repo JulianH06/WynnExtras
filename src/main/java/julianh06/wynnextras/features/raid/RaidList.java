@@ -74,7 +74,7 @@ public class RaidList {
 
     @SubscribeEvent
     void onRaidEnded(RaidEndedEvent event) {
-        List<String> members = Models.Party.getPartyMembers();
+        List<String> members = RaidMemberDetector.members;
         McUtils.sendMessageToClient(Text.of("[Wynnextras] Raid ended."));
         if(event instanceof RaidEndedEvent.Completed) {
             Long raidEndTime = ((RaidInfoAccessor) event.getRaid()).getRaidStartTime() + event.getRaid().getTimeInRaid();
@@ -86,6 +86,7 @@ public class RaidList {
             INSTANCE.raids.add(new RaidData(event.getRaid(), members, raidEndTime, false));
             RaidListData.save();
         }
+        members.clear();
     }
 
     @SubscribeEvent
