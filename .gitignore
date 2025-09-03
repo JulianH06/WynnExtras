@@ -29,6 +29,7 @@ bin/
 *.DS_Store
 
 # fabric
+tream
 
 run/
 
