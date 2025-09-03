@@ -11,33 +11,39 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.regex.Pattern;
-
-@Mixin (MessageFilterFeature.class)
+@Mixin(MessageFilterFeature.class)
 public class MessageFilterFeatureMixin {
     @Unique
     private static WynnExtrasConfig config;
 
-    @Inject(method = "onMessage", at = @At("TAIL"), remap = false)
-    void blockMessage(ChatMessageReceivedEvent e, CallbackInfo ci) {
+    @Inject(method = "onMessage", at = @At("HEAD"), remap = false)
+    void preProcessMessage(ChatMessageReceivedEvent e, CallbackInfo ci) {
 
-        if(config == null) {
+        if (config == null) {
             config = SimpleConfig.getInstance(WynnExtrasConfig.class);
         }
 
-    String msgLower = e.getStyledText().withoutFormatting().getString().toLowerCase();
 
-         if (!msgLower.contains(":")) {
-                    for (Pattern pattern : RaidChatNotifier.BLOCKED_PATTERNS) {
-                        if (pattern.matcher(msgLower).find()) {
-                            e.setCanceled(true);
-                            return;
-                        }
-                    }
+        RaidChatNotifier.handleMessage(e.getStyledText().withoutFormatting().getString());
+
+
+
+        String msgLower = e.getStyledText().withoutFormatting().getString().toLowerCase();
+      if (!msgLower.contains(":")) {
+            for (Pattern pattern : RaidChatNotifier.BLOCKED_PATTERNS) {
+                if (pattern.matcher(msgLower).find()) {
+                    e.setCanceled(true);
+                    return;
                 }
-        for(String blockedWord : config.blockedWords) {
+            }
+
+
+
+        for (String blockedWord : config.blockedWords) {
             if (msgLower.contains(blockedWord.toLowerCase())) {
                 e.setCanceled(true);
             }
         }
     }
-}
+
+}}

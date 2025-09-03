@@ -46,46 +46,42 @@ public class RaidChatNotifier {
     private static final long MESSAGE_DELAY_MS = 250;
     private static long lastMessageTime = 0;
 
-    public static void handleMessage(Text message) {
-        if (!config.toggleRaidTimestamps) return;
-
-        String rawMsg = message.getString();
-
-        if (rawMsg.contains(":")) {
-                return;
-            }
-
-        long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
-                           ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()
-                           : 0;
+   public static void handleMessage(String rawMsg) {
+       if (!config.toggleRaidTimestamps) return;
 
 
-            String msg = stripColorCodes(message.getString());
 
-            for (RaidMessageDetector detector : detectors) {
-                if (detector.matches(msg)) {
-                    String timestamp = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
-                                        ? formatTime(currentTime)
-                                        : "??:??.???";
+       long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
+                          ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()
+                          : 0;
 
-                    String progress = detector.extractProgress(msg);
-                    String finalMsg = detector.getFormattedMessage(progress, timestamp);
+       String msg = stripColorCodes(rawMsg);
 
-                    new Thread(() -> {
-                                    try {
-                                        Thread.sleep(20);
-                                    } catch (InterruptedException e) {
-                                        Thread.currentThread().interrupt();
-                                    }
-                                    if (!finalMsg.isEmpty()) {
-                                        McUtils.sendMessageToClient(Text.literal(finalMsg));
-                                    }
-                                }).start();
+       for (RaidMessageDetector detector : detectors) {
+           if (detector.matches(msg)) {
+               String timestamp = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
+                                   ? formatTime(currentTime)
+                                   : "??:??.???";
 
-                                return;
-            }
-        }
-    }
+               String progress = detector.extractProgress(msg);
+               String finalMsg = detector.getFormattedMessage(progress, timestamp);
+
+               new Thread(() -> {
+                   try {
+                       Thread.sleep(20);
+                   } catch (InterruptedException e) {
+                       Thread.currentThread().interrupt();
+                   }
+                   if (!finalMsg.isEmpty()) {
+                       McUtils.sendMessageToClient(Text.literal(finalMsg));
+                   }
+               }).start();
+
+               return;
+           }
+       }
+   }
+
 
 
 
@@ -115,9 +111,9 @@ public class RaidChatNotifier {
     }
 
 
-    public static final List<Pattern> BLOCKED_PATTERNS = Arrays.asList(
-        Pattern.compile("is preparing to descend! [1/2]", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("is preparing to descend! [2/2]", Pattern.CASE_INSENSITIVE),
+         public static final List<Pattern> BLOCKED_PATTERNS = Arrays.asList(
+        Pattern.compile("is preparing to descend! \\[1/2", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("is preparing to descend! \\[2/2", Pattern.CASE_INSENSITIVE),
         Pattern.compile("upper level must kill the slime chomper", Pattern.CASE_INSENSITIVE),
         Pattern.compile("players on the upper level must kill the carnivorous", Pattern.CASE_INSENSITIVE),
         Pattern.compile("players on the upper level must kill the invasive", Pattern.CASE_INSENSITIVE),
@@ -127,9 +123,9 @@ public class RaidChatNotifier {
         Pattern.compile("3/3 clouds purified", Pattern.CASE_INSENSITIVE),
         Pattern.compile("the team has reached the checkpoint!", Pattern.CASE_INSENSITIVE),
         Pattern.compile("100% rock destroyed", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("[+1 slimey goo]", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("[+2 slimey goo]", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("+1 [isoptera heart]", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("1 slimey goo", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("2 slimey goo", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("1 \\[isoptera heart", Pattern.CASE_INSENSITIVE),
         Pattern.compile("has entered the tree", Pattern.CASE_INSENSITIVE),
 
 
@@ -324,6 +320,9 @@ public class RaidChatNotifier {
         private long lastWatchPhaseTime = -1;
         private long firstWatchPhasePB = -1;
         private long watchPhasePB = -1;
+        public void resetForNewRaid() {
+            lastWatchPhaseTime = -1; // nur die Zeit zurücksetzen
+        }
 
         private static final Pattern PATTERN = Pattern.compile(
             "The Obelisks have appeared; they must be", Pattern.CASE_INSENSITIVE);
@@ -358,10 +357,13 @@ public class RaidChatNotifier {
                 }
             } else {
                 long duration = currentTime - lastWatchPhaseTime;
-
+                long oldPB = watchPhasePB;
                 if (watchPhasePB == -1 || duration < watchPhasePB) {
                     watchPhasePB = duration;
                     message = "§2[WynnExtras] §bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §e[New Session PB!]";
+                    if (oldPB != -1) {
+                        message += " §7[Old: " + formatTime(oldPB) + "]";
+                    }
                 } else {
                     message = "§2[WynnExtras] §bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §7[Session PB: " + formatTime(watchPhasePB) + "]";
                 }
@@ -412,78 +414,79 @@ public class RaidChatNotifier {
 
 
 
-private static class MultiOccurrenceDetector implements RaidMessageDetector {
-    private final String trigger;
-    private final String baseMessage;
-    private int occurrenceCount = 0;
-    private final Map<Integer, Long> pbs = new HashMap<>();
+     private static class MultiOccurrenceDetector implements RaidMessageDetector {
+         private final Pattern pattern;
+         private final String baseMessage;
+         private int occurrenceCount = 0;
+         private final Map<Integer, Long> pbs = new HashMap<>();
 
-    private long lastTriggerTime = -1;
-    private static final long MIN_INTERVAL_MS = 1000;
+         private long lastTriggerTime = -1;
 
+         public MultiOccurrenceDetector(String regex, String baseMessage) {
+             this.pattern = Pattern.compile(Pattern.quote(regex), Pattern.CASE_INSENSITIVE);
+             this.baseMessage = baseMessage;
+         }
 
-    public MultiOccurrenceDetector(String trigger, String baseMessage) {
-        this.trigger = trigger;
-        this.baseMessage = baseMessage;
-    }
+         @Override
+         public boolean matches(String msg) {
+             return pattern.matcher(msg).find();
+         }
 
-    @Override
-    public boolean matches(String msg) {
-        return msg.contains(trigger);
-    }
+         @Override
+         public String extractProgress(String msg) {
+             if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
+                 return null;
+             }
 
-    @Override
-    public String extractProgress(String msg) {
-     if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
-            return null;
-        }
-        long now = System.currentTimeMillis();
-                if (lastTriggerTime != -1 && (now - lastTriggerTime) < 3000) {
-                    return null;
-                }
-                lastTriggerTime = now;
-        occurrenceCount++;
-        return "[" + occurrenceCount + "]";
-    }
+             long now = System.currentTimeMillis();
+             if (lastTriggerTime != -1 && (now - lastTriggerTime) < 3000) {
+                 return null; // anti-spam
+             }
+             lastTriggerTime = now;
 
+             occurrenceCount++;
+             return "[" + occurrenceCount + "]";
+         }
 
+         @Override
+         public String getFormattedMessage(String progress, String timestamp) {
+             if (progress == null) {
+                 progress = "[" + occurrenceCount + "]";
+             }
+             if (timestamp == null) {
+                 timestamp = "??:??";
+             }
 
-    @Override
-    public String getFormattedMessage(String progress, String timestamp) {
-        if (progress == null) {
-            progress = "[" + occurrenceCount + "]";
-        }
-        if (timestamp == null) {
-            timestamp = "??:??";
-        }
+             String msg;
 
-        String msg;
+             if (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null) {
+                 long currentTime = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
+                 Long pb = pbs.get(occurrenceCount);
 
-        if (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null) {
-            long currentTime = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
-            Long pb = pbs.get(occurrenceCount);
+                 if (pb == null || currentTime < pb) {
+                     pbs.put(occurrenceCount, currentTime);
+                     msg = baseMessage + progress + " §c@ " + timestamp + " §e[New Session PB!]";
+                 } else {
+                     msg = baseMessage + progress + " §c@ " + timestamp +
+                           " §7[Session PB: " + formatTime(pb) + "]";
+                 }
+             } else {
+                 msg = baseMessage + progress + " §c@ " + timestamp;
+             }
+             return msg;
+         }
+     }
 
-            if (pb == null || currentTime < pb) {
-                pbs.put(occurrenceCount, currentTime);
-                msg = baseMessage + progress + " §c@ " + timestamp + " §e[New Session PB!]";
-            } else {
-                msg = baseMessage + progress + " §c@ " + timestamp +
-                      " §7[Session PB: " + formatTime(pb) + "]";
-            }
-        } else {
-            msg = baseMessage + progress + " §c@ " + timestamp;
-        }
-        return msg;
-    }
-
-
-}
 
 public static void resetCounters() {
         for (RaidMessageDetector detector : detectors) {
             if (detector instanceof MultiOccurrenceDetector m) {
                 m.occurrenceCount = 0;
             }
-        }
-    }
+            else if (detector instanceof WatchPhaseDetector w) {
+                        w.resetForNewRaid();
+
+          }
+      }
+  }
 }
