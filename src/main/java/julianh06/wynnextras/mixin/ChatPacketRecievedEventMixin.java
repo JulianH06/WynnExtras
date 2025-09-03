@@ -1,6 +1,7 @@
 package julianh06.wynnextras.mixin;
 
 import com.wynntils.mc.event.ChatPacketReceivedEvent;
+import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.features.chat.ChatNotificator;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ChatPacketRecievedEventMixin {
     @Inject(method = "<init>", at = @At("TAIL"), remap = false)
     public void started (Text message, CallbackInfo ci) {
-        ChatNotificator.onPlayerChatReceived(message);
+        new ChatEvent(message).post();
+        //ChatNotificator.onPlayerChatReceived(message);
     }
 }

@@ -2,6 +2,7 @@ package julianh06.wynnextras.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.wynntils.models.raid.type.RaidRoomInfo;
 import julianh06.wynnextras.config.simpleconfig.ConfigData;
 import julianh06.wynnextras.config.simpleconfig.ConfigHolder;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;

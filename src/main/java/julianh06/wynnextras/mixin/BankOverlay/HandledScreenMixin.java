@@ -3,23 +3,17 @@ package julianh06.wynnextras.mixin.BankOverlay;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.wynntils.core.components.Handlers;
 import com.wynntils.core.components.Models;
-import com.wynntils.core.components.Services;
 import com.wynntils.core.persisted.config.Config;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.features.inventory.*;
-import com.wynntils.functions.InventoryFunctions;
-import com.wynntils.handlers.item.GameItemAnnotator;
 import com.wynntils.handlers.item.ItemAnnotation;
 import com.wynntils.handlers.item.ItemHandler;
 import com.wynntils.mc.extension.ItemStackExtension;
 import com.wynntils.models.emeralds.type.EmeraldUnits;
 import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.WynnItemData;
-import com.wynntils.models.items.annotators.game.TeleportScrollAnnotator;
 import com.wynntils.models.items.items.game.*;
 import com.wynntils.models.items.properties.DurableItemProperty;
 import com.wynntils.services.itemfilter.statproviders.RarityStatProvider;
-import com.wynntils.services.itemrecord.type.SavedItem;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
@@ -31,12 +25,8 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.CappedValue;
-import com.wynntils.utils.wynn.InventoryUtils;
-import com.wynntils.utils.wynn.ItemUtils;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.features.inventory.*;
@@ -650,7 +640,7 @@ public abstract class HandledScreenMixin {
                 //if(i == 0) {
                 BankPageNameInputs.get(indexWithOffset).setX(xStart); //+ 62);
                 BankPageNameInputs.get(indexWithOffset).setY(yStart - 10);
-                if (!BankPageNameInputs.get(indexWithOffset).getActive() && BankPageNameInputs.get(indexWithOffset).getInput().isEmpty()) {
+                if (!BankPageNameInputs.get(indexWithOffset).isActive() && BankPageNameInputs.get(indexWithOffset).getInput().isEmpty()) {
                     BankPageNameInputs.get(indexWithOffset).setInput(pageString);
                 }
 //                } else {
@@ -814,8 +804,8 @@ public abstract class HandledScreenMixin {
             return;
         }
 
-        if ((!Searchbar.getActive() && Searchbar.isClickInBounds((int) mouseX, (int) mouseY))
-                || Searchbar.getActive() && !Searchbar.isClickInBounds((int) mouseX, (int) mouseY)) {
+        if ((!Searchbar.isActive() && Searchbar.isClickInBounds((int) mouseX, (int) mouseY))
+                || Searchbar.isActive() && !Searchbar.isClickInBounds((int) mouseX, (int) mouseY)) {
             Searchbar.click();
             return;
         }
@@ -823,8 +813,8 @@ public abstract class HandledScreenMixin {
         boolean clickedAnyNameInput = false;
         for (int i = scrollOffset; i < xFitAmount * yFitAmount - (xFitAmount - 1) + scrollOffset - 1; i++) {
             if (i > 19) break;
-            if ((!BankPageNameInputs.get(i).getActive() && BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY))
-                    || BankPageNameInputs.get(i).getActive() && !BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY)) {
+            if ((!BankPageNameInputs.get(i).isActive() && BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY))
+                    || BankPageNameInputs.get(i).isActive() && !BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY)) {
                 BankPageNameInputs.get(i).click();
                 if (BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY)) {
                     clickedAnyNameInput = true;
@@ -869,22 +859,44 @@ public abstract class HandledScreenMixin {
 
             if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
                 actionType = SlotActionType.QUICK_MOVE;
+                annotationCache.get(activeInv).clear();
             }
             System.out.println("Click in: " + (hoveredInvIndex) + " playerInvIndex " + playerInvIndex + " activeInv " + activeInv);
             if (hoveredInvIndex == activeInv) {
-                annotationCache.get(activeInv).clear();
+                ItemStack oldHeld = heldItem;
                 heldItem = getHeldItem(hoveredIndex, actionType, button); //heldItem = McUtils.mc().player.currentScreenHandler.slots.get(hoveredIndex).getStack().copy();
+                if(oldHeld != null) {
+                    if ((oldHeld.getItem() == Items.EMERALD ||
+                            oldHeld.getItem() == Items.EMERALD_BLOCK ||
+                            oldHeld.getItem() == Items.EXPERIENCE_BOTTLE) &&
+                            heldItem.getCustomName().getString().contains("Pouch")) {
+                        heldItem = null;
+                    }
+                }
                 //System.out.println("Clicked: " + heldItem.getName() + " hoveredIndex: " + hoveredInvIndex);
+
                 MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, hoveredIndex, button, actionType, MinecraftClient.getInstance().player);
+                annotationCache.get(activeInv).clear();
                 lastClickedSlot = hoveredIndex;
                 cir.cancel();
                 return;
             } else if (hoveredInvIndex == playerInvIndex + scrollOffset) { //i know this is ugly i wanted to do it with a variable but that somehow didnt work dont ask me why
-                annotationCache.get(playerInvIndex).clear();
                 System.out.println("playerinv click");
+                ItemStack oldHeld = heldItem;
                 heldItem = getHeldItem(hoveredIndex + 54, actionType, button); //McUtils.mc().player.currentScreenHandler.slots.get(hoveredIndex + 54).getStack().copy();
+                if(oldHeld != null) {
+                    if ((oldHeld.getItem() == Items.EMERALD ||
+                            oldHeld.getItem() == Items.EMERALD_BLOCK ||
+                            oldHeld.getItem() == Items.EXPERIENCE_BOTTLE) &&
+                            heldItem.getCustomName().getString().contains("Pouch")) {
+                        heldItem = null;
+                    }
+                }
                 //System.out.println("Clicked: " + heldItem.getName() + " hoveredIndex: " + hoveredInvIndex);
+
                 MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, hoveredIndex + 54, button, actionType, MinecraftClient.getInstance().player);
+
+                annotationCache.get(playerInvIndex).clear();
                 lastClickedSlot = hoveredIndex + 54;
                 cir.cancel();
                 return;
@@ -964,7 +976,7 @@ public abstract class HandledScreenMixin {
                 case SlotActionType.PICKUP -> {
                     heldItem = McUtils.mc().player.currentScreenHandler.slots.get(index).getStack().copy();
                     if (heldItem != null && HandledScreenMixin.heldItem != null) {
-                        if (heldItem.getItem() == HandledScreenMixin.heldItem.getItem()) {
+                        if (ItemStack.areItemsAndComponentsEqual(heldItem, HandledScreenMixin.heldItem)) {
                             if (HandledScreenMixin.heldItem.getCount() + heldItem.getCount() <= heldItem.getMaxCount()) {
                                 heldItem = Items.AIR.getDefaultStack();
                             } else {
@@ -983,7 +995,7 @@ public abstract class HandledScreenMixin {
                     }
                     int newAmount = HandledScreenMixin.heldItem.getCount();
                     for (Slot slot : McUtils.mc().player.currentScreenHandler.slots) {
-                        if (slot.getStack().getItem() == currentStack.getItem()) {
+                        if (ItemStack.areItemsAndComponentsEqual(slot.getStack(), currentStack)) {
                             newAmount += slot.getStack().getCount();
                             System.out.println("new amount is " + newAmount);
                             if (newAmount > currentStack.getMaxCount()) {
@@ -995,20 +1007,25 @@ public abstract class HandledScreenMixin {
                     currentStack.setCount(newAmount);
                     heldItem = currentStack;
                 }
+                case SlotActionType.QUICK_MOVE -> {
+                    heldItem = Items.AIR.getDefaultStack();
+                }
             }
         } else { //Right Click
             heldItem = HandledScreenMixin.heldItem;
-            if (heldItem != null && heldItem.getItem() == Items.AIR) {
-                heldItem = McUtils.mc().player.currentScreenHandler.slots.get(index).getStack().copy();
-                if (heldItem.getCount() % 2 == 0) {
-                    heldItem.setCount(heldItem.getCount() / 2);
+            if(heldItem != null) {
+                if (heldItem.getItem() == Items.AIR) {
+                    heldItem = McUtils.mc().player.currentScreenHandler.slots.get(index).getStack().copy();
+                    if (heldItem.getCount() % 2 == 0) {
+                        heldItem.setCount(heldItem.getCount() / 2);
+                    } else {
+                        heldItem.setCount(heldItem.getCount() / 2 + 1);
+                    }
+                } else if (heldItem.getCount() == 1) {
+                    heldItem = Items.AIR.getDefaultStack();
                 } else {
-                    heldItem.setCount(heldItem.getCount() / 2 + 1);
+                    heldItem.setCount(heldItem.getCount() - 1);
                 }
-            } else if (heldItem.getCount() == 1) {
-                heldItem = Items.AIR.getDefaultStack();
-            } else {
-                heldItem.setCount(heldItem.getCount() - 1);
             }
         }
         return heldItem;
@@ -1221,6 +1238,11 @@ public abstract class HandledScreenMixin {
         }
         RenderUtils.drawTexturedRect(context.getMatrices(), signRight, x + 10 + 10 * amount/* + 54*/, y - 13, 10, 15, 10, 15);
 
+    }
+
+    @Inject(method = "init", at = @At("HEAD"))
+    public void onInit(CallbackInfo ci) {
+        heldItem = Items.AIR.getDefaultStack();
     }
 
     @Inject(method = "close", at = @At("HEAD"))
