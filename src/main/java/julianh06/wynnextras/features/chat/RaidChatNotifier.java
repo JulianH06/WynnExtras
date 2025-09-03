@@ -485,11 +485,5 @@ private static class MultiOccurrenceDetector implements RaidMessageDetector {
     }
 }
 
-    public static void resetCounters() {
-            for (RaidMessageDetector detector : detectors) {
-                if (detector instanceof MultiOccurrenceDetector m) {
-                    m.occurrenceCount = 0;
-                }
-            }
-        }
+
 }
