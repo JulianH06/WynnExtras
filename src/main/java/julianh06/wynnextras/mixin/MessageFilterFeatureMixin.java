@@ -16,12 +16,14 @@ public class MessageFilterFeatureMixin {
     @Unique
     private static WynnExtrasConfig config;
 
-    @Inject(method = "onMessage", at = @At("HEAD"), remap = false)
-    void preProcessMessage(ChatMessageReceivedEvent e, CallbackInfo ci) {
 
-        if (config == null) {
+    @Inject(method = "onMessage", at = @At("TAIL"), remap = false)
+    void blockMessage(ChatMessageReceivedEvent e, CallbackInfo ci) {
+        if(config == null) {
             config = SimpleConfig.getInstance(WynnExtrasConfig.class);
         }
+
+        String msgLower = e.getStyledText().withoutFormatting().getString().toLowerCase();
 
 
         RaidChatNotifier.handleMessage(e.getStyledText().withoutFormatting().getString());

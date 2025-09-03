@@ -59,8 +59,6 @@ public class RaidList {
     public static boolean inRaidListMenu = false;
     private static boolean opened = false;
 
-
-
     private static Command raidListCmd = new Command(
             "Raidlist",
             "",
@@ -74,60 +72,8 @@ public class RaidList {
             null
     );
 
-    private static RaidKind getRandomRaid() {
-        int value = (int) Math.floor(Math.random() * 4);
-        return switch (value) {
-            case 0 -> new NestOfTheGrootslangsRaid();
-            case 1 -> new OrphionsNexusOfLightRaid();
-            case 2 -> new TheCanyonColossusRaid();
-            case 3 -> new TheNamelessAnomalyRaid();
-            default -> new OrphionsNexusOfLightRaid();
-        };
-    }
-
-    private static boolean getRandomFailed() {
-        int x = (int) Math.round(Math.random());
-        if(x == 1) {
-            return true;
-        } else if (x == 0) {
-            return false;
-        } else {
-            return false;
-        }
-    }
-
-    private static Command testCmd = new Command(
-            "test",
-            "",
-            context -> {
-                Models.Party.requestData();
-                System.out.println(Models.Party.getPartyMembers());
-                return 1;
-            },
-            null,
-            null
-    );
-
-    private static Command addRaidCmd = new Command(
-            "addTestRaid",
-            "",
-            context -> {
-                //INSTANCE.raids.clear();
-                RaidInfo info = new RaidInfo(getRandomRaid());
-                Long raidEndTime = ((RaidInfoAccessor) info).getRaidStartTime() + info.getTimeInRaid();
-                INSTANCE.raids.add(new RaidData(info, List.of("Teslanator", "elwood24", "LegendaryVirus", "JulianH06"), raidEndTime, getRandomFailed()));
-
-                //convertTime(raidStartTime);
-                RaidListData.save();
-                return 1;
-            },
-            null,
-            null
-    );
-
     @SubscribeEvent
     void onRaidEnded(RaidEndedEvent event) {
-        Models.Party.requestData();
         List<String> members = Models.Party.getPartyMembers();
         McUtils.sendMessageToClient(Text.of("[Wynnextras] Raid ended."));
         if(event instanceof RaidEndedEvent.Completed) {

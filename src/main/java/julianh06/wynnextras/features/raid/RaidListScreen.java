@@ -225,7 +225,12 @@ public class RaidListScreen extends Screen {
                                 long roomDuration = room.getRoomTotalTime();
                                 if(room.getRoomEndTime() == -1) roomDuration = -1;
                                 String roomString = room.getRoomName() + ": " + formatDuration(roomDuration);
-                                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 28, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+//                                16 for nol because parasite
+                                if(raid.raidInfo.getRaidKind() instanceof OrphionsNexusOfLightRaid) {
+                                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 28, yPos + 26 + j * 16, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                                } else {
+                                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 28, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                                }
                             }
                         }
                     }
@@ -493,4 +498,6 @@ public class RaidListScreen extends Screen {
     public void onChar(CharInputEvent event) {
         Filter.onCharInput(event);
     }
+
+    //TODO: PLAYER BESSER ERKENNEN LASSEN
 }
