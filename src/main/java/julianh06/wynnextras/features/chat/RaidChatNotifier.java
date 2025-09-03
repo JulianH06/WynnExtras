@@ -14,9 +14,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RaidChatNotifier {
-
-
-
     private static final List<RaidMessageDetector> detectors = Arrays.asList(
         new SlimeGatheringDetector(),
         new BindingSealDetector(),
@@ -46,41 +43,41 @@ public class RaidChatNotifier {
     private static final long MESSAGE_DELAY_MS = 250;
     private static long lastMessageTime = 0;
 
-   public static void handleMessage(String rawMsg) {
-       if (!config.toggleRaidTimestamps) return;
+    public static void handleMessage(String rawMsg) {
+        if (!config.toggleRaidTimestamps) return;
 
 
 
-       long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
+        long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
                           ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()
                           : 0;
 
-       String msg = stripColorCodes(rawMsg);
+        String msg = stripColorCodes(rawMsg);
 
-       for (RaidMessageDetector detector : detectors) {
-           if (detector.matches(msg)) {
-               String timestamp = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
-                                   ? formatTime(currentTime)
-                                   : "??:??.???";
+        for (RaidMessageDetector detector : detectors) {
+            if (detector.matches(msg)) {
+                String timestamp = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
+                    ? formatTime(currentTime)
+                    : "??:??.???";
 
-               String progress = detector.extractProgress(msg);
-               String finalMsg = detector.getFormattedMessage(progress, timestamp);
+                String progress = detector.extractProgress(msg);
+                String finalMsg = detector.getFormattedMessage(progress, timestamp);
 
-               new Thread(() -> {
-                   try {
-                       Thread.sleep(20);
-                   } catch (InterruptedException e) {
-                       Thread.currentThread().interrupt();
-                   }
-                   if (!finalMsg.isEmpty()) {
-                       McUtils.sendMessageToClient(Text.literal(finalMsg));
-                   }
-               }).start();
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(20);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                    if (!finalMsg.isEmpty()) {
+                        McUtils.sendMessageToClient(Text.literal(finalMsg));
+                    }
+                }).start();
 
-               return;
-           }
-       }
-   }
+                return;
+            }
+        }
+    }
 
 
 

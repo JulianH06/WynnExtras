@@ -10,6 +10,8 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.Locale;
 import java.util.regex.Pattern;
 @Mixin(MessageFilterFeature.class)
 public class MessageFilterFeatureMixin {
@@ -23,23 +25,20 @@ public class MessageFilterFeatureMixin {
             config = SimpleConfig.getInstance(WynnExtrasConfig.class);
         }
 
-        String msgLower = e.getStyledText().withoutFormatting().getString().toLowerCase();
+        String raw = e.getStyledText().withoutFormatting().getString();
+        String msgLower = raw.toLowerCase(Locale.ROOT);
 
-
-        RaidChatNotifier.handleMessage(e.getStyledText().withoutFormatting().getString());
-
-
-
-        String msgLower = e.getStyledText().withoutFormatting().getString().toLowerCase();
-      if (!msgLower.contains(":")) {
+        if (!msgLower.contains(": ")) {
             for (Pattern pattern : RaidChatNotifier.BLOCKED_PATTERNS) {
-                if (pattern.matcher(msgLower).find()) {
+                if (pattern.matcher(msgLower).find()
+                        && !msgLower.contains("[wynnextras]")
+                        && config.toggleRaidTimestamps) {
+                    RaidChatNotifier.handleMessage(e.getStyledText().withoutFormatting().getString());
                     e.setCanceled(true);
                     return;
                 }
             }
-
-
+        }
 
         for (String blockedWord : config.blockedWords) {
             if (msgLower.contains(blockedWord.toLowerCase())) {
@@ -47,5 +46,4 @@ public class MessageFilterFeatureMixin {
             }
         }
     }
-
-}}
+}
