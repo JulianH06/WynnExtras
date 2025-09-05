@@ -4,7 +4,6 @@ import com.wynntils.core.text.StyledText;
 import com.wynntils.models.raid.raids.*;
 import com.wynntils.models.raid.type.RaidRoomInfo;
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.SkinUtils;
 import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
@@ -14,17 +13,15 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.mixin.Accessor.RaidInfoAccessor;
-import julianh06.wynnextras.utils.SkinManager;
+import julianh06.wynnextras.utils.Pair;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -39,9 +36,9 @@ public class RaidListScreen extends Screen {
     private static final long scrollCooldown = 0; // in ms
     public static List<Boolean> currentCollapsed = new ArrayList<>();
     private static List<Float> currentCollapsedProgress = new ArrayList<>();
-//    private static int lastCollapsed = -1;
 
     public static List<RaidListElement> listElements = new ArrayList<>();
+    public static List<String> currentPlayers = new ArrayList<>();
 
     RaidFilterButton NOTGFilterButton = new RaidFilterButton(-1, -1, 40, 40);
     RaidFilterButton NOLFilterButton = new RaidFilterButton(-1, -1, 40, 40);
@@ -81,16 +78,6 @@ public class RaidListScreen extends Screen {
 
     @Override
     protected void init() {
-//        for (RaidData raid : RaidListData.INSTANCE.raids) {
-//            for (String name : raid.players) {
-//                try {
-//                    SkinManager.loadSkinAsync(SkinManager.getUUIDFromUsernameCached(name), name, null);
-//                } catch (IOException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
-//        }
-
         listElements.clear();
         //currentCollapsed = -1;
         int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
@@ -126,21 +113,12 @@ public class RaidListScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-//        System.out.println(textRenderer.getWidth("Orphion's Nexus of Light")); //LONGEST NAME 124 pixel
-//        System.out.println(textRenderer.getWidth("Completed")); //49 pixel
-        //super.render(context, mouseX, mouseY, delta);
         int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
         int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
         int width = (int) Math.max(screenWidth * 0.5, 400);
         int xStart = screenWidth / 2 - width / 2;
-        int yStart = screenWidth / 2;
 
         RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
-
-//        RenderUtils.drawTexturedRect(context.getMatrices(), NOTGTexture, xStart, 0, 0, 30, 30, 30, 30);
-//        RenderUtils.drawTexturedRect(context.getMatrices(), NOLTexture, xStart + 30, 0, 0, 30, 30, 30, 30);
-//        RenderUtils.drawTexturedRect(context.getMatrices(), TCCTexture, xStart + 60, 0, 0, 30, 30, 30, 30);
-//        RenderUtils.drawTexturedRect(context.getMatrices(), TNATexture, xStart + 90, 0, 0, 30, 30, 30, 30);
 
         List<RaidData> filteredList = filterList(RaidListData.INSTANCE.raids.reversed());
         List<RaidData> sortedList = sort(filteredList);
@@ -149,14 +127,6 @@ public class RaidListScreen extends Screen {
             while (i >= currentCollapsedProgress.size()) currentCollapsedProgress.add(0f);
             while (i >= currentCollapsed.size()) currentCollapsed.add(false);
 
-//            float yPos = 80 + 10 + 50 * i - scrollOffset;
-            boolean isCollapsed = currentCollapsed.get(i);
-//            if(!isCollapsed) listElements.get(i).setHeight(40);
-//            if(currentCollapsed != -1 && currentCollapsed < i) {
-//                yPos += currentCollapsedProgress.get(i);
-//            } else if(lastCollapsed < i && lastCollapsed != -1) {
-//                yPos += currentCollapsedProgress.get(i);
-//            }
             float yPos = getElementY(i);
             yPos += 10 - scrollOffset;
             yPos += 50 * i;
@@ -175,65 +145,37 @@ public class RaidListScreen extends Screen {
                 if(currentCollapsedProgress.get(i) >= 60)
                     RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddle, xStart, yPos + 80, 0, width, 20, width, 20);
 
-                    for (int j = 0; j < 4; j++) {
-                        boolean partyError = false;
-                        String name;
-                        if(j >= raid.players.size()) {
-                            name = "Player " + j;
-                            partyError = true;
-                        } else {
-                            name = raid.players.get(j);
-                        }
-
-//                        Identifier skin = null;
-//                        try {
-//                            skin = SkinManager.getSkin(SkinManager.getUUIDFromUsernameCached(name));
-//                        } catch (IOException e) {
-//                            throw new RuntimeException(e);
-//                        }
-//                        AbstractTexture texture = MinecraftClient.getInstance().getTextureManager().getTexture(skin);
-//
-//                        if (texture instanceof NativeImageBackedTexture nativeTex && nativeTex.getImage() != null) {
-//                            RenderUtils.drawTexturedRect(context.getMatrices(), skin, xStart + 25, yPos + 22 + j * 20, 0, 16, 16, 8, 8, 8, 8, 64, 64);
-//
-//                        } else {
-//                            RenderUtils.drawTexturedRect(context.getMatrices(), DefaultSkinHelper.getTexture(), xStart + 25, yPos + 22 + j * 20, 0, 16, 16, 8, 8, 8, 8, 64, 64);
-//                        }
-
-                         if(currentCollapsedProgress.get(i) >= 20 * j) {
-//                             Identifier Skin;
-//                             if (partyError) {
-//                                Skin = DefaultSkinHelper.getTexture();
-//                             } else
-//                                 try {
-//                                     Skin = SkinUtils.getSkin(SkinManager.getUUIDFromUsernameCached(name));
-//                                 } catch (IOException e) {
-//                                     Skin = DefaultSkinHelper.getTexture();
-//                                 }
-//
-//                             RenderUtils.drawTexturedRect(context.getMatrices(), Skin, xStart + 25, yPos + 22 + j * 20, 0, 16, 16, 8, 8, 8, 8, 64, 64);
-
-                             FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(name), xStart + 25, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
-                        }
+                for (int j = 0; j < 4; j++) {
+                    String name;
+                    if(j >= raid.players.size()) {
+                        name = "Player " + j;
+                    } else {
+                        name = raid.players.get(j);
                     }
-                    Map<Integer, RaidRoomInfo> challenges = ((RaidInfoAccessor)raid.raidInfo).getChallenges();
-                    if(challenges != null) {
-                        for(int j = 0; j < challenges.size(); j++) {
-                            if(currentCollapsedProgress.get(i) >= 20 * j) {
-                                RaidRoomInfo room = challenges.get(j + 1);
-                                if (room == null) continue;
-                                long roomDuration = room.getRoomTotalTime();
-                                if(room.getRoomEndTime() == -1) roomDuration = -1;
-                                String roomString = room.getRoomName() + ": " + formatDuration(roomDuration);
+
+                     if(currentCollapsedProgress.get(i) >= 20 * j) {
+
+                         FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(name), xStart + 25, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                    }
+                }
+                Map<Integer, RaidRoomInfo> challenges = ((RaidInfoAccessor)raid.raidInfo).getChallenges();
+                if(challenges != null) {
+                    for(int j = 0; j < challenges.size(); j++) {
+                        if(currentCollapsedProgress.get(i) >= 20 * j) {
+                            RaidRoomInfo room = challenges.get(j + 1);
+                            if (room == null) continue;
+                            long roomDuration = room.getRoomTotalTime();
+                            if(room.getRoomEndTime() == -1) roomDuration = -1;
+                            String roomString = room.getRoomName() + ": " + formatDuration(roomDuration);
 //                                16 for nol because parasite
-                                if(raid.raidInfo.getRaidKind() instanceof OrphionsNexusOfLightRaid) {
-                                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 28, yPos + 26 + j * 16, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
-                                } else {
-                                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 28, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
-                                }
+                            if(raid.raidInfo.getRaidKind() instanceof OrphionsNexusOfLightRaid) {
+                                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 28, yPos + 24 + j * 16, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                            } else {
+                                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 28, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                             }
                         }
                     }
+                }
 
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomLeft, xStart, yPos + 20 + currentCollapsedProgress.get(i), 0, 12, 20, 12, 20);
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomMid, xStart + 12, yPos + 20 + currentCollapsedProgress.get(i), 0, width - 24, 20, width - 24, 20);
@@ -287,8 +229,14 @@ public class RaidListScreen extends Screen {
         if(PBFilterButton.isActive) PBFilterButton.drawWithTexture(context, PBTexture);
         else PBFilterButton.drawWithTexture(context, PBTextureBW);
 
-        String totalString = "Total: " + sortedList.size();
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(totalString), xStart + (float) width / 2 - textRenderer.getWidth(totalString) * 0.5f, 57, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+        Pair<Integer, Integer> runs = getCompletedAndFailed(sortedList);
+        String completed = "§aCompleted: " + runs.getFirst();
+        String total = "§fTotal: " + sortedList.size();
+        String failed =  "§cFailed: " + runs.getSecond();
+        String combined = completed + " " + total + " " + failed;
+        int totalStringStart = Math.round(xStart + width / 2f - textRenderer.getWidth(total) / 2f) - 4;
+
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(combined), totalStringStart - textRenderer.getWidth(completed), 57, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
 
 
         for (int j = 0; j < listElements.size(); j++) {
@@ -318,8 +266,9 @@ public class RaidListScreen extends Screen {
 
     @Override
     public void close() {
+        currentCollapsed.clear();
+        currentCollapsedProgress.clear();
         super.close();
-        System.out.println("closed");
     }
 
     public Identifier getTexture(RaidKind raidKind) {
@@ -333,13 +282,10 @@ public class RaidListScreen extends Screen {
     }
 
     public static String convertTime(long time) {
-
         ZonedDateTime dateTime = Instant.ofEpochMilli(time)
                 .atZone(ZoneId.systemDefault());
 
-        String formatted = dateTime.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
-        return formatted;
-        //System.out.println("Time: " + formatted);
+        return dateTime.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss"));
     }
 
     @Override
@@ -499,5 +445,13 @@ public class RaidListScreen extends Screen {
         Filter.onCharInput(event);
     }
 
-    //TODO: PLAYER BESSER ERKENNEN LASSEN
+    public Pair<Integer, Integer> getCompletedAndFailed(List<RaidData> rawList) {
+        int completed = 0;
+        int failed = 0;
+        for(RaidData data : rawList) {
+            if(data.completed) completed++;
+            else failed ++;
+        }
+        return new Pair<>(completed, failed);
+    }
 }

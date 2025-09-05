@@ -1,56 +1,27 @@
 package julianh06.wynnextras.features.misc;
 
-import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.ArgumentBuilder;
-import com.mojang.brigadier.context.CommandContext;
-import com.wynntils.core.persisted.config.ConfigManager;
 import com.wynntils.models.raid.raids.RaidKind;
 import com.wynntils.models.raid.type.RaidInfo;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
-import julianh06.wynnextras.config.simpleconfig.annotations.Config;
-import julianh06.wynnextras.config.simpleconfig.serializer.ConfigSerializer;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
-import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static julianh06.wynnextras.features.render.PlayerRenderFilter.*;
 
 public class PlayerHider {
     private static WynnExtrasConfig config;
-
-    //    private static SubCommand subCommandTest = new SubCommand(
-//           "subTest",
-//           "subTest.",
-//           context -> {
-//               McUtils.sendMessageToClient(Text.of("subcommand PersonalStorageUtils worked"));
-//               return 1;
-//           }, null,
-//            ClientCommandManager.argument("PersonalStorageUtils", StringArgumentType.greedyString())
-//    );
-//
-//    private static Command testCommand = new Command(
-//            "PersonalStorageUtils",
-//            "PersonalStorageUtils.",
-//            context -> {
-//                //String arg = StringArgumentType.getString(context, "PersonalStorageUtils");
-//                McUtils.sendMessageToClient(Text.of("PersonalStorageUtils worked"));
-//                return 1;
-//            },
-//            subCommandTest,
-//            null
-//    );
 
     private static SubCommand toggleSubCmd;
 
@@ -78,9 +49,9 @@ public class PlayerHider {
                         context -> {
                             config.partyMemberHide = !config.partyMemberHide;
                             if(config.partyMemberHide) {
-                                McUtils.sendMessageToClient(Text.of("[Wynnextras] Enabled Playerhider"));
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Playerhider")));
                             } else {
-                                McUtils.sendMessageToClient(Text.of("[Wynnextras] Disabled Playerhider"));
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Playerhider")));
                             }
                             SimpleConfig.save(WynnExtrasConfig.class);
                             return 1;

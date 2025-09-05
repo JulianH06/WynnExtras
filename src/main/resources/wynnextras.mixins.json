@@ -21,7 +21,6 @@
   "mixins": [
     "ChatPacketRecievedEventMixin",
     "MessageFilterFeatureMixin",
-    "ScreenHandlerMixin",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
     "Accessor.RaidInfoAccessor",
     "Accessor.SlotAccessor",

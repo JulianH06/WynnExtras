@@ -1,6 +1,5 @@
 package julianh06.wynnextras.core;
 
-import com.wynntils.models.items.WynnItem;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
@@ -18,26 +17,22 @@ import julianh06.wynnextras.features.raid.RaidListData;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.api.ClientModInitializer;
-
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.ClickEvent;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.DefaultedList;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
-import org.apache.logging.log4j.core.net.Priority;
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWCharCallbackI;
 import org.lwjgl.glfw.GLFWKeyCallbackI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicReference;
 
 
 // TODO: Use WELogger instead of normal logger
@@ -78,54 +73,49 @@ public class WynnExtras implements ClientModInitializer {
 
 	public static DefaultedList<Slot> testInv;
 	public static int testInvSize;
-	public static int testBackgroundWidth;
-	public static int testBackgroundHeight;
 
 	GLFWKeyCallbackI previousCallback;
-	GLFWCharCallbackI previousCharCallback;
+
+	private static final Identifier PILL_FONT = Identifier.ofVanilla("banner/pill");
+	private static final Style BACKGROUND_STYLE;
+	private static final Style FOREGROUND_STYLE;
+	private static final Text WYNNEXTRAS_BACKGROUND_PILL;
+	private static final Text WYNNEXTRAS_FOREGROUND_PILL;
+
+	static {
+		BACKGROUND_STYLE = Style.EMPTY.withFont(PILL_FONT).
+		withColor(Formatting.DARK_GREEN);
+		FOREGROUND_STYLE = Style.EMPTY.withFont(PILL_FONT).
+		withColor(Formatting.WHITE);
+		WYNNEXTRAS_BACKGROUND_PILL = Text.literal("\uE060\uDAFF\uDFFF\uE046\uDAFF\uDFFF\uE048\uDAFF\uDFFF\uE03D\uDAFF\uDFFF\uE03D\uDAFF\uDFFF\uE034\uDAFF\uDFFF\uE047\uDAFF\uDFFF\uE043\uDAFF\uDFFF\uE041\uDAFF\uDFFF\uE030\uDAFF\uDFFF\uE042\uDAFF\uDFFF\uE062\uDAFF\uDFC2").
+		fillStyle(BACKGROUND_STYLE);
+		WYNNEXTRAS_FOREGROUND_PILL = Text.literal("\uE016\uE018\uE00D\uE00D\uE004\uE017\uE013\uE011\uE000\uE012\uDB00\uDC06").
+		fillStyle(FOREGROUND_STYLE);
+	}
+
+
+	public static MutableText addWynnExtrasPrefix(Text component) {
+		return Text.empty().
+				append(WYNNEXTRAS_BACKGROUND_PILL).
+				append(WYNNEXTRAS_FOREGROUND_PILL).
+				append(Text.literal("\uE02f\uE02f\uDB00\uDC04").fillStyle(Style.EMPTY.withFont(PILL_FONT).withColor(Formatting.DARK_GREEN))). // adds ">>"
+				append(component);
+	}
+
 
 	@Override
 	public void onInitializeClient() {
 		Core.init(MOD_ID);
-		//WynnExtrasConfig.load();
 
 		WELoader.loadAll();
-
-		//Runtime.getRuntime().addShutdownHook(new Thread(WynnExtrasConfig::save));
 
 		PlayerHider.registerBossPlayerHider();
 		BankOverlay.registerBankOverlay();
 		ProvokeTimer.init();
 
-		ArrayList<WynnItem> tempList = new ArrayList<>();
-		for (int i = 0; i < 54; i++) {
-			tempList.add(null);
-		}
-
 		BankOverlayData.load();
 		RaidListData.load();
 	}
-
-//
-//	AtomicReference<Character> character = new AtomicReference<>((char) 0);
-//	boolean charEventInit = false;
-//
-//	@SubscribeEvent(priority = EventPriority.HIGHEST)
-//	public void onCharEvent(TickEvent event) {
-//		if(charEventInit || MinecraftClient.getInstance().getWindow() == null) return;
-//		previousCharCallback = GLFW.glfwSetCharCallback(MinecraftClient.getInstance().getWindow().getHandle(), (window, codepoint) -> {
-//			if (!KeyInputEvent.initialized) {
-//				KeyInputEvent.init();
-//			}
-//
-//			character.set((char) codepoint);
-//
-//			if (previousCharCallback != null) {
-//				previousCharCallback.invoke(window, codepoint);
-//			}
-//		});
-//		charEventInit = true;
-//	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)
 	public void initKeyInputEvent(TickEvent event) {

@@ -1,5 +1,6 @@
 package julianh06.wynnextras.mixin.Raid;
 
+import com.wynntils.core.components.Handlers;
 import com.wynntils.models.raid.event.RaidStartedEvent;
 import com.wynntils.models.raid.raids.RaidKind;
 import julianh06.wynnextras.features.misc.PlayerHider;
@@ -13,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class RaidStartEventMixin {
     @Inject(method = "<init>", at = @At("TAIL"), remap = false)
     public void started (RaidKind raidKind, CallbackInfo ci) {
+        Handlers.Command.queueCommand("party list");
         PlayerHider.onRaidStarted(raidKind);
         RaidChatNotifier.resetCounters();
     }
