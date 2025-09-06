@@ -28,10 +28,6 @@ public class CommandLoader implements WELoader {
             base.then(ChatCommands.register());
             alias.then(ChatCommands.register());
 
-
-            dispatcher.register(ChatCommands.register());
-
-
             for (Command cmd : Command.COMMAND_LIST) {
                 if (cmd instanceof SubCommand) continue;
                 base.then(buildCommandTree(cmd));
@@ -41,6 +37,7 @@ public class CommandLoader implements WELoader {
 
             dispatcher.register(base);
             dispatcher.register(alias);
+            dispatcher.register(ChatCommands.register());
         });
     }
 
