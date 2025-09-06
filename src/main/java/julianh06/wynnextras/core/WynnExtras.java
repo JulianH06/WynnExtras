@@ -40,13 +40,13 @@ import org.slf4j.LoggerFactory;
 @WEModule
 public class WynnExtras implements ClientModInitializer {
 	private static Command discordCmd = new Command(
-			"Discord",
+			"discord",
 			"",
 			context -> {
-				McUtils.sendMessageToClient(Text.literal("[WynnExtras] https://discord.gg/UbC6vZDaD5").setStyle(Style.EMPTY
+				McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal("")).append(Text.literal("https://discord.gg/UbC6vZDaD5").setStyle(Style.EMPTY
 						.withColor(Formatting.AQUA)
 						.withUnderline(true)
-						.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://discord.gg/UbC6vZDaD5"))
+						.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://discord.gg/UbC6vZDaD5")))
 				));
 				return 1;
 			},
@@ -98,7 +98,7 @@ public class WynnExtras implements ClientModInitializer {
 		return Text.empty().
 				append(WYNNEXTRAS_BACKGROUND_PILL).
 				append(WYNNEXTRAS_FOREGROUND_PILL).
-				append(Text.literal("\uE02f\uE02f\uDB00\uDC04").fillStyle(Style.EMPTY.withFont(PILL_FONT).withColor(Formatting.DARK_GREEN))). // adds ">>"
+				//append(Text.literal("\uE02f\uE02f\uDB00\uDC04").fillStyle(Style.EMPTY.withFont(PILL_FONT).withColor(Formatting.DARK_GREEN))). // adds ">>"
 				append(component);
 	}
 

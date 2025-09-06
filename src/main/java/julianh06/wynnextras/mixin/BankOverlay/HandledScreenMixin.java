@@ -1344,8 +1344,3 @@ public abstract class HandledScreenMixin {
         //emeraldCountFeature.renderTexturedCount()
 
 }
-
-
-    //TODO: Cleanup
-    //TODO: WYNNTILS TOOLTIPS ANZEIGEN
-

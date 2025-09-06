@@ -16,7 +16,7 @@ public class RaidList {
     public static boolean inRaidListMenu = false;
 
     private static Command raidListCmd = new Command(
-            "Raidlist",
+            "raidlist",
             "",
             context -> {
                 MinecraftClient client = context.getSource().getClient();

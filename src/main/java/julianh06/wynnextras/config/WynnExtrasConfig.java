@@ -33,12 +33,10 @@ public class WynnExtrasConfig implements ConfigData {
 
     public interface Categories {
         String playerHider = "Player Hider";
-        String chatNotifier = "Chat Notifier";
-        String chatBlocker = "Chat Blocker";
         String bankOverlay = "Bank Overlay";
-        String totemRangeVisualizer = "Totem Range Visualizer";
-        String provokeTimer = "Provoke Timer";
-        String raidTimestamps = "Raid Timestamps";
+        String chat = "Chat";
+        String raid = "Raid";
+        String misc = "Misc";
     }
 
 
@@ -73,14 +71,15 @@ public class WynnExtrasConfig implements ConfigData {
 
     //CHAT NOTIFIER
 
-    @ConfigEntry.Category(Categories.chatNotifier)
+    @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Name("Notified words")
     public List<String> notifierWords = new ArrayList<>();
 
-    @ConfigEntry.Category(Categories.chatNotifier)
+    @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Text
-    public String notifierInfo = "The Phrase on the Left is what needs to be in the Message to trigger and " +
-            "the one on the right is the text that will be displayed. Separate them by | for it to work.";
+    public String notifierInfo = "The Text needs to be separated by \"|\". " +
+            "The Phrase on the Left is what needs to be in the Message to trigger and " +
+            "the one on the right is the text that will be displayed. Example: \"test|worked!\"";
 
 //    @ConfigEntry.Category(Categories.chatNotifier)
 //    @ConfigEntry.Name("Text scale")
@@ -94,11 +93,11 @@ public class WynnExtrasConfig implements ConfigData {
 //    @ConfigEntry.Name("Text offset y")
 //    public int TextOffsetY = 40;
 
-    @ConfigEntry.Category(Categories.chatNotifier)
+    @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Name("Text duration in ms")
     public int TextDurationInMs = 2000;
 
-    @ConfigEntry.Category(Categories.chatNotifier)
+    @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Dropdown(values = {
             "WHITE",
             "BLACK",
@@ -124,7 +123,7 @@ public class WynnExtrasConfig implements ConfigData {
 //    @ConfigEntry.Name("Text Preview")
 //    public boolean NotifierPreview = false;
 
-    @ConfigEntry.Category(Categories.chatNotifier)
+    @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Name("Sound")
     @ConfigEntry.Dropdown(values = {
         "entity.experience_orb.pickup",
@@ -140,22 +139,26 @@ public class WynnExtrasConfig implements ConfigData {
     })
     public String Sound = "entity.experience_orb.pickup";
 
-    @ConfigEntry.Category(Categories.chatNotifier)
+    @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Name("Sound volume")
     public float SoundVolume = 0.1f;
 
-    @ConfigEntry.Category(Categories.chatNotifier)
+    @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Name("Sound pitch")
     public float SoundPitch = 1;
 
-    @ConfigEntry.Category(Categories.chatNotifier)
+    @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Text
     public String notifierCmdInfo = "Run \"/WynnExtras (/we) notifiertest\" to test out the notifier.";
 
 
     //CHAT BLOCKER
 
-    @ConfigEntry.Category(Categories.chatBlocker)
+    @ConfigEntry.Category(Categories.chat)
+    @ConfigEntry.Text
+    public String empty = " ";
+
+    @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Name("Blocked words")
     public List<String> blockedWords = new ArrayList<>();
 
@@ -171,7 +174,7 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Category(Categories.bankOverlay)
     @ConfigEntry.Text
     public String bankInfo = "This Feature is still Work in Progress, bugs can (and probably will) occur. " +
-                                    "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras (/we) Discord\". " +
+                                    "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras (/we) discord\". " +
                                     "The feature is currently only available for the account bank but implementations for character banks, " +
                                     "the tome shelf and the misc bucket are planned. Buying pages is possible but it's a bit buggy so it's " +
                                     "recommended to disable the feature to buy pages.";
@@ -179,15 +182,15 @@ public class WynnExtrasConfig implements ConfigData {
 
     //TOTEM VISUALIZER
 
-    @ConfigEntry.Category(Categories.totemRangeVisualizer)
+    @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Totem range visualizer toggle")
     public boolean totemRangeVisualizerToggle = true;
 
-    @ConfigEntry.Category(Categories.totemRangeVisualizer)
+    @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Totem range")
     public int totemRange = 10;
 
-    @ConfigEntry.Category(Categories.totemRangeVisualizer)
+    @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Dropdown(values = {
             "WHITE",
             "BLACK",
@@ -209,11 +212,11 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Name("Totem circle color")
     public String totemColor = "WHITE";
 
-    @ConfigEntry.Category(Categories.totemRangeVisualizer)
+    @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Eldritchcall range")
     public int eldritchCallRange = 15;
 
-    @ConfigEntry.Category(Categories.totemRangeVisualizer)
+    @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Dropdown(values = {
             "WHITE",
             "BLACK",
@@ -237,11 +240,15 @@ public class WynnExtrasConfig implements ConfigData {
 
     //Provoke Timer
 
-    @ConfigEntry.Category(Categories.provokeTimer)
-    @ConfigEntry.Name("Toggle Provoke Timer")
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Text
+    public String emptyy = " ";
+
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Name("Toggle Provoke Timer [WIP]")
     public boolean provokeTimerToggle = true;
 
-    @ConfigEntry.Category(Categories.provokeTimer)
+    @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Dropdown(values = {
             "WHITE",
             "BLACK",
@@ -265,9 +272,9 @@ public class WynnExtrasConfig implements ConfigData {
 
 
 
-    @ConfigEntry.Category(Categories.raidTimestamps)
-       @ConfigEntry.Name("Raid timestamps toggle")
-       public boolean toggleRaidTimestamps = true;
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Enable Raid timestamps")
+    public boolean toggleRaidTimestamps = true;
 
 //    //Hider
 //    public boolean partyMemberHide = true;
