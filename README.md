@@ -1,3 +1,5 @@
+Discord: https://discord.gg/UbC6vZDaD5
+
 # 🌟 FEATURES
 - Custom Bank Overlay (WIP)
 
@@ -24,7 +26,6 @@
   
 # 🗒️ PLANNED FEATURES
 - profile viewer
-- party commands (maybe, still in talks with mods if its allowed)
 - pet hider
 - emote wheel (executing /emote)
 - disable explosions
