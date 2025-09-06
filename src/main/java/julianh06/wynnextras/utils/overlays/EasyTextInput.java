@@ -77,7 +77,7 @@ public class EasyTextInput extends EasyElement{
 
     public void drawWithTexture(DrawContext context, Identifier texture) {
         long now = System.currentTimeMillis();
-        RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, 0.0f, width, height, width, height);
+        RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, 0.0f, width, height, (int) width, (int) height);
         if(input.isEmpty() && !isActive) {
             context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 2, y + 3, CustomColor.fromHexString("FFFFFF").asInt());
         } else {
@@ -123,7 +123,7 @@ public class EasyTextInput extends EasyElement{
         input = value;
     }
 
-    public int getHeight() {
+    public float getHeight() {
         return height;
     }
 
@@ -131,7 +131,7 @@ public class EasyTextInput extends EasyElement{
         height = value;
     }
 
-    public int getWidth() {
+    public float getWidth() {
         return width;
     }
 
