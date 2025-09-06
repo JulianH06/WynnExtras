@@ -5,6 +5,8 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.ArgumentBuilder;
+import com.mojang.brigadier.tree.CommandNode;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import julianh06.wynnextras.command.ChatCommands;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
@@ -43,7 +45,7 @@ public class CommandLoader implements WELoader {
     }
 
    private LiteralArgumentBuilder<FabricClientCommandSource> buildCommandTree(Command cmd) {
-    
+
        LiteralArgumentBuilder<FabricClientCommandSource> root = ClientCommandManager.literal(cmd.getName());
 
        ArgumentBuilder<FabricClientCommandSource, ?> current = root;
