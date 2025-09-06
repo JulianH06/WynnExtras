@@ -20,19 +20,15 @@ public class ChatScreenMixin {
         ClientPlayerEntity player = mc.player;
         if (player == null) return;
 
-        // Commands nicht anfassen – Vanilla regelt das
         if (message.startsWith("/")) return;
 
-        // Normale Nachricht anpassen
         String processed = ChatManager.processMessageForSend(message);
         player.networkHandler.sendChatMessage(processed);
 
-        // Chat-History sichern
         if (addToHistory) {
             mc.inGameHud.getChatHud().addToMessageHistory(message);
         }
 
-        ci.cancel(); // Vanilla-Nachricht unterdrücken, damit sie nicht doppelt geht
+        ci.cancel();
     }
 }
-
