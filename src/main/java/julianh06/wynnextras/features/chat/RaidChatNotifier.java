@@ -21,23 +21,69 @@ public class RaidChatNotifier {
         new WatchPhaseDetector(),
         new ShadowlingDetector(),
 
-        new SingleOccurrenceDetector("is preparing to descend! [1/2]", "§2[WynnExtras] §bDescend 1/2 §c@ "),
-        new SingleOccurrenceDetector("is preparing to descend! [2/2]", "§2[WynnExtras] §bDescend 2/2 §c@ "),
-        new SingleOccurrenceDetector("Upper Level must kill the Slime Chomper", "§2[WynnExtras] §bSlime Chomper Spawned §c@ "),
-        new SingleOccurrenceDetector("players on the Upper Level must kill the Carnivorous", "§2[WynnExtras] §bCarnivor spawned §c@ "),
-        new SingleOccurrenceDetector("players on the Upper Level must kill the Invasive", "§2[WynnExtras] §bTarantula spawned §c@ "),
-        new SingleOccurrenceDetector("players on the Upper Level must kill the Unfurling", "§2[WynnExtras] §bHorsefly spawned §c@ "),
-        new SingleOccurrenceDetector( "The Void Holes have begun to destabi", "§2[WynnExtras] §b[4/5] Void Matters §c@ "),
+        new SingleOccurrenceDetector(
+            "is preparing to descend! [1/2]",
+            WynnExtras.addWynnExtrasPrefix("§bDescend 1/2 §c@ ")
+        ),
+        new SingleOccurrenceDetector(
+            "is preparing to descend! [2/2]",
+            WynnExtras.addWynnExtrasPrefix("§bDescend 2/2 §c@ ")
+        ),
+        new SingleOccurrenceDetector(
+            "Upper Level must kill the Slime Chomper",
+            WynnExtras.addWynnExtrasPrefix("§bSlime Chomper Spawned §c@ ")
+        ),
+        new SingleOccurrenceDetector(
+            "players on the Upper Level must kill the Carnivorous",
+            WynnExtras.addWynnExtrasPrefix("§bCarnivor spawned §c@ ")
+        ),
+        new SingleOccurrenceDetector(
+            "players on the Upper Level must kill the Invasive",
+            WynnExtras.addWynnExtrasPrefix("§bTarantula spawned §c@ ")
+        ),
+        new SingleOccurrenceDetector(
+            "players on the Upper Level must kill the Unfurling",
+            WynnExtras.addWynnExtrasPrefix("§bHorsefly spawned §c@ ")
+        ),
+        new SingleOccurrenceDetector(
+            "The Void Holes have begun to destabi",
+            WynnExtras.addWynnExtrasPrefix("§b[4/5] Void Matters §c@ ")
+        ),
 
-        new MultiOccurrenceDetector("A new platform has appeared on the Lower Area!", "§2[WynnExtras] §bLower Mini spawned §c@ "),
-        new MultiOccurrenceDetector("3/3 Clouds Purified", "§2[WynnExtras] §bPurified 3/3 clouds "),
-        new MultiOccurrenceDetector("The Team has reached the Checkpoint!", "§2[WynnExtras] §bReached Checkpoint §c@ "),
-        new MultiOccurrenceDetector("100% Rock Destroyed", "§2[WynnExtras] §bRock destroyed §c@ "),
-        new MultiOccurrenceDetector("[+1 Slimey Goo]", "§2[WynnExtras] §fGot 1 Slimey Goo §c@ "),
-        new MultiOccurrenceDetector("[+2 Slimey Goo]", "§2[WynnExtras] §fGot 2 Slimey Goo §c@ "),
-        new MultiOccurrenceDetector("+1 [Isoptera Heart]","§2[WynnExtras] §fGot heart §c@ "),
-        new MultiOccurrenceDetector("has entered the tree","§2[WynnExtras] §bEntered the Tree §c@ ")
+        new MultiOccurrenceDetector(
+            "A new platform has appeared on the Lower Area!",
+            WynnExtras.addWynnExtrasPrefix("§bLower Mini spawned §c@ ")
+        ),
+        new MultiOccurrenceDetector(
+            "3/3 Clouds Purified",
+            WynnExtras.addWynnExtrasPrefix("§bPurified 3/3 clouds §c@")
+        ),
+        new MultiOccurrenceDetector(
+            "The Team has reached the Checkpoint!",
+            WynnExtras.addWynnExtrasPrefix("§bReached Checkpoint §c@ ")
+        ),
+        new MultiOccurrenceDetector(
+            "100% Rock Destroyed",
+            WynnExtras.addWynnExtrasPrefix("§bRock destroyed §c@ ")
+        ),
+        new MultiOccurrenceDetector(
+            "[+1 Slimey Goo]",
+            WynnExtras.addWynnExtrasPrefix("§fGot 1 Slimey Goo §c@ ")
+        ),
+        new MultiOccurrenceDetector(
+            "[+2 Slimey Goo]",
+            WynnExtras.addWynnExtrasPrefix("§fGot 2 Slimey Goo §c@ ")
+        ),
+        new MultiOccurrenceDetector(
+            "+1 [Isoptera Heart]",
+            WynnExtras.addWynnExtrasPrefix("§fGot heart §c@ ")
+        ),
+        new MultiOccurrenceDetector(
+            "has entered the tree",
+            WynnExtras.addWynnExtrasPrefix("§bEntered the Tree §c@ ")
+        )
     );
+
     private static final WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
 
     private static final long MESSAGE_DELAY_MS = 250;
@@ -153,7 +199,7 @@ public class RaidChatNotifier {
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
             if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
-                return "§2[WynnExtras] §aAdded Slime " + progress + " §c@ " + timestamp;
+                return WynnExtras.addWynnExtrasPrefix("§aAdded Slime " + progress + " §c@ " + timestamp);
             }
 
             // aktuelle Zeit seit Raumstart
@@ -162,8 +208,8 @@ public class RaidChatNotifier {
             // bisherige PB für diesen Split
             Long pb = sessionPBs.get(progress);
 
-            StringBuilder output = new StringBuilder("§2[WynnExtras] §aAdded Slime " + progress +
-                    " §c@ " + formatTime(elapsed));
+            StringBuilder output = new StringBuilder (WynnExtras.addWynnExtrasPrefix("§aAdded Slime " + progress +
+                    " §c@ " + formatTime(elapsed)));
 
             if (pb == null || elapsed < pb) {
                 sessionPBs.put(progress, elapsed);
@@ -199,7 +245,7 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
             Long pb = sessionPBs.get(progress);
-            StringBuilder msg = new StringBuilder("§2[WynnExtras] §bCompleted Seal " + progress + " §c@ " + timestamp);
+            StringBuilder msg = new StringBuilder (WynnExtras.addWynnExtrasPrefix(("§bCompleted Seal " + progress + " §c@ " + timestamp)));
 
             if (pb == null || currentMillis < pb) {
                 sessionPBs.put(progress, currentMillis);
@@ -234,7 +280,7 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
             Long pb = sessionPBs.get(progress);
-            StringBuilder msg = new StringBuilder("§2[WynnExtras] §bAdded light " + progress + " §c@ " + timestamp);
+            StringBuilder msg = new StringBuilder (WynnExtras.addWynnExtrasPrefix((" §bAdded light " + progress + " §c@ " + timestamp)));
 
             if (pb == null || currentMillis < pb) {
                 sessionPBs.put(progress, currentMillis);
@@ -269,7 +315,7 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
             Long pb = sessionPBs.get(progress);
-            StringBuilder msg = new StringBuilder("§2[WynnExtras] §bKilled Shadowling " + progress + " §c@ " + timestamp);
+            StringBuilder msg = new StringBuilder (WynnExtras.addWynnExtrasPrefix("§bKilled Shadowling " + progress + " §c@ " + timestamp));
 
             if (pb == null || currentMillis < pb) {
                 sessionPBs.put(progress, currentMillis);
@@ -337,14 +383,14 @@ public class RaidChatNotifier {
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
             if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
-                return "§2[WynnExtras] §bStarted Watchphase (no raid data)";
+                return WynnExtras.addWynnExtrasPrefix("§bStarted Watchphase (no raid data)");
             }
 
             long currentTime = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
             String message;
 
             if (lastWatchPhaseTime == -1) {
-                message = "§2[WynnExtras] §bFirst Watchphase started §c@ " + timestamp;
+                message = WynnExtras.addWynnExtrasPrefix("§bFirst Watchphase started §c@ " + timestamp);
 
                 if (firstWatchPhasePB == -1 || currentTime < firstWatchPhasePB) {
                     firstWatchPhasePB = currentTime;
@@ -357,12 +403,12 @@ public class RaidChatNotifier {
                 long oldPB = watchPhasePB;
                 if (watchPhasePB == -1 || duration < watchPhasePB) {
                     watchPhasePB = duration;
-                    message = "§2[WynnExtras] §bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §e[New Session PB!]";
+                    message = WynnExtras.addWynnExtrasPrefix("§bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §e[New Session PB!]");
                     if (oldPB != -1) {
                         message += " §7[Old: " + formatTime(oldPB) + "]";
                     }
                 } else {
-                    message = "§2[WynnExtras] §bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §7[Session PB: " + formatTime(watchPhasePB) + "]";
+                    message = WynnExtras.addWynnExtrasPrefix("§bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §7[Session PB: " + formatTime(watchPhasePB) + "]");
                 }
             }
 
