@@ -1,6 +1,8 @@
 package julianh06.wynnextras.features.chat;
 
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.event.ChatEvent;
 import net.minecraft.client.MinecraftClient;
@@ -30,17 +32,11 @@ public class ChatManager implements WELoader {
             default -> channelColor = "§f";
         }
 
-        sendSystemMessage(
-             WynnExtras.addWynnExtrasPrefix("§dYou are now in the " + channelColor + channel.name() + "§d channel")
+        McUtils.sendMessageToClient(
+             WynnExtras.addWynnExtrasPrefix(Text.of("§dYou are now in the " + channelColor + channel.name() + "§d channel"))
         );
     }
 
-
-    private static void sendSystemMessage(String message) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        ClientPlayerEntity player = mc.player;
-        if (player != null) player.sendMessage(Text.literal(message), false);
-    }
     private static long rawInputExpireTime = 0;
 
     @SubscribeEvent
