@@ -1,9 +1,9 @@
 package julianh06.wynnextras.mixin;
 
 import julianh06.wynnextras.features.chat.ChatManager;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.MinecraftClient;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -20,19 +20,19 @@ public class ChatScreenMixin {
         ClientPlayerEntity player = mc.player;
         if (player == null) return;
 
-        // Nur eigene Nachrichten modifizieren
-        String processed = message.startsWith("/") ? message : ChatManager.processMessageForSend(message);
+        // Commands nicht anfassen – Vanilla regelt das
+        if (message.startsWith("/")) return;
 
+        // Normale Nachricht anpassen
+        String processed = ChatManager.processMessageForSend(message);
         player.networkHandler.sendChatMessage(processed);
 
-        // Chat-History erhalten
-        if (addToHistory && !message.startsWith("/")) {
+        // Chat-History sichern
+        if (addToHistory) {
             mc.inGameHud.getChatHud().addToMessageHistory(message);
         }
 
-        // Nur eigene Nachrichten abbrechen, Commands weiterleiten
-        if (!message.startsWith("/")) {
-            ci.cancel();
-        }
+        ci.cancel(); // Vanilla-Nachricht unterdrücken, damit sie nicht doppelt geht
     }
 }
+
