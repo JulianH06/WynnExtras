@@ -16,13 +16,6 @@ Discord: https://discord.gg/UbC6vZDaD5
 - Totem range (and eldritch call range) visualizer
 
   <img src="https://github.com/user-attachments/assets/10ed9479-2c11-4804-92e3-6b13a7e5232d" width="600px" alt="Showcase"/>
-
-- Provoke timer
-
-  <img src="https://github.com/user-attachments/assets/5b44d880-e540-4b87-909b-2dadfa445b73" width="600px" alt="Showcase"/>
-
-  <img src="https://github.com/user-attachments/assets/628bf0fb-65a1-407e-836e-cab0b8b0345d" width="600px" alt="Showcase"/>
-
   
 # 🗒️ PLANNED FEATURES
 - profile viewer
