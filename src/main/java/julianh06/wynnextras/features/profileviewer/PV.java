@@ -5,6 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.event.ClickEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.features.profileviewer.data.PlayerData;
@@ -63,6 +64,9 @@ public class PV {
 
     @SubscribeEvent
     void onTick(TickEvent event) {
+        if(PVScreen.dummy != null) {
+            PVScreen.dummy.age++;
+        }
         if(inPV) {
             MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new PVScreen(currentPlayer)));
             inPV = false;
@@ -90,5 +94,10 @@ public class PV {
         client.send(() -> client.setScreen(null));
         currentPlayer = player;
         inPV = true;
+    }
+
+    @SubscribeEvent
+    void onClick(ClickEvent event) {
+        PVScreen.onClick();
     }
 }

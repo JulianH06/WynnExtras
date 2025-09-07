@@ -1,55 +1,221 @@
 package julianh06.wynnextras.features.profileviewer;
 
-import com.wynntils.core.components.Services;
-import com.wynntils.core.text.StyledText;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.TextShadow;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.event.TickEvent;
+import julianh06.wynnextras.features.profileviewer.data.CharacterData;
+import julianh06.wynnextras.features.profileviewer.data.PlayerData;
+import julianh06.wynnextras.features.raid.RaidListScreen;
+import julianh06.wynnextras.utils.overlays.EasyButton;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.render.entity.PlayerEntityRenderer;
+import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.util.SkinTextures;
+import net.minecraft.client.world.ClientWorld;
+import net.minecraft.entity.EntityPose;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.PlayerModelPart;
+import net.minecraft.item.Items;
 import net.minecraft.text.Text;
+import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
+import net.neoforged.bus.api.SubscribeEvent;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity;
+
+@WEModule
 public class PVScreen extends Screen {
+    static int mouseX = 0;
+    static int mouseY = 0;
+
     public enum Rank {NONE, VIP, VIPPLUS, HERO, HEROPLUS, CHAMPION}
 
-    Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/profileviewerbackground.png");
+    public enum tab {GENERAL, RAID, WAR, MISC}
+
+    Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/profileviewerbackground11.png");
+    Identifier openInBrowserButtonTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexture.png");
+    Identifier classBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackground2.png");
+    Identifier onlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle.png");
+    Identifier offlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/offlinecircle.png");
     Identifier vip = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/vip.png");
     Identifier vipplus = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/vipplus.png");
     Identifier hero = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/hero.png");
     Identifier heroplus = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/heroplus.png");
     Identifier champion = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/champion.png");
+    Identifier warriorTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/warrior.png");
+    Identifier shamanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/shaman.png");
+    Identifier mageTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/mage.png");
+    Identifier assassinTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/assassin.png");
+    Identifier archerTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/archer.png");
+
+    static OpenInBroserButton openInBrowserButton;
 
     String player;
+    public static AbstractClientPlayerEntity dummy;
 
     public PVScreen(String player) {
         super(Text.of("Player Viewer"));
         this.player = player;
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                while (PV.currentPlayerData == null) {
+                    Thread.sleep(50);
+                }
+                SkinData skin = fetchSkin(PV.currentPlayerData.getUuid());
+                GameProfile profile = createProfileWithSkin(PV.currentPlayerData.getUuid(), player, skin);
+
+                MinecraftClient client = MinecraftClient.getInstance();
+                ClientWorld world = client.world;
+
+                if (world != null) {
+                    dummy = new AbstractClientPlayerEntity(world, profile) {
+                        @Override
+                        public SkinTextures getSkinTextures() {
+                            return MinecraftClient.getInstance()
+                                    .getSkinProvider()
+                                    .getSkinTextures(this.getGameProfile());
+                        }
+
+                        @Override
+                        public boolean isPartVisible(PlayerModelPart part) {
+                            if(part == PlayerModelPart.CAPE) return false;
+                            return true;
+                        }
+                    };
+
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        if(openInBrowserButton == null && PV.currentPlayerData != null) {
+            openInBrowserButton = new OpenInBroserButton(-1, -1, 100, 100, "https://wynncraft.com/stats/player/" + PV.currentPlayerData.getUuid());
+        }
         int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
         int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
-        int width = 400;
+        int width = 600;
         int height = 250;
         int xStart = screenWidth / 2 - width / 2;
         int yStart = screenHeight / 2 - height / 2;
+        PVScreen.mouseX = mouseX;
+        PVScreen.mouseY = mouseY;
 
         RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
         RenderUtils.drawTexturedRect(context.getMatrices(), backgroundTexture, xStart, yStart, width, height, width, height);
         if(PV.currentPlayerData != null) {
             Identifier rankBadge = getRankBadge();
             int rankBadgeWidth = getRankBadgeWidth();
-            if(rankBadge != null) {
-                RenderUtils.drawTexturedRect(context.getMatrices(), rankBadge, xStart + 10, yStart + 9.5f, (float) rankBadgeWidth / 2, 9, rankBadgeWidth / 2, 9);
+            String rankColorHexString;
+            if(PV.currentPlayerData.getLegacyRankColour() != null) {
+                rankColorHexString = PV.currentPlayerData.getLegacyRankColour().getMain();
+            } else {
+                rankColorHexString = "AAAAAA";
             }
-            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(" " + PV.currentPlayerData.getUsername()), xStart + 10 + (float) rankBadgeWidth / 2, yStart + 10, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+            if(rankBadge != null) {
+                RenderUtils.drawTexturedRect(context.getMatrices(), rankBadge, xStart + 5, yStart + 6, (float) rankBadgeWidth / 2, 9, rankBadgeWidth / 2, 9);
+            }
+            context.drawText(MinecraftClient.getInstance().textRenderer, " " + PV.currentPlayerData.getUsername(), xStart + 5 + rankBadgeWidth / 2, yStart + 7, CustomColor.fromHexString(rankColorHexString).asInt(), true);
+
+            if(PV.currentPlayerData.isOnline()) {
+                RenderUtils.drawTexturedRect(context.getMatrices(), onlineCircleTexture, xStart + 5, yStart + 20, 11, 11, 11, 11);
+                context.drawText(MinecraftClient.getInstance().textRenderer, PV.currentPlayerData.getServer(), xStart + 19, yStart + 22, CustomColor.fromHexString("FFFFFF").asInt(), true);
+            } else {
+                RenderUtils.drawTexturedRect(context.getMatrices(), offlineCircleTexture, xStart + 5, yStart + 20, 11, 11, 11, 11);
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+                String formatted;
+                if (PV.currentPlayerData.getLastJoin() == null) {
+                    formatted = "Unknown!";
+                } else {
+                    formatted = PV.currentPlayerData.getLastJoin().format(formatter);
+                }
+                context.drawText(MinecraftClient.getInstance().textRenderer, "Last seen: " + formatted, xStart + 19, yStart + 22, CustomColor.fromHexString("FFFFFF").asInt(), true);
+            }
+            if(dummy != null) {
+                if(InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
+                    dummy.setPose(EntityPose.CROUCHING);
+                    drawPlayer(context, xStart + 22 + 72, yStart + 34 + 129, 70, mouseX, mouseY, dummy); //166 178
+                } else {
+                    dummy.setPose(EntityPose.STANDING);
+                    drawPlayer(context, xStart + 22 + 72, yStart + 34 + 138, 70, mouseX, mouseY, dummy); //166 178
+                }
+            }
+
+            if(PV.currentPlayerData.getCharacters() != null) {
+                int i = 0;
+                Map<String, CharacterData> map = PV.currentPlayerData.getCharacters();
+                List<CharacterData> sortedCharacterList = new ArrayList<>(map.values());
+
+                sortedCharacterList.sort(
+                        Comparator.comparing(CharacterData::getTotalLevel).thenComparing(CharacterData::getPlaytime)
+                );
+
+                if(PV.currentPlayerData.getGuild() != null) {
+                    String guildString = "[" + PV.currentPlayerData.getGuild().getPrefix() + "] " + PV.currentPlayerData.getGuild().getName();
+                    String rankString = PV.currentPlayerData.getGuild().getRankStars() + " " + PV.currentPlayerData.getGuild().getRank() + " of " + PV.currentPlayerData.getGuild().getRankStars();
+                    context.drawText(MinecraftClient.getInstance().textRenderer, rankString , xStart + 5 + 180 / 2 - MinecraftClient.getInstance().textRenderer.getWidth(rankString) / 2, yStart + 185, CustomColor.fromHexString("00FFFF").asInt(), true);
+                    context.drawText(MinecraftClient.getInstance().textRenderer, guildString, xStart + 5 + 180 / 2 - MinecraftClient.getInstance().textRenderer.getWidth(guildString) / 2, yStart + 195, CustomColor.fromHexString("FFFFFF").asInt(), true);
+                }
+
+                if(PV.currentPlayerData.getPlaytime() != 0) {
+                    context.drawText(MinecraftClient.getInstance().textRenderer, "Playtime: " + PV.currentPlayerData.getPlaytime() + "h", xStart + 5 + 180 / 2 - MinecraftClient.getInstance().textRenderer.getWidth("Playtime: " + PV.currentPlayerData.getPlaytime() + "h") / 2, yStart + 205, CustomColor.fromHexString("FFFFFF").asInt(), true);
+                }
+
+                openInBrowserButton.setX(xStart);
+                openInBrowserButton.setY(yStart + height);
+                openInBrowserButton.setHeight(15);
+                openInBrowserButton.buttonText = "open in browser";
+                openInBrowserButton.drawWithTexture(context, openInBrowserButtonTexture);
+
+                for(CharacterData entry : sortedCharacterList.reversed()) {
+                    //System.out.println(entry.getValue().getType());
+                    Identifier classTexture = getClassTexture(entry.getType());
+
+                    int entryX = xStart + 192 + 137 * (i % 3);
+                    int entryY = yStart + 5 + 48 * Math.floorDiv(i, 3);
+                    RenderUtils.drawTexturedRect(context.getMatrices(), classBackgroundTexture, entryX, entryY, 130, 44, 130, 44);
+                    //context.drawText(MinecraftClient.getInstance().textRenderer, entry.getValue().getType(), entryX, entryY, CustomColor.fromHexString("FFFFFF").asInt(), true);
+                    if(classTexture != null) {
+                        RenderUtils.drawTexturedRect(context.getMatrices(), classTexture, entryX + 4, entryY + 4, 30, 34, 30, 34);
+                        if (entry.getNickname() != null) {
+                            context.drawText(MinecraftClient.getInstance().textRenderer, "*§o" + entry.getNickname(), entryX + 37, entryY + 12, CustomColor.fromHexString("FFFFFF").asInt(), true);
+                        } else {
+                            context.drawText(MinecraftClient.getInstance().textRenderer, entry.getType().toLowerCase(), entryX + 37, entryY + 12, CustomColor.fromHexString("FFFFFF").asInt(), true);
+                        }
+                        context.drawText(MinecraftClient.getInstance().textRenderer, "Level " + String.valueOf(entry.getLevel()), entryX + 37, entryY + 23, CustomColor.fromHexString("FFFFFF").asInt(), true);
+                    }
+                    i++;
+                }
+            }
         }
     }
 
@@ -57,6 +223,8 @@ public class PVScreen extends Screen {
     public void close() {
         PV.currentPlayer = "";
         PV.currentPlayerData = null;
+        dummy = null;
+        openInBrowserButton = null;
         super.close();
     }
 
@@ -93,5 +261,79 @@ public class PVScreen extends Screen {
             case CHAMPION -> 106;
             default -> 0;
         };
+    }
+
+    public static void drawPlayer(
+            DrawContext context,
+            int x, int y, int scale,
+            float mouseX, float mouseY,
+            LivingEntity player
+    ) {
+        float yaw = mouseX - x;
+        float pitch = mouseY - y;
+
+        Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
+        //rotation.rotateX((float) Math.toRadians(pitch));
+        rotation.rotateY((float) Math.toRadians(-20));
+
+        EntityRenderDispatcher dispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
+        dispatcher.setRenderShadows(false);
+
+        context.getMatrices().push();
+        context.getMatrices().translate(x, y, 50.0);
+        context.getMatrices().scale(scale, scale, scale);
+        context.getMatrices().multiply(rotation);
+
+        VertexConsumerProvider.Immediate buffer = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
+        dispatcher.render(player, 0, 0, 0, 1.0F, context.getMatrices(), buffer, 15728880);
+        buffer.draw();
+
+        context.getMatrices().pop();
+        dispatcher.setRenderShadows(true);
+    }
+
+    public record SkinData(String value, String signature) {}
+
+    public static SkinData fetchSkin(UUID uuid) throws IOException {
+        String url = "https://sessionserver.mojang.com/session/minecraft/profile/" + uuid + "?unsigned=false";
+        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        connection.setRequestMethod("GET");
+
+        try (InputStream input = connection.getInputStream()) {
+            JsonObject json = JsonParser.parseReader(new InputStreamReader(input)).getAsJsonObject();
+            JsonArray properties = json.getAsJsonArray("properties");
+            JsonObject skinProperty = properties.get(0).getAsJsonObject();
+            String value = skinProperty.get("value").getAsString();
+            String signature = skinProperty.get("signature").getAsString();
+            return new SkinData(value, signature);
+        }
+    }
+
+    public static GameProfile createProfileWithSkin(UUID uuid, String name, SkinData skin) {
+        GameProfile profile = new GameProfile(uuid, name);
+        profile.getProperties().put("textures", new Property("textures", skin.value(), skin.signature()));
+        return profile;
+    }
+
+    public Identifier getClassTexture(String className) {
+        return switch (className) {
+            case "WARRIOR" -> warriorTexture;
+            case "SHAMAN" -> shamanTexture;
+            case "ARCHER" -> archerTexture;
+            case "MAGE" -> mageTexture;
+            case "ASSASSIN" -> assassinTexture;
+            default -> null;
+        };
+    }
+
+    void onTick() {
+        dummy.age++;
+    }
+
+    public static void onClick() {
+        if(openInBrowserButton == null) return;
+        if(openInBrowserButton.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
+            openInBrowserButton.click();
+        }
     }
 }

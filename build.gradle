@@ -29,10 +29,6 @@ repositories {
 	}
 }
 
-loom {
-	accessWidenerPath = file("src/main/resources/wynnextras.accesswidener")
-}
-
 configurations {
 	shadowImpl
 	shadowModImpl
@@ -90,6 +86,20 @@ jar {
 	from("LICENSE") {
 		rename { "${it}_${inputs.properties.archivesName}"}
 	}
+}
+
+remapJar {
+	dependsOn shadowJar
+
+//	archiveClassifier.set('remapped')
+	inputFile.set shadowJar.archiveFile.get().asFile
+	sourceNamespace = "named"
+	targetNamespace = "intermediary"
+}
+
+tasks.named("shadowJar").configure {
+	configurations = [project.configurations.shadowImpl, project.configurations.shadowModImpl]
+	archiveClassifier.set('all')
 }
 
 // configure the maven publication

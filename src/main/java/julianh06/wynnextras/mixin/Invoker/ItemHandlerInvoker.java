@@ -7,8 +7,8 @@ import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin (ItemHandler.class)
+@Mixin (value = ItemHandler.class, remap = false)
 public interface ItemHandlerInvoker {
-    @Invoker("calculateAnnotation")
+    @Invoker(value = "calculateAnnotation", remap = false)
     ItemAnnotation invokeCalculateAnnotation(ItemStack itemStack, StyledText name);
 }

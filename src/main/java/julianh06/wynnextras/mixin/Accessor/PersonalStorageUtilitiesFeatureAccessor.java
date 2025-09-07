@@ -4,7 +4,7 @@ import com.wynntils.features.inventory.PersonalStorageUtilitiesFeature;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin (PersonalStorageUtilitiesFeature.class)
+@Mixin (value = PersonalStorageUtilitiesFeature.class, remap = false)
 public interface PersonalStorageUtilitiesFeatureAccessor {
     @Accessor (value = "lastPage", remap = false)
     int getLastPage();

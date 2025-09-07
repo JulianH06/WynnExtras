@@ -110,6 +110,8 @@ public class WynnExtras implements ClientModInitializer {
 
 		WELoader.loadAll();
 
+		julianh06.wynnextras.event.ClickEvent.register();
+
 		PlayerHider.registerBossPlayerHider();
 		BankOverlay.registerBankOverlay();
 		PV.register();
