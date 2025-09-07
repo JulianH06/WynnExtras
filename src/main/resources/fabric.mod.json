@@ -3,7 +3,6 @@
 	"id": "wynnextras",
 	"version": "${version}",
 	"name": "WynnExtras",
-	"accessWidener": "wynnextras.accesswidener",
 	"description": "The second best Wynncraft mod you'll probably find! \n\nSpecial Thanks to the Wynntils team for making a lot of helpful methods to build on!",
 	"authors": [
 		"JulianH06"
