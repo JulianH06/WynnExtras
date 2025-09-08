@@ -6,6 +6,7 @@ import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.ClickEvent;
+import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.features.profileviewer.data.PlayerData;
@@ -14,6 +15,7 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.neoforged.bus.api.SubscribeEvent;
+import org.lwjgl.glfw.GLFW;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -73,17 +75,17 @@ public class PV {
         }
     }
 
-    public static void open(String player) {
-        WynncraftApiHandler.fetchPlayerData(player).thenAccept(playerData -> {
-//            for (Map.Entry<String, CharacterData> entry : playerData.getCharacters().entrySet()) {
-//                String uuid = entry.getKey();
-//                CharacterData data = entry.getValue();
-//                System.out.println("[" + uuid + "] " + data.getType() + " Lv." + data.getLevel());
-//            }
+    @SubscribeEvent
+    void onInput(KeyInputEvent event) {
+        if(event.getKey() != GLFW.GLFW_KEY_ENTER || event.getAction() != GLFW.GLFW_PRESS) return;
+        if(PVScreen.searchBar != null) {
+            open(PVScreen.searchBar.getInput());
+        }
+    }
 
-//            System.out.println("Spieler: " + playerData.getUsername());
-//            System.out.println("Gilde: " + playerData.getGuild().getName());
-//            System.out.println("Kills: " + playerData.getGlobalData().getMobsKilled());
+    public static void open(String player) {
+        currentPlayerData = null;
+        WynncraftApiHandler.fetchPlayerData(player).thenAccept(playerData -> {
             currentPlayerData = playerData;
         }).exceptionally(ex -> {
             System.err.println("Error while getting the data: " + ex.getMessage());
@@ -93,6 +95,7 @@ public class PV {
         MinecraftClient client = MinecraftClient.getInstance();
         client.send(() -> client.setScreen(null));
         currentPlayer = player;
+        PVScreen.dummy = null;
         inPV = true;
     }
 

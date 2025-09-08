@@ -8,33 +8,23 @@ import com.mojang.authlib.properties.Property;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
-import julianh06.wynnextras.features.profileviewer.data.PlayerData;
-import julianh06.wynnextras.features.raid.RaidListScreen;
-import julianh06.wynnextras.utils.overlays.EasyButton;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
-import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.SkinTextures;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerModelPart;
-import net.minecraft.item.Items;
 import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.neoforged.bus.api.SubscribeEvent;
 import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
 
 import java.io.IOException;
@@ -55,11 +45,17 @@ public class PVScreen extends Screen {
 
     public enum Rank {NONE, VIP, VIPPLUS, HERO, HEROPLUS, CHAMPION}
 
-    public enum tab {GENERAL, RAID, WAR, MISC}
+    public enum Tab {General, Raids, Rankings, Professions, Dungeons, Wars, Quests, Skilltree, Misc}
 
-    Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/profileviewerbackground11.png");
-    Identifier openInBrowserButtonTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexture.png");
-    Identifier classBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackground2.png");
+    Identifier tabLeft = Identifier.of("wynnextras", "textures/gui/profileviewer/tableft.png");
+    Identifier tabMid = Identifier.of("wynnextras", "textures/gui/profileviewer/tabmid.png");
+    Identifier tagRight = Identifier.of("wynnextras", "textures/gui/profileviewer/tabright.png");
+
+    Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/profileviewerbackground15.png");
+    Identifier tabBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/tabbackground2.png");
+    Identifier openInBrowserButtonTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexture4.png");
+    Identifier openInBrowserButtonTextureW = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexture4wide.png");
+    Identifier classBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackground2inactive.png");
     Identifier onlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle.png");
     Identifier offlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/offlinecircle.png");
     Identifier vip = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/vip.png");
@@ -74,6 +70,9 @@ public class PVScreen extends Screen {
     Identifier archerTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/archer.png");
 
     static OpenInBroserButton openInBrowserButton;
+    public static Searchbar searchBar;
+
+    Tab currentTab = Tab.General;
 
     String player;
     public static AbstractClientPlayerEntity dummy;
@@ -81,6 +80,7 @@ public class PVScreen extends Screen {
     public PVScreen(String player) {
         super(Text.of("Player Viewer"));
         this.player = player;
+        currentTab = Tab.General;
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -119,8 +119,14 @@ public class PVScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         if(openInBrowserButton == null && PV.currentPlayerData != null) {
-            openInBrowserButton = new OpenInBroserButton(-1, -1, 100, 100, "https://wynncraft.com/stats/player/" + PV.currentPlayerData.getUuid());
+            openInBrowserButton = new OpenInBroserButton(-1, -1, 20, 87, "https://wynncraft.com/stats/player/" + PV.currentPlayerData.getUuid());
         }
+
+        if(searchBar == null && PV.currentPlayerData != null) {
+            searchBar = new Searchbar(-1, -1, 14, 100);
+            searchBar.setInput(PV.currentPlayerData.getUsername());
+        }
+
         int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
         int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
         int width = 600;
@@ -164,6 +170,9 @@ public class PVScreen extends Screen {
                 if(InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
                     dummy.setPose(EntityPose.CROUCHING);
                     drawPlayer(context, xStart + 22 + 72, yStart + 34 + 129, 70, mouseX, mouseY, dummy); //166 178
+                }else if(InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_RIGHT_SHIFT)) {
+                    dummy.setPose(EntityPose.SLEEPING);
+                    drawPlayer(context, xStart + 22 + 10, yStart + 34 + 119, 70, mouseX, mouseY, dummy); //166 178
                 } else {
                     dummy.setPose(EntityPose.STANDING);
                     drawPlayer(context, xStart + 22 + 72, yStart + 34 + 138, 70, mouseX, mouseY, dummy); //166 178
@@ -179,23 +188,6 @@ public class PVScreen extends Screen {
                         Comparator.comparing(CharacterData::getTotalLevel).thenComparing(CharacterData::getPlaytime)
                 );
 
-                if(PV.currentPlayerData.getGuild() != null) {
-                    String guildString = "[" + PV.currentPlayerData.getGuild().getPrefix() + "] " + PV.currentPlayerData.getGuild().getName();
-                    String rankString = PV.currentPlayerData.getGuild().getRankStars() + " " + PV.currentPlayerData.getGuild().getRank() + " of " + PV.currentPlayerData.getGuild().getRankStars();
-                    context.drawText(MinecraftClient.getInstance().textRenderer, rankString , xStart + 5 + 180 / 2 - MinecraftClient.getInstance().textRenderer.getWidth(rankString) / 2, yStart + 185, CustomColor.fromHexString("00FFFF").asInt(), true);
-                    context.drawText(MinecraftClient.getInstance().textRenderer, guildString, xStart + 5 + 180 / 2 - MinecraftClient.getInstance().textRenderer.getWidth(guildString) / 2, yStart + 195, CustomColor.fromHexString("FFFFFF").asInt(), true);
-                }
-
-                if(PV.currentPlayerData.getPlaytime() != 0) {
-                    context.drawText(MinecraftClient.getInstance().textRenderer, "Playtime: " + PV.currentPlayerData.getPlaytime() + "h", xStart + 5 + 180 / 2 - MinecraftClient.getInstance().textRenderer.getWidth("Playtime: " + PV.currentPlayerData.getPlaytime() + "h") / 2, yStart + 205, CustomColor.fromHexString("FFFFFF").asInt(), true);
-                }
-
-                openInBrowserButton.setX(xStart);
-                openInBrowserButton.setY(yStart + height);
-                openInBrowserButton.setHeight(15);
-                openInBrowserButton.buttonText = "open in browser";
-                openInBrowserButton.drawWithTexture(context, openInBrowserButtonTexture);
-
                 for(CharacterData entry : sortedCharacterList.reversed()) {
                     //System.out.println(entry.getValue().getType());
                     Identifier classTexture = getClassTexture(entry.getType());
@@ -206,16 +198,92 @@ public class PVScreen extends Screen {
                     //context.drawText(MinecraftClient.getInstance().textRenderer, entry.getValue().getType(), entryX, entryY, CustomColor.fromHexString("FFFFFF").asInt(), true);
                     if(classTexture != null) {
                         RenderUtils.drawTexturedRect(context.getMatrices(), classTexture, entryX + 4, entryY + 4, 30, 34, 30, 34);
-                        if (entry.getNickname() != null) {
-                            context.drawText(MinecraftClient.getInstance().textRenderer, "*§o" + entry.getNickname(), entryX + 37, entryY + 12, CustomColor.fromHexString("FFFFFF").asInt(), true);
-                        } else {
-                            context.drawText(MinecraftClient.getInstance().textRenderer, entry.getType().toLowerCase(), entryX + 37, entryY + 12, CustomColor.fromHexString("FFFFFF").asInt(), true);
-                        }
-                        context.drawText(MinecraftClient.getInstance().textRenderer, "Level " + String.valueOf(entry.getLevel()), entryX + 37, entryY + 23, CustomColor.fromHexString("FFFFFF").asInt(), true);
+                        context.drawText(MinecraftClient.getInstance().textRenderer, getClassName(entry), entryX + 37, entryY + 12, CustomColor.fromHexString("FFFFFF").asInt(), true);
+
+                        CustomColor levelColor;
+
+                        context.drawText(MinecraftClient.getInstance().textRenderer, "Level " + entry.getLevel(), entryX + 37, entryY + 23, CustomColor.fromHexString("FFFFFF").asInt(), true);
                     }
                     i++;
                 }
+            } else {
+                context.drawText(MinecraftClient.getInstance().textRenderer, "This player has their classes private.", xStart + 300, yStart + 115, CustomColor.fromHexString("ff0000").asInt(), true);
             }
+
+            if(PV.currentPlayerData.getGuild() != null) {
+                String guildString = "[" + PV.currentPlayerData.getGuild().getPrefix() + "] " + PV.currentPlayerData.getGuild().getName();
+                String rankString = PV.currentPlayerData.getGuild().getRankStars() + " " + PV.currentPlayerData.getGuild().getRank() + " of " + PV.currentPlayerData.getGuild().getRankStars();
+                context.drawText(MinecraftClient.getInstance().textRenderer, rankString , xStart + 5 + 180 / 2 - MinecraftClient.getInstance().textRenderer.getWidth(rankString) / 2, yStart + 185, CustomColor.fromHexString("00FFFF").asInt(), true);
+                context.drawText(MinecraftClient.getInstance().textRenderer, guildString, xStart + 5 + 180 / 2 - MinecraftClient.getInstance().textRenderer.getWidth(guildString) / 2, yStart + 195, CustomColor.fromHexString("FFFFFF").asInt(), true);
+            }
+
+            if(PV.currentPlayerData.getPlaytime() != 0) {
+                context.drawText(MinecraftClient.getInstance().textRenderer, "Playtime: " + PV.currentPlayerData.getPlaytime() + "h", xStart + 5 + 180 / 2 - textRenderer.getWidth("Playtime: " + PV.currentPlayerData.getPlaytime() + "h") / 2, yStart + 205, CustomColor.fromHexString("FFFFFF").asInt(), true);
+            }
+
+            if(PV.currentPlayerData.getFirstJoin() != null) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+                String formatted = "First joined: ";
+                formatted += PV.currentPlayerData.getFirstJoin().format(formatter);
+                context.drawText(MinecraftClient.getInstance().textRenderer, formatted, xStart + 5 + 180 / 2 - textRenderer.getWidth(formatted) / 2, yStart + 215, CustomColor.fromHexString("FFFFFF").asInt(), true);
+            }
+
+            //TODO: first join
+
+            if(openInBrowserButton != null) {
+                openInBrowserButton.setX(xStart);
+                openInBrowserButton.setY(yStart + height);
+                openInBrowserButton.buttonText = "Open in browser";
+                openInBrowserButton.drawWithTexture(context, openInBrowserButtonTexture);
+            }
+
+            RenderUtils.drawTexturedRect(context.getMatrices(), openInBrowserButtonTextureW, xStart + 89, yStart + height, 100, 20, 100, 20);
+
+            if(searchBar != null) {
+                searchBar.setX(xStart + 89);
+                searchBar.setY(yStart + height + 7);
+                searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"));
+            }
+
+
+
+            int j = 0;
+            int totalXOffset = 0;
+            for(Tab tab : Tab.values()) {
+                CustomColor tabStringColor;
+                if(tab.equals(currentTab)) {
+                    tabStringColor = CustomColor.fromHexString("FFFF00");
+                } else {
+                    tabStringColor = CustomColor.fromHexString("FFFFFF");
+                }
+                String tabString = tab.toString();
+                int signWidth = drawDynamicNameSign(context, tabString, xStart + 8 + totalXOffset, yStart - 19);
+                float centerX = xStart + 8 + totalXOffset + (float) signWidth /2;
+                float textX = centerX - (float) textRenderer.getWidth(tabString) /2;
+
+                context.drawText(MinecraftClient.getInstance().textRenderer, tabString, (int) textX, yStart - 12, tabStringColor.asInt(), true);
+
+                totalXOffset += signWidth + 4;
+                j++;
+            }
+
+//                RenderUtils.drawTexturedRect(context.getMatrices(), tabBackgroundTexture, xStart + 8, yStart - 19, 40, 20, 40, 20);
+                //context.drawText(MinecraftClient.getInstance().textRenderer, "General", xStart + 8 + 3, yStart - 11, CustomColor.fromHexString("FFFFFF").asInt(), true);
+//                RenderUtils.drawTexturedRect(context.getMatrices(), tabBackgroundTexture, xStart + 50, yStart - 19, 40, 20, 40, 20);
+                //context.drawText(MinecraftClient.getInstance().textRenderer, "Raid", xStart + 50 + 6, yStart - 13, CustomColor.fromHexString("FFFFFF").asInt(), true);
+//                RenderUtils.drawTexturedRect(context.getMatrices(), tabBackgroundTexture, xStart + 92, yStart - 19, 40, 20, 40, 20);
+               //context.drawText(MinecraftClient.getInstance().textRenderer, "War", xStart + 92 + 6, yStart - 13, CustomColor.fromHexString("FFFFFF").asInt(), true);
+//                RenderUtils.drawTexturedRect(context.getMatrices(), tabBackgroundTexture, xStart + 134, yStart - 19, 40, 20, 40, 20);
+
+
+        }
+    }
+
+    public String getClassName(CharacterData entry) {
+        if (entry.getNickname() != null) {
+            return "*§o" + entry.getNickname();
+        } else {
+            return entry.getType().charAt(0) + entry.getType().substring(1).toLowerCase();
         }
     }
 
@@ -225,6 +293,7 @@ public class PVScreen extends Screen {
         PV.currentPlayerData = null;
         dummy = null;
         openInBrowserButton = null;
+        searchBar = null;
         super.close();
     }
 
@@ -326,14 +395,28 @@ public class PVScreen extends Screen {
         };
     }
 
-    void onTick() {
-        dummy.age++;
-    }
-
     public static void onClick() {
-        if(openInBrowserButton == null) return;
+        if(openInBrowserButton == null || searchBar == null) return;
         if(openInBrowserButton.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
             openInBrowserButton.click();
         }
+        if(searchBar.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
+            searchBar.click();
+        } else {
+            searchBar.setActive(false);
+        }
+    }
+
+    public int drawDynamicNameSign(DrawContext context, String input, int x, int y) {
+        TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
+        int strWidth = textRenderer.getWidth(input);
+        int strMidWidth = strWidth - 15;
+        int amount = Math.max(0, Math.ceilDiv(strMidWidth, 10));
+        RenderUtils.drawTexturedRect(context.getMatrices(), tabLeft, x, y, 15, 20, 15, 20);
+        for (int i = 0; i < amount; i++) {
+            RenderUtils.drawTexturedRect(context.getMatrices(), tabMid, x + 15 + 10 * i, y, 10, 20, 10, 20);
+        }
+        RenderUtils.drawTexturedRect(context.getMatrices(), tagRight, x + 15 + 10 * amount, y, 15, 20, 15, 20);
+        return 30 + amount * 10;
     }
 }

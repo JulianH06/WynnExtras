@@ -37,6 +37,6 @@ public class OpenInBroserButton extends EasyButton {
         if(buttonText == null) {
             return;
         }
-        context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, buttonText, x + 2, y + 5, CustomColor.fromHexString("FFFFFF").asInt());
+        context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, buttonText, x + 2, y + 8, CustomColor.fromHexString("FFFFFF").asInt());
     }
 }
