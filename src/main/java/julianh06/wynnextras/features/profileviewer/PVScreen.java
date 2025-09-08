@@ -346,13 +346,17 @@ public class PVScreen extends Screen {
                         } else {
                             Map<String, Integer> normalComps = PV.currentPlayerData.getGlobalData().getDungeons().getList();
                             Map<String, Integer> corruptedComps;
+                            int i = 0;
+                            int j = 0;
                             for(Map.Entry<String, Integer> entry : PV.currentPlayerData.getGlobalData().getDungeons().getList().entrySet()) {
                                 if(entry.getKey().contains("Corrupted")) {
-                                    //context.drawText(MinecraftClient.getInstance().textRenderer, entry.getKey() + ": " + entry.getValue() + " completions", xStart + 238 + textRenderer.getWidth("The Nameless Anomaly"), yStart + 127, CustomColor.fromHexString("FFFFFF").asInt(), true);
+                                    context.drawText(MinecraftClient.getInstance().textRenderer, entry.getKey() + ": " + entry.getValue() + " completions", xStart, yStart + 10 * i, CommonColors.GRADIENT_2.asInt(), true);
 
+                                    i++;
                                 } else {
                                     //context.drawText(MinecraftClient.getInstance().textRenderer, "Rank #" + TNARank, xStart + 238 + textRenderer.getWidth("The Nameless Anomaly") - textRenderer.getWidth("Rank #" + TNARank), yStart + 127, CustomColor.fromHexString("FFFFFF").asInt(), true);
-
+                                    context.drawText(MinecraftClient.getInstance().textRenderer, entry.getKey() + ": " + entry.getValue() + " completions", xStart + 600 - textRenderer.getWidth(entry.getKey() + ": " + entry.getValue() + " completions"), yStart + 10 * j, CustomColor.fromHexString("FFFFFF").asInt(), true);
+                                    j++;
                                 }
                             }
                         }
