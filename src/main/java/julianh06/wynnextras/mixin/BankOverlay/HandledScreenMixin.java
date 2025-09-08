@@ -26,6 +26,8 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.CappedValue;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.features.inventory.*;
@@ -167,7 +169,7 @@ public abstract class HandledScreenMixin {
 
 
         if (BankPageNameInputs.isEmpty()) {
-            for (int i = 0; i < 20; i++) {
+            for (int i = 0; i < 21; i++) {
                 BankPageNameInputs.put(i, new EasyTextInput(-1000, -1000, 13, 162 + 4));
             }
         }
@@ -244,7 +246,7 @@ public abstract class HandledScreenMixin {
             boolean isUnlocked = indexWithOffset < lastPage; // < instead of <= because the index starts at 0 and the pages at 1
             if (indexWithOffset - scrollOffset == playerInvIndex) {
                 isUnlocked = true;
-            } else if (indexWithOffset > 19) {
+            } else if (indexWithOffset > 20) {
                 continue;
             }
 
@@ -506,7 +508,7 @@ public abstract class HandledScreenMixin {
                         RenderUtils.drawTexturedRectWithColor(
                                 context.getMatrices(),
                                 Texture.HIGHLIGHT.resource(),
-                                color.withAlpha(100),
+                                color.withAlpha(SimpleConfig.getInstance(WynnExtrasConfig.class).wynntilsItemRarityBackgroundAlpha),
                                 x - 1,
                                 y - 1,
                                 100,
@@ -644,7 +646,7 @@ public abstract class HandledScreenMixin {
 //                } else {
 //                    context.drawText(MinecraftClient.getInstance().textRenderer, pageString, xStart + 62, yStart - 10, color, true);
 //                }
-                if (indexWithOffset < 20) {
+                if (indexWithOffset < 21) {
                     drawDynamicNameSign(context, BankPageNameInputs.get(indexWithOffset).getInput(), xStart, yStart);
                 }
                 if(indexWithOffset != activeInv && Searchbar.getInput().isEmpty() && indexWithOffset != hoveredInvIndex) {
@@ -699,7 +701,7 @@ public abstract class HandledScreenMixin {
             } else {
                 color = CustomColor.fromHexString("FFFFFF");
             }
-            if (i > 19) break;
+            if (i > 20) break;
             BankPageNameInputs.get(i).drawWithoutBackground(context, color);
         }
 
@@ -810,7 +812,7 @@ public abstract class HandledScreenMixin {
 
         boolean clickedAnyNameInput = false;
         for (int i = scrollOffset; i < xFitAmount * yFitAmount - (xFitAmount - 1) + scrollOffset - 1; i++) {
-            if (i > 19) break;
+            if (i > 20) break;
             if ((!BankPageNameInputs.get(i).isActive() && BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY))
                     || BankPageNameInputs.get(i).isActive() && !BankPageNameInputs.get(i).isClickInBounds((int) mouseX, (int) mouseY)) {
                 BankPageNameInputs.get(i).click();

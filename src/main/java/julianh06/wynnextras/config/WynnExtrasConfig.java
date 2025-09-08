@@ -172,6 +172,10 @@ public class WynnExtrasConfig implements ConfigData {
     public boolean toggleBankOverlay = true;
 
     @ConfigEntry.Category(Categories.bankOverlay)
+    @ConfigEntry.Name("Wynntils item rarity background intensity")
+    public int wynntilsItemRarityBackgroundAlpha = 100;
+
+    @ConfigEntry.Category(Categories.bankOverlay)
     @ConfigEntry.Text
     public String bankInfo = "This Feature is still Work in Progress, bugs can (and probably will) occur. " +
                                     "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras (/we) discord\". " +
