@@ -24,64 +24,64 @@ public class RaidChatNotifier {
 
         new SingleOccurrenceDetector(
             "is preparing to descend! [1/2]",
-            "§bDescend 1/2 §c@ "
+            "§bDescend 1/2 §c"
         ),
         new SingleOccurrenceDetector(
             "is preparing to descend! [2/2]",
-            "§bDescend 2/2 §c@ "
+            "§bDescend 2/2 §c"
         ),
         new SingleOccurrenceDetector(
             "Upper Level must kill the Slime Chomper",
-            "§bSlime Chomper Spawned §c@ "
+            "§bSlime Chomper Spawned §c"
         ),
         new SingleOccurrenceDetector(
             "players on the Upper Level must kill the Carnivorous",
-            "§bCarnivor spawned §c@ "
+            "§bCarnivor spawned §c"
         ),
         new SingleOccurrenceDetector(
             "players on the Upper Level must kill the Invasive",
-            "§bTarantula spawned §c@ "
+            "§bTarantula spawned §c"
         ),
         new SingleOccurrenceDetector(
             "players on the Upper Level must kill the Unfurling",
-            "§bHorsefly spawned §c@ "
+            "§bHorsefly spawned §c"
         ),
         new SingleOccurrenceDetector(
             "The Void Holes have begun to destabi",
-            "§b[4/5] Void Matters §c@ "
+            "§b[4/5] Void Matters §c"
         ),
 
         new MultiOccurrenceDetector(
             "A new platform has appeared on the Lower Area!",
-            "§bLower Mini spawned §c@ "
+            "§bLower Mini spawned §c"
         ),
         new MultiOccurrenceDetector(
             "3/3 Clouds Purified",
-            "§bPurified 3/3 clouds §c@"
+            "§bPurified 3/3 clouds §c"
         ),
         new MultiOccurrenceDetector(
             "The Team has reached the Checkpoint!",
-            "§bReached Checkpoint §c@ "
+            "§bReached Checkpoint §c"
         ),
         new MultiOccurrenceDetector(
             "100% Rock Destroyed",
-            "§bRock destroyed §c@ "
+            "§bRock destroyed §c"
         ),
         new MultiOccurrenceDetector(
             "[+1 Slimey Goo]",
-            "§fGot 1 Slimey Goo §c@ "
+            "§fGot 1 Slimey Goo §c"
         ),
         new MultiOccurrenceDetector(
             "[+2 Slimey Goo]",
-            "§fGot 2 Slimey Goo §c@ "
+            "§fGot 2 Slimey Goo §c"
         ),
         new MultiOccurrenceDetector(
             "+1 [Isoptera Heart]",
-            "§fGot heart §c@ "
+            "§fGot heart §c"
         ),
         new MultiOccurrenceDetector(
             "has entered the tree",
-            "§bEntered the Tree §c@ "
+            "§bEntered the Tree §c"
         )
     );
 
@@ -281,7 +281,7 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
             Long pb = sessionPBs.get(progress);
-            String msg = " §bAdded light " + progress + " §c@ " + timestamp;
+            String msg = "§bAdded light " + progress + " §c@ " + timestamp;
 
             if (pb == null || currentMillis < pb) {
                 sessionPBs.put(progress, currentMillis);
