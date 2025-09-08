@@ -7,7 +7,7 @@ public class CharacterData {
     private String type;
     private String nickname;
     private int level;
-    private int xp;
+    private long xp;
     private int xpPercent;
     private int totalLevel;
     private int wars;
@@ -51,11 +51,11 @@ public class CharacterData {
         this.level = level;
     }
 
-    public int getXp() {
+    public long getXp() {
         return xp;
     }
 
-    public void setXp(int xp) {
+    public void setXp(long xp) {
         this.xp = xp;
     }
 

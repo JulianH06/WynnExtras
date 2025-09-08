@@ -59,6 +59,8 @@ public class EasyTextInput extends EasyElement{
     }
 
     public void drawWithoutBackground(DrawContext context, CustomColor color) {
+        if(input == null) return;
+
         long now = System.currentTimeMillis();
         if(input.isEmpty() && !isActive) {
             //context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 3, y + 1, CustomColor.fromHexString("FFFFFF").asInt());
