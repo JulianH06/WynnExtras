@@ -1,22 +1,48 @@
-Discord: https://discord.gg/UbC6vZDaD5
+Please report any bugs on discord: https://discord.gg/UbC6vZDaD5
 
 # 🌟 FEATURES
-- Custom Bank Overlay (WIP)
 
-  <img src="https://github.com/user-attachments/assets/ce5fd2d5-344d-42a9-b70d-9d27c847c1fa" width="600px" alt="Showcase"/>
+### Bank Overlay [WIP]
 
-- Get custom notifications for chat messages (or block them)!
+A custom Bank Overlay, inspired by NEU's Hypixel Skyblock Storage overlay!
 
-  <img src="https://github.com/user-attachments/assets/80be499a-f569-4f58-9e51-bd1691a4d532" width="600px" alt="Showcase"/>
+<img src="https://github.com/user-attachments/assets/ce5fd2d5-344d-42a9-b70d-9d27c847c1fa" width="600px" alt="Showcase"/>
 
-- Player hider for better vision
+### Raid List
 
-  <img src="https://github.com/user-attachments/assets/9888c912-6391-469a-ac6c-bd344ca11236" width="600px" alt="Showcase"/>
+Use /we Raidlist to see your raids! You can filter them with the text bar on top or by clicking on the raid icons! Clicking the trophy icon will sort them by completion time! 
+<sup><sub>(We will also show the timestamps here in the future!)</sup></sub>
 
-- Totem range (and eldritch call range) visualizer
+<img src="https://github.com/user-attachments/assets/0227e29d-549d-4a5e-87bf-be0e7401730d" width="600px" alt="Showcase"/>
 
-  <img src="https://github.com/user-attachments/assets/10ed9479-2c11-4804-92e3-6b13a7e5232d" width="600px" alt="Showcase"/>
-  
+### Raid Timestamps! 
+
+It currently only shows your Session PBs but we will make the times be saved in the config in a future update!
+
+<img src="https://github.com/user-attachments/assets/044daefa-e413-4cb7-8485-f04bbd731d63" width="600px" alt="Showcase"/>
+
+### Chat Channels!
+
+Easily lets you chat in different channels, while still seing every message! 
+
+<img src="https://github.com/user-attachments/assets/3f2cb728-8cfb-4d20-abc8-69e38620a972" width="600px" alt="Showcase"/>
+
+### Chat Notificator!
+
+Notifies you when certain words/phrases appear in chat! Inspired by Skytil's chat notifier!
+
+<img src="https://github.com/user-attachments/assets/80be499a-f569-4f58-9e51-bd1691a4d532" width="600px" alt="Showcase"/>
+
+### Chat Blocker/Filter!
+
+Blocks messages with certain words/phrases!
+
+### Player hider!
+
+Use /we playerhider add/remove <name> to add or remove a player from the list! Players on the list will be hidden if they're within a certian range. The range can be changed withing the config! There's also a quick way to toggle the feature: /we playerhider toggle!
+
+<img src="https://github.com/user-attachments/assets/9888c912-6391-469a-ac6c-bd344ca11236" width="600px" alt="Showcase"/>
+
 # 🗒️ PLANNED FEATURES
 - profile viewer
 - pet hider
