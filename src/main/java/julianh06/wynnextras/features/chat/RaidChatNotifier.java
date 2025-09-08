@@ -24,64 +24,64 @@ public class RaidChatNotifier {
 
         new SingleOccurrenceDetector(
             "is preparing to descend! [1/2]",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§bDescend 1/2 §c@ ")).getString()
+            "§bDescend 1/2 §c@ "
         ),
         new SingleOccurrenceDetector(
             "is preparing to descend! [2/2]",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§bDescend 2/2 §c@ ")).getString()
+            "§bDescend 2/2 §c@ "
         ),
         new SingleOccurrenceDetector(
             "Upper Level must kill the Slime Chomper",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§bSlime Chomper Spawned §c@ ")).getString()
+            "§bSlime Chomper Spawned §c@ "
         ),
         new SingleOccurrenceDetector(
             "players on the Upper Level must kill the Carnivorous",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§bCarnivor spawned §c@ ")).getString()
+            "§bCarnivor spawned §c@ "
         ),
         new SingleOccurrenceDetector(
             "players on the Upper Level must kill the Invasive",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§bTarantula spawned §c@ ")).getString()
+            "§bTarantula spawned §c@ "
         ),
         new SingleOccurrenceDetector(
             "players on the Upper Level must kill the Unfurling",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§bHorsefly spawned §c@ ")).getString()
+            "§bHorsefly spawned §c@ "
         ),
         new SingleOccurrenceDetector(
             "The Void Holes have begun to destabi",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§b[4/5] Void Matters §c@ ")).getString()
+            "§b[4/5] Void Matters §c@ "
         ),
 
         new MultiOccurrenceDetector(
             "A new platform has appeared on the Lower Area!",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§bLower Mini spawned §c@ ")).getString()
+            "§bLower Mini spawned §c@ "
         ),
         new MultiOccurrenceDetector(
             "3/3 Clouds Purified",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§bPurified 3/3 clouds §c@")).getString()
+            "§bPurified 3/3 clouds §c@"
         ),
         new MultiOccurrenceDetector(
             "The Team has reached the Checkpoint!",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§bReached Checkpoint §c@ ")).getString()
+            "§bReached Checkpoint §c@ "
         ),
         new MultiOccurrenceDetector(
             "100% Rock Destroyed",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§bRock destroyed §c@ ")).getString()
+            "§bRock destroyed §c@ "
         ),
         new MultiOccurrenceDetector(
             "[+1 Slimey Goo]",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§fGot 1 Slimey Goo §c@ ")).getString()
+            "§fGot 1 Slimey Goo §c@ "
         ),
         new MultiOccurrenceDetector(
             "[+2 Slimey Goo]",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§fGot 2 Slimey Goo §c@ ")).getString()
+            "§fGot 2 Slimey Goo §c@ "
         ),
         new MultiOccurrenceDetector(
             "+1 [Isoptera Heart]",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§fGot heart §c@ ")).getString()
+            "§fGot heart §c@ "
         ),
         new MultiOccurrenceDetector(
             "has entered the tree",
-            WynnExtras.addWynnExtrasPrefix(Text.of("§bEntered the Tree §c@ ")).getString()
+            "§bEntered the Tree §c@ "
         )
     );
 
@@ -117,7 +117,7 @@ public class RaidChatNotifier {
                         Thread.currentThread().interrupt();
                     }
                     if (!finalMsg.isEmpty()) {
-                        McUtils.sendMessageToClient(Text.literal(finalMsg));
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(finalMsg)));
                     }
                 }).start();
 
@@ -200,7 +200,7 @@ public class RaidChatNotifier {
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
             if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
-                return WynnExtras.addWynnExtrasPrefix(Text.of("§aAdded Slime " + progress + " §c@ " + timestamp)).getString();
+                return "§aAdded Slime " + progress + " §c@ " + timestamp;
             }
 
             // aktuelle Zeit seit Raumstart
@@ -209,21 +209,21 @@ public class RaidChatNotifier {
             // bisherige PB für diesen Split
             Long pb = sessionPBs.get(progress);
 
-            StringBuilder output = new StringBuilder(WynnExtras.addWynnExtrasPrefix(Text.of("§aAdded Slime " + progress +
-                    " §c@ " + formatTime(elapsed))).getString());
+            String output = "§aAdded Slime " + progress +
+                    " §c@ " + formatTime(elapsed);
 
             if (pb == null || elapsed < pb) {
                 sessionPBs.put(progress, elapsed);
                 if (pb != null) {
-                    output.append(" §e[New Session PB! Old: ").append(formatTime(pb)).append("]");
+                    output += (" §e[New Session PB! Old: ") + (formatTime(pb)) + ("]");
                 } else {
-                    output.append(" §e[First PB]");
+                    output += (" §e[First PB]");
                 }
             } else {
-                output.append(" §7[Session PB: ").append(formatTime(pb)).append("]");
+                output += (" §7[Session PB: ") + formatTime(pb) + ("]");
             }
 
-            return output.toString();
+            return output;
         }
     }
 
@@ -246,19 +246,19 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
             Long pb = sessionPBs.get(progress);
-            StringBuilder msg = new StringBuilder (WynnExtras.addWynnExtrasPrefix(Text.of("§bCompleted Seal " + progress + " §c@ " + timestamp)).getString());
+            String msg = "§bCompleted Seal " + progress + " §c@ " + timestamp;
 
             if (pb == null || currentMillis < pb) {
                 sessionPBs.put(progress, currentMillis);
                 if (pb != null) {
-                    msg.append(" §e[New Session PB! Old: ").append(formatTime(pb)).append("]");
+                    msg += (" §e[New Session PB! Old: ") + (formatTime(pb)) + ("]");
                 } else {
-                    msg.append(" §e[First PB]");
+                    msg += (" §e[First PB]");
                 }
             } else {
-                msg.append(" §7[Session PB: ").append(formatTime(pb)).append("]");
+                msg += (" §7[Session PB: ") + formatTime(pb) + ("]");
             }
-            return msg.toString();
+            return msg;
         }
     }
 
@@ -281,19 +281,19 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
             Long pb = sessionPBs.get(progress);
-            StringBuilder msg = new StringBuilder (WynnExtras.addWynnExtrasPrefix(Text.of(" §bAdded light " + progress + " §c@ " + timestamp)).getString());
+            String msg = " §bAdded light " + progress + " §c@ " + timestamp;
 
             if (pb == null || currentMillis < pb) {
                 sessionPBs.put(progress, currentMillis);
                 if (pb != null) {
-                    msg.append(" §e[New Session PB! Old: ").append(formatTime(pb)).append("]");
+                    msg += (" §e[New Session PB! Old: ") + (formatTime(pb)) + ("]");
                 } else {
-                    msg.append(" §e[First PB]");
+                    msg += (" §e[First PB]");
                 }
             } else {
-                msg.append(" §7[Session PB: ").append(formatTime(pb)).append("]");
+                msg += (" §7[Session PB: ") + (formatTime(pb)) + ("]");
             }
-            return msg.toString();
+            return msg;
         }
     }
 
@@ -316,19 +316,19 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
             Long pb = sessionPBs.get(progress);
-            StringBuilder msg = new StringBuilder (WynnExtras.addWynnExtrasPrefix(Text.of("§bKilled Shadowling " + progress + " §c@ " + timestamp)).getString());
+            String msg = "§bKilled Shadowling " + progress + " §c@ " + timestamp;
 
             if (pb == null || currentMillis < pb) {
                 sessionPBs.put(progress, currentMillis);
                 if (pb != null) {
-                    msg.append(" §e[New Session PB! Old: ").append(formatTime(pb)).append("]");
+                    msg +=(" §e[New Session PB! Old: ") + (formatTime(pb)) + ("]");
                 } else {
-                    msg.append(" §e[First PB]");
+                    msg += (" §e[First PB]");
                 }
             } else {
-                msg.append(" §7[Session PB: ").append(formatTime(pb)).append("]");
+                msg += (" §7[Session PB: ") + formatTime(pb) + ("]");
             }
-            return msg.toString();
+            return msg;
         }
     }
 
@@ -384,14 +384,14 @@ public class RaidChatNotifier {
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
             if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
-                return WynnExtras.addWynnExtrasPrefix(Text.of("§bStarted Watchphase (no raid data)")).getString();
+                return "§bStarted Watchphase (no raid data)";
             }
 
             long currentTime = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
             String message;
 
             if (lastWatchPhaseTime == -1) {
-                message = WynnExtras.addWynnExtrasPrefix(Text.of("§bFirst Watchphase started §c@ " + timestamp)).getString();
+                message = "§bFirst Watchphase started §c@ " + timestamp;
 
                 if (firstWatchPhasePB == -1 || currentTime < firstWatchPhasePB) {
                     firstWatchPhasePB = currentTime;
@@ -404,12 +404,12 @@ public class RaidChatNotifier {
                 long oldPB = watchPhasePB;
                 if (watchPhasePB == -1 || duration < watchPhasePB) {
                     watchPhasePB = duration;
-                    message = WynnExtras.addWynnExtrasPrefix(Text.of("§bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §e[New Session PB!]")).getString();
+                    message = "§bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §e[New Session PB!]";
                     if (oldPB != -1) {
                         message += " §7[Old: " + formatTime(oldPB) + "]";
                     }
                 } else {
-                    message = WynnExtras.addWynnExtrasPrefix(Text.of("§bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §7[Session PB: " + formatTime(watchPhasePB) + "]")).getString();
+                    message = "§bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §7[Session PB: " + formatTime(watchPhasePB) + "]";
                 }
             }
 
