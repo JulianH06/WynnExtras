@@ -6,8 +6,8 @@ import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin (ItemHighlightFeature.class)
+@Mixin (value = ItemHighlightFeature.class, remap = false)
 public interface ItemHighlightFeatureInvoker {
-    @Invoker("getHighlightColor")
+    @Invoker(value = "getHighlightColor", remap = false)
     CustomColor invokeGetHighlightColor(ItemStack itemStack, boolean hotbarHighlight);
 }

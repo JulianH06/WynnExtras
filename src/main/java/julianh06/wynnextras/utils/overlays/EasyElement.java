@@ -5,8 +5,8 @@ import net.minecraft.client.gui.DrawContext;
 public abstract class EasyElement {
     protected int x;
     protected int y;
-    protected int height;
-    protected int width;
+    protected float height;
+    protected float width;
 
     public EasyElement(int x, int y, int height, int width) {
         this.x = x;
@@ -39,19 +39,19 @@ public abstract class EasyElement {
         return y;
     }
 
-    public void setWidth(int width) {
+    public void setWidth(float width) {
         this.width = width;
     }
 
-    public int getWidth() {
+    public float getWidth() {
         return width;
     }
 
-    public void setHeight(int height) {
+    public void setHeight(float height) {
         this.height = height;
     }
 
-    public int getHeight() {
+    public float getHeight() {
         return height;
     }
 

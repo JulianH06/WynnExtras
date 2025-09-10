@@ -59,6 +59,8 @@ public class EasyTextInput extends EasyElement{
     }
 
     public void drawWithoutBackground(DrawContext context, CustomColor color) {
+        if(input == null) return;
+
         long now = System.currentTimeMillis();
         if(input.isEmpty() && !isActive) {
             //context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 3, y + 1, CustomColor.fromHexString("FFFFFF").asInt());
@@ -75,9 +77,28 @@ public class EasyTextInput extends EasyElement{
         }
     }
 
+    public void drawWithoutBackgroundButWithSearchtext(DrawContext context, CustomColor color) {
+        if(input == null) return;
+
+        long now = System.currentTimeMillis();
+        if(input.isEmpty() && !isActive) {
+            context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 3, y + 1, CustomColor.fromHexString("FFFFFF").asInt());
+        } else {
+            if(cursorPos > input.length()) {
+                cursorPos = input.length();
+            }
+            context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, input, x + 3, y + 1, color.asInt());
+            if(now - lastBlink > 500) {
+                blinkToggle = !blinkToggle;
+                lastBlink = now;
+            }
+            if(blinkToggle && isActive) RenderUtils.drawLine(context.getMatrices(), CustomColor.fromHexString("FFFFFF"), x + 3 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y, x + 3 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 9, 0, 1);
+        }
+    }
+
     public void drawWithTexture(DrawContext context, Identifier texture) {
         long now = System.currentTimeMillis();
-        RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, 0.0f, width, height, width, height);
+        RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, 0.0f, width, height, (int) width, (int) height);
         if(input.isEmpty() && !isActive) {
             context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 2, y + 3, CustomColor.fromHexString("FFFFFF").asInt());
         } else {
@@ -123,7 +144,7 @@ public class EasyTextInput extends EasyElement{
         input = value;
     }
 
-    public int getHeight() {
+    public float getHeight() {
         return height;
     }
 
@@ -131,7 +152,7 @@ public class EasyTextInput extends EasyElement{
         height = value;
     }
 
-    public int getWidth() {
+    public float getWidth() {
         return width;
     }
 

@@ -6,8 +6,8 @@ import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(ItemTextOverlayFeature.class)
+@Mixin(value = ItemTextOverlayFeature.class, remap = false)
 public interface ItemTextOverlayFeatureMixin {
-    @Invoker("drawTextOverlay")
+    @Invoker(value = "drawTextOverlay", remap = false)
     void invokeDrawTextOverlay(MatrixStack poseStack, ItemStack itemStack, int slotX, int slotY, boolean hotbar);
 }

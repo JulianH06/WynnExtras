@@ -13,6 +13,8 @@ import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayData;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
+import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidListData;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.utils.MinecraftUtils;
@@ -109,12 +111,17 @@ public class WynnExtras implements ClientModInitializer {
 
 		WELoader.loadAll();
 
+		julianh06.wynnextras.event.ClickEvent.register();
+
 		PlayerHider.registerBossPlayerHider();
 		BankOverlay.registerBankOverlay();
+		PV.register();
 		ProvokeTimer.init();
 
 		BankOverlayData.load();
 		RaidListData.load();
+		WynncraftApiHandler.load();
+
 	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)

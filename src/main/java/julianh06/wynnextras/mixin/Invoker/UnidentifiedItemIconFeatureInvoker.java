@@ -6,7 +6,7 @@ import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin (UnidentifiedItemIconFeature.class)
+@Mixin (value = UnidentifiedItemIconFeature.class, remap = false)
 public interface UnidentifiedItemIconFeatureInvoker {
     @Invoker(value = "drawIcon", remap = false)
     void invokeDrawIcon(MatrixStack poseStack, ItemStack itemStack, int slotX, int slotY, int z);

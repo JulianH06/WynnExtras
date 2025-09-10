@@ -66,12 +66,14 @@ public class RaidListScreen extends Screen {
     Identifier ScrollTextureBottomLeft = Identifier.of("wynnextras", "textures/gui/raid/scrollbot/scrollleft.png");
     Identifier ScrollTextureBottomMid = Identifier.of("wynnextras", "textures/gui/raid/scrollbot/scrollmid.png");
     Identifier ScrollTextureBottomRight = Identifier.of("wynnextras", "textures/gui/raid/scrollbot/scrollright.png");
-    Identifier ScrollTextureMiddle = Identifier.of("wynnextras", "textures/gui/raid/scrolltestmiddle.png");
+    Identifier ScrollTextureMiddleLeft = Identifier.of("wynnextras", "textures/gui/raid/scrollmid/scrollmidleft.png");
+    Identifier ScrollTextureMiddleMid = Identifier.of("wynnextras", "textures/gui/raid/scrollmid/scrollmidmid.png");
+    Identifier ScrollTextureMiddleRight = Identifier.of("wynnextras", "textures/gui/raid/scrollmid/scrollmidright.png");
     Identifier PBTexture = Identifier.of("wynnextras", "textures/gui/raid/raidicons/trophy-small.png");
     Identifier PBTextureBW = Identifier.of("wynnextras", "textures/gui/raid/raidicons/trophy-small-bw.png");
 
     public RaidListScreen() {
-        super(Text.of("Raid List Test"));
+        super(Text.of("Raid List"));
         scrollOffset = 0;
         PBFilterButton.isActive = false;
     }
@@ -137,13 +139,29 @@ public class RaidListScreen extends Screen {
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureTopLeft, xStart, yPos, 0, 12, 20, 12, 20);
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureTopMid, xStart + 12, yPos, 0, width - 24, 20, width - 24, 20);
                 RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureTopRight, xStart - 12 + width, yPos, 0, 12, 20, 12, 20);
-                if(currentCollapsedProgress.get(i) >= 0) RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddle, xStart, yPos + 20, 0, width, 20, width, 20);
-                if(currentCollapsedProgress.get(i) >= 20)
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddle, xStart, yPos + 40, 0, width, 20, width, 20);
-                if(currentCollapsedProgress.get(i) >= 40)
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddle, xStart, yPos + 60, 0, width, 20, width, 20);
-                if(currentCollapsedProgress.get(i) >= 60)
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddle, xStart, yPos + 80, 0, width, 20, width, 20);
+                if(currentCollapsedProgress.get(i) >= 0) {
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleLeft, xStart, yPos + 20, 0, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleMid, xStart + 16, yPos + 20, 0, width - 32, 20, width - 32, 20);
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleRight, xStart + width - 16, yPos + 20, 0, 16, 20, 16, 20);
+                }
+
+                if(currentCollapsedProgress.get(i) >= 20) {
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleLeft, xStart, yPos + 40, 0, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleMid, xStart + 16, yPos + 40, 0, width - 32, 20, width - 32, 20);
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleRight, xStart + width - 16, yPos + 40, 0, 16, 20, 16, 20);
+                }
+
+                if(currentCollapsedProgress.get(i) >= 40) {
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleLeft, xStart, yPos + 60, 0, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleMid, xStart + 16, yPos + 60, 0, width - 32, 20, width - 32, 20);
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleRight, xStart + width - 16, yPos + 60, 0, 16, 20, 16, 20);
+                }
+
+                if(currentCollapsedProgress.get(i) >= 60) {
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleLeft, xStart, yPos + 80, 0, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleMid, xStart + 16, yPos + 80, 0, width - 32, 20, width - 32, 20);
+                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleRight, xStart + width - 16, yPos + 80, 0, 16, 20, 16, 20);
+                }
 
                 for (int j = 0; j < 4; j++) {
                     String name;
@@ -155,7 +173,7 @@ public class RaidListScreen extends Screen {
 
                      if(currentCollapsedProgress.get(i) >= 20 * j) {
 
-                         FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(name), xStart + 25, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                         FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(name), xStart + 20, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                     }
                 }
                 Map<Integer, RaidRoomInfo> challenges = ((RaidInfoAccessor)raid.raidInfo).getChallenges();
@@ -169,9 +187,9 @@ public class RaidListScreen extends Screen {
                             String roomString = room.getRoomName() + ": " + formatDuration(roomDuration);
 //                                16 for nol because parasite
                             if(raid.raidInfo.getRaidKind() instanceof OrphionsNexusOfLightRaid) {
-                                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 28, yPos + 24 + j * 16, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 20, yPos + 24 + j * 16, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                             } else {
-                                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 28, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 20, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                             }
                         }
                     }
@@ -243,8 +261,8 @@ public class RaidListScreen extends Screen {
             if(currentCollapsed.get(j)) {
                 while (j >= currentCollapsedProgress.size()) currentCollapsedProgress.add(0f);
                 if(currentCollapsedProgress.get(j) < 80) {
-                    currentCollapsedProgress.set(j, currentCollapsedProgress.get(j) + 2);
-                    listElements.get(j).setHeight(listElements.get(j).getHeight() + 2);
+                    currentCollapsedProgress.set(j, currentCollapsedProgress.get(j) + 10 * delta);
+                    listElements.get(j).setHeight(listElements.get(j).getHeight() + 10 * delta);
                 } else {
                     currentCollapsedProgress.set(j, 80f);
                     listElements.get(j).setHeight(120);
@@ -252,9 +270,9 @@ public class RaidListScreen extends Screen {
             } else {
                 while (j >= currentCollapsedProgress.size()) currentCollapsedProgress.add(0f);
                 if (currentCollapsedProgress.get(j) > 0) {
-                    currentCollapsedProgress.set(j, currentCollapsedProgress.get(j) - 2);
+                    currentCollapsedProgress.set(j, currentCollapsedProgress.get(j) - 10 * delta);
                     RaidListElement currentElement = listElements.get(j);
-                    listElements.get(j).setHeight(listElements.get(j).getHeight() - 2);
+                    listElements.get(j).setHeight(listElements.get(j).getHeight() - 10 * delta);
                 } else {
                     currentCollapsed.set(j, false);
                     currentCollapsedProgress.set(j, 0f);
