@@ -13,5 +13,7 @@ public class TabButton extends EasyButton {
     @Override
     public void click() {
         PVScreen.currentTab = tab;
+        PVScreen.scrollOffset = 0;
+        PVScreen.questSearchBar = null;
     }
 }

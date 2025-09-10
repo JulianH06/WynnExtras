@@ -10,6 +10,7 @@ public class CharacterData {
     private long xp;
     private int xpPercent;
     private int totalLevel;
+    private int contentCompletion = 0;
     private int wars;
     private float playtime;
     private int mobsKilled;
@@ -201,6 +202,14 @@ public class CharacterData {
 
     public void setQuests(List<String> quests) {
         this.quests = quests;
+    }
+
+    public int getContentCompletion() {
+        return contentCompletion;
+    }
+
+    public void setContentCompletion(int contentCompletion) {
+        this.contentCompletion = contentCompletion;
     }
 }
 
