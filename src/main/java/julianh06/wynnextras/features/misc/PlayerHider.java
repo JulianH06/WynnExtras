@@ -75,7 +75,7 @@ public class PlayerHider {
                             return 1;
                         },
                         null,
-                        ClientCommandManager.argument("player", StringArgumentType.word())
+                        List.of(ClientCommandManager.argument("player", StringArgumentType.word()))
                 );
 
                 removeSubCmd = new SubCommand(
@@ -97,7 +97,7 @@ public class PlayerHider {
                             return 1;
                         },
                         null,
-                        ClientCommandManager.argument("player", StringArgumentType.word())
+                        List.of(ClientCommandManager.argument("player", StringArgumentType.word()))
                 );
 
                 playerhiderCmd = new Command(

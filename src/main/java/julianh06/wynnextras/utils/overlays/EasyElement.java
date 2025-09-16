@@ -58,4 +58,9 @@ public abstract class EasyElement {
     public abstract void draw(DrawContext context);
 
     public abstract void click();
+
+    public void setPosition(int x, int y) {
+        setX(x);
+        setY(y);
+    }
 }

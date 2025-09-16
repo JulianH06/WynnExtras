@@ -10,6 +10,7 @@ import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.features.profileviewer.data.PlayerData;
+import julianh06.wynnextras.utils.render.WorldRenderUtils;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -21,6 +22,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.Map;
 
 @WEModule
@@ -47,7 +49,7 @@ public class PV {
                         return 1;
                     },
                     null,
-                    ClientCommandManager.argument("player", StringArgumentType.word())
+                    List.of(ClientCommandManager.argument("player", StringArgumentType.word()))
             );
 
             pvCmdNoArgs = new Command(

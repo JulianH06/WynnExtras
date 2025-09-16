@@ -44,7 +44,6 @@ Use /we playerhider add/remove <name> to add or remove a player from the list! P
 <img src="https://github.com/user-attachments/assets/9888c912-6391-469a-ac6c-bd344ca11236" width="600px" alt="Showcase"/>
 
 # 🗒️ PLANNED FEATURES
-- profile viewer
 - pet hider
 - emote wheel (executing /emote)
 - disable explosions

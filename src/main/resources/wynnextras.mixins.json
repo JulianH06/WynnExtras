@@ -19,9 +19,10 @@
     "Invoker.HandledScreenInvoker"
   ],
   "mixins": [
+    "CharacterModelMixin",
     "ChatPacketRecievedEventMixin",
-    "MessageFilterFeatureMixin",
     "ChatScreenMixin",
+    "MessageFilterFeatureMixin",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
     "Accessor.RaidInfoAccessor",
     "Accessor.SlotAccessor",

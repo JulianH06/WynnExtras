@@ -404,12 +404,12 @@ public class RaidChatNotifier {
                 long oldPB = watchPhasePB;
                 if (watchPhasePB == -1 || duration < watchPhasePB) {
                     watchPhasePB = duration;
-                    message = "§bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §e[New Session PB!]";
+                    message = "§bWatchphase started after §c" + formatTime(duration) + " §7(@" + timestamp + ") §e[New Session PB!]";
                     if (oldPB != -1) {
                         message += " §7[Old: " + formatTime(oldPB) + "]";
                     }
                 } else {
-                    message = "§bWatchphase took §c" + formatTime(duration) + " §7(" + timestamp + ") §7[Session PB: " + formatTime(watchPhasePB) + "]";
+                    message = "§bWatchphase started after §c" + formatTime(duration) + " §7(@" + timestamp + ") §7[Session PB: " + formatTime(watchPhasePB) + "]";
                 }
             }
 

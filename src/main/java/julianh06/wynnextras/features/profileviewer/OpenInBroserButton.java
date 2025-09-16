@@ -1,10 +1,16 @@
 package julianh06.wynnextras.features.profileviewer;
 
+import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;
+import com.wynntils.utils.render.type.HorizontalAlignment;
+import com.wynntils.utils.render.type.TextShadow;
+import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.utils.overlays.EasyButton;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.awt.*;
@@ -12,6 +18,7 @@ import java.net.URI;
 
 public class OpenInBroserButton extends EasyButton {
     private final String url;
+    int scaleFactor;
 
     public OpenInBroserButton(int x, int y, int height, int width, String url) {
         super(x, y, height, width, "Open in browser");
@@ -37,6 +44,7 @@ public class OpenInBroserButton extends EasyButton {
         if(buttonText == null) {
             return;
         }
-        context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, buttonText, x + 2, y + 8, CustomColor.fromHexString("FFFFFF").asInt());
+        scaleFactor = (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(buttonText)), (float) (x + 87.5f * 3 / scaleFactor / 2), y + (float) (8 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
     }
 }

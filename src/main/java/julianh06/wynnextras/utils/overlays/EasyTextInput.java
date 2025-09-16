@@ -1,13 +1,20 @@
 package julianh06.wynnextras.utils.overlays;
 
+import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;
+import com.wynntils.utils.render.type.HorizontalAlignment;
+import com.wynntils.utils.render.type.TextShadow;
+import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.features.inventory.BankOverlay;
+import julianh06.wynnextras.features.inventory.BankOverlayType;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
@@ -27,6 +34,8 @@ public class EasyTextInput extends EasyElement{
 
     protected long lastBlink = 0;
     protected boolean blinkToggle = true;
+
+    int scaleFactor;
 
     public EasyTextInput() {
         super(-1, -1, 0, 0);
@@ -79,20 +88,23 @@ public class EasyTextInput extends EasyElement{
 
     public void drawWithoutBackgroundButWithSearchtext(DrawContext context, CustomColor color) {
         if(input == null) return;
+        scaleFactor = (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
 
         long now = System.currentTimeMillis();
         if(input.isEmpty() && !isActive) {
-            context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 3, y + 1, CustomColor.fromHexString("FFFFFF").asInt());
+            //context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 3, y + 1, CustomColor.fromHexString("FFFFFF").asInt());
+            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(searchText)), (float) x + (float) (3 * 3) / scaleFactor, (float) y + (float) (3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
         } else {
             if(cursorPos > input.length()) {
                 cursorPos = input.length();
             }
-            context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, input, x + 3, y + 1, color.asInt());
+            //context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, input, x + 3, y + 1, color.asInt());
+            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(input)), (float) x + (float) (3 * 3) / scaleFactor, (float) y + (float) (2 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
             if(now - lastBlink > 500) {
                 blinkToggle = !blinkToggle;
                 lastBlink = now;
             }
-            if(blinkToggle && isActive) RenderUtils.drawLine(context.getMatrices(), CustomColor.fromHexString("FFFFFF"), x + 3 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y, x + 3 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 9, 0, 1);
+            if(blinkToggle && isActive) RenderUtils.drawLine(context.getMatrices(), CustomColor.fromHexString("FFFFFF"), x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y + (float) (1 * 3) / scaleFactor, x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y + (float) (10 * 3) / scaleFactor, 0, 1f * 3 / scaleFactor);
         }
     }
 
@@ -166,7 +178,7 @@ public class EasyTextInput extends EasyElement{
     }
 
     public void onInput(KeyInputEvent event) {
-        if(!isActive || !BankOverlay.isBank) return;
+        if(!isActive || BankOverlay.currentOverlayType == BankOverlayType.NONE) return;
 
         AtomicLong now = new AtomicLong();
         int action = event.getAction();
@@ -235,12 +247,10 @@ public class EasyTextInput extends EasyElement{
     }
 
     public void onCharInput(CharInputEvent event) {
-        EasyTextInput ti = this;
-        if (ti != null && ti.isActive()) {
+        if (this.isActive()) {
             char c = event.getCharacter();
-            // nur druckbare Zeichen akzeptieren
             if (!Character.isISOControl(c)) {
-                ti.insertCharAtCursor(c);
+                this.insertCharAtCursor(c);
             }
         }
     }

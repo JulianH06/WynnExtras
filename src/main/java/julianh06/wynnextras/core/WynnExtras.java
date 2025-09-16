@@ -9,13 +9,19 @@ import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.core.loader.WELoader;
+import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.features.inventory.data.AccountBankData;
 import julianh06.wynnextras.features.inventory.BankOverlay;
-import julianh06.wynnextras.features.inventory.BankOverlayData;
+import julianh06.wynnextras.features.inventory.data.BookshelfData;
+import julianh06.wynnextras.features.inventory.data.CharacterBankData;
+import julianh06.wynnextras.features.inventory.data.MiscBucketData;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidListData;
+import julianh06.wynnextras.features.waypoints.WaypointData;
+import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.api.ClientModInitializer;
@@ -117,11 +123,15 @@ public class WynnExtras implements ClientModInitializer {
 		BankOverlay.registerBankOverlay();
 		PV.register();
 		ProvokeTimer.init();
+		Waypoints.register();
 
-		BankOverlayData.load();
+		AccountBankData.INSTANCE.load();
+		CharacterBankData.INSTANCE.load();
+		BookshelfData.INSTANCE.load();
+		MiscBucketData.INSTANCE.load();
 		RaidListData.load();
 		WynncraftApiHandler.load();
-
+		WaypointData.load();
 	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)
@@ -134,8 +144,8 @@ public class WynnExtras implements ClientModInitializer {
 					new KeyInputEvent(key, scancode, action, mods).post();//, character.get()).post();
 				}
 
-				if(BankOverlay.isBank && BankOverlay.activeTextInput != null && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
-				if(BankOverlay.isBank && (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)) return;
+				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && BankOverlay.activeTextInput != null && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
+				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)) return;
 
 				if (previousCallback != null) {
 					previousCallback.invoke(window, key, scancode, action, mods);

@@ -103,9 +103,9 @@ public class RaidListScreen extends Screen {
             lastScrollTime = now;
 
             if (verticalAmount > 0) {
-                scrollOffset -= 10; //Scroll up
+                scrollOffset -= 30 / (int) MinecraftClient.getInstance().getWindow().getScaleFactor(); //Scroll up
             } else {
-                scrollOffset += 10; //Scroll down
+                scrollOffset += 30 / (int) MinecraftClient.getInstance().getWindow().getScaleFactor(); //Scroll down
             }
             if (scrollOffset < 0) {
                 scrollOffset = 0;

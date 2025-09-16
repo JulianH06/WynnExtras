@@ -41,7 +41,7 @@ public class RenderLayers {
 
     // Fixed MultiPhases
     private static final RenderLayer.MultiPhase FILLED = RenderLayer.of(
-            "mythicid_filled",
+            "wynnextras_filled",
             VertexFormats.POSITION_COLOR,
             VertexFormat.DrawMode.TRIANGLE_STRIP,
             RenderLayer.DEFAULT_BUFFER_SIZE,
@@ -56,7 +56,7 @@ public class RenderLayers {
     );
 
     private static final RenderLayer.MultiPhase FILLED_XRAY = RenderLayer.of(
-            "mythicid_filled_xray",
+            "wynnextras_filled_xray",
             VertexFormats.POSITION_COLOR,
             VertexFormat.DrawMode.TRIANGLE_STRIP,
             RenderLayer.DEFAULT_BUFFER_SIZE,

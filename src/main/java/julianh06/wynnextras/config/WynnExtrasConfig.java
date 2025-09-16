@@ -10,6 +10,9 @@ import julianh06.wynnextras.config.simpleconfig.annotations.Config;
 import julianh06.wynnextras.config.simpleconfig.annotations.ConfigEntry;
 import julianh06.wynnextras.features.misc.ItemStackDeserializer;
 import julianh06.wynnextras.features.misc.ItemStackSerializer;
+import julianh06.wynnextras.features.waypoints.Waypoint;
+import julianh06.wynnextras.features.waypoints.WaypointData;
+import julianh06.wynnextras.features.waypoints.Waypoints;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.ItemStack;
@@ -173,18 +176,27 @@ public class WynnExtrasConfig implements ConfigData {
 
     @ConfigEntry.Category(Categories.bankOverlay)
     @ConfigEntry.Name("Wynntils item rarity background intensity")
-    public int wynntilsItemRarityBackgroundAlpha = 100;
+    public int wynntilsItemRarityBackgroundAlpha = 150;
 
     @ConfigEntry.Category(Categories.bankOverlay)
     @ConfigEntry.Text
     public String bankInfo = "This Feature is still Work in Progress, bugs can (and probably will) occur. " +
                                     "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras (/we) discord\". " +
-                                    "The feature is currently only available for the account bank but implementations for character banks, " +
-                                    "the tome shelf and the misc bucket are planned. Buying pages is possible but it's a bit buggy so it's " +
-                                    "recommended to disable the feature to buy pages.";
+                                    "Buying pages is possible but it's a bit buggy so it's recommended to disable the feature to buy pages.";
+
+
+
 
 
     //TOTEM VISUALIZER
+
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Name("Dark mode for the Bank overlay and profile viewer")
+    public boolean darkmodeToggle = false;
+
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Text
+    public String emptyyy = " ";
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Totem range visualizer toggle")

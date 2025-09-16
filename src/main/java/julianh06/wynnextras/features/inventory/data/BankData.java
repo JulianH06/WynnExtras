@@ -1,4 +1,4 @@
-package julianh06.wynnextras.features.inventory;
+package julianh06.wynnextras.features.inventory.data;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -8,8 +8,8 @@ import com.google.gson.reflect.TypeToken;
 import julianh06.wynnextras.features.misc.ItemStackDeserializer;
 import julianh06.wynnextras.features.misc.ItemStackSerializer;
 import julianh06.wynnextras.utils.OptionalTypeAdapter;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.item.ItemStack;
+
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -21,12 +21,35 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
-public class BankOverlayData {
+public abstract class BankData {
     public HashMap<Integer, List<ItemStack>> BankPages = new HashMap<>();
-
     public HashMap<Integer, String> BankPageNames = new HashMap<>();
 
-    public static BankOverlayData INSTANCE = new BankOverlayData();
+    public abstract Path getConfigPath();
+
+    public void save() {
+        try (Writer writer = Files.newBufferedWriter(getConfigPath())) {
+            getGson().toJson(this, writer);
+        } catch (IOException e) {
+            System.err.println("[WynnExtras] Couldn't write bank data:");
+            e.printStackTrace();
+        }
+    }
+
+    public void load() {
+        if (Files.exists(getConfigPath())) {
+            try (Reader reader = Files.newBufferedReader(getConfigPath())) {
+                BankData loaded = getGson().fromJson(reader, this.getClass());
+                if (loaded != null) {
+                    this.BankPages = loaded.BankPages;
+                    this.BankPageNames = loaded.BankPageNames;
+                }
+            } catch (IOException e) {
+                System.err.println("[WynnExtras] Couldn't read bank data:");
+                e.printStackTrace();
+            }
+        }
+    }
 
     private static final Gson GSON = new GsonBuilder()
             .registerTypeAdapterFactory(new TypeAdapterFactory() {
@@ -45,32 +68,8 @@ public class BankOverlayData {
             .setPrettyPrinting()
             .create();
 
-    private static final Path CONFIG_PATH = FabricLoader.getInstance()
-            .getConfigDir()
-            .resolve("wynnextras/bankpages.json");
-
-    public static void load() {
-        if (Files.exists(CONFIG_PATH)) {
-            try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
-                BankOverlayData loaded = GSON.fromJson(reader, BankOverlayData.class);
-                if (loaded != null) {
-                    INSTANCE = loaded;
-                } else {
-                    System.err.println("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");
-                }
-            } catch (IOException e) {
-                System.err.println("[WynnExtras] Couldn't read the bankpages file:");
-                e.printStackTrace();
-            }
-        }
-    }
-
-    public static void save() {
-        try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
-            GSON.toJson(INSTANCE, writer);
-        } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't write the bankpages file:");
-            e.printStackTrace();
-        }
+    public static Gson getGson() {
+        return GSON;
     }
 }
+

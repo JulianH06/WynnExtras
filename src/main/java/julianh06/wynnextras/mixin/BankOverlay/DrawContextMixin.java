@@ -7,6 +7,7 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.features.inventory.BankOverlay;
+import julianh06.wynnextras.features.inventory.BankOverlayType;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
@@ -26,7 +27,7 @@ public class DrawContextMixin{
                     target = "Lnet/minecraft/client/util/math/MatrixStack;translate(FFF)V")
     )
     public void redirectTranslate(MatrixStack instance, float x, float y, float z) {
-        if(!BankOverlay.isBank) {
+        if(BankOverlay.currentOverlayType == BankOverlayType.NONE) {
             instance.translate(0.0F, 0.0F, 400.0F);
         } else {
             instance.translate(0.0f, 0.0f, 501f);
@@ -40,7 +41,7 @@ public class DrawContextMixin{
                     target = "Lnet/minecraft/client/gui/tooltip/TooltipBackgroundRenderer;render(Lnet/minecraft/client/gui/DrawContext;IIIIILnet/minecraft/util/Identifier;)V")
     )
     private static void redirectRender(DrawContext context, int x, int y, int width, int height, int z, Identifier texture) {
-        if(!BankOverlay.isBank) {
+        if(BankOverlay.currentOverlayType == BankOverlayType.NONE) {
             TooltipBackgroundRenderer.render(context, x, y, width, height, 400, texture);
         } else {
             TooltipBackgroundRenderer.render(context, x, y, width, height, 500, texture);
@@ -54,7 +55,7 @@ public class DrawContextMixin{
             target = "Lnet/minecraft/client/gui/DrawContext;drawText(Lnet/minecraft/client/font/TextRenderer;Ljava/lang/String;IIIZ)I")
     )
     private int drawStackCount(DrawContext instance, TextRenderer textRenderer, String text, int x, int y, int color, boolean shadow) {
-        if(BankOverlay.isBank) {
+        if(BankOverlay.currentOverlayType != BankOverlayType.NONE) {
             FontRenderer.getInstance().renderText(
                     instance.getMatrices(),
                     StyledText.fromString(text),

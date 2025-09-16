@@ -3,6 +3,7 @@ package julianh06.wynnextras.mixin.BankOverlay;
 import com.wynntils.features.ui.ContainerScrollFeature;
 import com.wynntils.models.containers.type.ScrollableContainerProperty;
 import julianh06.wynnextras.features.inventory.BankOverlay;
+import julianh06.wynnextras.features.inventory.BankOverlayType;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -20,7 +21,7 @@ public class ContainerScrollFeatureMixin {
             )
     )
     public Optional<Integer> getScrollButton(ScrollableContainerProperty instance, HandledScreen<?> screen, boolean previousPage) {
-        if(BankOverlay.isBank) {
+        if(BankOverlay.currentOverlayType != BankOverlayType.NONE) {
             return Optional.empty();
         }
         return instance.getScrollButton(screen, previousPage);

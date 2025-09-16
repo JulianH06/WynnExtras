@@ -33,6 +33,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -52,7 +53,7 @@ public class WynncraftApiHandler {
                 return 1;
             },
             null,
-            ClientCommandManager.argument("key", StringArgumentType.word())
+            List.of(ClientCommandManager.argument("key", StringArgumentType.word()))
     );
 
     private static Command apiKeyCmdNoArgs = new Command(

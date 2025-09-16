@@ -22,7 +22,7 @@ public class EasyButton extends EasyElement{
 
     @Override
     public void click() {
-        System.out.println("button pressed");
+        System.out.println("deleteButton pressed");
     }
 
     @Override

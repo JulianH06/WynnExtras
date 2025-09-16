@@ -14,6 +14,8 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 
+import java.util.List;
+
 import static com.mojang.brigadier.builder.LiteralArgumentBuilder.literal;
 import static com.mojang.brigadier.builder.RequiredArgumentBuilder.argument;
 
@@ -60,13 +62,26 @@ public class CommandLoader implements WELoader {
             if(sub != null) current = current.then(buildCommandTree(sub));
         }
 
-        for (ArgumentBuilder<FabricClientCommandSource, ?> arg : cmd.getArguments()) {
-            if(arg != null) current = current.then(arg.executes(cmd::onExecute));
-        }
+        ArgumentBuilder<FabricClientCommandSource, ?> args = chainArguments(cmd.getArguments(), cmd);
+        if(args != null) current = current.then(args);
 
         current.executes(cmd::onExecute);
 
         return root;
+    }
+
+    public static ArgumentBuilder<FabricClientCommandSource, ?> chainArguments(
+            List<ArgumentBuilder<FabricClientCommandSource, ?>> args,
+            Command cmd
+    ) {
+        if (args.isEmpty()) return null;
+
+        ArgumentBuilder<FabricClientCommandSource, ?> head = args.getFirst();
+        if (args.size() == 1) {
+            return head.executes(cmd::onExecute);
+        } else {
+            return head.then(chainArguments(args.subList(1, args.size()), cmd));
+        }
     }
 
 }
