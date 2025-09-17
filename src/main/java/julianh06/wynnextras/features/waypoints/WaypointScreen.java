@@ -405,3 +405,5 @@ public class WaypointScreen extends Screen {
         }
     }
 }
+
+//TODO: import/export of categories and opacity slider for categories
