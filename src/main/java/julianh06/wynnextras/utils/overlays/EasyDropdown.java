@@ -19,6 +19,7 @@ import net.minecraft.util.Identifier;
 import java.util.ArrayList;
 import java.util.List;
 
+import static julianh06.wynnextras.features.waypoints.WaypointScreen.categoryDropdown;
 import static julianh06.wynnextras.features.waypoints.WaypointScreen.scaleFactor;
 
 public class EasyDropdown extends EasyElement{
@@ -39,11 +40,15 @@ public class EasyDropdown extends EasyElement{
 
     @Override
     public void draw(DrawContext context) {
-        categories = WaypointData.INSTANCE.categories;
+        categories = WaypointData.INSTANCE.activePackage.categories;
         if (isExpanded) {
-            if(categories.isEmpty()) {
+            if(categories.size() <= 1) {
                 RenderUtils.drawTexturedRect(context.getMatrices(), categorySingleTexture, x, y + height, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Create a category!")), x + 6f / scaleFactor, y + height + 10f / scaleFactor, CustomColor.fromHexString("FF0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2.65f / scaleFactor);
+                if(categories.isEmpty()) {
+                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Create a category!")), x + 6f / scaleFactor, y + height + 10f / scaleFactor, CustomColor.fromHexString("FF0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2.65f / scaleFactor);
+                } else {
+                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(WaypointData.INSTANCE.activePackage.categories.getFirst().name)), x + 6f / scaleFactor, y + height + 10f / scaleFactor, WaypointData.INSTANCE.activePackage.categories.getFirst().color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f / scaleFactor);
+                }
                 return;
             }
             for(int i = 0; i < categories.size(); i++) {
@@ -51,7 +56,7 @@ public class EasyDropdown extends EasyElement{
                 if(i == 0) texture = categoryTopTexture;
                 if(i == categories.size() - 1) texture = categoryBotTexture;
                 RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y + height + i * 39f / scaleFactor, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(WaypointData.INSTANCE.categories.get(i).name)), x + 6f / scaleFactor, y + height + i * 39f / scaleFactor + 10f / scaleFactor, WaypointData.INSTANCE.categories.get(i).color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f / scaleFactor);
+                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(WaypointData.INSTANCE.activePackage.categories.get(i).name)), x + 6f / scaleFactor, y + height + i * 39f / scaleFactor + 10f / scaleFactor, WaypointData.INSTANCE.activePackage.categories.get(i).color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f / scaleFactor);
             }
         }
     }

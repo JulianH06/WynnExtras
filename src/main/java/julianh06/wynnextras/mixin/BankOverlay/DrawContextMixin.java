@@ -12,13 +12,19 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin (DrawContext.class)
-public class DrawContextMixin{
+public abstract class DrawContextMixin{
+
+    @Shadow public abstract MatrixStack getMatrices();
 
     @Redirect(
             method = "drawTooltip(Lnet/minecraft/client/font/TextRenderer;Ljava/util/List;IILnet/minecraft/client/gui/tooltip/TooltipPositioner;Lnet/minecraft/util/Identifier;)V",
@@ -48,28 +54,27 @@ public class DrawContextMixin{
         }
     }
 
-    @Redirect(
-            method = "Lnet/minecraft/client/gui/DrawContext;drawStackCount(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/item/ItemStack;IILjava/lang/String;)V",
-            at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/DrawContext;drawText(Lnet/minecraft/client/font/TextRenderer;Ljava/lang/String;IIIZ)I")
-    )
-    private int drawStackCount(DrawContext instance, TextRenderer textRenderer, String text, int x, int y, int color, boolean shadow) {
+    @Inject(method = "drawStackCount", at = @At("HEAD"), cancellable = true)
+    private void drawStackCount(TextRenderer textRenderer, ItemStack stack, int x, int y, String stackCountText, CallbackInfo ci) {
         if(BankOverlay.currentOverlayType != BankOverlayType.NONE) {
-            FontRenderer.getInstance().renderText(
-                    instance.getMatrices(),
-                    StyledText.fromString(text),
-                    (float) x,
-                    (float) y,
-                    CustomColor.fromInt(color),
-                    HorizontalAlignment.LEFT,
-                    VerticalAlignment.TOP,
-                    TextShadow.NORMAL,
-                    1.0f
-            );
-        } else {
-            instance.drawText(textRenderer, text, x, y, -1, true);
+            if (stack.getCount() != 1 || stackCountText != null) {
+                String string = stackCountText == null ? String.valueOf(stack.getCount()) : stackCountText;
+                this.getMatrices().push();
+                this.getMatrices().translate(0.0F, 0.0F, 200.0F);
+                FontRenderer.getInstance().renderText(
+                        this.getMatrices(),
+                        StyledText.fromString(string),
+                        (float) x + 19 - 2 - textRenderer.getWidth(string),
+                        (float) y + 6 + 3,
+                        CustomColor.fromHexString("FFFFFF"),
+                        HorizontalAlignment.LEFT,
+                        VerticalAlignment.TOP,
+                        TextShadow.NORMAL,
+                        1.0f
+                );
+                this.getMatrices().pop();
+                ci.cancel();
+            }
         }
-        return 1;
     }
 }

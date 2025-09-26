@@ -24,7 +24,6 @@
     "ChatScreenMixin",
     "MessageFilterFeatureMixin",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
-    "Accessor.RaidInfoAccessor",
     "Accessor.SlotAccessor",
     "BankOverlay.ContainerScrollFeatureMixin",
     "BankOverlay.PersonalStorageUtilitiesFeatureMixin",

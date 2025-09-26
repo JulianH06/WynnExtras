@@ -35,7 +35,9 @@ public class EasyButton extends EasyElement{
     }
 
     public void drawWithTexture(DrawContext context, Identifier texture) {
-        RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, width, height, (int) width, (int) height);
+        if(texture != null) {
+            RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, width, height, (int) width, (int) height);
+        }
         if(buttonText == null) {
             return;
         }

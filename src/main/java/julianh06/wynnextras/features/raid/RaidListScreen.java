@@ -12,7 +12,6 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
-import julianh06.wynnextras.mixin.Accessor.RaidInfoAccessor;
 import julianh06.wynnextras.utils.Pair;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
@@ -176,7 +175,7 @@ public class RaidListScreen extends Screen {
                          FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(name), xStart + 20, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                     }
                 }
-                Map<Integer, RaidRoomInfo> challenges = ((RaidInfoAccessor)raid.raidInfo).getChallenges();
+                Map<Integer, RaidRoomInfo> challenges = raid.raidInfo.getChallenges();
                 if(challenges != null) {
                     for(int j = 0; j < challenges.size(); j++) {
                         if(currentCollapsedProgress.get(i) >= 20 * j) {

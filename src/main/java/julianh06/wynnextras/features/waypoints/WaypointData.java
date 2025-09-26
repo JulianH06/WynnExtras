@@ -15,6 +15,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -23,9 +24,13 @@ import java.util.List;
 public class WaypointData {
     public static WaypointData INSTANCE = new WaypointData();
 
-    public List<Waypoint> waypoints = new ArrayList<>();
+    public List<WaypointPackage> packages = new ArrayList<>();
 
-    public List<WaypointCategory> categories = new ArrayList<>();
+    public WaypointPackage activePackage = null;
+
+//    public List<Waypoint> waypoints = new ArrayList<>();
+//
+//    public List<WaypointCategory> categories = new ArrayList<>();
 
     static GsonBuilder builder = new GsonBuilder()
             .registerTypeAdapter(StyledText.class, new StyledTextAdapter());
@@ -36,47 +41,116 @@ public class WaypointData {
             .create();
 
 
-    private static final Path CONFIG_PATH = FabricLoader.getInstance()
-            .getConfigDir()
-            .resolve("wynnextras/waypoints.json");
+    private static final Path PACKAGE_FOLDER = FabricLoader.getInstance()
+            .getConfigDir().resolve("wynnextras/packages");
 
     public static void load() {
-        if (Files.exists(CONFIG_PATH)) {
-            try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
-                WaypointData loaded = gson.fromJson(reader, WaypointData.class);
-                if (loaded != null) {
-                    INSTANCE = loaded;
-                    for (Waypoint waypoint : INSTANCE.waypoints) {
-                        if (waypoint.categoryName != null) {
-                            for (WaypointCategory cat : INSTANCE.categories) {
-                                if (cat.name.equals(waypoint.categoryName)) {
-                                    waypoint.setCategory(cat);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    System.err.println("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");
-                }
-            } catch (IOException e) {
-                System.err.println("[WynnExtras] Couldn't read the waypoints file:");
-                e.printStackTrace();
+        INSTANCE = new WaypointData();
+
+        try {
+            if (!Files.exists(PACKAGE_FOLDER)) {
+                Files.createDirectories(PACKAGE_FOLDER);
             }
+
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(PACKAGE_FOLDER, "*.json")) {
+                for (Path file : stream) {
+                    WaypointPackage pkg = WaypointPackage.loadFromFile(file);
+                    if (pkg != null) {
+                        INSTANCE.packages.add(pkg);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("[WynnExtras] Couldn't load packages:");
+            e.printStackTrace();
+        }
+
+        // Optional: Default-Package setzen
+        if (INSTANCE.packages.isEmpty()) {
+            WaypointPackage defaultPkg = new WaypointPackage("Default");
+            INSTANCE.packages.add(defaultPkg);
+            INSTANCE.activePackage = defaultPkg;
         }
     }
 
+
     public static void save() {
-        try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
-            for (Waypoint waypoint : INSTANCE.waypoints) {
-                if (waypoint.getCategory() != null && (waypoint.categoryName == null || waypoint.categoryName.isEmpty())) {
-                    waypoint.categoryName = waypoint.getCategory().name; //just to make sure the category is saved correctly because i had some problems with it
-                }
+        try {
+            if (!Files.exists(PACKAGE_FOLDER)) {
+                Files.createDirectories(PACKAGE_FOLDER);
             }
-            gson.toJson(INSTANCE, writer);
+
+            for (WaypointPackage pkg : INSTANCE.packages) {
+                pkg.saveToFile(PACKAGE_FOLDER);
+            }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't write the waypoints file:");
+            System.err.println("[WynnExtras] Couldn't save packages:");
             e.printStackTrace();
         }
     }
+
+    public void deletePackage(String name) {
+        packages.removeIf(pkg -> pkg.name.equals(name));
+        try {
+            Files.deleteIfExists(PACKAGE_FOLDER.resolve(name + ".json"));
+        } catch (IOException e) {
+            System.err.println("[WynnExtras] Couldn't delete package file: " + name);
+            e.printStackTrace();
+        }
+    }
+
+    public WaypointPackage duplicatePackage(String originalName) {
+        WaypointPackage original = packages.stream()
+                .filter(pkg -> pkg.name.equals(originalName))
+                .findFirst()
+                .orElse(null);
+
+        if (original == null) return null;
+
+        WaypointPackage copy = new WaypointPackage(generateUniqueName(original.name));
+        for (WaypointCategory cat : original.categories) {
+            copy.categories.add(new WaypointCategory(cat.name, cat.color));
+        }
+
+        for (Waypoint waypoint : original.waypoints) {
+            Waypoint newWaypoint = new Waypoint(waypoint.x, waypoint.y, waypoint.z);
+            newWaypoint.name = waypoint.name;
+            newWaypoint.show = waypoint.show;
+            newWaypoint.showName = waypoint.showName;
+            newWaypoint.showDistance = waypoint.showDistance;
+            newWaypoint.categoryName = waypoint.categoryName;
+
+            for (WaypointCategory cat : copy.categories) {
+                if (cat.name.equals(newWaypoint.categoryName)) {
+                    newWaypoint.setCategory(cat);
+                    break;
+                }
+            }
+
+            copy.waypoints.add(newWaypoint);
+        }
+
+        packages.add(copy);
+        save();
+        return copy;
+    }
+
+    public String generateUniqueName(String baseName) {
+        int counter = 0;
+        while (true) {
+            String candidate = (counter == 0)
+                    ? baseName
+                    : baseName + " (" + counter + ")";
+            final String checkName = candidate;
+
+            boolean exists = packages.stream().anyMatch(pkg -> pkg.name != null && pkg.name.equals(checkName));
+
+            if (!exists) {
+                return candidate;
+            }
+            counter++;
+        }
+    }
+
+
 }

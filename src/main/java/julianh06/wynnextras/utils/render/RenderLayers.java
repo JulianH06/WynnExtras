@@ -14,7 +14,7 @@ public class RenderLayers {
 
     private static RenderLayer.MultiPhase createLineRenderLayer(int lineWidth, boolean throughWalls) {
         return RenderLayer.of(
-                "mythicid_lines_" + lineWidth + (throughWalls ? "_xray" : ""),
+                "wynnextras_lines_" + lineWidth + (throughWalls ? "_xray" : ""),
                 VertexFormats.LINES,
                 VertexFormat.DrawMode.LINES,
                 RenderLayer.DEFAULT_BUFFER_SIZE,

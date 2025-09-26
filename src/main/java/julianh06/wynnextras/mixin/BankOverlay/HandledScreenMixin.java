@@ -68,6 +68,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -84,6 +85,8 @@ import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 @WEModule
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenMixin {
+    @Shadow public abstract void close();
+
     @Unique
     ItemStack hoveredSlot = null;
     @Unique
@@ -265,6 +268,7 @@ public abstract class HandledScreenMixin {
             int stackIndex = 0;
             for (ItemStack stack : inv) {
                 if(i != playerInvIndex) {
+                    if(!isUnlocked) break;
                     if (stack == null) stack = new ItemStack(Items.AIR);
                     applyAnnotation(stack, annotations, stackIndex);
                 }
@@ -502,6 +506,8 @@ public abstract class HandledScreenMixin {
 
     @Unique
     private void applyAnnotation(ItemStack stack, List<ItemAnnotation> annotations, int index) {
+        if(stack.getItem() == Items.AIR) return;
+
         if (stack == null) {
             annotations.add(null);
             return;
@@ -776,10 +782,6 @@ public abstract class HandledScreenMixin {
 
         if (hoveredIndex < 0 || hoveredIndex >= 63) return;
 
-        int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
-        int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
-        int xFitAmount = Math.min(3, Math.floorDiv(screenWidth, 162)); //Max amount is 3
-        int yFitAmount = Math.min(4, Math.floorDiv(screenHeight, 90));
         int playerInvIndex = xFitAmount * yFitAmount - xFitAmount;
 
         SlotActionType actionType = determineActionType(button);
@@ -834,6 +836,13 @@ public abstract class HandledScreenMixin {
         ItemStack oldHeld = heldItem;
         heldItem = getHeldItem(hoveredIndex, actionType, button);
 
+        if(heldItem.getCustomName() != null) {
+            if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
+                heldItem = Items.AIR.getDefaultStack();
+                return true;
+            }
+        }
+
         if (shouldCancelEmeraldPouch(oldHeld, heldItem)) {
             heldItem = Items.AIR.getDefaultStack();
         }
@@ -854,6 +863,13 @@ public abstract class HandledScreenMixin {
 
         ItemStack oldHeld = heldItem;
         heldItem = getHeldItem(hoveredIndex + 54, actionType, button);
+
+        if(heldItem.getCustomName() != null) {
+            if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
+                heldItem = Items.AIR.getDefaultStack();
+                return true;
+            }
+        }
 
         if (shouldCancelEmeraldPouch(oldHeld, heldItem)) {
             heldItem = Items.AIR.getDefaultStack();

@@ -3,7 +3,6 @@ package julianh06.wynnextras.features.raid;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.*;
-import julianh06.wynnextras.mixin.Accessor.RaidInfoAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.neoforged.bus.api.SubscribeEvent;
 import java.util.ArrayList;
@@ -32,12 +31,12 @@ public class RaidList {
     void onRaidEnded(RaidEndedEvent event) {
         List<String> members = new ArrayList<>(RaidListScreen.currentPlayers);
         if(event instanceof RaidEndedEvent.Completed) {
-            Long raidEndTime = ((RaidInfoAccessor) event.getRaid()).getRaidStartTime() + event.getRaid().getTimeInRaid();
+            Long raidEndTime = event.getRaid().getRaidStartTime() + event.getRaid().getTimeInRaid();
             INSTANCE.raids.add(new RaidData(event.getRaid(), members, raidEndTime, true));
             RaidListData.save();
         }
         if(event instanceof RaidEndedEvent.Failed) {
-            Long raidEndTime = ((RaidInfoAccessor) event.getRaid()).getRaidStartTime() + event.getRaid().getTimeInRaid();
+            Long raidEndTime = event.getRaid().getRaidStartTime() + event.getRaid().getTimeInRaid();
             INSTANCE.raids.add(new RaidData(event.getRaid(), members, raidEndTime, false));
             RaidListData.save();
         }

@@ -28,6 +28,7 @@ import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.collection.DefaultedList;
 import net.neoforged.bus.api.SubscribeEvent;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -73,6 +74,19 @@ public class BankOverlay {
 
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
+        if(event.getKey() == GLFW.GLFW_KEY_UP && event.getAction() == GLFW.GLFW_PRESS) {
+            if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
+                scrollOffset -= xFitAmount; //Scroll up
+                if (scrollOffset < 0) {
+                    scrollOffset = 0;
+                }
+            }
+        }
+        if(event.getKey() == GLFW.GLFW_KEY_DOWN && event.getAction() == GLFW.GLFW_PRESS) {
+            if (BankOverlay.currentOverlayType != BankOverlayType.NONE && canScrollFurther) {
+                scrollOffset += xFitAmount; //Scroll down
+            }
+        }
         if(activeTextInput != null) {
             activeTextInput.onInput(event);
         }

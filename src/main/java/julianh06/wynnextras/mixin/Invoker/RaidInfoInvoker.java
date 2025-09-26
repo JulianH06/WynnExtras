@@ -4,8 +4,8 @@ import com.wynntils.models.raid.type.RaidInfo;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin (value = RaidInfo.class, remap = false)
+@Mixin (value = RaidInfo.class)
 public interface RaidInfoInvoker {
-    @Invoker("getTimeInRooms")
+    @Invoker(value = "getTimeInRooms", remap = false)
     long invokeGetTimeInRooms();
 }

@@ -38,7 +38,7 @@ public class WaypointElement {
     Identifier deleteTexture = Identifier.of("wynnextras", "textures/gui/waypoints/deletebutton.png");
     Identifier inavtiveTexture = Identifier.of("wynnextras", "textures/gui/waypoints/checkboxinactive.png");
     Identifier activeTexture = Identifier.of("wynnextras", "textures/gui/waypoints/checkboxactive.png");
-    Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/waypoints/waypointbackground2.png");
+    Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/waypoints/waypointbackground.png");
     Identifier coordsBackgroundTexture = Identifier.of("wynnextras", "textures/gui/waypoints/coordinateinput.png");
     Identifier nameBackgroundTexture = Identifier.of("wynnextras", "textures/gui/waypoints/categoryboxsingle.png");
 
@@ -52,7 +52,7 @@ public class WaypointElement {
         deleteButton = new EasyButton(-1, -1, -1, -1) {
             @Override
             public void click() {
-                WaypointData.INSTANCE.waypoints.remove(waypoint);
+                WaypointData.INSTANCE.activePackage.waypoints.remove(waypoint);
             }
         };
 
