@@ -46,11 +46,11 @@ public class WEScreen extends Screen {
     }
 
     protected void drawText(String text, float x, float y, CustomColor color) {
-        this.drawText(text, x, y, color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f);
+        this.drawText(text, x, y, color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f);
     }
 
     protected void drawText(String text, float x, float y) {
-        this.drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f);
+        this.drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f);
     }
 
     protected void drawCenteredText(String text, float x, float y, CustomColor color, float textScale) {
@@ -58,11 +58,11 @@ public class WEScreen extends Screen {
     }
 
     protected void drawCenteredText(String text, float x, float y, CustomColor color) {
-        this.drawText(text, x, y, color, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 1f);
+        this.drawText(text, x, y, color, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f);
     }
 
     protected void drawCenteredText(String text, float x, float y) {
-        this.drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 1f);
+        this.drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f);
     }
 
     protected void drawImage(Identifier texture, float x, float y, float width, float height) {

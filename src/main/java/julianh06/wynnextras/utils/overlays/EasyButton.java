@@ -21,18 +21,10 @@ public class EasyButton extends EasyElement{
     }
 
     @Override
-    public void click() {
-        System.out.println("deleteButton pressed");
-    }
+    public void click() {}
 
     @Override
-    public void draw(DrawContext context) {
-        RenderUtils.drawRect(context.getMatrices(), color, x, y, 0.0f, width, height);
-        if(buttonText == null) {
-            return;
-        }
-        context.drawText(MinecraftClient.getInstance().textRenderer, buttonText, x + 1, y + 1, CustomColor.fromHexString("000000").asInt(), false);
-    }
+    public void draw(DrawContext context) {RenderUtils.drawRect(context.getMatrices(), CustomColor.fromHexString("FFFFFF"), x, y, 0, width, height);}
 
     public void drawWithTexture(DrawContext context, Identifier texture) {
         if(texture != null) {

@@ -2,6 +2,8 @@ package julianh06.wynnextras.features.profileviewer;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.models.raid.raids.RaidKind;
@@ -73,30 +75,64 @@ public class WynncraftApiHandler {
 
     private String API_KEY;
 
-    public static CompletableFuture<PlayerData> fetchPlayerData(String playerName) {
+    public static CompletableFuture<String> fetchUUID(String playerName) {
         HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request;
-
-        if(INSTANCE.API_KEY == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
-                    " Run \"/WynnExtras apikey\" to learn more.")));
-
-
-            request = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_URL + playerName + "?fullResult"))
-                    .GET()
-                    .build();
-        } else {
-            request = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_URL + playerName + "?fullResult"))
-                    .header("Authorization", "Bearer " + INSTANCE.API_KEY)
-                    .GET()
-                    .build();
-        }
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.mojang.com/users/profiles/minecraft/" + playerName))
+                .GET()
+                .build();
 
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
-                .thenApply(WynncraftApiHandler::parsePlayerData);
+                .thenApply(body -> {
+                    try {
+                        JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+                        return json.get("id").getAsString(); // UUID ohne Bindestriche
+                    } catch (Exception e) {
+                        return null; // Spieler existiert nicht
+                    }
+                });
+    }
+
+    public static String formatUUID(String rawUUID) {
+        return rawUUID.replaceFirst(
+                "(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})",
+                "$1-$2-$3-$4-$5"
+        );
+    }
+
+    public static CompletableFuture<PlayerData> fetchPlayerData(String playerName) {
+        return fetchUUID(playerName).thenCompose(rawUUID -> {
+            if (rawUUID == null) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§cPlayername is incorrect or unknown.")));
+                return CompletableFuture.completedFuture(null);
+            }
+
+            String formattedUUID = formatUUID(rawUUID);
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request;
+
+            if (INSTANCE.API_KEY == null) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
+                        " Run \"/WynnExtras apikey\" to learn more.")));
+
+
+                request = HttpRequest.newBuilder()
+                        .uri(URI.create(BASE_URL + formattedUUID + "?fullResult"))
+                        .GET()
+                        .build();
+            } else {
+                request = HttpRequest.newBuilder()
+                        .uri(URI.create(BASE_URL + formattedUUID + "?fullResult"))
+                        .header("Authorization", "Bearer " + INSTANCE.API_KEY)
+                        .GET()
+                        .build();
+            }
+
+            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::body)
+                    .thenApply(WynncraftApiHandler::parsePlayerData);
+        });
     }
 
     private static PlayerData parsePlayerData(String json) {

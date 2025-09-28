@@ -30,7 +30,8 @@ public class InventoryScreenMixin {
     @Unique
     private static WynnExtrasConfig config;
 
-
+    @Unique
+    private static int normalGUIScale = -1;
 
     @Inject(method = "renderInGameBackground", at = @At("HEAD"), cancellable = true)
     public void renderInGameBackground(DrawContext context, CallbackInfo ci) {
@@ -42,6 +43,13 @@ public class InventoryScreenMixin {
 
         if (config == null) config = SimpleConfig.getInstance(WynnExtrasConfig.class);
         if (!config.toggleBankOverlay) return;
+
+        if(config.differentGUIScale) {
+            if(normalGUIScale == -1) {
+                normalGUIScale = MinecraftClient.getInstance().options.getGuiScale().getValue();
+            }
+            MinecraftClient.getInstance().options.getGuiScale().setValue(config.customGUIScale);
+        }
 
         BankOverlay.updateOverlayType();
 
@@ -72,6 +80,15 @@ public class InventoryScreenMixin {
 
             WynnExtras.testInv = currScreenHandler.slots;
             WynnExtras.testInvSize = currScreenHandler.slots.size() - 36;
+        }
+    }
+
+    @Inject(method = "close", at = @At("HEAD"))
+    public void close(CallbackInfo ci) {
+        if(config == null) config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        if(config.differentGUIScale && normalGUIScale != -1) {
+            MinecraftClient.getInstance().options.getGuiScale().setValue(normalGUIScale);
+            normalGUIScale = -1;
         }
     }
 }
