@@ -17,6 +17,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import julianh06.wynnextras.utils.overlays.EasyButton;
+import julianh06.wynnextras.utils.render.WEScreen;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -49,11 +50,11 @@ import java.util.concurrent.CompletableFuture;
 
 import static julianh06.wynnextras.features.waypoints.WaypointScreen.scaleFactor;
 
-public class PVScreen extends Screen {
+public class PVScreen extends WEScreen {
     static int mouseX = 0;
     static int mouseY = 0;
 
-    public enum Rank {NONE, VIP, VIPPLUS, HERO, HEROPLUS, CHAMPION}
+    public enum Rank {NONE, VIP, VIPPLUS, HERO, HEROPLUS, CHAMPION, MEDIA, WYNN, MOD, ADMIN}
 
     public enum Tab {General, Raids, Rankings, Professions, Dungeons, Quests, Misc}
     public static List<TabButton> tabButtons = new ArrayList<>();
@@ -104,6 +105,10 @@ public class PVScreen extends Screen {
     Identifier hero = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/hero.png");
     Identifier heroplus = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/heroplus.png");
     Identifier champion = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/champion.png");
+    Identifier media = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/media.png");
+    Identifier wynn = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/wynn.png");
+    Identifier mod = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/moderator.png");
+    Identifier admin = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/admin.png");
     Identifier warriorTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/warrior.png");
     Identifier warriorGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/warriorgold.png");
     Identifier shamanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/shaman.png");
@@ -169,6 +174,13 @@ public class PVScreen extends Screen {
     Identifier professionLevelTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/professionlevel.png");
     Identifier rankingBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackground.png");
     Identifier rankingBackgroundWideTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackgroundwide.png");
+
+    Identifier ironmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ironman.png");
+    Identifier ultimateIronmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ultimateironman.png");
+    Identifier huntedTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hunted.png");
+    Identifier hardcoreTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hardcore.png");
+    Identifier hardcoreFailedTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hardcorefailed.png");
+    Identifier craftsmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/craftsman.png");
 
     Identifier rankingBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackground_dark.png");
     Identifier rankingBackgroundWideTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackgroundwide_dark.png");
@@ -258,9 +270,9 @@ public class PVScreen extends Screen {
             lastScrollTime = now;
 
             if (verticalAmount > 0) {
-                scrollOffset -= 30 / scaleFactor; //Scroll up
+                scrollOffset -= 30; //Scroll up
             } else {
-                scrollOffset += 30 / scaleFactor; //Scroll down
+                scrollOffset += 30; //Scroll down
             }
             if(scrollOffset < 0) {
                 scrollOffset = 0;
@@ -271,7 +283,10 @@ public class PVScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         if(MinecraftClient.getInstance().getWindow() == null) return;
-        scaleFactor = (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
+        super.drawContext = context;
+        super.scaleFactor = MinecraftClient.getInstance().getWindow().getScaleFactor();
+        scaleFactor = (int) super.scaleFactor;
+        if(scaleFactor == 0) return;
 
         if(openInBrowserButton == null && PV.currentPlayerData != null) {
             openInBrowserButton = new OpenInBroserButton(-1, -1, 20 * 3 / scaleFactor, 87 * 3 / scaleFactor, "https://wynncraft.com/stats/player/" + PV.currentPlayerData.getUuid());
@@ -288,34 +303,28 @@ public class PVScreen extends Screen {
             }
         }
 
+        screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
+        screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
+        width = 600 * 3 / scaleFactor;
+        height = 250 * 3 / scaleFactor;
+        xStart = screenWidth / 2 - width / 2;
+        yStart = screenHeight / 2 - height / 2;
 
-        int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
-        int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
-        int width = 600 * 3 / scaleFactor;
-        int height = 250 * 3 / scaleFactor;
-        int xStart = screenWidth / 2 - width / 2;
-        int yStart = screenHeight / 2 - height / 2;
         PVScreen.mouseX = mouseX;
         PVScreen.mouseY = mouseY;
 
         if(questSearchBar == null && PV.currentPlayerData != null) {
-            questSearchBar = new Searchbar(xStart + 200 * 3 / scaleFactor, yStart + height + 7 * 3 / scaleFactor, 14 * 3 / scaleFactor, 400 * 3 / scaleFactor);
+            questSearchBar = new Searchbar( -1, -1, -1, -1);
             questSearchBar.setSearchText("Search...");
         }
 
-        RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+        drawBackground();
         if(currentTab == Tab.General) {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                RenderUtils.drawTexturedRect(context.getMatrices(), backgroundTextureDark, xStart, yStart, width, height, width, height);
-            } else {
-                RenderUtils.drawTexturedRect(context.getMatrices(), backgroundTexture, xStart, yStart, width, height, width, height);
-            }
+            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) drawImage(backgroundTextureDark, 0, 0, width * scaleFactor, height * scaleFactor);
+            else drawImage(backgroundTexture, 0, 0, width * scaleFactor, height * scaleFactor);
         } else {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                RenderUtils.drawTexturedRect(context.getMatrices(), alsobackgroundTextureDark, xStart, yStart, width, height, width, height);
-            } else {
-                RenderUtils.drawTexturedRect(context.getMatrices(), alsobackgroundTexture, xStart, yStart, width, height, width, height);
-            }
+            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) drawImage(alsobackgroundTextureDark, 0, 0, width * scaleFactor, height * scaleFactor);
+            else drawImage(alsobackgroundTexture, 0, 0, width * scaleFactor, height * scaleFactor);
         }
 
         int j = 0;
@@ -331,17 +340,16 @@ public class PVScreen extends Screen {
                 tabStringColor = CustomColor.fromHexString("FFFFFF");
             }
             String tabString = tab.toString();
-            int signWidth = drawDynamicNameSign(context, tabString, xStart + 8 * 3 / scaleFactor + totalXOffset * 3 / scaleFactor, yStart - 19 * 3 / scaleFactor);
-            float centerX = xStart + (float) (8 * 3) / scaleFactor + (float) (totalXOffset * 3) / scaleFactor + (float) signWidth * 3 / scaleFactor / 2;
+            int signWidth = drawDynamicNameSign(context, tabString, 24 + totalXOffset, -57);
+            float centerX = 24 + totalXOffset + (float) signWidth / 2;
 
-            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(tabString)), centerX - 1, yStart - 12 * 3 / scaleFactor, tabStringColor, HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-            tabButton.setX(xStart + 8 * 3 / scaleFactor + totalXOffset * 3 / scaleFactor);
+            drawText(tabString, centerX - 1, -36, tabStringColor, HorizontalAlignment.CENTER, VerticalAlignment.TOP, 3f);
+            tabButton.setX(xStart + 8 * 3 / scaleFactor + totalXOffset / scaleFactor);
             tabButton.setY(yStart - 19 * 3 / scaleFactor);
-            tabButton.setWidth((float) (signWidth * 3) / scaleFactor);
+            tabButton.setWidth((float) signWidth / scaleFactor);
             tabButton.setHeight((float) (20 * 3) / scaleFactor);
-            //tabButton.draw(context);
 
-            totalXOffset += signWidth + 4;
+            totalXOffset += signWidth + 12;
             j++;
         }
 
@@ -358,23 +366,23 @@ public class PVScreen extends Screen {
                     rankColorHexString = "AAAAAA";
                 }
                 if (rankBadge != null) {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), rankBadge, xStart + (float) (5 * 3) / scaleFactor, yStart + (float) (6 * 3) / scaleFactor, (float) (rankBadgeWidth / 2) * 3 / scaleFactor, 9 * 3 / scaleFactor, (rankBadgeWidth / 2) * 3 / scaleFactor, 9 * 3 / scaleFactor);
+                    drawImage(rankBadge, 15, 18, rankBadgeWidth, 27);
                 }
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(" " + PV.currentPlayerData.getUsername())), xStart + (float) (5 * 3) / scaleFactor + rankBadgeWidth * 3 / scaleFactor / 2, yStart + 7f * 3 / scaleFactor, CustomColor.fromHexString(rankColorHexString), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-                //context.drawText(MinecraftClient.getInstance().textRenderer, " " + PV.currentPlayerData.getUsername(), xStart + 5 * 3 / scaleFactor + rankBadgeWidth / 2, yStart + 7, CustomColor.fromHexString(rankColorHexString).asInt(), true);
+
+                drawText(" " + PV.currentPlayerData.getUsername(), 10 + rankBadgeWidth, 21, CustomColor.fromHexString(rankColorHexString), 3f);
 
                 if (PV.currentPlayerData.isOnline()) {
                     if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                        RenderUtils.drawTexturedRect(context.getMatrices(), onlineCircleTextureDark, xStart + (float) (5 * 3) / scaleFactor, yStart + (float) (20 * 3) / scaleFactor, (float) (11 * 3) / scaleFactor, (float) (11 * 3) / scaleFactor, 11 * 3 / scaleFactor, 11 * 3 / scaleFactor);
+                        drawImage(onlineCircleTextureDark, 15, 60, 33, 33);
                     } else {
-                        RenderUtils.drawTexturedRect(context.getMatrices(), onlineCircleTexture, xStart + (float) (5 * 3) / scaleFactor, yStart + (float) (20 * 3) / scaleFactor, (float) (11 * 3) / scaleFactor, (float) (11 * 3) / scaleFactor, 11 * 3 / scaleFactor, 11 * 3 / scaleFactor);
+                        drawImage(onlineCircleTexture, 15, 60, 33, 33);
                     }
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(PV.currentPlayerData.getServer())), (float) xStart + (float) (19 * 3) / scaleFactor, (float) yStart + (float) (22 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                    drawText(PV.currentPlayerData.getServer(), 57, 66, CustomColor.fromHexString("FFFFFF"), 3f);
                 } else {
                     if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                        RenderUtils.drawTexturedRect(context.getMatrices(), offlineCircleTextureDark, xStart + (float) (5 * 3) / scaleFactor, yStart + (float) (20 * 3) / scaleFactor, (float) (11 * 3) / scaleFactor, (float) (11 * 3) / scaleFactor, 11 * 3 / scaleFactor, 11 * 3 / scaleFactor);
+                        drawImage(offlineCircleTextureDark, 15, 60, 33, 33);
                     } else {
-                        RenderUtils.drawTexturedRect(context.getMatrices(), offlineCircleTexture, xStart + (float) (5 * 3) / scaleFactor, yStart + (float) (20 * 3) / scaleFactor, (float) (11 * 3) / scaleFactor, (float) (11 * 3) / scaleFactor, 11 * 3 / scaleFactor, 11 * 3 / scaleFactor);
+                        drawImage(offlineCircleTexture, 15, 60, 33, 33);
                     }
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
                     String formatted;
@@ -383,7 +391,7 @@ public class PVScreen extends Screen {
                     } else {
                         formatted = PV.currentPlayerData.getLastJoin().format(formatter);
                     }
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Last seen: " + formatted)), (float) xStart + (float) (19 * 3) / scaleFactor, (float) yStart + (float) (22 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                    drawText("Last seen: " + formatted, 57, 66, CustomColor.fromHexString("FFFFFF"), 3f);
                 }
                 if (dummy != null) {
                     if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
@@ -404,11 +412,10 @@ public class PVScreen extends Screen {
                     List<CharacterData> sortedCharacterList = new ArrayList<>(map.values());
 
                     sortedCharacterList.sort(
-                            Comparator.comparing(CharacterData::getLevel).thenComparing(CharacterData::getTotalLevel).thenComparing(CharacterData::getContentCompletion).thenComparing(CharacterData::getPlaytime)
+                        Comparator.comparing(CharacterData::getLevel).thenComparing(CharacterData::getTotalLevel).thenComparing(CharacterData::getContentCompletion).thenComparing(CharacterData::getPlaytime)
                     );
 
                     for (CharacterData entry : sortedCharacterList.reversed()) {
-                        //System.out.println(entry.getValue().getType());
                         Identifier classTexture;
                         if(entry.getLevel() == 106) {
                             classTexture = getGoldClassTexture(entry.getType());
@@ -416,35 +423,33 @@ public class PVScreen extends Screen {
                              classTexture = getClassTexture(entry.getType());
                         }
 
-                        int entryX = xStart + 192 * 3 / scaleFactor + (137 * 3 / scaleFactor) * (i % 3);
-                        int entryY = yStart + 5 * 3 / scaleFactor + (48 * 3 / scaleFactor) * Math.floorDiv(i, 3);
+                        int entryX = 576 + 411 * (i % 3);
+                        int entryY = 15 + 144 * Math.floorDiv(i, 3);
                         characterButtons.get(i).setCharacter(entry);
-                        characterButtons.get(i).setX(entryX);
-                        characterButtons.get(i).setY(entryY);
-                        characterButtons.get(i).setWidth(130 * 3 / scaleFactor);
-                        characterButtons.get(i).setHeight(44 * 3 / scaleFactor);
+                        characterButtons.get(i).setX(xStart + 192 * 3 / scaleFactor + (137 * 3 / scaleFactor) * (i % 3));
+                        characterButtons.get(i).setY(yStart + 5 * 3 / scaleFactor + (48 * 3 / scaleFactor) * Math.floorDiv(i, 3));
+                        characterButtons.get(i).setWidth((float) 390 / scaleFactor);
+                        characterButtons.get(i).setHeight((float) 132 / scaleFactor);
                         if(selectedCharacter == entry) {
                             if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                                RenderUtils.drawTexturedRect(context.getMatrices(), classBackgroundTextureActiveDark, entryX, entryY, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor);
+                                drawImage(classBackgroundTextureActiveDark, entryX, entryY, 390, 132);
                             } else {
-                                RenderUtils.drawTexturedRect(context.getMatrices(), classBackgroundTextureActive, entryX, entryY, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor);
+                                drawImage(classBackgroundTextureActive, entryX, entryY, 390, 132);
                             }
                         } else if(entry.getTotalLevel() != 1690) {
                             if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                                RenderUtils.drawTexturedRect(context.getMatrices(), classBackgroundTextureDark, entryX, entryY, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor);
+                                drawImage(classBackgroundTextureDark, entryX, entryY, 390, 132);
                             } else {
-                                RenderUtils.drawTexturedRect(context.getMatrices(), classBackgroundTexture, entryX, entryY, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor);
+                                drawImage(classBackgroundTexture, entryX, entryY, 390, 132);
                             }
                         } else {
                             if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                                RenderUtils.drawTexturedRect(context.getMatrices(), classBackgroundTextureGoldDark, entryX, entryY, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor);
+                                drawImage(classBackgroundTextureGoldDark, entryX, entryY, 390, 132);
                             } else {
-                                RenderUtils.drawTexturedRect(context.getMatrices(), classBackgroundTextureGold, entryX, entryY, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor, 130 * 3 / scaleFactor, 44 * 3 / scaleFactor);
+                                drawImage(classBackgroundTextureGold, entryX, entryY, 390, 132);
                             }
                         }
 
-
-                        //context.drawText(MinecraftClient.getInstance().textRenderer, entry.getValue().getType(), entryX, entryY, CustomColor.fromHexString("FFFFFF").asInt(), true);
                         if (classTexture != null) {
                             int level = entry.getLevel();
                             int totalLevel = entry.getTotalLevel();
@@ -455,75 +460,97 @@ public class PVScreen extends Screen {
                                 levelColor = CustomColor.fromHexString("FFFFFF");
                             }
 
-                            RenderUtils.drawTexturedRect(context.getMatrices(), classTexture, entryX + 4 * 3 / scaleFactor, entryY + (float) (4 * 3) / scaleFactor, (float) (30 * 3) / scaleFactor, (float) (34 * 3) / scaleFactor, 30 * 3 / scaleFactor, 34 * 3 / scaleFactor);
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(getClassName(entry))), (float) entryX + (float) (37 * 3) / scaleFactor, (float) entryY + (float) (6 * 3) / scaleFactor, levelColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 0.7f * 3 / scaleFactor);
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Level " + level)), (float) entryX + (float) (37 * 3) / scaleFactor, (float) entryY + (float) (14 * 3) / scaleFactor, levelColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 0.7f * 3 / scaleFactor);
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Total Level " + totalLevel)), (float) entryX + (float) (37 * 3) / scaleFactor, (float) entryY + (float) (22 * 3) / scaleFactor, levelColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 0.7f * 3 / scaleFactor);
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Completion " + (entry.getContentCompletion() * 100/1133) + "%")), (float) entryX + (float) (37 * 3) / scaleFactor, (float) entryY + (float) (30 * 3) / scaleFactor, levelColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 0.7f * 3 / scaleFactor);
+                            drawImage(classTexture, entryX + 12, entryY + 12, 90, 102);
+                            drawText(getClassName(entry), entryX + 111, entryY + 18, levelColor, 2.1f);
+                            drawText("Level " + level, entryX + 111, entryY + 42, levelColor, 2.1f);
+                            drawText("Total Level " + totalLevel, entryX + 111, entryY + 66, levelColor, 2.1f);
+                            drawText("Completion " + (entry.getContentCompletion() * 100/1133) + "%", entryX + 111, entryY + 90, levelColor, 2.1f);
+                        }
+
+                        List<String> gamemodes = entry.getGamemode();
+                        int k = 0;
+                        if(gamemodes != null) {
+                            if(gamemodes.contains("ultimate_ironman")) {
+                                drawImage(ultimateIronmanTexture, entryX + 350, entryY + 85, 30, 30);
+                                k++;
+                            } else if (gamemodes.contains("ironman")) {
+                                drawImage(ironmanTexture, entryX + 350, entryY + 85, 30, 30);
+                                k++;
+                            }
+                            if(gamemodes.contains("hunted")) {
+                                drawImage(huntedTexture, entryX - ((k % 2) * 35) + 350, entryY + 85 - (Math.floorDiv(k, 2) * 35), 30, 30);
+                                k++;
+                            }
+                            if(gamemodes.contains("hardcore")) {
+                                if(entry.getDeaths() == 0) {
+                                    drawImage(hardcoreTexture, entryX - ((k % 2) * 35) + 350, entryY + 85 - (Math.floorDiv(k, 2) * 35), 30, 30);
+                                } else {
+                                    drawImage(hardcoreFailedTexture, entryX - ((k % 2) * 35) + 350, entryY + 85 - (Math.floorDiv(k, 2) * 35), 30, 30);
+                                }
+                                k++;
+                            }
+                            if(gamemodes.contains("craftsman")) {
+                                drawImage(craftsmanTexture, entryX - ((k % 2) * 35) + 350, entryY + 85 - (Math.floorDiv(k, 2) * 35), 30, 30);
+                            }
                         }
                         i++;
                     }
                 } else {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("This player has their classes private.")), (float) xStart + (float) (300 * 3) / scaleFactor, (float) yStart + (float) (115 * 3) / scaleFactor, CustomColor.fromHexString("ff0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                    drawText("This player has their classes private.", 900, 345, CustomColor.fromHexString("FF0000"), 3f);
                 }
 
                 if (PV.currentPlayerData.getGuild() != null) {
                     String guildString = "[" + PV.currentPlayerData.getGuild().getPrefix() + "] " + PV.currentPlayerData.getGuild().getName();
                     String rankString = PV.currentPlayerData.getGuild().getRankStars() + " " + PV.currentPlayerData.getGuild().getRank() + " of " + PV.currentPlayerData.getGuild().getRankStars();
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(rankString)), (float) xStart + (float) (95 * 3) / scaleFactor, (float) yStart + (float) (185 * 3) / scaleFactor, CustomColor.fromHexString("00FFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(guildString)), (float) xStart + (float) (95 * 3) / scaleFactor, (float) yStart + (float) (195 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-                }
-
-                if (PV.currentPlayerData.getPlaytime() != 0) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Total Playtime: " + Math.round(PV.currentPlayerData.getPlaytime()) + "h")), (float) xStart + (float) (95 * 3) / scaleFactor, (float) yStart + (float) (215 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-                }
-
-                if(selectedCharacter != null) {
-                    if(selectedCharacter.getPlaytime() != 0) {
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Class Playtime: " + Math.round(selectedCharacter.getPlaytime()) + "h")), (float) xStart + (float) (95 * 3) / scaleFactor, (float) yStart + (float) (225 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-                    }
-                }
-
-                //System.out.println(WETeam + PV.currentPlayerData.getUsername());
-                if(WETeam != null && PV.currentPlayerData.getUsername() != null) {
-                    if (WETeam.contains(PV.currentPlayerData.getUsername())) {
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("★★★ WynnExtras Team Member ★★★")), (float) xStart + (float) (95 * 3) / scaleFactor, (float) yStart + (float) (235 * 3) / scaleFactor, CommonColors.SHINE, HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-                    }
+                    drawCenteredText(rankString, 285, 570, CustomColor.fromHexString("00FFFF"), 3f);
+                    drawCenteredText(guildString, 285, 600, CustomColor.fromHexString("FFFFFF"), 3f);
                 }
 
                 if (PV.currentPlayerData.getFirstJoin() != null) {
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
                     String formatted = "First joined: ";
                     formatted += PV.currentPlayerData.getFirstJoin().format(formatter);
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(formatted)), (float) xStart + (float) (95 * 3) / scaleFactor, (float) yStart + (float) (205 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                    drawCenteredText(formatted, 285, 630, CustomColor.fromHexString("FFFFFF"), 3f);
+                }
+
+                if (PV.currentPlayerData.getPlaytime() != 0) {
+                    drawCenteredText("Total Playtime: " + Math.round(PV.currentPlayerData.getPlaytime()) + "h", 285, 660, CustomColor.fromHexString("FFFFFF"), 3f);
+                }
+
+                if(selectedCharacter != null) {
+                    if(selectedCharacter.getPlaytime() != 0) {
+                        drawCenteredText("Class Playtime: " + Math.round(selectedCharacter.getPlaytime()) + "h", 285, 690, CustomColor.fromHexString("FFFFFF"), 3f);
+                    }
+                }
+
+                if(WETeam != null && PV.currentPlayerData.getUsername() != null) {
+                    if (WETeam.contains(PV.currentPlayerData.getUsername())) {
+                        drawCenteredText("★★★ WynnExtras Team Member ★★★", 285, 720, CommonColors.SHINE, 3f);
+                    }
                 }
             }
             case Raids -> {
                 DecimalFormat formatter = new DecimalFormat("#,###");
                 if(PV.currentPlayerData.getGlobalData() == null) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("This player has their raid stats private.")), (float) xStart + 300, (float) yStart + 115, CustomColor.fromHexString("ff0000"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 1.5f);
+                    drawCenteredText("This player has their raid stats private.", 900, 345, CustomColor.fromHexString("FF0000"), 5f);
                     break;
                 }
 
                 if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), raidBackgroundTextureDark, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (30 * 3) / scaleFactor, (float) (275 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 275 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), NOTGTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (30 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 100 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), raidBackgroundTextureDark, xStart + (float) (315 * 3) / scaleFactor, yStart + (float) (30 * 3) / scaleFactor, (float) (275 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 275 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), TCCTexture, xStart + (float) (490 * 3) / scaleFactor, yStart + (float) (30 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 100 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), raidBackgroundTextureDark, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (140 * 3) / scaleFactor, (float) (275 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 275 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), NOLTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (140 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 100 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), raidBackgroundTextureDark, xStart + (float) (315 * 3) / scaleFactor, yStart + (float) (140 * 3) / scaleFactor, (float) (275 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 275 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), TNATexture, xStart + (float) (490 * 3) / scaleFactor, yStart + (float) (140 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 100 * 3 / scaleFactor, 100 * 3 / scaleFactor);
+                    drawImage(raidBackgroundTextureDark, 30, 90, 825, 300);
+                    drawImage(raidBackgroundTextureDark, 945, 90, 825, 300);
+                    drawImage(raidBackgroundTextureDark, 30, 420, 825, 300);
+                    drawImage(raidBackgroundTextureDark, 945, 420, 825, 300);
                 } else {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), raidBackgroundTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (30 * 3) / scaleFactor, (float) (275 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 275 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), NOTGTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (30 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 100 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), raidBackgroundTexture, xStart + (float) (315 * 3) / scaleFactor, yStart + (float) (30 * 3) / scaleFactor, (float) (275 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 275 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), TCCTexture, xStart + (float) (490 * 3) / scaleFactor, yStart + (float) (30 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 100 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), raidBackgroundTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (140 * 3) / scaleFactor, (float) (275 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 275 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), NOLTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (140 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 100 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), raidBackgroundTexture, xStart + (float) (315 * 3) / scaleFactor, yStart + (float) (140 * 3) / scaleFactor, (float) (275 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 275 * 3 / scaleFactor, 100 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), TNATexture, xStart + (float) (490 * 3) / scaleFactor, yStart + (float) (140 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, (float) (100 * 3) / scaleFactor, 100 * 3 / scaleFactor, 100 * 3 / scaleFactor);
+                    drawImage(raidBackgroundTexture, 30, 90, 825, 300);
+                    drawImage(raidBackgroundTexture, 945, 90, 825, 300);
+                    drawImage(raidBackgroundTexture, 30, 420, 825, 300);
+                    drawImage(raidBackgroundTexture, 945, 420, 825, 300);
                 }
+                drawImage(NOTGTexture, 30, 90, 300, 300);
+                drawImage(TCCTexture, 1470, 90, 300, 300);
+                drawImage(NOLTexture, 30, 420, 300, 300);
+                drawImage(TNATexture, 1470, 420, 300, 300);
 
                 Map<String, Long> ranking = null;
                 if(selectedCharacter == null) {
@@ -552,20 +579,16 @@ public class PVScreen extends Screen {
                     if(TNARank <= 100 && TNARank > 0) tnaColor = CommonColors.RAINBOW;
 
                     if(NOTGRank != -1) {
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Rank #" + formatter.format(NOTGRank))), xStart + (float) (115 * 3) / scaleFactor, yStart + (float) (85 * 3) / scaleFactor, notgColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-                        //context.drawText(MinecraftClient.getInstance().textRenderer, "Rank #" + NOTGRank, xStart + 55, yStart + 42, notgColor.asInt(), true);
+                        drawText("Rank #" + formatter.format(NOTGRank), 345f, 255f, notgColor, 3.9f);
                     }
                     if(NOLRank != -1) {
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Rank #" + formatter.format(NOLRank))), xStart + (float) (115 * 3) / scaleFactor, yStart + (float) (195 * 3) / scaleFactor, nolColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-                        //context.drawText(MinecraftClient.getInstance().textRenderer, "Rank #" + NOLRank, xStart + 55, yStart + 127, nolColor.asInt(), true);
+                        drawText("Rank #" + formatter.format(NOLRank), 345f, 585f, nolColor, 3.9f);
                     }
                     if(TCCRank != -1) {
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Rank #" + formatter.format(TCCRank))), xStart + (float) (490 * 3) / scaleFactor, yStart + (float) (85 * 3) / scaleFactor, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-                        //context.drawText(MinecraftClient.getInstance().textRenderer, "Rank #" + TCCRank, xStart + 240 + textRenderer.getWidth("The Canyon Colossus") - textRenderer.getWidth("Rank #" + TCCRank), yStart + 42, tccColor.asInt(), true);
+                        drawText("Rank #" + formatter.format(TCCRank), 1470f, 255f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
                     }
                     if(TNARank != -1) {
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Rank #" + formatter.format(TNARank))), xStart + (float) (490 * 3) / scaleFactor, yStart + (float) (195 * 3) / scaleFactor, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-                        //context.drawText(MinecraftClient.getInstance().textRenderer, "Rank #" + TNARank, xStart + 238 + textRenderer.getWidth("The Nameless Anomaly") - textRenderer.getWidth("Rank #" + TNARank), yStart + 127, tnaColor.asInt(), true);
+                        drawText("Rank #" + formatter.format(TNARank), 1470f, 585f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
                     }
                 }
 
@@ -579,14 +602,10 @@ public class PVScreen extends Screen {
                     raids = PV.currentPlayerData.getGlobalData().getRaids();
                 }
 
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Nest of the Grootslangs")), xStart + (float) (115 * 3) / scaleFactor, yStart + (float) (55 * 3) / scaleFactor, notgColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-                //context.drawText(MinecraftClient.getInstance().textRenderer, "Nest of the Grootslangs", xStart + 55, yStart + 22, notgColor.asInt(), true);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Orphion's Nexus of Light")), xStart + (float) (115 * 3) / scaleFactor, yStart + (float) (165 * 3) / scaleFactor, nolColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-                //context.drawText(MinecraftClient.getInstance().textRenderer, "Orphion's Nexus of Light", xStart + 55, yStart + 107, nolColor.asInt(), true);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("The Canyon Colossus")), xStart + (float) (490 * 3) / scaleFactor, yStart + (float) (55 * 3) / scaleFactor, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-                //context.drawText(MinecraftClient.getInstance().textRenderer, "The Canyon Colossus", xStart + 240, yStart + 22, tccColor.asInt(), true);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("The Nameless Anomaly")), xStart + (float) (490 * 3) / scaleFactor, yStart + (float) (165 * 3) / scaleFactor, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-                //context.drawText(MinecraftClient.getInstance().textRenderer, "The Nameless Anomaly", xStart + 238, yStart + 107, tnaColor.asInt(), true);
+                drawText("Nest of the Grootslangs", 345f, 165f, notgColor, 3.9f);
+                drawText("Orphion's Nexus of Light", 345f, 495f, nolColor, 3.9f);
+                drawText("The Canyon Colossus", 1470f, 165f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+                drawText("The Nameless Anomaly", 1470f, 495f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
 
                 if(raids != null) {
                     long NOTGComps = raids.getList().getOrDefault("Nest of the Grootslangs", 0);
@@ -595,31 +614,27 @@ public class PVScreen extends Screen {
                     long TNAComps = raids.getList().getOrDefault("The Nameless Anomaly", 0);
                     long TotalComps = raids.getTotal();
 
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(formatter.format(NOTGComps) + " Completions")), xStart + (float) (115 * 3) / scaleFactor, yStart + (float) (70 * 3) / scaleFactor, notgColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
+                    drawText(formatter.format(NOTGComps) + " Completions", 345f, 210f, notgColor, 3.9f);
+                    drawText(formatter.format(NOLComps) + " Completions", 345f, 540f, nolColor, 3.9f);
+                    drawText(formatter.format(TCCComps) + " Completions", 1470f, 210f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+                    drawText(formatter.format(TNAComps) + " Completions", 1470f, 540f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
 
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(formatter.format(NOLComps) + " Completions")), xStart + (float) (115 * 3) / scaleFactor, yStart + (float) (180 * 3) / scaleFactor, nolColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(formatter.format(TCCComps) + " Completions")), xStart + (float) (490 * 3) / scaleFactor, yStart + (float) (70 * 3) / scaleFactor, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(formatter.format(TNAComps) + " Completions")), xStart + (float) (490 * 3) / scaleFactor, yStart + (float) (180 * 3) / scaleFactor, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Total Completions" + characterNameString + formatter.format(TotalComps))), xStart + (float) (300 * 3) / scaleFactor, yStart + (float) (10 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
+                    drawCenteredText("Total Completions" + characterNameString + formatter.format(TotalComps), 900f, 48f, CustomColor.fromHexString("FFFFFF"), 3.9f);
                 }
 
             }
             case Rankings -> {
                 Map<String, Long> rankings = PV.currentPlayerData.getRanking();
                 if(rankings == null) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("This player has their Rankings private.")), (float) xStart + (float) (300 * 3) / scaleFactor, (float) yStart + (float) (115 * 3) / scaleFactor, CustomColor.fromHexString("ff0000"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 1.5f * 3 / scaleFactor);
+                    drawCenteredText("This player has their rankings private.", 900, 345, CustomColor.fromHexString("FF0000"), 5f);
                     break;
                 }
-                //RenderUtils.drawTexturedRect(context.getMatrices(), dungeonBackgroundTexture, xStart + 10, yStart + 10, 580, 230, 580, 230);
 
                 for(int i = 0; i < 20; i++) {
                     if(i == 15) continue;
                     if(i > 18) continue;
-                    int xPos = xStart + 10 * 3 / scaleFactor + (145 * 3 / scaleFactor * (i % 4));
-                    int yPos = yStart + 10 * 3 / scaleFactor + (46 * 3 / scaleFactor * Math.floorDiv(i, 4));
+                    int xPos = 30 + (435 * (i % 4));
+                    int yPos = 30 + (138 * Math.floorDiv(i, 4));
 
                     Identifier texture = switch (i) {
                         case 0 -> fishingTexture;
@@ -721,63 +736,61 @@ public class PVScreen extends Screen {
 
                     if(i < 12) {
                         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                            RenderUtils.drawTexturedRect(context.getMatrices(), rankingBackgroundTextureDark, xPos, yPos, (float) (140 * 3) / scaleFactor, (float) (42 * 3) / scaleFactor, 140 * 3 / scaleFactor, 42 * 3 / scaleFactor);
+                            drawImage(rankingBackgroundTextureDark, xPos, yPos, 420, 126);
                         } else {
-                            RenderUtils.drawTexturedRect(context.getMatrices(), rankingBackgroundTexture, xPos, yPos, (float) (140 * 3) / scaleFactor, (float) (42 * 3) / scaleFactor, 140 * 3 / scaleFactor, 42 * 3 / scaleFactor);
+                            drawImage(rankingBackgroundTexture, xPos, yPos, 420, 126);
                         }
-                        RenderUtils.drawTexturedRect(context.getMatrices(), texture, xPos + (float) (4 * 3) / scaleFactor, yPos + (float) (6 * 3) / scaleFactor, (float) (30 * 3) / scaleFactor, (float) (30 * 3) / scaleFactor, 30 * 3 / scaleFactor, 30 * 3 / scaleFactor);
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(text)), xPos + (float) (37 * 3) / scaleFactor, yPos + (float) (12 * 3) / scaleFactor, textColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("#" + globalPlacementString)), xPos + (float) (37 * 3) / scaleFactor, yPos + (float) (22 * 3) / scaleFactor, textColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                        drawImage(texture, xPos + 12, yPos + 18, 90, 90);
+                        drawText(text, xPos + 111, yPos + 36, textColor);
+                        drawText("#" + globalPlacementString, xPos + 111, yPos + 66, textColor);
                     } else if(i < 16){
-                        xPos += (48 * 3 / scaleFactor * (i % 3));
+                        xPos += (144 * (i % 3));
                         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                            RenderUtils.drawTexturedRect(context.getMatrices(), rankingBackgroundWideTextureDark, xPos, yPos, (float) (189 * 3) / scaleFactor, (float) (42 * 3) / scaleFactor, 189 * 3 / scaleFactor, 42 * 3 / scaleFactor);
+                            drawImage(rankingBackgroundWideTextureDark, xPos, yPos, 567, 126);
                         } else {
-                            RenderUtils.drawTexturedRect(context.getMatrices(), rankingBackgroundWideTexture, xPos, yPos, (float) (189 * 3) / scaleFactor, (float) (42 * 3) / scaleFactor, 189 * 3 / scaleFactor, 42 * 3 / scaleFactor);
+                            drawImage(rankingBackgroundWideTexture, xPos, yPos, 567, 126);
                         }
-                        RenderUtils.drawTexturedRect(context.getMatrices(), texture, xPos + (float) (4 * 3) / scaleFactor, yPos + (float) (6 * 3) / scaleFactor, (float) (30 * 3) / scaleFactor, (float) (30 * 3) / scaleFactor, 30 * 3 / scaleFactor, 30 * 3 / scaleFactor);
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(text)), xPos + (float) (37 * 3) / scaleFactor, yPos + (float) (12 * 3) / scaleFactor, textColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("#" + globalPlacementString)), xPos + (float) (37 * 3) / scaleFactor, yPos + (float) (22 * 3) / scaleFactor, textColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-
+                        drawImage(texture, xPos + 12, yPos + 18, 90, 90);
+                        drawText(text, xPos + 111f, yPos + 36f, textColor);
+                        drawText("#" + globalPlacementString, xPos + 111f, yPos + 66f, textColor);
                     } else {
-                        xPos += (48 * 3 / scaleFactor * ((i - 1) % 3));
+                        xPos += (144 * ((i - 1) % 3));
                         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                            RenderUtils.drawTexturedRect(context.getMatrices(), rankingBackgroundWideTextureDark, xPos, yPos, (float) (189 * 3) / scaleFactor, (float) (42 * 3) / scaleFactor, 189 * 3 / scaleFactor, 42 * 3 / scaleFactor);
+                            drawImage(rankingBackgroundWideTextureDark, xPos, yPos, 567, 126);
                         } else {
-                            RenderUtils.drawTexturedRect(context.getMatrices(), rankingBackgroundWideTexture, xPos, yPos, (float) (189 * 3) / scaleFactor, (float) (42 * 3) / scaleFactor, 189 * 3 / scaleFactor, 42 * 3 / scaleFactor);
+                            drawImage(rankingBackgroundWideTexture, xPos, yPos, 567, 126);
                         }
-                        RenderUtils.drawTexturedRect(context.getMatrices(), texture, xPos + (float) (4 * 3) / scaleFactor, yPos + (float) (6 * 3) / scaleFactor, (float) (30 * 3) / scaleFactor, (float) (30 * 3) / scaleFactor, 30 * 3 / scaleFactor, 30 * 3 / scaleFactor);
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(text)), xPos + (float) (37 * 3) / scaleFactor, yPos + (float) (7 * 3) / scaleFactor, textColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Global #" + globalPlacementString)), xPos + (float) (37 * 3) / scaleFactor, yPos + (float) (17 * 3) / scaleFactor, textColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-                        if(i >= 16) {
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Solo #" + soloPlacementString)), xPos + (float) (37 * 3) / scaleFactor, yPos + (float) (27 * 3) / scaleFactor, textColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-                        }}
+                        drawImage(texture, xPos + 12, yPos + 18, 90, 90);
+                        drawText(text, xPos + 111f, yPos + 21f, textColor);
+                        drawText("#" + globalPlacementString, xPos + 111f, yPos + 51f, textColor);
+                        drawText("Solo #" + soloPlacementString, xPos + 111f, yPos + 81f, textColor);
+                    }
                 }
             }
             case Professions -> {
                 if(selectedCharacter == null) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Select a character to view professions.")), (float) xStart + (float) (300 * 3) / scaleFactor, (float) yStart + (float) (115 * 3) / scaleFactor, CustomColor.fromHexString("ff0000"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 1.5f * 3 / scaleFactor);
+                    drawCenteredText("Select a character to view professions.", 900, 345, CustomColor.fromHexString("FF0000"), 5f);
                     break;
                 }
                 Map<String, Profession> profs = selectedCharacter.getProfessions();
                 if(profs == null) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("This player has their profession stats private.")), (float) xStart + (float) (300 * 3) / scaleFactor, (float) yStart + (float) (115 * 3) / scaleFactor, CustomColor.fromHexString("ff0000"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 1.5f * 3 / scaleFactor);
+                    drawCenteredText("This player has their profession stats private.", 900, 345, CustomColor.fromHexString("FF0000"), 5f);
                     break;
                 }
 
                 if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), profBackgroundTextureDark, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (10 * 3) / scaleFactor, (float) (580 * 3) / scaleFactor, (float) (230 * 3) / scaleFactor, 580 * 3 / scaleFactor, 230 * 3 / scaleFactor);
+                    drawImage(profBackgroundTextureDark, 30, 30, 1740, 690);
                 } else {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), profBackgroundTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (10 * 3) / scaleFactor, (float) (580 * 3) / scaleFactor, (float) (230 * 3) / scaleFactor, 580 * 3 / scaleFactor, 230 * 3 / scaleFactor);
+                    drawImage(profBackgroundTexture, 30, 30, 1740, 690);
                 }
 
                 int i = 0;
                 for(Map.Entry<String, Profession> prof : profs.entrySet()) {
                     Identifier profTexture = getProfTexture(prof.getKey());
+                    int level = prof.getValue().getLevel();
+                    CustomColor levelColor;
                     if(i < 4) {
-                        int level = prof.getValue().getLevel();
-                        CustomColor levelColor;
-                        RenderUtils.drawTexturedRect(context.getMatrices(), profTexture, xStart + (float) (70 * 3) / scaleFactor + (float) (i * 136 * 3) / scaleFactor, yStart + (float) (20 * 3) / scaleFactor, (float) (64 * 3) / scaleFactor, (float) (64 * 3) / scaleFactor, 64 * 3 / scaleFactor, 64 * 3 / scaleFactor);
+                        drawImage(profTexture, 210 + i * 408, 60, 192, 192);
                         if(level == 132) {
                             levelColor = CommonColors.RAINBOW;
                         } else if (level >= 110) {
@@ -785,14 +798,12 @@ public class PVScreen extends Screen {
                         } else {
                             levelColor = CustomColor.fromHexString("FFFFFF");
                         }
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Level " + level)), xStart + (float) (102 * 3) / scaleFactor + (float) (i * 136 * 3) / scaleFactor, yStart + (float) (90 * 3) / scaleFactor, levelColor, HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 2f * 3 / scaleFactor);
+                        drawCenteredText("Level " + level, 306 + i * 408, 300, levelColor, 6f);
                         if(level < 132) {
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Progress to next Level: " + prof.getValue().getXpPercent() + "%")), xStart + (float) (102 * 3) / scaleFactor + (float) (i * 136 * 3) / scaleFactor, yStart + (float) (110 * 3) / scaleFactor, levelColor, HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 0.8f * 3 / scaleFactor);
+                            drawCenteredText("Progress to next Level: " + prof.getValue().getXpPercent() + "%", 306 + i * 408, 340, levelColor, 2.4f);
                         }
                     } else {
-                        int level = prof.getValue().getLevel();
-                        CustomColor levelColor;
-                        RenderUtils.drawTexturedRect(context.getMatrices(), profTexture, xStart + (float) (44 * 3) / scaleFactor + (float) ((i - 4) * 68 * 3) / scaleFactor, yStart + (float) (200 * 3) / scaleFactor, (float) (32 * 3) / scaleFactor, (float) (32 * 3) / scaleFactor, 32 * 3 / scaleFactor, 32 * 3 / scaleFactor);
+                        drawImage(profTexture, 132 + (i - 4) * 204, 600, 96, 96);
                         if(level == 132) {
                             levelColor = CommonColors.RAINBOW;
                         } else if (level >= 103) {
@@ -800,10 +811,10 @@ public class PVScreen extends Screen {
                         } else {
                             levelColor = CustomColor.fromHexString("FFFFFF");
                         }
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Level " + level)), xStart + (float) (44 * 3) / scaleFactor + (float) ((i - 4) * 68 * 3) / scaleFactor + (float) (16 * 3) / scaleFactor, yStart + (float) (187 * 3) / scaleFactor, levelColor, HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1.2f * 3 / scaleFactor);
+                        drawCenteredText("Level " + level, 180 + (i - 4) * 204, 575, levelColor, 3.6f);
                         if(level < 132) {
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Progress to")), xStart + (float) (44 * 3) / scaleFactor + (float) ((i - 4) * 68 * 3) / scaleFactor + (float) (16 * 3) / scaleFactor, yStart + (float) (170 * 3) / scaleFactor, levelColor, HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 0.8f * 3 / scaleFactor);
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("next Level: " + prof.getValue().getXpPercent() + "%")), xStart + (float) (44 * 3) / scaleFactor + (float) ((i - 4) * 68 * 3) / scaleFactor + (float) (16 * 3) / scaleFactor, yStart + (float) (178 * 3) / scaleFactor, levelColor, HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 0.8f * 3 / scaleFactor);
+                            drawCenteredText("Progress to", 180 + (i - 4) * 204, 520, levelColor, 2.4f);
+                            drawCenteredText("next Level: " + prof.getValue().getXpPercent() + "%", 180 + (i - 4) * 204, 544, levelColor, 2.4f);
                         }
                     }
 
@@ -812,11 +823,11 @@ public class PVScreen extends Screen {
             }
             case Dungeons -> {
                 if(PV.currentPlayerData.getGlobalData() == null) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("This player has their dungeon stats private.")), (float) xStart + (float) (300 * 3) / scaleFactor, (float) yStart + (float) (115 * 3) / scaleFactor, CustomColor.fromHexString("ff0000"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 1.5f * 3 / scaleFactor);
+                    drawCenteredText("This player has their dungeon stats private.", 900, 345, CustomColor.fromHexString("FF0000"), 5f);
                     break;
                 }
                 if (PV.currentPlayerData.getGlobalData().getDungeons() == null) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("This player has their dungeon stats private.")), (float) xStart + (float) (300 * 3) / scaleFactor, (float) yStart + (float) (115 * 3) / scaleFactor, CustomColor.fromHexString("ff0000"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 1.5f * 3 / scaleFactor);
+                    drawCenteredText("This player has their dungeon stats private.", 900, 345, CustomColor.fromHexString("FF0000"), 5f);
                     break;
                 }
 
@@ -843,9 +854,9 @@ public class PVScreen extends Screen {
                 }
 
                 if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), dungeonBackgroundTextureDark, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (29 * 3) / scaleFactor, (float) (580 * 3) / scaleFactor, (float) (211 * 3) / scaleFactor, 580 * 3 / scaleFactor, 211 * 3 / scaleFactor);
+                    drawImage(dungeonBackgroundTextureDark, 30, 87, 1740, 633);
                 } else {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), dungeonBackgroundTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (29 * 3) / scaleFactor, (float) (580 * 3) / scaleFactor, (float) (211 * 3) / scaleFactor, 580 * 3 / scaleFactor, 211 * 3 / scaleFactor);
+                    drawImage(dungeonBackgroundTexture, 30, 87, 1740, 633);
                 }
 
                 int i = 0;
@@ -854,35 +865,34 @@ public class PVScreen extends Screen {
                 for(Identifier dungeon : dungeonTextures) {
                     int comps = getDungeonComps(i, normalComps);
                     int cComps = getCorruptedComps(i, corruptedComps);
-                    int dungeonY = yStart + 11 * 3 / scaleFactor + Math.floorDiv(i, 5) * 145 * 3 / scaleFactor;
-                    int dungeonX = xStart + 30 * 3 / scaleFactor + 115 * 3 / scaleFactor * (i % 5);
+                    int dungeonX = 90 + 345 * (i % 5);
+                    int dungeonY = 90 + Math.floorDiv(i, 5) * 350;
                     if(Math.floorDiv(i, 5) > 0) {
-                        RenderUtils.drawTexturedRect(context.getMatrices(), dungeon, dungeonX + (float) (10 * 3) / scaleFactor, dungeonY + (float) (5 * 3) / scaleFactor, (float) (60 * 3) / scaleFactor, (float) (60 * 3) / scaleFactor, 60 * 3 / scaleFactor, 60 * 3 / scaleFactor);
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(getDungeonName(i))), dungeonX + (float) (40 * 3) / scaleFactor, dungeonY + (float) (70 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                        drawImage(dungeon, dungeonX + 30, dungeonY + 45, 180, 180);
+                        drawCenteredText(getDungeonName(i), dungeonX + 120, dungeonY + 250, CustomColor.fromHexString("FFFFFF"), 3f);
 
                         if(i < 8) {
-                            RenderUtils.drawTexturedRect(context.getMatrices(), dungeonKeyTexture, dungeonX + (float) (20 * 3) / scaleFactor, dungeonY - (float) (15 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 20 * 3 / scaleFactor, 20 * 3 / scaleFactor);
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(formatter.format(comps))), dungeonX + (float) (20 * 3) / scaleFactor, dungeonY - (float) (10 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                            drawImage(dungeonKeyTexture, dungeonX + 60, dungeonY - 15, 60, 60);
+                            drawText(formatter.format(comps), dungeonX + 55, dungeonY, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
                         } else {
-                            RenderUtils.drawTexturedRect(context.getMatrices(), dungeonKeyTexture, dungeonX + (float) (30 * 3) / scaleFactor, dungeonY - (float) (15 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 20 * 3 / scaleFactor, 20 * 3 / scaleFactor);
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(formatter.format(comps))), dungeonX + (float) (30 * 3) / scaleFactor, dungeonY - (float) (10 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                            drawImage(dungeonKeyTexture, dungeonX + 90, dungeonY - 15, 60, 60);
+                            drawText(formatter.format(comps), dungeonX + 90, dungeonY, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
                         }
 
                         if(i < 8) {
-                            RenderUtils.drawTexturedRect(context.getMatrices(), corruptedDungeonKeyTexture, dungeonX + (float) (40 * 3) / scaleFactor, dungeonY - (float) (15 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 20 * 3 / scaleFactor, 20 * 3 / scaleFactor);
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(formatter.format(cComps))), dungeonX + (float) (62 * 3) / scaleFactor, dungeonY - (float) (10 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                            drawImage(corruptedDungeonKeyTexture, dungeonX + 120, dungeonY - 15, 60, 60);
+                            drawText(formatter.format(cComps), dungeonX + 190, dungeonY, CustomColor.fromHexString("FFFFFF"));
                         }
                     } else {
-                        RenderUtils.drawTexturedRect(context.getMatrices(), dungeon, dungeonX + (float) (10 * 3) / scaleFactor, dungeonY + (float) (35 * 3) / scaleFactor, (float) (60 * 3) / scaleFactor, (float) (60 * 3) / scaleFactor, 60 * 3 / scaleFactor, 60 * 3 / scaleFactor);
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(getDungeonName(i))), dungeonX + (float) (40 * 3) / scaleFactor, dungeonY + (float) (25 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                        drawImage(dungeon, dungeonX + 30, dungeonY + 45, 180, 180);
+                        drawCenteredText(getDungeonName(i), dungeonX + 120, dungeonY + 30, CustomColor.fromHexString("FFFFFF"), 3f);
 
-
-                        RenderUtils.drawTexturedRect(context.getMatrices(), dungeonKeyTexture, dungeonX + (float) (20 * 3) / scaleFactor, dungeonY + (float) (95 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 20 * 3 / scaleFactor, 20 * 3 / scaleFactor);
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(String.valueOf(comps))), dungeonX + (float) (20 * 3) / scaleFactor, dungeonY + (float) (100 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                        drawImage(dungeonKeyTexture, dungeonX + 60, dungeonY + 230, 60, 60);
+                        drawText(formatter.format(comps), dungeonX + 55, dungeonY + 250, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
 
                         if(i < 8) {
-                            RenderUtils.drawTexturedRect(context.getMatrices(), corruptedDungeonKeyTexture, dungeonX + (float) (40 * 3) / scaleFactor, dungeonY + (float) (95 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 20 * 3 / scaleFactor, 20 * 3 / scaleFactor);
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(formatter.format(cComps))), dungeonX + (float) (62 * 3) / scaleFactor, dungeonY + (float) (100 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                            drawImage(corruptedDungeonKeyTexture, dungeonX + 120, dungeonY + 230, 60, 60);
+                            drawText(formatter.format(cComps), dungeonX + 190, dungeonY + 250, CustomColor.fromHexString("FFFFFF"));
                         }
                     }
                     i++;
@@ -895,18 +905,17 @@ public class PVScreen extends Screen {
                         characterNameString = ": ";
                     }
 
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Total Completions" + characterNameString + formatter.format(TotalComps))), xStart + (float) (300 * 3) / scaleFactor, yStart + (float) (10 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1.3f * 3 / scaleFactor);
-
+                    drawCenteredText("Total Completions" + characterNameString + formatter.format(TotalComps), 900, 45, CustomColor.fromHexString("FFFFFF"), 3.9f);
                 }
             }
             case Quests -> {
                 if(selectedCharacter == null) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Select a character to view quests.")), (float) xStart + (float) (300 * 3) / scaleFactor, (float) yStart + (float) (115 * 3) / scaleFactor, CustomColor.fromHexString("ff0000"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 1.5f * 3 / scaleFactor);
+                    drawCenteredText("Select a character to view quests.", 900, 345, CustomColor.fromHexString("FF0000"), 5f);
                     break;
                 }
                 List<String> quests = selectedCharacter.getQuests();
                 if(quests == null) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("This player has their quest stats private.")), (float) xStart + (float) (300 * 3) / scaleFactor, (float) yStart + (float) (115 * 3) / scaleFactor, CustomColor.fromHexString("ff0000"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 1.5f * 3 / scaleFactor);
+                    drawCenteredText("This player has their quest stats private.", 900, 345, CustomColor.fromHexString("FF0000"), 5f);
                     break;
                 }
 
@@ -922,11 +931,12 @@ public class PVScreen extends Screen {
                 titleString = "Completed Quests on " + getClassName(selectedCharacter) + ": " + quests.size() + "/262 (" + rounded + "%)";
 
                 if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), questBackgroundTextureDark, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (30 * 3) / scaleFactor, (float) (580 * 3) / scaleFactor, (float) (200 * 3) / scaleFactor, 580 * 3 / scaleFactor, 200 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), questSearchbarTextureDark, xStart + (float) (200 * 3) / scaleFactor, yStart + height, (float) (400 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 400 * 3 / scaleFactor, 20 * 3 / scaleFactor);
+                    drawImage(questBackgroundTextureDark, 30, 90, 1740, 600);
+                    drawImage(questSearchbarTextureDark, 600, height * scaleFactor, 1200, 60);
                 } else {
                     RenderUtils.drawTexturedRect(context.getMatrices(), questBackgroundTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (30 * 3) / scaleFactor, (float) (580 * 3) / scaleFactor, (float) (200 * 3) / scaleFactor, 580 * 3 / scaleFactor, 200 * 3 / scaleFactor);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), questSearchbarTexture, xStart + (float) (200 * 3) / scaleFactor, yStart + height, (float) (400 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 400 * 3 / scaleFactor, 20 * 3 / scaleFactor);
+                    drawImage(questBackgroundTexture, 30, 90, 1740, 600);
+                    drawImage(questSearchbarTexture, 600, height * scaleFactor, 1200, 60);
                 }
 
                 questSearchBar.setX(xStart + 200 * 3 / scaleFactor);
@@ -945,26 +955,26 @@ public class PVScreen extends Screen {
                             continue;
                         }
                     }
-                    int yPos = yStart + 38 * 3 / scaleFactor + Math.floorDiv(i, 2) * 12 * 3 / scaleFactor - scrollOffset * 3 / scaleFactor;
-                    if(yPos > yStart + 230 * 3 / scaleFactor) break;
-                    if(yPos > yStart + 20 * 3 / scaleFactor) {
+                    int yPos = 114 + Math.floorDiv(i, 2) * 36- scrollOffset;
+                    if(yPos > 690) break;
+                    if(yPos > 60) {
                         HorizontalAlignment horizontalAlignment = HorizontalAlignment.LEFT;
                         int rightOffset = 0;
                         if (i % 2 == 1) {
-                            rightOffset = 560 * 3 / scaleFactor;
+                            rightOffset = 1680;
                             horizontalAlignment = HorizontalAlignment.RIGHT;
                         }
 
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(quest)), (float) xStart + (float) (20 * 3) / scaleFactor + rightOffset, (float) yPos, textColor, horizontalAlignment, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                        drawText(quest, (float) 60 + rightOffset, (float) yPos, textColor, horizontalAlignment, VerticalAlignment.TOP, 3f);
                     }
                     i++;
                 }
 
                 {
-                    int yPos = yStart + 20 * 3 / scaleFactor + 38 * 3 / scaleFactor + Math.floorDiv(i, 2) * 12 * 3 / scaleFactor - scrollOffset * 3 / scaleFactor;
-                    if (yPos > yStart + 20 * 3 / scaleFactor && yPos < yStart + 230 * 3 / scaleFactor) {
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Missing:")), (float) xStart + (float) (20 * 3) / scaleFactor, (float) yPos, textColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f * 3 / scaleFactor);
-                        if(i % 2 == 0) i += 2 * 3 / scaleFactor;
+                    int yPos = 60 + 114 + Math.floorDiv(i, 2) * 36 - scrollOffset;
+                    if (yPos > 60 && yPos < 690) {
+                        drawText("Missing:", (float) 60, (float) yPos, textColor, 6f);
+                        if(i % 2 == 0) i += 6;
                         else i++;
                     }
                 }
@@ -975,51 +985,49 @@ public class PVScreen extends Screen {
                             continue;
                         }
                     }
-                    int yPos = yStart + 68 * 3 / scaleFactor + Math.floorDiv(i, 2) * 12 * 3 / scaleFactor - scrollOffset * 3 / scaleFactor;
-                    if(yPos > yStart + 230 * 3 / scaleFactor) break;
-                    if(yPos > yStart + 20 * 3 / scaleFactor) {
+                    int yPos = 204 + Math.floorDiv(i, 2) * 36 - scrollOffset;
+                    if(yPos > 690) break;
+                    if(yPos > 60) {
                         HorizontalAlignment horizontalAlignment = HorizontalAlignment.LEFT;
                         int rightOffset = 0;
                         if (i % 2 == 1) {
-                            rightOffset = 560 * 3 / scaleFactor;
+                            rightOffset = 1680;
                             horizontalAlignment = HorizontalAlignment.RIGHT;
                         }
 
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(quest)), (float) xStart + (float) (20 * 3) / scaleFactor + rightOffset, (float) yPos, textColor, horizontalAlignment, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+                        drawText(quest, (float) 60 + rightOffset, (float) yPos, textColor, horizontalAlignment, VerticalAlignment.TOP, 3f);
                     }
                     i++;
                 }
 
                 if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), questBackgroundBorderTextureDark, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (20 * 3) / scaleFactor, (float) (580 * 3) / scaleFactor, (float) (220 * 3) / scaleFactor, 580 * 3 / scaleFactor, 220 * 3 / scaleFactor);
+                    drawImage(questBackgroundBorderTextureDark, 30, 60, 1740, 660);
                 } else {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), questBackgroundBorderTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (20 * 3) / scaleFactor, (float) (580 * 3) / scaleFactor, (float) (220 * 3) / scaleFactor, 580 * 3 / scaleFactor, 220 * 3 / scaleFactor);
+                    drawImage(questBackgroundBorderTexture, 30, 60, 1740, 660);
                 }
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(titleString)), (float) xStart + (float) (300 * 3) / scaleFactor, (float) yStart + (float) (10 * 3) / scaleFactor, textColor, HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1.5f * 3 / scaleFactor);
-
+                drawCenteredText(titleString, 900, 50, textColor, 4.5f);
             }
             case Misc -> {
                 Global data = PV.currentPlayerData.getGlobalData();
                 if(data == null) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("This player has their misc stats private.")), (float) xStart + (float) (300 * 3) / scaleFactor, (float) yStart + (float) (115 * 3) / scaleFactor, CustomColor.fromHexString("ff0000"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 1.5f * 3 / scaleFactor);
+                    drawCenteredText("This player has their misc stats private.", 900, 345, CustomColor.fromHexString("FF0000"), 5f);
                     break;
                 }
 
                 if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), miscBackgroundTextureDark, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (10 * 3) / scaleFactor, (float) (580 * 3) / scaleFactor, (float) (230 * 3) / scaleFactor, 580 * 3 / scaleFactor, 230 * 3 / scaleFactor);
+                    drawImage(miscBackgroundTextureDark, 30, 30, 1740, 690);
                 } else {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), miscBackgroundTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (10 * 3) / scaleFactor, (float) (580 * 3) / scaleFactor, (float) (230 * 3) / scaleFactor, 580 * 3 / scaleFactor, 230 * 3 / scaleFactor);
+                    drawImage(miscBackgroundTexture, 30, 30, 1740, 690);
                 }
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Wars completed: " + data.getWars())), (float) xStart + (float) (20 * 3) / scaleFactor, (float) yStart + (float) (20 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f * 3 / scaleFactor);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Dungeons completed: " + data.getDungeons().getTotal())), (float) xStart + (float) (20 * 3) / scaleFactor, (float) yStart + (float) (40 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f * 3 / scaleFactor);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Unique Caves completed: " + data.getCaves())), (float) xStart + (float) (20 * 3) / scaleFactor, (float) yStart + (float) (60 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f * 3 / scaleFactor);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Unique Lootrun camps completed: " + data.getLootruns())), (float) xStart + (float) (20 * 3) / scaleFactor, (float) yStart + (float) (80 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f * 3 / scaleFactor);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Unique World events completed: " + data.getWorldEvents())), (float) xStart + (float) (20 * 3) / scaleFactor, (float) yStart + (float) (100 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f * 3 / scaleFactor);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Chests opened: " + data.getChestsFound())), (float) xStart + (float) (20 * 3) / scaleFactor, (float) yStart + (float) (120 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f * 3 / scaleFactor);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Mobs killed: " + data.getMobsKilled())), (float) xStart + (float) (20 * 3) / scaleFactor, (float) yStart + (float) (140 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f * 3 / scaleFactor);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Pvp kills: " + data.getPvp().getKills())), (float) xStart + (float) (20 * 3) / scaleFactor, (float) yStart + (float) (160 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f * 3 / scaleFactor);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Pvp deaths: " + data.getPvp().getDeaths())), (float) xStart + (float) (20 * 3) / scaleFactor, (float) yStart + (float) (180 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f * 3 / scaleFactor);
-
+                drawText("Wars completed: " + data.getWars(), 60, 60, CustomColor.fromHexString("FFFFFF"),6f);
+                drawText("Dungeons completed: " + data.getDungeons().getTotal(), 60, 120, CustomColor.fromHexString("FFFFFF"),6f);
+                drawText("Unique Caves completed: " + data.getCaves(), 60, 180, CustomColor.fromHexString("FFFFFF"),6f);
+                drawText("Unique Lootrun camps completed: " + data.getLootruns(), 60, 240, CustomColor.fromHexString("FFFFFF"),6f);
+                drawText("Unique World events completed: " + data.getWorldEvents(), 60, 300, CustomColor.fromHexString("FFFFFF"),6f);
+                drawText("Chests opened: " + data.getChestsFound(), 60, 360, CustomColor.fromHexString("FFFFFF"),6f);
+                drawText("Mobs killed: " + data.getMobsKilled(), 60, 420, CustomColor.fromHexString("FFFFFF"),6f);
+                drawText("Pvp kills: " + data.getPvp().getKills(), 60, 480, CustomColor.fromHexString("FFFFFF"),6f);
+                drawText("Pvp deaths: " + data.getPvp().getDeaths(), 60, 540, CustomColor.fromHexString("FFFFFF"),6f);
             }
         }
 
@@ -1035,9 +1043,9 @@ public class PVScreen extends Screen {
         }
 
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            RenderUtils.drawTexturedRect(context.getMatrices(), openInBrowserButtonTextureWDark, xStart + 89 * 3 / scaleFactor, yStart + height, 100 * 3 / scaleFactor, 20 * 3 / scaleFactor, 100 * 3 / scaleFactor, 20 * 3 / scaleFactor);
+            drawImage(openInBrowserButtonTextureWDark, 267, (float) (height * scaleFactor), 300, 60);
         } else {
-            RenderUtils.drawTexturedRect(context.getMatrices(), openInBrowserButtonTextureW, xStart + 89 * 3 / scaleFactor, yStart + height, 100 * 3 / scaleFactor, 20 * 3 / scaleFactor, 100 * 3 / scaleFactor, 20 * 3 / scaleFactor);
+            drawImage(openInBrowserButtonTextureW, 267, (float) (height * scaleFactor), 300, 60);
         }
 
         if (searchBar != null) {
@@ -1045,8 +1053,6 @@ public class PVScreen extends Screen {
             searchBar.setY(yStart + height + 7 * 3 / scaleFactor);
             searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"));
         }
-
-
     }
 
     public Identifier getProfTexture(String prof) {
@@ -1133,14 +1139,27 @@ public class PVScreen extends Screen {
     }
 
     public Rank getRank() {
-        return switch (PV.currentPlayerData.getSupportRank()) {
-            case "vip" -> Rank.VIP;
-            case "vipplus" -> Rank.VIPPLUS;
-            case "hero" -> Rank.HERO;
-            case "heroplus" -> Rank.HEROPLUS;
-            case "champion" -> Rank.CHAMPION;
-            case null, default -> Rank.NONE;
-        };
+        String rank = PV.currentPlayerData.getRank();
+        if(rank == null) return Rank.NONE;
+        if(rank.equals("Player")) {
+            return switch (PV.currentPlayerData.getSupportRank()) {
+                case "player" -> Rank.NONE;
+                case "vip" -> Rank.VIP;
+                case "vipplus" -> Rank.VIPPLUS;
+                case "hero" -> Rank.HERO;
+                case "heroplus" -> Rank.HEROPLUS;
+                case "champion" -> Rank.CHAMPION;
+                case null -> Rank.NONE;
+                default -> Rank.WYNN;
+            };
+        } else {
+            return switch (rank) {
+                case "Media" -> Rank.MEDIA;
+                case "Moderator" -> Rank.MOD;
+                case "Administrator" -> Rank.ADMIN;
+                default -> Rank.WYNN;
+            };
+        }
     }
 
     public Identifier getRankBadge() {
@@ -1151,19 +1170,26 @@ public class PVScreen extends Screen {
             case HERO -> hero;
             case HEROPLUS -> heroplus;
             case CHAMPION -> champion;
-            default -> null;
+            case MEDIA -> media;
+            case MOD -> mod;
+            case WYNN -> wynn;
+            case ADMIN -> admin;
+            case null, default -> null;
         };
     }
 
     public int getRankBadgeWidth() {
         Rank rank = getRank();
         return switch (rank) {
-            case VIP -> 44;
-            case VIPPLUS -> 58;
-            case HERO -> 62;
-            case HEROPLUS -> 76;
-            case CHAMPION -> 106;
-            default -> 0;
+            case VIP -> 66;
+            case VIPPLUS -> 87;
+            case HERO -> 93;
+            case HEROPLUS -> 114;
+            case CHAMPION -> 159;
+            case MEDIA, ADMIN -> 105;
+            case WYNN -> 90;
+            case MOD -> 183;
+            case null, default -> 0;
         };
     }
 
@@ -1338,22 +1364,22 @@ public class PVScreen extends Screen {
         int strMidWidth = strWidth - 15;
         int amount = Math.max(0, Math.ceilDiv(strMidWidth, 10));
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            RenderUtils.drawTexturedRect(context.getMatrices(), tabLeftDark, x, y, (float) (10 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 10 * 3 / scaleFactor, 20 * 3 / scaleFactor);
+            drawImage(tabLeftDark, x, y, 30, 60);
         } else {
-            RenderUtils.drawTexturedRect(context.getMatrices(), tabLeft, x, y, (float) (10 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 10 * 3 / scaleFactor, 20 * 3 / scaleFactor);
+            drawImage(tabLeft, x, y, 30, 60);
         }
         for (int i = 0; i < amount; i++) {
             if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                RenderUtils.drawTexturedRect(context.getMatrices(), tabMidDark, x + (float) (10 * 3) / scaleFactor + (float) (10 * i * 3) / scaleFactor, y, (float) (10 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 10 * 3 / scaleFactor, 20 * 3 / scaleFactor);
+                drawImage(tabMidDark, x + 30 * (i + 1), y, 30, 60);
             } else {
-                RenderUtils.drawTexturedRect(context.getMatrices(), tabMid, x + (float) (10 * 3) / scaleFactor + (float) (10 * i * 3) / scaleFactor, y, (float) (10 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 10 * 3 / scaleFactor, 20 * 3 / scaleFactor);
+                drawImage(tabMid, x + 30 * (i + 1), y, 30, 60);
             }
         }
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            RenderUtils.drawTexturedRect(context.getMatrices(), tagRightDark, x + (float) (10 * 3) / scaleFactor + (float) (10 * amount * 3) / scaleFactor, y, (float) (10 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 10 * 3 / scaleFactor, 20 * 3 / scaleFactor);
+            drawImage(tagRightDark, x + 30 * (amount + 1), y, 30, 60);
         } else {
-            RenderUtils.drawTexturedRect(context.getMatrices(), tagRight, x + (float) (10 * 3) / scaleFactor + (float) (10 * amount * 3) / scaleFactor, y, (float) (10 * 3) / scaleFactor, (float) (20 * 3) / scaleFactor, 10 * 3 / scaleFactor, 20 * 3 / scaleFactor);
+            drawImage(tagRight, x + 30 * (amount + 1), y, 30, 60);
         }
-        return 20 + amount * 10;
+        return 60 + amount * 30;
     }
 }

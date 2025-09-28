@@ -20,6 +20,21 @@ public class ChatScreenMixin {
         ClientPlayerEntity player = mc.player;
         if (player == null) return;
 
+        if(message.matches("^/a\\s.*")) {
+            message = message.substring(2);
+            player.networkHandler.sendChatMessage(message);
+            mc.inGameHud.getChatHud().addToMessageHistory(message);
+            ci.cancel();
+            return;
+        }
+        if(message.matches("^/ac\\s.*")) {
+            message = message.substring(3);
+            player.networkHandler.sendChatMessage(message);
+            mc.inGameHud.getChatHud().addToMessageHistory(message);
+            ci.cancel();
+            return;
+        }
+
         if (message.startsWith("/")) return;
 
         String processed = ChatManager.processMessageForSend(message);

@@ -12,6 +12,7 @@ import com.wynntils.handlers.item.ItemHandler;
 import com.wynntils.handlers.tooltip.impl.identifiable.IdentifiableTooltipBuilder;
 import com.wynntils.mc.extension.ItemStackExtension;
 import com.wynntils.models.character.CharacterModel;
+import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.emeralds.type.EmeraldUnits;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.*;
@@ -24,6 +25,7 @@ import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.mc.TooltipUtils;
 import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;
+import com.wynntils.utils.render.TextRenderSetting;
 import com.wynntils.utils.render.Texture;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
@@ -63,6 +65,7 @@ import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -608,7 +611,8 @@ public abstract class HandledScreenMixin {
                     annotation instanceof EmeraldPouchItem ||
                     annotation instanceof GatheringToolItem ||
                     annotation instanceof HorseItem ||
-                    annotation instanceof PowderItem) {
+                    annotation instanceof PowderItem ||
+                    annotation instanceof PotionItem) {
 
                 context.getMatrices().push();
                 context.getMatrices().translate(0, 0, 100);

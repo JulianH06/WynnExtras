@@ -182,7 +182,7 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Text
     public String bankInfo = "This Feature is still Work in Progress, bugs can (and probably will) occur. " +
                                     "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras (/we) discord\". " +
-                                    "Buying pages is possible but it's a bit buggy so it's recommended to disable the feature to buy pages.";
+                                    "Buying pages is currently not possible but it will be added in the future. disable the feature to buy pages.";
 
 
 
@@ -286,7 +286,13 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Name("Provoke timer color")
     public String provokeTimerColor = "WHITE";
 
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Name("Use different GUI Scale for menus")
+    public boolean differentGUIScale = false;
 
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Name("GUI Scale")
+    public int customGUIScale = 3;
 
     @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Enable Raid timestamps")
