@@ -187,6 +187,9 @@ public class WynnExtrasConfig implements ConfigData {
 
 
 
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Enable Raid timestamps")
+    public boolean toggleRaidTimestamps = true;
 
     //TOTEM VISUALIZER
 
@@ -294,9 +297,16 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Name("GUI Scale")
     public int customGUIScale = 3;
 
-    @ConfigEntry.Category(Categories.raid)
-    @ConfigEntry.Name("Enable Raid timestamps")
-    public boolean toggleRaidTimestamps = true;
+    // Perspective
+
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Text
+    public String emptyyyy = " ";
+
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Name("Remove front person view")
+    public boolean removeFrontPersonView = false;
+
 
 //    //Hider
 //    public boolean partyMemberHide = true;

@@ -11,6 +11,7 @@
   "client": [
     "InventoryScreenMixin",
     "LivingEntityRendererMixin",
+    "PerspectiveMixin",
     "StringListCellMixin",
     "Accessor.HandledScreenAccessor",
     "Accessor.KeybindingAccessor",
