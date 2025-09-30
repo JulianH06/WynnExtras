@@ -194,6 +194,18 @@ public class WynnExtrasConfig implements ConfigData {
     //TOTEM VISUALIZER
 
     @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Name("Fast requeue toggle (automatically runs /pf when closing a raid chest)")
+    public boolean toggleFastRequeue = true;
+
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Name("Show Wynnpool item weights")
+    public boolean showWeight = true;
+
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Name("Show weight of each stat")
+    public boolean showScales = true;
+
+    @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Dark mode for the Bank overlay and profile viewer")
     public boolean darkmodeToggle = false;
 
@@ -265,7 +277,7 @@ public class WynnExtrasConfig implements ConfigData {
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Toggle Provoke Timer [WIP]")
-    public boolean provokeTimerToggle = true;
+    public boolean provokeTimerToggle = false;
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Dropdown(values = {
