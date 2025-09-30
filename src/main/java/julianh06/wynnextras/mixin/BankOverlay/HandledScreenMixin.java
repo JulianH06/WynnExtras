@@ -2,14 +2,17 @@ package julianh06.wynnextras.mixin.BankOverlay;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.wynntils.core.components.Handlers;
+import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
 import com.wynntils.core.persisted.config.Config;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.features.inventory.*;
 import com.wynntils.features.tooltips.ItemGuessFeature;
+import com.wynntils.features.tooltips.TooltipFittingFeature;
 import com.wynntils.handlers.item.ItemAnnotation;
 import com.wynntils.handlers.item.ItemHandler;
 import com.wynntils.handlers.tooltip.impl.identifiable.IdentifiableTooltipBuilder;
+import com.wynntils.mc.event.ItemTooltipRenderEvent;
 import com.wynntils.mc.extension.ItemStackExtension;
 import com.wynntils.models.character.CharacterModel;
 import com.wynntils.models.elements.type.Skill;
@@ -20,6 +23,7 @@ import com.wynntils.models.items.properties.DurableItemProperty;
 import com.wynntils.models.items.properties.IdentifiableItemProperty;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.mc.ComponentUtils;
 import com.wynntils.utils.mc.LoreUtils;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.mc.TooltipUtils;
@@ -37,12 +41,11 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.event.InventoryKeyPressEvent;
 import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.inventory.BankOverlayButtons.*;
 import julianh06.wynnextras.features.inventory.data.BankData;
-import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
-import julianh06.wynnextras.mixin.Accessor.PersonalStorageUtilitiesFeatureAccessor;
-import julianh06.wynnextras.mixin.Accessor.SlotAccessor;
+import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
@@ -51,7 +54,11 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
+import net.minecraft.client.gui.tooltip.TooltipComponent;
+import net.minecraft.client.gui.tooltip.TooltipPositioner;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.util.Window;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.component.ComponentType;
 import net.minecraft.entity.player.PlayerEntity;
@@ -65,11 +72,14 @@ import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector2i;
+import org.joml.Vector2ic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -84,6 +94,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static julianh06.wynnextras.features.inventory.BankOverlay.*;
+import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredStack;
+import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredWynnitem;
 
 @WEModule
 @Mixin(HandledScreen.class)
@@ -737,11 +749,81 @@ public abstract class HandledScreenMixin {
 
 
         Optional<WynnItem> item = asWynnItem(hoveredSlot);
-        List<Text> tooltip = item.map(i -> TooltipUtils.getWynnItemTooltip(hoveredSlot, i))
-                .filter(t -> !t.isEmpty())
-                .orElse(hoveredSlot.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.ADVANCED));
+        List<Text> tooltip = item.map(i -> {
+            currentHoveredStack = hoveredSlot;
+            currentHoveredWynnitem = i;
+            return WeightDisplay.getWynnItemTooltipWithScale(hoveredSlot, i);
+        }).filter(t -> !t.isEmpty())
+            .orElse(hoveredSlot.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.ADVANCED));
 
-        context.drawTooltip(screen.getTextRenderer(), tooltip, mouseX, mouseY);
+        List<TooltipComponent> components = TooltipUtils.getClientTooltipComponent(tooltip);
+        int tooltipHeight = TooltipUtils.getTooltipHeight(components);
+        int screenHeight = screen.height;
+        float scale = 1.0f;
+
+        int y = mouseY;
+        boolean overflow = false;
+        if (tooltipHeight > screenHeight) {
+            scale = (float) screenHeight / (float) tooltipHeight;
+            y = 0; //ganz unten am screen
+            overflow = true;
+        }
+
+        context.getMatrices().push();
+        context.getMatrices().scale(scale, scale, 1.0f);
+
+        if(!overflow) {
+            context.drawTooltip(screen.getTextRenderer(), tooltip, (int) (mouseX / scale), y);
+        } else {
+            drawTooltip(screen.getTextRenderer(), components, (int)(mouseX / scale) + 12, y, null, context);
+            //context.drawTooltip(screen.getTextRenderer(), components, (int)(mouseX / scale), y, bottomPositioner, null);
+        }
+
+        context.getMatrices().pop();
+    }
+
+    @Unique
+    private void drawTooltip(TextRenderer textRenderer, List<TooltipComponent> components, int x, int y, @Nullable Identifier texture, DrawContext context) {
+        if (!components.isEmpty()) {
+            int i = 0;
+            int j = components.size() == 1 ? -2 : 0;
+
+            TooltipComponent tooltipComponent;
+            for(Iterator var9 = components.iterator(); var9.hasNext(); j += tooltipComponent.getHeight(textRenderer)) {
+                tooltipComponent = (TooltipComponent)var9.next();
+                int k = tooltipComponent.getWidth(textRenderer);
+                if (k > i) {
+                    i = k;
+                }
+            }
+
+            int l = i;
+            int m = j;
+            int n = x;
+            int o = y;
+            context.getMatrices().push();
+            TooltipBackgroundRenderer.render(context, n, o, i, j, 400, texture);
+            context.getMatrices().translate(0.0F, 0.0F, 800.0F);
+            int q = o;
+
+            int r;
+            TooltipComponent tooltipComponent2;
+            for(r = 0; r < components.size(); ++r) {
+                tooltipComponent2 = (TooltipComponent)components.get(r);
+                tooltipComponent2.drawText(textRenderer, n, q, context.getMatrices().peek().getPositionMatrix(), ((DrawContextAccessor) context).getVertexConsumers());
+                q += tooltipComponent2.getHeight(textRenderer) + (r == 0 ? 2 : 0);
+            }
+
+            q = o;
+
+            for(r = 0; r < components.size(); ++r) {
+                tooltipComponent2 = (TooltipComponent)components.get(r);
+                tooltipComponent2.drawItems(textRenderer, n, q, l, m, context);
+                q += tooltipComponent2.getHeight(textRenderer) + (r == 0 ? 2 : 0);
+            }
+
+            context.getMatrices().pop();
+        }
     }
 
     @Unique
@@ -1201,6 +1283,66 @@ public abstract class HandledScreenMixin {
             poseStack.pop();
         }
     }
+
+    //Weight display stuff
+
+    // Hovered Slot
+    @Shadow
+    private Slot touchHoveredSlot;
+
+    @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
+    private void keyPressedPre(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
+        InventoryKeyPressEvent event = new InventoryKeyPressEvent(keyCode, scanCode, modifiers, this.touchHoveredSlot);
+        event.post();
+
+        if (event.isCanceled()) {
+            cir.setReturnValue(true);
+            cir.cancel();
+        }
+    }
+
+    @Unique
+    private Pair<List<Text>, Float> fitTooltip(MatrixStack poseStack, List<Text> tooltips, int mouseX, int mouseY) {
+        TooltipFittingFeature fitting = Managers.Feature.getFeatureInstance(TooltipFittingFeature.class);
+        Window window = MinecraftClient.getInstance().getWindow();
+
+        float scale = fitting.universalScale.get();
+        boolean wrap = ((TooltipFittingFeatureAccessor) fitting).getWrapText().get();
+        boolean fit = ((TooltipFittingFeatureAccessor) fitting).getFitToScreen().get();
+
+        List<Text> wrapped = tooltips;
+
+        if (wrap) {
+            int maxWidth = (int)(window.getScaledWidth() / scale);
+            int tooltipWidth = ComponentUtils.getOptimalTooltipWidth(wrapped, maxWidth, (int)(mouseX / scale));
+            wrapped = ComponentUtils.wrapTooltips(wrapped, tooltipWidth);
+        }
+
+        List<TooltipComponent> components = TooltipUtils.getClientTooltipComponent(wrapped);
+        int height = TooltipUtils.getTooltipHeight(components);
+        height = (int)(height * scale) + 10;
+
+        if (fit && height > window.getScaledHeight()) {
+            scale *= (float)window.getScaledHeight() / (float)height;
+        }
+
+        poseStack.push();
+        poseStack.scale(scale, scale, 1.0F);
+
+        return new Pair<>(wrapped, scale);
+    }
+
+    @Unique
+    private void positionTooltip(int screenWidth, int screenHeight, Vector2i tooltipPos, int tooltipWidth, int tooltipHeight) {
+        if (tooltipPos.x + tooltipWidth > screenWidth) {
+            tooltipPos.x = Math.max(tooltipPos.x - 24 - tooltipWidth, 4);
+        }
+
+        if (tooltipPos.y + tooltipHeight > screenHeight) {
+            tooltipPos.y = screenHeight - tooltipHeight;
+        }
+    }
+
 }
 
 //TODO SHOW POSSIBLE THINGS WHEN ITEM IS UNIDENTIFIED

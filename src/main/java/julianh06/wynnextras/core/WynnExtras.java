@@ -15,6 +15,7 @@ import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.data.BookshelfData;
 import julianh06.wynnextras.features.inventory.data.CharacterBankData;
 import julianh06.wynnextras.features.inventory.data.MiscBucketData;
+import julianh06.wynnextras.features.misc.FastRequeue;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.profileviewer.PV;
@@ -124,6 +125,7 @@ public class WynnExtras implements ClientModInitializer {
 		PV.register();
 		ProvokeTimer.init();
 		Waypoints.register();
+		FastRequeue.registerFastRequeue();
 
 		AccountBankData.INSTANCE.load();
 		CharacterBankData.INSTANCE.load();
@@ -157,5 +159,22 @@ public class WynnExtras implements ClientModInitializer {
 			});
 
 		}
+	}
+
+
+	public static boolean inMainScreen = false;
+
+	@SubscribeEvent
+	void onTick(TickEvent event) {
+		if(inMainScreen) {
+			MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new MainScreen()));
+			inMainScreen = false;
+		}
+	}
+
+	public static void openMainScreen() {
+		MinecraftClient client = MinecraftClient.getInstance();
+		client.send(() -> client.setScreen(null));
+		inMainScreen = true;
 	}
 }
