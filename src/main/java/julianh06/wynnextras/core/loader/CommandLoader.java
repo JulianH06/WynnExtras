@@ -61,13 +61,6 @@ public class CommandLoader implements WELoader {
                                             })
                             )
             );
-            dispatcher.register(
-                    ClientCommandManager.literal("<name>")
-                            .executes(ctx -> {
-                                //hier deine logik
-                                return 1;
-                            })
-            );
         });
     }
 
