@@ -36,7 +36,7 @@ public class RaidChatNotifier {
         ),
         new SingleOccurrenceDetector(
             "players on the Upper Level must kill the Carnivorous",
-            "§bCarnivor spawned §c"
+            "§bCarnivore spawned §c"
         ),
         new SingleOccurrenceDetector(
             "players on the Upper Level must kill the Invasive",

@@ -106,7 +106,15 @@ public class WeightDisplay {
                 Float value = entry.getValue();
                 Float scale = weightData.identifications.getOrDefault(stat, 0f);
                 scaled.put(stat, value * scale);
-                score += value * scale;
+                if(scale < 0) {
+                    // If the weight is negative, we need to invert the percentage and make the scale positive
+                    System.out.println("1 " + String.valueOf(100-value));
+                    System.out.println("2 " + scale);
+                    System.out.println("3 " + (100-value)*scale);
+                    score += Math.abs((100 - value) * scale);
+                } else {
+                    score += value * scale;
+                }
             }
 
             WeightData calculated = new WeightData(weightData.weightName, scaled, score);
@@ -153,7 +161,7 @@ public class WeightDisplay {
                                 }
                             }
 
-                            if(isRaw && !key.equals("healthRegen") && !key.equals("manaRegen")) {
+                            if(isRaw && !key.equals("healthRegen") && !key.equals("manaRegen") && !key.contains("Steal")) {
                                 key = key.substring(0,1).toUpperCase() + key.substring(1);
                                 key = "raw" + key;
                             } else if (isRaw && key.equals("healthRegen")) {

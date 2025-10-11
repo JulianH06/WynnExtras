@@ -162,19 +162,19 @@ public class WynnExtras implements ClientModInitializer {
 	}
 
 
-	public static boolean inMainScreen = false;
-
-	@SubscribeEvent
-	void onTick(TickEvent event) {
-		if(inMainScreen) {
-			MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new MainScreen()));
-			inMainScreen = false;
-		}
-	}
-
-	public static void openMainScreen() {
-		MinecraftClient client = MinecraftClient.getInstance();
-		client.send(() -> client.setScreen(null));
-		inMainScreen = true;
-	}
+//	public static boolean inMainScreen = false;
+//
+//	@SubscribeEvent
+//	void onTick(TickEvent event) {
+//		if(inMainScreen) {
+//			MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new MainScreen()));
+//			inMainScreen = false;
+//		}
+//	}
+//
+//	public static void openMainScreen() {
+//		MinecraftClient client = MinecraftClient.getInstance();
+//		client.send(() -> client.setScreen(null));
+//		inMainScreen = true;
+//	}
 }

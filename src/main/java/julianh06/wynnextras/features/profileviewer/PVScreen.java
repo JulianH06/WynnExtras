@@ -5,25 +5,25 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
-import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.render.FontRenderer;
+import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.profileviewer.data.*;
+import julianh06.wynnextras.features.profileviewer.tabs.*;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.UI.UIUtils;
+import julianh06.wynnextras.utils.UI.WEElement;
+import julianh06.wynnextras.utils.UI.Widget;
 import julianh06.wynnextras.utils.overlays.EasyButton;
-import julianh06.wynnextras.utils.render.WEScreen;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
+import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
@@ -48,11 +48,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-import static julianh06.wynnextras.features.waypoints.WaypointScreen.scaleFactor;
-
 public class PVScreen extends WEScreen {
-    static int mouseX = 0;
-    static int mouseY = 0;
+    public static int mouseX = 0;
+    public static int mouseY = 0;
 
     public enum Rank {NONE, VIP, VIPPLUS, HERO, HEROPLUS, CHAMPION, MEDIA, WYNN, MOD, ADMIN}
 
@@ -60,130 +58,129 @@ public class PVScreen extends WEScreen {
     public static List<TabButton> tabButtons = new ArrayList<>();
     public static List<CharacterButton> characterButtons = new ArrayList<>();
 
-    static List<String> WETeam = List.of("JulianH06", "Teslanator", "Mikecraft1224", "LegendaryVirus", "elwood24", "BaltrazYT");
+    public static List<String> WETeam = List.of("JulianH06", "Teslanator", "Mikecraft1224", "LegendaryVirus", "elwood24", "BaltrazYT");
 
     List<String> allQuests = Arrays.asList("???", "A Grave Mistake", "A Hunter's Calling", "A Journey Beyond", "A Journey Further", "A Marauder's Dues", "A Sandy Scandal", "Acquiring Credentials", "Aldorei's Secret Part I", "Aldorei's Secret Part II", "All Roads To Peace", "An Iron Heart Part I", "An Iron Heart Part II", "Arachnids' Ascent", "Beneath the Depths", "Beyond the Grave", "Blazing Retribution", "Bob's Lost Soul", "Canyon Condor", "Clearing the Camps", "Cluck Cluck", "Cook Assistant", "Corrupted Betrayal", "Cowfusion", "Creeper Infiltration", "Crop Failure", "Death Whistle", "Deja Vu", "Desperate Metal", "Dwarves and Doguns Part I", "Dwarves and Doguns Part II", "Dwarves and Doguns Part III", "Dwarves and Doguns Part IV", "Dwelling Walls", "Elemental Exercise", "Enter the Dojo", "Enzan's Brother", "Fallen Delivery", "Fantastic Voyage", "Fate of the Fallen", "Flight in Distress", "Forbidden Prison", "From the Bottom", "From the Mountains", "Frost Bite", "General's Orders", "Grand Youth", "Grave Digger", "Green Gloop", "Haven Antiquity", "Heart of Llevigar", "Hollow Serenity", "Hunger of the Gerts Part I", "Hunger of the Gerts Part II", "Ice Nations", "Infested Plants", "Jungle Fever", "King's Recruit", "Kingdom of Sand", "Lava Springs", "Lazarus Pit", "Lexdale Witch Trials", "Lost in the Jungle", "Lost Royalty", "Lost Soles", "Lost Tower", "Maltic's Well", "Master Piece", "Meaningful Holiday", "Memory Paranoia", "Mini-Quest - Gather Acacia Logs", "Mini-Quest - Gather Acacia Logs II", "Mini-Quest - Gather Avo Logs", "Mini-Quest - Gather Avo Logs II", "Mini-Quest - Gather Avo Logs III", "Mini-Quest - Gather Avo Logs IV", "Mini-Quest - Gather Bamboo", "Mini-Quest - Gather Barley", "Mini-Quest - Gather Bass", "Mini-Quest - Gather Bass II", "Mini-Quest - Gather Bass III", "Mini-Quest - Gather Bass IV", "Mini-Quest - Gather Birch Logs", "Mini-Quest - Gather Carp", "Mini-Quest - Gather Carp II", "Mini-Quest - Gather Cobalt", "Mini-Quest - Gather Cobalt II", "Mini-Quest - Gather Cobalt III", "Mini-Quest - Gather Copper", "Mini-Quest - Gather Dark Logs", "Mini-Quest - Gather Dark Logs II", "Mini-Quest - Gather Dark Logs III", "Mini-Quest - Gather Decay Roots", "Mini-Quest - Gather Decay Roots II", "Mini-Quest - Gather Decay Roots III", "Mini-Quest - Gather Diamonds", "Mini-Quest - Gather Diamonds II", "Mini-Quest - Gather Diamonds III", "Mini-Quest - Gather Diamonds IV", "Mini-Quest - Gather Gold", "Mini-Quest - Gather Gold II", "Mini-Quest - Gather Granite", "Mini-Quest - Gather Gudgeon", "Mini-Quest - Gather Gylia Fish", "Mini-Quest - Gather Gylia Fish II", "Mini-Quest - Gather Gylia Fish III", "Mini-Quest - Gather Hops", "Mini-Quest - Gather Hops II", "Mini-Quest - Gather Icefish", "Mini-Quest - Gather Icefish II", "Mini-Quest - Gather Iron", "Mini-Quest - Gather Iron II", "Mini-Quest - Gather Jungle Logs", "Mini-Quest - Gather Jungle Logs II", "Mini-Quest - Gather Kanderstone", "Mini-Quest - Gather Kanderstone II", "Mini-Quest - Gather Kanderstone III", "Mini-Quest - Gather Koi", "Mini-Quest - Gather Koi II", "Mini-Quest - Gather Koi III", "Mini-Quest - Gather Light Logs", "Mini-Quest - Gather Light Logs II", "Mini-Quest - Gather Light Logs III", "Mini-Quest - Gather Malt", "Mini-Quest - Gather Malt II", "Mini-Quest - Gather Millet", "Mini-Quest - Gather Millet II", "Mini-Quest - Gather Millet III", "Mini-Quest - Gather Molten Eel", "Mini-Quest - Gather Molten Eel II", "Mini-Quest - Gather Molten Eel III", "Mini-Quest - Gather Molten Eel IV", "Mini-Quest - Gather Molten Ore", "Mini-Quest - Gather Molten Ore II", "Mini-Quest - Gather Molten Ore III", "Mini-Quest - Gather Molten Ore IV", "Mini-Quest - Gather Oak Logs", "Mini-Quest - Gather Oats", "Mini-Quest - Gather Oats II", "Mini-Quest - Gather Pine Logs", "Mini-Quest - Gather Pine Logs II", "Mini-Quest - Gather Pine Logs III", "Mini-Quest - Gather Piranhas", "Mini-Quest - Gather Piranhas II", "Mini-Quest - Gather Rice", "Mini-Quest - Gather Rice II", "Mini-Quest - Gather Rice III", "Mini-Quest - Gather Rice IV", "Mini-Quest - Gather Rye", "Mini-Quest - Gather Rye II", "Mini-Quest - Gather Salmon", "Mini-Quest - Gather Salmon II", "Mini-Quest - Gather Sandstone", "Mini-Quest - Gather Sandstone II", "Mini-Quest - Gather Silver", "Mini-Quest - Gather Silver II", "Mini-Quest - Gather Sorghum", "Mini-Quest - Gather Sorghum II", "Mini-Quest - Gather Sorghum III", "Mini-Quest - Gather Sorghum IV", "Mini-Quest - Gather Spruce Logs", "Mini-Quest - Gather Spruce Logs II", "Mini-Quest - Gather Trout", "Mini-Quest - Gather Wheat", "Mini-Quest - Gather Willow Logs", "Mini-Quest - Gather Willow Logs II", "Mini-Quest - Slay Ailuropodas", "Mini-Quest - Slay Angels", "Mini-Quest - Slay Astrochelys Manis", "Mini-Quest - Slay Azers", "Mini-Quest - Slay Conures", "Mini-Quest - Slay Coyotes", "Mini-Quest - Slay Creatures of Nesaak Forest", "Mini-Quest - Slay Creatures of the Void", "Mini-Quest - Slay Dead Villagers", "Mini-Quest - Slay Dragonlings", "Mini-Quest - Slay Felrocs", "Mini-Quest - Slay Frosted Guards & Cryostone Golems", "Mini-Quest - Slay Hobgoblins", "Mini-Quest - Slay Idols", "Mini-Quest - Slay Ifrits", "Mini-Quest - Slay Jinkos", "Mini-Quest - Slay Lizardmen", "Mini-Quest - Slay Magma Entities", "Mini-Quest - Slay Mooshrooms", "Mini-Quest - Slay Myconids", "Mini-Quest - Slay Orcs", "Mini-Quest - Slay Pernix Monkeys", "Mini-Quest - Slay Robots", "Mini-Quest - Slay Scarabs", "Mini-Quest - Slay Skeletons", "Mini-Quest - Slay Slimes", "Mini-Quest - Slay Spiders", "Mini-Quest - Slay Weirds", "Mini-Quest - Slay Wraiths & Phantasms", "Misadventure on the Sea", "Mixed Feelings", "Murder Mystery", "Mushroom Man", "One Thousand Meters Under", "Out of my Mind", "Pirate's Trove", "Pit of the Dead", "Point of No Return", "Poisoning the Pest", "Potion Making", "Purple and Blue", "Realm of Light I - The Worm Holes", "Realm of Light II - Taproot", "Realm of Light III - A Headless History", "Realm of Light IV - Finding the Light", "Realm of Light V - The Realm of Light", "Recipe For Disaster", "Reclaiming the House", "Recover the Past", "Redbeard's Booty", "Reincarnation", "Rise of the Quartron", "Royal Trials", "Shattered Minds", "Stable Story", "Star Thief", "Supply and Delivery", "Taking the Tower", "Temple of the Legends", "Tempo Town Trouble", "The Bigger Picture", "The Breaking Point", "The Canary Calls", "The Canyon Guides", "The Corrupted Village", "The Dark Descent", "The Envoy Part I", "The Envoy Part II", "The Feathers Fly Part I", "The Feathers Fly Part II", "The Hero of Gavel", "The Hidden City", "The House of Twain", "The Lost", "The Maiden Tower", "The Mercenary", "The Olmic Rune", "The Order of the Grook", "The Passage", "The Qira Hive", "The Sewers of Ragni", "The Shadow of the Beast", "The Thanos Depository", "The Ultimate Weapon", "Tower of Ascension", "Tribal Aggression", "Troubled Tribesmen", "Tunnel Trouble", "UndericeÀ", "Underwater", "Wrath of the Mummy", "WynnExcavation Site A", "WynnExcavation Site B", "WynnExcavation Site C", "WynnExcavation Site D", "Zhight Island");
 
-    Identifier tabLeft = Identifier.of("wynnextras", "textures/gui/profileviewer/tableft.png");
-    Identifier tabMid = Identifier.of("wynnextras", "textures/gui/profileviewer/tabmid.png");
-    Identifier tagRight = Identifier.of("wynnextras", "textures/gui/profileviewer/tabright.png");
+    static Identifier tabLeft = Identifier.of("wynnextras", "textures/gui/profileviewer/tableft.png");
+    static Identifier tabMid = Identifier.of("wynnextras", "textures/gui/profileviewer/tabmid.png");
+    static Identifier tagRight = Identifier.of("wynnextras", "textures/gui/profileviewer/tabright.png");
 
-    Identifier tabLeftDark = Identifier.of("wynnextras", "textures/gui/profileviewer/tableft_dark.png");
-    Identifier tabMidDark = Identifier.of("wynnextras", "textures/gui/profileviewer/tabmid_dark.png");
-    Identifier tagRightDark = Identifier.of("wynnextras", "textures/gui/profileviewer/tabright_dark.png");
+    static Identifier tabLeftDark = Identifier.of("wynnextras", "textures/gui/profileviewer/tableft_dark.png");
+    static Identifier tabMidDark = Identifier.of("wynnextras", "textures/gui/profileviewer/tabmid_dark.png");
+    static Identifier tagRightDark = Identifier.of("wynnextras", "textures/gui/profileviewer/tabright_dark.png");
 
-    Identifier NOTGTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/notg.png");
-    Identifier NOLTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/nol.png");
-    Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tcc.png");
-    Identifier TNATexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tna.png");
+    static Identifier NOTGTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/notg.png");
+    static Identifier NOLTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/nol.png");
+    static Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tcc.png");
+    static Identifier TNATexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tna.png");
 
-    Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/profileviewerbackground.png");
-    Identifier alsobackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/alsoprofileviewerbackground.png");
-    Identifier raidBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/raidbackground.png");
-    Identifier openInBrowserButtonTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexture.png");
-    Identifier openInBrowserButtonTextureW = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexturewide.png");
-    Identifier classBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive.png");
-    Identifier classBackgroundTextureGold = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactivegold.png");
-    Identifier classBackgroundTextureActive = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactive.png");
-    Identifier onlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle.png");
-    Identifier offlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/offlinecircle.png");
+    static Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/profileviewerbackground.png");
+    static Identifier alsobackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/alsoprofileviewerbackground.png");
+    static Identifier raidBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/raidbackground.png");
+    static Identifier openInBrowserButtonTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexture.png");
+    static Identifier openInBrowserButtonTextureW = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexturewide.png");
+    static Identifier classBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive.png");
+    static Identifier classBackgroundTextureGold = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactivegold.png");
+    static Identifier classBackgroundTextureActive = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactive.png");
+    static Identifier onlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle.png");
+    static Identifier offlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/offlinecircle.png");
 
-    Identifier backgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/profileviewerbackground_dark.png");
-    Identifier alsobackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/alsoprofileviewerbackground_dark.png");
-    Identifier raidBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/raidbackground_dark.png");
-    Identifier openInBrowserButtonTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexture_dark.png");
-    Identifier openInBrowserButtonTextureWDark = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexturewide_dark.png");
-    Identifier classBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive_dark.png");
-    Identifier classBackgroundTextureGoldDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactivegold_dark.png");
-    Identifier classBackgroundTextureActiveDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactive_dark.png");
-    Identifier onlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle_dark.png");
-    Identifier offlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/offlinecircle_dark.png");
-
-
-    Identifier vip = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/vip.png");
-    Identifier vipplus = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/vipplus.png");
-    Identifier hero = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/hero.png");
-    Identifier heroplus = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/heroplus.png");
-    Identifier champion = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/champion.png");
-    Identifier media = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/media.png");
-    Identifier wynn = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/wynn.png");
-    Identifier mod = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/moderator.png");
-    Identifier admin = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/admin.png");
-    Identifier warriorTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/warrior.png");
-    Identifier warriorGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/warriorgold.png");
-    Identifier shamanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/shaman.png");
-    Identifier shamanGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/shamangold.png");
-    Identifier mageTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/mage.png");
-    Identifier mageGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/magegold.png");
-    Identifier assassinTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/assassin.png");
-    Identifier assassinGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/assassingold.png");
-    Identifier archerTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/archer.png");
-    Identifier archerGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/archergold.png");
+    static Identifier backgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/profileviewerbackground_dark.png");
+    static Identifier alsobackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/alsoprofileviewerbackground_dark.png");
+    static Identifier raidBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/raidbackground_dark.png");
+    static Identifier openInBrowserButtonTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexture_dark.png");
+    static Identifier openInBrowserButtonTextureWDark = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexturewide_dark.png");
+    static Identifier classBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive_dark.png");
+    static Identifier classBackgroundTextureGoldDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactivegold_dark.png");
+    static Identifier classBackgroundTextureActiveDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactive_dark.png");
+    static Identifier onlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle_dark.png");
+    static Identifier offlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/offlinecircle_dark.png");
 
 
-    Identifier decrepitSewersTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/decrepitsewers.png");
-    Identifier infestedPitTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/infestedpit.png");
-    Identifier underworldCryptTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/underworldcrypt.png");
-    Identifier timelostSanctumTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/timelostsanctum.png");
-    Identifier sandSweptTombTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/sandswepttomb.png");
-    Identifier iceBarrowsTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/icebarrows.png");
-    Identifier undergrowthRuinsTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/undergrowthruins.png");
-    Identifier galleonsGraveyardTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/galleonsgraveyard.png");
-    Identifier fallenFactoryTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/fallenfactory.png");
-    Identifier eldritchOutlookTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/eldritchoutlook.png");
+    static Identifier vip = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/vip.png");
+    static Identifier vipplus = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/vipplus.png");
+    static Identifier hero = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/hero.png");
+    static Identifier heroplus = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/heroplus.png");
+    static Identifier champion = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/champion.png");
+    static Identifier media = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/media.png");
+    static Identifier wynn = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/wynn.png");
+    static Identifier mod = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/moderator.png");
+    static Identifier admin = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/admin.png");
+    static Identifier warriorTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/warrior.png");
+    static Identifier warriorGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/warriorgold.png");
+    static Identifier shamanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/shaman.png");
+    static Identifier shamanGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/shamangold.png");
+    static Identifier mageTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/mage.png");
+    static Identifier mageGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/magegold.png");
+    static Identifier assassinTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/assassin.png");
+    static Identifier assassinGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/assassingold.png");
+    static Identifier archerTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/archer.png");
+    static Identifier archerGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/archergold.png");
 
-    List<Identifier> dungeonTextures = List.of(decrepitSewersTexture, infestedPitTexture, underworldCryptTexture, timelostSanctumTexture, sandSweptTombTexture, iceBarrowsTexture, undergrowthRuinsTexture, galleonsGraveyardTexture, fallenFactoryTexture, eldritchOutlookTexture);
 
-    Identifier dungeonKeyTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/dungeonkey.png");
-    Identifier corruptedDungeonKeyTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/corrupteddungeonkey.png");
-    Identifier dungeonBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/dungeonpagebackground.png");
-    Identifier miscBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/miscpagebackground.png");
+    static Identifier decrepitSewersTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/decrepitsewers.png");
+    static Identifier infestedPitTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/infestedpit.png");
+    static Identifier underworldCryptTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/underworldcrypt.png");
+    static Identifier timelostSanctumTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/timelostsanctum.png");
+    static Identifier sandSweptTombTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/sandswepttomb.png");
+    static Identifier iceBarrowsTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/icebarrows.png");
+    static Identifier undergrowthRuinsTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/undergrowthruins.png");
+    static Identifier galleonsGraveyardTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/galleonsgraveyard.png");
+    static Identifier fallenFactoryTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/fallenfactory.png");
+    static Identifier eldritchOutlookTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/eldritchoutlook.png");
 
-    Identifier dungeonBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/dungeonpagebackground_dark.png");
-    Identifier miscBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/miscpagebackground_dark.png");
+    static List<Identifier> dungeonTextures = List.of(decrepitSewersTexture, infestedPitTexture, underworldCryptTexture, timelostSanctumTexture, sandSweptTombTexture, iceBarrowsTexture, undergrowthRuinsTexture, galleonsGraveyardTexture, fallenFactoryTexture, eldritchOutlookTexture);
 
-    Identifier miningTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/mining.png");
-    Identifier woodcuttingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/woodcutting.png");
-    Identifier farmingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/farming.png");
-    Identifier fishingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/fishing.png");
-    Identifier armouringTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/armouring.png");
-    Identifier tailoringTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tailoring.png");
-    Identifier weaponsmithingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/weaponsmithing.png");
-    Identifier woodworkingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/woodworking.png");
-    Identifier jewelingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/jeweling.png");
-    Identifier alchemismTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/alchemism.png");
-    Identifier scribingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/scribing.png");
-    Identifier cookingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/cooking.png");
-    Identifier profBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/profs/profbackground.png");
+    static Identifier dungeonKeyTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/dungeonkey.png");
+    static Identifier corruptedDungeonKeyTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/corrupteddungeonkey.png");
+    static Identifier dungeonBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/dungeonpagebackground.png");
+    static Identifier miscBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/miscpagebackground.png");
 
-    Identifier profBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/profs/profbackground_dark.png");
+    static Identifier dungeonBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/dungeonpagebackground_dark.png");
+    static Identifier miscBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/miscpagebackground_dark.png");
 
-    Identifier questBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackground.png");
-    Identifier questBackgroundBorderTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackgroundborders.png");
-    Identifier questSearchbarTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questsearchbar.png");
+    static Identifier miningTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/mining.png");
+    static Identifier woodcuttingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/woodcutting.png");
+    static Identifier farmingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/farming.png");
+    static Identifier fishingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/fishing.png");
+    static Identifier armouringTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/armouring.png");
+    static Identifier tailoringTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tailoring.png");
+    static Identifier weaponsmithingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/weaponsmithing.png");
+    static Identifier woodworkingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/woodworking.png");
+    static Identifier jewelingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/jeweling.png");
+    static Identifier alchemismTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/alchemism.png");
+    static Identifier scribingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/scribing.png");
+    static Identifier cookingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/cooking.png");
+    static Identifier profBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/profs/profbackground.png");
+    static Identifier profBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/profs/profbackground_dark.png");
 
-    Identifier questBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackground_dark.png");
-    Identifier questBackgroundBorderTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackgroundborders_dark.png");
-    Identifier questSearchbarTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questsearchbar_dark.png");
+    static Identifier questBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackground.png");
+    static Identifier questBackgroundBorderTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackgroundborders.png");
+    static Identifier questSearchbarTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questsearchbar.png");
 
-    Identifier warsCompletionTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/warscompletion.png");
-    Identifier playerContentTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/playercontent.png");
-    Identifier globalPlayerContent = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/globalplayercontent.png");
-    Identifier combatLevelTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/combatlevel.png");
-    Identifier totalLevelTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/totallevel.png");
-    Identifier professionLevelTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/professionlevel.png");
-    Identifier rankingBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackground.png");
-    Identifier rankingBackgroundWideTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackgroundwide.png");
+    static Identifier questBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackground_dark.png");
+    static Identifier questBackgroundBorderTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackgroundborders_dark.png");
+    static Identifier questSearchbarTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questsearchbar_dark.png");
 
-    Identifier ironmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ironman.png");
-    Identifier ultimateIronmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ultimateironman.png");
-    Identifier huntedTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hunted.png");
-    Identifier hardcoreTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hardcore.png");
-    Identifier hardcoreFailedTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hardcorefailed.png");
-    Identifier craftsmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/craftsman.png");
+    static Identifier warsCompletionTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/warscompletion.png");
+    static Identifier playerContentTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/playercontent.png");
+    static Identifier globalPlayerContent = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/globalplayercontent.png");
+    static Identifier combatLevelTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/combatlevel.png");
+    static Identifier totalLevelTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/totallevel.png");
+    static Identifier professionLevelTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/professionlevel.png");
+    static Identifier rankingBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackground.png");
+    static Identifier rankingBackgroundWideTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackgroundwide.png");
 
-    Identifier rankingBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackground_dark.png");
-    Identifier rankingBackgroundWideTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackgroundwide_dark.png");
+    static Identifier ironmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ironman.png");
+    static Identifier ultimateIronmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ultimateironman.png");
+    static Identifier huntedTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hunted.png");
+    static Identifier hardcoreTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hardcore.png");
+    static Identifier hardcoreFailedTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hardcorefailed.png");
+    static Identifier craftsmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/craftsman.png");
+
+    static Identifier rankingBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackground_dark.png");
+    static Identifier rankingBackgroundWideTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackgroundwide_dark.png");
 
     static OpenInBroserButton openInBrowserButton;
     public static Searchbar searchBar;
@@ -200,18 +197,27 @@ public class PVScreen extends WEScreen {
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 0; // in ms
 
-    static int scaleFactor;
+    BackgroundImageWidget backgroundImageWidget = new BackgroundImageWidget();
+    List<TabButtonWidget> tabButtonWidgets = new ArrayList<>();
+    static TabWidget currentTabWidget;
 
-    public PVScreen(String player) {
+    public PVScreen(String name) {
         super(Text.of("Player Viewer"));
+        String player;
+        if(name == null && McUtils.player() == null) player = "null";
+        else if(name == null) player = McUtils.playerName();
+        else player = name;
         tabButtons.clear();
         characterButtons.clear();
         openInBrowserButton = null;
         searchBar = null;
         questSearchBar = null;
         selectedCharacter = null;
+        int j = 0;
         for(Tab tab : Tab.values()) {
+            tabButtonWidgets.add(new TabButtonWidget(j, tab, this));
             tabButtons.add(new TabButton(0, 0, 0, 0, tab));
+            j++;
         }
         for (int i = 0; i < 15; i++) {
             characterButtons.add(new CharacterButton(-1, -1, 0, 0, null));
@@ -219,11 +225,14 @@ public class PVScreen extends WEScreen {
         this.player = player;
         currentTab = Tab.General;
 
+        initAsyncPlayerData();
+    }
+
+    private void initAsyncPlayerData() {
         CompletableFuture.runAsync(() -> {
             try {
-                while (PV.currentPlayerData == null) {
-                    Thread.sleep(50);
-                }
+                while (PV.currentPlayerData == null) Thread.sleep(50);
+
                 SkinData skin = fetchSkin(PV.currentPlayerData.getUuid());
                 GameProfile profile = createProfileWithSkin(PV.currentPlayerData.getUuid(), player, skin);
 
@@ -234,18 +243,14 @@ public class PVScreen extends WEScreen {
                     dummy = new AbstractClientPlayerEntity(world, profile) {
                         @Override
                         public SkinTextures getSkinTextures() {
-                            return MinecraftClient.getInstance()
-                                    .getSkinProvider()
-                                    .getSkinTextures(this.getGameProfile());
+                            return client.getSkinProvider().getSkinTextures(getGameProfile());
                         }
 
                         @Override
                         public boolean isPartVisible(PlayerModelPart part) {
-                            if(part == PlayerModelPart.CAPE) return false;
-                            return true;
+                            return part != PlayerModelPart.CAPE;
                         }
                     };
-
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -256,32 +261,125 @@ public class PVScreen extends WEScreen {
     @Override
     public void init() {
         super.init();
-        ScreenMouseEvents.afterMouseScroll(this).register((
-                screen,
-                mX,
-                mY,
-                horizontalAmount,
-                verticalAmount
-        ) -> {
-            long now = System.currentTimeMillis();
-            if (now - lastScrollTime < scrollCooldown) {
-                return;
-            }
-            lastScrollTime = now;
 
-            if (verticalAmount > 0) {
-                scrollOffset -= 30; //Scroll up
-            } else {
-                scrollOffset += 30; //Scroll down
-            }
-            if(scrollOffset < 0) {
-                scrollOffset = 0;
-            }
-        });
+        rootWidgets.clear();
+        if(currentTabWidget instanceof GeneralTabWidget) {
+            currentTabWidget = null;
+        }
+        if(currentTabWidget == null) currentTabWidget = new GeneralTabWidget();
+
+        addRootWidget(backgroundImageWidget);
+        for(TabButtonWidget tabButtonWidget : tabButtonWidgets) {
+            addRootWidget(tabButtonWidget);
+        }
+        registerScrolling();
+        //addRootWidget(hier jetzt alle verschiedenen tabs);
     }
 
     @Override
+    protected void scrollList(float delta) {
+        scrollOffset -= (int) (delta);
+        if(scrollOffset < 0) scrollOffset = 0;
+    }
+
+    @Override
+    public void updateValues() {
+        int xStart = getLogicalWidth() / 2 - 900;
+        int yStart = getLogicalHeight() / 2 - 375;
+        backgroundImageWidget.setBounds(xStart, yStart, 1800, 750);
+        int totalWidth = 24;
+        for(TabButtonWidget tabButtonWidget : tabButtonWidgets) {
+            int signWidth = drawDynamicNameSign(drawContext, tabButtonWidget.tab.toString(), xStart + totalWidth, yStart - 57);
+            //24; //+ totalXOffset + (float) signWidth / 2
+            tabButtonWidget.setBounds(xStart + totalWidth, yStart - 55, signWidth, 55);
+            tabButtonWidget.setTextOffset(signWidth / 2, 17);
+            totalWidth += signWidth + 12;
+        }
+        if(currentTabWidget == null) return;
+        if(!rootWidgets.contains(currentTabWidget)){
+            addRootWidget(currentTabWidget);
+        }
+        currentTabWidget.setBounds(xStart, yStart, 1800, 750);
+    }
+
+    @Override //im drawing the tab stuff in updateValues so the background has to be rendered first that's why this override exists
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        PVScreen.mouseX = mouseX;
+        PVScreen.mouseY = mouseY;
+        super.applyBlur();
+
+        this.drawContext = context;
+        computeScaleAndOffsets();
+        if (ui == null) ui = new UIUtils(context, scaleFactor, xStart, yStart);
+        else ui.updateContext(context, scaleFactor, xStart, yStart);
+
+
+        ui.drawBackground();
+        backgroundImageWidget.draw(context, mouseX, mouseY, delta, ui);
+        updateValues();
+        updateVisibleListRange();
+        layoutListElements();
+
+        for (Widget w : rootWidgets) {
+            if(w instanceof BackgroundImageWidget) continue;
+            w.draw(context, mouseX, mouseY, delta, ui);
+        }
+
+        // draw only visible range with small buffer for smoothness
+        int start = Math.max(0, firstVisibleIndex - 1);
+        int end = Math.min(listElements.size() - 1, lastVisibleIndex + 1);
+        for (int i = start; i <= end; i++) {
+            WEElement<?> e = listElements.get(i);
+            e.draw(context, mouseX, mouseY, delta, ui);
+        }
+
+        //this still uses the old system, needs to be updated some day
+
+        int xStart = getLogicalWidth() / 2 - 900;
+        int yStart = getLogicalHeight() / 2 - 374;
+        if(openInBrowserButton == null && PV.currentPlayerData != null) {
+            openInBrowserButton = new OpenInBroserButton(-1, -1, (int) (20 * 3 / scaleFactor), (int) (87 * 3 / scaleFactor), "https://wynncraft.com/stats/player/" + PV.currentPlayerData.getUuid());
+        }
+
+        if (openInBrowserButton != null) {
+            openInBrowserButton.setX((int) (xStart / scaleFactor));
+            openInBrowserButton.setY((int) ((yStart + currentTabWidget.getHeight()) / scaleFactor) + 1);
+            openInBrowserButton.buttonText = "Open in browser";
+            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+                openInBrowserButton.drawWithTexture(context, openInBrowserButtonTextureDark);
+            } else {
+                openInBrowserButton.drawWithTexture(context, openInBrowserButtonTexture);
+            }
+        }
+
+        //Player searchbar
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+            drawImage(openInBrowserButtonTextureWDark, xStart + 267, yStart + currentTabWidget.getHeight(), 300, 60);
+        } else {
+            drawImage(openInBrowserButtonTextureW, xStart + 267, yStart + currentTabWidget.getHeight(), 300, 60);
+        }
+
+        if(searchBar == null || searchBar.getInput().equals("Unknown user")) {
+            searchBar = new Searchbar(-1, -1, (int) (14 * 3 / scaleFactor), (int) (100 * 3 / scaleFactor));
+            if(PV.currentPlayerData == null) {
+                searchBar.setInput("Unknown user");
+            } else if(PV.currentPlayerData.getUsername() == null) {
+                searchBar.setInput("Unknown user");
+            } else {
+                searchBar.setInput(PV.currentPlayerData.getUsername());
+            }
+        }
+
+        if (searchBar != null) {
+            searchBar.setX((int) ((xStart + 89 * 3) / ui.getScaleFactor()));
+            searchBar.setY((int) ((yStart + currentTabWidget.getHeight() + 7 * 3) / ui.getScaleFactor()));
+            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"));
+            //searchBar.draw(context);
+        }
+    }
+
+    @Override
+    public void testDraw(DrawContext context, int mouseX, int mouseY, float delta) {
         if(MinecraftClient.getInstance().getWindow() == null) return;
         super.drawContext = context;
         super.scaleFactor = MinecraftClient.getInstance().getWindow().getScaleFactor();
@@ -289,11 +387,11 @@ public class PVScreen extends WEScreen {
         if(scaleFactor == 0) return;
 
         if(openInBrowserButton == null && PV.currentPlayerData != null) {
-            openInBrowserButton = new OpenInBroserButton(-1, -1, 20 * 3 / scaleFactor, 87 * 3 / scaleFactor, "https://wynncraft.com/stats/player/" + PV.currentPlayerData.getUuid());
+            openInBrowserButton = new OpenInBroserButton(-1, -1, (int) (20 * 3 / scaleFactor), (int) (87 * 3 / scaleFactor), "https://wynncraft.com/stats/player/" + PV.currentPlayerData.getUuid());
         }
 
         if(searchBar == null || searchBar.getInput().equals("Unknown user")) {
-            searchBar = new Searchbar(-1, -1, 14 * 3 / scaleFactor, 100 * 3 / scaleFactor);
+            searchBar = new Searchbar(-1, -1, (int) (14 * 3 / scaleFactor), (int) (100 * 3 / scaleFactor));
             if(PV.currentPlayerData == null) {
                 searchBar.setInput("Unknown user");
             } else if(PV.currentPlayerData.getUsername() == null) {
@@ -305,8 +403,8 @@ public class PVScreen extends WEScreen {
 
         screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
         screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
-        width = 600 * 3 / scaleFactor;
-        height = 250 * 3 / scaleFactor;
+        width = (int) (600 * 3 / scaleFactor);
+        height = (int) (250 * 3 / scaleFactor);
         xStart = screenWidth / 2 - width / 2;
         yStart = screenHeight / 2 - height / 2;
 
@@ -318,13 +416,12 @@ public class PVScreen extends WEScreen {
             questSearchBar.setSearchText("Search...");
         }
 
-        drawBackground();
         if(currentTab == Tab.General) {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) drawImage(backgroundTextureDark, 0, 0, width * scaleFactor, height * scaleFactor);
-            else drawImage(backgroundTexture, 0, 0, width * scaleFactor, height * scaleFactor);
+            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) ui.drawImage(backgroundTextureDark, (float) 0, (float) 0, (float) (width * scaleFactor), (float) (height * scaleFactor));
+            else ui.drawImage(backgroundTexture, 0, 0, width, height);
         } else {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) drawImage(alsobackgroundTextureDark, 0, 0, width * scaleFactor, height * scaleFactor);
-            else drawImage(alsobackgroundTexture, 0, 0, width * scaleFactor, height * scaleFactor);
+            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) ui.drawImage(alsobackgroundTextureDark, (float) 0, (float) 0, (float) (width * scaleFactor), (float) (height * scaleFactor));
+            else ui.drawImage(alsobackgroundTexture, 0, 0, (float)(width * scaleFactor),(float)( height * scaleFactor));
         }
 
         int j = 0;
@@ -344,10 +441,10 @@ public class PVScreen extends WEScreen {
             float centerX = 24 + totalXOffset + (float) signWidth / 2;
 
             drawText(tabString, centerX - 1, -36, tabStringColor, HorizontalAlignment.CENTER, VerticalAlignment.TOP, 3f);
-            tabButton.setX(xStart + 8 * 3 / scaleFactor + totalXOffset / scaleFactor);
-            tabButton.setY(yStart - 19 * 3 / scaleFactor);
-            tabButton.setWidth((float) signWidth / scaleFactor);
-            tabButton.setHeight((float) (20 * 3) / scaleFactor);
+            tabButton.setX((int) (xStart + 8 * 3 / scaleFactor + totalXOffset / scaleFactor));
+            tabButton.setY((int) (yStart - 19 * 3 / scaleFactor));
+            tabButton.setWidth((float) ((float) signWidth / scaleFactor));
+            tabButton.setHeight((float) ((float) (20 * 3) / scaleFactor));
 
             totalXOffset += signWidth + 12;
             j++;
@@ -396,13 +493,13 @@ public class PVScreen extends WEScreen {
                 if (dummy != null) {
                     if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
                         dummy.setPose(EntityPose.CROUCHING);
-                        drawPlayer(context, xStart + 66 / scaleFactor + 216 / scaleFactor, yStart + 102 / scaleFactor + 387 / scaleFactor, 210 / scaleFactor, mouseX, mouseY, dummy); //166 178
+                        drawPlayer(context, (int) (xStart + 66 / scaleFactor + 216 / scaleFactor), (int) (yStart + 102 / scaleFactor + 387 / scaleFactor), (int) (210 / scaleFactor), mouseX, mouseY, dummy, scaleFactor); //166 178
                     } else if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_RIGHT_SHIFT)) {
                         dummy.setPose(EntityPose.SLEEPING);
-                        drawPlayer(context, xStart + 66 / scaleFactor, yStart + 102 / scaleFactor + 357 / scaleFactor, 210 / scaleFactor, mouseX, mouseY, dummy); //166 178
+                        drawPlayer(context, (int) (xStart + 66 / scaleFactor), (int) (yStart + 102 / scaleFactor + 357 / scaleFactor), (int) (210 / scaleFactor), mouseX, mouseY, dummy, scaleFactor); //166 178
                     } else {
                         dummy.setPose(EntityPose.STANDING);
-                        drawPlayer(context, xStart + 66 / scaleFactor + 216 / scaleFactor, yStart + 102 / scaleFactor + 414 / scaleFactor, 210 / scaleFactor, mouseX, mouseY, dummy); //166 178
+                        drawPlayer(context, (int) (xStart + 66 / scaleFactor + 216 / scaleFactor), (int) (yStart + 102 / scaleFactor + 414 / scaleFactor), (int) (210 / scaleFactor), mouseX, mouseY, dummy, scaleFactor); //166 178
                     }
                 }
 
@@ -426,10 +523,10 @@ public class PVScreen extends WEScreen {
                         int entryX = 576 + 411 * (i % 3);
                         int entryY = 15 + 144 * Math.floorDiv(i, 3);
                         characterButtons.get(i).setCharacter(entry);
-                        characterButtons.get(i).setX(xStart + 192 * 3 / scaleFactor + (137 * 3 / scaleFactor) * (i % 3));
-                        characterButtons.get(i).setY(yStart + 5 * 3 / scaleFactor + (48 * 3 / scaleFactor) * Math.floorDiv(i, 3));
-                        characterButtons.get(i).setWidth((float) 390 / scaleFactor);
-                        characterButtons.get(i).setHeight((float) 132 / scaleFactor);
+                        characterButtons.get(i).setX((int) (xStart + 192 * 3 / scaleFactor + (137 * 3 / scaleFactor) * (i % 3)));
+                        characterButtons.get(i).setY((int) (yStart + 5 * 3 / scaleFactor + (48 * 3 / scaleFactor) * Math.floorDiv(i, 3)));
+                        characterButtons.get(i).setWidth((float) ((float) 390 / scaleFactor));
+                        characterButtons.get(i).setHeight((float) ((float) 132 / scaleFactor));
                         if(selectedCharacter == entry) {
                             if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
                                 drawImage(classBackgroundTextureActiveDark, entryX, entryY, 390, 132);
@@ -932,17 +1029,17 @@ public class PVScreen extends WEScreen {
 
                 if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
                     drawImage(questBackgroundTextureDark, 30, 90, 1740, 600);
-                    drawImage(questSearchbarTextureDark, 600, height * scaleFactor, 1200, 60);
+                    drawImage(questSearchbarTextureDark, 600F, (float) (height * scaleFactor), 1200, 60);
                 } else {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), questBackgroundTexture, xStart + (float) (10 * 3) / scaleFactor, yStart + (float) (30 * 3) / scaleFactor, (float) (580 * 3) / scaleFactor, (float) (200 * 3) / scaleFactor, 580 * 3 / scaleFactor, 200 * 3 / scaleFactor);
+                    RenderUtils.drawTexturedRect(context.getMatrices(), questBackgroundTexture, (float) (xStart + (float) (10 * 3) / scaleFactor), (float) (yStart + (float) (30 * 3) / scaleFactor), (float) ((float) (580 * 3) / scaleFactor), (float) ((float) (200 * 3) / scaleFactor), (int) (580 * 3 / scaleFactor), (int) (200 * 3 / scaleFactor));
                     drawImage(questBackgroundTexture, 30, 90, 1740, 600);
-                    drawImage(questSearchbarTexture, 600, height * scaleFactor, 1200, 60);
+                    drawImage(questSearchbarTexture, 600F, (float) (height * scaleFactor), 1200, 60);
                 }
 
-                questSearchBar.setX(xStart + 200 * 3 / scaleFactor);
-                questSearchBar.setY(yStart + height + 7 * 3 / scaleFactor);
-                questSearchBar.setWidth(400 * 3 / scaleFactor);
-                questSearchBar.setHeight(14 * 3 / scaleFactor);
+                questSearchBar.setX((int) (xStart + 200 * 3 / scaleFactor));
+                questSearchBar.setY((int) (yStart + height + 7 * 3 / scaleFactor));
+                questSearchBar.setWidth((int) (400 * 3 / scaleFactor));
+                questSearchBar.setHeight((int) (14 * 3 / scaleFactor));
                 questSearchBar.drawWithoutBackgroundButWithSearchtext(context, CustomColor.fromHexString("FFFFFF"));
 
                 int i = 0;
@@ -1043,19 +1140,23 @@ public class PVScreen extends WEScreen {
         }
 
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            drawImage(openInBrowserButtonTextureWDark, 267, (float) (height * scaleFactor), 300, 60);
+            drawImage(openInBrowserButtonTextureWDark, 267, (float) (height * ui.getScaleFactor()), 300, 60);
         } else {
-            drawImage(openInBrowserButtonTextureW, 267, (float) (height * scaleFactor), 300, 60);
+            drawImage(openInBrowserButtonTextureW, 267, (float) (height * ui.getScaleFactor()), 300, 60);
         }
 
         if (searchBar != null) {
-            searchBar.setX(xStart + 89 * 3 / scaleFactor);
-            searchBar.setY(yStart + height + 7 * 3 / scaleFactor);
-            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"));
+            searchBar.setX((int) (0));
+            searchBar.setY((int) (0));
+            searchBar.setWidth(300);
+            searchBar.setHeight(60);
+//            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"));
+            searchBar.draw(context);
         }
+
     }
 
-    public Identifier getProfTexture(String prof) {
+    public static Identifier getProfTexture(String prof) {
         return switch (prof) {
             case "mining" -> miningTexture;
             case "woodcutting" -> woodcuttingTexture;
@@ -1073,7 +1174,7 @@ public class PVScreen extends WEScreen {
         };
     }
 
-    public int getDungeonComps(int i, Map<String, Integer> map) {
+    public static int getDungeonComps(int i, Map<String, Integer> map) {
         return switch (i) {
             case 0 -> map.getOrDefault("Decrepit Sewers", 0);
             case 1 -> map.getOrDefault("Infested Pit", 0);
@@ -1089,7 +1190,7 @@ public class PVScreen extends WEScreen {
         };
     }
 
-    public int getCorruptedComps(int i, Map<String, Integer> map) {
+    public static int getCorruptedComps(int i, Map<String, Integer> map) {
         return switch (i) {
             case 0 -> map.getOrDefault("Corrupted Decrepit Sewers", 0);
             case 1 -> map.getOrDefault("Corrupted Infested Pit", 0);
@@ -1103,7 +1204,7 @@ public class PVScreen extends WEScreen {
         };
     }
 
-    public String getDungeonName(int i) {
+    public static String getDungeonName(int i) {
         return switch (i) {
             case 0 -> "Decrepit Sewers";
             case 1 -> "Infested Pit";
@@ -1119,7 +1220,7 @@ public class PVScreen extends WEScreen {
         };
     }
 
-    public String getClassName(CharacterData entry) {
+    public static String getClassName(CharacterData entry) {
         if (entry.getNickname() != null) {
             return "*§o" + entry.getNickname() + "§r";
         } else {
@@ -1131,6 +1232,7 @@ public class PVScreen extends WEScreen {
     public void close() {
         PV.currentPlayer = "";
         PV.currentPlayerData = null;
+        currentTabWidget = null;
         dummy = null;
         openInBrowserButton = null;
         searchBar = null;
@@ -1138,7 +1240,7 @@ public class PVScreen extends WEScreen {
         super.close();
     }
 
-    public Rank getRank() {
+    public static Rank getRank() {
         String rank = PV.currentPlayerData.getRank();
         if(rank == null) return Rank.NONE;
         if(rank.equals("Player")) {
@@ -1162,7 +1264,7 @@ public class PVScreen extends WEScreen {
         }
     }
 
-    public Identifier getRankBadge() {
+    public static Identifier getRankBadge() {
         Rank rank = getRank();
         return switch (rank) {
             case VIP -> vip;
@@ -1178,7 +1280,7 @@ public class PVScreen extends WEScreen {
         };
     }
 
-    public int getRankBadgeWidth() {
+    public static int getRankBadgeWidth() {
         Rank rank = getRank();
         return switch (rank) {
             case VIP -> 66;
@@ -1193,7 +1295,7 @@ public class PVScreen extends WEScreen {
         };
     }
 
-    static float playerRotationY = 0;
+    public static float playerRotationY = 0;
     private static boolean draggingAllowed = false;
 
 
@@ -1208,11 +1310,12 @@ public class PVScreen extends WEScreen {
     }
 
 
-    public static void drawPlayer(
+    public void drawPlayer(
             DrawContext context,
             int x, int y, int scale,
             float mouseX, float mouseY,
-            LivingEntity player
+            LivingEntity player,
+            double scaleFactor
     ) {
         float flipOffset = 0;
 
@@ -1226,8 +1329,8 @@ public class PVScreen extends WEScreen {
         if(dummy.getPose() == EntityPose.SLEEPING) {
             rotation.rotateY((float) Math.PI * 0.5f);
             rotation.rotateX((float) Math.PI);
-            sleepOffsetX = (float) (60 * 3) / scaleFactor;
-            sleepOffsetY = (float) (10 * 3) / scaleFactor;
+            sleepOffsetX = (float) ((float) (60 * 3) / scaleFactor);
+            sleepOffsetY = (float) ((float) (10 * 3) / scaleFactor);
         } else {
             sleepOffsetX = 0;
             sleepOffsetY = 0;
@@ -1235,7 +1338,7 @@ public class PVScreen extends WEScreen {
 
         if(PV.currentPlayer.equalsIgnoreCase("teslanator")) {
             rotation.rotateX((float) Math.PI);
-            flipOffset = -130 * 3 / scaleFactor;
+            flipOffset = (float) (-130 * 3 / scaleFactor);
             rotation.rotateY((float) Math.PI);
         }
 
@@ -1246,7 +1349,6 @@ public class PVScreen extends WEScreen {
         float smolScale = 1;
         float thickScale = 1;
 
-//        System.out.println(PV.currentPlayer);
         if(PV.currentPlayer.equalsIgnoreCase("legendaryvirus")) {
             smolScale = 0.5f;
             thickScale = 1.5f;
@@ -1288,7 +1390,7 @@ public class PVScreen extends WEScreen {
         return profile;
     }
 
-    public Identifier getClassTexture(String className) {
+    public static Identifier getClassTexture(String className) {
         return switch (className) {
             case "WARRIOR" -> warriorTexture;
             case "SHAMAN" -> shamanTexture;
@@ -1299,7 +1401,7 @@ public class PVScreen extends WEScreen {
         };
     }
 
-    public Identifier getGoldClassTexture(String className) {
+    public static Identifier getGoldClassTexture(String className) {
         return switch (className) {
             case "WARRIOR" -> warriorGoldTexture;
             case "SHAMAN" -> shamanGoldTexture;
@@ -1311,51 +1413,55 @@ public class PVScreen extends WEScreen {
     }
 
     public static void onClick() {
-        if(scaleFactor == 0) return;
-        int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
-        int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
-        int width = 600 * 3 / scaleFactor;
-        int height = 250 * 3 / scaleFactor;
-        int xStart = screenWidth / 2 - width / 2;
-        int yStart = screenHeight / 2 - height / 2;
-        int dragX = xStart + 23 * 3 / scaleFactor;
-        int dragY = yStart + 33 * 3 / scaleFactor;
-        int dragWidth = 143 * 3 / scaleFactor;
-        int dragHeight = 143 * 3 / scaleFactor;
-
-        if (mouseX >= dragX && mouseX <= dragX + dragWidth &&
-                mouseY >= dragY && mouseY <= dragY + dragHeight) {
-            draggingAllowed = true;
-        } else {
-            draggingAllowed = false;
-        }
-
+//        if(scaleFactor == 0) return;
+//        int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
+//        int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
+//        int width = 600 * 3 / scaleFactor;
+//        int height = 250 * 3 / scaleFactor;
+//        int xStart = screenWidth / 2 - width / 2;
+//        int yStart = screenHeight / 2 - height / 2;
+//        int dragX = xStart + 23 * 3 / scaleFactor;
+//        int dragY = yStart + 33 * 3 / scaleFactor;
+//        int dragWidth = 143 * 3 / scaleFactor;
+//        int dragHeight = 143 * 3 / scaleFactor;
+//
+//        if (mouseX >= dragX && mouseX <= dragX + dragWidth &&
+//                mouseY >= dragY && mouseY <= dragY + dragHeight) {
+//            draggingAllowed = true;
+//        } else {
+//            draggingAllowed = false;
+//        }
+//
         if(openInBrowserButton == null || searchBar == null || (currentTab == Tab.Quests && questSearchBar == null)) return;
         if(openInBrowserButton.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
             openInBrowserButton.click();
         }
-        if(searchBar.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
-            searchBar.click();
-        } else {
-            searchBar.setActive(false);
-        }
-        if(questSearchBar.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
-            questSearchBar.click();
-        } else {
-            questSearchBar.setActive(false);
-        }
-        for(EasyButton button : tabButtons) {
-            if(button.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
-                button.click();
+        if(searchBar != null) {
+            if (searchBar.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
+                searchBar.click();
+            } else {
+                searchBar.setActive(false);
             }
         }
-        if(currentTab == Tab.General) {
-            for (CharacterButton button : characterButtons) {
-                if (button.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
-                    button.click();
-                }
+        if(questSearchBar != null) {
+            if (questSearchBar.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
+                questSearchBar.click();
+            } else {
+                questSearchBar.setActive(false);
             }
         }
+//        for(EasyButton button : tabButtons) {
+//            if(button.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
+//                button.click();
+//            }
+//        }
+//        if(currentTab == Tab.General) {
+//            for (CharacterButton button : characterButtons) {
+//                if (button.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
+//                    button.click();
+//                }
+//            }
+//        }
     }
 
     public int drawDynamicNameSign(DrawContext context, String input, int x, int y) {
@@ -1364,22 +1470,136 @@ public class PVScreen extends WEScreen {
         int strMidWidth = strWidth - 15;
         int amount = Math.max(0, Math.ceilDiv(strMidWidth, 10));
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            drawImage(tabLeftDark, x, y, 30, 60);
+            ui.drawImage(tabLeftDark, x, y, 30, 60);
         } else {
-            drawImage(tabLeft, x, y, 30, 60);
+            ui.drawImage(tabLeft, x, y, 30, 60);
         }
         for (int i = 0; i < amount; i++) {
             if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                drawImage(tabMidDark, x + 30 * (i + 1), y, 30, 60);
+                ui.drawImage(tabMidDark, x + 30 * (i + 1), y, 30, 60);
             } else {
-                drawImage(tabMid, x + 30 * (i + 1), y, 30, 60);
+                ui.drawImage(tabMid, x + 30 * (i + 1), y, 30, 60);
             }
         }
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            drawImage(tagRightDark, x + 30 * (amount + 1), y, 30, 60);
+            ui.drawImage(tagRightDark, x + 30 * (amount + 1), y, 30, 60);
         } else {
-            drawImage(tagRight, x + 30 * (amount + 1), y, 30, 60);
+            ui.drawImage(tagRight, x + 30 * (amount + 1), y, 30, 60);
         }
         return 60 + amount * 30;
+    }
+
+    private static TabWidget getTabWidget(Tab tab) {
+        return switch (tab) {
+            case General -> new GeneralTabWidget();
+            case Raids -> new RaidsTabWidget();
+            case Rankings -> new RankingsTabWidget();
+            case Professions -> new ProfessionsTabWidget();
+            case Dungeons -> new DungeonsTabWidget();
+            case Quests -> new QuestsTabWidget();
+            case Misc -> new MiscTabWidget();
+            case null, default -> new TabWidget(0, 0, 0, 0);
+        };
+    }
+
+    public static class BackgroundImageWidget extends Widget {
+        public BackgroundImageWidget() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if(currentTab == Tab.General) {
+                if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) ui.drawImage(backgroundTextureDark, x, y, width, height);
+                else ui.drawImage(backgroundTexture, x, y, width, height);
+            } else {
+                if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) ui.drawImage(alsobackgroundTextureDark, x, y, width, height);
+                else ui.drawImage(alsobackgroundTexture, x, y, width,height);
+            }
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {}
+
+    }
+
+    public static class TabButtonWidget extends Widget {
+        int index;
+        Tab tab;
+        private Runnable action;
+        int textXOffset = 0;
+        int textYOffset = 0;
+
+        public TabButtonWidget(int index, Tab tab, WEScreen parent) {
+            super(0, 0, 0, 0);
+            this.index = index;
+            this.tab = tab;
+            this.action = () -> {
+                if(PV.currentPlayerData == null) return;
+                System.out.println("CLICKED " + tab.toString());
+                if(tab == currentTab) return;
+                currentTab = tab;
+                TabWidget tabWidget = getTabWidget(tab);
+                if (tabWidget == null || tabWidget.equals(currentTabWidget)) {
+                    parent.removeRootWidget(currentTabWidget);
+                    currentTabWidget = null;
+                } else {
+                    parent.removeRootWidget(currentTabWidget);
+                    currentTabWidget = tabWidget;
+                    scrollOffset = 0;
+                    if (!parent.rootWidgets.contains(tabWidget)) {
+                        parent.addRootWidget(tabWidget);
+                    }
+                }
+            };
+        }
+
+        protected void setTextOffset(int x, int y) {
+            this.textXOffset = x;
+            this.textYOffset = y;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            CustomColor tabStringColor;
+            if (tab.equals(currentTab) || hovered) {
+                tabStringColor = CustomColor.fromHexString("FFFF00");
+            } else if (selectedCharacter == null && (tab.equals(Tab.Professions) || tab.equals(Tab.Quests))) {
+                tabStringColor = CustomColor.fromHexString("9e9e9e");
+            } else {
+                tabStringColor = CustomColor.fromHexString("FFFFFF");
+            }
+            String tabString = tab.toString();
+            //ui.drawRect(x, y, width, height, CustomColor.fromHexString("FFFFFF"));
+            ui.drawText(tabString, x + textXOffset, y + textYOffset, tabStringColor, HorizontalAlignment.CENTER, VerticalAlignment.TOP, 3f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if (!isEnabled()) return false;
+            if (action != null) action.run();
+            return true;
+        }
+    }
+
+    public static class TabWidget extends Widget {
+        public TabWidget(int x, int y, int width, int height) {
+            super(x, y, width, height);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+
+        }
+
+        @Override
+        public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+            return false;
+        }
+
+        @Override
+        public boolean mouseReleased(double mx, double my, int button) {
+            return super.mouseReleased(mx, my, button);
+        }
     }
 }

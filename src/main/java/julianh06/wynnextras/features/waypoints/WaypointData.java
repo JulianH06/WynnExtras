@@ -36,7 +36,6 @@ public class WaypointData {
             .registerTypeAdapter(StyledText.class, new StyledTextAdapter());
 
     static Gson gson = builder
-            .registerTypeAdapter(RaidKind.class, new RaidKindAdapter(builder.create()))
             .setPrettyPrinting()
             .create();
 

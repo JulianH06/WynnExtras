@@ -6,6 +6,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.core.MainScreen;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
@@ -14,6 +15,7 @@ import julianh06.wynnextras.features.profileviewer.PV;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.minecraft.data.Main;
 
 import java.util.List;
 
@@ -26,15 +28,15 @@ public class CommandLoader implements WELoader {
             LiteralArgumentBuilder<FabricClientCommandSource> base = ClientCommandManager.literal("WynnExtras");
             LiteralArgumentBuilder<FabricClientCommandSource> alias = ClientCommandManager.literal("we");
 
-//            base.executes(commandContext -> {
-//                WynnExtras.openMainScreen();
-//                return 1;
-//            });
-//
-//            alias.executes(commandContext -> {
-//                WynnExtras.openMainScreen();
-//                return 1;
-//            });
+            base.executes(commandContext -> {
+                //MainScreen.open();
+                return 1;
+            });
+
+            alias.executes(commandContext -> {
+                //MainScreen.open();
+                return 1;
+            });
 
             for (Command cmd: Command.COMMAND_LIST) {
                 if((cmd instanceof SubCommand)) continue;
