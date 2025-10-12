@@ -47,7 +47,6 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(PV.currentPlayerData == null) return;
 
-
         if(!createdClassWidgets) {
             if(PV.currentPlayerData.getCharacters() != null) {
                 classWidgets.clear();

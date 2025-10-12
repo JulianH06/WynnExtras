@@ -42,6 +42,7 @@ public class RankingsTabWidget extends PVScreen.TabWidget {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if(PV.currentPlayerData == null) return;
         Map<String, Long> rankings = PV.currentPlayerData.getRanking();
         if(rankings == null) {
             ui.drawCenteredText("This player has their rankings private.", 900, 345, CustomColor.fromHexString("FF0000"), 5f);

@@ -41,6 +41,7 @@ public class DungeonsTabWidget extends PVScreen.TabWidget {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if(PV.currentPlayerData == null) return;
         if(PV.currentPlayerData.getGlobalData() == null) {
             ui.drawCenteredText("This player has their dungeon stats private.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
             return;

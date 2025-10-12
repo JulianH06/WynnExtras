@@ -37,7 +37,8 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-        if(questSearchBar == null && PV.currentPlayerData != null) {
+        if(PV.currentPlayerData == null) return;
+        if(questSearchBar == null) {
             questSearchBar = new Searchbar( -1, -1, -1, -1);
             questSearchBar.setSearchText("Search...");
         }

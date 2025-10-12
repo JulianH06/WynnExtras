@@ -4,6 +4,7 @@ import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
+import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.Profession;
 import net.minecraft.client.gui.DrawContext;
@@ -24,6 +25,7 @@ public class ProfessionsTabWidget extends PVScreen.TabWidget {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if(PV.currentPlayerData == null) return;
         if(selectedCharacter == null) {
             ui.drawCenteredText("Select a character to view professions.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
             return;

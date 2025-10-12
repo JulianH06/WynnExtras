@@ -34,6 +34,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if(PV.currentPlayerData == null) return;
         DecimalFormat formatter = new DecimalFormat("#,###");
         if(PV.currentPlayerData.getGlobalData() == null) {
             ui.drawCenteredText("This player has their raid stats private.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);

@@ -20,6 +20,7 @@ public class MiscTabWidget extends PVScreen.TabWidget {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if(PV.currentPlayerData == null) return;
         Global data = PV.currentPlayerData.getGlobalData();
         if(data == null) {
             ui.drawCenteredText("This player has their misc stats private.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);

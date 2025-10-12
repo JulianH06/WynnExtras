@@ -43,7 +43,7 @@
 		"minecraft": "~1.21.4",
 		"java": ">=21",
 		"fabric-api": "*",
-		"wynntils": ">=3.2.12",
+		"wynntils": ">=3.3.0",
 		"modmenu": "*",
 		"cloth-config": "*"
 	},
