@@ -198,11 +198,11 @@ public class WynnExtrasConfig implements ConfigData {
     public boolean toggleFastRequeue = true;
 
     @ConfigEntry.Category(Categories.misc)
-    @ConfigEntry.Name("Show Wynnpool item weights")
+    @ConfigEntry.Name("Show Wynnpool item weights (NOT WORKING CURRENTLY)")
     public boolean showWeight = true;
 
     @ConfigEntry.Category(Categories.misc)
-    @ConfigEntry.Name("Show weight of each stat")
+    @ConfigEntry.Name("Show weight of each stat (NOT WORKING CURRENTLY)")
     public boolean showScales = true;
 
     @ConfigEntry.Category(Categories.misc)

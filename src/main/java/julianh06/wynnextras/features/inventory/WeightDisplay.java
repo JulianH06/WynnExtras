@@ -5,12 +5,10 @@ import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.features.tooltips.ItemStatInfoFeature;
-import com.wynntils.features.tooltips.TooltipFittingFeature;
 import com.wynntils.models.gear.type.GearTier;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.stats.type.StatType;
 import com.wynntils.models.wynnitem.parsing.WynnItemParser;
-import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.mc.TooltipUtils;
 import com.wynntils.utils.wynn.ColorScaleUtils;
 import julianh06.wynnextras.annotations.WEModule;
@@ -25,7 +23,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
-import org.spongepowered.asm.mixin.Unique;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -39,8 +36,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 
 
-@WEModule
+//@WEModule
 public class WeightDisplay {
+//    private static final KeyBind cycleKeyBind = new KeyBind( //There were some issues with key conflicts
+//            "Mythic item weight display cycle", GLFW.GLFW_KEY_TAB, //ill leve this here if i ever find a solution
+//            true, null, (a) -> { tabPressed = true; }); //but until then ill use the arrow keys to go up/down
+
     public record WeightData(String weightName, Map<String, Float> identifications, Float score) {}
     public record ItemData(String name, List<WeightData> data, int index) {}
 
@@ -50,7 +51,8 @@ public class WeightDisplay {
     //For the individual items with calculated scales
     public static final Map<String, ItemData> weightCache = new ConcurrentHashMap<>();
 
-    public static boolean tabPressed = false;
+    public static boolean upPressed = false;
+    public static boolean downPressed = false;
     public static ItemStack currentHoveredStack = null;
     public static WynnItem currentHoveredWynnitem = null;
 
@@ -106,7 +108,15 @@ public class WeightDisplay {
                 Float value = entry.getValue();
                 Float scale = weightData.identifications.getOrDefault(stat, 0f);
                 scaled.put(stat, value * scale);
-                score += value * scale;
+                if(scale < 0) {
+                    // If the weight is negative, we need to invert the percentage and make the scale positive
+                    System.out.println("1 " + String.valueOf(100-value));
+                    System.out.println("2 " + scale);
+                    System.out.println("3 " + (100-value)*scale);
+                    score += Math.abs((100 - value) * scale);
+                } else {
+                    score += value * scale;
+                }
             }
 
             WeightData calculated = new WeightData(weightData.weightName, scaled, score);
@@ -153,7 +163,7 @@ public class WeightDisplay {
                                 }
                             }
 
-                            if(isRaw && !key.equals("healthRegen") && !key.equals("manaRegen")) {
+                            if(isRaw && !key.equals("healthRegen") && !key.equals("manaRegen") && !key.contains("Steal")) {
                                 key = key.substring(0,1).toUpperCase() + key.substring(1);
                                 key = "raw" + key;
                             } else if (isRaw && key.equals("healthRegen")) {
@@ -300,8 +310,11 @@ public class WeightDisplay {
 
     @SubscribeEvent
     public void onKey(KeyInputEvent event) {
-        if(event.getKey() == GLFW.GLFW_KEY_TAB && event.getAction() == GLFW.GLFW_PRESS) {
-            tabPressed = true;
+        if(event.getKey() == GLFW.GLFW_KEY_UP && event.getAction() == GLFW.GLFW_PRESS) {
+            upPressed = true;
+        }
+        if(event.getKey() == GLFW.GLFW_KEY_DOWN && event.getAction() == GLFW.GLFW_PRESS) {
+            downPressed = true;
         }
     }
 
@@ -319,7 +332,7 @@ public class WeightDisplay {
         String itemString = ItemUtils.itemStackToItemString(itemStack);
         if (itemString != null && WeightDisplay.getCachedWeight(itemString, true, itemStack, tooltips) != null) {
             //System.out.println(tabPressed);
-            if(tabPressed && itemStack.getCustomName() != null) {
+            if((upPressed || downPressed) && itemStack.getCustomName() != null) {
                 String key = itemStack.getCustomName().getString()
                         .replace("À", "")
                         .replaceAll("§[0-9a-fk-or]", "")
@@ -327,10 +340,16 @@ public class WeightDisplay {
                         .strip();
                 WeightDisplay.ItemData itemData = itemCache.get(key);
                 if (itemData != null && !itemData.data().isEmpty()) {
-                    int nextIndex = (itemData.index() + 1) % itemData.data().size();
+                    int nextIndex = itemData.index;
+                    if(downPressed) nextIndex = (itemData.index() + 1) % itemData.data().size();
+                    else if(upPressed) {
+                        if(itemData.index() - 1 == -1) nextIndex = itemData.data.size() - 1;
+                        else nextIndex = (itemData.index - 1) % itemData.data().size();
+                    }
                     itemCache.put(key, new WeightDisplay.ItemData(itemData.name(), itemData.data(), nextIndex));
                 }
-                tabPressed = false;
+                upPressed = false;
+                downPressed = false;
             }
             tooltips = modifyTooltip(tooltips, WeightDisplay.getCachedWeight(itemString, itemStack, tooltips), itemStack, itemString);
         }
@@ -381,7 +400,7 @@ public class WeightDisplay {
                         idx.incrementAndGet();
                     }
                     if(scaleData.data().size() > 1 && SimpleConfig.getInstance(WynnExtrasConfig.class).showScales) {
-                        modified.add(Text.literal("  ↳ Press TAB to cycle").formatted(Formatting.DARK_GRAY));
+                        modified.add(Text.literal("  ↳ Use ↑ / ↓ to cycle").formatted(Formatting.DARK_GRAY));
                     }
                 }
             }

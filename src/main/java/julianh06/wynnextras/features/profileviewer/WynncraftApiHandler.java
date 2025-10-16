@@ -5,24 +5,13 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.wynntils.core.text.StyledText;
-import com.wynntils.models.raid.raids.RaidKind;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
-import julianh06.wynnextras.features.misc.StyledTextAdapter;
-import julianh06.wynnextras.features.profileviewer.data.OffsetDateTimeAdapter;
-import julianh06.wynnextras.features.profileviewer.data.PlayerData;
-import julianh06.wynnextras.features.raid.RaidKindAdapter;
-import julianh06.wynnextras.features.raid.RaidListData;
-import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.features.profileviewer.data.*;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.command.argument.TextArgumentType;
 import net.minecraft.text.Text;
 
 import java.io.IOException;
@@ -36,7 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @WEModule
@@ -135,11 +123,62 @@ public class WynncraftApiHandler {
         });
     }
 
+    public static CompletableFuture<AbilityTreeData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request;
+
+        if (INSTANCE.API_KEY == null) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
+                    " Run \"/WynnExtras apikey\" to learn more.")));
+
+
+            request = HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL + playerUUID + "/characters/" + characterUUUID + "/abilities"))
+                    .GET()
+                    .build();
+        } else {
+            request = HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL + playerUUID + "/characters/" + characterUUUID + "/abilities"))
+                    .header("Authorization", "Bearer " + INSTANCE.API_KEY)
+                    .GET()
+                    .build();
+        }
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenApply(WynncraftApiHandler::parseAbilityData);
+    }
+
+    public static CompletableFuture<AbilityTreeData> fetchClassAbilityMap(String className) {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request;
+
+        request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.wynncraft.com/v3/ability/map/" + className))
+                .GET()
+                .build();
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenApply(WynncraftApiHandler::parseAbilityData);
+    }
+
     private static PlayerData parsePlayerData(String json) {
         Gson gson = new GsonBuilder()
                 .registerTypeAdapter(OffsetDateTime.class, new OffsetDateTimeAdapter())
                 .create();
+
         return gson.fromJson(json, PlayerData.class);
+    }
+
+    private static AbilityTreeData parseAbilityData(String json) {
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(AbilityTreeData.class, new AbilityTreeDataDeserializer())
+                .registerTypeAdapter(AbilityTreeData.Node.class, new NodeDeserializer())
+                .registerTypeAdapter(AbilityTreeData.Icon.class, new IconDeserializer())
+                .create();
+
+        return gson.fromJson(json, AbilityTreeData.class);
     }
 
     static Gson gson = new GsonBuilder()
@@ -161,7 +200,7 @@ public class WynncraftApiHandler {
                     System.err.println("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");
                 }
             } catch (IOException e) {
-                System.err.println("[WynnExtras] Couldn't read the raidlist file:");
+                System.err.println("[WynnExtras] Couldn't read the apikey file:");
                 e.printStackTrace();
             }
         }
@@ -171,7 +210,7 @@ public class WynncraftApiHandler {
         try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
             gson.toJson(INSTANCE, writer);
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't write the raidlist file:");
+            System.err.println("[WynnExtras] Couldn't write the apikey file:");
             e.printStackTrace();
         }
     }

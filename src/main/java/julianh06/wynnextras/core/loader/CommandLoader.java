@@ -3,10 +3,8 @@ package julianh06.wynnextras.core.loader;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.tree.CommandNode;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.wynntils.utils.mc.McUtils;
-import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.core.MainScreen;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.command.ChatCommands;
@@ -17,24 +15,21 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 
 import java.util.List;
 
-import static com.mojang.brigadier.builder.LiteralArgumentBuilder.literal;
-import static com.mojang.brigadier.builder.RequiredArgumentBuilder.argument;
-
 public class CommandLoader implements WELoader {
     public CommandLoader() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             LiteralArgumentBuilder<FabricClientCommandSource> base = ClientCommandManager.literal("WynnExtras");
             LiteralArgumentBuilder<FabricClientCommandSource> alias = ClientCommandManager.literal("we");
 
-//            base.executes(commandContext -> {
-//                WynnExtras.openMainScreen();
-//                return 1;
-//            });
-//
-//            alias.executes(commandContext -> {
-//                WynnExtras.openMainScreen();
-//                return 1;
-//            });
+            base.executes(commandContext -> {
+                MainScreen.open();
+                return 1;
+            });
+
+            alias.executes(commandContext -> {
+                MainScreen.open();
+                return 1;
+            });
 
             for (Command cmd: Command.COMMAND_LIST) {
                 if((cmd instanceof SubCommand)) continue;
