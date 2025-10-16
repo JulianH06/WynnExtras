@@ -29,12 +29,12 @@ public class CommandLoader implements WELoader {
             LiteralArgumentBuilder<FabricClientCommandSource> alias = ClientCommandManager.literal("we");
 
             base.executes(commandContext -> {
-                //MainScreen.open();
+                MainScreen.open();
                 return 1;
             });
 
             alias.executes(commandContext -> {
-                //MainScreen.open();
+                MainScreen.open();
                 return 1;
             });
 

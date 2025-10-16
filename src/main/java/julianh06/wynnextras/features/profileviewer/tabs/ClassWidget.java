@@ -2,12 +2,14 @@ package julianh06.wynnextras.features.profileviewer.tabs;
 
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 
 import java.util.List;
@@ -23,6 +25,13 @@ public class ClassWidget extends Widget {
     static Identifier classBackgroundTextureGoldDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactivegold_dark.png");
     static Identifier classBackgroundTextureActiveDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactive_dark.png");
 
+    static Identifier classBackgroundTextureHovered = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered.png");
+    static Identifier classBackgroundTextureHoveredDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered_dark.png");
+    static Identifier classBackgroundTextureActiveHovered = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactivehovered.png");
+    static Identifier classBackgroundTextureActiveHoveredDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactivehovered_dark.png");
+
+
+
     static Identifier ironmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ironman.png");
     static Identifier ultimateIronmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ultimateironman.png");
     static Identifier huntedTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hunted.png");
@@ -37,6 +46,7 @@ public class ClassWidget extends Widget {
         super(0, 0, 0, 0);
         this.characterData = characterData;
         this.action = () -> {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             if(PVScreen.selectedCharacter == characterData) {
                 PVScreen.selectedCharacter = null;
                 return;
@@ -64,10 +74,24 @@ public class ClassWidget extends Widget {
         }
 
         if(selectedCharacter == characterData) {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                ui.drawImage(classBackgroundTextureActiveDark, x, y, 390, 132);
+            if(hovered) {
+                if (SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+                    ui.drawImage(classBackgroundTextureActiveHoveredDark, x, y, 390, 132);
+                } else {
+                    ui.drawImage(classBackgroundTextureActiveHovered, x, y, 390, 132);
+                }
             } else {
-                ui.drawImage(classBackgroundTextureActive, x, y, 390, 132);
+                if (SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+                    ui.drawImage(classBackgroundTextureActiveDark, x, y, 390, 132);
+                } else {
+                    ui.drawImage(classBackgroundTextureActive, x, y, 390, 132);
+                }
+            }
+        } else if(hovered) {
+            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+                ui.drawImage(classBackgroundTextureHoveredDark, x, y, 390, 132);
+            } else {
+                ui.drawImage(classBackgroundTextureHovered, x, y, 390, 132);
             }
         } else if(characterData.getTotalLevel() != 1690) {
             if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {

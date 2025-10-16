@@ -32,7 +32,6 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
     public QuestsTabWidget() {
         super(0, 0, 0, 0);
         questSearchBar = null;
-
     }
 
     @Override

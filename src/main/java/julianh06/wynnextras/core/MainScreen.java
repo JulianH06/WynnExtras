@@ -13,16 +13,12 @@ import julianh06.wynnextras.utils.UI.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.stream.IntStream;
 
-/*
- * MainScreen
- * - ein Button oben links, der beim Klicken "Button pressed" in die Konsole schreibt
- * - eine Liste an SimpleListElement-Einträgen, die als weiße Rechtecke gezeichnet werden
- */
 public class MainScreen extends WEScreen {
     private TestButton testButton;
 
@@ -52,15 +48,11 @@ public class MainScreen extends WEScreen {
         rootWidgets.clear();
         listElements.clear();
 
-        // Erzeuge Button als Root-Widget; position in logical coords
-        //testButton = new TestButton(0, 0, 200, 200, Text.of("Press me"), ui, this);
-        //addRootWidget(testButton);
         addRootWidget(logo);
         addRootWidget(modrinthButton);
         addRootWidget(discordButton);
         addRootWidget(gitHubButton);
 
-        // erzeugt 20 Listenelemente (nur zur Anzeige)
         IntStream.range(0, listLength).forEach(i -> {
             SimpleListElement e = new SimpleListElement(i, ui, this);
             addListElement(e);
@@ -84,6 +76,7 @@ public class MainScreen extends WEScreen {
     }
 
     public static void actionForIndex(int i, Screen parent) {
+        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         switch (i) {
             case 0 -> {
                 MinecraftUtils.mc().send(() -> {
@@ -91,10 +84,23 @@ public class MainScreen extends WEScreen {
                 });
             }
             case 1 -> {
-
+                MinecraftUtils.mc().setScreen(null);
+                MinecraftClient client = MinecraftClient.getInstance();
+                if (client.player != null) {
+                    client.player.networkHandler.sendChatCommand("we waypoints");
+                    //the waypoint gui has not been migrated to the new WEScreen system yet
+                }
             }
             case 2 -> {
-                PV.open("JulianH06");
+                PV.open(McUtils.playerName());
+            }
+            case 3 -> {
+                MinecraftUtils.mc().setScreen(null);
+                MinecraftClient client = MinecraftClient.getInstance();
+                if (client.player != null) {
+                    client.player.networkHandler.sendChatCommand("we raidlist");
+                    //the raidlist has not been migrated to the new WEScreen system yet
+                }
             }
             case 4 -> {
                 MinecraftUtils.mc().setScreen(null);
@@ -241,6 +247,7 @@ public class MainScreen extends WEScreen {
         public DiscordButton() {
             super(0, 0, 0, 0);
             this.action = () -> {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 LinkUtils.openLink("https://discord.gg/UbC6vZDaD5");
             };
         }
@@ -266,6 +273,7 @@ public class MainScreen extends WEScreen {
         public ModrinthButton() {
             super(0, 0, 0, 0);
             this.action = () -> {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 LinkUtils.openLink("https://modrinth.com/mod/wynnextras");
             };
         }
@@ -291,6 +299,7 @@ public class MainScreen extends WEScreen {
         public GitHubButton() {
             super(0, 0, 0, 0);
             this.action = () -> {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 LinkUtils.openLink("https://github.com/JulianH06/WynnExtras");
             };
         }
