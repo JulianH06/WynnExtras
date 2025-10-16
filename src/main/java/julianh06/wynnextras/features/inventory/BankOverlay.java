@@ -22,6 +22,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.ScreenHandler;
@@ -74,17 +75,19 @@ public class BankOverlay {
 
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
-        if(event.getKey() == GLFW.GLFW_KEY_UP && event.getAction() == GLFW.GLFW_PRESS) {
-            if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
-                scrollOffset -= xFitAmount; //Scroll up
-                if (scrollOffset < 0) {
-                    scrollOffset = 0;
+        if(!InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), GLFW.GLFW_KEY_LEFT_SHIFT) && SimpleConfig.getInstance(WynnExtrasConfig.class).enableScrollWithArrowKeys) {
+            if (event.getKey() == GLFW.GLFW_KEY_UP && event.getAction() == GLFW.GLFW_PRESS) {
+                if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
+                    scrollOffset -= xFitAmount; //Scroll up
+                    if (scrollOffset < 0) {
+                        scrollOffset = 0;
+                    }
                 }
             }
-        }
-        if(event.getKey() == GLFW.GLFW_KEY_DOWN && event.getAction() == GLFW.GLFW_PRESS) {
-            if (BankOverlay.currentOverlayType != BankOverlayType.NONE && canScrollFurther) {
-                scrollOffset += xFitAmount; //Scroll down
+            if (event.getKey() == GLFW.GLFW_KEY_DOWN && event.getAction() == GLFW.GLFW_PRESS) {
+                if (BankOverlay.currentOverlayType != BankOverlayType.NONE && canScrollFurther) {
+                    scrollOffset += xFitAmount; //Scroll down
+                }
             }
         }
         if(activeTextInput != null) {

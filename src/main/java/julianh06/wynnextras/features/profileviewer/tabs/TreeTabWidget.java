@@ -282,7 +282,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         } else {
             ui.drawImage(borderTexture, x, y, 1800, 750);
         }
-        ui.drawCenteredText( McUtils.playerName() + "'s build for " + getClassName(selectedCharacter), x + 900, y + 50, CustomColor.fromHexString("FFFFFF"), 3.9f);
+        ui.drawCenteredText( PV.currentPlayerData.getUsername() + "'s build for " + getClassName(selectedCharacter), x + 900, y + 50, CustomColor.fromHexString("FFFFFF"), 3.9f);
         ui.drawCenteredText( "coming soon", x + 730, y + 530, CustomColor.fromHexString("FF0000"), 6f);
         ui.drawCenteredText( "coming soon", x + 240, y + 530, CustomColor.fromHexString("FF0000"), 6f);
     }

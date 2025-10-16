@@ -300,7 +300,7 @@ public class PVScreen extends WEScreen {
             lastViewedPlayersSkins.put(PV.currentPlayerData.getUsername(), dummyTexture);
         }
 
-        int xStart = getLogicalWidth() / 2 - 900;
+        int xStart = getLogicalWidth() / 2 - 900 - (getLogicalWidth() - 1800 < 200 ? 50 : 0);
         int yStart = getLogicalHeight() / 2 - 375;
 
         backgroundImageWidget.setBounds(xStart, yStart, 1800, 750);
@@ -390,7 +390,12 @@ public class PVScreen extends WEScreen {
         layoutListElements();
 
         for (Widget w : rootWidgets) {
-            if(w instanceof BackgroundImageWidget) continue;
+            if(w instanceof BackgroundImageWidget || w instanceof PlayerWidget) continue;
+            w.draw(context, mouseX, mouseY, delta, ui);
+        }
+
+        //its to make the tooltips of the player names always render above the class buttons
+        for (PlayerWidget w : lastViewedPlayersWidget) {
             w.draw(context, mouseX, mouseY, delta, ui);
         }
 
@@ -441,7 +446,7 @@ public class PVScreen extends WEScreen {
 
         if (searchBar != null) {
             searchBar.setX((int) ((xStart + 89 * 3) / ui.getScaleFactor()));
-            searchBar.setY((int) ((yStart + currentTabWidget.getHeight() + 7 * 3) / ui.getScaleFactor()));
+            searchBar.setY((int) ((yStart + currentTabWidget.getHeight() + 8 * 3) / ui.getScaleFactor()));
             searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"));
             //searchBar.draw(context);
         }

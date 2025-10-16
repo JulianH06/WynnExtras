@@ -18,6 +18,7 @@ import julianh06.wynnextras.core.Core;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -36,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 
 
-//@WEModule
+@WEModule
 public class WeightDisplay {
 //    private static final KeyBind cycleKeyBind = new KeyBind( //There were some issues with key conflicts
 //            "Mythic item weight display cycle", GLFW.GLFW_KEY_TAB, //ill leve this here if i ever find a solution
@@ -298,11 +299,11 @@ public class WeightDisplay {
             Map.entry("meteor", "3rdSpellCost"),
             Map.entry("uppercut", "3rdSpellCost"),
             Map.entry("arrowBomb", "3rdSpellCost"),
-            Map.entry("multihit", "3rdSpellCost"),
+            Map.entry("multiHit", "3rdSpellCost"),
             Map.entry("aura", "3rdSpellCost"),
 
             Map.entry("iceSnake", "4thSpellCost"),
-            Map.entry("warScrem", "4thSpellCost"),
+            Map.entry("warScream", "4thSpellCost"),
             Map.entry("arrowShield", "4thSpellCost"),
             Map.entry("smokeBomb", "4thSpellCost"),
             Map.entry("uproot", "4thSpellCost")
@@ -310,6 +311,9 @@ public class WeightDisplay {
 
     @SubscribeEvent
     public void onKey(KeyInputEvent event) {
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).enableScrollWithArrowKeys && BankOverlay.currentOverlayType != BankOverlayType.NONE && !InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), GLFW.GLFW_KEY_LEFT_SHIFT)) {
+            return;
+        }
         if(event.getKey() == GLFW.GLFW_KEY_UP && event.getAction() == GLFW.GLFW_PRESS) {
             upPressed = true;
         }
@@ -400,7 +404,9 @@ public class WeightDisplay {
                         idx.incrementAndGet();
                     }
                     if(scaleData.data().size() > 1 && SimpleConfig.getInstance(WynnExtrasConfig.class).showScales) {
-                        modified.add(Text.literal("  ↳ Use ↑ / ↓ to cycle").formatted(Formatting.DARK_GRAY));
+                        if(SimpleConfig.getInstance(WynnExtrasConfig.class).enableScrollWithArrowKeys && BankOverlay.currentOverlayType != BankOverlayType.NONE) {
+                            modified.add(Text.literal("  ↳ Use LShift + ↑ / ↓ to cycle").formatted(Formatting.DARK_GRAY));
+                        } else modified.add(Text.literal("  ↳ Use ↑ / ↓ to cycle").formatted(Formatting.DARK_GRAY));
                     }
                 }
             }

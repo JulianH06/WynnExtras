@@ -179,6 +179,10 @@ public class WynnExtrasConfig implements ConfigData {
     public int wynntilsItemRarityBackgroundAlpha = 150;
 
     @ConfigEntry.Category(Categories.bankOverlay)
+    @ConfigEntry.Name("Enable scroll with up/down arrow keys")
+    public boolean enableScrollWithArrowKeys = false;
+
+    @ConfigEntry.Category(Categories.bankOverlay)
     @ConfigEntry.Text
     public String bankInfo = "This Feature is still Work in Progress, bugs can (and probably will) occur. " +
                                     "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras (/we) discord\". " +
@@ -198,11 +202,11 @@ public class WynnExtrasConfig implements ConfigData {
     public boolean toggleFastRequeue = true;
 
     @ConfigEntry.Category(Categories.misc)
-    @ConfigEntry.Name("Show Wynnpool item weights (NOT WORKING CURRENTLY)")
+    @ConfigEntry.Name("Show Wynnpool item weights")
     public boolean showWeight = true;
 
     @ConfigEntry.Category(Categories.misc)
-    @ConfigEntry.Name("Show weight of each stat (NOT WORKING CURRENTLY)")
+    @ConfigEntry.Name("Show weight of each stat")
     public boolean showScales = true;
 
     @ConfigEntry.Category(Categories.misc)
