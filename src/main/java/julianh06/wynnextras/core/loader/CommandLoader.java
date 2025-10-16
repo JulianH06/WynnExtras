@@ -3,11 +3,8 @@ package julianh06.wynnextras.core.loader;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.tree.CommandNode;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.core.MainScreen;
-import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.command.ChatCommands;
@@ -15,12 +12,8 @@ import julianh06.wynnextras.features.profileviewer.PV;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.data.Main;
 
 import java.util.List;
-
-import static com.mojang.brigadier.builder.LiteralArgumentBuilder.literal;
-import static com.mojang.brigadier.builder.RequiredArgumentBuilder.argument;
 
 public class CommandLoader implements WELoader {
     public CommandLoader() {

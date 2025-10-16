@@ -2,25 +2,20 @@ package julianh06.wynnextras.features.profileviewer.tabs;
 
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
 import julianh06.wynnextras.utils.Pair;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static julianh06.wynnextras.features.profileviewer.PVScreen.getClassName;
 import static julianh06.wynnextras.features.profileviewer.PVScreen.selectedCharacter;
-import static julianh06.wynnextras.features.profileviewer.data.AbilityTreeData.iconToItemStack;
 
 public class TreeTabWidget extends PVScreen.TabWidget {
     static Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/treetabbackground.png");

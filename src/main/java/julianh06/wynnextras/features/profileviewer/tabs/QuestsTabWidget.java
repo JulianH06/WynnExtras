@@ -2,7 +2,6 @@ package julianh06.wynnextras.features.profileviewer.tabs;
 
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;

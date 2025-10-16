@@ -5,23 +5,13 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.wynntils.core.text.StyledText;
-import com.wynntils.models.raid.raids.RaidKind;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
-import julianh06.wynnextras.features.misc.StyledTextAdapter;
 import julianh06.wynnextras.features.profileviewer.data.*;
-import julianh06.wynnextras.features.raid.RaidKindAdapter;
-import julianh06.wynnextras.features.raid.RaidListData;
-import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.command.argument.TextArgumentType;
 import net.minecraft.text.Text;
 
 import java.io.IOException;
@@ -35,9 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 
 @WEModule
 public class WynncraftApiHandler {

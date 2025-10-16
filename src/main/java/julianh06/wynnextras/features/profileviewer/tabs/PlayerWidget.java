@@ -1,6 +1,5 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -8,10 +7,6 @@ import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.tooltip.HoveredTooltipPositioner;
-import net.minecraft.client.gui.tooltip.TooltipPositioner;
-import net.minecraft.client.sound.Sound;
-import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;

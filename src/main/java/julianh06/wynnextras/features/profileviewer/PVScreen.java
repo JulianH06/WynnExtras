@@ -7,7 +7,6 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -868,3 +867,5 @@ public class PVScreen extends WEScreen {
         }
     }
 }
+
+//TODO: cleanup
