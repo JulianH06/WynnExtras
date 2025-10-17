@@ -349,7 +349,7 @@ public class PVScreen extends WEScreen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         PVScreen.mouseX = mouseX;
         PVScreen.mouseY = mouseY;
-        //super.applyBlur();
+        super.applyBlur();
 
         this.drawContext = context;
         computeScaleAndOffsets();
@@ -409,7 +409,7 @@ public class PVScreen extends WEScreen {
 
         //this still uses the old system, needs to be updated some day
 
-        int xStart = getLogicalWidth() / 2 - 900;
+        int xStart = getLogicalWidth() / 2 - 900 - (getLogicalWidth() - 1800 < 200 ? 50 : 0);
         int yStart = getLogicalHeight() / 2 - 374;
         if(openInBrowserButton == null && PV.currentPlayerData != null) {
             openInBrowserButton = new OpenInBroserButton(-1, -1, (int) (20 * 3 / scaleFactor), (int) (87 * 3 / scaleFactor), "https://wynncraft.com/stats/player/" + PV.currentPlayerData.getUuid());

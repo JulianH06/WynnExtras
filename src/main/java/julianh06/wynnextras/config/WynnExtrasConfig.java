@@ -323,7 +323,6 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Name("Remove front person view")
     public boolean removeFrontPersonView = false;
 
-
 //    //Hider
 //    public boolean partyMemberHide = true;
 //    public int maxHideDistance = 3;

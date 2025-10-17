@@ -240,7 +240,7 @@ public abstract class WEScreen extends Screen {
         float sx = ui.sx(listX);
         float sy = ui.sy(listY);
         int sw = ui.sw(listWidth);
-        int sh = ui.sh(listHeight);
+        int sh = ui.sh(listHeight + (listSpacing * (listElements.size() - 1)));
         return mouseX >= sx && mouseY >= sy && mouseX < sx + sw && mouseY < sy + sh;
     }
 

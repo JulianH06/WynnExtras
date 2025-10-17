@@ -9,6 +9,7 @@ import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.core.loader.WELoader;
+import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
 import julianh06.wynnextras.features.inventory.BankOverlay;
@@ -26,6 +27,7 @@ import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.screen.slot.Slot;
@@ -42,6 +44,9 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWKeyCallbackI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Duration;
+import java.time.Instant;
 
 
 // TODO: Use WELogger instead of normal logger
@@ -91,6 +96,8 @@ public class WynnExtras implements ClientModInitializer {
 	private static final Text WYNNEXTRAS_BACKGROUND_PILL;
 	private static final Text WYNNEXTRAS_FOREGROUND_PILL;
 
+	private static String latestVersion = null;
+
 	static {
 		BACKGROUND_STYLE = Style.EMPTY.withFont(PILL_FONT).
 		withColor(Formatting.DARK_GREEN);
@@ -115,6 +122,9 @@ public class WynnExtras implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		Core.init(MOD_ID);
+		CurrentVersionData.INSTANCE.version = FabricLoader.getInstance().getModContainer("wynnextras").map(mod -> mod.getMetadata().getVersion().getFriendlyString()).orElse("unknown");
+		CurrentVersionData.save();
+		latestVersion = CurrentVersionData.fetchLatestVersion();
 
 		WELoader.loadAll();
 
@@ -161,20 +171,37 @@ public class WynnExtras implements ClientModInitializer {
 		}
 	}
 
+	private static int ticksUntilNotify = -1;
 
-//	public static boolean inMainScreen = false;
-//
-//	@SubscribeEvent
-//	void onTick(TickEvent event) {
-//		if(inMainScreen) {
-//			MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new MainScreen()));
-//			inMainScreen = false;
-//		}
-//	}
-//
-//	public static void openMainScreen() {
-//		MinecraftClient client = MinecraftClient.getInstance();
-//		client.send(() -> client.setScreen(null));
-//		inMainScreen = true;
-//	}
+	@SubscribeEvent
+	public void onWorldChange(WorldChangeEvent event) {
+		if (latestVersion != null && !CurrentVersionData.INSTANCE.version.equals(latestVersion)) {
+			ticksUntilNotify = 50; //small delay
+		}
+	}
+
+	@SubscribeEvent
+	public void onClientTick(TickEvent event) {
+		if (ticksUntilNotify < 0) return;
+
+		ticksUntilNotify--;
+		if (ticksUntilNotify == 0) {
+			tryNotifyVersionUpdate(CurrentVersionData.INSTANCE.version, latestVersion);
+		}
+	}
+
+	private static Instant lastNotificationTime = null;
+	private static final Duration COOLDOWN = Duration.ofMinutes(15);
+
+	public static void tryNotifyVersionUpdate(String currentVersion, String latestVersion) {
+		if (latestVersion == null || currentVersion.equals(latestVersion)) return;
+
+		Instant now = Instant.now();
+		if (lastNotificationTime == null || Duration.between(lastNotificationTime, now).compareTo(COOLDOWN) >= 0) {
+			lastNotificationTime = now;
+			McUtils.sendMessageToClient(
+				addWynnExtrasPrefix(Text.of("§aA new version of WynnExtras is available: §b" + latestVersion + "§a! You're currently using version §b" + currentVersion + "§a. You can download it now on Modrinth!"))
+			);
+		}
+	}
 }

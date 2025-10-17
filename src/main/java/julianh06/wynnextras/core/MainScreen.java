@@ -18,10 +18,8 @@ import net.minecraft.util.Identifier;
 import java.util.stream.IntStream;
 
 public class MainScreen extends WEScreen {
-    private TestButton testButton;
-
     Identifier logoTexture = Identifier.of("wynnextras", "textures/general/wynnextrasbanner.png");
-    public static int listLength = 5;
+    public static int listLength = 6;
 
     public MainScreen() {
         super(Text.of("WynnExtras"));
@@ -59,18 +57,19 @@ public class MainScreen extends WEScreen {
 
     @Override
     public void updateValues() {
-        logo.setBounds(getLogicalWidth() / 2 - 600, 0, 1200, 375);
+        logo.setBounds(getLogicalWidth() / 2 - 400, 0, 800, 250);
         modrinthButton.setBounds(getLogicalWidth() / 2 - 200, getLogicalHeight() - 110, 100, 100);
         discordButton.setBounds(getLogicalWidth() / 2 - 50, getLogicalHeight() - 110, 100, 100);
         gitHubButton.setBounds(getLogicalWidth() / 2 + 100, getLogicalHeight() - 110, 100, 100);
         this.listX = (float) getLogicalWidth() / 2 - 350;
-        this.listY = 375f;
+        this.listY = 250f;
         this.listWidth = 700f;
         this.listHeight = getLogicalHeight() - 490;
         if(getLogicalHeight() > 550) {
-            this.listItemHeight = (getLogicalHeight() - 600) / (float) listLength;
+            this.listItemHeight = (getLogicalHeight() - 500) / (float) listLength;
         } else this.listItemHeight = 0;
         this.listSpacing = 20f;
+        //System.out.println(listElements);
     }
 
     public static void actionForIndex(int i, Screen parent) {
@@ -82,12 +81,6 @@ public class MainScreen extends WEScreen {
                 });
             }
             case 1 -> {
-                MinecraftUtils.mc().setScreen(null);
-                MinecraftClient client = MinecraftClient.getInstance();
-                if (client.player != null) {
-                    client.player.networkHandler.sendChatCommand("we waypoints");
-                    //the waypoint gui has not been migrated to the new WEScreen system yet
-                }
             }
             case 2 -> {
                 PV.open(McUtils.playerName());
@@ -96,11 +89,19 @@ public class MainScreen extends WEScreen {
                 MinecraftUtils.mc().setScreen(null);
                 MinecraftClient client = MinecraftClient.getInstance();
                 if (client.player != null) {
+                    client.player.networkHandler.sendChatCommand("we waypoints");
+                    //the waypoint gui has not been migrated to the new WEScreen system yet
+                }
+            }
+            case 4 -> {
+                MinecraftUtils.mc().setScreen(null);
+                MinecraftClient client = MinecraftClient.getInstance();
+                if (client.player != null) {
                     client.player.networkHandler.sendChatCommand("we raidlist");
                     //the raidlist has not been migrated to the new WEScreen system yet
                 }
             }
-            case 4 -> {
+            case 5 -> {
                 MinecraftUtils.mc().setScreen(null);
             }
             default -> {
@@ -112,10 +113,11 @@ public class MainScreen extends WEScreen {
     public static String textForIndex(int i) {
         return switch (i) {
             case 0 -> "Config";
-            case 1 -> "Waypoints";
+            case 1 -> "Ability Tree Loader";
             case 2 -> "Profile Viewer";
-            case 3 -> "Raid List";
-            case 4 -> "Close";
+            case 3 -> "Waypoints";
+            case 4 -> "Raid List";
+            case 5 -> "Close";
             default -> "null";
         };
     }
@@ -139,46 +141,6 @@ public class MainScreen extends WEScreen {
         WEScreen.open(MainScreen::new);
     }
 
-    // TestButton: einfacher Button der in die Konsole schreibt
-    public static class TestButton extends Widget {
-        private final Text label;
-        private Runnable action;
-
-        public TestButton(int x, int y, int width, int height, Text label, UIUtils ui, Screen parent) {
-            super(x, y, width, height);
-            this.label = label;
-            // set default action
-            this.action = () -> {
-                MinecraftUtils.mc().send(() -> {
-                    MinecraftUtils.mc().setScreen(SimpleConfig.getConfigScreen(WynnExtrasConfig.class, parent).get());
-                });
-            };
-            this.ui = ui;
-        }
-
-        @Override
-        protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if (isHovered()) {
-                ui.drawRect(x, y, width, height, CustomColor.fromHexString("777777"));
-            } else {
-                ui.drawRect(x, y, width, height, CustomColor.fromHexString("555555"));
-            }
-        }
-
-        @Override
-        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawText(label.getString(), x, y, CustomColor.fromHexString("FFFFFF"), 5);
-        }
-
-        @Override
-        protected boolean onClick(int button) {
-            if (!isEnabled()) return false;
-            if (action != null) action.run();
-            return true;
-        }
-    }
-
-    // SimpleListElement: minimalistische WEElement-Implementierung, zeichnet weiße Rechtecke mit Label
     public static class SimpleListElement extends WEElement<String> {
         private final int id;
         private boolean hoveredLocal = false;
@@ -229,6 +191,7 @@ public class MainScreen extends WEScreen {
             int sw = ui.sw(width);
             int sh = ui.sh(height);
 
+            System.out.println("id: " + id);
             if (mouseX >= sx && mouseY >= sy && mouseX < sx + sw && mouseY < sy + sh) {
                 System.out.println("[WynnExtras] clicked element " + id);
                 actionForIndex(id, parent);
