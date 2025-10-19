@@ -2,20 +2,26 @@ package julianh06.wynnextras.features.profileviewer.tabs;
 
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.features.profileviewer.SaveButtonWidget;
+import julianh06.wynnextras.features.profileviewer.Searchbar;
+import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
 import julianh06.wynnextras.utils.Pair;
+import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.*;
 
-import static julianh06.wynnextras.features.profileviewer.PVScreen.getClassName;
-import static julianh06.wynnextras.features.profileviewer.PVScreen.selectedCharacter;
+import static julianh06.wynnextras.features.profileviewer.PVScreen.*;
+import static julianh06.wynnextras.features.profileviewer.WynncraftApiHandler.parseStyledHtml;
 
 public class TreeTabWidget extends PVScreen.TabWidget {
     static Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/treetabbackground.png");
@@ -30,7 +36,6 @@ public class TreeTabWidget extends PVScreen.TabWidget {
     static Identifier intelligenceTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/intelligence.png");
     static Identifier defenceTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/defence.png");
     static Identifier agilityTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/agility.png");
-
 
     static Identifier warrior = Identifier.of("wynnextras", "textures/gui/profileviewer/node/warrior.png");
     static Identifier warriorActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/warrior_active.png");
@@ -89,18 +94,38 @@ public class TreeTabWidget extends PVScreen.TabWidget {
     static Identifier up_right_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left.png");
     static Identifier up_right_leftActive = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left_active.png");
 
+    static Identifier questSearchbarTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questsearchbar.png");
+    static Identifier questSearchbarTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questsearchbar_dark.png");
 
     int scrollOffset;
 
+    SaveButtonWidget saveButtonWidget;
+
+    List<NodeWidget> nodeWidgets = new ArrayList<>();
+
+    public static AbilityMapData.Node currentHoveredNode = null;
+
+    public static boolean loaded = false;
+
     public TreeTabWidget() {
         super(0, 0, 0, 0);
+        nodeWidgets.clear();
         scrollOffset = 0;
+        if(selectedCharacter != null) {
+            saveButtonWidget = new SaveButtonWidget(PV.currentPlayerData.getUsername(), getClassName(selectedCharacter), selectedCharacter.getSkillPoints());
+            children.add(saveButtonWidget);
+        }
+        treeSearchBar = null;
     }
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-//        System.out.println(PVScreen.scrollOffset);
         if(PV.currentPlayerData == null) return;
+        loaded = false;
+        if(treeSearchBar == null) {
+            treeSearchBar = new Searchbar( -1, -1, -1, -1);
+            treeSearchBar.setSearchText("Search for ability...");
+        }
         if(selectedCharacter == null) {
             ui.drawCenteredText("Select a character to view ability trees.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
             return;
@@ -113,22 +138,31 @@ public class TreeTabWidget extends PVScreen.TabWidget {
                 .findFirst()
                 .orElse(null);
 
+        saveButtonWidget.setCharacterUUID(characterUUID);
+        saveButtonWidget.setBounds(0, 100, 100, 100);
+
+        currentHoveredNode = null;
+
         if (characterUUID == null) return;
 
         String className = selectedCharacter.getType().toLowerCase();
         //System.out.println(characterUUID);
         //ui.drawCenteredText(characterUUID, x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
 
-        AbilityTreeData tree = AbilityTreeCache.getClassTree(className);
+        AbilityMapData tree = AbilityTreeCache.getClassMap(className);
         if (tree == null) {
-            if (!AbilityTreeCache.isLoading(className)) {
+            if (!AbilityTreeCache.isLoading(className) && !AbilityTreeCache.isLoading(className + "tree")) {
                 AbilityTreeCache.loadClassTree(className);
             }
             ui.drawCenteredText("Loading class ability tree...", x + 900, y + 365, CustomColor.fromHexString("FFFF00"), 4f);
             return;
         }
 
-        AbilityTreeData playerTree = AbilityTreeCache.getPlayerTree(characterUUID);
+
+        //ctx.drawTooltip(McUtils.mc().textRenderer, Text.of(AbilityTreeCache.getClassTree(className).pages.get("1").get("bash").name), mouseX, mouseX);
+
+
+        AbilityMapData playerTree = AbilityTreeCache.getPlayerTree(characterUUID);
         if (playerTree == null) {
             if (!AbilityTreeCache.isLoading(className)) {
                 AbilityTreeCache.loadCharacterTree(characterUUID);
@@ -144,12 +178,27 @@ public class TreeTabWidget extends PVScreen.TabWidget {
             return;
         }
 
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+            ui.drawImage(questSearchbarTextureDark, x + 600F, y + height, 1200, 60);
+        } else {
+            ui.drawImage(questSearchbarTexture, x + 600F, y + height, 1200, 60);
+        }
+
+        //copied it from the quest search bar, its ugly but it works
+        treeSearchBar.setX((int) ((x + 200 * 3) / ui.getScaleFactor()));
+        treeSearchBar.setY((int) ((y + height + 7 * 3) / ui.getScaleFactor()));
+        treeSearchBar.setWidth((int) (400 * 3 / ui.getScaleFactor()));
+        treeSearchBar.setHeight((int) (14 * 3 / ui.getScaleFactor()));
+        treeSearchBar.drawWithoutBackgroundButWithSearchtext(ctx, CustomColor.fromHexString("FFFFFF"));
+
+        loaded = true;
+
         PVScreen.scrollOffset = Math.min(2700, PVScreen.scrollOffset);
 
         Set<String> unlockedIds = new HashSet<>();
         Set<Pair<Integer, Integer>> connectorCoordinates = new HashSet<>();
-        for (List<AbilityTreeData.Node> nodes : playerTree.pages.values()) {
-            for (AbilityTreeData.Node node : nodes) {
+        for (List<AbilityMapData.Node> nodes : playerTree.pages.values()) {
+            for (AbilityMapData.Node node : nodes) {
                 if (node.meta != null) {
                     if(node.type.equals("ability") && node.meta.id != null) {
                         unlockedIds.add(node.meta.id);
@@ -161,8 +210,8 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         }
 
 
-        for (List<AbilityTreeData.Node> nodes : tree.pages.values()) {
-            for (AbilityTreeData.Node node : nodes) {
+        for (List<AbilityMapData.Node> nodes : tree.pages.values()) {
+            for (AbilityMapData.Node node : nodes) {
                 if (node.meta != null) {
                     if(node.type.equals("ability") && node.meta.id != null) {
                         node.unlocked = unlockedIds.contains(node.meta.id);
@@ -175,7 +224,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         }
 
 
-//        List<AbilityTreeData.Node> nodes = tree.pages.get(3);
+//        List<AbilityMapData.Node> nodes = tree.pages.get(3);
 //        //System.out.println(nodes);
 //        if (nodes == null) return;
 
@@ -209,18 +258,18 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         ui.drawCenteredText("Save", x + 285 + 37.5f, y + 510, CustomColor.fromHexString("FFFFFF"), 6f);
         ui.drawCenteredText("Tree", x + 285 + 37.5f, y + 585, CustomColor.fromHexString("FFFFFF"), 6f);
 
-        ui.drawCenteredText("Load", x + 775 + 37.5f, y + 510, CustomColor.fromHexString("FFFFFF"), 6f);
-        ui.drawCenteredText("Tree", x + 775 + 37.5f, y + 585, CustomColor.fromHexString("FFFFFF"), 6f);
+        ui.drawCenteredText("Save &", x + 775 + 37.5f, y + 510, CustomColor.fromHexString("FFFFFF"), 6f);
+        ui.drawCenteredText("Load", x + 775 + 37.5f, y + 585, CustomColor.fromHexString("FFFFFF"), 6f);
 
 
         //ui.drawRect(x + 900, y, 900, height, CustomColor.fromHexString("000000"));
 //        System.out.println(height);
-        List<AbilityTreeData.Node> abilities = new ArrayList<>(); //this is so to make the nodes always draw over the connectors
-        List<AbilityTreeData.Node> connectors = new ArrayList<>();
+        List<AbilityMapData.Node> abilities = new ArrayList<>(); //this is so to make the nodes always draw over the connectors
+        List<AbilityMapData.Node> connectors = new ArrayList<>();
         int i = 0;
-        for(List<AbilityTreeData.Node> nodes : tree.pages.values()) {
+        for(List<AbilityMapData.Node> nodes : tree.pages.values()) {
             int yStart = 0;
-            for (AbilityTreeData.Node node : nodes) {
+            for (AbilityMapData.Node node : nodes) {
                 yStart = y + 75 + node.coordinates.y * 75 - PVScreen.scrollOffset;
                 if (node.type.equals("ability")) {
                     abilities.add(node);
@@ -238,7 +287,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
             }
         }
 
-        for(AbilityTreeData.Node node : connectors) {
+        for(AbilityMapData.Node node : connectors) {
             int yStart = y + 75 + node.coordinates.y * 75 - PVScreen.scrollOffset;
             Identifier texture = null;
             switch ((String) node.meta.icon) {
@@ -256,11 +305,108 @@ public class TreeTabWidget extends PVScreen.TabWidget {
                 ui.drawImage(texture, x + node.coordinates.x * 75 + 917, yStart - 34, 145, 145);
             }
         }
+        if(nodeWidgets.isEmpty()) {
+            for(AbilityMapData.Node node : abilities) {
+                NodeWidget w = new NodeWidget(x, y, node);
+                nodeWidgets.add(w);
+                children.add(w);
+            }
+        } else {
+            for(NodeWidget w : nodeWidgets) {
+                //w.setBounds(x, y, 75, 75);
+            }
+        }
+        AbilityTreeData treeData = AbilityTreeCache.getClassTree(getClassName(selectedCharacter).toLowerCase());
+        if(treeData != null) {
+            if(treeData.pages != null) {
 
-        for(AbilityTreeData.Node node : abilities) {
+            }
+        }
+    }
+
+    @Override
+    protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if(PV.currentPlayerData == null) return;
+        if(selectedCharacter == null) {
+            return;
+        }
+        if(selectedCharacter.getSkillPoints() == null) return;
+
+        if(!loaded) return;
+
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+            ui.drawImage(borderTextureDark, x, y, 1800, 750);
+        } else {
+            ui.drawImage(borderTexture, x, y, 1800, 750);
+        }
+        ui.drawCenteredText( PV.currentPlayerData.getUsername() + "'s build for " + getClassName(selectedCharacter), x + 900, y + 50, CustomColor.fromHexString("FFFFFF"), 3.9f);
+        ui.drawCenteredText( "coming soon", x + 730, y + 530, CustomColor.fromHexString("FF0000"), 6f);
+        ui.drawCenteredText( "coming soon", x + 240, y + 530, CustomColor.fromHexString("FF0000"), 6f);
+
+
+        AbilityTreeData treeData = AbilityTreeCache.getClassTree(getClassName(selectedCharacter).toLowerCase());
+        if(treeData != null) {
+            if(treeData.pages != null) {
+                for(Map<String, AbilityTreeData.Ability> pagee : treeData.pages.values()) {
+                    for(AbilityTreeData.Ability ability : pagee.values()) {
+                        if(treeSearchBar.getInput().isEmpty() || ability.name == null) {
+                            continue;
+                        }
+                        if(!ability.name.toLowerCase().contains(treeSearchBar.getInput().toLowerCase())) {
+                            continue;
+                        }
+                        int yStart = y + 75 + ability.coordinates.y * 75 - PVScreen.scrollOffset + (450 * (ability.page - 1));
+                        if(yStart - 25 > y && yStart - 25 < y + 630) {
+                            ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, x + ability.coordinates.x * 75 + 943 + 90, yStart - 7 + 90, CustomColor.fromHexString("FFFF00"));
+                        }
+                    }
+                }
+                if(currentHoveredNode == null) return;
+                Map<String, AbilityTreeData.Ability> page = treeData.pages.get(currentHoveredNode.meta.page);
+                if(page != null) {
+                    AbilityTreeData.Ability ability = null;
+                    for(AbilityTreeData.Ability abilityy : page.values()) {
+                        //System.out.println("---");
+                        //System.out.println(abilityy.coordinates.x + " " + abilityy.coordinates.y + " " + currentHoveredNode.coordinates.x + " " + currentHoveredNode.coordinates.y);
+                        if(abilityy.coordinates.x == (currentHoveredNode.coordinates.x) &&
+                                (abilityy.coordinates.y == (currentHoveredNode.coordinates.y % 6) || (currentHoveredNode.coordinates.y % 6 == 0) && (abilityy.coordinates.y % 6 == 0) )) {
+                            ability = abilityy;
+                            break;
+                        }
+                    }
+                    if(ability != null) {
+                        if(ability.description != null && ability.name != null) {
+                            List<String> description = new ArrayList<>(ability.description);
+                            description.addFirst(ability.name);
+                            ctx.drawTooltip(McUtils.mc().textRenderer, parseStyledHtml(description), mouseX, mouseY);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static class NodeWidget extends Widget {
+        AbilityMapData.Node node;
+        int x;
+        int y;
+
+        public NodeWidget(int x, int y, AbilityMapData.Node node) {
+            super(0, 0, 75, 75);
+            this.node = node;
+            this.x = x;
+            this.y = y;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            int xStart = x + node.coordinates.x * 75 + 925;
             int yStart = y + 75 + node.coordinates.y * 75 - PVScreen.scrollOffset;
+
+            setBounds(xStart + 25, yStart, 75, 75);
+
             Identifier texture = null;
-            switch (((AbilityTreeData.Icon.IconValue) ((AbilityTreeData.Icon) node.meta.icon).value).name) {
+            switch (((AbilityMapData.Icon.IconValue) ((AbilityMapData.Icon) node.meta.icon).value).name) {
                 case "abilityTree.nodeWarrior" -> texture = node.unlocked ? warriorActive : warrior;
                 case "abilityTree.nodeShaman" -> texture = node.unlocked ? shamanActive : shaman;
                 case "abilityTree.nodeArcher" -> texture = node.unlocked ? archerActive : archer;
@@ -272,18 +418,12 @@ public class TreeTabWidget extends PVScreen.TabWidget {
                 case "abilityTree.nodePurple" -> texture = node.unlocked ? purpleActive : purple;
                 case "abilityTree.nodeRed" -> texture = node.unlocked ? redActive : red;
             }
-            if(texture != null && yStart - 25 > y && yStart - 25 < y + height - 120) {
-                ui.drawImage(texture, x + node.coordinates.x * 75 + 925, yStart - 25, 125, 125);
+            if(texture != null && yStart - 25 > y && yStart - 25 < y + 630) {
+                ui.drawImage(texture, xStart, yStart - 25, 125, 125);
+                if(hovered) {
+                    currentHoveredNode = node;
+                }
             }
         }
-
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(borderTextureDark, x, y, 1800, 750);
-        } else {
-            ui.drawImage(borderTexture, x, y, 1800, 750);
-        }
-        ui.drawCenteredText( PV.currentPlayerData.getUsername() + "'s build for " + getClassName(selectedCharacter), x + 900, y + 50, CustomColor.fromHexString("FFFFFF"), 3.9f);
-        ui.drawCenteredText( "coming soon", x + 730, y + 530, CustomColor.fromHexString("FF0000"), 6f);
-        ui.drawCenteredText( "coming soon", x + 240, y + 530, CustomColor.fromHexString("FF0000"), 6f);
     }
 }

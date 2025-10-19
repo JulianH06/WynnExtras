@@ -10,6 +10,7 @@ import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.event.WorldChangeEvent;
+import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
 import julianh06.wynnextras.features.inventory.BankOverlay;
@@ -136,6 +137,7 @@ public class WynnExtras implements ClientModInitializer {
 		ProvokeTimer.init();
 		Waypoints.register();
 		FastRequeue.registerFastRequeue();
+		TreeLoader.init();
 
 		AccountBankData.INSTANCE.load();
 		CharacterBankData.INSTANCE.load();

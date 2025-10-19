@@ -178,9 +178,10 @@ public class PVScreen extends WEScreen {
     static Identifier rankingBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackground_dark.png");
     static Identifier rankingBackgroundWideTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackgroundwide_dark.png");
 
-    static OpenInBroserButton openInBrowserButton;
+    static OpenInBrowserButton openInBrowserButton;
     public static Searchbar searchBar;
     public static Searchbar questSearchBar;
+    public static Searchbar treeSearchBar;
 
     public static Tab currentTab = Tab.General;
 
@@ -215,6 +216,7 @@ public class PVScreen extends WEScreen {
         openInBrowserButton = null;
         searchBar = null;
         questSearchBar = null;
+        treeSearchBar = null;
         selectedCharacter = null;
         int j = 0;
         for(Tab tab : Tab.values()) {
@@ -389,30 +391,14 @@ public class PVScreen extends WEScreen {
         updateVisibleListRange();
         layoutListElements();
 
-        for (Widget w : rootWidgets) {
-            if(w instanceof BackgroundImageWidget || w instanceof PlayerWidget) continue;
-            w.draw(context, mouseX, mouseY, delta, ui);
-        }
 
-        //its to make the tooltips of the player names always render above the class buttons
-        for (PlayerWidget w : lastViewedPlayersWidget) {
-            w.draw(context, mouseX, mouseY, delta, ui);
-        }
-
-        // draw only visible range with small buffer for smoothness
-        int start = Math.max(0, firstVisibleIndex - 1);
-        int end = Math.min(listElements.size() - 1, lastVisibleIndex + 1);
-        for (int i = start; i <= end; i++) {
-            WEElement<?> e = listElements.get(i);
-            e.draw(context, mouseX, mouseY, delta, ui);
-        }
 
         //this still uses the old system, needs to be updated some day
 
         int xStart = getLogicalWidth() / 2 - 900 - (getLogicalWidth() - 1800 < 200 ? 50 : 0);
         int yStart = getLogicalHeight() / 2 - 374;
         if(openInBrowserButton == null && PV.currentPlayerData != null) {
-            openInBrowserButton = new OpenInBroserButton(-1, -1, (int) (20 * 3 / scaleFactor), (int) (87 * 3 / scaleFactor), "https://wynncraft.com/stats/player/" + PV.currentPlayerData.getUuid());
+            openInBrowserButton = new OpenInBrowserButton(-1, -1, (int) (20 * 3 / scaleFactor), (int) (87 * 3 / scaleFactor), "https://wynncraft.com/stats/player/" + PV.currentPlayerData.getUuid());
         }
 
         if (openInBrowserButton != null) {
@@ -449,6 +435,24 @@ public class PVScreen extends WEScreen {
             searchBar.setY((int) ((yStart + currentTabWidget.getHeight() + 8 * 3) / ui.getScaleFactor()));
             searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"));
             //searchBar.draw(context);
+        }
+
+        for (Widget w : rootWidgets) {
+            if(w instanceof BackgroundImageWidget || w instanceof PlayerWidget) continue;
+            w.draw(context, mouseX, mouseY, delta, ui);
+        }
+
+        //its to make the tooltips of the player names always render above the class buttons
+        for (PlayerWidget w : lastViewedPlayersWidget) {
+            w.draw(context, mouseX, mouseY, delta, ui);
+        }
+
+        // draw only visible range with small buffer for smoothness
+        int start = Math.max(0, firstVisibleIndex - 1);
+        int end = Math.min(listElements.size() - 1, lastVisibleIndex + 1);
+        for (int i = start; i <= end; i++) {
+            WEElement<?> e = listElements.get(i);
+            e.draw(context, mouseX, mouseY, delta, ui);
         }
     }
 
@@ -517,6 +521,7 @@ public class PVScreen extends WEScreen {
     }
 
     public static String getClassName(CharacterData entry) {
+        if(entry == null) return "";
         if (entry.getNickname() != null) {
             return "*§o" + entry.getNickname() + "§r";
         } else {
@@ -533,6 +538,7 @@ public class PVScreen extends WEScreen {
         openInBrowserButton = null;
         searchBar = null;
         questSearchBar = null;
+        treeSearchBar = null;
         super.close();
     }
 
@@ -709,7 +715,7 @@ public class PVScreen extends WEScreen {
     }
 
     public static void onClick() {
-        if(openInBrowserButton == null || searchBar == null || (currentTab == Tab.Quests && questSearchBar == null)) return;
+        if(openInBrowserButton == null || searchBar == null || (currentTab == Tab.Quests && questSearchBar == null) || (currentTab == Tab.Tree && treeSearchBar == null)) return;
         if(openInBrowserButton.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             openInBrowserButton.click();
@@ -728,6 +734,15 @@ public class PVScreen extends WEScreen {
                 questSearchBar.click();
             } else {
                 questSearchBar.setActive(false);
+            }
+        }
+
+        if(treeSearchBar != null) {
+            if (treeSearchBar.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                treeSearchBar.click();
+            } else {
+                treeSearchBar.setActive(false);
             }
         }
     }
@@ -858,6 +873,11 @@ public class PVScreen extends WEScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+
+        }
+
+        @Override
+        protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
 
         }
 
