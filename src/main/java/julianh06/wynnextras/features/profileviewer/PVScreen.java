@@ -456,6 +456,11 @@ public class PVScreen extends WEScreen {
         }
     }
 
+    @Override
+    protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+
+    }
+
     public static Identifier getProfTexture(String prof) {
         return switch (prof) {
             case "mining" -> miningTexture;

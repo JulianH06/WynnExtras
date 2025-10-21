@@ -1,10 +1,12 @@
 package julianh06.wynnextras.utils.UI;
 
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.sound.SoundEvents;
 import org.lwjgl.glfw.GLFW;
 
 public class TextInputWidget extends Widget {
@@ -12,19 +14,24 @@ public class TextInputWidget extends Widget {
     protected String placeholder = "Search...";
     protected int cursorPos = 0;
 
-    protected boolean blinkToggle = true;
+    public boolean blinkToggle = true;
     protected long lastBlink = 0;
 
     protected CustomColor backgroundColor = CustomColor.fromHexString("FFFFFF");
     protected CustomColor focusedColor = CustomColor.fromHexString("FFEA00");
     protected CustomColor textColor = CustomColor.fromHexString("000000");
 
-    public TextInputWidget(int x, int y, int width, int height) {
+    int textXOffset, textYOffset;
+
+    public TextInputWidget(int x, int y, int width, int height, int textXOffset, int textYOffset) {
         super(x, y, width, height);
+        this.textXOffset = textXOffset;
+        this.textYOffset = textYOffset;
     }
 
     @Override
     protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if(backgroundColor == null) return;
         CustomColor bg = hovered ? focusedColor : backgroundColor;
         ui.drawRect(x, y, width, height, bg);
     }
@@ -34,8 +41,8 @@ public class TextInputWidget extends Widget {
         MinecraftClient client = MinecraftClient.getInstance();
         TextRenderer font = client.textRenderer;
 
-        int textX = x + 2;
-        int textY = y + 3;
+        int textX = x + textXOffset;
+        int textY = y + textYOffset;
 
         if (input.isEmpty() && !isFocused()) {
             ui.drawText(placeholder, textX, textY, CustomColor.fromHexString("FFFFFF"));
@@ -51,13 +58,14 @@ public class TextInputWidget extends Widget {
 
             if (blinkToggle && isFocused()) {
                 int cursorX = (int) (textX + (font.getWidth(input.substring(0, cursorPos))) * ui.getScaleFactor());
-                ui.drawLine(cursorX, textY - 1, cursorX, textY + 33, 2, textColor);
+                ui.drawLine(cursorX, textY - 6, cursorX, textY + 28, 2, textColor);
             }
         }
     }
 
     @Override
     protected boolean onClick(int button) {
+        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         setFocused(true);
         cursorPos = input.length();
         return true;

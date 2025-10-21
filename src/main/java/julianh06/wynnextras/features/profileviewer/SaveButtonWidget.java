@@ -11,6 +11,8 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.features.abilitytree.AbilityIdConverter;
 import julianh06.wynnextras.features.abilitytree.TreeData;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
+import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
+import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
 import julianh06.wynnextras.features.profileviewer.data.SkillPoints;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -24,11 +26,17 @@ import net.minecraft.util.Identifier;
 public class SaveButtonWidget extends Widget {
     private String characterUUID;
     private Runnable action;
+    public AbilityTreeData classTree = null;
 
-    public SaveButtonWidget(String playerName, String className, SkillPoints skillPoints) {
+    public void setClassTree(AbilityTreeData classTree) {
+        this.classTree = classTree;
+    }
+
+    public SaveButtonWidget(String playerName, String className, SkillPoints skillPoints, AbilityMapData classMap, AbilityMapData playerTree) {
         super(0, 0, 0, 0);
         this.action = () -> {
-            TreeLoader.savePlayerAbilityTree(playerName, characterUUID, className, skillPoints);
+            if(classTree == null) return;
+            TreeLoader.savePlayerAbilityTree(playerName, characterUUID, className, skillPoints, classMap, classTree, playerTree);
             String abilityFileName = playerName + "_" + characterUUID + ".json";
             AbilityIdConverter.convert(className, abilityFileName); // calls method from your new class with class argument
             TreeData.loadAll();

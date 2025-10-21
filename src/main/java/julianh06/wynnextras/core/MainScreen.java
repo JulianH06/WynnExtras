@@ -57,6 +57,11 @@ public class MainScreen extends WEScreen {
     }
 
     @Override
+    protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+
+    }
+
+    @Override
     public void updateValues() {
         logo.setBounds(getLogicalWidth() / 2 - 400, 0, 800, 250);
         modrinthButton.setBounds(getLogicalWidth() / 2 - 200, getLogicalHeight() - 110, 100, 100);

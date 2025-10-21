@@ -3,6 +3,8 @@ package julianh06.wynnextras.features.abilitytree;
 import com.google.gson.*;
 import com.wynntils.models.character.SkillPointModel;
 import com.wynntils.models.character.type.SavableSkillPointSet;
+import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
+import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
 import julianh06.wynnextras.features.profileviewer.data.SkillPoints;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -19,6 +21,9 @@ public class TreeData {
     public int intelligence;
     public int defence;
     public int agility;
+    public AbilityMapData classMap;
+    public AbilityTreeData classTree;
+    public AbilityMapData playerTree;
     public String className;
     public List<String> input;
     public static Map<String, TreeData> trees = new HashMap<>();

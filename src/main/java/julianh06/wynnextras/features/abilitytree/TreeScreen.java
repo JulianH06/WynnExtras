@@ -15,15 +15,24 @@ import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.CraftedGearItem;
 import com.wynntils.models.items.items.game.GearItem;
+import com.wynntils.models.items.items.game.HorseItem;
 import com.wynntils.models.items.items.game.TomeItem;
 import com.wynntils.models.items.items.gui.SkillPointItem;
 import com.wynntils.models.stats.type.SkillStatType;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.LoreUtils;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.render.type.HorizontalAlignment;
+import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.wynn.ContainerUtils;
 import com.wynntils.utils.wynn.InventoryUtils;
 import it.unimi.dsi.fastutil.ints.Int2ObjectFunction;
+import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
+import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
+import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
+import julianh06.wynnextras.features.profileviewer.tabs.TreeTabWidget;
+import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.UI.*;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.ItemStack;
@@ -36,12 +45,21 @@ import org.lwjgl.glfw.GLFW;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static julianh06.wynnextras.features.profileviewer.PVScreen.getClassName;
+import static julianh06.wynnextras.features.profileviewer.PVScreen.selectedCharacter;
+import static julianh06.wynnextras.features.profileviewer.WynncraftApiHandler.parseStyledHtml;
+import static julianh06.wynnextras.features.profileviewer.tabs.TreeTabWidget.*;
+
 public class TreeScreen extends WEScreen {
     private Map<String, TreeData> trees = new HashMap<>();
 
     public enum Classes {Warrior, Shaman, Mage, Assassin, Archer}
 
     public List<ClassListWidget> classListWidgets = new ArrayList<>();
+
+    static TreeData currentViewedTreeData;
+    public static AbilityMapData.Node currentHoveredNode = null;
+    List<NodeWidget> nodeWidgets = new ArrayList<>();
 
     public TreeScreen() {
         super(Text.of("Ability Tree Screen"));
@@ -64,7 +82,7 @@ public class TreeScreen extends WEScreen {
             for(TreeData treeData : trees.values()) {
                 if(treeData == null) continue;
                 if(treeData.className.equals(type.getName())) {
-                    classTrees.add(new TreeListElement(i, ui, treeData));
+                    classTrees.add(new TreeListElement(i, ui, treeData, true));
                     i++;
                 }
             }
@@ -83,7 +101,7 @@ public class TreeScreen extends WEScreen {
             for(TreeData treeData : trees.values()) {
                 if(treeData == null) continue;
                 if(treeData.className.equals(classes.toString())) {
-                    classTrees.add(new TreeListElement(i, ui, treeData));
+                    classTrees.add(new TreeListElement(i, ui, treeData, false));
                     i++;
                 }
             }
@@ -111,21 +129,19 @@ public class TreeScreen extends WEScreen {
         int sectionWidth = 900;
         int xStart = (int) (screenWidth * ui.getScaleFactor() / 2 - sectionWidth);
         int yStart = 0;
-//        this.listX = xStart - 25;
-//        this.listY = yStart;
-//        this.listWidth = sectionWidth;
-//        this.listHeight = getLogicalHeight() - 490;
-//        if(getLogicalHeight() > 550) {
-//            this.listItemHeight = 50;
-//        } else this.listItemHeight = 0;
-//        this.listSpacing = 20f;
-        //System.out.println(classListElements);
         for(ClassListWidget element : classListWidgets) {
             element.setBounds(xStart - 25, yStart, sectionWidth, 50);
             yStart += element.getHeight() + 20;
         }
-        ui.drawRect( xStart- 25, 0, sectionWidth, (float) (screenHeight * ui.getScaleFactor()), CustomColor.fromHexString("808080"));
-        ui.drawRect((float) (screenWidth * ui.getScaleFactor()) / 2 + 25, 0, sectionWidth, (float) (screenHeight * ui.getScaleFactor()), CustomColor.fromHexString("404040"));
+    }
+
+    @Override
+    protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        int sectionWidth = 900;
+        int xStart = (int) (screenWidth * ui.getScaleFactor() / 2 - sectionWidth);
+        int yStart = 0;
+        ui.drawRect( xStart - 25, yStart, sectionWidth, (float) (screenHeight * ui.getScaleFactor()), CustomColor.fromHexString("707070"));
+        ui.drawRect((float) (screenWidth * ui.getScaleFactor()) / 2 + 25, yStart, sectionWidth, (float) (screenHeight * ui.getScaleFactor()), CustomColor.fromHexString("404040"));
     }
 
     @Override
@@ -172,16 +188,16 @@ public class TreeScreen extends WEScreen {
 
         public int getHeight() {
             if(!expanded) return 50;
-            return 50 + children.size() * 150;
+            return 50 + children.size() * 210;
         }
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             //System.out.println(x);
-            ui.drawRect(x, y, width, height, CustomColor.fromHexString("909090"));
-            ui.drawCenteredText(playerClass, x + width / 2f, y + 25, active ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("808080"));
-            ui.drawRect(x, y + 22.5f, width / 2f - McUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")), 5, active ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("808080"));
-            ui.drawRect(x + width / 2f + McUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")), y + 22.5f, width / 2f - McUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")) - 50, 5, active ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("808080"));
+            //ui.drawRect(x, y, width, height, CustomColor.fromHexString("909090"));
+            ui.drawCenteredText(playerClass, x + width / 2f, y + 25, active ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("B0B0B0"));
+            ui.drawRect(x, y + 22.5f, width / 2f - McUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")), 5, active ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("B0B0B0"));
+            ui.drawRect(x + width / 2f + McUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")), y + 22.5f, width / 2f - McUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")) - 50, 5, active ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("B0B0B0"));
             ui.drawImage(expanded ? (active ? arrowOpenedWhite : arrowOpenedGray)
                     : (active ? arrowClosedWhite : arrowClosedGray),x + width - 45, y + 5, 40, 40);
             if(!expanded) {
@@ -194,7 +210,7 @@ public class TreeScreen extends WEScreen {
             boolean addChildren = children.isEmpty();
             for(TreeListElement element : elements) {
                 if(addChildren) addChild(element);
-                element.setBounds(x, y + 50 + 150 * i, width, 125);
+                element.setBounds(x, y + 50 + 210 * i, width, 185);
                 i++;
             }
         }
@@ -205,18 +221,42 @@ public class TreeScreen extends WEScreen {
             if (action != null) action.run();
             return true;
         }
+
+        @Override
+        public boolean mouseClicked(double mx, double my, int button) {
+            for(TreeListElement element : elements) {;
+                if(element == null) continue;
+                if(element.nameInput == null) continue;
+
+                element.nameInput.setFocused(false);
+                element.nameInput.blinkToggle = false;
+            }
+            return super.mouseClicked(mx, my, button);
+        }
     }
 
     public static class TreeListElement extends Widget {
         private final int id;
         TreeData data;
         TextInputWidget nameInput;
+        LoadButton loadButton;
+        ViewButton viewButton;
+        LoadButton loadButtonWithSkillpoints;
+        boolean active;
 
-        public TreeListElement(int id, UIUtils ui, TreeData data) {
+        public TreeListElement(int id, UIUtils ui, TreeData data, boolean active) {
             super(0, 0, 100, 20);
             this.id = id;
             this.ui = ui;
             this.data = data;
+            this.active = active;
+            viewButton = new ViewButton(data);
+            addChild(viewButton);
+            if(!active) return;
+            loadButton = new LoadButton(false);
+            loadButtonWithSkillpoints = new LoadButton(true);
+            addChild(loadButton);
+            addChild(loadButtonWithSkillpoints);
         }
 
         @Override
@@ -226,18 +266,48 @@ public class TreeScreen extends WEScreen {
         @Override
         protected void drawContent(DrawContext context, int mouseX, int mouseY, float tickDelta) {
             if(nameInput == null) {
-                nameInput = new TextInputWidget(x, y, width, 40);
+                nameInput = new TextInputWidget(x, y, width, 50, 10, 13);
                 nameInput.setInput(data.visibleName);
-                nameInput.setBackgroundColor(CustomColor.fromHexString("808080"));
+                nameInput.setBackgroundColor(null);
                 nameInput.setTextColor(CustomColor.fromHexString("FFFFFF"));
+                nameInput.setPlaceholder("<Click here to add a name>");
                 children.add(nameInput);
             } else {
                 nameInput.setBounds(x, y, width, 40);
             }
 
-            ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromHexString("FFFFFF"));
-            ui.drawRect(x + width / 2f - 10, y + 30, width / 2f, height - 40, CustomColor.fromHexString("808080"));
-            ui.drawText(String.valueOf(data.strength), x + width / 2f - 10, y + 40);
+            if(!active) {
+                viewButton.setBounds(x, y + 55, (int) ((width / 2f) - 25), 125);
+            } else {
+                viewButton.setBounds(x, y + 55, (int) ((width / 2f) - 25) / 2 - 2, 60);
+                loadButton.setBounds(x + (int) ((width / 2f) - 25) / 2 + 2, y + 55, (int) ((width / 2f) - 25) / 2 - 2, 60);
+                loadButtonWithSkillpoints.setBounds(x, y + 120, (int) (width / 2f) - 25, 60);
+            }
+
+            ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromHexString("808080"));
+            //ui.drawRect(x + width / 2f - 10, y + 30, width / 2f, height - 40, CustomColor.fromHexString("808080"));
+            int iconSize = 75;
+            int spacing = 18;
+
+            ui.drawButton(x + width / 2f - 20, y + 55, width / 2f + 20, iconSize + 50, 17, false);
+
+            ui.drawImage(TreeTabWidget.strengthTexture, x + width / 2f - 10, y + 60, iconSize, iconSize);
+            ui.drawCenteredText(String.valueOf(data.strength), x + width / 2f + iconSize / 2f - 10, y + 80 + iconSize, CustomColor.fromHexString("00a800"));
+
+            ui.drawImage(TreeTabWidget.dexterityTexture, x + width / 2f + (iconSize + spacing) - 10, y + 60, iconSize, iconSize);
+            ui.drawCenteredText(String.valueOf(data.dexterity), x + width / 2f + iconSize / 2f + (iconSize + spacing) - 10, y + 80 + iconSize, CustomColor.fromHexString("fcfc54"));
+
+            ui.drawImage(TreeTabWidget.intelligenceTexture, x + width / 2f + (iconSize + spacing) * 2 - 10, y + 60, iconSize, iconSize);
+            ui.drawCenteredText(String.valueOf(data.intelligence), x + width / 2f + iconSize / 2f + (iconSize + spacing) * 2 - 10, y + 80 + iconSize, CustomColor.fromHexString("54fcfc"));
+
+            ui.drawImage(TreeTabWidget.defenceTexture, x + width / 2f + (iconSize + spacing) * 3 - 10, y + 60, iconSize, iconSize);
+            ui.drawCenteredText(String.valueOf(data.defence), x + width / 2f + iconSize / 2f + (iconSize + spacing) * 3 - 10, y + 80 + iconSize, CustomColor.fromHexString("fc5454"));
+
+            ui.drawImage(TreeTabWidget.agilityTexture, x + width / 2f + (iconSize + spacing) * 4 - 10, y + 60, iconSize, iconSize);
+            ui.drawCenteredText(String.valueOf(data.agility), x + width / 2f + iconSize / 2f + (iconSize + spacing) * 4 - 10, y + 80 + iconSize, CustomColor.fromHexString("fcfcfc"));
+
+            ui.drawButton(x, y, width, 50, 17, hovered);
+
             //ui.drawText(data.name, x, y);
             //ui.drawRect(x, y, width, height);
             //            if(this.height <= 0) return;
@@ -259,6 +329,61 @@ public class TreeScreen extends WEScreen {
 //
 //            // zeichne Text über UIUtils (zentriert oder linksbündig)
 //            ui.drawCenteredText(textForIndex(id), x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 6f);
+        }
+
+        public static class LoadButton extends Widget {
+            boolean withSkillpoints;
+            private Runnable action;
+
+            public LoadButton(boolean withSkillpoints) {
+                super(0, 0, 0, 0);
+                this.withSkillpoints = withSkillpoints;
+                this.action = () -> {
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                };
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                ui.drawButton(x, y, width, height, 17, hovered);
+                //ui.drawRect(x, y, width, height);
+                ui.drawCenteredText("Load Tree" + (withSkillpoints ? " and Skillpoints" : ""), x + width / 2f, y + height / 2f);
+            }
+
+            @Override
+            protected boolean onClick(int button) {
+                if (!isEnabled()) return false;
+                if (action != null) action.run();
+                return true;
+            }
+        }
+
+        public static class ViewButton extends Widget {
+            private Runnable action;
+
+            public ViewButton(TreeData data) {
+                super(0, 0, 0, 0);
+                this.action = () -> {
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    System.out.println("clicked viewbutton");
+                    currentViewedTreeData = data;
+                };
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+
+                ui.drawButton(x, y, width, height, 17, hovered);
+                //ui.drawRect(x, y, width, height);
+                ui.drawCenteredText("View Tree", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), (height == 60 ? 3f : 4f));
+            }
+
+            @Override
+            protected boolean onClick(int button) {
+                if (!isEnabled()) return false;
+                if (action != null) action.run();
+                return true;
+            }
         }
     }
 

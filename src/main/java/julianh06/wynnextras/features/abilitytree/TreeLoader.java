@@ -7,8 +7,7 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
-import julianh06.wynnextras.features.profileviewer.data.PlayerData;
-import julianh06.wynnextras.features.profileviewer.data.SkillPoints;
+import julianh06.wynnextras.features.profileviewer.data.*;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -54,8 +53,13 @@ public class TreeLoader {
     static HandledScreen<?> screen = null;
     static boolean resetTree = false;
     static List<String> abilitiesToClick = new ArrayList<>();
-    static GsonBuilder builder = new GsonBuilder();
-    static Gson gson = builder.setPrettyPrinting().create();
+    static Gson gson = new GsonBuilder()
+            .registerTypeAdapter(AbilityMapData.class, new AbilityMapDataDeserializer())
+            .registerTypeAdapter(AbilityTreeData.class, new AbilityTreeDataDeserializer())
+            .registerTypeAdapter(AbilityMapData.Icon.class, new IconDeserializer())
+            .registerTypeAdapter(AbilityMapData.Node.class, new NodeDeserializer())
+            .registerTypeAdapter(AbilityTreeData.Icon.class, new IconDeserializer())
+            .create();
 
     private static Command openTreeScreen = new Command(
             "tree",
@@ -341,7 +345,7 @@ public class TreeLoader {
         public static PlayerData currentPlayerData;
 
 
-    public static void savePlayerAbilityTree(String playerName, String characterUUID, String className, SkillPoints skillPoints) {
+    public static void savePlayerAbilityTree(String playerName, String characterUUID, String className, SkillPoints skillPoints, AbilityMapData classMap, AbilityTreeData classTree, AbilityMapData playerTree) {
         try {
 //            String playerApiUrl = "https://api.wynncraft.com/v3/player/" + playerName + "?fullResult";
 ////            String playerResponse = makeHttpRequest(playerApiUrl);
@@ -397,7 +401,10 @@ public class TreeLoader {
             }
             JsonObject out = new JsonObject();
             out.addProperty("name", playerName + "_" + characterUUID);
-            out.addProperty("visibleName", playerName + "_" + characterUUID);
+            out.add("classMap", gson.toJsonTree(classMap));
+            out.add("classTree", gson.toJsonTree(classTree));
+            out.add("playerTree", gson.toJsonTree(playerTree));
+            out.addProperty("visibleName", "");
             out.addProperty("strength", skillPoints.getStrength());
             out.addProperty("dexterity", skillPoints.getDexterity());
             out.addProperty("intelligence", skillPoints.getIntelligence());

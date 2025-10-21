@@ -16,6 +16,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
+import net.minecraft.util.Identifier;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -247,13 +248,13 @@ public class WynncraftApiHandler {
 
     public static List<Text> parseStyledHtml(List<String> htmlLines) {
         return htmlLines.stream()
-                .map(line -> parseSpan(sanitizeHtmlString(line), Style.EMPTY))
+                .map(line -> parseSpan(line, Style.EMPTY))
                 .collect(Collectors.toList());
     }
 
     public static String sanitizeHtmlString(String s) {
         if (s == null) return "";
-        return s.replaceAll("[\\u0000-\\u001F\\u007F-\\u009F\\uE000-\\uF8FF]", "");
+        return s.replaceAll("", "");
     }
 
 
@@ -286,6 +287,10 @@ public class WynncraftApiHandler {
             Matcher styleMatcher = Pattern.compile("style\\s*=\\s*(['\"])(.*?)\\1").matcher(tag);
             if (styleMatcher.find()) style = styleMatcher.group(2);
 
+            String classAttr = "";
+            Matcher classMatcher = Pattern.compile("class\\s*=\\s*(['\"])(.*?)\\1").matcher(tag);
+            if (classMatcher.find()) classAttr = classMatcher.group(2);
+
             int contentStart = tagEnd + 1;
             int spanEnd = findMatchingSpanEnd(html, contentStart);
             if (spanEnd == -1) break;
@@ -293,13 +298,27 @@ public class WynncraftApiHandler {
             String inner = html.substring(contentStart, spanEnd);
             Style newStyle = inheritedStyle;
 
+            // Farbe
             Matcher colorMatch = Pattern.compile("color:\\s*#([0-9a-fA-F]{6})").matcher(style);
             if (colorMatch.find()) {
                 int rgb = Integer.parseInt(colorMatch.group(1), 16);
                 newStyle = newStyle.withColor(TextColor.fromRgb(rgb));
             }
+
+            // Fett
             if (style.contains("font-weight:bold") || style.contains("font-weight:bolder")) {
                 newStyle = newStyle.withBold(true);
+            }
+
+            // Font-Klassen erkennen und Font-Resource setzen
+            // Annahme: deine resourcepack definiert fonts unter namespace "wynn" oder ähnlich.
+            // Passe die Identifier-Namen an die tatsächlichen font-IDs im Resource Pack an.
+            if (classAttr != null && !classAttr.isEmpty()) {
+                if (classAttr.contains("font-common")) {
+                    newStyle = newStyle.withFont(Identifier.of("minecraft", "common"));
+                } else if (classAttr.contains("font-ascii")) {
+                    newStyle = newStyle.withFont(Identifier.of("minecraft", "default")); // Beispiel
+                }
             }
 
             Text parsedInner = parseSpan(inner, newStyle);
@@ -313,7 +332,7 @@ public class WynncraftApiHandler {
     }
 
     public static String stripHtml(String input) {
-        return input.replaceAll("<[^>]*>", "").replaceAll("&nbsp;", " ");
+        return input.replaceAll("<[^>]*>", "");
     }
 
     private static int findMatchingSpanEnd(String html, int contentStart) {

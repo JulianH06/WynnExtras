@@ -89,6 +89,8 @@ public abstract class WEScreen extends Screen {
         updateValues();
         updateVisibleListRange();
         layoutListElements();
+        drawBackground(context, mouseX, mouseY, delta);
+        drawContent(context, mouseX, mouseY, delta);
 
         for (Widget w : rootWidgets) {
             w.draw(context, mouseX, mouseY, delta, ui);
@@ -101,9 +103,12 @@ public abstract class WEScreen extends Screen {
             WEElement<?> e = listElements.get(i);
             e.draw(context, mouseX, mouseY, delta, ui);
         }
+        drawForeground(context, mouseX, mouseY, delta);
     }
 
-    protected void testDraw(DrawContext context, int mouseX, int mouseY, float delta) {}
+    protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) { /* override */ }
+    protected abstract void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta);
+    protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) { /* override */ }
 
     protected void updateWidgetBounds() {
         if (ui == null) return;
