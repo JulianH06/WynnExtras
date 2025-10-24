@@ -13,7 +13,9 @@ import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
 import julianh06.wynnextras.utils.Pair;
+import julianh06.wynnextras.utils.UI.AbilityTreeWidget;
 import julianh06.wynnextras.utils.UI.Widget;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -107,11 +109,19 @@ public class TreeTabWidget extends PVScreen.TabWidget {
 
     public static boolean loaded = false;
 
+    private final AbilityTreeWidget abilityWidget;
+
     public TreeTabWidget() {
         super(0, 0, 0, 0);
         nodeWidgets.clear();
         scrollOffset = 0;
         treeSearchBar = null;
+        if(selectedCharacter != null) {
+            this.abilityWidget = new AbilityTreeWidget(selectedCharacter.getType() , this.x, this.y, 1800, 750, 630);
+            addChild(abilityWidget);
+        } else {
+            this.abilityWidget = null;
+        }
     }
 
     @Override
@@ -150,6 +160,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         AbilityMapData tree = AbilityTreeCache.getClassMap(className);
         if (tree == null) {
             if (!AbilityTreeCache.isLoading(className) && !AbilityTreeCache.isLoading(className + "tree")) {
+                System.out.println(className);
                 AbilityTreeCache.loadClassTree(className);
             }
             ui.drawCenteredText("Loading class ability tree...", x + 900, y + 365, CustomColor.fromHexString("FFFF00"), 4f);
@@ -281,40 +292,47 @@ public class TreeTabWidget extends PVScreen.TabWidget {
                 }
             }
             i++;
-            if(i != 7 && yStart + 75 > y && yStart + 75 < y + height - 100) {
-                ui.drawImage(pageLineTexture, x + 1000, yStart + 75, 730, 32);
-                if(i == 1 && yStart - 400 > y && yStart - 400 < y + height - 100) {
-                    ui.drawText(String.valueOf(i), x + 1000, yStart - 400, CustomColor.fromHexString("434654"));
-                }
-                ui.drawText(String.valueOf(i + 1), x + 1000, yStart + 110, CustomColor.fromHexString("434654"));
-            }
+//            if(i != 7 && yStart + 75 > y && yStart + 75 < y + height - 100) {
+//                ui.drawImage(pageLineTexture, x + 1000, yStart + 75, 730, 32);
+//                if(i == 1 && yStart - 400 > y && yStart - 400 < y + height - 100) {
+//                    ui.drawText(String.valueOf(i), x + 1000, yStart - 400, CustomColor.fromHexString("434654"));
+//                }
+//                ui.drawText(String.valueOf(i + 1), x + 1000, yStart + 110, CustomColor.fromHexString("434654"));
+//            }
         }
 
-        for(AbilityMapData.Node node : connectors) {
-            int yStart = y + 75 + node.coordinates.y * 75 - PVScreen.scrollOffset;
-            Identifier texture = null;
-            switch ((String) node.meta.icon) {
-                case "connector_up_down" -> texture = node.unlocked ? verticalActive : vertical;
-                case "connector_right_left" -> texture = node.unlocked ? horizontalActive : horizontal;
-                case "connector_down_left" -> texture = node.unlocked ? down_leftActive : down_left;
-                case "connector_right_down" -> texture = node.unlocked ? right_downActive : right_down;
-                case "connector_right_down_left" -> texture = node.unlocked ? right_down_leftActive : right_down_left;
-                case "connector_up_right_down" -> texture = node.unlocked ? up_right_downActive : up_right_down;
-                case "connector_up_down_left" -> texture = node.unlocked ? up_down_leftActive : up_down_left;
-                case "connector_up_right_down_left" -> texture = node.unlocked ? up_right_down_leftActive : up_right_down_left;
-                case "connector_up_right_left" -> texture = node.unlocked ? up_right_leftActive : up_right_left;
-            }
-            if(texture != null && yStart - 25 > y && yStart - 25 < y + height - 100) {
-                ui.drawImage(texture, x + node.coordinates.x * 75 + 917, yStart - 34, 145, 145);
-            }
+        abilityWidget.setPlayerTree(playerTree);
+        abilityWidget.setClassTree(tree);
+        if(searchBar != null) {
+            abilityWidget.setSearchInput(searchBar.getInput());
         }
-        if(nodeWidgets.isEmpty()) {
-            for(AbilityMapData.Node node : abilities) {
-                NodeWidget w = new NodeWidget(x, y, node);
-                nodeWidgets.add(w);
-                children.add(w);
-            }
-        }
+        abilityWidget.setBounds(x, y, 1800, 750);
+
+//        for(AbilityMapData.Node node : connectors) {
+//            int yStart = y + 75 + node.coordinates.y * 75 - PVScreen.scrollOffset;
+//            Identifier texture = null;
+//            switch ((String) node.meta.icon) {
+//                case "connector_up_down" -> texture = node.unlocked ? verticalActive : vertical;
+//                case "connector_right_left" -> texture = node.unlocked ? horizontalActive : horizontal;
+//                case "connector_down_left" -> texture = node.unlocked ? down_leftActive : down_left;
+//                case "connector_right_down" -> texture = node.unlocked ? right_downActive : right_down;
+//                case "connector_right_down_left" -> texture = node.unlocked ? right_down_leftActive : right_down_left;
+//                case "connector_up_right_down" -> texture = node.unlocked ? up_right_downActive : up_right_down;
+//                case "connector_up_down_left" -> texture = node.unlocked ? up_down_leftActive : up_down_left;
+//                case "connector_up_right_down_left" -> texture = node.unlocked ? up_right_down_leftActive : up_right_down_left;
+//                case "connector_up_right_left" -> texture = node.unlocked ? up_right_leftActive : up_right_left;
+//            }
+//            if(texture != null && yStart - 25 > y && yStart - 25 < y + height - 100) {
+//                ui.drawImage(texture, x + node.coordinates.x * 75 + 917, yStart - 34, 145, 145);
+//            }
+//        }
+//        if(nodeWidgets.isEmpty()) {
+//            for(AbilityMapData.Node node : abilities) {
+//                NodeWidget w = new NodeWidget(x, y, node);
+//                nodeWidgets.add(w);
+//                children.add(w);
+//            }
+//        }
     }
 
     @Override
@@ -336,6 +354,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         ui.drawCenteredText( "coming soon", x + 730, y + 530, CustomColor.fromHexString("FF0000"), 6f);
         ui.drawCenteredText( "coming soon", x + 240, y + 530, CustomColor.fromHexString("FF0000"), 6f);
 
+        abilityWidget.drawNodeTooltip(ctx, mouseX, mouseY);
 
         AbilityTreeData treeData = AbilityTreeCache.getClassTree(getClassName(selectedCharacter).toLowerCase());
         if(treeData != null) {
@@ -343,43 +362,43 @@ public class TreeTabWidget extends PVScreen.TabWidget {
                 saveButtonWidget.setClassTree(treeData);
                 children.add(saveButtonWidget);
             }
-            if(treeData.pages != null) {
-                for(Map<String, AbilityTreeData.Ability> pagee : treeData.pages.values()) {
-                    for(AbilityTreeData.Ability ability : pagee.values()) {
-                        if(treeSearchBar.getInput().isEmpty() || ability.name == null) {
-                            continue;
-                        }
-                        if(!ability.name.toLowerCase().contains(treeSearchBar.getInput().toLowerCase())) {
-                            continue;
-                        }
-                        int yStart = y + 75 + ability.coordinates.y * 75 - PVScreen.scrollOffset + (450 * (ability.page - 1));
-                        if(yStart - 25 > y && yStart - 25 < y + 630) {
-                            ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, x + ability.coordinates.x * 75 + 943 + 90, yStart - 7 + 90, CustomColor.fromHexString("FFFF00"));
-                        }
-                    }
-                }
-                if(currentHoveredNode == null) return;
-                Map<String, AbilityTreeData.Ability> page = treeData.pages.get(currentHoveredNode.meta.page);
-                if(page != null) {
-                    AbilityTreeData.Ability ability = null;
-                    for(AbilityTreeData.Ability abilityy : page.values()) {
-                        //System.out.println("---");
-                        //System.out.println(abilityy.coordinates.x + " " + abilityy.coordinates.y + " " + currentHoveredNode.coordinates.x + " " + currentHoveredNode.coordinates.y);
-                        if(abilityy.coordinates.x == (currentHoveredNode.coordinates.x) &&
-                                (abilityy.coordinates.y == (currentHoveredNode.coordinates.y % 6) || (currentHoveredNode.coordinates.y % 6 == 0) && (abilityy.coordinates.y % 6 == 0) )) {
-                            ability = abilityy;
-                            break;
-                        }
-                    }
-                    if(ability != null) {
-                        if(ability.description != null && ability.name != null) {
-                            List<String> description = new ArrayList<>(ability.description);
-                            description.addFirst(ability.name);
-                            ctx.drawTooltip(McUtils.mc().textRenderer, parseStyledHtml(description), mouseX, mouseY);
-                        }
-                    }
-                }
-            }
+//            if(treeData.pages != null) {
+//                for(Map<String, AbilityTreeData.Ability> pagee : treeData.pages.values()) {
+//                    for(AbilityTreeData.Ability ability : pagee.values()) {
+//                        if(treeSearchBar.getInput().isEmpty() || ability.name == null) {
+//                            continue;
+//                        }
+//                        if(!ability.name.toLowerCase().contains(treeSearchBar.getInput().toLowerCase())) {
+//                            continue;
+//                        }
+//                        int yStart = y + 75 + ability.coordinates.y * 75 - PVScreen.scrollOffset + (450 * (ability.page - 1));
+//                        if(yStart - 25 > y && yStart - 25 < y + 630) {
+//                            ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, x + ability.coordinates.x * 75 + 943 + 90, yStart - 7 + 90, CustomColor.fromHexString("FFFF00"));
+//                        }
+//                    }
+//                }
+//                if(currentHoveredNode == null) return;
+//                Map<String, AbilityTreeData.Ability> page = treeData.pages.get(currentHoveredNode.meta.page);
+//                if(page != null) {
+//                    AbilityTreeData.Ability ability = null;
+//                    for(AbilityTreeData.Ability abilityy : page.values()) {
+//                        //System.out.println("---");
+//                        //System.out.println(abilityy.coordinates.x + " " + abilityy.coordinates.y + " " + currentHoveredNode.coordinates.x + " " + currentHoveredNode.coordinates.y);
+//                        if(abilityy.coordinates.x == (currentHoveredNode.coordinates.x) &&
+//                                (abilityy.coordinates.y == (currentHoveredNode.coordinates.y % 6) || (currentHoveredNode.coordinates.y % 6 == 0) && (abilityy.coordinates.y % 6 == 0) )) {
+//                            ability = abilityy;
+//                            break;
+//                        }
+//                    }
+//                    if(ability != null) {
+//                        if(ability.description != null && ability.name != null) {
+//                            List<String> description = new ArrayList<>(ability.description);
+//                            description.addFirst(ability.name);
+//                            ctx.drawTooltip(McUtils.mc().textRenderer, parseStyledHtml(description), mouseX, mouseY);
+//                        }
+//                    }
+//                }
+//            }
         }
     }
 

@@ -21,10 +21,8 @@ public class TreeData {
     public int intelligence;
     public int defence;
     public int agility;
-    public AbilityMapData classMap;
-    public AbilityTreeData classTree;
-    public AbilityMapData playerTree;
     public String className;
+    public AbilityMapData playerTree;
     public List<String> input;
     public static Map<String, TreeData> trees = new HashMap<>();
     public static Gson gson = new GsonBuilder().setPrettyPrinting().create();

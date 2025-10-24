@@ -78,7 +78,7 @@ public abstract class WEScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.applyBlur();
+        //super.applyBlur();
 
         this.drawContext = context;
         computeScaleAndOffsets();

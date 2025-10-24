@@ -401,8 +401,6 @@ public class TreeLoader {
             }
             JsonObject out = new JsonObject();
             out.addProperty("name", playerName + "_" + characterUUID);
-            out.add("classMap", gson.toJsonTree(classMap));
-            out.add("classTree", gson.toJsonTree(classTree));
             out.add("playerTree", gson.toJsonTree(playerTree));
             out.addProperty("visibleName", "");
             out.addProperty("strength", skillPoints.getStrength());

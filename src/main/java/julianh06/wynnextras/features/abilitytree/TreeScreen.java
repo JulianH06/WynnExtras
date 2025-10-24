@@ -27,6 +27,7 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.wynn.ContainerUtils;
 import com.wynntils.utils.wynn.InventoryUtils;
 import it.unimi.dsi.fastutil.ints.Int2ObjectFunction;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
@@ -44,9 +45,10 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
-import static julianh06.wynnextras.features.profileviewer.PVScreen.getClassName;
-import static julianh06.wynnextras.features.profileviewer.PVScreen.selectedCharacter;
+import static julianh06.wynnextras.features.profileviewer.PVScreen.*;
+import static julianh06.wynnextras.features.profileviewer.PVScreen.searchBar;
 import static julianh06.wynnextras.features.profileviewer.WynncraftApiHandler.parseStyledHtml;
 import static julianh06.wynnextras.features.profileviewer.tabs.TreeTabWidget.*;
 
@@ -58,8 +60,8 @@ public class TreeScreen extends WEScreen {
     public List<ClassListWidget> classListWidgets = new ArrayList<>();
 
     static TreeData currentViewedTreeData;
-    public static AbilityMapData.Node currentHoveredNode = null;
-    List<NodeWidget> nodeWidgets = new ArrayList<>();
+
+    public AbilityTreeWidget abilityWidget;
 
     public TreeScreen() {
         super(Text.of("Ability Tree Screen"));
@@ -70,7 +72,10 @@ public class TreeScreen extends WEScreen {
     protected void init() {
         classListWidgets.clear();
         rootWidgets.clear();
+        currentViewedTreeData = null;
+        abilityWidget = null;
         //System.out.println(trees);
+        registerScrolling();
         AtomicInteger index = new AtomicInteger(0);
         int y = 0;
         ClassType type = Models.Character.getClassType();
@@ -82,7 +87,7 @@ public class TreeScreen extends WEScreen {
             for(TreeData treeData : trees.values()) {
                 if(treeData == null) continue;
                 if(treeData.className.equals(type.getName())) {
-                    classTrees.add(new TreeListElement(i, ui, treeData, true));
+                    classTrees.add(new TreeListElement(i, ui, treeData, true, this));
                     i++;
                 }
             }
@@ -101,7 +106,7 @@ public class TreeScreen extends WEScreen {
             for(TreeData treeData : trees.values()) {
                 if(treeData == null) continue;
                 if(treeData.className.equals(classes.toString())) {
-                    classTrees.add(new TreeListElement(i, ui, treeData, false));
+                    classTrees.add(new TreeListElement(i, ui, treeData, false, this));
                     i++;
                 }
             }
@@ -110,18 +115,14 @@ public class TreeScreen extends WEScreen {
             addRootWidget(element);
             y += 100;
         }
-//        trees.values().forEach(data -> {
-//            int i = index.getAndIncrement();
-//            TreeListElement e = new TreeListElement(i, ui, data);
-//            addListElement(e);
-//        });
+
 
     }
 
     @Override
     protected void scrollList(float delta) {
-        //scrollOffset -= (int) (delta);
-        //if(scrollOffset < 0) scrollOffset = 0;
+        scrollOffset -= (int) (delta);
+        if(scrollOffset < 0) scrollOffset = 0;
     }
 
     @Override
@@ -133,6 +134,11 @@ public class TreeScreen extends WEScreen {
             element.setBounds(xStart - 25, yStart, sectionWidth, 50);
             yStart += element.getHeight() + 20;
         }
+        if(abilityWidget == null && currentViewedTreeData != null) {
+            System.out.println(currentViewedTreeData.className);
+            this.abilityWidget = new AbilityTreeWidget(currentViewedTreeData.className, xStart, 0, 1800, 750, 100000);
+            rootWidgets.add(abilityWidget);
+        }
     }
 
     @Override
@@ -142,6 +148,34 @@ public class TreeScreen extends WEScreen {
         int yStart = 0;
         ui.drawRect( xStart - 25, yStart, sectionWidth, (float) (screenHeight * ui.getScaleFactor()), CustomColor.fromHexString("707070"));
         ui.drawRect((float) (screenWidth * ui.getScaleFactor()) / 2 + 25, yStart, sectionWidth, (float) (screenHeight * ui.getScaleFactor()), CustomColor.fromHexString("404040"));
+
+        //System.out.println(currentViewedTreeData == null);
+        if(currentViewedTreeData == null) return;
+        //System.out.println(characterUUID);
+        //ui.drawCenteredText(characterUUID, x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
+
+        AbilityMapData tree = AbilityTreeCache.getClassMap(currentViewedTreeData.className.toLowerCase());
+        if (tree == null) {
+            if (!AbilityTreeCache.isLoading(currentViewedTreeData.className.toLowerCase()) && !AbilityTreeCache.isLoading(currentViewedTreeData.className.toLowerCase() + "tree")) {
+                AbilityTreeCache.loadClassTree(currentViewedTreeData.className.toLowerCase());
+            }
+            return;
+        }
+        AbilityMapData playerTree = currentViewedTreeData.playerTree;
+
+        if(tree == null || playerTree == null) return;
+
+        abilityWidget.setPlayerTree(playerTree);
+        abilityWidget.setClassTree(tree);
+        if(searchBar != null) {
+            abilityWidget.setSearchInput(searchBar.getInput());
+        }
+        abilityWidget.setBounds(xStart, -100, 1800, 750);
+    }
+
+    @Override
+    protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if(abilityWidget != null) abilityWidget.drawNodeTooltip(ctx, mouseX, mouseY);
     }
 
     @Override
@@ -244,17 +278,17 @@ public class TreeScreen extends WEScreen {
         LoadButton loadButtonWithSkillpoints;
         boolean active;
 
-        public TreeListElement(int id, UIUtils ui, TreeData data, boolean active) {
+        public TreeListElement(int id, UIUtils ui, TreeData data, boolean active, TreeScreen screen) {
             super(0, 0, 100, 20);
             this.id = id;
             this.ui = ui;
             this.data = data;
             this.active = active;
-            viewButton = new ViewButton(data);
+            viewButton = new ViewButton(data, screen);
             addChild(viewButton);
             if(!active) return;
-            loadButton = new LoadButton(false);
-            loadButtonWithSkillpoints = new LoadButton(true);
+            loadButton = new LoadButton(false, data.name);
+            loadButtonWithSkillpoints = new LoadButton(true, data.name);
             addChild(loadButton);
             addChild(loadButtonWithSkillpoints);
         }
@@ -335,11 +369,21 @@ public class TreeScreen extends WEScreen {
             boolean withSkillpoints;
             private Runnable action;
 
-            public LoadButton(boolean withSkillpoints) {
+            public LoadButton(boolean withSkillpoints, String treeName) {
                 super(0, 0, 0, 0);
                 this.withSkillpoints = withSkillpoints;
                 this.action = () -> {
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    TreeData tree = TreeData.getTree(treeName);
+                    if (tree == null) {
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("This tree doesn't exist.")));
+                        return;
+                    }
+                    McUtils.mc().setScreen(null);
+                    TreeLoader.resetAll();
+                    TreeLoader.wasStarted = true;
+                    TreeLoader.resetTree = true;
+                    TreeLoader.abilitiesToClick = new ArrayList<>(tree.input);
                 };
             }
 
@@ -361,12 +405,16 @@ public class TreeScreen extends WEScreen {
         public static class ViewButton extends Widget {
             private Runnable action;
 
-            public ViewButton(TreeData data) {
+            public ViewButton(TreeData data, TreeScreen screen) {
                 super(0, 0, 0, 0);
                 this.action = () -> {
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     System.out.println("clicked viewbutton");
                     currentViewedTreeData = data;
+                    screen.removeRootWidget(screen.abilityWidget);
+                    screen.abilityWidget = null;
+                    //if(screen.abilityWidget != null) screen.abilityWidget.clearTrees();
                 };
             }
 
@@ -658,3 +706,4 @@ public class TreeScreen extends WEScreen {
         return setBonusSkillPoints.getOrDefault(skill, 0);
     }
 }
+//TODO: ADJUST COLOR OF THE DROPDOWN ARROW
