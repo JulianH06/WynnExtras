@@ -258,7 +258,7 @@ public class TreeLoader {
             if (clickedSockets >= 6) resetAll();
         });
 
-// Ability Selection
+        // Ability Selection
         int[] abilityClickTicks = {0};
         int[] currentPage = {1};
         int[] failCycles = {0}; // How many times we've cycled the list
@@ -305,7 +305,7 @@ public class TreeLoader {
                 return;
             }
 
-            String ability = abilitiesToClick.get(0);
+            String ability = abilitiesToClick.getFirst();
             int pageOffset = CheckPageOfAbility.checkpage(currentPage[0], ability);
 
             // Navigation logic
@@ -326,12 +326,13 @@ public class TreeLoader {
             if (hasUnlockPrefix(ability, screen)) {
                 System.out.println("Clicking ability: Unlock " + ability);
                 clickOnAbility(client, player, ability, screen);
-                abilitiesToClick.remove(0);
+                abilitiesToClick.removeFirst();
                 failCycles[0] = 0; // Success: reset fail counter
             } else {
-                // If not present, move ability to end for retry and track cycles
+                System.out.println("cant click");
+                // If not present, move ability one spot down in the list and try unlocking the next one first
                 if (abilitiesToClick.size() > 1) {
-                    abilitiesToClick.add(abilitiesToClick.remove(0));
+                    abilitiesToClick.add(Math.min(failCycles[0], abilitiesToClick.size() - 1), abilitiesToClick.removeFirst());
                     failCycles[0]++; // Count a cycle only if list is requeued
                 }
             }
@@ -401,14 +402,15 @@ public class TreeLoader {
             }
             JsonObject out = new JsonObject();
             out.addProperty("name", playerName + "_" + characterUUID);
-            out.add("playerTree", gson.toJsonTree(playerTree));
             out.addProperty("visibleName", "");
             out.addProperty("strength", skillPoints.getStrength());
             out.addProperty("dexterity", skillPoints.getDexterity());
             out.addProperty("intelligence", skillPoints.getIntelligence());
             out.addProperty("defence", skillPoints.getDefence());
             out.addProperty("agility", skillPoints.getAgility());
-            out.addProperty("className", className);
+            String formatted = className.substring(0, 1).toUpperCase() + className.substring(1).toLowerCase();
+            out.addProperty("className", formatted);
+            out.add("playerTree", gson.toJsonTree(playerTree));
             JsonArray inArr = new JsonArray();
             for (String id : ids) inArr.add(id);
             out.add("input", inArr);

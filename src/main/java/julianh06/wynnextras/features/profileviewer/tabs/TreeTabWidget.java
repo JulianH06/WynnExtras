@@ -188,7 +188,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         }
 
         if(selectedCharacter != null) {
-            saveButtonWidget = new SaveButtonWidget(PV.currentPlayerData.getUsername(), getClassName(selectedCharacter), selectedCharacter.getSkillPoints(), tree, playerTree);
+            saveButtonWidget = new SaveButtonWidget(PV.currentPlayerData.getUsername(), selectedCharacter.getType(), selectedCharacter.getSkillPoints(), tree, playerTree);
             children.add(saveButtonWidget);
         }
 

@@ -35,10 +35,9 @@ public class SaveButtonWidget extends Widget {
     public SaveButtonWidget(String playerName, String className, SkillPoints skillPoints, AbilityMapData classMap, AbilityMapData playerTree) {
         super(0, 0, 0, 0);
         this.action = () -> {
-            if(classTree == null) return;
-            TreeLoader.savePlayerAbilityTree(playerName, characterUUID, className, skillPoints, classMap, classTree, playerTree);
+            TreeLoader.savePlayerAbilityTree(playerName, characterUUID, className.toLowerCase(), skillPoints, classMap, classTree, playerTree);
             String abilityFileName = playerName + "_" + characterUUID + ".json";
-            AbilityIdConverter.convert(className, abilityFileName); // calls method from your new class with class argument
+            AbilityIdConverter.convert(className.toLowerCase(), abilityFileName); // calls method from your new class with class argument
             TreeData.loadAll();
         };
     }
