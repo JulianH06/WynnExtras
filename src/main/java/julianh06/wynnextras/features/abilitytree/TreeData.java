@@ -1,11 +1,8 @@
 package julianh06.wynnextras.features.abilitytree;
 
 import com.google.gson.*;
-import com.wynntils.models.character.SkillPointModel;
-import com.wynntils.models.character.type.SavableSkillPointSet;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
-import julianh06.wynnextras.features.profileviewer.data.SkillPoints;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.BufferedReader;
@@ -22,7 +19,8 @@ public class TreeData {
     public int defence;
     public int agility;
     public String className;
-    public AbilityMapData playerTree;
+    public AbilityMapData playerMap;
+    public AbilityTreeData playerTree;
     public List<String> input;
     public static Map<String, TreeData> trees = new HashMap<>();
     public static Gson gson = new GsonBuilder().setPrettyPrinting().create();

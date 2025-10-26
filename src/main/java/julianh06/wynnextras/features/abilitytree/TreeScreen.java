@@ -15,25 +15,20 @@ import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.CraftedGearItem;
 import com.wynntils.models.items.items.game.GearItem;
-import com.wynntils.models.items.items.game.HorseItem;
 import com.wynntils.models.items.items.game.TomeItem;
 import com.wynntils.models.items.items.gui.SkillPointItem;
 import com.wynntils.models.stats.type.SkillStatType;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.LoreUtils;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.wynn.ContainerUtils;
 import com.wynntils.utils.wynn.InventoryUtils;
 import it.unimi.dsi.fastutil.ints.Int2ObjectFunction;
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
 import julianh06.wynnextras.features.profileviewer.tabs.TreeTabWidget;
-import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.UI.*;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.ItemStack;
@@ -45,12 +40,9 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static julianh06.wynnextras.features.profileviewer.PVScreen.*;
 import static julianh06.wynnextras.features.profileviewer.PVScreen.searchBar;
-import static julianh06.wynnextras.features.profileviewer.WynncraftApiHandler.parseStyledHtml;
-import static julianh06.wynnextras.features.profileviewer.tabs.TreeTabWidget.*;
 
 public class TreeScreen extends WEScreen {
     private Map<String, TreeData> trees = new HashMap<>();
@@ -161,7 +153,7 @@ public class TreeScreen extends WEScreen {
             }
             return;
         }
-        AbilityMapData playerTree = currentViewedTreeData.playerTree;
+        AbilityMapData playerTree = currentViewedTreeData.playerMap;
 
         if(tree == null || playerTree == null) return;
 
@@ -383,7 +375,16 @@ public class TreeScreen extends WEScreen {
                     TreeLoader.resetAll();
                     TreeLoader.wasStarted = true;
                     TreeLoader.resetTree = true;
-                    TreeLoader.abilitiesToClick = new ArrayList<>(tree.input);
+                    List<AbilityTreeData.Ability> abilities = TreeLoader.calculateNodeOrder(tree.playerTree.archetypes, TreeLoader.convertNodeMapToList(tree.playerMap), new ArrayList<>(), tree.playerTree);
+                    for(AbilityTreeData.Ability ability : abilities) {
+                        //System.out.println(ability.name);
+                    }
+                    List<AbilityMapData.Node> nodes = new ArrayList<>();
+                    for(AbilityTreeData.Ability ability : abilities) {
+                        nodes.add(TreeLoader.getNodeFromAbility(ability, tree.playerMap));
+                    }
+                    TreeLoader.abilitiesToClick2 = nodes; //TODO: treeloader anpassen
+                    TreeLoader.classTree = tree.playerTree;
                 };
             }
 

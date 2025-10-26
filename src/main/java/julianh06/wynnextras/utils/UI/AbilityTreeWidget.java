@@ -183,7 +183,7 @@ public class AbilityTreeWidget extends Widget {
             if (loadedClass != null) this.classTree = loadedClass;
         }
 
-        // 4) Falls classTree oder playerTree fehlen: markiere als nicht geladen und beende
+        // 4) Falls classTree oder playerMap fehlen: markiere als nicht geladen und beende
         if (this.classTree == null || this.playerTree == null) {
             loaded = false;
             return;
@@ -467,7 +467,7 @@ public class AbilityTreeWidget extends Widget {
         void prepare(AbilityMapData classTree, AbilityMapData playerTree) {
             this.classTree = classTree;
             this.playerTree = playerTree;
-            // playerTree -> unlocked sets
+            // playerMap -> unlocked sets
             for (List<AbilityMapData.Node> nodes : this.playerTree.pages.values()) {
                 for (AbilityMapData.Node node : nodes) {
                     if (node.meta != null) {

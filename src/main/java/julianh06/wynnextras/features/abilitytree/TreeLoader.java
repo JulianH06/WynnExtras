@@ -2,6 +2,11 @@ package julianh06.wynnextras.features.abilitytree;
 
 import com.google.gson.*;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.wynntils.models.abilitytree.AbilityTreeModel;
+import com.wynntils.models.abilitytree.type.AbilityTreeNodeState;
+import com.wynntils.models.abilitytree.type.ArchetypeRequirement;
+import com.wynntils.models.character.SkillPointModel;
+import com.wynntils.models.items.items.gui.ArchetypeAbilitiesItem;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
@@ -18,6 +23,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
@@ -29,12 +35,14 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 @WEModule
@@ -53,6 +61,9 @@ public class TreeLoader {
     static HandledScreen<?> screen = null;
     static boolean resetTree = false;
     static List<String> abilitiesToClick = new ArrayList<>();
+    static List<AbilityMapData.Node> abilitiesToClick2 = null;
+    static AbilityTreeData classTree = null;
+
     static Gson gson = new GsonBuilder()
             .registerTypeAdapter(AbilityMapData.class, new AbilityMapDataDeserializer())
             .registerTypeAdapter(AbilityTreeData.class, new AbilityTreeDataDeserializer())
@@ -154,6 +165,7 @@ public class TreeLoader {
         clickedSockets = 0;
         resetTree = false;
         abilitiesToClick = new ArrayList<>();
+        abilitiesToClick2 = null;
         ticksSinceLastAction = 0;
         socketClicksPerformed = 0;
     }
@@ -262,11 +274,15 @@ public class TreeLoader {
         int[] abilityClickTicks = {0};
         int[] currentPage = {1};
         int[] failCycles = {0}; // How many times we've cycled the list
-        final int MAX_FAIL_CYCLES = 45;
-
+        final int MAX_FAIL_CYCLES = 30;
 
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
-            if (abilitiesToClick.isEmpty()) {
+            if(abilitiesToClick2 == null) {
+                abilityClickTicks[0] = 0;
+                failCycles[0] = 0;
+                return;
+            }
+            if(abilitiesToClick2.isEmpty()) {
                 abilityClickTicks[0] = 0;
                 failCycles[0] = 0;
                 return;
@@ -299,14 +315,15 @@ public class TreeLoader {
 
             if (failCycles[0] >= MAX_FAIL_CYCLES) {
                 System.out.println("Reached max cycles without unlocking abilities. Aborting!");
-                abilitiesToClick.clear(); // Or handle differently
+                abilitiesToClick2 = null; // Or handle differently
                 abilityClickTicks[0] = 0;
                 failCycles[0] = 0;
                 return;
             }
 
-            String ability = abilitiesToClick.getFirst();
-            int pageOffset = CheckPageOfAbility.checkpage(currentPage[0], ability);
+            AbilityMapData.Node ability1 = abilitiesToClick2.getFirst();
+            System.out.println(ability1.meta.page + " " + currentPage[0]);
+            int pageOffset = ability1.meta.page - currentPage[0];
 
             // Navigation logic
             if (pageOffset > 0) {
@@ -323,16 +340,24 @@ public class TreeLoader {
             }
 
             // Only click if "Unlock <Ability>" is present as substring
-            if (hasUnlockPrefix(ability, screen)) {
-                System.out.println("Clicking ability: Unlock " + ability);
-                clickOnAbility(client, player, ability, screen);
-                abilitiesToClick.removeFirst();
+            if(classTree == null) return;
+            AbilityTreeData.Ability abilityFromNode = getAbilityFromNode(ability1, classTree);
+            if(abilityFromNode == null) return;
+            String name = extractAbilityNameFromHtml(abilityFromNode.name);
+            System.out.println(name);
+            if (hasUnlockPrefix(name, screen)) {
+                System.out.println("Clicking ability: Unlock " + ability1);
+                clickOnAbility(client, player, name, screen);
+                abilitiesToClick2.removeFirst();
+                if(abilitiesToClick2.isEmpty()) {
+                    System.out.println("FINISHED");
+                }
                 failCycles[0] = 0; // Success: reset fail counter
             } else {
                 System.out.println("cant click");
                 // If not present, move ability one spot down in the list and try unlocking the next one first
-                if (abilitiesToClick.size() > 1) {
-                    abilitiesToClick.add(Math.min(failCycles[0], abilitiesToClick.size() - 1), abilitiesToClick.removeFirst());
+                if (abilitiesToClick2.size() > 1) {
+                    abilitiesToClick2.add(Math.min(failCycles[0], abilitiesToClick2.size() - 1), abilitiesToClick2.removeFirst());
                     failCycles[0]++; // Count a cycle only if list is requeued
                 }
             }
@@ -342,8 +367,419 @@ public class TreeLoader {
 
     }
 
+    public static String extractAbilityNameFromHtml(String html) {
+        if (html == null) return null;
+        // 1) Entferne HTML-Tags, ersetze sie durch ein Leerzeichen damit Worte nicht zusammenlaufen
+        String plain = html.replaceAll("<[^>]+>", " ");
+        // 2) Entferne Minecraft-Farb-/Formatcodes (§x)
+        plain = plain.replaceAll("§.", "");
+        // 3) Unescape einiger häufiger Entities
+        plain = plain.replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replace("&#39;", "'")
+                .replace("&quot;", "\"");
+        // 4) Normalisiere typographische Apostrophe auf ASCII-Apostroph
+        plain = plain.replace('\u2019', '\'').replace('\u2018', '\'');
+        // 5) Entferne Steuerzeichen, collapse multiple whitespaces, trim
+        plain = plain.replaceAll("[\\p{C}]+", " ").replaceAll("\\s+", " ").trim();
+        // 6) Falls der Name in Klammern oder mit vorangestellten/trailenden Satzzeichen bleibt, säubere Ränder
+        plain = plain.replaceAll("^[\\p{Punct}\\s]+", "").replaceAll("[\\p{Punct}\\s]+$", "");
+        return plain.isEmpty() ? null : plain;
+    }
 
-        public static PlayerData currentPlayerData;
+
+    public static AbilityMapData.Node getNodeFromAbility(AbilityTreeData.Ability ability, AbilityMapData treeData) {
+        int page = ability.page;
+
+        for(AbilityMapData.Node node : treeData.pages.get(page)) {
+            if(ability.coordinates.x != node.coordinates.x) {
+                //System.out.println("skipped because x");
+                continue;
+            }
+            if(ability.coordinates.y != node.coordinates.y % 6) {
+                //System.out.println("skipped because y " + ability.name);
+                continue;
+            }
+            return node;
+        }
+
+        return null;
+    }
+
+
+    public static AbilityTreeData.Ability getAbilityFromNode(AbilityMapData.Node node, AbilityTreeData treeData) {
+        Map<String, AbilityTreeData.Ability> page = treeData.pages.get(node.meta.page);
+        for(AbilityTreeData.Ability ability : page.values()) {
+            if(ability.coordinates.x != node.coordinates.x) {
+                //System.out.println("skipped because x");
+                continue;
+            }
+            if(ability.coordinates.y != node.coordinates.y % 6) {
+                //System.out.println("skipped because y " + ability.name);
+                continue;
+            }
+            return ability;
+        }
+
+        return null;
+    }
+
+    public static List<AbilityMapData.Node> convertNodeMapToList(AbilityMapData treeMap) {
+        List<AbilityMapData.Node> result = new ArrayList<>();
+
+        if(treeMap == null) return result;
+        if(treeMap.pages == null) return result;
+
+        for(List<AbilityMapData.Node> page : treeMap.pages.values()) {
+            result.addAll(page);
+        }
+
+        return result;
+    }
+
+    public static List<AbilityTreeData.Ability> convertNodeTreeToList(AbilityTreeData treeData) {
+        List<AbilityTreeData.Ability> result = new ArrayList<>();
+
+        if(treeData == null) return result;
+        if(treeData.pages == null) return result;
+
+        for(Map<String, AbilityTreeData.Ability> page : treeData.pages.values()) {
+            result.addAll(page.values());
+        }
+
+        return result;
+    }
+
+    // Hilfsfunktionen oben in deiner Klasse
+
+    private static String normalizeArchetypeKey(String display) {
+        if (display == null) return null;
+        return (display + " Archetype").toLowerCase();
+    }
+
+    private static Optional<String> extractArchetypeInfo(List<String> description) {
+        if (description == null) return Optional.empty();
+        Pattern archetypeLine = Pattern.compile("(.+?)\\s+Archetype", Pattern.CASE_INSENSITIVE);
+        for (String line : description) {
+            if (line == null) continue;
+            String plain = line.replaceAll("<[^>]+>", "").replaceAll("§.", "").trim();
+            Matcher m = archetypeLine.matcher(plain);
+            if (m.find()) {
+                return Optional.of(m.group(1).trim()); // z.B. "Paladin" (ohne das Wort "Archetype")
+            }
+        }
+        return Optional.empty();
+    }
+
+    public static Optional<Integer> extractCountFromComponentsString(String componentsToString) {
+        if (componentsToString == null) return Optional.empty();
+        String plain = componentsToString.replaceAll("§.", ""); // alle Farb-/Formatcodes entfernen
+        Pattern p = Pattern.compile("\\b(\\d+)\\/(\\d+)\\b");
+        Matcher m = p.matcher(plain);
+        if (m.find()) {
+            int max = Integer.parseInt(m.group(2));
+            return Optional.of(max);
+        }
+        return Optional.empty();
+    }
+
+    public static Map<String, Integer> getArchetypeCounts(Map<String, AbilityTreeData.Archetype> archetypes) {
+        Map<String, Integer> result = new HashMap<>();
+        if (archetypes == null) return result;
+        for (Map.Entry<String, AbilityTreeData.Archetype> e : archetypes.entrySet()) {
+            String internalKey = e.getKey(); // z.B. your internal id like "monk" or similar
+            AbilityTreeData.Archetype at = e.getValue();
+            if (at == null) continue;
+
+            ItemStack archetypeItem;
+            try {
+                archetypeItem = McUtils.inventory().getStack(at.slot);
+            } catch (Exception ex) {
+                continue;
+            }
+            if (archetypeItem == null) continue;
+
+            String displayName = null;
+            try {
+                Object cn = archetypeItem.getCustomName();
+                if (cn != null) displayName = String.valueOf(cn).trim(); //TODO: maybe remove the trim
+            } catch (Exception ignored) {}
+
+            String lore = null;
+            try {
+                if (archetypeItem.getComponents() != null) lore = archetypeItem.getComponents().toString();
+            } catch (Exception ignored) {}
+
+            Optional<Integer> res = lore == null ? Optional.empty() : extractCountFromComponentsString(lore);
+            if (res.isEmpty()) continue;
+
+            int count = res.get();
+
+            // mapKey: if the displayed name exists, prefer that, else fallback to internal archetype key
+            String mapKey;
+            if (displayName != null && !"null".equalsIgnoreCase(displayName) && !displayName.isEmpty()) {
+                mapKey = normalizeArchetypeKey(displayName);
+            } else {
+                // fallback: use the provided map key (internal) but normalize to the same format
+                // If your archetypes keys are already like "Paladin Archetype", adapt accordingly.
+                mapKey = (internalKey == null ? "" : internalKey.toLowerCase());
+            }
+
+            if (!mapKey.isEmpty()) result.put(mapKey, count);
+        }
+        return result;
+    }
+
+    public static List<AbilityTreeData.Ability> calculateNodeOrder(
+            Map<String, AbilityTreeData.Archetype> archetypes,
+            List<AbilityMapData.Node> nodez,
+            List<String> unlockedNodes,
+            AbilityTreeData treeData) {
+
+        List<AbilityTreeData.Ability> result = new ArrayList<>();
+        if (nodez == null || nodez.isEmpty()) return result;
+
+        List<AbilityTreeData.Ability> nodes = new ArrayList<>();
+        for(AbilityMapData.Node node : nodez) {
+            nodes.add(getAbilityFromNode(node, treeData));
+        }
+
+        // Map: lowercased name -> Ability
+        Map<String, AbilityTreeData.Ability> byName = new HashMap<>();
+        for (AbilityTreeData.Ability a : nodes) {
+            if (a == null || a.name == null) continue;
+            if(a.name.toLowerCase().contains("bak") || a.name.toLowerCase().contains("half")) {
+                System.out.println("BAK OR HALF");
+            }
+            byName.put(a.name.toLowerCase(), a);
+        }
+
+        // Normalisiere initial unlocked (lowercase)
+        Set<String> unlocked = new HashSet<>();
+        if (unlockedNodes != null) {
+            for (String s : unlockedNodes) if (s != null) unlocked.add(s.toLowerCase());
+            // keep unlockedNodes normalized as well
+            unlockedNodes.clear();
+            unlockedNodes.addAll(unlocked);
+        }
+
+        // Status für DFS / Toposort
+        Set<String> visiting = new HashSet<>();
+        Set<String> visited = new HashSet<>();
+
+        // Archetype-Counts (öffnet Knoten wenn genug Archetype-Punkte vorhanden)
+        Map<String, Integer> archetypeCounts = getArchetypeCounts(archetypes);
+        // Ensure archetypeCounts keys are normalized (already done in getArchetypeCounts)
+
+        Deque<AbilityTreeData.Ability> stack = new ArrayDeque<>();
+
+        class Resolver {
+            // returns true if node is resolved/unlocked (either already unlocked or added to stack)
+            boolean resolve(String name) {
+                if (name == null || name.isEmpty()) return true;
+                String key = name.toLowerCase();
+                if (unlocked.contains(key)) return true;
+                if (visited.contains(key)) return true;
+                if (visiting.contains(key)) {
+                    throw new IllegalStateException("Cycle detected in requirements at: " + key);
+                }
+
+                AbilityTreeData.Ability node = byName.get(key);
+                if (node == null) {
+                    // Unknown requirement: treat as already unlocked to allow progress
+                    unlocked.add(key);
+                    if (unlockedNodes != null && !unlockedNodes.contains(key)) unlockedNodes.add(key);
+                    return true;
+                }
+
+                // Archetype requirement check
+                AbilityTreeData.ArchetypeRequirement arReq = null;
+                if (node.requirements != null) arReq = node.requirements.ARCHETYPE;
+                if (arReq != null) {
+                    String arcName = arReq.name == null ? null : arReq.name.trim();
+                    String arcKey = arcName == null ? null : normalizeArchetypeKey(arcName);
+                    System.out.println("getting with " + arcKey);
+                    int need = arReq.amount;
+                    int have = arcKey == null ? 0 : archetypeCounts.getOrDefault(arcKey, 0);
+                    if (have < need) {
+                        return false; // hier wird bei denen dann returned
+                    }
+                }
+
+                // Optional: check ABILITY_POINTS requirement here if needed
+                // if (node.requirements != null && node.requirements.ABILITY_POINTS != null) { ... }
+
+                visiting.add(key);
+
+                // NODE requirement is a single node name
+                if (node.requirements != null && node.requirements.NODE != null) {
+                    String req = node.requirements.NODE.trim();
+                    if (!req.isEmpty()) {
+                        boolean ok = resolve(req);
+                        if (!ok) {
+                            visiting.remove(key);
+                            return false;
+                        }
+                    }
+                }
+
+                visiting.remove(key);
+                visited.add(key);
+
+                if (!unlocked.contains(key)) {
+                    stack.push(node);
+                    unlocked.add(key);
+
+                    // Archetype-Extraction: falls die Ability eine Archetype-Anzeigezeile hat, erhöhe den passenden Counter
+                    try {
+                        Optional<String> optDisplay = extractArchetypeInfo(node.description);
+                        if (optDisplay.isPresent()) {
+                            String display = optDisplay.get();
+                            String internalArchetypeName = getInternalName(display, archetypes);
+                            String mapKey = normalizeArchetypeKey(internalArchetypeName);
+                            archetypeCounts.put(mapKey, archetypeCounts.getOrDefault(mapKey, 0) + 1);
+                            System.out.println("putting with " + mapKey);
+                            //System.out.println(mapKey + " now has this many points: " + archetypeCounts.get(mapKey));
+                        }
+                    } catch (Exception ignored) {
+                    }
+
+                    if (unlockedNodes != null) {
+                        if (!unlockedNodes.contains(key)) unlockedNodes.add(key);
+                    }
+                }
+                return true;
+            }
+        }
+
+        Resolver resolver = new Resolver();
+
+        // Versuche alle Knoten zu lösen; Knoten, die wegen Archetype-Requirements nicht gelöst werden können, werden später erneut geprüft
+        for (AbilityTreeData.Ability a : nodes) {
+            if (a == null || a.name == null) continue;
+            String key = a.name.toLowerCase();
+            if (unlocked.contains(key) || visited.contains(key)) continue;
+            resolver.resolve(key);
+        }
+
+        // Wiederholte Versuche falls Archetype-Abhängigkeiten später erfüllt werden
+        boolean progress;
+        do {
+            progress = false;
+            for (AbilityTreeData.Ability a : nodes) {
+                if (a == null || a.name == null) continue;
+                String key = a.name.toLowerCase();
+                if (visited.contains(key)) continue;
+                boolean resolved = resolver.resolve(key);
+                if (resolved) progress = true;
+            }
+        } while (progress);
+
+        // Stack in richtige Reihenfolge umwandeln (first resolved -> first in list)
+        while (!stack.isEmpty()) result.add(stack.removeLast());
+
+        return result;
+    }
+
+    public static String getInternalName(String displayName, Map<String, AbilityTreeData.Archetype> archetypes) {
+        if (displayName == null || archetypes == null) return null;
+        String target = normalizeDisplay(displayName);
+
+        // 1) exact match against cleaned archetype.name field
+        for (Map.Entry<String, AbilityTreeData.Archetype> e : archetypes.entrySet()) {
+            AbilityTreeData.Archetype at = e.getValue();
+            if (at == null) continue;
+            String raw = at.name;
+            String cand = normalizeDisplay(raw);
+            if (cand.equals(target)) return e.getKey();
+        }
+
+        // 2) contains / word-match (handles cases where target is a substring)
+        for (Map.Entry<String, AbilityTreeData.Archetype> e : archetypes.entrySet()) {
+            AbilityTreeData.Archetype at = e.getValue();
+            if (at == null) continue;
+            String cand = normalizeDisplay(at.name);
+            if (!cand.isEmpty() && (cand.contains(target) || target.contains(cand))) return e.getKey();
+        }
+        return null;
+    }
+
+    // Hilfsmethode: bereinigt HTML/Farbcodes, normalisiert Apostrophe/Hyphen und collapsed whitespace
+    private static String normalizeDisplay(String s) {
+        if (s == null) return "";
+        // remove tags -> replace with space so words don't merge
+        String plain = s.replaceAll("<[^>]+>", " ");
+        // remove minecraft color codes like §a
+        plain = plain.replaceAll("§.", "");
+        // unescape common entities
+        plain = plain.replace("&nbsp;", " ").replace("&amp;", "&").replace("&#39;", "'").replace("&quot;", "\"");
+        // normalize typographic apostrophes to ASCII
+        plain = plain.replace('\u2019', '\'').replace('\u2018', '\'');
+        // remove control chars, collapse spaces, trim and lowercase
+        plain = plain.replaceAll("[\\p{C}]+", " ").replaceAll("\\s+", " ").trim().toLowerCase();
+        return plain;
+    }
+
+
+
+//    public static List<AbilityTreeData.Ability> calculateNodeOrder(List<AbilityTreeData.Ability> nodes, List<String> unlockedNodes) {
+//        List<AbilityTreeData.Ability> result = new ArrayList<>();
+//
+//        if(nodes == null) return result;
+//        if(nodes.isEmpty()) return result;
+//
+//        List<AbilityTreeData.Ability> copy = new ArrayList<>(nodes);
+//        for(AbilityTreeData.Ability node : nodes) {
+//            if(unlockedNodes.contains(node.name)) continue; //if its already added, e.g. when its required for another node earlier in the list
+//            if(node.requirements != null && node.requirements.NODE != null) {
+//                if(!unlockedNodes.contains(node.requirements.NODE.toLowerCase())) {
+//                    List<AbilityTreeData.Ability> required = getRequiredNodes(node.requirements.NODE.toLowerCase(), copy, unlockedNodes);
+//                    //for the line above it may be better to recursively call this function instead of another function but that would
+//                    //require this function to be changed a little bit
+//
+//                    result.addAll(required);
+//                    for(AbilityTreeData.Ability ability : required) {
+//                        unlockedNodes.add(ability.name);
+//                    }
+//                    copy.removeAll(required);
+//                } else {
+//                    result.add(node);
+//                    unlockedNodes.add(node.name);
+//                    copy.remove(node);
+//                }
+//            } else {
+//                result.add(node);
+//                unlockedNodes.add(node.name.toLowerCase());
+//                copy.remove(node);
+//            }
+//            //missing: check for archetype requirement, maybe add a queue that nodes get added to if the archetype requirement is not met
+//            //and the total amount of nodes per archetype is tracked and if the needed amount is reached the element in the queue is unlocked
+//            //maybe the queue can be sorted with the lowest amount needed being the first node
+//        }
+//
+//        return result;
+//    }
+
+//    public static List<AbilityTreeData.Ability> getRequiredNodes(String nodeName, List<AbilityTreeData.Ability> nodes, List<String> unlockedNodes) {
+//        List<AbilityTreeData.Ability> result = new ArrayList<>();
+//
+//        if(nodes == null) return result;
+//        if(nodes.isEmpty()) return result;
+//
+//        for(AbilityTreeData.Ability node : nodes) {
+//            if(!node.name.equals(nodeName)) continue;
+//            if(node.requirements != null && node.requirements.NODE != null) {
+//                if(unlockedNodes.contains(node.requirements.NODE.toLowerCase())) {
+//
+//                }
+//            } else {
+//                result.add(node);
+//                unlockedNodes.add(node.name.toLowerCase());
+//                break;
+//            }
+//        }
+//    }
+
 
 
     public static void savePlayerAbilityTree(String playerName, String characterUUID, String className, SkillPoints skillPoints, AbilityMapData classMap, AbilityTreeData classTree, AbilityMapData playerTree) {
@@ -410,7 +846,8 @@ public class TreeLoader {
             out.addProperty("agility", skillPoints.getAgility());
             String formatted = className.substring(0, 1).toUpperCase() + className.substring(1).toLowerCase();
             out.addProperty("className", formatted);
-            out.add("playerTree", gson.toJsonTree(playerTree));
+            out.add("playerMap", gson.toJsonTree(playerTree));
+            out.add("playerTree", gson.toJsonTree(classTree));
             JsonArray inArr = new JsonArray();
             for (String id : ids) inArr.add(id);
             out.add("input", inArr);
