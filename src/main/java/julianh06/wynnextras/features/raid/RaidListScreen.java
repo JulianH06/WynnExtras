@@ -114,6 +114,7 @@ public class RaidListScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        //context.enableScissor(100, 100, this.height - 100, this.width / 2);
         int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
         int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
         int width = (int) Math.max(screenWidth * 0.5, 400);
@@ -279,6 +280,7 @@ public class RaidListScreen extends Screen {
                 }
             }
         }
+        //context.disableScissor();
     }
 
     @Override

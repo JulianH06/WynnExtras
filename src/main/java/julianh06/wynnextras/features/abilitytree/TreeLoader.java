@@ -2,11 +2,7 @@ package julianh06.wynnextras.features.abilitytree;
 
 import com.google.gson.*;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.wynntils.models.abilitytree.AbilityTreeModel;
-import com.wynntils.models.abilitytree.type.AbilityTreeNodeState;
-import com.wynntils.models.abilitytree.type.ArchetypeRequirement;
-import com.wynntils.models.character.SkillPointModel;
-import com.wynntils.models.items.items.gui.ArchetypeAbilitiesItem;
+import com.wynntils.core.components.Models;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
@@ -23,7 +19,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
+import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
@@ -35,12 +31,12 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -252,8 +248,42 @@ public class TreeLoader {
             if (client.player == null || client.world == null) return;
             ClientPlayerEntity player = client.player;
             ticksSinceLastAction++;
+            boolean hasTreeManipulation = Models.StatusEffect.getStatusEffects().stream()
+                    .anyMatch(effect -> effect.getName().getStringWithoutFormatting().equals("Tree Manipulation"));
+            //hasTreeManipulation = false;
             if (ticksSinceLastAction < GUI_SETTLE_TICKS) return;
             if (!treeMenuWasOpened) openTreeMenu(client, player);
+            else if (hasTreeManipulation && inTreeMenu && !resetMenuWasOpened) {
+                if(McUtils.player().getInventory().getStack(12).getItem() != Items.AIR) {
+                    System.out.println("GO UP");
+                    client.interactionManager.clickSlot(
+                            screen.getScreenHandler().syncId,
+                            54 + 3,
+                            1,
+                            SlotActionType.PICKUP,
+                            client.player
+                    );
+                    client.interactionManager.clickSlot(
+                            screen.getScreenHandler().syncId,
+                            54 + 3,
+                            1,
+                            SlotActionType.PICKUP,
+                            client.player
+                    );
+                    return;
+                }
+                System.out.println("HAS TREE MANIPULATION EFFECT");
+                if(client.interactionManager == null) return;
+                client.interactionManager.clickSlot(
+                        screen.getScreenHandler().syncId,
+                        4,
+                        1,
+                        SlotActionType.PICKUP,
+                        client.player
+                );
+                resetMenuWasOpened = true;
+            }
+            //else if(<player has the ability tree buff where you can freely change stuff>) <right click the very first node to reset the whole tree>
             else if (inTreeMenu && !resetMenuWasOpened) openTreeResetMenu(client, player, screen);
             else if (inResetMenu && !wasReset) {
                 if (countOccurences("Ability Shard", screen) < 3)
@@ -273,24 +303,24 @@ public class TreeLoader {
         // Ability Selection
         int[] abilityClickTicks = {0};
         int[] currentPage = {1};
-        int[] failCycles = {0}; // How many times we've cycled the list
+        AtomicInteger failCycles = new AtomicInteger(); // How many times we've cycled the list
         final int MAX_FAIL_CYCLES = 30;
 
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
             if(abilitiesToClick2 == null) {
                 abilityClickTicks[0] = 0;
-                failCycles[0] = 0;
+                failCycles.set(0);
                 return;
             }
             if(abilitiesToClick2.isEmpty()) {
                 abilityClickTicks[0] = 0;
-                failCycles[0] = 0;
+                failCycles.set(0);
                 return;
             }
             if (resetTree) {
                 abilityClickTicks[0] = 0;
                 currentPage[0] = 1;
-                failCycles[0] = 0;
+                failCycles.set(0);
                 return;
             }
             if (!inTreeMenu) {
@@ -313,11 +343,11 @@ public class TreeLoader {
             abilityClickTicks[0]++;
             if (abilityClickTicks[0] < GUI_SETTLE_TICKS) return;
 
-            if (failCycles[0] >= MAX_FAIL_CYCLES) {
+            if (failCycles.get() >= MAX_FAIL_CYCLES) {
                 System.out.println("Reached max cycles without unlocking abilities. Aborting!");
                 abilitiesToClick2 = null; // Or handle differently
                 abilityClickTicks[0] = 0;
-                failCycles[0] = 0;
+                failCycles.set(0);
                 return;
             }
 
@@ -350,15 +380,15 @@ public class TreeLoader {
                 clickOnAbility(client, player, name, screen);
                 abilitiesToClick2.removeFirst();
                 if(abilitiesToClick2.isEmpty()) {
-                    System.out.println("FINISHED");
+                    System.out.println("FINISHED"); //TODO: FIX THAT IT BREAKS WHEN LAG (E.G WHEN PLAYING ON ASIA SERVERS)
                 }
-                failCycles[0] = 0; // Success: reset fail counter
+                failCycles.set(0); // Success: reset fail counter
             } else {
                 System.out.println("cant click");
                 // If not present, move ability one spot down in the list and try unlocking the next one first
                 if (abilitiesToClick2.size() > 1) {
-                    abilitiesToClick2.add(Math.min(failCycles[0], abilitiesToClick2.size() - 1), abilitiesToClick2.removeFirst());
-                    failCycles[0]++; // Count a cycle only if list is requeued
+                    abilitiesToClick2.add(Math.min(failCycles.get(), abilitiesToClick2.size() - 1), abilitiesToClick2.removeFirst());
+                    failCycles.set(failCycles.get() + 1); // Count a cycle only if list is requeued
                 }
             }
 
