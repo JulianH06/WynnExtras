@@ -166,6 +166,52 @@ public class TreeLoader {
         socketClicksPerformed = 0;
     }
 
+    private static class PendingClick {
+        AbilityMapData.Node node;
+        String abilityName; // "Unlock <Ability>" bereinigt
+        int attempts;
+        int ticksWaiting; // Ticks seit letztem Klick
+        int expectedPage; // Seite, auf der der Klick ausgeführt wurde
+        PendingClick(AbilityMapData.Node node, String abilityName, int expectedPage) {
+            this.node = node;
+            this.abilityName = abilityName;
+            this.attempts = 0;
+            this.ticksWaiting = 0;
+            this.expectedPage = expectedPage;
+        }
+    }
+
+    private static final int CLICK_CONFIRM_TIMEOUT_TICKS = 1;
+    private static final int MAX_ATTEMPTS_PER_ABILITY = 15;
+    private static final int GUI_SETTLE_TICKS_DEFAULT = GUI_SETTLE_TICKS; // vorhandener Wert
+    private static PendingClick pendingClick = null;
+    private static Map<String, Integer> perAbilityAttempts = new HashMap<>(); // key = unique node id (page+x+y)
+    private static int lagTickCounter = 0;
+    private static boolean fastMode = true;
+    private static String makeNodeKey(AbilityMapData.Node node) {
+        if (node == null || node.meta == null || node.coordinates == null) return UUID.randomUUID().toString();
+        return node.meta.page + ":" + node.coordinates.x + ":" + (node.coordinates.y % 6);
+    }
+    private static boolean nodesEqual(AbilityMapData.Node a, AbilityMapData.Node b) {
+        if (a == null || b == null || a.meta == null || b.meta == null || a.coordinates == null || b.coordinates == null) return false;
+        return a.meta.page == b.meta.page && a.coordinates.x == b.coordinates.x && (a.coordinates.y % 6) == (b.coordinates.y % 6);
+    }
+
+    // --- Neue/zusätzliche Felder in deiner Klasse ---
+    private static class PendingResetClick {
+        String stage; // "socket" oder "confirm"
+        int ticksWaiting;
+        int attempts;
+        PendingResetClick(String stage) {
+            this.stage = stage;
+            this.ticksWaiting = 0;
+            this.attempts = 0;
+        }
+    }
+    private static PendingResetClick pendingReset = null;
+    private static final int RESET_CLICK_TIMEOUT = 5;
+    private static final int MAX_RESET_ATTEMPTS = 15;
+
     public static void init() {
         TreeData.loadAll();
         // Register commands
@@ -242,85 +288,291 @@ public class TreeLoader {
             if (wasStarted && inTreeMenu) wasStarted = false;
         });
 
+
+
+// --- Ersetzter / verbesserter Reset-Tickhandler ---
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
             if (!resetTree) return;
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player == null || client.world == null) return;
             ClientPlayerEntity player = client.player;
+
             ticksSinceLastAction++;
             boolean hasTreeManipulation = Models.StatusEffect.getStatusEffects().stream()
                     .anyMatch(effect -> effect.getName().getStringWithoutFormatting().equals("Tree Manipulation"));
-            //hasTreeManipulation = false;
+            hasTreeManipulation = false;
             if (ticksSinceLastAction < GUI_SETTLE_TICKS) return;
-            if (!treeMenuWasOpened) openTreeMenu(client, player);
-            else if (hasTreeManipulation && inTreeMenu && !resetMenuWasOpened) {
-                if(McUtils.player().getInventory().getStack(12).getItem() != Items.AIR) {
-                    System.out.println("GO UP");
-                    client.interactionManager.clickSlot(
-                            screen.getScreenHandler().syncId,
-                            54 + 3,
-                            1,
-                            SlotActionType.PICKUP,
-                            client.player
-                    );
-                    client.interactionManager.clickSlot(
-                            screen.getScreenHandler().syncId,
-                            54 + 3,
-                            1,
-                            SlotActionType.PICKUP,
-                            client.player
-                    );
+
+            // --- PendingClick / Retry logic für Shards + Confirm ---
+            if (pendingReset != null && screen != null) {
+                pendingReset.ticksWaiting++;
+                if (pendingReset.ticksWaiting >= RESET_CLICK_TIMEOUT) {
+                    pendingReset.attempts++;
+                    if (pendingReset.attempts > MAX_RESET_ATTEMPTS) {
+                        System.out.println("Reset click '" + pendingReset.stage + "' failed after retries. Aborting reset.");
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Reset failed due to lag, please retry manually.")));
+                        resetAll();
+                        pendingReset = null;
+                        return;
+                    }
+                    System.out.println("Retrying reset click stage: " + pendingReset.stage);
+                    if (pendingReset.stage.equals("socket")) {
+                        clickOnSockets(client, player, screen);
+                    } else if (pendingReset.stage.equals("confirm")) {
+                        confirmReset(client, player, screen);
+                    }
+                    pendingReset.ticksWaiting = 0;
                     return;
                 }
-                System.out.println("HAS TREE MANIPULATION EFFECT");
-                if(client.interactionManager == null) return;
-                client.interactionManager.clickSlot(
-                        screen.getScreenHandler().syncId,
-                        4,
-                        1,
-                        SlotActionType.PICKUP,
-                        client.player
-                );
-                resetMenuWasOpened = true;
+
+                // prüfen ob Erfolg erkannt werden kann
+                if (pendingReset.stage.equals("socket")) {
+                    // Erfolg wenn weniger als 3 Ability Shards in screen
+                    if (countOccurences("Ability Shard", screen) < 3) {
+                        System.out.println("Shard clicks confirmed.");
+                        pendingReset = null;
+                        ticksSinceLastAction = 0;
+                        return;
+                    } else {
+                        pendingReset.stage = "confirm";
+                    }
+                } else if (pendingReset.stage.equals("confirm")) {
+                    // Erfolg wenn Tree Menu wieder offen oder reset beendet
+                    if (inTreeMenu && !inResetMenu) {
+                        System.out.println("Reset confirm acknowledged.");
+                        pendingReset = null;
+                        resetTree = false;
+                        return;
+                    }
+                }
+
+                // noch warten
+                return;
             }
-            //else if(<player has the ability tree buff where you can freely change stuff>) <right click the very first node to reset the whole tree>
-            else if (inTreeMenu && !resetMenuWasOpened) openTreeResetMenu(client, player, screen);
-            else if (inResetMenu && !wasReset) {
-                if (countOccurences("Ability Shard", screen) < 3)
-                    if (socketClicksPerformed < countOccurences("Ability Shard", screen) + 1) {
+
+            // --- Normale Reset-Logik ---
+            if (!treeMenuWasOpened) {
+                openTreeMenu(client, player);
+                return;
+            }
+
+            if (hasTreeManipulation && inTreeMenu && !resetMenuWasOpened) {
+                if (McUtils.player().getInventory().getStack(12).getItem() != Items.AIR) {
+                    client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 54 + 3, 1, SlotActionType.PICKUP, client.player);
+                    client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 54 + 3, 1, SlotActionType.PICKUP, client.player);
+                    return;
+                }
+                if (client.interactionManager == null) return;
+                client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 4, 1, SlotActionType.PICKUP, client.player);
+                resetMenuWasOpened = true;
+                return;
+            }
+
+            if (inTreeMenu && !resetMenuWasOpened) {
+                openTreeResetMenu(client, player, screen);
+                return;
+            }
+
+            // Shards einlegen
+            if (inResetMenu && !wasReset) {
+                int shardCount = countOccurences("Ability Shard", screen);
+                if (shardCount < 3) {
+                    if (socketClicksPerformed < shardCount + 1) {
                         clickOnSockets(client, player, screen);
                         socketClicksPerformed++;
+                        pendingReset = new PendingResetClick("socket");
+                        pendingReset.ticksWaiting = 0;
+                        return;
                     } else {
                         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You don't have 3 Ability Shards in your Inventory")));
                         resetAll();
+                        return;
                     }
-                else
+                } else {
                     confirmReset(client, player, screen);
-            } else if (inTreeMenu && wasReset) resetTree = false;
-            if (clickedSockets >= 6) resetAll();
+                    pendingReset = new PendingResetClick("confirm");
+                    pendingReset.ticksWaiting = 0;
+                    return;
+                }
+            }
+
+            if (inTreeMenu && wasReset) {
+                resetTree = false;
+            }
+
+            if (clickedSockets >= 6) {
+                resetAll();
+            }
         });
+
+
+//        ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
+//            if (!resetTree) return;
+//            MinecraftClient client = MinecraftClient.getInstance();
+//            if (client.player == null || client.world == null) return;
+//            ClientPlayerEntity player = client.player;
+//            ticksSinceLastAction++;
+//            boolean hasTreeManipulation = Models.StatusEffect.getStatusEffects().stream()
+//                    .anyMatch(effect -> effect.getName().getStringWithoutFormatting().equals("Tree Manipulation"));
+//            hasTreeManipulation = false;
+//            if (ticksSinceLastAction < GUI_SETTLE_TICKS) return;
+//            if (!treeMenuWasOpened) openTreeMenu(client, player);
+//            else if (hasTreeManipulation && inTreeMenu && !resetMenuWasOpened) {
+//                if(McUtils.player().getInventory().getStack(12).getItem() != Items.AIR) {
+//                    System.out.println("GO UP");
+//                    client.interactionManager.clickSlot(
+//                            screen.getScreenHandler().syncId,
+//                            54 + 3,
+//                            1,
+//                            SlotActionType.PICKUP,
+//                            client.player
+//                    );
+//                    client.interactionManager.clickSlot(
+//                            screen.getScreenHandler().syncId,
+//                            54 + 3,
+//                            1,
+//                            SlotActionType.PICKUP,
+//                            client.player
+//                    );
+//                    return;
+//                }
+//                System.out.println("HAS TREE MANIPULATION EFFECT");
+//                if(client.interactionManager == null) return;
+//                client.interactionManager.clickSlot(
+//                        screen.getScreenHandler().syncId,
+//                        4,
+//                        1,
+//                        SlotActionType.PICKUP,
+//                        client.player
+//                );
+//                resetMenuWasOpened = true;
+//            }
+//            //else if(<player has the ability tree buff where you can freely change stuff>) <right click the very first node to reset the whole tree>
+//            else if (inTreeMenu && !resetMenuWasOpened) openTreeResetMenu(client, player, screen);
+//            else if (inResetMenu && !wasReset) {
+//                if (countOccurences("Ability Shard", screen) < 3)
+//                    if (socketClicksPerformed < countOccurences("Ability Shard", screen) + 1) {
+//                        clickOnSockets(client, player, screen);
+//                        socketClicksPerformed++;
+//                    } else {
+//                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You don't have 3 Ability Shards in your Inventory")));
+//                        resetAll();
+//                    }
+//                else
+//                    confirmReset(client, player, screen);
+//            } else if (inTreeMenu && wasReset) resetTree = false;
+//            if (clickedSockets >= 6) resetAll();
+//        });
 
         // Ability Selection
         int[] abilityClickTicks = {0};
         int[] currentPage = {1};
         AtomicInteger failCycles = new AtomicInteger(); // How many times we've cycled the list
         final int MAX_FAIL_CYCLES = 30;
+//
+//        ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
+//            if(abilitiesToClick2 == null) {
+//                abilityClickTicks[0] = 0;
+//                failCycles.set(0);
+//                return;
+//            }
+//            if(abilitiesToClick2.isEmpty()) {
+//                abilityClickTicks[0] = 0;
+//                failCycles.set(0);
+//                return;
+//            }
+//            if (resetTree) {
+//                abilityClickTicks[0] = 0;
+//                currentPage[0] = 1;
+//                failCycles.set(0);
+//                return;
+//            }
+//            if (!inTreeMenu) {
+//                abilityClickTicks[0] = 0;
+//                return;
+//            }
+//
+//            MinecraftClient client = MinecraftClient.getInstance();
+//            if (client.player == null || client.world == null) {
+//                abilityClickTicks[0] = 0;
+//                return;
+//            }
+//            ClientPlayerEntity player = client.player;
+//            if (client.currentScreen == null) {
+//                abilityClickTicks[0] = 0;
+//                return;
+//            }
+//            HandledScreen<?> screen = (HandledScreen<?>) client.currentScreen;
+//
+//            abilityClickTicks[0]++;
+//            if (abilityClickTicks[0] < GUI_SETTLE_TICKS) return;
+//
+//            if (failCycles.get() >= MAX_FAIL_CYCLES) {
+//                System.out.println("Reached max cycles without unlocking abilities. Aborting!");
+//                abilitiesToClick2 = null; // Or handle differently
+//                abilityClickTicks[0] = 0;
+//                failCycles.set(0);
+//                return;
+//            }
+//
+//            AbilityMapData.Node ability1 = abilitiesToClick2.getFirst();
+//            System.out.println(ability1.meta.page + " " + currentPage[0]);
+//            int pageOffset = ability1.meta.page - currentPage[0];
+//
+//            // Navigation logic
+//            if (pageOffset > 0) {
+//                clickOnAbility(client, player, "Next Page", screen);
+//                currentPage[0]++;
+//                abilityClickTicks[0] = 0;
+//                return;
+//            }
+//            if (pageOffset < 0) {
+//                clickOnAbility(client, player, "Previous Page", screen);
+//                currentPage[0]--;
+//                abilityClickTicks[0] = 0;
+//                return;
+//            }
+//
+//            // Only click if "Unlock <Ability>" is present as substring
+//            if(classTree == null) return;
+//            AbilityTreeData.Ability abilityFromNode = getAbilityFromNode(ability1, classTree);
+//            if(abilityFromNode == null) return;
+//            String name = extractAbilityNameFromHtml(abilityFromNode.name);
+//            System.out.println(name);
+//            if (hasUnlockPrefix(name, screen)) {
+//                System.out.println("Clicking ability: Unlock " + ability1);
+//                clickOnAbility(client, player, name, screen);
+//                abilitiesToClick2.removeFirst();
+//                if(abilitiesToClick2.isEmpty()) {
+//                    System.out.println("FINISHED"); //TODO: FIX THAT IT BREAKS WHEN LAG (E.G WHEN PLAYING ON ASIA SERVERS)
+//                }
+//                failCycles.set(0); // Success: reset fail counter
+//            } else {
+//                System.out.println("cant click");
+//                // If not present, move ability one spot down in the list and try unlocking the next one first
+//                if (abilitiesToClick2.size() > 1) {
+//                    abilitiesToClick2.add(Math.min(failCycles.get(), abilitiesToClick2.size() - 1), abilitiesToClick2.removeFirst());
+//                    failCycles.set(failCycles.get() + 1); // Count a cycle only if list is requeued
+//                }
+//            }
+//
+//            abilityClickTicks[0] = 0;
+//        });
 
+        // --- Ersetzter/verbesserter Tick-Handler (Ability Selection) ---
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
-            if(abilitiesToClick2 == null) {
+            // Basisprüfungen (unverändert)
+            if (abilitiesToClick2 == null || abilitiesToClick2.isEmpty()) {
                 abilityClickTicks[0] = 0;
                 failCycles.set(0);
-                return;
-            }
-            if(abilitiesToClick2.isEmpty()) {
-                abilityClickTicks[0] = 0;
-                failCycles.set(0);
+                pendingClick = null;
                 return;
             }
             if (resetTree) {
                 abilityClickTicks[0] = 0;
                 currentPage[0] = 1;
                 failCycles.set(0);
+                pendingClick = null;
                 return;
             }
             if (!inTreeMenu) {
@@ -329,33 +581,72 @@ public class TreeLoader {
             }
 
             MinecraftClient client = MinecraftClient.getInstance();
-            if (client.player == null || client.world == null) {
+            if (client.player == null || client.world == null || client.currentScreen == null) {
                 abilityClickTicks[0] = 0;
                 return;
             }
             ClientPlayerEntity player = client.player;
-            if (client.currentScreen == null) {
-                abilityClickTicks[0] = 0;
-                return;
-            }
             HandledScreen<?> screen = (HandledScreen<?>) client.currentScreen;
 
             abilityClickTicks[0]++;
-            if (abilityClickTicks[0] < GUI_SETTLE_TICKS) return;
+            if (abilityClickTicks[0] < GUI_SETTLE_TICKS_DEFAULT) return;
 
             if (failCycles.get() >= MAX_FAIL_CYCLES) {
                 System.out.println("Reached max cycles without unlocking abilities. Aborting!");
-                abilitiesToClick2 = null; // Or handle differently
+                abilitiesToClick2 = null;
                 abilityClickTicks[0] = 0;
                 failCycles.set(0);
+                pendingClick = null;
                 return;
             }
 
-            AbilityMapData.Node ability1 = abilitiesToClick2.getFirst();
-            System.out.println(ability1.meta.page + " " + currentPage[0]);
-            int pageOffset = ability1.meta.page - currentPage[0];
+            // Wenn ein Klick pending ist: prüfen ob bestätigt oder timeout -> retry oder skip
+            if (pendingClick != null) {
+                pendingClick.ticksWaiting++;
+                System.out.println(pendingClick.ticksWaiting);
 
-            // Navigation logic
+                boolean stillHasUnlock = hasUnlockPrefix(pendingClick.abilityName, screen);
+
+                // Fast Confirm: Wenn Button verschwindet → sofort weiter
+                if (!stillHasUnlock) {
+                    System.out.println("Fast confirm: " + pendingClick.abilityName);
+                    abilitiesToClick2.removeFirst();
+                    pendingClick = null;
+                    abilityClickTicks[0] = 0;
+                    fastMode = true; // zurück in fast mode
+                } else {
+                    System.out.println("LAG");
+                    // Wenn Unlock noch da ist
+                    if (pendingClick.ticksWaiting >= 2) { // nur 2 Ticks warten für schnelles Feedback
+                        // Wir nehmen an, es laggt → wechsel in "slow mode"
+                        fastMode = false;
+                        lagTickCounter++;
+                        if (lagTickCounter > CLICK_CONFIRM_TIMEOUT_TICKS) {
+                            System.out.println("Lag detected -> retrying " + pendingClick.abilityName);
+                            clickOnAbility(client, player, pendingClick.abilityName, screen);
+                            pendingClick.ticksWaiting = 0;
+                            lagTickCounter = 0;
+                        }
+                        return;
+                    }
+                }
+            }
+            // end pendingClick handling
+            if(abilitiesToClick2 == null) return;
+            if(abilitiesToClick2.isEmpty()) return;
+
+            AbilityMapData.Node abilityNode = abilitiesToClick2.getFirst();
+            AbilityTreeData.Ability abilityFromNode = getAbilityFromNode(abilityNode, classTree);
+            if (abilityFromNode == null) return; //{ abilitiesToClick2.removeFirst(); return; }
+            String abilityName = extractAbilityNameFromHtml(abilityFromNode.name);
+            if (abilityName == null) return; //{ abilitiesToClick2.removeFirst(); return; }
+
+            //TODO: auf as1 werden die ersten zwei abilities unlocked und die dritte nicht und dann pfeil hoch/runter bis abbruch
+            //TODO: ich vermute, dass es lagt, dadurch hat die dritte ability noch nicht den unlock prefix, dadurch wird es hinter geschoben,
+            //TODO: dadurch wird die ability auf der naechsten seite versucht, es wird next page geklickt, was wiederrum lagt, weshalb
+            //TODO: der loader nicht mehr weiß auf welcher page er ist :steamhappy:
+            //wenn page switch: pfeil pending machen, itemstacks speichern, clicken, stacks durch iterieren, sobald einer anders ist: page switch hat geklappt
+            int pageOffset = abilityNode.meta.page - currentPage[0]; //TODO: Issue: page up/down doesnt have failsafe, if it lags then the loader doenst know the correct page its on
             if (pageOffset > 0) {
                 clickOnAbility(client, player, "Next Page", screen);
                 currentPage[0]++;
@@ -365,34 +656,29 @@ public class TreeLoader {
             if (pageOffset < 0) {
                 clickOnAbility(client, player, "Previous Page", screen);
                 currentPage[0]--;
+//                if(currentPage[0] < 1) currentPage[0] = 1;
                 abilityClickTicks[0] = 0;
                 return;
             }
 
-            // Only click if "Unlock <Ability>" is present as substring
-            if(classTree == null) return;
-            AbilityTreeData.Ability abilityFromNode = getAbilityFromNode(ability1, classTree);
-            if(abilityFromNode == null) return;
-            String name = extractAbilityNameFromHtml(abilityFromNode.name);
-            System.out.println(name);
-            if (hasUnlockPrefix(name, screen)) {
-                System.out.println("Clicking ability: Unlock " + ability1);
-                clickOnAbility(client, player, name, screen);
-                abilitiesToClick2.removeFirst();
-                if(abilitiesToClick2.isEmpty()) {
-                    System.out.println("FINISHED"); //TODO: FIX THAT IT BREAKS WHEN LAG (E.G WHEN PLAYING ON ASIA SERVERS)
+            if (hasUnlockPrefix(abilityName, screen)) {
+                clickOnAbility(client, player, abilityName, screen);
+                pendingClick = new PendingClick(abilityNode, abilityName, currentPage[0]);
+                pendingClick.ticksWaiting = 0;
+
+                // Fast mode → sofort nächste Node vorbereiten (nicht warten)
+                if (fastMode) {
+                    abilityClickTicks[0] = 0; // keine Pause
+                } else {
+                    abilityClickTicks[0] = 1; // minimal delay
                 }
-                failCycles.set(0); // Success: reset fail counter
+                return;
             } else {
-                System.out.println("cant click");
-                // If not present, move ability one spot down in the list and try unlocking the next one first
                 if (abilitiesToClick2.size() > 1) {
                     abilitiesToClick2.add(Math.min(failCycles.get(), abilitiesToClick2.size() - 1), abilitiesToClick2.removeFirst());
                     failCycles.set(failCycles.get() + 1); // Count a cycle only if list is requeued
                 }
             }
-
-            abilityClickTicks[0] = 0;
         });
 
     }
@@ -438,6 +724,7 @@ public class TreeLoader {
 
 
     public static AbilityTreeData.Ability getAbilityFromNode(AbilityMapData.Node node, AbilityTreeData treeData) {
+        if(treeData == null) return null;
         Map<String, AbilityTreeData.Ability> page = treeData.pages.get(node.meta.page);
         for(AbilityTreeData.Ability ability : page.values()) {
             if(ability.coordinates.x != node.coordinates.x) {
