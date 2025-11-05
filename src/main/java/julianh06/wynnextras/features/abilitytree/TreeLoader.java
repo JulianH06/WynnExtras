@@ -2,8 +2,29 @@ package julianh06.wynnextras.features.abilitytree;
 
 import com.google.gson.*;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.wynntils.core.WynntilsMod;
+import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
+import com.wynntils.handlers.container.scriptedquery.QueryStep;
+import com.wynntils.handlers.container.scriptedquery.ScriptedContainerQuery;
+import com.wynntils.handlers.container.type.ContainerContent;
+import com.wynntils.handlers.container.type.ContainerContentChangeType;
+import com.wynntils.models.character.CharacterModel;
+import com.wynntils.models.character.type.SavableSkillPointSet;
+import com.wynntils.models.containers.ContainerModel;
+import com.wynntils.models.elements.type.Skill;
+import com.wynntils.models.items.WynnItem;
+import com.wynntils.models.items.items.game.CraftedGearItem;
+import com.wynntils.models.items.items.game.GearItem;
+import com.wynntils.models.items.items.game.TomeItem;
+import com.wynntils.models.items.items.gui.SkillPointItem;
+import com.wynntils.models.stats.type.SkillStatType;
+import com.wynntils.utils.mc.LoreUtils;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.type.Time;
+import com.wynntils.utils.wynn.ContainerUtils;
+import com.wynntils.utils.wynn.InventoryUtils;
+import it.unimi.dsi.fastutil.ints.Int2ObjectFunction;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -19,6 +40,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.screen.slot.Slot;
@@ -26,6 +48,7 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.item.ItemStack;
+import org.lwjgl.glfw.GLFW;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -36,9 +59,12 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 
 @WEModule
@@ -181,11 +207,14 @@ public class TreeLoader {
         }
     }
 
+    public static boolean loadSkillpoints = false;
+    public static SavableSkillPointSet skillPointSet;
+    public static boolean loadingSkillpoints = false;
+
     private static final int CLICK_CONFIRM_TIMEOUT_TICKS = 1;
     private static final int MAX_ATTEMPTS_PER_ABILITY = 15;
     private static final int GUI_SETTLE_TICKS_DEFAULT = GUI_SETTLE_TICKS; // vorhandener Wert
     private static PendingClick pendingClick = null;
-    private static Map<String, Integer> perAbilityAttempts = new HashMap<>(); // key = unique node id (page+x+y)
     private static int lagTickCounter = 0;
     private static boolean fastMode = true;
     private static String makeNodeKey(AbilityMapData.Node node) {
@@ -211,6 +240,12 @@ public class TreeLoader {
     private static PendingResetClick pendingReset = null;
     private static final int RESET_CLICK_TIMEOUT = 5;
     private static final int MAX_RESET_ATTEMPTS = 15;
+
+    private static boolean scrolledUp = false;
+    private static ItemStack firstNode = null;
+    private static long lastResetTryClick = 0;
+
+    private static long finishedTreeTime = 0;
 
     public static void init() {
         TreeData.loadAll();
@@ -289,7 +324,6 @@ public class TreeLoader {
         });
 
 
-
 // --- Ersetzter / verbesserter Reset-Tickhandler ---
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
             if (!resetTree) return;
@@ -300,7 +334,7 @@ public class TreeLoader {
             ticksSinceLastAction++;
             boolean hasTreeManipulation = Models.StatusEffect.getStatusEffects().stream()
                     .anyMatch(effect -> effect.getName().getStringWithoutFormatting().equals("Tree Manipulation"));
-            hasTreeManipulation = false;
+            //hasTreeManipulation = false;
             if (ticksSinceLastAction < GUI_SETTLE_TICKS) return;
 
             // --- PendingClick / Retry logic für Shards + Confirm ---
@@ -357,16 +391,52 @@ public class TreeLoader {
             }
 
             if (hasTreeManipulation && inTreeMenu && !resetMenuWasOpened) {
-                if (McUtils.player().getInventory().getStack(12).getItem() != Items.AIR) {
-                    client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 54 + 3, 1, SlotActionType.PICKUP, client.player);
-                    client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 54 + 3, 1, SlotActionType.PICKUP, client.player);
-                    return;
-                }
-                if (client.interactionManager == null) return;
-                client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 4, 1, SlotActionType.PICKUP, client.player);
+                client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 54 + 4, 1, SlotActionType.QUICK_MOVE, client.player);
+                lastResetTryClick = Time.now().timestamp();
+//                if (McUtils.player().getInventory().getStack(12).getItem() != Items.AIR) {
+//                    client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 54 + 3, 1, SlotActionType.PICKUP, client.player);
+//                    client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 54 + 3, 1, SlotActionType.PICKUP, client.player);
+//                    return;
+//                }
+//                scrolledUp = true;
+//                firstNode = McUtils.containerMenu().getSlot(4).getStack();
+//                client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 4, 1, SlotActionType.PICKUP, client.player);
+//                client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 4, 1, SlotActionType.PICKUP, client.player);
                 resetMenuWasOpened = true;
+                wasReset = true;
                 return;
             }
+
+//            if(scrolledUp && firstNode != null) {
+//                if(client.interactionManager == null) return;
+//                if(screen == null) return;
+//                if(screen.getScreenHandler() == null) return;
+//
+////                if(Time.now().timestamp() - lastResetTryClick < 100) {
+////                    McUtils.sendMessageToClient(Text.of("WAITING " + Math.random() * 1000));
+////                    McUtils.sendMessageToClient(Text.of("--- "));
+////                    return;
+////                }
+//
+//                //McUtils.sendMessageToClient(Text.of("CLICKING AGAIN"));
+//
+//                //client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 4, 1, SlotActionType.PICKUP, client.player);
+//                //lastResetTryClick = Time.now().timestamp();
+//
+//                if(McUtils.containerMenu().getSlot(4) == null) return;
+//                if(McUtils.containerMenu().getSlot(4).getStack() == null) return;
+//                if(McUtils.containerMenu().getSlot(4).getStack().getCustomName() == null) return;
+//
+//                if(McUtils.containerMenu().getSlot(4).getStack().getCustomName().getString().contains("Unlock ")) {
+//                //if(ItemStack.areItemsEqual(firstNode, McUtils.containerMenu().getSlot(4).getStack())) {
+//                    McUtils.sendMessageToClient(Text.of("DONEEEEE"));
+//                    resetMenuWasOpened = true;
+//                    wasReset = true;
+//                    firstNode = null;
+//                    //return;
+//                    //client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 4, 1, SlotActionType.PICKUP, client.player);
+//                }
+//            }
 
             if (inTreeMenu && !resetMenuWasOpened) {
                 openTreeResetMenu(client, player, screen);
@@ -559,9 +629,17 @@ public class TreeLoader {
 //            abilityClickTicks[0] = 0;
 //        });
 
+        AtomicBoolean pendingPageSwitch = new AtomicBoolean(false);
+        AtomicReference<List<ItemStack>> prevPageStacks = new AtomicReference<>(new ArrayList<>());
+        final int PAGE_SWITCH_TIMEOUT = 40; // ~2 Sekunden
+        AtomicInteger pageSwitchTicks = new AtomicInteger();
+
+
         // --- Ersetzter/verbesserter Tick-Handler (Ability Selection) ---
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
             // Basisprüfungen (unverändert)
+            if(Time.now().timestamp() - lastResetTryClick < 1000) return; //wait a second after resetting the tree
+
             if (abilitiesToClick2 == null || abilitiesToClick2.isEmpty()) {
                 abilityClickTicks[0] = 0;
                 failCycles.set(0);
@@ -591,8 +669,56 @@ public class TreeLoader {
             abilityClickTicks[0]++;
             if (abilityClickTicks[0] < GUI_SETTLE_TICKS_DEFAULT) return;
 
+            // Wenn gerade ein Page-Switch läuft: warten bis Inventar anders aussieht
+            if (pendingPageSwitch.get()) {
+                pageSwitchTicks.incrementAndGet();
+
+                List<ItemStack> inv = new ArrayList<>(McUtils.containerMenu().getStacks());
+                boolean changed = false;
+                int i = 0;
+                for(ItemStack stack : prevPageStacks.get()) {
+                    if(stack == null) { i++; continue; }
+                    if(stack.getItem().equals(Items.AIR)) { i++; continue; }
+
+                    ItemStack invStack = inv.get(i);
+                    if(invStack == null) { i++; continue; }
+                    if(invStack.getItem().equals(Items.AIR)) { i++; continue; }
+                    i++;
+
+                    if(!ItemStack.areItemsEqual(invStack, stack)) {
+                        //McUtils.sendMessageToClient(Text.of("CHANGED:" + invStack.getCustomName() + " AAAA "
+                        //+ stack.getCustomName()));
+                        //McUtils.sendMessageToClient(Text.of("---------"));
+                        changed = true;
+                        break;
+                    }
+                }
+
+                if (changed) {
+                    System.out.println("Page switch confirmed after " + pageSwitchTicks + " ticks.");
+                    pendingPageSwitch.set(false);
+                    abilityClickTicks[0] = 0;
+                    prevPageStacks.get().clear();
+                    return;
+                }
+
+                if (pageSwitchTicks.get() > PAGE_SWITCH_TIMEOUT) {
+                    System.out.println("Page switch timed out! Retrying...");
+                    pendingPageSwitch.set(false);
+                    prevPageStacks.get().clear();
+                    return;
+                }
+
+                // Solange der Wechsel nicht fertig ist → alles andere aussetzen
+                return;
+            }
+
+
             if (failCycles.get() >= MAX_FAIL_CYCLES) {
                 System.out.println("Reached max cycles without unlocking abilities. Aborting!");
+                resetAll();
+                if(McUtils.mc().currentScreen != null) McUtils.mc().currentScreen.close();
+                McUtils.sendMessageToClient(Text.of("Something went wrong! Try again"));
                 abilitiesToClick2 = null;
                 abilityClickTicks[0] = 0;
                 failCycles.set(0);
@@ -603,14 +729,16 @@ public class TreeLoader {
             // Wenn ein Klick pending ist: prüfen ob bestätigt oder timeout -> retry oder skip
             if (pendingClick != null) {
                 pendingClick.ticksWaiting++;
-                System.out.println(pendingClick.ticksWaiting);
+                //System.out.println(pendingClick.ticksWaiting);
 
                 boolean stillHasUnlock = hasUnlockPrefix(pendingClick.abilityName, screen);
 
                 // Fast Confirm: Wenn Button verschwindet → sofort weiter
                 if (!stillHasUnlock) {
+                    McUtils.sendMessageToClient(Text.of("UNLOCKED: " + pendingClick.abilityName));
                     System.out.println("Fast confirm: " + pendingClick.abilityName);
                     abilitiesToClick2.removeFirst();
+                    failCycles.set(0);
                     pendingClick = null;
                     abilityClickTicks[0] = 0;
                     fastMode = true; // zurück in fast mode
@@ -633,7 +761,21 @@ public class TreeLoader {
             }
             // end pendingClick handling
             if(abilitiesToClick2 == null) return;
-            if(abilitiesToClick2.isEmpty()) return;
+            if(abilitiesToClick2.isEmpty()) {
+                resetAll();
+                if(McUtils.mc().currentScreen != null) McUtils.mc().currentScreen.close();
+                McUtils.sendMessageToClient(Text.of("Done! Skillpoints? " + loadSkillpoints));
+                if(skillPointSet != null) {
+                    int currentSlot = player.getInventory().selectedSlot;
+                    player.getInventory().selectedSlot = 7;
+                    client.interactionManager.interactItem(player, Hand.MAIN_HAND);
+                    player.getInventory().selectedSlot = currentSlot;
+                    loadingSkillpoints = true;
+                    finishedTreeTime = Time.now().timestamp();
+//                    loadSkillpoints(skillPointSet);
+                }
+                return;
+            }
 
             AbilityMapData.Node abilityNode = abilitiesToClick2.getFirst();
             AbilityTreeData.Ability abilityFromNode = getAbilityFromNode(abilityNode, classTree);
@@ -646,18 +788,18 @@ public class TreeLoader {
             //TODO: dadurch wird die ability auf der naechsten seite versucht, es wird next page geklickt, was wiederrum lagt, weshalb
             //TODO: der loader nicht mehr weiß auf welcher page er ist :steamhappy:
             //wenn page switch: pfeil pending machen, itemstacks speichern, clicken, stacks durch iterieren, sobald einer anders ist: page switch hat geklappt
-            int pageOffset = abilityNode.meta.page - currentPage[0]; //TODO: Issue: page up/down doesnt have failsafe, if it lags then the loader doenst know the correct page its on
-            if (pageOffset > 0) {
-                clickOnAbility(client, player, "Next Page", screen);
-                currentPage[0]++;
-                abilityClickTicks[0] = 0;
-                return;
-            }
-            if (pageOffset < 0) {
-                clickOnAbility(client, player, "Previous Page", screen);
-                currentPage[0]--;
-//                if(currentPage[0] < 1) currentPage[0] = 1;
-                abilityClickTicks[0] = 0;
+            int pageOffset = abilityNode.meta.page - currentPage[0];
+            if (pageOffset != 0 && !pendingPageSwitch.get()) {
+                List<ItemStack> inv = new ArrayList<>(McUtils.containerMenu().getStacks());
+                prevPageStacks.set(inv);
+
+                String direction = pageOffset > 0 ? "Next Page" : "Previous Page";
+                clickOnAbility(client, player, direction, screen);
+                currentPage[0] += pageOffset > 0 ? 1 : -1;
+
+                pendingPageSwitch.set(true);
+                pageSwitchTicks.set(0);
+                System.out.println("Initiated page switch: " + direction);
                 return;
             }
 
@@ -675,12 +817,60 @@ public class TreeLoader {
                 return;
             } else {
                 if (abilitiesToClick2.size() > 1) {
-                    abilitiesToClick2.add(Math.min(failCycles.get(), abilitiesToClick2.size() - 1), abilitiesToClick2.removeFirst());
+                    AbilityMapData.Node removed = abilitiesToClick2.removeFirst();
+                    abilitiesToClick2.add(Math.min(failCycles.get(), abilitiesToClick2.size() - 1), removed);
                     failCycles.set(failCycles.get() + 1); // Count a cycle only if list is requeued
+                    McUtils.sendMessageToClient(Text.of(abilityName + " Es muss hinter geschoben werden"));
                 }
             }
         });
 
+        ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
+            if(!loadingSkillpoints || skillPointSet == null) return;
+
+            if(Time.now().timestamp() - finishedTreeTime < 600) {
+                MinecraftClient.getInstance().interactionManager.clickSlot(screen.getScreenHandler().syncId, 4, 0, SlotActionType.QUICK_MOVE,McUtils.player());
+
+                return;
+            }
+
+            int finishedSkillPoints = 0;
+            int[] pointArray = skillPointSet.getSkillPointsAsArray();
+            for (int i = 0; i < 5; i++) {
+                int remainingPoints = pointArray[i];
+                if(remainingPoints == 0) {
+                    finishedSkillPoints++;
+                    continue;
+                }
+
+                if(remainingPoints % 5 == 0) {
+                    //11
+                    //MinecraftClient.getInstance().player.networkHandler.sendPacket(new ClientCommandC2SPacket(McUtils.player(), ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY));
+                    MinecraftClient.getInstance().interactionManager.clickSlot(screen.getScreenHandler().syncId, 11 + i, 0, SlotActionType.QUICK_MOVE,McUtils.player());
+                    //clickSlotHelper(11 + i, screen, MinecraftClient.getInstance());
+
+                    //McUtils.containerMenu().onSlotClick(11 + i, 0, SlotActionType.QUICK_MOVE, McUtils.player());
+                    //MinecraftClient.getInstance().player.networkHandler.sendPacket(new ClientCommandC2SPacket(McUtils.player(), ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY));
+
+                    pointArray[i] -= 5;
+                    break;
+                }
+
+                clickSlotHelper(11 + i, screen, MinecraftClient.getInstance());
+                //McUtils.containerMenu().onSlotClick(11 + i, 0, SlotActionType.PICKUP, McUtils.player());
+                pointArray[i]--;
+                break;
+            }
+
+            if(finishedSkillPoints == 5) {
+                McUtils.sendMessageToClient(Text.of("Finished assigning skill points"));
+                skillPointSet = null;
+                loadingSkillpoints = false;
+                return;
+            }
+
+            skillPointSet = new SavableSkillPointSet(pointArray);
+        });
     }
 
     public static String extractAbilityNameFromHtml(String html) {
@@ -915,7 +1105,6 @@ public class TreeLoader {
                 if (arReq != null) {
                     String arcName = arReq.name == null ? null : arReq.name.trim();
                     String arcKey = arcName == null ? null : normalizeArchetypeKey(arcName);
-                    System.out.println("getting with " + arcKey);
                     int need = arReq.amount;
                     int have = arcKey == null ? 0 : archetypeCounts.getOrDefault(arcKey, 0);
                     if (have < need) {
@@ -955,7 +1144,7 @@ public class TreeLoader {
                             String internalArchetypeName = getInternalName(display, archetypes);
                             String mapKey = normalizeArchetypeKey(internalArchetypeName);
                             archetypeCounts.put(mapKey, archetypeCounts.getOrDefault(mapKey, 0) + 1);
-                            System.out.println("putting with " + mapKey);
+
                             //System.out.println(mapKey + " now has this many points: " + archetypeCounts.get(mapKey));
                         }
                     } catch (Exception ignored) {
@@ -1159,7 +1348,7 @@ public class TreeLoader {
             out.addProperty("strength", skillPoints.getStrength());
             out.addProperty("dexterity", skillPoints.getDexterity());
             out.addProperty("intelligence", skillPoints.getIntelligence());
-            out.addProperty("defence", skillPoints.getDefence());
+            out.addProperty("defence", Math.max(skillPoints.getDefence(), skillPoints.getDefense()));
             out.addProperty("agility", skillPoints.getAgility());
             String formatted = className.substring(0, 1).toUpperCase() + className.substring(1).toLowerCase();
             out.addProperty("className", formatted);
@@ -1313,5 +1502,280 @@ public class TreeLoader {
                 client.player
         );
         ticksSinceLastAction = 0;
+    }
+
+
+
+
+
+
+    //Wynntils Skillpoint loader, slightly changed to work without having to save the points in their ui
+
+    private static final int TOME_SLOT = 8;
+    private static final int[] SKILL_POINT_TOTAL_SLOTS = {11, 12, 13, 14, 15};
+    private static final int SKILL_POINT_TOME_SLOT = 4;
+    private static final int CONTENT_BOOK_SLOT = 62;
+    private static final int TOME_MENU_CONTENT_BOOK_SLOT = 89;
+
+    private static Map<Skill, Integer> totalSkillPoints = new EnumMap<>(Skill.class);
+    private static Map<Skill, Integer> gearSkillPoints = new EnumMap<>(Skill.class);
+    private static Map<Skill, Integer> craftedSkillPoints = new EnumMap<>(Skill.class);
+    private static Map<Skill, Integer> tomeSkillPoints = new EnumMap<>(Skill.class);
+    private static Map<Skill, Integer> statusEffectSkillPoints = new EnumMap<>(Skill.class);
+    private static Map<Skill, Integer> setBonusSkillPoints = new EnumMap<>(Skill.class);
+    private static Map<Skill, Integer> assignedSkillPoints = new EnumMap<>(Skill.class);
+
+    public static void loadSkillpoints(SavableSkillPointSet points) {
+        ContainerUtils.closeBackgroundContainer();
+
+        ScriptedContainerQuery query = ScriptedContainerQuery.builder("Loading Skill Point Loadout Query")
+                .onError(msg -> WynntilsMod.warn("Failed to load skill point loadout: " + msg))
+                .then(QueryStep.useItemInHotbar(InventoryUtils.COMPASS_SLOT_NUM)
+                        .expectContainerTitle(ContainerModel.CHARACTER_INFO_NAME)
+                        .verifyContentChange((container, changes, changeType) ->
+                                verifyChange(container, changes, changeType, CONTENT_BOOK_SLOT))
+                        .processIncomingContainer((container) -> loadSkillPointsOnServer(container, points)))
+                .build();
+        query.executeQuery();
+    }
+
+    private static void loadSkillPointsOnServer(ContainerContent containerContent, SavableSkillPointSet points) {
+        // we need to figure out which points we can subtract from first to actually allow assigning for positive points
+        Map<Skill, Integer> negatives = new EnumMap<>(Skill.class);
+        Map<Skill, Integer> positives = new EnumMap<>(Skill.class);
+        for (int i = 0; i < Skill.values().length; i++) {
+            int buildTarget = points.getSkillPointsAsArray()[i];
+            int difference = buildTarget - getAssignedSkillPoints(Skill.values()[i]);
+
+            // no difference automatically dropped here
+            if (difference > 0) {
+                positives.put(Skill.values()[i], difference);
+            } else if (difference < 0) {
+                negatives.put(Skill.values()[i], difference);
+            }
+        }
+
+        boolean confirmationCompleted = false;
+        for (Map.Entry<Skill, Integer> entry : negatives.entrySet()) {
+            int difference5s = Math.abs(entry.getValue()) / 5;
+            int difference1s = Math.abs(entry.getValue()) % 5;
+
+            for (int i = 0; i < difference5s; i++) {
+                ContainerUtils.shiftClickOnSlot(
+                        SKILL_POINT_TOTAL_SLOTS[entry.getKey().ordinal()],
+                        containerContent.containerId(),
+                        GLFW.GLFW_MOUSE_BUTTON_RIGHT,
+                        containerContent.items());
+                if (!confirmationCompleted) {
+                    // confirmation required, force loop to repeat this iteration
+                    i--;
+                    confirmationCompleted = true;
+                }
+            }
+            for (int i = 0; i < difference1s; i++) {
+                ContainerUtils.clickOnSlot(
+                        SKILL_POINT_TOTAL_SLOTS[entry.getKey().ordinal()],
+                        containerContent.containerId(),
+                        GLFW.GLFW_MOUSE_BUTTON_RIGHT,
+                        containerContent.items());
+                if (!confirmationCompleted) {
+                    // needs to exist in both loops in case of 1s only
+                    i--;
+                    confirmationCompleted = true;
+                }
+            }
+        }
+
+        for (Map.Entry<Skill, Integer> entry : positives.entrySet()) {
+            int difference5s = Math.abs(entry.getValue()) / 5;
+            int difference1s = Math.abs(entry.getValue()) % 5;
+
+            for (int i = 0; i < difference5s; i++) {
+                ContainerUtils.shiftClickOnSlot(
+                        SKILL_POINT_TOTAL_SLOTS[entry.getKey().ordinal()],
+                        containerContent.containerId(),
+                        GLFW.GLFW_MOUSE_BUTTON_LEFT,
+                        containerContent.items());
+            }
+            for (int i = 0; i < difference1s; i++) {
+                ContainerUtils.clickOnSlot(
+                        SKILL_POINT_TOTAL_SLOTS[entry.getKey().ordinal()],
+                        containerContent.containerId(),
+                        GLFW.GLFW_MOUSE_BUTTON_LEFT,
+                        containerContent.items());
+            }
+        }
+
+        // Server needs 2 ticks, give a couple extra to be safe
+        Managers.TickScheduler.scheduleLater(TreeLoader::populateSkillPoints, 4);
+    }
+
+    public static int getAssignedSkillPoints(Skill skill) {
+        return assignedSkillPoints.getOrDefault(skill, 0);
+    }
+
+    public static void populateSkillPoints() {
+        ContainerUtils.closeBackgroundContainer();
+
+        Managers.TickScheduler.scheduleNextTick(() -> {
+            assignedSkillPoints = new EnumMap<>(Skill.class);
+            calculateGearSkillPoints();
+            calculateStatusEffectSkillPoints();
+            queryTotalAndTomeSkillPoints();
+        });
+    }
+
+    private static boolean verifyChange(ContainerContent content, Int2ObjectFunction<ItemStack> changes, ContainerContentChangeType changeType, int contentBookSlot) {
+        return changeType == ContainerContentChangeType.SET_CONTENT && changes.containsKey(contentBookSlot) && ((ItemStack)content.items().get(contentBookSlot)).getItem() == Items.POTION;
+    }
+
+    private static void calculateGearSkillPoints() {
+        gearSkillPoints = new EnumMap<>(Skill.class);
+        craftedSkillPoints = new EnumMap<>(Skill.class);
+        setBonusSkillPoints = new EnumMap<>(Skill.class);
+
+        for (ItemStack itemStack : Models.Inventory.getEquippedItems()) {
+            calculateSingleGearSkillPoints(itemStack);
+        }
+
+        Models.Set.getUniqueSetNames().forEach(name -> {
+            int trueCount = Models.Set.getTrueCount(name);
+            Models.Set.getSetInfo(name).getBonusForItems(trueCount).forEach((bonus, value) -> {
+                if (bonus instanceof SkillStatType skillStat) {
+                    setBonusSkillPoints.merge(skillStat.getSkill(), value, Integer::sum);
+                }
+            });
+        });
+    }
+
+    private static void calculateSingleGearSkillPoints(ItemStack itemStack) {
+        Optional<WynnItem> wynnItemOptional = Models.Item.getWynnItem(itemStack);
+        if (wynnItemOptional.isEmpty()) return; // Empty slot
+
+        if (wynnItemOptional.get() instanceof GearItem gear) {
+            gear.getIdentifications().forEach(x -> {
+                if (x.statType() instanceof SkillStatType skillStat) {
+                    gearSkillPoints.merge(skillStat.getSkill(), x.value(), Integer::sum);
+                }
+            });
+
+        } else if (wynnItemOptional.get() instanceof CraftedGearItem craftedGear) {
+            craftedGear.getIdentifications().forEach(x -> {
+                if (x.statType() instanceof SkillStatType skillStat) {
+                    craftedSkillPoints.merge(skillStat.getSkill(), x.value(), Integer::sum);
+                }
+            });
+        } else {
+            WynntilsMod.warn("Skill Point Model failed to parse gear: " + LoreUtils.getStringLore(itemStack));
+        }
+    }
+
+    private static void calculateStatusEffectSkillPoints() {
+        statusEffectSkillPoints = new EnumMap<>(Skill.class);
+        Models.StatusEffect.getStatusEffects().forEach(statusEffect -> {
+            for (Skill skill : Skill.values()) {
+                if (statusEffect.getName().contains(skill.getDisplayName())) {
+                    statusEffectSkillPoints.merge(
+                            skill,
+                            Integer.parseInt(statusEffect.getModifier().getStringWithoutFormatting()),
+                            Integer::sum);
+                }
+            }
+        });
+    }
+
+    private static void queryTotalAndTomeSkillPoints() {
+        totalSkillPoints = new EnumMap<>(Skill.class);
+        tomeSkillPoints = new EnumMap<>(Skill.class);
+
+        ScriptedContainerQuery query = ScriptedContainerQuery.builder("Total and Tome Skill Point Query")
+                .onError(msg -> WynntilsMod.warn("Failed to query skill points: " + msg))
+                .then(QueryStep.useItemInHotbar(CharacterModel.CHARACTER_INFO_SLOT)
+                        .expectContainerTitle(ContainerModel.CHARACTER_INFO_NAME)
+                        .verifyContentChange((container, changes, changeType) ->
+                                verifyChange(container, changes, changeType, CONTENT_BOOK_SLOT))
+                        .processIncomingContainer(TreeLoader::processTotalSkillPoints))
+                .conditionalThen(
+                        TreeLoader::checkTomesUnlocked,
+                        QueryStep.clickOnSlot(TOME_SLOT)
+                                .expectContainerTitle(ContainerModel.MASTERY_TOMES_NAME)
+                                .verifyContentChange((container, changes, changeType) ->
+                                        verifyChange(container, changes, changeType, TOME_MENU_CONTENT_BOOK_SLOT))
+                                .processIncomingContainer(TreeLoader::processTomeSkillPoints))
+                .execute(TreeLoader::calculateAssignedSkillPoints)
+                .build();
+
+        query.executeQuery();
+    }
+
+    private static boolean checkTomesUnlocked(ContainerContent content) {
+        return LoreUtils.getStringLore(content.items().get(TOME_SLOT)).contains("✔");
+    }
+
+    private static void processTotalSkillPoints(ContainerContent content) {
+        for (Integer slot : SKILL_POINT_TOTAL_SLOTS) {
+            Optional<WynnItem> wynnItemOptional =
+                    Models.Item.getWynnItem(content.items().get(slot));
+            if (wynnItemOptional.isPresent() && wynnItemOptional.get() instanceof SkillPointItem skillPoint) {
+                totalSkillPoints.merge(skillPoint.getSkill(), skillPoint.getSkillPoints(), Integer::sum);
+            } else {
+                WynntilsMod.warn("Skill Point Model failed to parse skill point item: "
+                        + LoreUtils.getStringLore(content.items().get(slot)));
+            }
+        }
+    }
+
+    private static void processTomeSkillPoints(ContainerContent content) {
+        ItemStack itemStack = content.items().get(SKILL_POINT_TOME_SLOT);
+        Optional<WynnItem> wynnItemOptional = Models.Item.getWynnItem(itemStack);
+        if (wynnItemOptional.isPresent() && wynnItemOptional.get() instanceof TomeItem tome) {
+            tome.getIdentifications().forEach(x -> {
+                if (x.statType() instanceof SkillStatType skillStat) {
+                    tomeSkillPoints.merge(skillStat.getSkill(), x.value(), Integer::sum);
+                }
+            });
+        } else if (LoreUtils.getStringLore(itemStack).contains("§6Requirements:")) {
+            // no-op, this is a tome that has not been unlocked or is not used by the player
+        } else {
+            WynntilsMod.warn("Skill Point Model failed to parse tome: "
+                    + LoreUtils.getStringLore(content.items().get(SKILL_POINT_TOME_SLOT)));
+        }
+    }
+
+    private static void calculateAssignedSkillPoints() {
+        for (Skill skill : Skill.values()) {
+            assignedSkillPoints.put(
+                    skill,
+                    getTotalSkillPoints(skill)
+                            - getGearSkillPoints(skill)
+                            - getSetBonusSkillPoints(skill)
+                            - getTomeSkillPoints(skill)
+                            - getCraftedSkillPoints(skill)
+                            - getStatusEffectSkillPoints(skill));
+        }
+    }
+
+    public static int getTotalSkillPoints(Skill skill) {
+        return totalSkillPoints.getOrDefault(skill, 0);
+    }
+
+    public static int getGearSkillPoints(Skill skill) {
+        return gearSkillPoints.getOrDefault(skill, 0);
+    }
+
+    public static int getCraftedSkillPoints(Skill skill) {
+        return craftedSkillPoints.getOrDefault(skill, 0);
+    }
+
+    public static int getTomeSkillPoints(Skill skill) {
+        return tomeSkillPoints.getOrDefault(skill, 0);
+    }
+
+    public static int getStatusEffectSkillPoints(Skill skill) {
+        return statusEffectSkillPoints.getOrDefault(skill, 0);
+    }
+
+    public static int getSetBonusSkillPoints(Skill skill) {
+        return setBonusSkillPoints.getOrDefault(skill, 0);
     }
 }

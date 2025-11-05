@@ -546,9 +546,10 @@ public class AbilityTreeWidget extends Widget {
                 case "abilityTree.nodePurple" -> texture = node.unlocked ? purpleActive : purple;
                 case "abilityTree.nodeRed" -> texture = node.unlocked ? redActive : red;
             }
-            if(texture != null && yStart - 25 > y && yStart - 25 < y + botLimit) {
+            if(texture != null && yStart - 25 > y && yStart - 25 < y + 630) {
                 ui.drawImage(texture, xStart, yStart - 25, 125, 125);
-                if(contains(mouseX, mouseY)) {
+                System.out.println(mouseY + " " + ui.sy(y) + (mouseY > ui.sy(y) + 100)); //TODO: klappt nicht :D
+                if(hovered && mouseY > ui.sy(y)) {
                     currentHoveredNode = node;
                 }
             }

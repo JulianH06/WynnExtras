@@ -55,6 +55,8 @@ public class TreeScreen extends WEScreen {
 
     public AbilityTreeWidget abilityWidget;
 
+    Identifier abilityTreeBackground = Identifier.of("wynnextras", "textures/gui/treeloader/abilitytreebackground.png");
+
     public TreeScreen() {
         super(Text.of("Ability Tree Screen"));
         this.trees = TreeData.trees;
@@ -140,7 +142,9 @@ public class TreeScreen extends WEScreen {
         int yStart = 0;
         ui.drawRect( xStart - 25, yStart, sectionWidth, (float) (screenHeight * ui.getScaleFactor()), CustomColor.fromHexString("707070"));
         ui.drawRect((float) (screenWidth * ui.getScaleFactor()) / 2 + 25, yStart, sectionWidth, (float) (screenHeight * ui.getScaleFactor()), CustomColor.fromHexString("404040"));
-
+        ui.drawImage(abilityTreeBackground, (float) (screenWidth * ui.getScaleFactor()) / 2 + 25, yStart, sectionWidth, sectionWidth * 0.60f);
+        ui.drawImage(abilityTreeBackground, (float) (screenWidth * ui.getScaleFactor()) / 2 + 25, yStart + sectionWidth * 0.60f, sectionWidth, sectionWidth * 0.60f);
+        ui.drawImage(abilityTreeBackground, (float) (screenWidth * ui.getScaleFactor()) / 2 + 25, yStart + sectionWidth * 0.60f * 2, sectionWidth, sectionWidth * 0.60f);
         //System.out.println(currentViewedTreeData == null);
         if(currentViewedTreeData == null) return;
         //System.out.println(characterUUID);
@@ -179,6 +183,7 @@ public class TreeScreen extends WEScreen {
                 TreeData.getTree(element.data.name).visibleName = element.nameInput.getInput();
             }
         }
+        scrollOffset = 0;
         TreeData.saveAll();
         TreeData.loadAll();
         super.close();
@@ -376,14 +381,20 @@ public class TreeScreen extends WEScreen {
                     TreeLoader.wasStarted = true;
                     TreeLoader.resetTree = true;
                     List<AbilityTreeData.Ability> abilities = TreeLoader.calculateNodeOrder(tree.playerTree.archetypes, TreeLoader.convertNodeMapToList(tree.playerMap), new ArrayList<>(), tree.playerTree);
-                    for(AbilityTreeData.Ability ability : abilities) {
-                        //System.out.println(ability.name);
-                    }
+
                     List<AbilityMapData.Node> nodes = new ArrayList<>();
                     for(AbilityTreeData.Ability ability : abilities) {
                         nodes.add(TreeLoader.getNodeFromAbility(ability, tree.playerMap));
                     }
                     TreeLoader.abilitiesToClick2 = nodes; //TODO: treeloader anpassen
+                    TreeLoader.loadSkillpoints = withSkillpoints;
+                    int[] points = new int[5];
+                    points[0] = tree.strength;
+                    points[1] = tree.dexterity;
+                    points[2] = tree.intelligence;
+                    points[3] = tree.defence;
+                    points[4] = tree.agility;
+                    TreeLoader.skillPointSet = withSkillpoints ? new SavableSkillPointSet(points) : null;
                     TreeLoader.classTree = tree.playerTree;
                 };
             }
@@ -434,277 +445,6 @@ public class TreeScreen extends WEScreen {
                 return true;
             }
         }
-    }
-
-
-    //Wynntils Skillpoint loader, slightly changed to work without having to save the points in their ui
-
-    private static final int TOME_SLOT = 8;
-    private static final int[] SKILL_POINT_TOTAL_SLOTS = {11, 12, 13, 14, 15};
-    private static final int SKILL_POINT_TOME_SLOT = 4;
-    private static final int CONTENT_BOOK_SLOT = 62;
-    private static final int TOME_MENU_CONTENT_BOOK_SLOT = 89;
-
-    private Map<Skill, Integer> totalSkillPoints = new EnumMap<>(Skill.class);
-    private Map<Skill, Integer> gearSkillPoints = new EnumMap<>(Skill.class);
-    private Map<Skill, Integer> craftedSkillPoints = new EnumMap<>(Skill.class);
-    private Map<Skill, Integer> tomeSkillPoints = new EnumMap<>(Skill.class);
-    private Map<Skill, Integer> statusEffectSkillPoints = new EnumMap<>(Skill.class);
-    private Map<Skill, Integer> setBonusSkillPoints = new EnumMap<>(Skill.class);
-    private Map<Skill, Integer> assignedSkillPoints = new EnumMap<>(Skill.class);
-
-    public void loadSkillpoints(SavableSkillPointSet points) {
-        ContainerUtils.closeBackgroundContainer();
-
-        ScriptedContainerQuery query = ScriptedContainerQuery.builder("Loading Skill Point Loadout Query")
-                .onError(msg -> WynntilsMod.warn("Failed to load skill point loadout: " + msg))
-                .then(QueryStep.useItemInHotbar(InventoryUtils.COMPASS_SLOT_NUM)
-                        .expectContainerTitle(ContainerModel.CHARACTER_INFO_NAME)
-                        .verifyContentChange((container, changes, changeType) ->
-                                verifyChange(container, changes, changeType, CONTENT_BOOK_SLOT))
-                        .processIncomingContainer((container) -> loadSkillPointsOnServer(container, points)))
-                .build();
-        query.executeQuery();
-    }
-
-    private void loadSkillPointsOnServer(ContainerContent containerContent, SavableSkillPointSet points) {
-        // we need to figure out which points we can subtract from first to actually allow assigning for positive points
-        Map<Skill, Integer> negatives = new EnumMap<>(Skill.class);
-        Map<Skill, Integer> positives = new EnumMap<>(Skill.class);
-        for (int i = 0; i < Skill.values().length; i++) {
-            int buildTarget = points.getSkillPointsAsArray()[i];
-            int difference = buildTarget - getAssignedSkillPoints(Skill.values()[i]);
-
-            // no difference automatically dropped here
-            if (difference > 0) {
-                positives.put(Skill.values()[i], difference);
-            } else if (difference < 0) {
-                negatives.put(Skill.values()[i], difference);
-            }
-        }
-
-        boolean confirmationCompleted = false;
-        for (Map.Entry<Skill, Integer> entry : negatives.entrySet()) {
-            int difference5s = Math.abs(entry.getValue()) / 5;
-            int difference1s = Math.abs(entry.getValue()) % 5;
-
-            for (int i = 0; i < difference5s; i++) {
-                ContainerUtils.shiftClickOnSlot(
-                        SKILL_POINT_TOTAL_SLOTS[entry.getKey().ordinal()],
-                        containerContent.containerId(),
-                        GLFW.GLFW_MOUSE_BUTTON_RIGHT,
-                        containerContent.items());
-                if (!confirmationCompleted) {
-                    // confirmation required, force loop to repeat this iteration
-                    i--;
-                    confirmationCompleted = true;
-                }
-            }
-            for (int i = 0; i < difference1s; i++) {
-                ContainerUtils.clickOnSlot(
-                        SKILL_POINT_TOTAL_SLOTS[entry.getKey().ordinal()],
-                        containerContent.containerId(),
-                        GLFW.GLFW_MOUSE_BUTTON_RIGHT,
-                        containerContent.items());
-                if (!confirmationCompleted) {
-                    // needs to exist in both loops in case of 1s only
-                    i--;
-                    confirmationCompleted = true;
-                }
-            }
-        }
-
-        for (Map.Entry<Skill, Integer> entry : positives.entrySet()) {
-            int difference5s = Math.abs(entry.getValue()) / 5;
-            int difference1s = Math.abs(entry.getValue()) % 5;
-
-            for (int i = 0; i < difference5s; i++) {
-                ContainerUtils.shiftClickOnSlot(
-                        SKILL_POINT_TOTAL_SLOTS[entry.getKey().ordinal()],
-                        containerContent.containerId(),
-                        GLFW.GLFW_MOUSE_BUTTON_LEFT,
-                        containerContent.items());
-            }
-            for (int i = 0; i < difference1s; i++) {
-                ContainerUtils.clickOnSlot(
-                        SKILL_POINT_TOTAL_SLOTS[entry.getKey().ordinal()],
-                        containerContent.containerId(),
-                        GLFW.GLFW_MOUSE_BUTTON_LEFT,
-                        containerContent.items());
-            }
-        }
-
-        // Server needs 2 ticks, give a couple extra to be safe
-        Managers.TickScheduler.scheduleLater(this::populateSkillPoints, 4);
-    }
-
-    public int getAssignedSkillPoints(Skill skill) {
-        return assignedSkillPoints.getOrDefault(skill, 0);
-    }
-
-    public void populateSkillPoints() {
-        ContainerUtils.closeBackgroundContainer();
-
-        Managers.TickScheduler.scheduleNextTick(() -> {
-            assignedSkillPoints = new EnumMap<>(Skill.class);
-            calculateGearSkillPoints();
-            calculateStatusEffectSkillPoints();
-            queryTotalAndTomeSkillPoints();
-        });
-    }
-
-    private boolean verifyChange(ContainerContent content, Int2ObjectFunction<ItemStack> changes, ContainerContentChangeType changeType, int contentBookSlot) {
-        return changeType == ContainerContentChangeType.SET_CONTENT && changes.containsKey(contentBookSlot) && ((ItemStack)content.items().get(contentBookSlot)).getItem() == Items.POTION;
-    }
-
-    private void calculateGearSkillPoints() {
-        gearSkillPoints = new EnumMap<>(Skill.class);
-        craftedSkillPoints = new EnumMap<>(Skill.class);
-        setBonusSkillPoints = new EnumMap<>(Skill.class);
-
-        for (ItemStack itemStack : Models.Inventory.getEquippedItems()) {
-            calculateSingleGearSkillPoints(itemStack);
-        }
-
-        Models.Set.getUniqueSetNames().forEach(name -> {
-            int trueCount = Models.Set.getTrueCount(name);
-            Models.Set.getSetInfo(name).getBonusForItems(trueCount).forEach((bonus, value) -> {
-                if (bonus instanceof SkillStatType skillStat) {
-                    setBonusSkillPoints.merge(skillStat.getSkill(), value, Integer::sum);
-                }
-            });
-        });
-    }
-
-    private void calculateSingleGearSkillPoints(ItemStack itemStack) {
-        Optional<WynnItem> wynnItemOptional = Models.Item.getWynnItem(itemStack);
-        if (wynnItemOptional.isEmpty()) return; // Empty slot
-
-        if (wynnItemOptional.get() instanceof GearItem gear) {
-            gear.getIdentifications().forEach(x -> {
-                if (x.statType() instanceof SkillStatType skillStat) {
-                    gearSkillPoints.merge(skillStat.getSkill(), x.value(), Integer::sum);
-                }
-            });
-
-        } else if (wynnItemOptional.get() instanceof CraftedGearItem craftedGear) {
-            craftedGear.getIdentifications().forEach(x -> {
-                if (x.statType() instanceof SkillStatType skillStat) {
-                    craftedSkillPoints.merge(skillStat.getSkill(), x.value(), Integer::sum);
-                }
-            });
-        } else {
-            WynntilsMod.warn("Skill Point Model failed to parse gear: " + LoreUtils.getStringLore(itemStack));
-        }
-    }
-
-    private void calculateStatusEffectSkillPoints() {
-        statusEffectSkillPoints = new EnumMap<>(Skill.class);
-        Models.StatusEffect.getStatusEffects().forEach(statusEffect -> {
-            for (Skill skill : Skill.values()) {
-                if (statusEffect.getName().contains(skill.getDisplayName())) {
-                    statusEffectSkillPoints.merge(
-                            skill,
-                            Integer.parseInt(statusEffect.getModifier().getStringWithoutFormatting()),
-                            Integer::sum);
-                }
-            }
-        });
-    }
-
-    private void queryTotalAndTomeSkillPoints() {
-        totalSkillPoints = new EnumMap<>(Skill.class);
-        tomeSkillPoints = new EnumMap<>(Skill.class);
-
-        ScriptedContainerQuery query = ScriptedContainerQuery.builder("Total and Tome Skill Point Query")
-                .onError(msg -> WynntilsMod.warn("Failed to query skill points: " + msg))
-                .then(QueryStep.useItemInHotbar(CharacterModel.CHARACTER_INFO_SLOT)
-                        .expectContainerTitle(ContainerModel.CHARACTER_INFO_NAME)
-                        .verifyContentChange((container, changes, changeType) ->
-                                verifyChange(container, changes, changeType, CONTENT_BOOK_SLOT))
-                        .processIncomingContainer(this::processTotalSkillPoints))
-                .conditionalThen(
-                        this::checkTomesUnlocked,
-                        QueryStep.clickOnSlot(TOME_SLOT)
-                                .expectContainerTitle(ContainerModel.MASTERY_TOMES_NAME)
-                                .verifyContentChange((container, changes, changeType) ->
-                                        verifyChange(container, changes, changeType, TOME_MENU_CONTENT_BOOK_SLOT))
-                                .processIncomingContainer(this::processTomeSkillPoints))
-                .execute(this::calculateAssignedSkillPoints)
-                .build();
-
-        query.executeQuery();
-    }
-
-    private boolean checkTomesUnlocked(ContainerContent content) {
-        return LoreUtils.getStringLore(content.items().get(TOME_SLOT)).contains("✔");
-    }
-
-    private void processTotalSkillPoints(ContainerContent content) {
-        for (Integer slot : SKILL_POINT_TOTAL_SLOTS) {
-            Optional<WynnItem> wynnItemOptional =
-                    Models.Item.getWynnItem(content.items().get(slot));
-            if (wynnItemOptional.isPresent() && wynnItemOptional.get() instanceof SkillPointItem skillPoint) {
-                totalSkillPoints.merge(skillPoint.getSkill(), skillPoint.getSkillPoints(), Integer::sum);
-            } else {
-                WynntilsMod.warn("Skill Point Model failed to parse skill point item: "
-                        + LoreUtils.getStringLore(content.items().get(slot)));
-            }
-        }
-    }
-
-    private void processTomeSkillPoints(ContainerContent content) {
-        ItemStack itemStack = content.items().get(SKILL_POINT_TOME_SLOT);
-        Optional<WynnItem> wynnItemOptional = Models.Item.getWynnItem(itemStack);
-        if (wynnItemOptional.isPresent() && wynnItemOptional.get() instanceof TomeItem tome) {
-            tome.getIdentifications().forEach(x -> {
-                if (x.statType() instanceof SkillStatType skillStat) {
-                    tomeSkillPoints.merge(skillStat.getSkill(), x.value(), Integer::sum);
-                }
-            });
-        } else if (LoreUtils.getStringLore(itemStack).contains("§6Requirements:")) {
-            // no-op, this is a tome that has not been unlocked or is not used by the player
-        } else {
-            WynntilsMod.warn("Skill Point Model failed to parse tome: "
-                    + LoreUtils.getStringLore(content.items().get(SKILL_POINT_TOME_SLOT)));
-        }
-    }
-
-    private void calculateAssignedSkillPoints() {
-        for (Skill skill : Skill.values()) {
-            assignedSkillPoints.put(
-                    skill,
-                    getTotalSkillPoints(skill)
-                            - getGearSkillPoints(skill)
-                            - getSetBonusSkillPoints(skill)
-                            - getTomeSkillPoints(skill)
-                            - getCraftedSkillPoints(skill)
-                            - getStatusEffectSkillPoints(skill));
-        }
-    }
-
-    public int getTotalSkillPoints(Skill skill) {
-        return totalSkillPoints.getOrDefault(skill, 0);
-    }
-
-    public int getGearSkillPoints(Skill skill) {
-        return gearSkillPoints.getOrDefault(skill, 0);
-    }
-
-    public int getCraftedSkillPoints(Skill skill) {
-        return craftedSkillPoints.getOrDefault(skill, 0);
-    }
-
-    public int getTomeSkillPoints(Skill skill) {
-        return tomeSkillPoints.getOrDefault(skill, 0);
-    }
-
-    public int getStatusEffectSkillPoints(Skill skill) {
-        return statusEffectSkillPoints.getOrDefault(skill, 0);
-    }
-
-    public int getSetBonusSkillPoints(Skill skill) {
-        return setBonusSkillPoints.getOrDefault(skill, 0);
     }
 }
 //TODO: ADJUST COLOR OF THE DROPDOWN ARROW

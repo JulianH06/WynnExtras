@@ -103,8 +103,6 @@ public class TreeTabWidget extends PVScreen.TabWidget {
 
     SaveButtonWidget saveButtonWidget;
 
-    List<NodeWidget> nodeWidgets = new ArrayList<>();
-
     public static AbilityMapData.Node currentHoveredNode = null;
 
     public static boolean loaded = false;
@@ -113,7 +111,6 @@ public class TreeTabWidget extends PVScreen.TabWidget {
 
     public TreeTabWidget() {
         super(0, 0, 0, 0);
-        nodeWidgets.clear();
         scrollOffset = 0;
         treeSearchBar = null;
         if(selectedCharacter != null) {
@@ -180,7 +177,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
             return;
         }
 
-        boolean hasNoAssignedSkillpoints = (selectedCharacter.getSkillPoints().getStrength() == 0) && (selectedCharacter.getSkillPoints().getDexterity() == 0) && (selectedCharacter.getSkillPoints().getIntelligence() == 0) && (selectedCharacter.getSkillPoints().getDefence() == 0) && (selectedCharacter.getSkillPoints().getAgility() == 0);
+        boolean hasNoAssignedSkillpoints = (selectedCharacter.getSkillPoints().getStrength() == 0) && (selectedCharacter.getSkillPoints().getDexterity() == 0) && (selectedCharacter.getSkillPoints().getIntelligence() == 0) && (Math.max(selectedCharacter.getSkillPoints().getDefence(), selectedCharacter.getSkillPoints().getDefense())== 0) && (selectedCharacter.getSkillPoints().getAgility() == 0);
 
         if(playerTree.pages.isEmpty() && hasNoAssignedSkillpoints) {
             ui.drawCenteredText("This Player has their build stats private.", x + 900, y + 365, CustomColor.fromHexString("FF0000"), 4f);
@@ -262,7 +259,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         ui.drawImage(intelligenceTexture, x + 440, y + 170, 75, 75);
 
         ui.drawCenteredText("Defence", x + 620 + 37.5f, y + 150, CustomColor.fromHexString("fc5454"));
-        ui.drawCenteredText(String.valueOf(selectedCharacter.getSkillPoints().getDefence()), x + 620 + 37.5f, y + 270, CustomColor.fromHexString("fc5454"));
+        ui.drawCenteredText(String.valueOf(Math.max(selectedCharacter.getSkillPoints().getDefence(), selectedCharacter.getSkillPoints().getDefense())), x + 620 + 37.5f, y + 270, CustomColor.fromHexString("fc5454"));
         ui.drawImage(defenceTexture, x + 620, y + 170, 75, 75);
 
         ui.drawCenteredText("Agility", x + 800 + 37.5f, y + 150, CustomColor.fromHexString("fcfcfc"));
@@ -356,7 +353,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
 
         abilityWidget.drawNodeTooltip(ctx, mouseX, mouseY);
 
-        AbilityTreeData treeData = AbilityTreeCache.getClassTree(getClassName(selectedCharacter).toLowerCase());
+        AbilityTreeData treeData = AbilityTreeCache.getClassTree(selectedCharacter.getType().toLowerCase());
         if(treeData != null) {
             if(selectedCharacter != null) {
                 saveButtonWidget.setClassTree(treeData);
@@ -400,46 +397,8 @@ public class TreeTabWidget extends PVScreen.TabWidget {
 //                }
 //            }
         }
-    }
+        //System.out.println(y);
+        ui.drawRect(x + 950, y + 100, 100, 550);
 
-    public static class NodeWidget extends Widget {
-        AbilityMapData.Node node;
-        int x;
-        int y;
-
-        public NodeWidget(int x, int y, AbilityMapData.Node node) {
-            super(0, 0, 75, 75);
-            this.node = node;
-            this.x = x;
-            this.y = y;
-        }
-
-        @Override
-        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            int xStart = x + node.coordinates.x * 75 + 925;
-            int yStart = y + 75 + node.coordinates.y * 75 - PVScreen.scrollOffset;
-
-            setBounds(xStart + 25, yStart, 75, 75);
-
-            Identifier texture = null;
-            switch (((AbilityMapData.Icon.IconValue) ((AbilityMapData.Icon) node.meta.icon).value).name) {
-                case "abilityTree.nodeWarrior" -> texture = node.unlocked ? warriorActive : warrior;
-                case "abilityTree.nodeShaman" -> texture = node.unlocked ? shamanActive : shaman;
-                case "abilityTree.nodeArcher" -> texture = node.unlocked ? archerActive : archer;
-                case "abilityTree.nodeMage" -> texture = node.unlocked ? mageActive : mage;
-                case "abilityTree.nodeAssassin" -> texture = node.unlocked ? assassinActive : assassin;
-                case "abilityTree.nodeWhite" -> texture = node.unlocked ? whiteActive : white;
-                case "abilityTree.nodeYellow" -> texture = node.unlocked ? yellowActive : yellow;
-                case "abilityTree.nodeBlue" -> texture = node.unlocked ? blueActive : blue;
-                case "abilityTree.nodePurple" -> texture = node.unlocked ? purpleActive : purple;
-                case "abilityTree.nodeRed" -> texture = node.unlocked ? redActive : red;
-            }
-            if(texture != null && yStart - 25 > y && yStart - 25 < y + 630) {
-                ui.drawImage(texture, xStart, yStart - 25, 125, 125);
-                if(hovered) {
-                    currentHoveredNode = node;
-                }
-            }
-        }
     }
 }

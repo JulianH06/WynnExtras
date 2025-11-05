@@ -12,10 +12,17 @@ import julianh06.wynnextras.features.profileviewer.PV;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.sound.SoundEvents;
 
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class CommandLoader implements WELoader {
+    private static final ScheduledExecutorService SCHEDULER = Executors.newSingleThreadScheduledExecutor();
+
     public CommandLoader() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             LiteralArgumentBuilder<FabricClientCommandSource> base = ClientCommandManager.literal("WynnExtras");
@@ -43,7 +50,6 @@ public class CommandLoader implements WELoader {
             dispatcher.register(
                     ClientCommandManager.literal("pv")
                             .executes(ctx -> {
-                                // Kein Argument
                                 PV.open(McUtils.playerName());
                                 return 1;
                             })
@@ -55,6 +61,18 @@ public class CommandLoader implements WELoader {
                                                 return 1;
                                             })
                             )
+            );
+
+            dispatcher.register(
+                ClientCommandManager.literal("dwoc").executes(ctx -> {
+                    McUtils.player().networkHandler.sendChatCommand("emote explode");
+                    SCHEDULER.schedule(() -> {
+                        MinecraftClient.getInstance().execute(() -> {
+                            McUtils.playSoundUI(SoundEvents.ENTITY_GENERIC_EXPLODE.value());
+                        });
+                    }, 600, TimeUnit.MILLISECONDS);
+                    return 1;
+                })
             );
         });
     }
