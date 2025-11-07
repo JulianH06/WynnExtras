@@ -1,5 +1,8 @@
 package julianh06.wynnextras.mixin;
 
+import com.wynntils.core.components.Services;
+import com.wynntils.services.chat.ChatTab;
+import com.wynntils.services.chat.ChatTabService;
 import julianh06.wynnextras.features.chat.ChatManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
@@ -14,7 +17,7 @@ public class ChatScreenMixin {
 
     @Inject(method = "sendMessage", at = @At("HEAD"), cancellable = true)
     private void onSendMessage(String message, boolean addToHistory, CallbackInfo ci) {
-        if (message == null || message.isEmpty()) return;
+        if (message == null || message.isEmpty() || ChatManager.currentChannel == ChatManager.ChatChannel.ALL) return;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         ClientPlayerEntity player = mc.player;

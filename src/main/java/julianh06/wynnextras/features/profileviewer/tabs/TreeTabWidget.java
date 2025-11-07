@@ -12,6 +12,7 @@ import julianh06.wynnextras.features.profileviewer.Searchbar;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
+import julianh06.wynnextras.features.profileviewer.data.SkillPoints;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.UI.AbilityTreeWidget;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -99,6 +100,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
     static Identifier questSearchbarTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questsearchbar.png");
     static Identifier questSearchbarTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questsearchbar_dark.png");
 
+
     int scrollOffset;
 
     SaveButtonWidget saveButtonWidget;
@@ -123,6 +125,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        scrollOffset = PVScreen.scrollOffset;
         if(PV.currentPlayerData == null) return;
         loaded = false;
         if(treeSearchBar == null) {
@@ -133,7 +136,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
             ui.drawCenteredText("Select a character to view ability trees.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
             return;
         }
-        if(selectedCharacter.getSkillPoints() == null) return;
+        //if(selectedCharacter.getSkillPoints() == null) return;
 
         String characterUUID = PV.currentPlayerData.getCharacters().entrySet().stream()
                 .filter(e -> e.getValue().equals(selectedCharacter))
@@ -143,7 +146,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
 
         if(saveButtonWidget != null) {
             saveButtonWidget.setCharacterUUID(characterUUID);
-            saveButtonWidget.setBounds(0, 100, 100, 100);
+            saveButtonWidget.setBounds(x + 280,  y + 424, 400, 225);
         }
 
         currentHoveredNode = null;
@@ -177,15 +180,27 @@ public class TreeTabWidget extends PVScreen.TabWidget {
             return;
         }
 
-        boolean hasNoAssignedSkillpoints = (selectedCharacter.getSkillPoints().getStrength() == 0) && (selectedCharacter.getSkillPoints().getDexterity() == 0) && (selectedCharacter.getSkillPoints().getIntelligence() == 0) && (Math.max(selectedCharacter.getSkillPoints().getDefence(), selectedCharacter.getSkillPoints().getDefense())== 0) && (selectedCharacter.getSkillPoints().getAgility() == 0);
+        boolean hasNoAssignedSkillpoints = selectedCharacter.getSkillPoints() == null;
+        if(!hasNoAssignedSkillpoints) hasNoAssignedSkillpoints = (selectedCharacter.getSkillPoints().getStrength() == 0) && (selectedCharacter.getSkillPoints().getDexterity() == 0) && (selectedCharacter.getSkillPoints().getIntelligence() == 0) && (Math.max(selectedCharacter.getSkillPoints().getDefence(), selectedCharacter.getSkillPoints().getDefense())== 0) && (selectedCharacter.getSkillPoints().getAgility() == 0);
 
         if(playerTree.pages.isEmpty() && hasNoAssignedSkillpoints) {
             ui.drawCenteredText("This Player has their build stats private.", x + 900, y + 365, CustomColor.fromHexString("FF0000"), 4f);
             return;
         }
 
-        if(selectedCharacter != null) {
-            saveButtonWidget = new SaveButtonWidget(PV.currentPlayerData.getUsername(), selectedCharacter.getType(), selectedCharacter.getSkillPoints(), tree, playerTree);
+        if(selectedCharacter != null && saveButtonWidget == null) {
+            SkillPoints points;
+            if(hasNoAssignedSkillpoints) {
+                points = new SkillPoints();
+                points.setStrength(0);
+                points.setDexterity(0);
+                points.setIntelligence(0);
+                points.setDefence(0);
+                points.setAgility(0);
+            } else {
+                points = selectedCharacter.getSkillPoints();
+            }
+            saveButtonWidget = new SaveButtonWidget(PV.currentPlayerData.getUsername(), selectedCharacter.getType(), points, tree, playerTree);
             children.add(saveButtonWidget);
         }
 
@@ -204,7 +219,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
 
         loaded = true;
 
-        PVScreen.scrollOffset = Math.min(2700, PVScreen.scrollOffset);
+        scrollOffset = Math.min(2700, scrollOffset);
 
         Set<String> unlockedIds = new HashSet<>();
         Set<Pair<Integer, Integer>> connectorCoordinates = new HashSet<>();
@@ -247,30 +262,27 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         }
 
         ui.drawCenteredText("Strength", x + 80 + 37.5f, y + 150, CustomColor.fromHexString("00a800"));
-        ui.drawCenteredText(String.valueOf(selectedCharacter.getSkillPoints().getStrength()), x + 80 + 37.5f, y + 270, CustomColor.fromHexString("00a800"));
+        ui.drawCenteredText(hasNoAssignedSkillpoints ? "unknown" : String.valueOf(selectedCharacter.getSkillPoints().getStrength()), x + 80 + 37.5f, y + 270, CustomColor.fromHexString("00a800"));
         ui.drawImage(strengthTexture, x + 80, y + 170, 75, 75);
 
         ui.drawCenteredText("Dexterity", x + 260 + 37.5f, y + 150, CustomColor.fromHexString("fcfc54"));
-        ui.drawCenteredText(String.valueOf(selectedCharacter.getSkillPoints().getDexterity()), x + 260 + 37.5f, y + 270, CustomColor.fromHexString("fcfc54"));
+        ui.drawCenteredText(hasNoAssignedSkillpoints ? "unknown" : String.valueOf(selectedCharacter.getSkillPoints().getDexterity()), x + 260 + 37.5f, y + 270, CustomColor.fromHexString("fcfc54"));
         ui.drawImage(dexterityTexture, x + 260, y + 170, 75, 75);
 
         ui.drawCenteredText("Intelligence", x + 440 + 37.5f, y + 150, CustomColor.fromHexString("54fcfc"));
-        ui.drawCenteredText(String.valueOf(selectedCharacter.getSkillPoints().getIntelligence()), x + 440 + 37.5f, y + 270, CustomColor.fromHexString("54fcfc"));
+        ui.drawCenteredText(hasNoAssignedSkillpoints ? "unknown" : String.valueOf(selectedCharacter.getSkillPoints().getIntelligence()), x + 440 + 37.5f, y + 270, CustomColor.fromHexString("54fcfc"));
         ui.drawImage(intelligenceTexture, x + 440, y + 170, 75, 75);
 
         ui.drawCenteredText("Defence", x + 620 + 37.5f, y + 150, CustomColor.fromHexString("fc5454"));
-        ui.drawCenteredText(String.valueOf(Math.max(selectedCharacter.getSkillPoints().getDefence(), selectedCharacter.getSkillPoints().getDefense())), x + 620 + 37.5f, y + 270, CustomColor.fromHexString("fc5454"));
+        ui.drawCenteredText(hasNoAssignedSkillpoints ? "unknown" : String.valueOf(Math.max(selectedCharacter.getSkillPoints().getDefence(), selectedCharacter.getSkillPoints().getDefense())), x + 620 + 37.5f, y + 270, CustomColor.fromHexString("fc5454"));
         ui.drawImage(defenceTexture, x + 620, y + 170, 75, 75);
 
         ui.drawCenteredText("Agility", x + 800 + 37.5f, y + 150, CustomColor.fromHexString("fcfcfc"));
-        ui.drawCenteredText(String.valueOf(selectedCharacter.getSkillPoints().getAgility()), x + 800 + 37.5f, y + 270, CustomColor.fromHexString("fcfcfc"));
+        ui.drawCenteredText(hasNoAssignedSkillpoints ? "unknown" : String.valueOf(selectedCharacter.getSkillPoints().getAgility()), x + 800 + 37.5f, y + 270, CustomColor.fromHexString("fcfcfc"));
         ui.drawImage(agilityTexture, x + 800, y + 170, 75, 75);
 
-        ui.drawCenteredText("Save", x + 285 + 37.5f, y + 510, CustomColor.fromHexString("FFFFFF"), 6f);
-        ui.drawCenteredText("Tree", x + 285 + 37.5f, y + 585, CustomColor.fromHexString("FFFFFF"), 6f);
-
-        ui.drawCenteredText("Save &", x + 775 + 37.5f, y + 510, CustomColor.fromHexString("FFFFFF"), 6f);
-        ui.drawCenteredText("Load", x + 775 + 37.5f, y + 585, CustomColor.fromHexString("FFFFFF"), 6f);
+        //ui.drawCenteredText("Save &", x + 775 + 37.5f, y + 510, CustomColor.fromHexString("FFFFFF"), 6f);
+        //ui.drawCenteredText("Load", x + 775 + 37.5f, y + 585, CustomColor.fromHexString("FFFFFF"), 6f);
 
 
         //ui.drawRect(x + 900, y, 900, height, CustomColor.fromHexString("000000"));
@@ -281,7 +293,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         for(List<AbilityMapData.Node> nodes : tree.pages.values()) {
             int yStart = 0;
             for (AbilityMapData.Node node : nodes) {
-                yStart = y + 75 + node.coordinates.y * 75 - PVScreen.scrollOffset;
+                yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
                 if (node.type.equals("ability")) {
                     abilities.add(node);
                 } else {
@@ -300,6 +312,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
 
         abilityWidget.setPlayerTree(playerTree);
         abilityWidget.setClassTree(tree);
+        abilityWidget.setScrollOffset(scrollOffset);
         if(searchBar != null) {
             abilityWidget.setSearchInput(searchBar.getInput());
         }
@@ -338,67 +351,49 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         if(selectedCharacter == null) {
             return;
         }
-        if(selectedCharacter.getSkillPoints() == null) return;
 
         if(!loaded) return;
-
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(borderTextureDark, x, y, 1800, 750);
-        } else {
-            ui.drawImage(borderTexture, x, y, 1800, 750);
-        }
-        ui.drawCenteredText( PV.currentPlayerData.getUsername() + "'s build for " + getClassName(selectedCharacter), x + 900, y + 50, CustomColor.fromHexString("FFFFFF"), 3.9f);
-        ui.drawCenteredText( "coming soon", x + 730, y + 530, CustomColor.fromHexString("FF0000"), 6f);
-        ui.drawCenteredText( "coming soon", x + 240, y + 530, CustomColor.fromHexString("FF0000"), 6f);
-
-        abilityWidget.drawNodeTooltip(ctx, mouseX, mouseY);
 
         AbilityTreeData treeData = AbilityTreeCache.getClassTree(selectedCharacter.getType().toLowerCase());
         if(treeData != null) {
             if(selectedCharacter != null) {
                 saveButtonWidget.setClassTree(treeData);
-                children.add(saveButtonWidget);
             }
-//            if(treeData.pages != null) {
-//                for(Map<String, AbilityTreeData.Ability> pagee : treeData.pages.values()) {
-//                    for(AbilityTreeData.Ability ability : pagee.values()) {
-//                        if(treeSearchBar.getInput().isEmpty() || ability.name == null) {
-//                            continue;
-//                        }
-//                        if(!ability.name.toLowerCase().contains(treeSearchBar.getInput().toLowerCase())) {
-//                            continue;
-//                        }
-//                        int yStart = y + 75 + ability.coordinates.y * 75 - PVScreen.scrollOffset + (450 * (ability.page - 1));
-//                        if(yStart - 25 > y && yStart - 25 < y + 630) {
-//                            ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, x + ability.coordinates.x * 75 + 943 + 90, yStart - 7 + 90, CustomColor.fromHexString("FFFF00"));
-//                        }
-//                    }
-//                }
-//                if(currentHoveredNode == null) return;
-//                Map<String, AbilityTreeData.Ability> page = treeData.pages.get(currentHoveredNode.meta.page);
-//                if(page != null) {
-//                    AbilityTreeData.Ability ability = null;
-//                    for(AbilityTreeData.Ability abilityy : page.values()) {
-//                        //System.out.println("---");
-//                        //System.out.println(abilityy.coordinates.x + " " + abilityy.coordinates.y + " " + currentHoveredNode.coordinates.x + " " + currentHoveredNode.coordinates.y);
-//                        if(abilityy.coordinates.x == (currentHoveredNode.coordinates.x) &&
-//                                (abilityy.coordinates.y == (currentHoveredNode.coordinates.y % 6) || (currentHoveredNode.coordinates.y % 6 == 0) && (abilityy.coordinates.y % 6 == 0) )) {
-//                            ability = abilityy;
-//                            break;
-//                        }
-//                    }
-//                    if(ability != null) {
-//                        if(ability.description != null && ability.name != null) {
-//                            List<String> description = new ArrayList<>(ability.description);
-//                            description.addFirst(ability.name);
-//                            ctx.drawTooltip(McUtils.mc().textRenderer, parseStyledHtml(description), mouseX, mouseY);
-//                        }
-//                    }
-//                }
-//            }
+            if(treeData.pages != null) {
+                for(Map<String, AbilityTreeData.Ability> pagee : treeData.pages.values()) {
+                    for(AbilityTreeData.Ability ability : pagee.values()) {
+                        if(treeSearchBar.getInput().isEmpty() || ability.name == null) {
+                            continue;
+                        }
+                        if(!ability.name.toLowerCase().contains(treeSearchBar.getInput().toLowerCase())) {
+                            continue;
+                        }
+                        int yStart = y + 75 + ability.coordinates.y * 75 - PVScreen.scrollOffset + (450 * (ability.page - 1));
+                        if(yStart - 25 > y && yStart - 25 < y + 630) {
+                            ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, x + ability.coordinates.x * 75 + 943 + 90, yStart - 7 + 90, CustomColor.fromHexString("FFFF00"));
+                        }
+                    }
+                }
+            }
         }
+
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+            ui.drawImage(borderTextureDark, x, y, 1800, 750);
+        } else {
+            ui.drawImage(borderTexture, x, y, 1800, 750);
+            //ui.drawRect(x, y, 1800, 750);
+        }
+        ui.drawCenteredText( PV.currentPlayerData.getUsername() + "'s build for " + getClassName(selectedCharacter), x + 900, y + 50, CustomColor.fromHexString("FFFFFF"), 3.9f);
+        //ui.drawCenteredText( "coming soon", x + 730, y + 530, CustomColor.fromHexString("FF0000"), 6f);
+        //ui.drawCenteredText( "coming soon", x + 240, y + 530, CustomColor.fromHexString("FF0000"), 6f);
+
+
+
+
+        abilityWidget.drawNodeTooltip(ctx, mouseX, mouseY);
+
         //System.out.println(y);
-        ui.drawRect(x + 950, y + 100, 100, 550);
+        //ui.drawRect(x + 950, y + 100, 100, 550);
 
     }
 }

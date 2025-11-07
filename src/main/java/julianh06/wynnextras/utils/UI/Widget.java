@@ -192,6 +192,7 @@ public abstract class Widget {
 
     // ---- Utilities ----
     protected boolean contains(int mx, int my) {
+        if(ui == null) return false;
         return mx >= ui.sx(x) && my >= ui.sy(y) && mx < ui.sx(x) + ui.sw(width) && my < ui.sy(y) + ui.sh(height);
     }
 

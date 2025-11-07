@@ -223,7 +223,7 @@ public class WynnExtrasConfig implements ConfigData {
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Totem range")
-    public int totemRange = 10;
+    public float totemRange = 10;
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Dropdown(values = {
@@ -249,7 +249,7 @@ public class WynnExtrasConfig implements ConfigData {
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Eldritchcall range")
-    public int eldritchCallRange = 15;
+    public float eldritchCallRange = 15;
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Dropdown(values = {

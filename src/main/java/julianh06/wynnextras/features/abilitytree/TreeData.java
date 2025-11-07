@@ -21,7 +21,6 @@ public class TreeData {
     public String className;
     public AbilityMapData playerMap;
     public AbilityTreeData playerTree;
-    public List<String> input;
     public static Map<String, TreeData> trees = new HashMap<>();
     public static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 

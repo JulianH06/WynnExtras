@@ -8,6 +8,8 @@ import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.abilitytree.AbilityIdConverter;
 import julianh06.wynnextras.features.abilitytree.TreeData;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
@@ -28,6 +30,11 @@ public class SaveButtonWidget extends Widget {
     private Runnable action;
     public AbilityTreeData classTree = null;
 
+    static Identifier saveButtonTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/savebutton.png");
+    static Identifier saveButtonTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/savebutton_dark.png");
+    static Identifier saveButtonTextureHovered = Identifier.of("wynnextras", "textures/gui/profileviewer/savebuttonhovered.png");
+    static Identifier saveButtonTextureHoveredDark = Identifier.of("wynnextras", "textures/gui/profileviewer/savebuttonhovered_dark.png");
+
     public void setClassTree(AbilityTreeData classTree) {
         this.classTree = classTree;
     }
@@ -40,8 +47,8 @@ public class SaveButtonWidget extends Widget {
                 return;
             }
             TreeLoader.savePlayerAbilityTree(playerName, characterUUID, className.toLowerCase(), skillPoints, classMap, classTree, playerTree);
-            String abilityFileName = playerName + "_" + characterUUID + ".json";
-            AbilityIdConverter.convert(className.toLowerCase(), abilityFileName); // calls method from your new class with class argument
+            //String abilityFileName = playerName + "_" + characterUUID + ".json";
+            //AbilityIdConverter.convert(className.toLowerCase(), abilityFileName); // calls method from your new class with class argument
             TreeData.loadAll();
         };
     }
@@ -62,7 +69,11 @@ public class SaveButtonWidget extends Widget {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-        ui.drawRect(x, y, width, height, CustomColor.fromHexString("FFFFFF"));
+        //ui.drawRect(x, y, width, height, CustomColor.fromHexString("FFFFFF"));
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) ui.drawImage(hovered ? saveButtonTextureHoveredDark : saveButtonTextureDark, x, y, width, height);
+        else ui.drawImage(hovered ? saveButtonTextureHovered : saveButtonTexture, x, y, width, height);
+        ui.drawCenteredText("Save", x + 287.5f, y + 80, CustomColor.fromHexString("FFFFFF"), 6f);
+        ui.drawCenteredText("Tree", x + 287.5f, y + 155, CustomColor.fromHexString("FFFFFF"), 6f);
     }
 
     public void setCharacterUUID(String characterUUID) {

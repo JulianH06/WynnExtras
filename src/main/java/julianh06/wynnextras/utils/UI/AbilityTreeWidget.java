@@ -113,7 +113,9 @@ public class AbilityTreeWidget extends Widget {
     public static Identifier UP_right_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active9.png");
     public static Identifier up_RIGHT_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active10.png");
 
-    private final String className;
+    public final String className;
+
+    private int scrollOffset;
 
     // Externe UI-Utilities / Textures sollten aus deinem Projekt referenziert werden.
     // (z.B. PV.ui, Textures, CustomColor etc.)
@@ -165,6 +167,10 @@ public class AbilityTreeWidget extends Widget {
         refreshState();
     }
 
+    public void setScrollOffset(int scrollOffset) {
+        this.scrollOffset = scrollOffset;
+    }
+
     public void refreshState() {
         // 1) Reset internen State
         state.reset();
@@ -192,7 +198,7 @@ public class AbilityTreeWidget extends Widget {
         // 5) Beide vorhanden -> erzeuge internen State und NodeWidgets
         state.prepare(this.classTree, this.playerTree);
         for (AbilityMapData.Node n : state.abilities) {
-            NodeWidget w = new NodeWidget(x, y, n, botLimit);
+            NodeWidget w = new NodeWidget(x, y, n, botLimit, scrollOffset);
             w.parent = this;
             nodeWidgets.add(w);
             children.add(w); // GUI-Framework übernimmt Rendering/Input für child widgets
@@ -232,7 +238,7 @@ public class AbilityTreeWidget extends Widget {
 
         // Draw connectors (zuerst)
         for (AbilityMapData.Node node : state.connectors) {
-            int yStart = y + 75 + node.coordinates.y * 75 - PVScreen.scrollOffset;
+            int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
             Identifier tex = connectorTextureFor(node);
             if (tex != null && yStart - 25 > y && yStart - 25 < y + botLimit) {
                 ui.drawImage(tex, x + node.coordinates.x * 75 + 917, yStart - 34, 145, 145);
@@ -243,7 +249,7 @@ public class AbilityTreeWidget extends Widget {
         // Falls nodeWidgets leer (z. B. beim ersten render) sicherstellen, dass refreshState aufgerufen wurde
         if (nodeWidgets.isEmpty() && !state.abilities.isEmpty()) {
             for (AbilityMapData.Node node : state.abilities) {
-                NodeWidget w = new NodeWidget(x, y, node, botLimit);
+                NodeWidget w = new NodeWidget(x, y, node, botLimit, scrollOffset);
                 w.parent = this;
                 nodeWidgets.add(w);
                 children.add(w);
@@ -263,7 +269,7 @@ public class AbilityTreeWidget extends Widget {
                 for (AbilityTreeData.Ability ability : page.values()) {
                     if (ability.name == null) continue;
                     if (ability.name.toLowerCase().contains(search)) {
-                        int yStart = y + 75 + ability.coordinates.y * 75 - PVScreen.scrollOffset + (450 * (ability.page - 1));
+                        int yStart = y + 75 + ability.coordinates.y * 75 - scrollOffset + (450 * (ability.page - 1));
                         if (yStart - 25 > y && yStart - 25 < y + botLimit) {
                             ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7,
                                     x + ability.coordinates.x * 75 + 943 + 90, yStart - 7 + 90,
@@ -484,7 +490,7 @@ public class AbilityTreeWidget extends Widget {
             for (List<AbilityMapData.Node> nodes : this.classTree.pages.values()) {
                 int yStart = 0;
                 for (AbilityMapData.Node node : nodes) {
-                    yStart = y + 75 + node.coordinates.y * 75 - PVScreen.scrollOffset;
+                    yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
                     if (node.meta != null) {
                         if ("ability".equals(node.type) && node.meta.id != null) {
                             node.unlocked = unlockedIds.contains(node.meta.id);
@@ -509,27 +515,26 @@ public class AbilityTreeWidget extends Widget {
         }
     }
 
-    /* ---------------------------
-       NodeWidget: kleine, wiederverwendbare innere Klasse
-       --------------------------- */
     public static class NodeWidget extends Widget {
         AbilityMapData.Node node;
         int x;
         int y;
         int botLimit;
+        int scrollOffset;
 
-        public NodeWidget(int x, int y, AbilityMapData.Node node, int botLimit) {
+        public NodeWidget(int x, int y, AbilityMapData.Node node, int botLimit, int scrollOffset) {
             super(0, 0, 75, 75);
             this.node = node;
             this.x = x;
             this.y = y;
             this.botLimit = botLimit;
+            this.scrollOffset = scrollOffset;
         }
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             int xStart = x + node.coordinates.x * 75 + 925;
-            int yStart = y + 75 + node.coordinates.y * 75 - PVScreen.scrollOffset;
+            int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
 
             setBounds(xStart + 25, yStart, 75, 75);
 
@@ -546,10 +551,9 @@ public class AbilityTreeWidget extends Widget {
                 case "abilityTree.nodePurple" -> texture = node.unlocked ? purpleActive : purple;
                 case "abilityTree.nodeRed" -> texture = node.unlocked ? redActive : red;
             }
-            if(texture != null && yStart - 25 > y && yStart - 25 < y + 630) {
+            if(texture != null && yStart - 25 > y && yStart - 25 < y + botLimit) {
                 ui.drawImage(texture, xStart, yStart - 25, 125, 125);
-                System.out.println(mouseY + " " + ui.sy(y) + (mouseY > ui.sy(y) + 100)); //TODO: klappt nicht :D
-                if(hovered && mouseY > ui.sy(y)) {
+                if(contains(mouseX, mouseY) && mouseY < ui.sy(y + botLimit + 25) && mouseY > ui.sy(y + 100)) {
                     currentHoveredNode = node;
                 }
             }
