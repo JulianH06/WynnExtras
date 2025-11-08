@@ -11,65 +11,132 @@ import java.util.Map;
 public class AbilityTreeDataDeserializer implements JsonDeserializer<AbilityTreeData> {
     @Override
     public AbilityTreeData deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext ctx) throws JsonParseException {
-        AbilityTreeData atd = new AbilityTreeData();
-        atd.pages = new HashMap<>();
+        AbilityTreeData tree = new AbilityTreeData();
+        JsonObject root = json.getAsJsonObject();
 
-        JsonElement root = json;
+        // --- Archetypes ---
+        tree.archetypes = new HashMap<>();
+        if (root.has("archetypes")) {
+            JsonObject archetypesObj = root.getAsJsonObject("archetypes");
+            for (Map.Entry<String, JsonElement> entry : archetypesObj.entrySet()) {
+                String key = entry.getKey();
+                JsonObject val = entry.getValue().getAsJsonObject();
 
-        // Case A: root is an object of pages: { "1": [ ... ], "2": [ ... ] }
-        if (root.isJsonObject()) {
-            JsonObject rootObj = root.getAsJsonObject();
+                AbilityTreeData.Archetype archetype = new AbilityTreeData.Archetype();
+                archetype.name = val.get("name").getAsString();
+                archetype.description = val.get("description").getAsString();
+                archetype.shortDescription = val.get("shortDescription").getAsString();
+                archetype.slot = val.get("slot").getAsInt();
+                archetype.icon = parseIcon(val.get("icon"));
 
-            // Detect whether it's the "map" style (keys are numeric pages) or a normal object (could also contain archetypes)
-            boolean looksLikePages = true;
-            for (Map.Entry<String, JsonElement> e : rootObj.entrySet()) {
-                String key = e.getKey();
-                if (!key.matches("\\d+")) { looksLikePages = false; break; }
+                tree.archetypes.put(key, archetype);
             }
+        }
 
-            if (looksLikePages) {
-                for (Map.Entry<String, JsonElement> entry : rootObj.entrySet()) {
-                    int page = Integer.parseInt(entry.getKey());
-                    JsonElement arr = entry.getValue();
-                    if (!arr.isJsonArray()) continue;
-                    List<AbilityTreeData.Node> nodes = new ArrayList<>();
-                    for (JsonElement el : arr.getAsJsonArray()) {
-                        AbilityTreeData.Node node = ctx.deserialize(el, AbilityTreeData.Node.class);
-                        nodes.add(node);
+        // --- Pages ---
+        tree.pages = new HashMap<>();
+        if (root.has("pages")) {
+            JsonObject pagesObj = root.getAsJsonObject("pages");
+            for (Map.Entry<String, JsonElement> pageEntry : pagesObj.entrySet()) {
+                int pageNumber = Integer.parseInt(pageEntry.getKey());
+                JsonObject abilitiesObj = pageEntry.getValue().getAsJsonObject();
+
+                Map<String, AbilityTreeData.Ability> abilityMap = new HashMap<>();
+                for (Map.Entry<String, JsonElement> abilityEntry : abilitiesObj.entrySet()) {
+                    String abilityId = abilityEntry.getKey();
+                    JsonObject abilityData = abilityEntry.getValue().getAsJsonObject();
+
+                    AbilityTreeData.Ability ability = new AbilityTreeData.Ability();
+                    ability.page = pageNumber;
+                    ability.name = abilityData.get("name").getAsString();
+                    ability.slot = abilityData.has("slot") ? abilityData.get("slot").getAsInt() : 0;
+
+                    // Coordinates
+                    JsonObject coord = abilityData.getAsJsonObject("coordinates");
+                    ability.coordinates = new AbilityTreeData.Coordinates();
+                    ability.coordinates.x = coord.get("x").getAsInt();
+                    ability.coordinates.y = coord.get("y").getAsInt();
+
+                    // Description
+                    JsonElement desc = abilityData.get("description");
+                    if (desc != null && desc.isJsonArray()) {
+                        ability.description = new ArrayList<>();
+                        for (JsonElement line : desc.getAsJsonArray()) {
+                            ability.description.add(line.getAsString());
+                        }
                     }
-                    atd.pages.put(page, nodes);
+
+
+                    // Requirements
+                    if (abilityData.has("requirements")) {
+                        JsonObject req = abilityData.getAsJsonObject("requirements");
+                        AbilityTreeData.Requirements r = new AbilityTreeData.Requirements();
+                        if (req.has("ABILITY_POINTS")) r.ABILITY_POINTS = req.get("ABILITY_POINTS").getAsInt();
+                        if (req.has("NODE")) r.NODE = req.get("NODE").getAsString();
+                        if (req.has("ARCHETYPE") && req.get("ARCHETYPE").isJsonObject()) {
+                            JsonObject ar = req.getAsJsonObject("ARCHETYPE");
+                            AbilityTreeData.ArchetypeRequirement arq = new AbilityTreeData.ArchetypeRequirement();
+                            arq.name = ar.get("name").getAsString();
+                            arq.amount = ar.get("amount").getAsInt();
+                            r.ARCHETYPE = arq;
+                        }
+                        ability.requirements = r;
+                    }
+
+                    // Links
+                    JsonElement links = abilityData.get("links");
+                    if (links != null && links.isJsonArray()) {
+                        ability.links = new ArrayList<>();
+                        for (JsonElement link : links.getAsJsonArray()) {
+                            ability.links.add(link.getAsString());
+                        }
+                    }
+
+
+                    // Locks
+                    JsonElement locks = abilityData.get("locks");
+                    if (locks != null && locks.isJsonArray()) {
+                        ability.locks = new ArrayList<>();
+                        for (JsonElement lock : locks.getAsJsonArray()) {
+                            ability.locks.add(lock.getAsString());
+                        }
+                    }
+
+
+                    // Icon
+                    ability.icon = parseIcon(abilityData.get("icon"));
+
+                    abilityMap.put(abilityId, ability);
                 }
-                return atd;
+
+                tree.pages.put(pageNumber, abilityMap);
             }
-            // Otherwise fall through: maybe the response is an object with other keys (not page map)
         }
 
-        // Case B: root is an array of nodes (character ability map)
-        if (root.isJsonArray()) {
-            for (JsonElement el : root.getAsJsonArray()) {
-                AbilityTreeData.Node node = ctx.deserialize(el, AbilityTreeData.Node.class);
-                int page = 0;
-                if (node != null && node.meta != null) page = node.meta.page;
-                atd.pages.computeIfAbsent(page, k -> new ArrayList<>()).add(node);
-            }
-            return atd;
+
+        return tree;
+    }
+
+    private AbilityTreeData.Icon parseIcon(JsonElement iconElement) {
+        if (!iconElement.isJsonObject()) return null;
+        JsonObject iconObj = iconElement.getAsJsonObject();
+
+        AbilityTreeData.Icon icon = new AbilityTreeData.Icon();
+        icon.format = iconObj.has("format") ? iconObj.get("format").getAsString() : null;
+
+        JsonElement value = iconObj.get("value");
+        if (value.isJsonPrimitive()) {
+            icon.value = value.getAsString();
+        } else if (value.isJsonObject()) {
+            JsonObject valObj = value.getAsJsonObject();
+            AbilityTreeData.Icon.IconValue iv = new AbilityTreeData.Icon.IconValue();
+            iv.id = valObj.has("id") ? valObj.get("id").getAsString() : null;
+            iv.name = valObj.has("name") ? valObj.get("name").getAsString() : null;
+            iv.customModelData = valObj.has("customModelData") ? valObj.get("customModelData") : null;
+            icon.value = iv;
         }
 
-        // Case C: root is object but not numeric keys: maybe an object containing "pages" or "map" field, try heuristics
-        JsonObject obj = root.getAsJsonObject();
-        if (obj.has("pages") && obj.get("pages").isJsonObject()) {
-            JsonObject pagesObj = obj.getAsJsonObject("pages");
-            for (Map.Entry<String, JsonElement> entry : pagesObj.entrySet()) {
-                int page = Integer.parseInt(entry.getKey());
-                JsonArray arr = entry.getValue().getAsJsonArray();
-                List<AbilityTreeData.Node> nodes = new ArrayList<>();
-                for (JsonElement el : arr) nodes.add(ctx.deserialize(el, AbilityTreeData.Node.class));
-                atd.pages.put(page, nodes);
-            }
-            return atd;
-        }
-
-        // fallback: empty structure
-        return atd;
+        return icon;
     }
 }
+

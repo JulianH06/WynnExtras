@@ -16,11 +16,11 @@ import net.minecraft.util.Identifier;
 import java.awt.*;
 import java.net.URI;
 
-public class OpenInBroserButton extends EasyButton {
+public class OpenInBrowserButton extends EasyButton {
     private final String url;
     int scaleFactor;
 
-    public OpenInBroserButton(int x, int y, int height, int width, String url) {
+    public OpenInBrowserButton(int x, int y, int height, int width, String url) {
         super(x, y, height, width, "Open in browser");
         this.url = url;
     }

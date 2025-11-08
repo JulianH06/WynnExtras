@@ -5,15 +5,15 @@ import com.google.gson.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 
-public class NodeDeserializer implements JsonDeserializer<AbilityTreeData.Node> {
+public class NodeDeserializer implements JsonDeserializer<AbilityMapData.Node> {
     @Override
-    public AbilityTreeData.Node deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext ctx) throws JsonParseException {
+    public AbilityMapData.Node deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext ctx) throws JsonParseException {
         JsonObject obj = json.getAsJsonObject();
-        AbilityTreeData.Node node = new AbilityTreeData.Node();
+        AbilityMapData.Node node = new AbilityMapData.Node();
 
         node.type = getAsStringOrNull(obj, "type");
         if (obj.has("coordinates") && obj.get("coordinates").isJsonObject()) {
-            node.coordinates = ctx.deserialize(obj.get("coordinates"), AbilityTreeData.Coordinates.class);
+            node.coordinates = ctx.deserialize(obj.get("coordinates"), AbilityMapData.Coordinates.class);
         }
         if (obj.has("family") && obj.get("family").isJsonArray()) {
             node.family = new ArrayList<>();
@@ -22,7 +22,7 @@ public class NodeDeserializer implements JsonDeserializer<AbilityTreeData.Node> 
 
         if (obj.has("meta") && obj.get("meta").isJsonObject()) {
             JsonObject metaObj = obj.getAsJsonObject("meta");
-            AbilityTreeData.Node.Meta meta = new AbilityTreeData.Node.Meta();
+            AbilityMapData.Node.Meta meta = new AbilityMapData.Node.Meta();
 
             // page
             if (metaObj.has("page") && metaObj.get("page").isJsonPrimitive()) {
@@ -40,9 +40,9 @@ public class NodeDeserializer implements JsonDeserializer<AbilityTreeData.Node> 
                 if (iconEl.isJsonPrimitive()) {
                     meta.icon = iconEl.getAsString();
                 } else if (iconEl.isJsonObject()) {
-                    // Try to parse as AbilityTreeData.Icon (format + value) or as simple Icon object
+                    // Try to parse as AbilityMapData.Icon (format + value) or as simple Icon object
                     try {
-                        AbilityTreeData.Icon parsed = ctx.deserialize(iconEl, AbilityTreeData.Icon.class);
+                        AbilityMapData.Icon parsed = ctx.deserialize(iconEl, AbilityMapData.Icon.class);
                         meta.icon = parsed;
                     } catch (JsonParseException ex) {
                         // fallback to raw object

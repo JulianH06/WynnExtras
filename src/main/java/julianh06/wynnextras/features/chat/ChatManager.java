@@ -17,7 +17,7 @@ public class ChatManager implements WELoader {
 
     public enum ChatChannel { ALL, PARTY, GUILD }
 
-    private static ChatChannel currentChannel = ChatChannel.ALL;
+    public static ChatChannel currentChannel = ChatChannel.ALL;
     private static boolean awaitingRawInput = false;
 
     public static ChatChannel getCurrentChannel() { return currentChannel; }

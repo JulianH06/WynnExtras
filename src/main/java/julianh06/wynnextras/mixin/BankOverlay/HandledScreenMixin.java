@@ -278,6 +278,10 @@ public abstract class HandledScreenMixin {
             }
 
             List<ItemStack> inv = buildInventoryForIndex(indexWithOffset, playerInvIndex);
+            if(inv.isEmpty()) {
+                close();
+                return;
+            }
             List<ItemAnnotation> annotations = annotationCache.computeIfAbsent(indexWithOffset, k -> new ArrayList<>(Collections.nCopies(inv.size(), null)));
 
             int stackIndex = 0;
@@ -380,7 +384,10 @@ public abstract class HandledScreenMixin {
                 color = CustomColor.fromHexString("008000").asInt();
             } else if (!isUnlocked && i != playerInvIndex) {
                 color = CustomColor.fromHexString("FF0000").asInt();
-                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, buyPageStageText, playerXStart + 55, playerYStart + 40, color);
+                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, buyPageStageText + " Buying pages", playerXStart, playerYStart + 10, color);
+                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, "is currently not implemented.", playerXStart, playerYStart + 30, color);
+                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, "To buy pages disable the", playerXStart, playerYStart + 50, color);
+                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, "menu in the config (/we config).", playerXStart, playerYStart + 70, color);
             } else {
                 color = CustomColor.fromHexString("FFFFFF").asInt();
             }
@@ -459,7 +466,15 @@ public abstract class HandledScreenMixin {
 
             for (int j = 0; j < 45; j++) {
                 if (j == 0) {
-                    ItemStack rightArrow = McUtils.containerMenu().getSlot(52).getStack();
+                    ItemStack rightArrow = null;
+                    try {
+                        rightArrow = McUtils.containerMenu().getSlot(52).getStack();
+                    } catch (IndexOutOfBoundsException e) {
+                        retryLoad();
+                        activeInv = -1;
+                        return new ArrayList<>();
+                    }
+                    if(rightArrow == null) return new ArrayList<>();
                     if(rightArrow.getItem() == Items.POTION) {
                         String rawText = rightArrow.getName().getString();
                         String cleanedText = rawText.replaceAll("§[0-9a-fk-or]", "");
@@ -924,7 +939,7 @@ public abstract class HandledScreenMixin {
 
         if(heldItem.getCustomName() != null) {
             if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
-                heldItem = Items.AIR.getDefaultStack();
+                heldItem = oldHeld == null ? Items.AIR.getDefaultStack() : oldHeld;
                 return true;
             }
         }
@@ -950,12 +965,12 @@ public abstract class HandledScreenMixin {
         ItemStack oldHeld = heldItem;
         heldItem = getHeldItem(hoveredIndex + 54, actionType, button);
 
-        if(heldItem.getCustomName() != null) {
-            if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
-                heldItem = Items.AIR.getDefaultStack();
-                return true;
-            }
-        }
+//        if(heldItem.getCustomName() != null) {
+//            if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
+//                heldItem = oldHeld == null ? Items.AIR.getDefaultStack() : oldHeld;
+//                return true;
+//            }
+//        }
 
         if (shouldCancelEmeraldPouch(oldHeld, heldItem)) {
             heldItem = Items.AIR.getDefaultStack();
@@ -1119,7 +1134,7 @@ public abstract class HandledScreenMixin {
                     heldItem.setCount(currentHeld.getCount() - 1);
                 }
             } else {
-                heldItem = currentHeld.copy();
+                heldItem = clickedStack.copy();
             }
         }
 
@@ -1214,7 +1229,9 @@ public abstract class HandledScreenMixin {
             for (Slot slot : BankOverlay.activeInvSlots) {
                 stacks.add(slot.getStack());
             }
-            Pages.BankPages.put(activeInv, stacks);
+            if(activeInv != -1) {
+                Pages.BankPages.put(activeInv, stacks);
+            }
             BankOverlay.activeInvSlots.clear();
             activeInv = 0;
             annotationCache.clear();

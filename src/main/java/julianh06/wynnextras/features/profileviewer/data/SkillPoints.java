@@ -5,6 +5,7 @@ public class SkillPoints {
     private int dexterity;
     private int intelligence;
     private int defence;
+    private int defense; //the api gives me "defense" but ill keep both spellings incase the admins fix it
     private int agility;
 
     public int getStrength() {
@@ -45,6 +46,14 @@ public class SkillPoints {
 
     public void setAgility(int agility) {
         this.agility = agility;
+    }
+
+    public int getDefense() {
+        return defense;
+    }
+
+    public void setDefense(int defense) {
+        this.defense = defense;
     }
 }
 

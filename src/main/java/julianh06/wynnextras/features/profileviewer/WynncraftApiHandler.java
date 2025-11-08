@@ -12,7 +12,11 @@ import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.text.TextColor;
+import net.minecraft.util.Identifier;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -26,6 +30,9 @@ import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @WEModule
 public class WynncraftApiHandler {
@@ -61,7 +68,7 @@ public class WynncraftApiHandler {
 
     private static final String BASE_URL = "https://api.wynncraft.com/v3/player/";
 
-    private String API_KEY;
+    public String API_KEY;
 
     public static CompletableFuture<String> fetchUUID(String playerName) {
         HttpClient client = HttpClient.newHttpClient();
@@ -123,7 +130,7 @@ public class WynncraftApiHandler {
         });
     }
 
-    public static CompletableFuture<AbilityTreeData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {
+    public static CompletableFuture<AbilityMapData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request;
 
@@ -146,10 +153,10 @@ public class WynncraftApiHandler {
 
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
-                .thenApply(WynncraftApiHandler::parseAbilityData);
+                .thenApply(WynncraftApiHandler::parseAbilityMapData);
     }
 
-    public static CompletableFuture<AbilityTreeData> fetchClassAbilityMap(String className) {
+    public static CompletableFuture<AbilityMapData> fetchClassAbilityMap(String className) {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request;
 
@@ -160,7 +167,21 @@ public class WynncraftApiHandler {
 
         return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
-                .thenApply(WynncraftApiHandler::parseAbilityData);
+                .thenApply(WynncraftApiHandler::parseAbilityMapData);
+    }
+
+    public static CompletableFuture<AbilityTreeData> fetchClassAbilityTree(String className) {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request;
+
+        request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.wynncraft.com/v3/ability/tree/" + className))
+                .GET()
+                .build();
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenApply(WynncraftApiHandler::parseAbilityTreeData);
     }
 
     private static PlayerData parsePlayerData(String json) {
@@ -171,11 +192,21 @@ public class WynncraftApiHandler {
         return gson.fromJson(json, PlayerData.class);
     }
 
-    private static AbilityTreeData parseAbilityData(String json) {
+    private static AbilityMapData parseAbilityMapData(String json) {
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(AbilityMapData.class, new AbilityMapDataDeserializer())
+                .registerTypeAdapter(AbilityMapData.Node.class, new NodeDeserializer())
+                .registerTypeAdapter(AbilityMapData.Icon.class, new IconDeserializer())
+                .create();
+
+        return gson.fromJson(json, AbilityMapData.class);
+    }
+
+    private static AbilityTreeData parseAbilityTreeData(String json) {
         Gson gson = new GsonBuilder()
                 .registerTypeAdapter(AbilityTreeData.class, new AbilityTreeDataDeserializer())
-                .registerTypeAdapter(AbilityTreeData.Node.class, new NodeDeserializer())
-                .registerTypeAdapter(AbilityTreeData.Icon.class, new IconDeserializer())
+                .registerTypeAdapter(AbilityMapData.Node.class, new NodeDeserializer())
+                .registerTypeAdapter(AbilityMapData.Icon.class, new IconDeserializer())
                 .create();
 
         return gson.fromJson(json, AbilityTreeData.class);
@@ -214,4 +245,117 @@ public class WynncraftApiHandler {
             e.printStackTrace();
         }
     }
+
+    public static List<Text> parseStyledHtml(List<String> htmlLines) {
+        return htmlLines.stream()
+                .map(line -> parseSpan(line, Style.EMPTY))
+                .collect(Collectors.toList());
+    }
+
+    public static String sanitizeHtmlString(String s) {
+        if (s == null) return "";
+        return s.replaceAll("", "");
+    }
+
+
+    private static Text parseSpan(String html, Style inheritedStyle) {
+        MutableText result = null; // kein leeres Literal als Root
+
+        int index = 0;
+        while (index < html.length()) {
+            int spanStart = html.indexOf("<span", index);
+            if (spanStart == -1) {
+                String remaining = stripHtml(html.substring(index));
+                if (!remaining.isEmpty()) {
+                    MutableText piece = Text.literal(remaining).setStyle(inheritedStyle);
+                    result = (result == null) ? piece : result.append(piece);
+                }
+                break;
+            }
+
+            String before = stripHtml(html.substring(index, spanStart));
+            if (!before.isEmpty()) {
+                MutableText piece = Text.literal(before).setStyle(inheritedStyle);
+                result = (result == null) ? piece : result.append(piece);
+            }
+
+            int tagEnd = html.indexOf(">", spanStart);
+            if (tagEnd == -1) break;
+            String tag = html.substring(spanStart, tagEnd + 1);
+
+            String style = "";
+            Matcher styleMatcher = Pattern.compile("style\\s*=\\s*(['\"])(.*?)\\1").matcher(tag);
+            if (styleMatcher.find()) style = styleMatcher.group(2);
+
+            String classAttr = "";
+            Matcher classMatcher = Pattern.compile("class\\s*=\\s*(['\"])(.*?)\\1").matcher(tag);
+            if (classMatcher.find()) classAttr = classMatcher.group(2);
+
+            int contentStart = tagEnd + 1;
+            int spanEnd = findMatchingSpanEnd(html, contentStart);
+            if (spanEnd == -1) break;
+
+            String inner = html.substring(contentStart, spanEnd);
+            Style newStyle = inheritedStyle;
+
+            // Farbe
+            Matcher colorMatch = Pattern.compile("color:\\s*#([0-9a-fA-F]{6})").matcher(style);
+            if (colorMatch.find()) {
+                int rgb = Integer.parseInt(colorMatch.group(1), 16);
+                newStyle = newStyle.withColor(TextColor.fromRgb(rgb));
+            }
+
+            // Fett
+            if (style.contains("font-weight:bold") || style.contains("font-weight:bolder")) {
+                newStyle = newStyle.withBold(true);
+            }
+
+            // Font-Klassen erkennen und Font-Resource setzen
+            // Annahme: deine resourcepack definiert fonts unter namespace "wynn" oder ähnlich.
+            // Passe die Identifier-Namen an die tatsächlichen font-IDs im Resource Pack an.
+            if (classAttr != null && !classAttr.isEmpty()) {
+                if (classAttr.contains("font-common")) {
+                    newStyle = newStyle.withFont(Identifier.of("minecraft", "common"));
+                } else if (classAttr.contains("font-ascii")) {
+                    newStyle = newStyle.withFont(Identifier.of("minecraft", "default")); // Beispiel
+                }
+            }
+
+            Text parsedInner = parseSpan(inner, newStyle);
+            MutableText piece = parsedInner instanceof MutableText ? (MutableText) parsedInner : Text.literal(parsedInner.getString()).setStyle(newStyle);
+            result = (result == null) ? piece : result.append(piece);
+
+            index = spanEnd + "</span>".length();
+        }
+
+        return (result == null) ? Text.empty() : result;
+    }
+
+    public static String stripHtml(String input) {
+        return input.replaceAll("<[^>]*>", "");
+    }
+
+    private static int findMatchingSpanEnd(String html, int contentStart) {
+        int index = contentStart;
+        int depth = 0;
+        while (index < html.length()) {
+            int nextOpen = html.indexOf("<span", index);
+            int nextClose = html.indexOf("</span>", index);
+            if (nextClose == -1) return -1; // kein schließendes Tag mehr
+
+            if (nextOpen != -1 && nextOpen < nextClose) {
+                depth++; // inneres <span> beginnt
+                index = nextOpen + 5;
+            } else {
+                if (depth == 0) {
+                    return nextClose; // passendes schließendes Tag für die aktuelle Ebene
+                } else {
+                    depth--; // schließt eine verschachtelte Ebene
+                    index = nextClose + 7;
+                }
+            }
+        }
+        return -1;
+    }
+
 }

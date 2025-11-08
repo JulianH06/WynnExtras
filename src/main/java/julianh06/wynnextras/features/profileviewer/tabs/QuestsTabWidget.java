@@ -33,6 +33,8 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
         questSearchBar = null;
     }
 
+    //TODO: g von missing ist teilweise noch sichtbar
+
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(PV.currentPlayerData == null) return;
@@ -104,7 +106,7 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
         {
             int yPos = 60 + 114 + Math.floorDiv(i, 2) * 36 - scrollOffset;
             if (yPos > 60 && yPos < 690) {
-                ui.drawText("Missing:", (float) x + 60, (float) y + yPos, textColor, 6f);
+                ui.drawText("Missing:", (float) x + 60, (float) y + yPos, textColor, 5.75f);
                 if(i % 2 == 0) i += 6;
                 else i++;
             }

@@ -3,14 +3,12 @@ package julianh06.wynnextras.features.profileviewer.data;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class AbilityTreeCache {
+    private static final Map<String, AbilityMapData> classMaps = new HashMap<>();
     private static final Map<String, AbilityTreeData> classTrees = new HashMap<>();
-    private static final Map<String /* character uuid*/, AbilityTreeData> playerTrees = new HashMap<>();
+    private static final Map<String /* character uuid*/, AbilityMapData> playerTrees = new HashMap<>();
     private static final Set<String> loading = new HashSet<>();
 
     public static boolean isLoading(String className) {
@@ -18,15 +16,24 @@ public class AbilityTreeCache {
     }
 
     public static void loadClassTree(String className) {
-        if (classTrees.containsKey(className) || loading.contains(className)) return;
+        if (classMaps.containsKey(className) || loading.contains(className)) return;
 
         loading.add(className);
         WynncraftApiHandler.fetchClassAbilityMap(className).thenAccept(tree -> {
-            classTrees.put(className, tree);
+            classMaps.put(className, tree);
             loading.remove(className);
         }).exceptionally(ex -> {
             System.err.println("Failed to load ability tree for " + className + ": " + ex.getMessage());
             loading.remove(className);
+            return null;
+        });
+        loading.add(className + "tree");
+        WynncraftApiHandler.fetchClassAbilityTree(className).thenAccept(tree -> {
+            classTrees.put(className, tree);
+            loading.remove(className + "tree");
+        }).exceptionally(ex -> {
+            System.err.println("Failed to load ability tree for " + className + ": " + ex.getMessage());
+            loading.remove(className + "tree");
             return null;
         });
     }
@@ -45,23 +52,28 @@ public class AbilityTreeCache {
         });
     }
 
-    public static void cacheClassTree(String className, AbilityTreeData tree) {
-        classTrees.put(className, tree);
+    public static void cacheClassTree(String className, AbilityMapData tree) {
+        classMaps.put(className, tree);
     }
 
-    public static AbilityTreeData getClassTree(String className /* warrior, archer, etc. */) {
+    public static AbilityMapData getClassMap(String className /* warrior, archer, etc. */) {
+        return classMaps.get(className);
+    }
+
+    public static AbilityTreeData getClassTree(String className) {
         return classTrees.get(className);
     }
 
-    public static void cachePlayerTree(String characterUUID, AbilityTreeData tree) {
+    public static void cachePlayerTree(String characterUUID, AbilityMapData tree) {
         playerTrees.put(characterUUID, tree);
     }
 
-    public static AbilityTreeData getPlayerTree(String characterUUID) {
+    public static AbilityMapData getPlayerTree(String characterUUID) {
         return playerTrees.get(characterUUID);
     }
 
     public static void clear() {
+        classMaps.clear();
         classTrees.clear();
         playerTrees.clear();
     }

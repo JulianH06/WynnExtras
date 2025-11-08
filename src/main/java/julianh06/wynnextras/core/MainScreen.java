@@ -4,6 +4,7 @@ import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
+import julianh06.wynnextras.features.abilitytree.TreeScreen;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.utils.LinkUtils;
 import julianh06.wynnextras.utils.MinecraftUtils;
@@ -56,6 +57,11 @@ public class MainScreen extends WEScreen {
     }
 
     @Override
+    protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+
+    }
+
+    @Override
     public void updateValues() {
         logo.setBounds(getLogicalWidth() / 2 - 400, 0, 800, 250);
         modrinthButton.setBounds(getLogicalWidth() / 2 - 200, getLogicalHeight() - 110, 100, 100);
@@ -81,6 +87,7 @@ public class MainScreen extends WEScreen {
                 });
             }
             case 1 -> {
+                WEScreen.open(TreeScreen::new);
             }
             case 2 -> {
                 PV.open(McUtils.playerName());
@@ -164,21 +171,8 @@ public class MainScreen extends WEScreen {
             if(this.height <= 0) return;
             if (ui == null) return;
 
-            // transformiere logical bounds → screen coords
-            int sx = (int) ui.sx(x);
-            int sy = (int) ui.sy(y);
-            int sw = ui.sw(width);
-            int sh = ui.sh(height);
-
-            // Hover-Erkennung in screen coords
-            hoveredLocal = mouseX >= sx && mouseY >= sy && mouseX < sx + sw && mouseY < sy + sh;
-            int fill = hoveredLocal ? 0xFFEFEFEF : 0xFFFFFFFF;
-
-            // zeichne Hintergrund über UIUtils
-//            ui.drawRect(x, y, width, height, CustomColor.fromInt(fill));
             ui.drawButton(x, y, width, height, 12, hovered);
 
-            // zeichne Text über UIUtils (zentriert oder linksbündig)
             ui.drawCenteredText(textForIndex(id), x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 6f);
         }
 

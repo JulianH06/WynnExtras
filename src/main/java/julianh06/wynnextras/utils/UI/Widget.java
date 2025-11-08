@@ -156,7 +156,7 @@ public abstract class Widget {
         if (!visible || !enabled) return false;
         // dispatch to focused child if present
         for (Widget child : children) {
-            if (child.isFocused() && child.keyPressed(keyCode, scanCode, modifiers)) return true;
+            if (child.keyPressed(keyCode, scanCode, modifiers)) return true;
         }
         return onKeyPressed(keyCode, scanCode, modifiers);
     }
@@ -166,7 +166,7 @@ public abstract class Widget {
     public boolean charTyped(char chr, int modifiers) {
         if (!visible || !enabled) return false;
         for (Widget child : children) {
-            if (child.isFocused() && child.charTyped(chr, modifiers)) return true;
+            if (child.charTyped(chr, modifiers)) return true;
         }
         return onCharTyped(chr, modifiers);
     }
@@ -192,6 +192,7 @@ public abstract class Widget {
 
     // ---- Utilities ----
     protected boolean contains(int mx, int my) {
+        if(ui == null) return false;
         return mx >= ui.sx(x) && my >= ui.sy(y) && mx < ui.sx(x) + ui.sw(width) && my < ui.sy(y) + ui.sh(height);
     }
 

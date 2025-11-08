@@ -84,6 +84,30 @@ public final class UIUtils {
         );
     }
 
+    public void drawRect(float x, float y, float width, float heigt) {
+        this.drawRect(x, y, width, heigt, CustomColor.fromHexString("FFFFFF"));
+    }
+
+    public void drawRectBorders(float x, float y, float width, float height, CustomColor color) {
+        RenderUtils.drawRectBorders(
+                drawContext.getMatrices(),
+                color,
+                sx(x), sy(y),
+                sw(width), sh(height), 0, 1
+        );
+    }
+
+    public void drawLine(float x1, float y1, float x2, float y2, float width, CustomColor color) {
+        RenderUtils.drawLine(
+                drawContext.getMatrices(),
+                color,
+                sx(x1), sy(y1),
+                sx(x2), sy(y2),
+                0.0f,
+                sw(width)
+        );
+    }
+
     public void drawText(String text, float x, float y, CustomColor color, HorizontalAlignment hAlign, VerticalAlignment vAlign, TextShadow shadow, float textScale) {
         FontRenderer.getInstance().renderText(
                 drawContext.getMatrices(),
