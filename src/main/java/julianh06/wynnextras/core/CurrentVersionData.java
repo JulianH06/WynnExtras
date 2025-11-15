@@ -25,7 +25,7 @@ public class CurrentVersionData {
 
     String version;
 
-    static Gson gson = new Gson();
+    static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     private static final Path CONFIG_PATH = FabricLoader.getInstance()
             .getConfigDir()

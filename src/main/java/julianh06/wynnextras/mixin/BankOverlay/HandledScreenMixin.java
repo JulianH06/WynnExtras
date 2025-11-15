@@ -7,36 +7,28 @@ import com.wynntils.core.components.Models;
 import com.wynntils.core.persisted.config.Config;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.features.inventory.*;
-import com.wynntils.features.tooltips.ItemGuessFeature;
 import com.wynntils.features.tooltips.TooltipFittingFeature;
 import com.wynntils.handlers.item.ItemAnnotation;
 import com.wynntils.handlers.item.ItemHandler;
-import com.wynntils.handlers.tooltip.impl.identifiable.IdentifiableTooltipBuilder;
-import com.wynntils.mc.event.ItemTooltipRenderEvent;
 import com.wynntils.mc.extension.ItemStackExtension;
-import com.wynntils.models.character.CharacterModel;
-import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.emeralds.type.EmeraldUnits;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.*;
 import com.wynntils.models.items.properties.DurableItemProperty;
-import com.wynntils.models.items.properties.IdentifiableItemProperty;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.ComponentUtils;
-import com.wynntils.utils.mc.LoreUtils;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.mc.TooltipUtils;
 import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;
-import com.wynntils.utils.render.TextRenderSetting;
 import com.wynntils.utils.render.Texture;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.CappedValue;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import com.wynntils.utils.type.Time;
+import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
@@ -44,7 +36,6 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.InventoryKeyPressEvent;
 import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.inventory.BankOverlayButtons.*;
-import julianh06.wynnextras.features.inventory.data.BankData;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
 import julianh06.wynnextras.utils.Pair;
@@ -56,11 +47,10 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.gui.tooltip.TooltipPositioner;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.Window;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.component.ComponentType;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
@@ -68,18 +58,14 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2i;
-import org.joml.Vector2ic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -88,7 +74,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.awt.*;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -195,6 +180,18 @@ public abstract class HandledScreenMixin {
     Identifier signMid3D = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m3_dark.png");
 
     @Unique
+    Identifier lock_locked = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_locked.png");
+
+    @Unique
+    Identifier lock_unlocked = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_unlocked.png");
+
+    @Unique
+    Identifier lock_locked_dark = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_locked_dark.png");
+
+    @Unique
+    Identifier lock_unlocked_dark = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_unlocked_dark.png");
+
+    @Unique
     List<Identifier> signMids = new ArrayList<>();
 
     @Unique
@@ -204,6 +201,13 @@ public abstract class HandledScreenMixin {
     int visibleInventories;
 
     @Unique
+    String priceText;
+
+    @Unique
+    String confirmText = "";
+
+
+    @Unique
     private final EnumSet<BankOverlayType> initializedTypes = EnumSet.noneOf(BankOverlayType.class);
 
 
@@ -211,6 +215,7 @@ public abstract class HandledScreenMixin {
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         Pages = currentData;
         if (currentOverlayType == BankOverlayType.NONE || MinecraftClient.getInstance() == null || Pages == null) return;
+        if (MinecraftClient.getInstance().getWindow() == null || !MinecraftClient.getInstance().isRunning()) return;
         if(MinecraftClient.getInstance().player == null || MinecraftClient.getInstance().currentScreen == null) return;
         initializeOverlayState();
 
@@ -259,9 +264,11 @@ public abstract class HandledScreenMixin {
             );
         }
 
+        //System.out.println(lastPage);
+
         for (int indexWithOffset = scrollOffset; indexWithOffset < visibleInventories; indexWithOffset++) {
             boolean pageContainsSearch = false;
-            boolean isUnlocked = indexWithOffset < lastPage; // < instead of <= because the index starts at 0 and the pages at 1
+            boolean isUnlocked = indexWithOffset < currentData.lastPage; // < instead of <= because the index starts at 0 and the pages at 1
             if (indexWithOffset - scrollOffset == playerInvIndex) {
                 isUnlocked = true;
             } else if (indexWithOffset > currentMaxPages - 1) {
@@ -277,13 +284,90 @@ public abstract class HandledScreenMixin {
                 drawEmeraldOverlay(context, x - 28, y - 5);
             }
 
-            List<ItemStack> inv = buildInventoryForIndex(indexWithOffset, playerInvIndex);
-            if(inv.isEmpty()) {
+            List<ItemStack> inv;
+            try {
+                inv = buildInventoryForIndex(indexWithOffset, playerInvIndex);
+            } catch (IndexOutOfBoundsException e) {
                 close();
                 return;
             }
+
+            try {
+                if (McUtils.containerMenu() != null && indexWithOffset == activeInv + 1) {
+                    ItemStack rightArrow = McUtils.containerMenu().getSlot(52).getStack();
+                    List<Text> lore = rightArrow.getComponents().get(DataComponentTypes.LORE).lines();
+                    //System.out.println(lore);
+                    if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(240.0f)) {
+                        //System.out.println("RED ARROW");
+                        currentData.lastPage = activeInv + 1;
+                        for (Text text : lore) {
+                            if (text.getString().contains("§7Price")) {
+                                priceText = text.getString();
+                                confirmText = "";
+                                //System.out.println(text.getString() + (text.getString().contains("✖") ? " CANNOT AFFORD" : " CAN AFFORD"));
+                                break;
+                            }
+                        }
+                    } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(239.0f)) {
+                        System.out.println("GREEN ARROW");
+                        confirmText = "§7Click again to confirm.";
+                    } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(237.0f) && rightArrow.getCustomName().getString().contains(String.valueOf(currentData.lastPage + 1)) && activeInv == currentData.lastPage - 1) {
+                        System.out.println(rightArrow.getCustomName().getString());
+                        currentData.lastPage++;
+                        //PersonalStorageUtilitiesFeatureAccessor accessor = (PersonalStorageUtilitiesFeatureAccessor) BankOverlay.PersonalStorageUtils;
+                        //accessor.setLastPage(lastPage);
+                        System.out.println("BOUGHT");
+                        priceText = null;
+                        //McUtils.sendMessageToClient(Text.of("bought new page"));
+                        retryLoad();
+                    }
+                } else {
+                    confirmText = "§7Click to go to page " + currentData.lastPage;
+                }
+            } catch (Exception ignored) {
+            }
+
             List<ItemAnnotation> annotations = annotationCache.computeIfAbsent(indexWithOffset, k -> new ArrayList<>(Collections.nCopies(inv.size(), null)));
 
+            if(McUtils.containerMenu() != null && indexWithOffset == currentData.lastPage && i != playerInvIndex) {
+                int textX = xRemain / 2 + (i % xFitAmount) * (162 + 4);
+                int textY = yRemain / 2 + Math.floorDiv(i, xFitAmount) * (90 + 4 + 10);
+                TextRenderer textRenderer = McUtils.mc().textRenderer;
+                if(priceText == null) {
+                    String text = "§c✖ §7Price: §funknown.";
+                    String text2 = "§7Go to page §f" + currentData.lastPage + " §7to check.";
+                    context.drawTextWithShadow(textRenderer, text, textX + 81 - textRenderer.getWidth(text) / 2, textY + 5, CustomColor.fromHexString("FFFFFF").asInt());
+                    context.drawTextWithShadow(textRenderer, text2, textX + 81 - textRenderer.getWidth(text2) / 2, textY + 15, CustomColor.fromHexString("FFFFFF").asInt());
+                } else {
+                    context.drawTextWithShadow(textRenderer, priceText, textX + 81 - textRenderer.getWidth(priceText) / 2, textY + 10, CustomColor.fromHexString("FFFFFF").asInt());
+                }
+
+                int playerXStart = xStart + (i % xFitAmount) * (162 + 4);
+                int playerYStart = yStart + Math.floorDiv(i, xFitAmount) * (90 + 4 + 10);
+
+                boolean hovered =
+                        mouseX >= playerXStart &&
+                                mouseX < playerXStart + 162 &&
+                                mouseY >= playerYStart &&
+                                mouseY < playerYStart + 92;
+
+                if (hovered) {
+                    hoveredInvIndex = indexWithOffset;
+
+                    if(hoveredInvIndex != activeInv && Searchbar.getInput().isEmpty()) {
+                        RenderUtils.drawRect(context.getMatrices(), CustomColor.fromHSV(0, 0, 0, 0.25f), playerXStart, playerYStart, 0, 164, 92);
+                    }
+
+                    String buyText = confirmText.equals("") ? "§7Click to buy." : confirmText;
+
+                    RenderUtils.drawTexturedRect(context.getMatrices(), SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? lock_unlocked_dark : lock_unlocked, playerXStart + 82 - 25, playerYStart + 46 - 19, 50, 50, 50, 50);
+                    context.drawTextWithShadow(textRenderer, buyText, textX + 81 - textRenderer.getWidth(buyText) / 2, playerYStart + 75, CustomColor.fromHexString("FFFFFF").asInt());
+                } else {
+                    RenderUtils.drawTexturedRect(context.getMatrices(), SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? lock_locked_dark : lock_locked, playerXStart + 82 - 25, playerYStart + 46 - 19, 50, 50, 50, 50);
+                }
+            }
+
+            if(inv == null) return;
             int stackIndex = 0;
             for (ItemStack stack : inv) {
                 if(i != playerInvIndex) {
@@ -384,10 +468,10 @@ public abstract class HandledScreenMixin {
                 color = CustomColor.fromHexString("008000").asInt();
             } else if (!isUnlocked && i != playerInvIndex) {
                 color = CustomColor.fromHexString("FF0000").asInt();
-                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, buyPageStageText + " Buying pages", playerXStart, playerYStart + 10, color);
-                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, "is currently not implemented.", playerXStart, playerYStart + 30, color);
-                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, "To buy pages disable the", playerXStart, playerYStart + 50, color);
-                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, "menu in the config (/we config).", playerXStart, playerYStart + 70, color);
+                //context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, buyPageStageText/* + " Buying pages"*/, playerXStart + 20, playerYStart + 50, color);
+//                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, "is currently not implemented.", playerXStart, playerYStart + 30, color);
+//                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, "To buy pages disable the", playerXStart, playerYStart + 50, color);
+//                context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, "menu in the config (/we config).", playerXStart, playerYStart + 70, color);
             } else {
                 color = CustomColor.fromHexString("FFFFFF").asInt();
             }
@@ -417,14 +501,14 @@ public abstract class HandledScreenMixin {
 
         if (Pages == null) Pages = currentData;
 
+        PersonalStorageUtilitiesFeatureAccessor accessor = (PersonalStorageUtilitiesFeatureAccessor) BankOverlay.PersonalStorageUtils;
+        accessor.setLastPage(99);
+
         hoveredInvIndex = -1;
         hoveredIndex = -1;
         hoveredSlot = Items.AIR.getDefaultStack();
 
         if (activeInv == -1) activeInv = 0;
-
-        PersonalStorageUtilitiesFeatureAccessor accessor = (PersonalStorageUtilitiesFeatureAccessor) BankOverlay.PersonalStorageUtils;
-        lastPage = accessor.getLastPage();
     }
 
     @Unique
@@ -452,7 +536,7 @@ public abstract class HandledScreenMixin {
     }
 
     @Unique
-    private List<ItemStack> buildInventoryForIndex(int indexWithOffset, int playerInvIndex) {
+    private List<ItemStack> buildInventoryForIndex(int indexWithOffset, int playerInvIndex) throws IndexOutOfBoundsException {
         List<ItemStack> inv = new ArrayList<>();
 
         if (indexWithOffset == activeInv && activeInv != playerInvIndex + scrollOffset) {
@@ -472,7 +556,7 @@ public abstract class HandledScreenMixin {
                     } catch (IndexOutOfBoundsException e) {
                         retryLoad();
                         activeInv = -1;
-                        return new ArrayList<>();
+                        throw e;
                     }
                     if(rightArrow == null) return new ArrayList<>();
                     if(rightArrow.getItem() == Items.POTION) {
@@ -762,7 +846,6 @@ public abstract class HandledScreenMixin {
     private void renderHoveredTooltip(DrawContext context, HandledScreen<?> screen, int mouseX, int mouseY) {
         if (hoveredSlot.getItem() == Items.AIR) return;
 
-
         Optional<WynnItem> item = asWynnItem(hoveredSlot);
         List<Text> tooltip = item.map(i -> {
             currentHoveredStack = hoveredSlot;
@@ -873,6 +956,18 @@ public abstract class HandledScreenMixin {
 
         BankOverlay.activeTextInput = null;
 
+        if(hoveredInvIndex == currentData.lastPage && activeInv == hoveredInvIndex - 1) {
+            ScreenHandler currScreenHandler = McUtils.containerMenu();
+            if(currScreenHandler == null) { return; }
+            ContainerUtils.clickOnSlot(52, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
+            return;
+        } else if(hoveredInvIndex == currentData.lastPage) {
+            BankOverlay.PersonalStorageUtils.jumpToDestination(currentData.lastPage);
+            activeInv = currentData.lastPage - 1;
+            retryLoad();
+            return;
+        }
+
         handleButtonClick(mouseX, mouseY);
 
         if (Searchbar.isClickInBounds((int) mouseX, (int) mouseY) != Searchbar.isActive()) {
@@ -888,7 +983,7 @@ public abstract class HandledScreenMixin {
         SlotActionType actionType = determineActionType(button);
         if (handleBankSlotClick(hoveredIndex, button, actionType, cir)) return;
         if (handlePlayerSlotClick(hoveredIndex, button, actionType, playerInvIndex, cir)) return;
-        if (handlePageClick(hoveredIndex)) {
+        if (handlePageClick()) {
             if (actionType == SlotActionType.QUICK_MOVE) {
                 heldItem = Items.AIR.getDefaultStack();
             }
@@ -965,12 +1060,12 @@ public abstract class HandledScreenMixin {
         ItemStack oldHeld = heldItem;
         heldItem = getHeldItem(hoveredIndex + 54, actionType, button);
 
-//        if(heldItem.getCustomName() != null) {
-//            if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
-//                heldItem = oldHeld == null ? Items.AIR.getDefaultStack() : oldHeld;
-//                return true;
-//            }
-//        }
+        if(heldItem.getCustomName() != null) {
+            if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
+                heldItem = oldHeld == null ? Items.AIR.getDefaultStack() : oldHeld;
+                return true;
+            }
+        }
 
         if (shouldCancelEmeraldPouch(oldHeld, heldItem)) {
             heldItem = Items.AIR.getDefaultStack();
@@ -987,11 +1082,11 @@ public abstract class HandledScreenMixin {
 
 
     @Unique
-    private boolean handlePageClick(int hoveredIndex) {
+    private boolean handlePageClick() {
         if (heldItem.getItem() != Items.AIR) return false;
 
         int clickedPage = hoveredInvIndex + 1;
-        if (clickedPage <= lastPage) {
+        if (clickedPage <= currentData.lastPage) {
             List<ItemStack> stacks = BankOverlay.activeInvSlots.stream()
                     .map(Slot::getStack)
                     .collect(Collectors.toList());
@@ -1000,11 +1095,11 @@ public abstract class HandledScreenMixin {
             activeInv = hoveredInvIndex;
             BankOverlay.PersonalStorageUtils.jumpToDestination(clickedPage);
         } else {
-            if (activeInv != lastPage - 1) {
-                activeInv = lastPage - 1;
-                BankOverlay.PersonalStorageUtils.jumpToDestination(lastPage);
+            if (activeInv != currentData.lastPage - 1) {
+                activeInv = currentData.lastPage - 1;
+                BankOverlay.PersonalStorageUtils.jumpToDestination(currentData.lastPage);
                 buyPageStack = null;
-            } else {
+            } /*else {
                 Slot pageBuySlot = McUtils.containerMenu().getSlot(52);
                 ItemStack newStack = pageBuySlot.getStack();
 
@@ -1023,7 +1118,7 @@ public abstract class HandledScreenMixin {
                     lastPage++;
                     buyPageStageText = "NOT BOUGHT";
                 }
-            }
+            }*/
         }
         return true;
     }

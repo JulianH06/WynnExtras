@@ -9,6 +9,7 @@ import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.loader.api.FabricLoader;
@@ -66,7 +67,40 @@ public class WynncraftApiHandler {
             null
     );
 
+//    private static Command whoami = new Command(
+//            "whoami",
+//            "",
+//            context -> {
+//                HttpClient client = HttpClient.newHttpClient();
+//                HttpRequest request;
+////                if (INSTANCE.API_KEY == null) {
+////                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
+////                            " Run \"/WynnExtras apikey\" to learn more.")));
+////
+////
+////                    request = HttpRequest.newBuilder()
+////                            .uri(URI.create(BASE_URL + formattedUUID + "?fullResult"))
+////                            .GET()
+////                            .build();
+////                } else {
+//                    request = HttpRequest.newBuilder()
+//                            .uri(URI.create("https://api.wynncraft.com/v3/player/whoami"))
+//                            .header("Authorization", "Bearer " + INSTANCE.API_KEY)
+//                            .GET()
+//                            .build();
+//                //}
+//
+//                HttpResponse<String> response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).join();
+//
+//                System.out.println(response.body());
+//                return 1;
+//            },
+//            null,
+//            null
+//    );
+
     private static final String BASE_URL = "https://api.wynncraft.com/v3/player/";
+    private static final String BASE_URL_GUILD = "https://api.wynncraft.com/v3/guild/";
 
     public String API_KEY;
 
@@ -94,6 +128,32 @@ public class WynncraftApiHandler {
                 "(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})",
                 "$1-$2-$3-$4-$5"
         );
+    }
+
+    public static CompletableFuture<GuildData> fetchGuildData(String prefix) {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request;
+
+        if (INSTANCE.API_KEY == null) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
+                    " Run \"/WynnExtras apikey\" to learn more.")));
+
+
+            request = HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL_GUILD + "prefix/" + prefix + "?identifier=uuid"))
+                    .GET()
+                    .build();
+        } else {
+            request = HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL_GUILD + "prefix/" + prefix + "?identifier=uuid"))
+                    .header("Authorization", "Bearer " + INSTANCE.API_KEY)
+                    .GET()
+                    .build();
+        }
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenApply(WynncraftApiHandler::parseGuildData);
     }
 
     public static CompletableFuture<PlayerData> fetchPlayerData(String playerName) {
@@ -190,6 +250,13 @@ public class WynncraftApiHandler {
                 .create();
 
         return gson.fromJson(json, PlayerData.class);
+    }
+
+    private static GuildData parseGuildData(String json) {
+        Gson gson = new GsonBuilder()
+                .create();
+
+        return gson.fromJson(json, GuildData.class);
     }
 
     private static AbilityMapData parseAbilityMapData(String json) {

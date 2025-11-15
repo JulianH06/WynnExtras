@@ -22,14 +22,20 @@ import java.util.List;
 import java.util.Optional;
 
 public abstract class BankData {
+    public int lastPage = 1;
     public HashMap<Integer, List<ItemStack>> BankPages = new HashMap<>();
     public HashMap<Integer, String> BankPageNames = new HashMap<>();
 
     public abstract Path getConfigPath();
 
     public void save() {
-        try (Writer writer = Files.newBufferedWriter(getConfigPath())) {
-            getGson().toJson(this, writer);
+        Path path = getConfigPath();
+        try {
+            Files.createDirectories(path.getParent());
+
+            try (Writer writer = Files.newBufferedWriter(path)) {
+                getGson().toJson(this, writer);
+            }
         } catch (IOException e) {
             System.err.println("[WynnExtras] Couldn't write bank data:");
             e.printStackTrace();
@@ -37,11 +43,20 @@ public abstract class BankData {
     }
 
     public void load() {
-        if (Files.exists(getConfigPath())) {
-            try (Reader reader = Files.newBufferedReader(getConfigPath())) {
+        Path path = getConfigPath();
+        try {
+            Files.createDirectories(path.getParent());
+        } catch (IOException e) {
+            System.err.println("[WynnExtras] Couldn't create config directory:");
+            e.printStackTrace();
+        }
+
+        if (Files.exists(path)) {
+            try (Reader reader = Files.newBufferedReader(path)) {
                 BankData loaded = getGson().fromJson(reader, this.getClass());
                 if (loaded != null) {
                     this.BankPages = loaded.BankPages;
+                    this.lastPage = loaded.lastPage;
                     this.BankPageNames = loaded.BankPageNames;
                 }
             } catch (IOException e) {

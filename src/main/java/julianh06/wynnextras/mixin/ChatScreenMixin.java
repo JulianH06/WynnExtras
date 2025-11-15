@@ -1,8 +1,5 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.core.components.Services;
-import com.wynntils.services.chat.ChatTab;
-import com.wynntils.services.chat.ChatTabService;
 import julianh06.wynnextras.features.chat.ChatManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;

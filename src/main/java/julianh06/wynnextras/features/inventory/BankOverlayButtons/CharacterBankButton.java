@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.inventory.BankOverlayButtons;
 
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
@@ -13,6 +14,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.world.tick.Tick;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -43,5 +45,6 @@ public class CharacterBankButton extends EasyButton {
 
         if(currScreenHandler == null) { return; }
         clickOnSlot(47, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
+        timeSinceSwitch = Time.now().timestamp();
     }
 }

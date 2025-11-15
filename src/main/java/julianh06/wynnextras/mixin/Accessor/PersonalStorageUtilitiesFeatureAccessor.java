@@ -8,4 +8,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface PersonalStorageUtilitiesFeatureAccessor {
     @Accessor (value = "lastPage", remap = false)
     int getLastPage();
+
+    @Accessor (value = "lastPage", remap = false)
+    void setLastPage(int lastPage);
 }

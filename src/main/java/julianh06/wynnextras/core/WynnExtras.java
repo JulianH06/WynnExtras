@@ -12,6 +12,7 @@ import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
+import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
 import julianh06.wynnextras.features.inventory.BankOverlay;
@@ -30,9 +31,12 @@ import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
@@ -50,6 +54,8 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 
 // TODO: Use WELogger instead of normal logger
@@ -136,18 +142,23 @@ public class WynnExtras implements ClientModInitializer {
 		PlayerHider.registerBossPlayerHider();
 		BankOverlay.registerBankOverlay();
 		PV.register();
+		GV.register();
 		ProvokeTimer.init();
 		Waypoints.register();
 		FastRequeue.registerFastRequeue();
 		TreeLoader.init();
 
-		AccountBankData.INSTANCE.load();
-		CharacterBankData.INSTANCE.load();
-		BookshelfData.INSTANCE.load();
-		MiscBucketData.INSTANCE.load();
 		RaidListData.load();
 		WynncraftApiHandler.load();
 		WaypointData.load();
+
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+			AccountBankData.INSTANCE.load();
+			CharacterBankData.INSTANCE.load();
+			BookshelfData.INSTANCE.load();
+			MiscBucketData.INSTANCE.load();
+			System.out.println("loaded bankdata");
+		});
 	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)
@@ -186,6 +197,32 @@ public class WynnExtras implements ClientModInitializer {
 
 	@SubscribeEvent
 	public void onClientTick(TickEvent event) {
+//		try {
+//			if(McUtils.containerMenu() != null) {
+//				ItemStack rightArrow = McUtils.containerMenu().getSlot(52).getStack();
+//				List<Text> lore = rightArrow.getComponents().get(DataComponentTypes.LORE).lines();
+//				//System.out.println(lore);
+//				if(rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(240.0f)) {
+//					//System.out.println("RED ARROW");
+//					for(Text text : lore) {
+//						if(text.getString().contains("§7Price")) {
+//							//System.out.println(text.getString() + (text.getString().contains("✖") ? " CANNOT AFFORD" : " CAN AFFORD"));
+//							break;
+//						}
+//					}
+//				} else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(239.0f)) {
+//					System.out.println("GREEN ARROW");
+//				} else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(237.0f)){
+//					System.out.println("BOUGHT");
+//				} else {
+////					System.out.println(rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0));
+//
+//				}
+//			}
+//		} catch (Exception ignored) {
+//			//System.out.println("crash");
+//		}
+
 		if (ticksUntilNotify < 0) return;
 
 		ticksUntilNotify--;

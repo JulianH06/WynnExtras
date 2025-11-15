@@ -30,6 +30,7 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.collection.DefaultedList;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
+import org.spongepowered.asm.mixin.Unique;
 
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -48,6 +49,8 @@ public class BankOverlay {
     public static BankData Pages;
 
     public static int activeInv = -1;
+
+    public static Long timeSinceSwitch = 0L;
 
     public static ItemStack heldItem = Items.AIR.getDefaultStack();
 

@@ -35,7 +35,7 @@ public class MessageFilterFeatureMixin {
                         && !msgLower.contains("[wynnextras]")
                         && config.toggleRaidTimestamps) {
                     RaidChatNotifier.handleMessage(e.getMessage().withoutFormatting().getString());
-                    e.setCanceled(true);
+                    e.cancelChat();
                     return;
                 }
             }
@@ -43,7 +43,7 @@ public class MessageFilterFeatureMixin {
 
         for (String blockedWord : config.blockedWords) {
             if (msgLower.contains(blockedWord.toLowerCase())) {
-                e.setCanceled(true);
+                e.cancelChat();
             }
         }
     }

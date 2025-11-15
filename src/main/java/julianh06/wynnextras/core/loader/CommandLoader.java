@@ -26,9 +26,15 @@ public class CommandLoader implements WELoader {
     public CommandLoader() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             LiteralArgumentBuilder<FabricClientCommandSource> base = ClientCommandManager.literal("WynnExtras");
+            LiteralArgumentBuilder<FabricClientCommandSource> baseLowerCase = ClientCommandManager.literal("wynnextras");
             LiteralArgumentBuilder<FabricClientCommandSource> alias = ClientCommandManager.literal("we");
 
             base.executes(commandContext -> {
+                MainScreen.open();
+                return 1;
+            });
+
+            baseLowerCase.executes(commandContext -> {
                 MainScreen.open();
                 return 1;
             });
@@ -45,6 +51,7 @@ public class CommandLoader implements WELoader {
             }
 
             dispatcher.register(base);
+            dispatcher.register(baseLowerCase);
             dispatcher.register(alias);
             dispatcher.register(ChatCommands.register());
             dispatcher.register(

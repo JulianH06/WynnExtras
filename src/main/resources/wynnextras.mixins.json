@@ -28,6 +28,7 @@
     "MessageFilterFeatureMixin",
     "ScreenHandlerMixin",
     "TooltipFittingFeatureMixin",
+    "Accessor.BannerBlockEntityAccessor",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
     "Accessor.SlotAccessor",
     "Accessor.TooltipFittingFeatureAccessor",
