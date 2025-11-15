@@ -5,9 +5,11 @@ import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.core.MainScreen;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.command.ChatCommands;
+import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -65,6 +67,22 @@ public class CommandLoader implements WELoader {
                                             .executes(ctx -> {
                                                 String arg = StringArgumentType.getString(ctx, "player");
                                                 PV.open(arg);
+                                                return 1;
+                                            })
+                            )
+            );
+
+            dispatcher.register(
+                    ClientCommandManager.literal("gv")
+                            .executes(ctx -> {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to specify the guild you want to view. Usage: /gv [guild prefix]"));
+                                return 1;
+                            })
+                            .then(
+                                    ClientCommandManager.argument("prefix", StringArgumentType.word())
+                                            .executes(ctx -> {
+                                                String arg = StringArgumentType.getString(ctx, "prefix");
+                                                GV.open(arg);
                                                 return 1;
                                             })
                             )

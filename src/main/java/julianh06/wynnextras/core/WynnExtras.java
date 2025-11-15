@@ -119,12 +119,16 @@ public class WynnExtras implements ClientModInitializer {
 	}
 
 
-	public static MutableText addWynnExtrasPrefix(Text component) {
+	public static MutableText addWynnExtrasPrefix(Text text) {
 		return Text.empty().
 				append(WYNNEXTRAS_BACKGROUND_PILL).
 				append(WYNNEXTRAS_FOREGROUND_PILL).
 				//append(Text.literal("\uE02f\uE02f\uDB00\uDC04").fillStyle(Style.EMPTY.withFont(PILL_FONT).withColor(Formatting.DARK_GREEN))). // adds ">>"
-				append(component);
+				append(text);
+	}
+
+	public static MutableText addWynnExtrasPrefix(String text) {
+		return addWynnExtrasPrefix(Text.of(text));
 	}
 
 

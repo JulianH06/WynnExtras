@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.guildviewer;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.ClickEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
@@ -49,7 +50,7 @@ public class GV {
                     "gv",
                     "",
                     context -> {
-                        open(McUtils.player().getName().getString());
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to specify the guild you want to view. Usage: /gv [guild prefix]"));
                         return 1;
                     },
                     null,
@@ -70,9 +71,9 @@ public class GV {
     @SubscribeEvent
     void onInput(KeyInputEvent event) {
         if(event.getKey() != GLFW.GLFW_KEY_ENTER || event.getAction() != GLFW.GLFW_PRESS) return;
-//        if(PVScreen.searchBar != null) {
-//            open(PVScreen.searchBar.getInput());
-//        }
+        if(GVScreen.searchBar != null) {
+            open(GVScreen.searchBar.getInput());
+        }
     }
 
     public static void open(String guild) {

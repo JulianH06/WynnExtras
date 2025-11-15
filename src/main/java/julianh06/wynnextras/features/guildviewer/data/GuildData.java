@@ -19,6 +19,7 @@ public class GuildData {
 
     public static class Members {
         public int total;
+        //theres obviously only one owner but it didnt work with just a member so ill keep this cause it works
         public Map<String, Member> owner;
         public Map<String, Member> chief;
         public Map<String, Member> strategist;

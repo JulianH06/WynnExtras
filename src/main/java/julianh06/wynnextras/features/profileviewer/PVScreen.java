@@ -273,7 +273,7 @@ public class PVScreen extends WEScreen {
         if(currentTabWidget instanceof GeneralTabWidget) {
             currentTabWidget = null;
         }
-        if(currentTabWidget == null) currentTabWidget = new GeneralTabWidget();
+        if(currentTabWidget == null) currentTabWidget = new GeneralTabWidget(this);
 
         addRootWidget(backgroundImageWidget);
         for(TabButtonWidget tabButtonWidget : tabButtonWidgets) {
@@ -777,9 +777,9 @@ public class PVScreen extends WEScreen {
         return 60 + amount * 30;
     }
 
-    private static TabWidget getTabWidget(Tab tab) {
+    private static TabWidget getTabWidget(Tab tab, PVScreen pvScreen) {
         return switch (tab) {
-            case General -> new GeneralTabWidget();
+            case General -> new GeneralTabWidget(pvScreen);
             case Raids -> new RaidsTabWidget();
             case Rankings -> new RankingsTabWidget();
             case Professions -> new ProfessionsTabWidget();
@@ -819,7 +819,7 @@ public class PVScreen extends WEScreen {
         int textXOffset = 0;
         int textYOffset = 0;
 
-        public TabButtonWidget(int index, Tab tab, WEScreen parent) {
+        public TabButtonWidget(int index, Tab tab, PVScreen parent) {
             super(0, 0, 0, 0);
             this.index = index;
             this.tab = tab;
@@ -828,7 +828,7 @@ public class PVScreen extends WEScreen {
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 if(tab == currentTab) return;
                 currentTab = tab;
-                TabWidget tabWidget = getTabWidget(tab);
+                TabWidget tabWidget = getTabWidget(tab, parent);
                 if (tabWidget == null || tabWidget.equals(currentTabWidget)) {
                     parent.removeRootWidget(currentTabWidget);
                     currentTabWidget = null;

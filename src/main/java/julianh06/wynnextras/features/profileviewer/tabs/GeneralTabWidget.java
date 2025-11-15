@@ -2,11 +2,14 @@ package julianh06.wynnextras.features.profileviewer.tabs;
 
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
+import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
+import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.VertexConsumerProvider;
@@ -14,14 +17,14 @@ import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 import org.joml.Quaternionf;
 
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.time.format.FormatStyle;
+import java.util.*;
 
 import static julianh06.wynnextras.features.profileviewer.PVScreen.*;
 
@@ -36,11 +39,17 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
     private List<ClassWidget> classWidgets = new ArrayList<>();
     private static boolean draggingAllowed = false;
 
-    public GeneralTabWidget() {
+    private GuildButtonWidget guildButtonWidget = null;
+
+    private PVScreen pvScreen;
+
+    public GeneralTabWidget(PVScreen pvScreen) {
         super(0, 0, 100, 100);
         playerRotationY = 0;
+        guildButtonWidget = null;
         classWidgets.clear();
         clearChildren();
+        this.pvScreen = pvScreen;
     }
 
     @Override
@@ -135,13 +144,25 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             String stars = PV.currentPlayerData.getGuild().getRankStars();
             String rankString = (stars == null  ? "" : stars) + " " + PV.currentPlayerData.getGuild().getRank() + " of " + (stars == null  ? "" : stars);
             ui.drawCenteredText(rankString, x + 285, y + 570, CustomColor.fromHexString("00FFFF"), 3f);
-            ui.drawCenteredText(guildString, x + 285, y + 600, CustomColor.fromHexString("FFFFFF"), 3f);
+            if(guildButtonWidget == null) {
+                guildButtonWidget = new GuildButtonWidget(guildString, PV.currentPlayerData.getGuild().getPrefix(), pvScreen);
+                children.add(guildButtonWidget);
+            }
+            int widgetWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(guildString) * ui.getScaleFactor() * 1.2);
+            guildButtonWidget.setBounds(x + 285 - widgetWidth / 2, y + 590, widgetWidth, 20);
+            //ui.drawCenteredText(guildString, x + 285, y + 600, CustomColor.fromHexString("FFFFFF"), 3f);
         }
 
         if (PV.currentPlayerData.getFirstJoin() != null) {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+            ZoneId zone = ZoneId.systemDefault();
+
+            DateTimeFormatter formatter = DateTimeFormatter
+                    .ofLocalizedDate(FormatStyle.MEDIUM)
+                    .withLocale(Locale.getDefault())
+                    .withZone(zone);
+
             String formatted = "First joined: ";
-            formatted += PV.currentPlayerData.getFirstJoin().format(formatter);
+            formatted += formatter.format(PV.currentPlayerData.getFirstJoin());
             ui.drawCenteredText(formatted, x + 285, y + 630, CustomColor.fromHexString("FFFFFF"), 3f);
         }
 
@@ -261,5 +282,33 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
     public boolean mouseReleased(double mx, double my, int button) {
         draggingAllowed = false;
         return super.mouseReleased(mx, my, button);
+    }
+
+    private static class GuildButtonWidget extends Widget {
+        String guildString;
+        private final Runnable action;
+
+        public GuildButtonWidget(String guildString, String guildPrefix, PVScreen parent) {
+            super(0, 0, 0, 0);
+            this.guildString = guildString;
+            this.action = () -> {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                parent.close();
+                GV.open(guildPrefix);
+            };
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if (!isEnabled()) return false;
+            if (action != null) action.run();
+            return true;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            //ui.drawRect(x, y, width, height);
+            ui.drawCenteredText((hovered ? "§n" : "") + guildString, x + width / 2f, y + 10, hovered ? CustomColor.fromHexString("00FFFF") : CustomColor.fromHexString("FFFFFF"));
+        }
     }
 }

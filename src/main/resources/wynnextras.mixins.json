@@ -13,11 +13,13 @@
     "LivingEntityRendererMixin",
     "PerspectiveMixin",
     "StringListCellMixin",
+    "Accessor.BannerBlockEntityRendererAccessor",
     "Accessor.DrawContextAccessor",
     "Accessor.HandledScreenAccessor",
     "Accessor.KeybindingAccessor",
     "BankOverlay.DrawContextMixin",
     "BankOverlay.HandledScreenMixin",
+    "Invoker.BannerBlockEntityRendererInvoker",
     "Invoker.HandledScreenInvoker"
   ],
   "mixins": [
