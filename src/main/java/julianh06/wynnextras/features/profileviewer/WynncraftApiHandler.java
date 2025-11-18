@@ -28,6 +28,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -190,6 +191,52 @@ public class WynncraftApiHandler {
         });
     }
 
+    public static CompletableFuture<FetchResult> fetchPlayerAspectData(String playerUUID) {
+        System.out.println("FETCHING PLAYER ASPECT DATA");
+
+        if (playerUUID == null) {
+            McUtils.sendMessageToClient(Text.of("§cUUID is null!"));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(3))
+                .build();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:8080/user"))
+                .header("playerUUID", playerUUID)
+                .timeout(Duration.ofSeconds(5))
+                .GET()
+                .build();
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .handle((response, ex) -> {
+                    if (ex != null) {
+                        System.err.println("Server unreachable: " + ex.getMessage());
+                        return new FetchResult(FetchStatus.SERVER_UNREACHABLE, null);
+                    }
+
+                    int code = response.statusCode();
+
+                    if (code == 404) {
+                        return new FetchResult(FetchStatus.NOT_FOUND, null);
+                    }
+
+                    if (code >= 500) {
+                        return new FetchResult(FetchStatus.SERVER_ERROR, null);
+                    }
+
+                    if (code != 200) {
+                        return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
+                    }
+
+                    User user = parsePlayerAspectData(response.body());
+                    return new FetchResult(FetchStatus.OK, user);
+                });
+    }
+
+
     public static CompletableFuture<AbilityMapData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request;
@@ -250,6 +297,12 @@ public class WynncraftApiHandler {
                 .create();
 
         return gson.fromJson(json, PlayerData.class);
+    }
+
+    private static User parsePlayerAspectData(String json) {
+        Gson gson = new Gson();
+
+        return gson.fromJson(json, User.class);
     }
 
     private static GuildData parseGuildData(String json) {
@@ -425,4 +478,13 @@ public class WynncraftApiHandler {
         return -1;
     }
 
+    public enum FetchStatus {
+        OK,
+        NOT_FOUND,
+        SERVER_UNREACHABLE,
+        SERVER_ERROR,
+        UNKNOWN_ERROR
+    }
+
+    public record FetchResult(FetchStatus status, User user) {}
 }
