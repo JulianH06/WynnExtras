@@ -10,6 +10,7 @@ import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.features.profileviewer.data.PlayerData;
+import julianh06.wynnextras.features.profileviewer.tabs.AspectsWidget;
 import julianh06.wynnextras.utils.render.WorldRenderUtils;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -35,6 +36,8 @@ public class PV {
 
     public static String currentPlayer = "";
     public static PlayerData currentPlayerData;
+
+    public static Boolean openedAspectPage;
 
     public static void register() {
         ClientTickEvents.END_CLIENT_TICK.register((client) -> {
@@ -97,6 +100,9 @@ public class PV {
         MinecraftClient client = MinecraftClient.getInstance();
         client.send(() -> client.setScreen(null));
         currentPlayer = player;
+        openedAspectPage = false;
+        AspectsWidget.currentPlayerAspectData = null;
+        AspectsWidget.fetchStatus = null;
         PVScreen.dummy = null;
         inPV = true;
     }

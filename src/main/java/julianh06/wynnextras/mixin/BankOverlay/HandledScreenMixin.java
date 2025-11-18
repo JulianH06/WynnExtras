@@ -81,6 +81,7 @@ import java.util.stream.Collectors;
 import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredStack;
 import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredWynnitem;
+import static julianh06.wynnextras.features.misc.CustomClassSelection.inClassSelection;
 
 @WEModule
 @Mixin(HandledScreen.class)
@@ -213,6 +214,11 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        if(inClassSelection) {
+            ci.cancel();
+            return;
+        }
+
         Pages = currentData;
         if (currentOverlayType == BankOverlayType.NONE || MinecraftClient.getInstance() == null || Pages == null) return;
         if (MinecraftClient.getInstance().getWindow() == null || !MinecraftClient.getInstance().isRunning()) return;
@@ -946,6 +952,11 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if(inClassSelection) {
+            cir.cancel();
+            return;
+        }
+
         if (currentOverlayType != BankOverlayType.NONE) {
             cir.cancel();
         } else {

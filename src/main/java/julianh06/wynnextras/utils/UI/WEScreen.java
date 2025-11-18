@@ -30,7 +30,6 @@ public abstract class WEScreen extends Screen {
     protected int yStart;
     protected int screenWidth;
     protected int screenHeight;
-
     protected UIUtils ui;
 
     public final List<Widget> rootWidgets = new ArrayList<>();
@@ -79,7 +78,8 @@ public abstract class WEScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         //this.renderPanoramaBackground(context, delta);
-        super.applyBlur();
+        if(super.client == null) super.client = MinecraftClient.getInstance();
+        if(super.client != null) super.applyBlur();
 
         this.drawContext = context;
         computeScaleAndOffsets();
@@ -254,7 +254,7 @@ public abstract class WEScreen extends Screen {
     private int lastScreenWidth = -1;
     private int lastScreenHeight = -1;
 
-    protected void computeScaleAndOffsets() {
+    public void computeScaleAndOffsets() {
         MinecraftClient client = MinecraftClient.getInstance();
         Window w = client.getWindow();
         if (w == null) return;
@@ -428,5 +428,31 @@ public abstract class WEScreen extends Screen {
             }
             client.setScreen(screenSupplier.get());
         });
+    }
+
+    //needed for the class selection stuff
+
+    public void setDrawContext(DrawContext drawContext) {
+        this.drawContext = drawContext;
+    }
+
+    public void setUi(UIUtils ui) {
+        this.ui = ui;
+    }
+
+    public UIUtils getUi() {
+        return this.ui;
+    }
+
+    public double getScaleFactor() {
+        return scaleFactor;
+    }
+
+    public int getxStart() {
+        return xStart;
+    }
+
+    public int getyStart() {
+        return yStart;
     }
 }
