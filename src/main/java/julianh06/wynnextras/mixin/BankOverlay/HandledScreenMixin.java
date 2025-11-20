@@ -196,9 +196,6 @@ public abstract class HandledScreenMixin {
     List<Identifier> signMids = new ArrayList<>();
 
     @Unique
-    String buyPageStageText = "NOT BOUGHT";
-
-    @Unique
     int visibleInventories;
 
     @Unique
@@ -214,10 +211,10 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        if(inClassSelection) {
-            ci.cancel();
-            return;
-        }
+//        if(inClassSelection) {
+//            ci.cancel();
+//            return;
+//        }
 
         Pages = currentData;
         if (currentOverlayType == BankOverlayType.NONE || MinecraftClient.getInstance() == null || Pages == null) return;
@@ -299,7 +296,7 @@ public abstract class HandledScreenMixin {
             }
 
             try {
-                if (McUtils.containerMenu() != null && indexWithOffset == activeInv + 1) {
+                if (McUtils.containerMenu() != null && indexWithOffset == activeInv + 1 && !shouldWait) {
                     ItemStack rightArrow = McUtils.containerMenu().getSlot(52).getStack();
                     List<Text> lore = rightArrow.getComponents().get(DataComponentTypes.LORE).lines();
                     //System.out.println(lore);
@@ -319,10 +316,10 @@ public abstract class HandledScreenMixin {
                         confirmText = "§7Click again to confirm.";
                     } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(237.0f) && rightArrow.getCustomName().getString().contains(String.valueOf(currentData.lastPage + 1)) && activeInv == currentData.lastPage - 1) {
                         System.out.println(rightArrow.getCustomName().getString());
+                        System.out.println("BOUGHT" + " ACITVE PAGE " + activeInv + " LAST PAGE" + currentData.lastPage);
                         currentData.lastPage++;
                         //PersonalStorageUtilitiesFeatureAccessor accessor = (PersonalStorageUtilitiesFeatureAccessor) BankOverlay.PersonalStorageUtils;
                         //accessor.setLastPage(lastPage);
-                        System.out.println("BOUGHT");
                         priceText = null;
                         //McUtils.sendMessageToClient(Text.of("bought new page"));
                         retryLoad();
@@ -952,10 +949,10 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
-        if(inClassSelection) {
-            cir.cancel();
-            return;
-        }
+//        if(inClassSelection) {
+//            cir.cancel();
+//            return;
+//        }
 
         if (currentOverlayType != BankOverlayType.NONE) {
             cir.cancel();
@@ -967,16 +964,22 @@ public abstract class HandledScreenMixin {
 
         BankOverlay.activeTextInput = null;
 
-        if(hoveredInvIndex == currentData.lastPage && activeInv == hoveredInvIndex - 1) {
-            ScreenHandler currScreenHandler = McUtils.containerMenu();
-            if(currScreenHandler == null) { return; }
-            ContainerUtils.clickOnSlot(52, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
-            return;
-        } else if(hoveredInvIndex == currentData.lastPage) {
-            BankOverlay.PersonalStorageUtils.jumpToDestination(currentData.lastPage);
-            activeInv = currentData.lastPage - 1;
-            retryLoad();
-            return;
+        int playerInvIndex = xFitAmount * yFitAmount - xFitAmount + scrollOffset;
+        if(hoveredInvIndex != playerInvIndex) {
+            if (hoveredInvIndex == currentData.lastPage && activeInv == hoveredInvIndex - 1) {
+                ScreenHandler currScreenHandler = McUtils.containerMenu();
+                if (currScreenHandler == null) {
+                    return;
+                }
+                ContainerUtils.clickOnSlot(52, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
+                return;
+            } else if (hoveredInvIndex == currentData.lastPage) {
+                BankOverlay.PersonalStorageUtils.jumpToDestination(currentData.lastPage);
+                System.out.println("Jump 1");
+                activeInv = currentData.lastPage - 1;
+                retryLoad();
+                return;
+            }
         }
 
         handleButtonClick(mouseX, mouseY);
@@ -988,8 +991,6 @@ public abstract class HandledScreenMixin {
         handleNameInputs(mouseX, mouseY);
 
         if (hoveredIndex < 0 || hoveredIndex >= 63) return;
-
-        int playerInvIndex = xFitAmount * yFitAmount - xFitAmount;
 
         SlotActionType actionType = determineActionType(button);
         if (handleBankSlotClick(hoveredIndex, button, actionType, cir)) return;
@@ -1038,7 +1039,10 @@ public abstract class HandledScreenMixin {
 
     @Unique
     private boolean handleBankSlotClick(int hoveredIndex, int button, SlotActionType actionType, CallbackInfoReturnable<Boolean> cir) {
-        if (hoveredInvIndex != activeInv) return false;
+        int playerInvIndex = xFitAmount * yFitAmount - xFitAmount + scrollOffset;
+
+        if(hoveredInvIndex != activeInv) return false;
+        if(hoveredInvIndex == playerInvIndex) return false;
 
         ItemStack oldHeld = heldItem;
         heldItem = getHeldItem(hoveredIndex, actionType, button);
@@ -1065,7 +1069,7 @@ public abstract class HandledScreenMixin {
 
     @Unique
     private boolean handlePlayerSlotClick(int hoveredIndex, int button, SlotActionType actionType, int playerInvIndex, CallbackInfoReturnable<Boolean> cir) {
-        if (hoveredInvIndex != playerInvIndex + scrollOffset) return false;
+        if (hoveredInvIndex != playerInvIndex) return false;
         if(hoveredIndex == 4) return true; //Ingredient pouch, clicking it within the bank overlay crashes the game
 
         ItemStack oldHeld = heldItem;
@@ -1104,10 +1108,13 @@ public abstract class HandledScreenMixin {
 
             Pages.BankPages.put(activeInv, stacks);
             activeInv = hoveredInvIndex;
+            System.out.println("Jump 2");
             BankOverlay.PersonalStorageUtils.jumpToDestination(clickedPage);
+
         } else {
             if (activeInv != currentData.lastPage - 1) {
                 activeInv = currentData.lastPage - 1;
+                System.out.println("Jump 3");
                 BankOverlay.PersonalStorageUtils.jumpToDestination(currentData.lastPage);
                 buyPageStack = null;
             } /*else {

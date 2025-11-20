@@ -48,7 +48,7 @@ public class PVScreen extends WEScreen {
 
     public enum Rank {NONE, VIP, VIPPLUS, HERO, HEROPLUS, CHAMPION, MEDIA, WYNN, MOD, ADMIN}
 
-    public enum Tab {General, Raids, Rankings, Professions, Dungeons, Quests, Tree, Misc}
+    public enum Tab {General, Raids, Rankings, Professions, Dungeons, Quests, Tree, Aspects, Misc}
     public static List<TabButton> tabButtons = new ArrayList<>();
     public static List<CharacterButton> characterButtons = new ArrayList<>();
 
@@ -786,7 +786,7 @@ public class PVScreen extends WEScreen {
             case Dungeons -> new DungeonsTabWidget();
             case Quests -> new QuestsTabWidget();
             case Tree -> new TreeTabWidget();
-            //case Aspects -> new AspectsWidget();
+            case Aspects -> new AspectsWidget();
             case Misc -> new MiscTabWidget();
             case null, default -> new TabWidget(0, 0, 0, 0);
         };
