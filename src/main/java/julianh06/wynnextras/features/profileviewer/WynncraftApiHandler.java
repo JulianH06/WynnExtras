@@ -204,7 +204,7 @@ public class WynncraftApiHandler {
                 .build();
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:8080/user"))
+                .uri(URI.create("http://wynnextras.com/user"))
                 .header("playerUUID", playerUUID)
                 .timeout(Duration.ofSeconds(5))
                 .GET()
