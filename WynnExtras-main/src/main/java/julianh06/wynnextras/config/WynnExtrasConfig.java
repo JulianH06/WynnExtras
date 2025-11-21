@@ -87,7 +87,7 @@ public class WynnExtrasConfig implements ConfigData {
 //    @ConfigEntry.Category(Categories.chatNotifier)
 //    @ConfigEntry.Name("Text scale")
 //    public float TextScale = 5f;
-//
+// test
 //    @ConfigEntry.Category(Categories.chatNotifier)
 //    @ConfigEntry.Name("Text offset x")
 //    public int TextOffsetX = 75;
