@@ -80,7 +80,7 @@ public class WynnExtrasConfig implements ConfigData {
 
     @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Text
-    public String notifierInfot = "The Text needs to be separated by \"|\". (ALT Gr + <)\n" +
+    public String notifierInfotext = "The Text needs to be separated by \"|\". (ALT Gr + <)\n" +
             "The Phrase on the Left is what needs to be in the Message to trigger and \n" +
             "the one on the right is the text that will be displayed. Example: \"test|worked!\"";
 
