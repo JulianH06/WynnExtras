@@ -1,0 +1,55 @@
+{
+	"schemaVersion": 1,
+	"id": "wynnextras",
+	"version": "${version}",
+	"name": "WynnExtras",
+	"description": "The second best Wynncraft mod you'll probably find! \n\nSpecial Thanks to the Wynntils team for making a lot of helpful methods to build on!",
+	"authors": [
+		"JulianH06"
+	],
+	"contributors": [
+		"Mikecraft1224",
+		"Teslanator",
+		"elwood24",
+		"LegendaryVirus",
+		"pat_crafter07",
+		"BaltrazYT"
+	],
+	"contact": {
+		"issues": "https://discord.gg/UbC6vZDaD5",
+		"sources": "github.com/JulianH06/WynnExtras"
+	},
+	"custom": {
+		"modmenu": {
+			"links": {
+				"modmenu.discord": "https://discord.gg/UbC6vZDaD5"
+			}
+		}
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/wynnextras/wynnextras.png",
+	"environment": "*",
+	"entrypoints": {
+		"client": [
+          "julianh06.wynnextras.core.WynnExtras"
+		],
+		"modmenu": [
+			"julianh06.wynnextras.config.WynnExtrasModMenuApiImpl"
+        ]
+	},
+	"mixins": [
+      "wynnextras.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.10",
+		"minecraft": "~1.21.4",
+		"java": ">=21",
+		"fabric-api": "*",
+		"wynntils": ">=3.3.4",
+		"modmenu": "*",
+		"cloth-config": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}

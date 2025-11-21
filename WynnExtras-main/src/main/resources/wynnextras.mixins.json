@@ -1,0 +1,56 @@
+{
+  "required": true,
+  "package": "julianh06.wynnextras.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  },
+  "client": [
+    "InventoryScreenMixin",
+    "LivingEntityRendererMixin",
+    "PerspectiveMixin",
+    "StringListCellMixin",
+    "Accessor.BannerBlockEntityRendererAccessor",
+    "Accessor.DrawContextAccessor",
+    "Accessor.HandledScreenAccessor",
+    "Accessor.KeybindingAccessor",
+    "BankOverlay.DrawContextMixin",
+    "BankOverlay.HandledScreenMixin",
+    "Invoker.BannerBlockEntityRendererInvoker",
+    "Invoker.HandledScreenInvoker"
+  ],
+  "mixins": [
+    "CharacterModelMixin",
+    "ChatPacketRecievedEventMixin",
+    "ChatScreenMixin",
+    "ItemStatInfoFeatureMixin",
+    "MessageFilterFeatureMixin",
+    "ScreenHandlerMixin",
+    "TooltipFittingFeatureMixin",
+    "Accessor.BannerBlockEntityAccessor",
+    "Accessor.PersonalStorageUtilitiesFeatureAccessor",
+    "Accessor.SlotAccessor",
+    "Accessor.TooltipFittingFeatureAccessor",
+    "BankOverlay.ContainerScrollFeatureMixin",
+    "BankOverlay.PersonalStorageUtilitiesFeatureMixin",
+    "Invoker.InventoryEmeraldCountFeatureInvoker",
+    "Invoker.ItemHandlerInvoker",
+    "Invoker.ItemHighlightFeatureInvoker",
+    "Invoker.ItemTextOverlayFeatureMixin",
+    "Invoker.RaidInfoInvoker",
+    "Invoker.UnidentifiedItemIconFeatureInvoker",
+    "Raid.RaidEndedEventCompletedMixin",
+    "Raid.RaidEndedEventFailedMixin",
+    "Raid.RaidEndedEventMixin",
+    "Raid.RaidModelMixin",
+    "Raid.RaidStartEventMixin",
+    "ShamanTotem.ShamanTotemCircleActivate",
+    "ShamanTotem.ShamanTotemCircleRemoved",
+    "ShamanTotem.ShamanTotemCircleSummoned",
+    "ShamanTotem.ShamanTotemCircleUpdated",
+    "ShamanTotem.ShamanTotemModelMixin"
+  ]
+}
