@@ -323,6 +323,14 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Name("Remove front person view")
     public boolean removeFrontPersonView = false;
 
+
+
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Raid Personal Bests (internal)")
+    @ConfigEntry.Excluded
+    public Map<String, Long> raidPBs = new HashMap<>();
+
+
 //    //Hider
 //    public boolean partyMemberHide = true;
 //    public int maxHideDistance = 3;
