@@ -164,7 +164,7 @@ public class WeightDisplay {
                                 }
                             }
 
-                            if(isRaw && !key.equals("healthRegen") && !key.equals("manaRegen") && !key.contains("Steal")) {
+                            if(isRaw && !key.equals("healthRegen") && !key.equals("manaRegen") && !key.contains("Steal") && !key.contains("poison") && !key.contains("jump")) {
                                 key = key.substring(0,1).toUpperCase() + key.substring(1);
                                 key = "raw" + key;
                             } else if (isRaw && key.equals("healthRegen")) {
@@ -269,7 +269,9 @@ public class WeightDisplay {
             Map.entry("Defence", "defence"),
             Map.entry("Agility", "agility"),
             Map.entry("Intelligence", "intelligence"),
-            Map.entry("Strength", "strength")
+            Map.entry("Strength", "strength"),
+            Map.entry("Jump Height", "jumpHeight"),
+            Map.entry("Poison", "poison")
     );
 
     private static String fallbackCamelCase(String stat) {

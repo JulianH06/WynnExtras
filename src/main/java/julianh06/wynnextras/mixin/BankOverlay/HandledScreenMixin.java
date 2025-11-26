@@ -300,7 +300,8 @@ public abstract class HandledScreenMixin {
                     ItemStack rightArrow = McUtils.containerMenu().getSlot(52).getStack();
                     List<Text> lore = rightArrow.getComponents().get(DataComponentTypes.LORE).lines();
                     //System.out.println(lore);
-                    if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(240.0f)) {
+                    System.out.println(rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0));
+                    if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(284.0f)) {
                         //System.out.println("RED ARROW");
                         currentData.lastPage = activeInv + 1;
                         for (Text text : lore) {
@@ -311,10 +312,10 @@ public abstract class HandledScreenMixin {
                                 break;
                             }
                         }
-                    } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(239.0f)) {
+                    } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(283.0f)) {
                         System.out.println("GREEN ARROW");
                         confirmText = "§7Click again to confirm.";
-                    } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(237.0f) && rightArrow.getCustomName().getString().contains(String.valueOf(currentData.lastPage + 1)) && activeInv == currentData.lastPage - 1) {
+                    } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(281.0f) && rightArrow.getCustomName().getString().contains(String.valueOf(currentData.lastPage + 1)) && activeInv == currentData.lastPage - 1) {
                         System.out.println(rightArrow.getCustomName().getString());
                         System.out.println("BOUGHT" + " ACITVE PAGE " + activeInv + " LAST PAGE" + currentData.lastPage);
                         currentData.lastPage++;

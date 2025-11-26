@@ -12,6 +12,7 @@ import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
+import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
@@ -106,7 +107,7 @@ public class WynnExtras implements ClientModInitializer {
 	private static final Text WYNNEXTRAS_BACKGROUND_PILL;
 	private static final Text WYNNEXTRAS_FOREGROUND_PILL;
 
-	private static String latestVersion = null;
+	public static String latestVersion = null;
 
 	static {
 		BACKGROUND_STYLE = Style.EMPTY.withFont(PILL_FONT).
@@ -152,6 +153,7 @@ public class WynnExtras implements ClientModInitializer {
 		Waypoints.register();
 		FastRequeue.registerFastRequeue();
 		TreeLoader.init();
+		maintracking.init();
 
 		RaidListData.load();
 		WynncraftApiHandler.load();

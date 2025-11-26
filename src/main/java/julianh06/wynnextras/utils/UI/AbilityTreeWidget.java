@@ -117,21 +117,14 @@ public class AbilityTreeWidget extends Widget {
 
     private int scrollOffset;
 
-    // Externe UI-Utilities / Textures sollten aus deinem Projekt referenziert werden.
-    // (z.B. PV.ui, Textures, CustomColor etc.)
-
-    // Public state
     public static AbilityMapData.Node currentHoveredNode = null;
     public static boolean loaded = false;
 
-    // Interne trees (können durch Set-Methoden gesetzt werden)
     public AbilityMapData classTree;
     public AbilityMapData playerTree;
 
-    // Konsolidierter Hilfszustand
     private final AbilityTreeState state = new AbilityTreeState();
 
-    // Node Widgets (nur visuelle Buttons für abilities)
     private final List<NodeWidget> nodeWidgets = new ArrayList<>();
 
     private String searchInput = "";
@@ -148,9 +141,6 @@ public class AbilityTreeWidget extends Widget {
         this.botLimit = botLimit;
     }
 
-    /* ---------------------------
-       Öffentliche API
-       --------------------------- */
     public void setClassTree(AbilityMapData classTree) {
         this.classTree = classTree;
         refreshState();
@@ -172,10 +162,8 @@ public class AbilityTreeWidget extends Widget {
     }
 
     public void refreshState() {
-        // 1) Reset internen State
         state.reset();
 
-        // 2) Entferne vorherige NodeWidgets aus children (sichere Entfernung)
         if (!nodeWidgets.isEmpty()) {
             children.removeAll(nodeWidgets);
             nodeWidgets.clear();
@@ -183,25 +171,22 @@ public class AbilityTreeWidget extends Widget {
 
         currentHoveredNode = null;
 
-        // 3) Versuche, classTree aus Cache zu laden, falls nicht gesetzt
         if (this.classTree == null) {
             AbilityMapData loadedClass = AbilityTreeCache.getClassMap(this.className);
             if (loadedClass != null) this.classTree = loadedClass;
         }
 
-        // 4) Falls classTree oder playerMap fehlen: markiere als nicht geladen und beende
         if (this.classTree == null || this.playerTree == null) {
             loaded = false;
             return;
         }
 
-        // 5) Beide vorhanden -> erzeuge internen State und NodeWidgets
         state.prepare(this.classTree, this.playerTree);
         for (AbilityMapData.Node n : state.abilities) {
             NodeWidget w = new NodeWidget(x, y, n, botLimit, scrollOffset);
             w.parent = this;
             nodeWidgets.add(w);
-            children.add(w); // GUI-Framework übernimmt Rendering/Input für child widgets
+            children.add(w);
         }
 
         loaded = true;
@@ -213,7 +198,6 @@ public class AbilityTreeWidget extends Widget {
         List<AbilityMapData.Node> nodes = state.classTree.pages.get(pageId);
         if (nodes == null) return null;
         for (AbilityMapData.Node n : nodes) {
-            // Beachte: dein früherer Matching-Logic für y%6 oder spezielle Fälle gehört hier falls nötig.
             if (n.coordinates.x == coordX && n.coordinates.y == coordY) return n;
         }
         return null;
@@ -227,16 +211,12 @@ public class AbilityTreeWidget extends Widget {
         return currentHoveredNode;
     }
 
-    /* ---------------------------
-       Rendering (extern aufrufen, z.B. aus TreeTabWidget)
-       --------------------------- */
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if (!loaded || state.classTree == null) return;
 
         //System.out.println(nodeWidgets);
 
-        // Draw connectors (zuerst)
         for (AbilityMapData.Node node : state.connectors) {
             int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
             Identifier tex = connectorTextureFor(node);
@@ -245,8 +225,6 @@ public class AbilityTreeWidget extends Widget {
             }
         }
 
-        // NodeWidgets (abilities) sind bereits in nodeWidgets und werden vom Widget-Framework gerendert
-        // Falls nodeWidgets leer (z. B. beim ersten render) sicherstellen, dass refreshState aufgerufen wurde
         if (nodeWidgets.isEmpty() && !state.abilities.isEmpty()) {
             for (AbilityMapData.Node node : state.abilities) {
                 NodeWidget w = new NodeWidget(x, y, node, botLimit, scrollOffset);
@@ -261,7 +239,6 @@ public class AbilityTreeWidget extends Widget {
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if (!loaded) return;
 
-        // Search highlight: durchlaufe treeData (falls vorhanden) und markiere Treffer
         AbilityTreeData treeData = AbilityTreeCache.getClassTree(this.className);
         if (treeData != null && treeData.pages != null && searchInput != null && !searchInput.isEmpty()) {
             String search = searchInput.toLowerCase();
@@ -287,8 +264,6 @@ public class AbilityTreeWidget extends Widget {
 
         AbilityTreeData treeData = AbilityTreeCache.getClassTree(this.className.toLowerCase());
 
-        // Tooltip für aktuell gehoverte Node (falls vorhanden)
-        //System.out.println(currentHoveredNode == null);
         if (currentHoveredNode != null && treeData != null) {
             Map<String, AbilityTreeData.Ability> page = treeData.pages.get(currentHoveredNode.meta.page);
             if (page != null) {
@@ -302,10 +277,6 @@ public class AbilityTreeWidget extends Widget {
             }
         }
     }
-
-    /* ---------------------------
-       Hilfs-Methoden / Logik
-       --------------------------- */
 
     private Identifier connectorTextureFor(AbilityMapData.Node node) {
         if (node.meta == null) return null;
