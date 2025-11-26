@@ -52,6 +52,7 @@ public final class UIUtils {
 
     // --- Getter / Setter ---
     public double getScaleFactor() { return scaleFactor; }
+    public float getScaleFactorF() { return (float) scaleFactor; }
     public void setScaleFactor(double scaleFactor) { this.scaleFactor = scaleFactor; }
     public int getXStart() { return xStart; }
     public int getYStart() { return yStart; }

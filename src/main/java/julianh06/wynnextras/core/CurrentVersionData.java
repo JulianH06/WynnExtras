@@ -23,7 +23,7 @@ import java.util.List;
 public class CurrentVersionData {
     public static CurrentVersionData INSTANCE = new CurrentVersionData();
 
-    String version;
+    public String version;
 
     static Gson gson = new GsonBuilder().setPrettyPrinting().create();
 

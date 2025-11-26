@@ -1,12 +1,16 @@
 package julianh06.wynnextras.features.profileviewer;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
@@ -18,10 +22,12 @@ import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Pair;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -30,7 +36,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,6 +47,9 @@ import java.util.stream.Collectors;
 @WEModule
 public class WynncraftApiHandler {
     public static WynncraftApiHandler INSTANCE = new WynncraftApiHandler();
+
+    public List<ApiAspect> aspectList = new ArrayList<>();
+    public boolean[] waitingForAspectResponse = new boolean[5];
 
     private static Command apiKeyCmd = new Command(
             "apikey",
@@ -67,38 +78,6 @@ public class WynncraftApiHandler {
             null,
             null
     );
-
-//    private static Command whoami = new Command(
-//            "whoami",
-//            "",
-//            context -> {
-//                HttpClient client = HttpClient.newHttpClient();
-//                HttpRequest request;
-////                if (INSTANCE.API_KEY == null) {
-////                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
-////                            " Run \"/WynnExtras apikey\" to learn more.")));
-////
-////
-////                    request = HttpRequest.newBuilder()
-////                            .uri(URI.create(BASE_URL + formattedUUID + "?fullResult"))
-////                            .GET()
-////                            .build();
-////                } else {
-//                    request = HttpRequest.newBuilder()
-//                            .uri(URI.create("https://api.wynncraft.com/v3/player/whoami"))
-//                            .header("Authorization", "Bearer " + INSTANCE.API_KEY)
-//                            .GET()
-//                            .build();
-//                //}
-//
-//                HttpResponse<String> response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).join();
-//
-//                System.out.println(response.body());
-//                return 1;
-//            },
-//            null,
-//            null
-//    );
 
     private static final String BASE_URL = "https://api.wynncraft.com/v3/player/";
     private static final String BASE_URL_GUILD = "https://api.wynncraft.com/v3/guild/";
@@ -157,6 +136,58 @@ public class WynncraftApiHandler {
                 .thenApply(WynncraftApiHandler::parseGuildData);
     }
 
+    public static CompletableFuture<List<ApiAspect>> fetchAspectList(String className) {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request;
+
+        if(INSTANCE.API_KEY == null) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set you api-key to upload your aspects. For more info run \"/WynnExtras apikey\""));
+            return null;
+        } else {
+            request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.wynncraft.com/v3/aspects/" + className))
+                    .header("Authorization", "Bearer " + INSTANCE.API_KEY)
+                    .GET()
+                    .build();
+        }
+
+        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenApply(WynncraftApiHandler::parseAspectData);
+    }
+
+    public static List<ApiAspect> fetchAllAspects() {
+        List<String> classes = List.of("warrior", "shaman", "mage", "archer", "assassin");
+        List<ApiAspect> aspectList = WynncraftApiHandler.INSTANCE.aspectList;
+
+        if(!aspectList.isEmpty()) return aspectList;
+
+
+        int i = 0;
+        for(String className : classes) {
+            if(WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i]) continue;
+
+            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i] = true;
+
+            int finalI = i;
+            WynncraftApiHandler.fetchAspectList(className)
+                    .thenAccept(result -> {
+                        if(result == null) return;
+                        if(result.isEmpty()) return;
+
+                        WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                        aspectList.addAll(result);
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Unexpected error: " + ex.getMessage());
+                        return null;
+                    });
+            i++;
+        }
+
+        return aspectList;
+    }
+
     public static CompletableFuture<PlayerData> fetchPlayerData(String playerName) {
         return fetchUUID(playerName).thenCompose(rawUUID -> {
             if (rawUUID == null) {
@@ -192,8 +223,6 @@ public class WynncraftApiHandler {
     }
 
     public static CompletableFuture<FetchResult> fetchPlayerAspectData(String playerUUID) {
-        System.out.println("FETCHING PLAYER ASPECT DATA");
-
         if (playerUUID == null) {
             McUtils.sendMessageToClient(Text.of("§cUUID is null!"));
             return CompletableFuture.completedFuture(null);
@@ -235,6 +264,149 @@ public class WynncraftApiHandler {
                     return new FetchResult(FetchStatus.OK, user);
                 });
     }
+
+    public static void processAspects(Map<String, Pair<String, String>> map) {
+        if(INSTANCE.API_KEY == null) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set you api-key to upload your aspects. For more info run \"/WynnExtras apikey\""));
+            return;
+        }
+
+        List<Aspect> aspects = new ArrayList<>();
+        for(String entry : map.keySet()) {
+            int amount = parseAspectAmount(map.get(entry));
+            Aspect aspect = new Aspect();
+            aspect.setAmount(amount);
+            aspect.setName(entry);
+            aspect.setRarity(map.get(entry).getRight());
+            aspects.add(aspect);
+        }
+
+        User user = new User();
+        user.setUuid(McUtils.player().getUuidAsString());
+        user.setPlayerName(McUtils.playerName());
+        user.setAspects(aspects);
+        user.setModVersion(CurrentVersionData.INSTANCE.version);
+        user.setUpdatedAt(Time.now().timestamp());
+
+        postPlayerAspectData(user).thenAccept(result -> {
+            if (result.status() == FetchStatus.OK) {
+                McUtils.sendMessageToClient(Text.of("§aSuccessfully uploaded your aspects!"));
+            } else {
+                McUtils.sendMessageToClient(Text.of("§eError: " + result.status()));
+            }
+        });
+    }
+
+    public static CompletableFuture<FetchResult> postPlayerAspectData(User user) {
+
+        if (user == null) {
+            McUtils.sendMessageToClient(Text.of("§cUser object is null!"));
+            return CompletableFuture.completedFuture(new FetchResult(FetchStatus.UNKNOWN_ERROR, null));
+        }
+
+        try {
+            String json = gson.toJson(user); // falls du schon gson nutzt
+
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://wynnextras.com/user"))
+                    .header("Content-Type", "application/json")
+                    .header("Wynncraft-Api-Key", INSTANCE.API_KEY)
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .timeout(Duration.ofSeconds(8))
+                    .build();
+
+            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .handle((response, ex) -> {
+
+                        if (ex != null) {
+                            System.err.println("Server unreachable: " + ex.getMessage());
+                            return new FetchResult(FetchStatus.SERVER_UNREACHABLE, null);
+                        }
+
+                        int code = response.statusCode();
+
+                        if (code == 401) {
+                            return new FetchResult(FetchStatus.UNAUTHORIZED, null);
+                        }
+
+                        if (code == 400) {
+                            return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
+                        }
+
+                        if (code >= 500) {
+                            return new FetchResult(FetchStatus.SERVER_ERROR, null);
+                        }
+
+                        if (code != 200) {
+                            System.err.println("POST ERROR: " + code + " → " + response.body());
+                            return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
+                        }
+
+                        // Der Server gibt den gespeicherten User zurück
+                        User savedUser = parsePlayerAspectData(response.body());
+                        return new FetchResult(FetchStatus.OK, savedUser);
+                    });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(new FetchResult(FetchStatus.UNKNOWN_ERROR, null));
+        }
+    }
+
+
+    private static int parseAspectAmount(Pair<String, String> aspect) {
+        String tierText = aspect.getLeft(); // z.B. "Tier III >>>>>>>>>> Tier IV [109/120]"
+        String rarity = aspect.getRight();  // z.B. "Legendary", "Fabled", "Mythic"
+
+        int[] tier1 = {1, 1, 1};    // Mythic, Fabled, Legendary
+        int[] tier2 = {4, 14, 4};
+        int[] tier3 = {10, 60, 25};
+        int[] tier4 = {0, 0, 120};  // nur Legendary
+
+        int rarityIndex;
+        switch (rarity) {
+            case "Mythic" -> rarityIndex = 0;
+            case "Fabled" -> rarityIndex = 1;
+            case "Legendary" -> rarityIndex = 2;
+            default -> rarityIndex = -1;
+        }
+        if (rarityIndex == -1) return 0;
+
+        // Wenn MAX, komplette Summe zurückgeben
+        if (tierText.contains("[MAX]")) {
+            return tier1[rarityIndex] + tier2[rarityIndex] + tier3[rarityIndex] + tier4[rarityIndex];
+        }
+
+        // Den aktuellen Tiernamen extrahieren (das erste Tier)
+        String currentTier = "";
+        if (tierText.contains("Tier I ")) currentTier = "Tier I";
+        else if (tierText.contains("Tier II ")) currentTier = "Tier II";
+        else if (tierText.contains("Tier III ")) currentTier = "Tier III";
+
+        int sum = 0;
+
+        // Additive Summe vorheriger Tiers
+        switch (currentTier) {
+            case "Tier I" -> sum += tier1[rarityIndex];
+            case "Tier II" -> sum += tier1[rarityIndex] + tier2[rarityIndex];
+            case "Tier III" -> sum += tier1[rarityIndex] + tier2[rarityIndex] + tier3[rarityIndex];
+        }
+
+        // Progress aus den Klammern hinzufügen
+        if (tierText.matches(".*\\[(\\d+)/(\\d+)\\].*")) {
+            String bracketContent = tierText.replaceAll(".*\\[(\\d+)/(\\d+)\\].*", "$1");
+            int currentProgress = Integer.parseInt(bracketContent);
+            sum += currentProgress;
+        }
+
+        return sum;
+    }
+
+
 
 
     public static CompletableFuture<AbilityMapData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {
@@ -299,17 +471,29 @@ public class WynncraftApiHandler {
         return gson.fromJson(json, PlayerData.class);
     }
 
+    private static GuildData parseGuildData(String json) {
+        Gson gson = new Gson();
+
+        return gson.fromJson(json, GuildData.class);
+    }
+
     private static User parsePlayerAspectData(String json) {
         Gson gson = new Gson();
 
         return gson.fromJson(json, User.class);
     }
 
-    private static GuildData parseGuildData(String json) {
+    private static List<ApiAspect> parseAspectData(String json) {
+        System.out.println(json);
+
         Gson gson = new GsonBuilder()
+                .registerTypeAdapter(ApiAspect.Icon.class, new ApiAspect.IconDeserializer())
                 .create();
 
-        return gson.fromJson(json, GuildData.class);
+        Type mapType = new TypeToken<Map<String, ApiAspect>>() {}.getType();
+        Map<String, ApiAspect> aspectMap = gson.fromJson(json, mapType);
+
+        return new ArrayList<>(aspectMap.values());
     }
 
     private static AbilityMapData parseAbilityMapData(String json) {
@@ -416,7 +600,7 @@ public class WynncraftApiHandler {
             if (spanEnd == -1) break;
 
             String inner = html.substring(contentStart, spanEnd);
-            Style newStyle = inheritedStyle;
+            Style newStyle = inheritedStyle.withItalic(false);
 
             // Farbe
             Matcher colorMatch = Pattern.compile("color:\\s*#([0-9a-fA-F]{6})").matcher(style);
@@ -483,7 +667,8 @@ public class WynncraftApiHandler {
         NOT_FOUND,
         SERVER_UNREACHABLE,
         SERVER_ERROR,
-        UNKNOWN_ERROR
+        UNKNOWN_ERROR,
+        UNAUTHORIZED
     }
 
     public record FetchResult(FetchStatus status, User user) {}

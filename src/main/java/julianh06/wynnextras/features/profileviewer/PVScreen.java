@@ -786,7 +786,7 @@ public class PVScreen extends WEScreen {
             case Dungeons -> new DungeonsTabWidget();
             case Quests -> new QuestsTabWidget();
             case Tree -> new TreeTabWidget();
-            case Aspects -> new AspectsWidget();
+            case Aspects -> new AspectsTabWidget();
             case Misc -> new MiscTabWidget();
             case null, default -> new TabWidget(0, 0, 0, 0);
         };

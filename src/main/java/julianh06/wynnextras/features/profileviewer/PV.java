@@ -1,30 +1,21 @@
 package julianh06.wynnextras.features.profileviewer;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.context.CommandContext;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.ClickEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
-import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.features.profileviewer.data.PlayerData;
-import julianh06.wynnextras.features.profileviewer.tabs.AspectsWidget;
-import julianh06.wynnextras.utils.render.WorldRenderUtils;
+import julianh06.wynnextras.features.profileviewer.tabs.AspectsTabWidget;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
-import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.List;
-import java.util.Map;
 
 @WEModule
 public class PV {
@@ -101,8 +92,8 @@ public class PV {
         client.send(() -> client.setScreen(null));
         currentPlayer = player;
         openedAspectPage = false;
-        AspectsWidget.currentPlayerAspectData = null;
-        AspectsWidget.fetchStatus = null;
+        AspectsTabWidget.currentPlayerAspectData = null;
+        AspectsTabWidget.fetchStatus = null;
         PVScreen.dummy = null;
         inPV = true;
     }
