@@ -6,6 +6,7 @@ public abstract class Achievement {
     protected String id;
     protected String title;
     protected String description;
+    protected boolean secret;
     protected boolean unlocked;
     protected Instant unlockedAt;
 
