@@ -41,6 +41,6 @@ public class ItemStatInfoFeatureMixin {
     private List<Text> redirectGetWynnItemTooltip(ItemStack itemStack, WynnItem wynnItem) {
         currentHoveredStack = itemStack;
         currentHoveredWynnitem = wynnItem;
-        return WeightDisplay.getWynnItemTooltipWithScale(itemStack, wynnItem);
+        return TooltipUtils.getWynnItemTooltip(itemStack, wynnItem);
     }
 }

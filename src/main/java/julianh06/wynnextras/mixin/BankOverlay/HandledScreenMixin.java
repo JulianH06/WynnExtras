@@ -854,7 +854,7 @@ public abstract class HandledScreenMixin {
         List<Text> tooltip = item.map(i -> {
             currentHoveredStack = hoveredSlot;
             currentHoveredWynnitem = i;
-            return WeightDisplay.getWynnItemTooltipWithScale(hoveredSlot, i);
+            return TooltipUtils.getWynnItemTooltip(hoveredSlot, i);
         }).filter(t -> !t.isEmpty())
             .orElse(hoveredSlot.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.ADVANCED));
 
@@ -975,9 +975,11 @@ public abstract class HandledScreenMixin {
                 ContainerUtils.clickOnSlot(52, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
                 return;
             } else if (hoveredInvIndex == currentData.lastPage) {
-                BankOverlay.PersonalStorageUtils.jumpToDestination(currentData.lastPage);
-                System.out.println("Jump 1");
-                activeInv = currentData.lastPage - 1;
+                if(PersonalStorageUtils != null) {
+                    BankOverlay.PersonalStorageUtils.jumpToDestination(currentData.lastPage);
+                    System.out.println("Jump 1");
+                    activeInv = currentData.lastPage - 1;
+                }
                 retryLoad();
                 return;
             }
@@ -1103,41 +1105,23 @@ public abstract class HandledScreenMixin {
 
         int clickedPage = hoveredInvIndex + 1;
         if (clickedPage <= currentData.lastPage) {
-            List<ItemStack> stacks = BankOverlay.activeInvSlots.stream()
-                    .map(Slot::getStack)
-                    .collect(Collectors.toList());
+            if(PersonalStorageUtils != null) {
+                List<ItemStack> stacks = BankOverlay.activeInvSlots.stream()
+                        .map(Slot::getStack)
+                        .collect(Collectors.toList());
 
-            Pages.BankPages.put(activeInv, stacks);
-            activeInv = hoveredInvIndex;
-            System.out.println("Jump 2");
-            BankOverlay.PersonalStorageUtils.jumpToDestination(clickedPage);
-
+                Pages.BankPages.put(activeInv, stacks);
+                activeInv = hoveredInvIndex;
+                System.out.println("Jump 2");
+                BankOverlay.PersonalStorageUtils.jumpToDestination(clickedPage);
+            }
         } else {
-            if (activeInv != currentData.lastPage - 1) {
+            if (activeInv != currentData.lastPage - 1 && PersonalStorageUtils != null) {
                 activeInv = currentData.lastPage - 1;
                 System.out.println("Jump 3");
                 BankOverlay.PersonalStorageUtils.jumpToDestination(currentData.lastPage);
                 buyPageStack = null;
-            } /*else {
-                Slot pageBuySlot = McUtils.containerMenu().getSlot(52);
-                ItemStack newStack = pageBuySlot.getStack();
-
-                if (buyPageStack == null) {
-                    buyPageStack = newStack;
-                    buyPageStageText = "Click again to buy Page " + (lastPage + 1) + ".";
-                } else if (buyPageStack.equals(newStack)) {
-                    Int2ObjectMap<ItemStack> changedSlots = new Int2ObjectOpenHashMap<>();
-                    changedSlots.put(52, new ItemStack(Items.AIR));
-                    McUtils.sendPacket(new ClickSlotC2SPacket(bankSyncid, 0, 52, 0, SlotActionType.PICKUP, buyPageStack, changedSlots));
-                    buyPageStageText = "Click again to confirm.";
-                } else {
-                    Int2ObjectMap<ItemStack> changedSlots = new Int2ObjectOpenHashMap<>();
-                    changedSlots.put(52, new ItemStack(Items.AIR));
-                    McUtils.sendPacket(new ClickSlotC2SPacket(bankSyncid, 0, 52, 0, SlotActionType.PICKUP, buyPageStack, changedSlots));
-                    lastPage++;
-                    buyPageStageText = "NOT BOUGHT";
-                }
-            }*/
+            }
         }
         return true;
     }
