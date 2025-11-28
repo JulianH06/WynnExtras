@@ -34,7 +34,7 @@ public class TooltipFittingFeatureMixin {
         if (!ItemUtils.isTier(WeightDisplay.currentHoveredStack, GearTier.MYTHIC)) {
             return TooltipUtils.getClientTooltipComponent(components);
         }
-        List<Text> modified = WeightDisplay.getWynnItemTooltipWithScale(WeightDisplay.currentHoveredStack, WeightDisplay.currentHoveredWynnitem);
+        List<Text> modified = TooltipUtils.getWynnItemTooltip(WeightDisplay.currentHoveredStack, WeightDisplay.currentHoveredWynnitem);
         return TooltipUtils.getClientTooltipComponent(modified);
 
     }

@@ -5,18 +5,15 @@ import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.features.tooltips.ItemStatInfoFeature;
-import com.wynntils.models.gear.type.GearTier;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.stats.type.StatType;
 import com.wynntils.models.wynnitem.parsing.WynnItemParser;
-import com.wynntils.utils.mc.TooltipUtils;
 import com.wynntils.utils.wynn.ColorScaleUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.Core;
 import julianh06.wynnextras.event.KeyInputEvent;
-import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.item.ItemStack;
@@ -82,17 +79,12 @@ public class WeightDisplay {
     public static void calculateScale(String encodedItem, ItemStack itemStack, List<Text> wynntilsTooltip) {
         if(itemStack.getCustomName() == null) return;
 
-//        extractIdentifications(wynntilsTooltip);
-//
-//        if(true) return;
         String key = itemStack.getCustomName().getString()
                 .replace("À", "")
                 .replaceAll("§[0-9a-fk-or]", "")
                 .replace("⬡ Shiny ", "")
                 .strip();
         ItemData weightProfile = itemCache.get(key);
-        System.out.println(itemCache);
-        System.out.println(key);
         if (weightProfile == null) return;
 
         List<WeightData> calculatedList = new ArrayList<>();
@@ -324,46 +316,9 @@ public class WeightDisplay {
         }
     }
 
-    public static List<Text> getWynnItemTooltipWithScale(ItemStack itemStack, WynnItem wynnItem) {
-        List<Text> tooltips = TooltipUtils.getWynnItemTooltip(itemStack, wynnItem);
+    //the getWynnItemTooltipWithScale method has been moved to TooltipUtilsMixin
 
-        if (!SimpleConfig.getInstance(WynnExtrasConfig.class).showWeight) {
-            return tooltips;
-        }
-
-        if (!ItemUtils.isTier(itemStack, GearTier.MYTHIC)) {
-            return tooltips;
-        }
-
-        String itemString = ItemUtils.itemStackToItemString(itemStack);
-        if (itemString != null && WeightDisplay.getCachedWeight(itemString, true, itemStack, tooltips) != null) {
-            //System.out.println(tabPressed);
-            if((upPressed || downPressed) && itemStack.getCustomName() != null) {
-                String key = itemStack.getCustomName().getString()
-                        .replace("À", "")
-                        .replaceAll("§[0-9a-fk-or]", "")
-                        .replace("⬡ Shiny ", "")
-                        .strip();
-                WeightDisplay.ItemData itemData = itemCache.get(key);
-                if (itemData != null && !itemData.data().isEmpty()) {
-                    int nextIndex = itemData.index;
-                    if(downPressed) nextIndex = (itemData.index() + 1) % itemData.data().size();
-                    else if(upPressed) {
-                        if(itemData.index() - 1 == -1) nextIndex = itemData.data.size() - 1;
-                        else nextIndex = (itemData.index - 1) % itemData.data().size();
-                    }
-                    itemCache.put(key, new WeightDisplay.ItemData(itemData.name(), itemData.data(), nextIndex));
-                }
-                upPressed = false;
-                downPressed = false;
-            }
-            tooltips = modifyTooltip(tooltips, WeightDisplay.getCachedWeight(itemString, itemStack, tooltips), itemStack, itemString);
-        }
-
-        return tooltips;
-    }
-
-    private static List<Text> modifyTooltip(List<Text> tooltips, WeightDisplay.WeightData weightData, ItemStack itemStack, String encodedItem) {
+    public static List<Text> modifyTooltip(List<Text> tooltips, WeightDisplay.WeightData weightData, ItemStack itemStack, String encodedItem) {
         List<Text> modified = new ArrayList<>();
 
         if (!tooltips.isEmpty()) {
