@@ -50,7 +50,7 @@ public class BankOverlay {
 
     public static int activeInv = -1;
 
-    public static Long timeSinceSwitch = 0L;
+    public static boolean recentlySwitched = false;
 
     public static ItemStack heldItem = Items.AIR.getDefaultStack();
 
@@ -66,11 +66,13 @@ public class BankOverlay {
 
     public static EasyTextInput activeTextInput;
 
-    public static BankOverlayType currentOverlayType = BankOverlayType.NONE;
-    public static BankOverlayType expectedOverlayType = BankOverlayType.NONE;
+    public volatile static BankOverlayType currentOverlayType = BankOverlayType.NONE;
+    public volatile static BankOverlayType expectedOverlayType = BankOverlayType.NONE;
     public static BankData currentData;
     public static String currentCharacterID;
     public static int currentMaxPages;
+
+    public static boolean shouldWait = false;
 
     public static HashMap<Integer, EasyTextInput> BankPageNameInputs = new HashMap<>();
     public static EnumMap<BankOverlayType, HashMap<Integer, EasyTextInput>> BankPageNameInputsByType = new EnumMap<>(BankOverlayType.class);

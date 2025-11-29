@@ -30,8 +30,6 @@ public class ClassWidget extends Widget {
     static Identifier classBackgroundTextureActiveHovered = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactivehovered.png");
     static Identifier classBackgroundTextureActiveHoveredDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactivehovered_dark.png");
 
-
-
     static Identifier ironmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ironman.png");
     static Identifier ultimateIronmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ultimateironman.png");
     static Identifier huntedTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hunted.png");
@@ -39,12 +37,17 @@ public class ClassWidget extends Widget {
     static Identifier hardcoreFailedTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hardcorefailed.png");
     static Identifier craftsmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/craftsman.png");
 
+    static Identifier onlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle_dark.png");
+    static Identifier onlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle.png");
+
     CharacterData characterData;
     private final Runnable action;
+    private final boolean isAtiveCharacter;
 
-    public ClassWidget(CharacterData characterData) {
+    public ClassWidget(CharacterData characterData, boolean isAtiveCharacter) {
         super(0, 0, 0, 0);
         this.characterData = characterData;
+        this.isAtiveCharacter = isAtiveCharacter;
         this.action = () -> {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             if(PVScreen.selectedCharacter == characterData) {
@@ -149,6 +152,10 @@ public class ClassWidget extends Widget {
             if(gamemodes.contains("craftsman")) {
                 ui.drawImage(craftsmanTexture, x - ((k % 2) * 35) + 350, y + 85 - (Math.floorDiv(k, 2) * 35), 30, 30);
             }
+        }
+
+        if(isAtiveCharacter) {
+            ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? onlineCircleTextureDark : onlineCircleTexture, x + 6, y + 6, 20, 20);
         }
     }
 }
