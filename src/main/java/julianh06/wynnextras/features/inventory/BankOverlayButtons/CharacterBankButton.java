@@ -45,6 +45,6 @@ public class CharacterBankButton extends EasyButton {
 
         if(currScreenHandler == null) { return; }
         clickOnSlot(47, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
-        timeSinceSwitch = Time.now().timestamp();
+        recentlySwitched = true;
     }
 }

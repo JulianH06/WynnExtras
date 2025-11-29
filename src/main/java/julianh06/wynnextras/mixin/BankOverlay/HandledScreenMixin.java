@@ -127,9 +127,6 @@ public abstract class HandledScreenMixin {
     ItemHighlightFeature itemHighlightFeature;
 
     @Unique
-    boolean shouldWait = false;
-
-    @Unique
     int lastPage = currentMaxPages;
 
     @Unique
@@ -296,11 +293,11 @@ public abstract class HandledScreenMixin {
             }
 
             try {
-                if (McUtils.containerMenu() != null && indexWithOffset == activeInv + 1 && !shouldWait) {
+                if (McUtils.containerMenu() != null && indexWithOffset == activeInv + 1 && !shouldWait && (expectedOverlayType == BankOverlayType.NONE || currentOverlayType == expectedOverlayType)) {
                     ItemStack rightArrow = McUtils.containerMenu().getSlot(52).getStack();
                     List<Text> lore = rightArrow.getComponents().get(DataComponentTypes.LORE).lines();
                     //System.out.println(lore);
-                    System.out.println(rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0));
+                    //System.out.println(rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0));
                     if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(284.0f)) {
                         //System.out.println("RED ARROW");
                         currentData.lastPage = activeInv + 1;
@@ -313,11 +310,11 @@ public abstract class HandledScreenMixin {
                             }
                         }
                     } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(283.0f)) {
-                        System.out.println("GREEN ARROW");
+                        //System.out.println("GREEN ARROW");
                         confirmText = "§7Click again to confirm.";
                     } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(281.0f) && rightArrow.getCustomName().getString().contains(String.valueOf(currentData.lastPage + 1)) && activeInv == currentData.lastPage - 1) {
-                        System.out.println(rightArrow.getCustomName().getString());
-                        System.out.println("BOUGHT" + " ACITVE PAGE " + activeInv + " LAST PAGE" + currentData.lastPage);
+                        //System.out.println(rightArrow.getCustomName().getString());
+                        //System.out.println("BOUGHT" + " ACITVE PAGE " + activeInv + " LAST PAGE" + currentData.lastPage);
                         currentData.lastPage++;
                         //PersonalStorageUtilitiesFeatureAccessor accessor = (PersonalStorageUtilitiesFeatureAccessor) BankOverlay.PersonalStorageUtils;
                         //accessor.setLastPage(lastPage);
