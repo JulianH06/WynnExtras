@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.chat;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.core.components.Models;
@@ -96,34 +97,44 @@ public class RaidChatNotifier {
                 "voidpedestal1"
         ),
         new SingleOccurrenceDetector(
+                "A Void Pedestal has been activated! [2/2]",
+                "§bVoid Pedestal Activated [2/2] §c",
+                "voidpedestal2"
+        ),
+        new SingleOccurrenceDetector(
                 "You have unblocked the voidhole out!",
-                "§Void Room done §c",
+                "§bVoid Room done §c",
                 "voidholeroompb"
         ),
         new SingleOccurrenceDetector(
                 "The Giant Void Hole has opened! Use it to escape!",
-                "§Voidgather Room done §c",
+                "§bVoidgather Room done §c",
                 "voidgatherroompb"
         ),
         new SingleOccurrenceDetector(
                 "The lower door has been unlocked",
-                "§Lower door unlocked §c",
+                "§bLower door unlocked §c",
                 "lowerdoorunlock"
         ),
         new SingleOccurrenceDetector(
                 "The Upper door has been unlocked",
-                "§Upper door unlocked §c",
+                "§bUpper door unlocked §c",
                 "upperdoorunlock"
         ),
         new SingleOccurrenceDetector(
-                "The exit has been unlocked!",
-                "§Exit unlocked §c",
-                "exitunlock"
+                "has picked up the Wings!",
+                "§bWings picked up §c",
+                "wings"
         ),
         new SingleOccurrenceDetector(
-                "has picked up the Wings!",
-                "§Wings picked up §c",
-                "wings"
+                "The Void Hole at the bottom of",
+                "§bVoid hole opened §c",
+                "voidholeopen"
+        ),
+        new SingleOccurrenceDetector(
+                "Destroy them and defeat the Despairing Crawler",
+                "§bDespairing Crawler spaned §c",
+                "despairingcrawlerspawn"
         ),
 
 
@@ -144,12 +155,12 @@ public class RaidChatNotifier {
         ),
         new MultiOccurrenceDetector(
             "The void holes inside the tree are open!",
-            "§Tree Opened §c",
+            "§bTree Opened §c",
             "openedtree"
         ),
         new MultiOccurrenceDetector(
-                "[1 Void Matter]",
-                "§[1 Void Matter] §c",
+                "[+1 Void Matter]",
+                "§b[+1 Void Matter] §c",
                 "voidmattergathered"
         ),
         new MultiOccurrenceDetector(
@@ -188,18 +199,18 @@ public class RaidChatNotifier {
                 "treeenter"
         ),
         new MultiOccurrenceDetector(
-                "A player must stand on the platform at all times to prevent it from decaying!",
-                "Platform spawned §c",
+                "A player must stand on the platform at",
+                "§bPlatform spawned §c",
                 "platformspawnedtcc"
         ),
         new MultiOccurrenceDetector(
-                "A miniboss has spawned! It has sped up the lava flows! Kill it to slow them down.",
-                "Miniboss spawned §c",
+                "A miniboss has spawned! It has sped",
+                "§bMiniboss spawned §c",
                 "minibossspawnedtcc"
         ),
         new MultiOccurrenceDetector(
-                "The golem has been defeated, and the passageway has opened.",
-                "Golem defeated §c",
+                "The golem has been defeated, and the",
+                "§bGolem defeated §c",
                 "golemdefeated"
         )
     );
@@ -317,6 +328,7 @@ public class RaidChatNotifier {
         Pattern.compile("A Bulb Keeper has spawned!", Pattern.CASE_INSENSITIVE),
         Pattern.compile("The Giant Void Hole has opened! Use it to escape!", Pattern.CASE_INSENSITIVE),
         Pattern.compile("A Void Pedestal has been activated! \\[1/2]", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("A Void Pedestal has been activated! \\[2/2]", Pattern.CASE_INSENSITIVE),
         Pattern.compile("You have unblocked the voidhole out!", Pattern.CASE_INSENSITIVE),
         Pattern.compile("\\[1 Void Matter]", Pattern.CASE_INSENSITIVE),
         Pattern.compile("has entered the tree", Pattern.CASE_INSENSITIVE),
@@ -327,11 +339,12 @@ public class RaidChatNotifier {
         Pattern.compile("the obelisks have appeared; they must be", Pattern.CASE_INSENSITIVE),
         Pattern.compile("The lower door has been unlocked.", Pattern.CASE_INSENSITIVE),
         Pattern.compile("The Upper door has been unlocked!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The exit has been unlocked!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("A player must stand on the platform at all times to prevent it from decaying!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("A miniboss has spawned! It has sped up the lava flows! Kill it to slow them down.", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The golem has been defeated, and the passageway has opened.", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("A player must stand on the platform", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("A miniboss has spawned! It has sped", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("The golem has been defeated, and", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("The Void Hole at the bottom of", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("Destroy them and defeat the Despairing Crawler", Pattern.CASE_INSENSITIVE)
     );
 
 
@@ -736,7 +749,7 @@ public class RaidChatNotifier {
 
     public void save() {
         Path path = FabricLoader.getInstance().getConfigDir().resolve("wynnextras/raidPBs.json");
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
         try {
             Files.createDirectories(path.getParent());
@@ -752,7 +765,7 @@ public class RaidChatNotifier {
 
     public void load() {
         Path path = FabricLoader.getInstance().getConfigDir().resolve("wynnextras/raidPBs.json");
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
         try {
             Files.createDirectories(path.getParent());

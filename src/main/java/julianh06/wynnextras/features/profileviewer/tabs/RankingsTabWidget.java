@@ -45,7 +45,7 @@ public class RankingsTabWidget extends PVScreen.TabWidget {
         if(PV.currentPlayerData == null) return;
         Map<String, Long> rankings = PV.currentPlayerData.getRanking();
         if(rankings == null) {
-            ui.drawCenteredText("This player has their rankings private.", 900, 345, CustomColor.fromHexString("FF0000"), 5f);
+            ui.drawCenteredText("This player has their rankings private.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
             return;
         }
 
