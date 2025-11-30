@@ -13,6 +13,7 @@ import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.aspects.maintracking;
+import julianh06.wynnextras.features.chat.RaidChatNotifier;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
@@ -157,6 +158,7 @@ public class WynnExtras implements ClientModInitializer {
 
 		RaidListData.load();
 		WaypointData.load();
+		RaidChatNotifier.INSTANCE.load();
 
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			AccountBankData.INSTANCE.load();
