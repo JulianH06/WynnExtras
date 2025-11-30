@@ -61,7 +61,7 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
                 classWidgets.clear();
                 clearChildren();
                 Map<String, CharacterData> map = PV.currentPlayerData.getCharacters();
-                CharacterData activeCharacter = map.get(PV.currentPlayerData.getActiveCharacter().toString());
+                CharacterData activeCharacter = PV.currentPlayerData.getActiveCharacter() == null ? null : map.get(PV.currentPlayerData.getActiveCharacter().toString());
                 List<CharacterData> sortedCharacterList = new ArrayList<>(map.values());
 
                 sortedCharacterList.sort(
