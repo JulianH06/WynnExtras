@@ -55,13 +55,63 @@ public class RaidChatNotifier {
         new SingleOccurrenceDetector(
             "The Void Holes have begun to destabi",
             "§b[4/5] Void Matters §c",
-                "voiddone"
+                "voidgathered"
+        ),
+        new SingleOccurrenceDetector(
+                "The Altar has opened to the void, you may leave through it.",
+                "§bVoid Room Done §c",
+                "treedone"
+        ),
+        new SingleOccurrenceDetector(
+                "All the Void Rifts have been destroyed! A path",
+                "§bBerry Room Done §c",
+                "berryroom"
+        ),
+        new SingleOccurrenceDetector(
+                "has taken the Berserker Berry!",
+                "§bBerry Room Done §c",
+                "berrytaken"
+        ),
+        new SingleOccurrenceDetector(
+                "A Void Pedestal has been activated! [1/2]",
+                "§bVoid Pedestal Activated [1/2] §c",
+                "voidpedestal1"
+        ),
+        new SingleOccurrenceDetector(
+                "You have unblocked the voidhole out!",
+                "§Void Room done §c",
+                "voidholeroompb"
+        ),
+        new SingleOccurrenceDetector(
+                "The Giant Void Hole has opened! Use it to escape!",
+                "§Voidgather Room done §c",
+                "voidgatherroompb"
         ),
 
         new MultiOccurrenceDetector(
             "A new platform has appeared on the Lower Area!",
             "§bLower Mini spawned §c",
                 "lowermini"
+        ),
+        new MultiOccurrenceDetector(
+                "A Bulb Keeper has spawned!",
+                "§bBulb Keeper spawned §c",
+                "bulbspawned"
+        ),
+        new MultiOccurrenceDetector(
+                "A Red Bulb has been captured!",
+                "§bBulb captured §c",
+                "bulbcaptured"
+        ),
+        new MultiOccurrenceDetector(
+            "The void holes inside the tree are open!",
+            "§Tree Opened §c",
+            "openedtree"
+        ),
+        new MultiOccurrenceDetector(
+                "[1 Void Matter]",
+                "§[1 Void Matter] §c",
+                "voidmattergathered"
         ),
         new MultiOccurrenceDetector(
             "3/3 Clouds Purified",
@@ -200,6 +250,15 @@ public class RaidChatNotifier {
         Pattern.compile("1 slimey goo", Pattern.CASE_INSENSITIVE),
         Pattern.compile("2 slimey goo", Pattern.CASE_INSENSITIVE),
         Pattern.compile("1 \\[isoptera heart", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("All the Void Rifts have been destroyed! A path", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("The void holes inside the tree are open!", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("The Altar has opened to the void, you may leave through it.", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("A Red Bulb has been captured!", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("A Bulb Keeper has spawned!", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("The Giant Void Hole has opened! Use it to escape!", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("A Void Pedestal has been activated! [1/2]", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("You have unblocked the voidhole out!", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("[1 Void Matter]", Pattern.CASE_INSENSITIVE),
         Pattern.compile("has entered the tree", Pattern.CASE_INSENSITIVE),
 
 
