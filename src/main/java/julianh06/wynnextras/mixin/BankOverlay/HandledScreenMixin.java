@@ -201,7 +201,6 @@ public abstract class HandledScreenMixin {
     @Unique
     String confirmText = "";
 
-
     @Unique
     private final EnumSet<BankOverlayType> initializedTypes = EnumSet.noneOf(BankOverlayType.class);
 
@@ -296,30 +295,30 @@ public abstract class HandledScreenMixin {
                 if (McUtils.containerMenu() != null && indexWithOffset == activeInv + 1 && !shouldWait && (expectedOverlayType == BankOverlayType.NONE || currentOverlayType == expectedOverlayType)) {
                     ItemStack rightArrow = McUtils.containerMenu().getSlot(52).getStack();
                     List<Text> lore = rightArrow.getComponents().get(DataComponentTypes.LORE).lines();
-                    //System.out.println(lore);
-                    //System.out.println(rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0));
-                    if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(284.0f)) {
-                        //System.out.println("RED ARROW");
+                    System.out.println(rightArrow.getComponents().get(DataComponentTypes.CUSTOM_NAME).getString());
+                    if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_NAME).getString().contains(">§4>§c>§4>§c>") &&
+                            (pageBuyCustomModelData == 0 || rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0) == pageBuyCustomModelData)
+                    ) {
                         currentData.lastPage = activeInv + 1;
+                        try {
+                            pageBuyCustomModelData = rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0);
+                        } catch (Exception e) {}
+
                         for (Text text : lore) {
                             if (text.getString().contains("§7Price")) {
                                 priceText = text.getString();
                                 confirmText = "";
-                                //System.out.println(text.getString() + (text.getString().contains("✖") ? " CANNOT AFFORD" : " CAN AFFORD"));
                                 break;
                             }
                         }
-                    } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(283.0f)) {
-                        //System.out.println("GREEN ARROW");
+                    } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_NAME).getString().contains(">§4>§c>§4>§c>") &&
+                            pageBuyCustomModelData != 0 && rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0) != pageBuyCustomModelData
+                    ) {
                         confirmText = "§7Click again to confirm.";
-                    } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(281.0f) && rightArrow.getCustomName().getString().contains(String.valueOf(currentData.lastPage + 1)) && activeInv == currentData.lastPage - 1) {
-                        //System.out.println(rightArrow.getCustomName().getString());
-                        //System.out.println("BOUGHT" + " ACITVE PAGE " + activeInv + " LAST PAGE" + currentData.lastPage);
+                    } else if (rightArrow.getCustomName().getString().contains(String.valueOf(currentData.lastPage + 1)) && activeInv == currentData.lastPage - 1) {
                         currentData.lastPage++;
-                        //PersonalStorageUtilitiesFeatureAccessor accessor = (PersonalStorageUtilitiesFeatureAccessor) BankOverlay.PersonalStorageUtils;
-                        //accessor.setLastPage(lastPage);
+                        pageBuyCustomModelData = 0;
                         priceText = null;
-                        //McUtils.sendMessageToClient(Text.of("bought new page"));
                         retryLoad();
                     }
                 } else {
