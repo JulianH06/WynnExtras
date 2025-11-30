@@ -103,9 +103,6 @@ public class WeightDisplay {
                 scaled.put(stat, value * scale);
                 if(scale < 0) {
                     // If the weight is negative, we need to invert the percentage and make the scale positive
-                    System.out.println("1 " + String.valueOf(100-value));
-                    System.out.println("2 " + scale);
-                    System.out.println("3 " + (100-value)*scale);
                     score += Math.abs((100 - value) * scale);
                 } else {
                     score += value * scale;
@@ -113,7 +110,6 @@ public class WeightDisplay {
             }
 
             WeightData calculated = new WeightData(weightData.weightName, scaled, score);
-            System.out.println(calculated.weightName + calculated.score);
             calculatedList.add(calculated);
         }
 
@@ -172,7 +168,6 @@ public class WeightDisplay {
         }
 
 
-        System.out.println(percentages);
         return percentages;
     }
 
@@ -193,7 +188,6 @@ public class WeightDisplay {
 
             int responseCode = conn.getResponseCode();
             if (responseCode != 200) {
-                System.out.println("RESPONSECODE NOT 200");
                 return;
             }
 
