@@ -316,9 +316,15 @@ public class WynncraftApiHandler {
 
         postPlayerAspectData(user).thenAccept(result -> {
             if (result.status() == FetchStatus.OK) {
-                McUtils.sendMessageToClient(Text.of("§aSuccessfully uploaded your aspects!"));
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSuccessfully uploaded your aspects!"));
+            } else if (result.status == FetchStatus.NOKEYSET) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§You need to set your api-key to use this feature. Run \"/we apikey\" for more information."));
+            } else if (result.status == FetchStatus.FORBIDDEN) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4You need to upload your own aspects first to view other peoples aspects. Run \"/we apikey\" for more information."));
+            } else if (result.status == FetchStatus.UNAUTHORIZED) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4The api-key you have set is not connected to your minecraft account. Run \"/we apikey\" for more information."));
             } else {
-                McUtils.sendMessageToClient(Text.of("§eError: " + result.status()));
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4Error: " + result.status()));
             }
         });
     }
@@ -541,11 +547,12 @@ public class WynncraftApiHandler {
             .create();
 
 
-    private static final Path CONFIG_PATH = FabricLoader.getInstance()
-            .getConfigDir()
-            .resolve("wynnextras/apikeyDoNotShare.json");
+
 
     public static void load() {
+        Path CONFIG_PATH = FabricLoader.getInstance()
+                .getConfigDir()
+                .resolve("wynnextras/" + McUtils.player().getUuid().toString() + "/apikeyDoNotShare.json");
         if (Files.exists(CONFIG_PATH)) {
             try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
                 WynncraftApiHandler loaded = gson.fromJson(reader, WynncraftApiHandler.class);
@@ -562,6 +569,9 @@ public class WynncraftApiHandler {
     }
 
     public static void save() {
+        Path CONFIG_PATH = FabricLoader.getInstance()
+                .getConfigDir()
+                .resolve("wynnextras/" + McUtils.player().getUuid().toString() + "/apikeyDoNotShare.json");
         try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
             gson.toJson(INSTANCE, writer);
         } catch (IOException e) {

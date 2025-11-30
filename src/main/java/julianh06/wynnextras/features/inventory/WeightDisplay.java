@@ -156,11 +156,13 @@ public class WeightDisplay {
                                 }
                             }
 
-                            if(isRaw && !key.equals("healthRegen") && !key.equals("manaRegen") && !key.contains("Steal") && !key.contains("poison") && !key.contains("jump")) {
+                            if(isRaw && !key.equals("healthRegen") && !key.equals("manaRegen") && !key.contains("Steal") && !key.contains("poison") && !key.contains("jump") && !key.contains("AttackSpeed")) {
                                 key = key.substring(0,1).toUpperCase() + key.substring(1);
                                 key = "raw" + key;
                             } else if (isRaw && key.equals("healthRegen")) {
                                 key = key + "Raw"; //healthRegen is the only stat that has "Raw" at the end of the string instead of the start
+                            } else if (isRaw && key.contains("AttackSpeed")) {
+                                key = "rawAttackSpeed"; //healthRegen is the only stat that has "Raw" at the end of the string instead of the start
                             }
                             percentages.put(key, percent);
                         }
