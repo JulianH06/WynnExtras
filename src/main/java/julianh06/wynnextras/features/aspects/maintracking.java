@@ -2,8 +2,10 @@ package julianh06.wynnextras.features.aspects;
 
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
+import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -22,6 +24,10 @@ public class maintracking {
             "ScanAspects",
             "Command to manually scan your Aspects",
             (ctx)->{
+                if(WynncraftApiHandler.INSTANCE.API_KEY == null) {
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§bYou need to set your api-key to use this feature.Run \"/we apikey\" for more information."));
+                    return 0;
+                }
                 aspect.openMenu(MinecraftClient.getInstance(),MinecraftClient.getInstance().player);
                 return 0;
             },
@@ -49,11 +55,14 @@ public class maintracking {
     public static void init(){
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
             MinecraftClient client = MinecraftClient.getInstance();
-            if (client.player == null || client.world == null) return;
+            if (client.player == null || client.world == null) {
+                return;
+            }
             Screen currScreen = client.currentScreen;
             if (currScreen == null) {
                 scanDone = false;
                 goingBack = false;
+                nextPage = false;
                 aspectsInChest = new ItemStack[5];
                 return;
             }

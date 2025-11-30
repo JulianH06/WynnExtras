@@ -161,6 +161,9 @@ public class aspect {
             }
 
             maintracking.setAspectScanreq(false);
+            if (readCount < 18 && McUtils.mc().currentScreen != null) {
+                McUtils.mc().currentScreen.close();
+            }
             return result;
         }
     }

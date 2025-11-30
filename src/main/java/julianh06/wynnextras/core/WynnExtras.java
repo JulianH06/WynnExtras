@@ -156,7 +156,6 @@ public class WynnExtras implements ClientModInitializer {
 		maintracking.init();
 
 		RaidListData.load();
-		WynncraftApiHandler.load();
 		WaypointData.load();
 
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -164,6 +163,7 @@ public class WynnExtras implements ClientModInitializer {
 			CharacterBankData.INSTANCE.load();
 			BookshelfData.INSTANCE.load();
 			MiscBucketData.INSTANCE.load();
+			WynncraftApiHandler.load();
 			System.out.println("loaded bankdata");
 		});
 	}
