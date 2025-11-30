@@ -80,8 +80,8 @@ public class WynnExtrasConfig implements ConfigData {
 
     @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Text
-    public String notifierInfo = "The Text needs to be separated by \"|\". " +
-            "The Phrase on the Left is what needs to be in the Message to trigger and " +
+    String notifierInfotext = "The Text needs to be separated by \"|\". (ALT Gr + <)\n" +
+            "The Phrase on the left is what needs to be in the Message to trigger and \n" +
             "the one on the right is the text that will be displayed. Example: \"test|worked!\"";
 
 //    @ConfigEntry.Category(Categories.chatNotifier)
@@ -184,9 +184,9 @@ public class WynnExtrasConfig implements ConfigData {
 
     @ConfigEntry.Category(Categories.bankOverlay)
     @ConfigEntry.Text
-    public String bankInfo = "This Feature is still Work in Progress, bugs can (and probably will) occur. " +
-                                    "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras (/we) discord\". " +
-                                    "Buying pages is currently not possible but it will be added in the future. disable the feature to buy pages.";
+    public String bankInfoText = "This Feature is still Work in Progress, bugs can (and probably will) occur. " +
+                                    "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras (/we) discord\". ";
+
 
     @ConfigEntry.Category(Categories.bankOverlay)
     @ConfigEntry.Name("Dark mode for the Bank overlay")
@@ -198,7 +198,7 @@ public class WynnExtrasConfig implements ConfigData {
 
     //TOTEM VISUALIZER
 
-    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Fast requeue toggle (automatically runs /pf when closing a raid chest)")
     public boolean toggleFastRequeue = true;
 
@@ -280,7 +280,7 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Text
     public String emptyy = " ";
 
-    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Toggle Provoke Timer [WIP]")
     public boolean provokeTimerToggle = false;
 
@@ -323,6 +323,14 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Remove front person view")
     public boolean removeFrontPersonView = false;
+
+
+
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Raid Personal Bests (internal)")
+    @ConfigEntry.Excluded
+    public Map<String, Long> raidPBs = new HashMap<>();
+
 
 //    //Hider
 //    public boolean partyMemberHide = true;
