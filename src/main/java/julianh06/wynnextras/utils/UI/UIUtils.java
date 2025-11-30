@@ -1,4 +1,5 @@
 package julianh06.wynnextras.utils.UI;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.FontRenderer;
@@ -7,9 +8,13 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.*;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.joml.Matrix4f;
 
 public final class UIUtils {
     Identifier buttontl = Identifier.of("wynnextras", "textures/general/button/cornertl.png");
@@ -159,6 +164,50 @@ public final class UIUtils {
                 sw(width), sh(height),
                 sw(width), sh(height)
         );
+    }
+
+    public void drawImage(Identifier texture, float x, float y, float width, float height, float alpha) {
+        drawTexturedRect(
+                drawContext.getMatrices(),
+                texture,
+                sx(x), sy(y), 0.0F,
+                sw(width), sh(height), 0, 0,
+                sw(width), sh(height),
+                sw(width), sh(height),
+                alpha
+        );
+    }
+
+    public static void drawTexturedRect(MatrixStack matrixStack, Identifier tex, float x, float y, float z, float width, float height, int uOffset, int vOffset, int u, int v, int textureWidth, int textureHeight, float alpha) {
+        float uScale = 1.0F / (float)textureWidth;
+        float vScale = 1.0F / (float)textureHeight;
+        Matrix4f matrix = matrixStack.peek().getPositionMatrix();
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
+        RenderSystem.setShaderTexture(0, tex);
+        BufferBuilder bufferBuilder = Tessellator.getInstance().begin(
+                VertexFormat.DrawMode.QUADS,
+                VertexFormats.POSITION_TEXTURE_COLOR
+        );
+
+        bufferBuilder.vertex(matrix, x, y + height, z)
+                .texture((float)uOffset * uScale, (float)(vOffset + v) * vScale)
+                .color(1f, 1f, 1f, alpha);
+
+        bufferBuilder.vertex(matrix, x + width, y + height, z)
+                .texture((float)(uOffset + u) * uScale, (float)(vOffset + v) * vScale)
+                .color(1f, 1f, 1f, alpha);
+
+        bufferBuilder.vertex(matrix, x + width, y, z)
+                .texture((float)(uOffset + u) * uScale, (float)vOffset * vScale)
+                .color(1f, 1f, 1f, alpha);
+
+        bufferBuilder.vertex(matrix, x, y, z)
+                .texture((float)uOffset * uScale, (float)vOffset * vScale)
+                .color(1f, 1f, 1f, alpha);
+
+        BufferRenderer.drawWithGlobalProgram(bufferBuilder.endNullable());
     }
 
     public void drawButton(float x, float y, float width, float height, int scale, boolean hovered) {

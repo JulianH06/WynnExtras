@@ -70,9 +70,13 @@ public class WynncraftApiHandler {
             "apikey",
             "",
             context -> {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Add an API key like this: \"/WynnExtras apikey <your key>\". " +
-                        "You can find a tutorial on how to get your api key in #infos on our discord. " +
-                        "Run \"/WynnExtras discord\" to join.")));
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("""
+                        Add an API key like this: "/WynnExtras apikey <your key>". \
+                        If you play on multiple accounts you can either:
+                           1. Add your alt(s) to your existing Wynncraft account so they can share the same API key
+                           2. Create a separate Wynncraft account for each Minecraft account, and generate an API key for each
+                        You can find a tutorial on how to get your api key in #infos on our discord. \
+                        Run "/WynnExtras discord" to join.""")));
                 return 1;
             },
             null,
@@ -222,47 +226,69 @@ public class WynncraftApiHandler {
         });
     }
 
-    public static CompletableFuture<FetchResult> fetchPlayerAspectData(String playerUUID) {
+    public static CompletableFuture<FetchResult> fetchPlayerAspectData(String playerUUID, String requestingUUID) {
         if (playerUUID == null) {
             McUtils.sendMessageToClient(Text.of("§cUUID is null!"));
             return CompletableFuture.completedFuture(null);
         }
 
-        HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(3))
-                .build();
+        if(INSTANCE.API_KEY == null) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set you api-key to upload your aspects. For more info run \"/we apikey\""));
+            return CompletableFuture.completedFuture(new FetchResult(FetchStatus.NOKEYSET, null));
+        }
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://wynnextras.com/user"))
-                .header("playerUUID", playerUUID)
-                .timeout(Duration.ofSeconds(5))
-                .GET()
-                .build();
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(3))
+                    .build();
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .handle((response, ex) -> {
-                    if (ex != null) {
-                        System.err.println("Server unreachable: " + ex.getMessage());
-                        return new FetchResult(FetchStatus.SERVER_UNREACHABLE, null);
-                    }
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://wynnextras.com/user"))
+                    .header("playerUUID", playerUUID)
+                    .header("Wynncraft-Api-Key", INSTANCE.API_KEY)
+                    .header("RequestingUUID", requestingUUID)
+                    .timeout(Duration.ofSeconds(8))
+                    .GET()
+                    .build();
 
-                    int code = response.statusCode();
+            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .handle((response, ex) -> {
 
-                    if (code == 404) {
-                        return new FetchResult(FetchStatus.NOT_FOUND, null);
-                    }
+                        if (ex != null) {
+                            System.err.println("Server unreachable: " + ex.getMessage());
+                            return new FetchResult(FetchStatus.SERVER_UNREACHABLE, null);
+                        }
 
-                    if (code >= 500) {
-                        return new FetchResult(FetchStatus.SERVER_ERROR, null);
-                    }
+                        int code = response.statusCode();
 
-                    if (code != 200) {
-                        return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
-                    }
+                        if (code == 403) {
+                            return new FetchResult(FetchStatus.FORBIDDEN, null);
+                        }
 
-                    User user = parsePlayerAspectData(response.body());
-                    return new FetchResult(FetchStatus.OK, user);
-                });
+                        if (code == 401) {
+                            return new FetchResult(FetchStatus.UNAUTHORIZED, null);
+                        }
+
+                        if (code == 400) {
+                            return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
+                        }
+
+                        if (code >= 500) {
+                            return new FetchResult(FetchStatus.SERVER_ERROR, null);
+                        }
+
+                        if (code != 200) {
+                            return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
+                        }
+
+                        User user = parsePlayerAspectData(response.body());
+                        return new FetchResult(FetchStatus.OK, user);
+                    });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(new FetchResult(FetchStatus.UNKNOWN_ERROR, null));
+        }
     }
 
     public static void processAspects(Map<String, Pair<String, String>> map) {
@@ -298,14 +324,13 @@ public class WynncraftApiHandler {
     }
 
     public static CompletableFuture<FetchResult> postPlayerAspectData(User user) {
-
         if (user == null) {
             McUtils.sendMessageToClient(Text.of("§cUser object is null!"));
             return CompletableFuture.completedFuture(new FetchResult(FetchStatus.UNKNOWN_ERROR, null));
         }
 
         try {
-            String json = gson.toJson(user); // falls du schon gson nutzt
+            String json = gson.toJson(user);
 
             HttpClient client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(5))
@@ -346,7 +371,6 @@ public class WynncraftApiHandler {
                             return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
                         }
 
-                        // Der Server gibt den gespeicherten User zurück
                         User savedUser = parsePlayerAspectData(response.body());
                         return new FetchResult(FetchStatus.OK, savedUser);
                     });
@@ -359,13 +383,13 @@ public class WynncraftApiHandler {
 
 
     private static int parseAspectAmount(Pair<String, String> aspect) {
-        String tierText = aspect.getLeft(); // z.B. "Tier III >>>>>>>>>> Tier IV [109/120]"
-        String rarity = aspect.getRight();  // z.B. "Legendary", "Fabled", "Mythic"
+        String tierText = aspect.getLeft();
+        String rarity = aspect.getRight();
 
-        int[] tier1 = {1, 1, 1};    // Mythic, Fabled, Legendary
+        int[] tier1 = {1, 1, 1};
         int[] tier2 = {4, 14, 4};
         int[] tier3 = {10, 60, 25};
-        int[] tier4 = {0, 0, 120};  // nur Legendary
+        int[] tier4 = {0, 0, 120};
 
         int rarityIndex;
         switch (rarity) {
@@ -376,12 +400,10 @@ public class WynncraftApiHandler {
         }
         if (rarityIndex == -1) return 0;
 
-        // Wenn MAX, komplette Summe zurückgeben
         if (tierText.contains("[MAX]")) {
             return tier1[rarityIndex] + tier2[rarityIndex] + tier3[rarityIndex] + tier4[rarityIndex];
         }
 
-        // Den aktuellen Tiernamen extrahieren (das erste Tier)
         String currentTier = "";
         if (tierText.contains("Tier I ")) currentTier = "Tier I";
         else if (tierText.contains("Tier II ")) currentTier = "Tier II";
@@ -389,14 +411,12 @@ public class WynncraftApiHandler {
 
         int sum = 0;
 
-        // Additive Summe vorheriger Tiers
         switch (currentTier) {
             case "Tier I" -> sum += tier1[rarityIndex];
             case "Tier II" -> sum += tier1[rarityIndex] + tier2[rarityIndex];
             case "Tier III" -> sum += tier1[rarityIndex] + tier2[rarityIndex] + tier3[rarityIndex];
         }
 
-        // Progress aus den Klammern hinzufügen
         if (tierText.matches(".*\\[(\\d+)/(\\d+)\\].*")) {
             String bracketContent = tierText.replaceAll(".*\\[(\\d+)/(\\d+)\\].*", "$1");
             int currentProgress = Integer.parseInt(bracketContent);
@@ -665,10 +685,12 @@ public class WynncraftApiHandler {
     public enum FetchStatus {
         OK,
         NOT_FOUND,
+        FORBIDDEN,
         SERVER_UNREACHABLE,
         SERVER_ERROR,
         UNKNOWN_ERROR,
-        UNAUTHORIZED
+        UNAUTHORIZED,
+        NOKEYSET
     }
 
     public record FetchResult(FetchStatus status, User user) {}

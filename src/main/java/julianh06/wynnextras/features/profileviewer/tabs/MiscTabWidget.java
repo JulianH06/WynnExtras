@@ -27,11 +27,8 @@ public class MiscTabWidget extends PVScreen.TabWidget {
             return;
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(miscBackgroundTextureDark, x + 30, y + 30, 1740, 690);
-        } else {
-            ui.drawImage(miscBackgroundTexture, x + 30, y + 30, 1740, 690);
-        }
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(miscBackgroundTextureDark, miscBackgroundTexture, x + 30, y + 30, 1740, 690, ui);
+
         ui.drawText("Wars completed: " + data.getWars(), x + 60, y + 60, CustomColor.fromHexString("FFFFFF"),6f);
         ui.drawText("Dungeons completed: " + data.getDungeons().getTotal(), x + 60, y + 120, CustomColor.fromHexString("FFFFFF"),6f);
         ui.drawText("Unique Caves completed: " + data.getCaves(), x + 60, y + 180, CustomColor.fromHexString("FFFFFF"),6f);

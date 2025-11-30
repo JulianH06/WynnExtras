@@ -5,6 +5,7 @@ import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
@@ -38,20 +39,12 @@ public class PlayerWidget extends Widget {
         setBounds(x, y, 100, 80);
         //ui.drawText(lastViewedPlayers.get(index), x, y);
         if(hovered) {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                ui.drawImage(longPlayerTabTextureDark, x - 3, y, 110, 80);
-            } else {
-                ui.drawImage(longPlayerTabTexture, x - 3, y, 110, 80);
-            }
+            PVScreen.DarkModeToggleWidget.drawImageWithFade(longPlayerTabTextureDark, longPlayerTabTexture, x - 3, y, 110, 80, ui);
         } else {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                ui.drawImage(playerTabTextureDark, x - 3, y, 100, 80);
-            } else {
-                ui.drawImage(playerTabTexture, x - 3, y, 100, 80);
-            }
+            PVScreen.DarkModeToggleWidget.drawImageWithFade(playerTabTextureDark, playerTabTexture, x - 3, y, 100, 80, ui);
         }
 
-        //to only draw the head
+        //first layer of the head
         Identifier texture = lastViewedPlayersSkins.get(lastViewedPlayers.get(index));
         if(texture == null) return;
         RenderUtils.drawTexturedRect(
@@ -60,6 +53,16 @@ public class PlayerWidget extends Widget {
                 ui.sx(x + 22 + (hovered ? 10 : 0)), ui.sy(y + 10), 0,
                 ui.sw(60), ui.sh(60),
                 8, 8, 8, 8,
+                64, 64
+        );
+
+        //second layer
+        RenderUtils.drawTexturedRect(
+                ctx.getMatrices(),
+                texture,
+                ui.sx(x + 22 + (hovered ? 10 : 0)), ui.sy(y + 10), 1,   // z = 1 = über dem Kopf
+                ui.sw(60), ui.sh(60),
+                40, 8, 8, 8,
                 64, 64
         );
     }

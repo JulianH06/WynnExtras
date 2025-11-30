@@ -41,17 +41,11 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
             return;
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(raidBackgroundTextureDark, x + 30, y + 90, 825, 300);
-            ui.drawImage(raidBackgroundTextureDark, x + 945, y + 90, 825, 300);
-            ui.drawImage(raidBackgroundTextureDark, x + 30, y + 420, 825, 300);
-            ui.drawImage(raidBackgroundTextureDark, x + 945, y + 420, 825, 300);
-        } else {
-            ui.drawImage(raidBackgroundTexture, x + 30, y + 90, 825, 300);
-            ui.drawImage(raidBackgroundTexture, x + 945, y + 90, 825, 300);
-            ui.drawImage(raidBackgroundTexture, x + 30, y + 420, 825, 300);
-            ui.drawImage(raidBackgroundTexture, x + 945, y + 420, 825, 300);
-        }
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(raidBackgroundTextureDark, raidBackgroundTexture, x + 30, y + 90, 825, 300, ui);
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(raidBackgroundTextureDark, raidBackgroundTexture, x + 945, y + 90, 825, 300, ui);
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(raidBackgroundTextureDark, raidBackgroundTexture, x + 30, y + 420, 825, 300, ui);
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(raidBackgroundTextureDark, raidBackgroundTexture, x + 945, y + 420, 825, 300, ui);
+
         ui.drawImage(NOTGTexture, x + 30, y + 90, 300, 300);
         ui.drawImage(TCCTexture, x + 1470, y + 90, 300, 300);
         ui.drawImage(NOLTexture, x + 30, y + 420, 300, 300);

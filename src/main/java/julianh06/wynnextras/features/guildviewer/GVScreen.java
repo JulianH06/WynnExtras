@@ -86,6 +86,8 @@ public class GVScreen extends WEScreen {
 
     PVScreen.BackgroundImageWidget backgroundImageWidget = new PVScreen.BackgroundImageWidget();
 
+    public static PVScreen.DarkModeToggleWidget darkModeToggleWidget = new PVScreen.DarkModeToggleWidget();
+
     private static int scrollOffset = 0;
 
     List<GuildMemeberWidget> memeberWidgets = new ArrayList<>();
@@ -94,7 +96,7 @@ public class GVScreen extends WEScreen {
         super(Text.of("guild viewer"));
         openInBrowserButton = null;
         searchBar = null;
-
+        PVScreen.currentTab = PVScreen.Tab.General;
     }
 
     @Override
@@ -105,6 +107,7 @@ public class GVScreen extends WEScreen {
         scrollOffset = 0;
         rootWidgets.clear();
         addRootWidget(backgroundImageWidget);
+        addRootWidget(darkModeToggleWidget);
         memeberWidgets = new ArrayList<>();
         openInBrowserButton = null;
         searchBar = null;
@@ -136,6 +139,7 @@ public class GVScreen extends WEScreen {
         int xStart = getLogicalWidth() / 2 - 900/* - (getLogicalWidth() - 1800 < 200 ? 50 : 0)*/;
         int yStart = getLogicalHeight() / 2 - 375;
         backgroundImageWidget.setBounds(xStart, yStart, 1800, 750);
+        darkModeToggleWidget.setBounds(xStart + 1800 - 120, yStart + 750, 120, 60);
 
 //        int totalWidth = 24;
 //        for(PVScreen.TabButtonWidget tabButtonWidget : tabButtonWidgets) {
@@ -211,19 +215,13 @@ public class GVScreen extends WEScreen {
             openInBrowserButton.setX((int) (xStart / scaleFactor));
             openInBrowserButton.setY((int) ((yStart + backgroundImageWidget.getHeight()) / scaleFactor) + 1);
             openInBrowserButton.buttonText = "Open in browser";
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                openInBrowserButton.drawWithTexture(context, openInBrowserButtonTextureDark);
-            } else {
-                openInBrowserButton.drawWithTexture(context, openInBrowserButtonTexture);
-            }
+
+            PVScreen.DarkModeToggleWidget.drawImageWithFade(openInBrowserButtonTextureDark, openInBrowserButtonTexture, xStart, yStart + backgroundImageWidget.getHeight(), 260, 60, ui);
+            openInBrowserButton.drawWithTexture(context, null);
         }
 
         //Player searchbar
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(openInBrowserButtonTextureWDark, xStart + 267, yStart + 750, 300, 60);
-        } else {
-            ui.drawImage(openInBrowserButtonTextureW, xStart + 267, yStart + 750, 300, 60);
-        }
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(openInBrowserButtonTextureWDark, openInBrowserButtonTextureW, xStart + 267, yStart + 750, 300, 60, ui);
 
         if(searchBar == null || searchBar.getInput().equals("Unknown guild")) {
             searchBar = new Searchbar(-1, -1, (int) (14 * 3 / scaleFactor), (int) (100 * 3 / scaleFactor));
@@ -250,24 +248,21 @@ public class GVScreen extends WEScreen {
         int yOffset = spacing - scrollOffset - 50;
         ui.drawText("[" + GV.currentGuildData.prefix + "] " + GV.currentGuildData.name, xStart + 19, yStart + 19);
 
-        if (SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(onlineCircleTextureDark, xStart + 15, yStart + 60, 33, 33);
-        } else {
-            ui.drawImage(onlineCircleTexture, xStart + 15, yStart + 60, 33, 33);
-        }
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, xStart + 15, yStart + 60, 33, 33, ui);
+
         ui.drawText("Online: " + GV.currentGuildData.online + "/" + GV.currentGuildData.members.total, xStart + 57, yStart + 66, CustomColor.fromHexString("FFFFFF"), 3f);
 
         //ui.drawRect(xStart + 565, yStart, 1800 - 565, 100);
         ui.drawCenteredText("Members: " + GV.currentGuildData.members.total + "/" + getMaxMembers(GV.currentGuildData.level), textX, yStart + 30);
 
         ui.drawCenteredText("Level " + GV.currentGuildData.level, xStart + 285, yStart + 590);
-        ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? xpbarbackground_dark : xpbarbackground, xStart + 66, yStart + 540, 435, 30);
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(xpbarbackground_dark, xpbarbackground, xStart + 66, yStart + 540, 435, 30, ui);
 
         context.enableScissor((int) ui.sx(xStart + 66), (int) ui.sy(yStart + 540), (int) ui.sx(xStart + 66 + 435 * (GV.currentGuildData.xpPercent / 100f)), (int) ui.sy(yStart + 540 + 35));
         ui.drawImage(xpbarprogress, xStart + 66, yStart + 540, 435, 30);
         context.disableScissor();
 
-        ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? xpbarborder_dark : xpbarborder, xStart + 66, yStart + 540, 435, 30);
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(xpbarborder_dark, xpbarborder, xStart + 66, yStart + 540, 435, 30, ui);
         ui.drawCenteredText(GV.currentGuildData.xpPercent + "%", xStart + 285, yStart + 540 + 17, CustomColor.fromHexString("FFFFFF"), 2.5f);
 
         Instant instant = Instant.parse(GV.currentGuildData.created);
@@ -285,7 +280,7 @@ public class GVScreen extends WEScreen {
 
         ui.drawCenteredText("Current territories: " + GV.currentGuildData.territories, xStart + 285, yStart + 710);
 
-        renderBanner(GV.currentGuildData.banner, context.getMatrices(), (int) ui.sx(xStart + 350), (int) ui.sy(yStart + 515), 70);
+        renderBanner(GV.currentGuildData.banner, context.getMatrices(), (int) ui.sx(xStart + 350), (int) ui.sy(yStart + 515), 210 / ui.getScaleFactorF());
 
         if (memeberWidgets.isEmpty()) {
             for (GuildData.Member member : GV.currentGuildData.members.owner.values()) {
@@ -367,6 +362,8 @@ public class GVScreen extends WEScreen {
             widget.draw(context, mouseX, mouseY, delta, ui);
         }
         context.disableScissor();
+
+        darkModeToggleWidget.draw(context, mouseX, mouseY, delta, ui);
     }
 
     @Override
@@ -380,7 +377,13 @@ public class GVScreen extends WEScreen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if(openInBrowserButton == null || searchBar == null) return false;
+        if(openInBrowserButton == null || searchBar == null || darkModeToggleWidget == null) return false;
+
+        if(darkModeToggleWidget.contains(PVScreen.mouseX, PVScreen.mouseY)) {
+            darkModeToggleWidget.action.run();
+            return false;
+        }
+
         if(openInBrowserButton.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             openInBrowserButton.click();
@@ -620,17 +623,9 @@ public class GVScreen extends WEScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(hovered) {
-                if (SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    ui.drawImage(classBackgroundTextureHoveredDark, x, y, width, height);
-                } else {
-                    ui.drawImage(classBackgroundTextureHovered, x, y, width, height);
-                }
+                PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered, x, y, width, height, ui);
             } else {
-                if (SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    ui.drawImage(classBackgroundTextureDark, x, y, width, height);
-                } else {
-                    ui.drawImage(classBackgroundTexture, x, y, width, height);
-                }
+                PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture,  x, y, width, height, ui);
             }
             //ui.drawRect(x, y, width, height);
             ui.drawCenteredText(member.username, x + 175, y + 25);
@@ -648,7 +643,7 @@ public class GVScreen extends WEScreen {
             ui.drawCenteredText("Contributed: " + formatLong(member.contributed), x + 175, y + 85);
 
             if(member.online) {
-                ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? onlineCircleTextureDark : onlineCircleTexture, x + 5, y + 5, 20, 20);
+                PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, x + 5, y + 5, 20, 20, ui);
             }
         }
 

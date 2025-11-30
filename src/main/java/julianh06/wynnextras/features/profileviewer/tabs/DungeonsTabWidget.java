@@ -73,11 +73,7 @@ public class DungeonsTabWidget extends PVScreen.TabWidget {
             }
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(dungeonBackgroundTextureDark, x + 30, y + 87, 1740, 633);
-        } else {
-            ui.drawImage(dungeonBackgroundTexture, x + 30, y + 87, 1740, 633);
-        }
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(dungeonBackgroundTextureDark, dungeonBackgroundTexture, x + 30, y + 87, 1740, 633, ui);
 
         int i = 0;
 

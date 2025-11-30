@@ -97,18 +97,12 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
         ui.drawText(" " + PV.currentPlayerData.getUsername(), x + 10 + rankBadgeWidth,  y + 21, CustomColor.fromHexString(rankColorHexString), 3f);
 
         if (PV.currentPlayerData.isOnline()) {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                ui.drawImage(onlineCircleTextureDark, x + 15, y + 60, 33, 33);
-            } else {
-                ui.drawImage(onlineCircleTexture, x + 15, y + 60, 33, 33);
-            }
+            PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, x + 15, y + 60, 33, 33, ui);
+
             ui.drawText(PV.currentPlayerData.getServer(), x + 57, y + 66, CustomColor.fromHexString("FFFFFF"), 3f);
         } else {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                ui.drawImage(offlineCircleTextureDark, x + 15, y + 60, 33, 33);
-            } else {
-                ui.drawImage(offlineCircleTexture, x + 15, y + 60, 33, 33);
-            }
+            PVScreen.DarkModeToggleWidget.drawImageWithFade(offlineCircleTextureDark, offlineCircleTexture, x + 15, y + 60, 33, 33, ui);
+
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
             String formatted;
             if (PV.currentPlayerData.getLastJoin() == null) {
@@ -197,6 +191,9 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             double scaleFactor
     ) {
         float flipOffset = 0;
+
+        if(scaleFactor == 1) flipOffset = 180;
+        //the player renderer is REALLY weird for gui scale 1, its still broken but this makes it a bit better
 
         Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
         //rotation.rotateX((float) Math.toRadians(pitch));

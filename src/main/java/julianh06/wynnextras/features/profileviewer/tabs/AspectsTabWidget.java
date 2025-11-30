@@ -40,6 +40,10 @@ import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
 import net.minecraft.util.Identifier;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
@@ -70,6 +74,8 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
     private List<AspectsTabPageButton> pageWidgets = new ArrayList<>();
     private List<AspectWidget> aspectWidgets = new ArrayList<>();
 
+    private InfoWidget infoWidget = null;
+
     private static Map<Integer, List<ItemAnnotation>> annotationCache = new HashMap<>();
 
     public enum Page {Overview, Warrior, Shaman, Mage, Archer, Assassin}
@@ -88,7 +94,10 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             currentPlayerAspectData = null;
             fetchStatus = null;
             currentPage = Page.Overview;
-            WynncraftApiHandler.fetchPlayerAspectData(PV.currentPlayerData.getUuid().toString())
+
+            if(PV.currentPlayerData.getUuid() == null) return;
+
+            WynncraftApiHandler.fetchPlayerAspectData(PV.currentPlayerData.getUuid().toString(), MinecraftClient.getInstance().player.getUuidAsString())
                     .thenAccept(result -> {
                         if (result == null) return;
 
@@ -110,6 +119,21 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
         }
 
         switch (fetchStatus) {
+            case NOKEYSET -> {
+                ui.drawCenteredText("You need to set your api-key to use this feature.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
+                ui.drawCenteredText("Run \"/we apikey\" for more information.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);
+                return;
+            }
+            case FORBIDDEN -> {
+                ui.drawCenteredText("You need to upload your own aspects first to view other peoples aspects.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
+                ui.drawCenteredText("Run \"/we ScanAspects\" to upload your Aspects.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);
+                return;
+            }
+            case UNAUTHORIZED -> {
+                ui.drawCenteredText("The api-key you have set is not connected to your minecraft account.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
+                ui.drawCenteredText("Run \"/we apikey\" for more information.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);
+                return;
+            }
             case NOT_FOUND -> {
                 ui.drawCenteredText("No data found for this player!", x + 900, y + 365, CustomColor.fromHexString("FF0000"), 4f);
                 return;
@@ -125,7 +149,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
         }
 
         if (currentPlayerAspectData == null) {
-            System.out.println(fetchStatus);
             return;
         }
 
@@ -254,7 +277,8 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                 drawProgressBar(x + 40, y + 380, 800,80, 5f, (float) maxTotal / aspects.size(), ctx, ui);
 
                 if(PV.currentPlayerData.getGlobalData() != null) {
-                    ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? rankingBackgroundWideTextureDark : rankingBackgroundWideTexture, x + 40, y + 510, 800, 160);
+                    PVScreen.DarkModeToggleWidget.drawImageWithFade(rankingBackgroundWideTextureDark, rankingBackgroundWideTexture,  x + 40, y + 510, 800, 160, ui);
+
                     ui.drawCenteredText("Total Raid Completions: " + PV.currentPlayerData.getGlobalData().getRaids().getTotal(), x + 440, y + 590, CustomColor.fromHexString("FFFFFF"), 5f);
                 }
 
@@ -266,13 +290,16 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
                 ui.drawCenteredText("Maxed Legendary Aspects: " + maxLegendary + "/" + legendaryAspects.size(), x + 960 + 400, y + 530, CustomColor.fromHexString("FFFFFF"), 4.5f);
                 drawProgressBar(x + 60 + width / 2, y + 570, 800,80, 5f, (float) maxLegendary / legendaryAspects.size(), ctx, ui);
+
+                if(infoWidget == null) {
+                    infoWidget = new InfoWidget(currentPlayerAspectData.getUpdatedAt());
+                }
+
+                infoWidget.setBounds(x + width - 80, y + height - 80, 50, 50);
+                infoWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
             }
             default -> {
-                if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    ui.drawImage(dungeonBackgroundTextureDark, x + 30, y + 87, 1740, 633);
-                } else {
-                    ui.drawImage(dungeonBackgroundTexture, x + 30, y + 87, 1740, 633);
-                }
+                PVScreen.DarkModeToggleWidget.drawImageWithFade(dungeonBackgroundTextureDark, dungeonBackgroundTexture,  x + 30, y + 87, 1740, 633, ui);
 
                 List<ApiAspect> sorted = new ArrayList<>(List.copyOf(aspects));
 
@@ -312,7 +339,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                         }
                         AspectWidget aspectWidget = new AspectWidget(aspect, playerAspect, warriorAspects, shamanAspects, mageAspects, archerAspects, assassinAspects);
                         aspectWidgets.add(aspectWidget);
-                        //addChild(aspectWidget);
                         i++;
                     }
                 }
@@ -362,35 +388,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
         ctx.getMatrices().pop();
     }
 
-    public <T extends WynnItem> Optional<T> asWynnItem(ItemStack itemStack) {
-        Optional<ItemAnnotation> annotationOpt = ItemHandler.getItemStackAnnotation(itemStack);
-        if(annotationOpt.isEmpty()) return Optional.empty();
-        if (!(annotationOpt.get() instanceof WynnItem wynnItem)) return Optional.empty();
-        return Optional.of((T) wynnItem);
-    }
-
-    private void applyAnnotation(ItemStack stack, List<ItemAnnotation> annotations, int index) {
-        if(stack.getItem() == Items.AIR) return;
-
-        if (stack == null) {
-            annotations.add(null);
-            return;
-        }
-
-        if (annotations.size() <= index) return;
-
-        ItemAnnotation annotation = annotations.get(index);
-        if (annotation == null) {
-            StyledText name = StyledText.fromComponent(stack.getName());
-            annotation = ((ItemHandlerInvoker) (Object) Handlers.Item).invokeCalculateAnnotation(stack, name);
-            annotations.set(index, annotation);
-        }
-
-        if (annotation != null) {
-            ((ItemStackExtension) (Object) stack).setAnnotation(annotation);
-        }
-    }
-
     private static int getAspectAmountForClass(Page page, List<ApiAspect> warriorAspects, List<ApiAspect> shamanAspects, List<ApiAspect> mageAspects, List<ApiAspect> archerAspects, List<ApiAspect> assassinAspects) {
         return switch (page) {
             case Warrior -> warriorAspects.size();
@@ -403,29 +400,26 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
     }
 
     private static void drawProgressBar(int x, int y, int width, int height, float textScale, float progress, DrawContext ctx, UIUtils ui) {
-        ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? xpbarbackground_dark : xpbarbackground, x, y, width, height);
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(xpbarbackground_dark, xpbarbackground,  x, y, width, height, ui);
 
         ctx.enableScissor((int) ui.sx(x), (int) ui.sy(y), (int) ui.sx(x + width * (progress)), (int) ui.sy(y + height));
         ui.drawImage(xpbarprogress, x, y, width, height);
         ctx.disableScissor();
 
-        ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? xpbarborder_dark : xpbarborder, x, y, width, height);
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(xpbarborder_dark, xpbarborder,  x, y, width, height, ui);
         ui.drawCenteredText(String.format("%.2f%%", progress * 100), x + width / 2f, y + height / 2f + 2, CustomColor.fromHexString("FFFFFF"), textScale);
     }
 
     private static ItemStack toItemStack(ApiAspect aspect, boolean max, int tier) {
         ApiAspect.Icon icon = aspect.getIcon();
         if (icon == null) return ItemStack.EMPTY;
-        //System.out.println(icon.isObject() + " " + icon.isString());
 
-        // Fall 1: einfacher String wie "minecraft:diamond_sword"
         if (icon.getValueString() != null) {
             Identifier id = Identifier.of(icon.getValueString());
             Item item = Registries.ITEM.get(id);
             return new ItemStack(item);
         }
 
-        // Fall 2: komplexes Objekt mit id, name, customModelData
         if (icon.getValueObject() != null) {
             ApiAspect.IconValue iv = icon.getValueObject();
             Identifier id = Identifier.of(iv.getId());
@@ -459,74 +453,14 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             if(aspect.getTiers() != null) {
                 if(aspect.getTiers().get(String.valueOf(tier)) != null) {
                     List<String> lore = aspect.getTiers().get(String.valueOf(tier)).getDescription();
-//                    Text loreAsText = convertWynnHtml(lore.getFirst());
-                    //System.out.println(loreAsText);
-                    //new LoreComponent(loreAsText)
                     stack.set(DataComponentTypes.LORE, new LoreComponent(WynncraftApiHandler.parseStyledHtml(lore)));
                 }
-                //System.out.println(aspect.getTiers().keySet());
             }
 
             return stack;
         }
 
         return ItemStack.EMPTY;
-    }
-
-    public static Text convertWynnHtml(String html) {
-        // Entferne unnötige linebreaks & normalize
-        html = html.replace("\n", "").replace("\r", "");
-
-        // Tokens: entweder <tag> oder normaler Text
-        List<String> tokens = new ArrayList<>();
-        Matcher m = Pattern.compile("(<[^>]+>|[^<]+)").matcher(html);
-        while (m.find()) tokens.add(m.group());
-
-        // Style-Stack
-        Deque<Style> styleStack = new ArrayDeque<>();
-        styleStack.push(Style.EMPTY);
-
-        MutableText result = Text.literal(" ");
-
-        for (String token : tokens) {
-
-            // --- OPEN TAG ------------------------------------------------------
-            if (token.startsWith("<span")) {
-
-                Style current = styleStack.peek();
-                Style newStyle = current;
-
-                // Farbe extrahieren (optional)
-                Matcher colorMatcher = Pattern.compile("color:#([A-Fa-f0-9]{6})").matcher(token);
-                if (colorMatcher.find()) {
-                    int color = Integer.parseInt(colorMatcher.group(1), 16);
-                    newStyle = newStyle.withColor(TextColor.fromRgb(color));
-                }
-
-                // Underline
-                if (token.contains("text-decoration: underline")) {
-                    newStyle = newStyle.withUnderline(true);
-                }
-
-                // Stack erweitern
-                styleStack.push(newStyle);
-                continue;
-            }
-
-            // --- CLOSE TAG ----------------------------------------------------
-            if (token.startsWith("</span")) {
-                if (styleStack.size() > 1) styleStack.pop();
-                continue;
-            }
-
-            // --- TEXT ----------------------------------------------------------
-            String text = token;
-            if (!text.isBlank()) {
-                result.append(Text.literal(text).setStyle(styleStack.peek()));
-            }
-        }
-
-        return result;
     }
 
     public static boolean isMaxed(Aspect aspect) {
@@ -548,7 +482,9 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
     private static class AspectsTabPageButton extends Widget {
         static Identifier classBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive.png");
+        static Identifier classBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive_dark.png");
         static Identifier classBackgroundTextureHovered = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered.png");
+        static Identifier classBackgroundTextureHoveredDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered_dark.png");
         Page page;
         private final Runnable action;
 
@@ -570,14 +506,18 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawImage(hovered ? classBackgroundTextureHovered : classBackgroundTexture, x, y, width, height);
+            if(hovered) {
+                PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered, x, y, width, height, ui);
+            } else {
+                PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture, x, y, width, height, ui);
+            }
+
             CustomColor textColor = currentPage == page ? CustomColor.fromHexString("FFFF00") : CustomColor.fromHexString("FFFFFF");
             ui.drawCenteredText(page.name(), x + width / 2f, y + height / 2f, textColor, 4f);
         }
     }
 
     private static class AspectWidget extends Widget {
-        static Identifier dungeonBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/raritycircle.png");
         public final Config<ItemHighlightFeature.HighlightTexture> highlightTexture = new Config<>(ItemHighlightFeature.HighlightTexture.CIRCLE_TRANSPARENT);
         ApiAspect aspect;
         int i;
@@ -703,6 +643,30 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
             if(hovered) {
                 currentHovered = stack;
+            }
+        }
+    }
+
+    private static class InfoWidget extends Widget {
+        static Identifier infoIcon = Identifier.of("wynnextras", "textures/gui/profileviewer/infoicon.png");
+        static Identifier infoIconDark = Identifier.of("wynnextras", "textures/gui/profileviewer/infoicon_dark.png");
+
+        Long lastUpdatedTimestamp;
+        DateTimeFormatter formatter;
+
+        public InfoWidget(Long lastUpdatedTimestamp) {
+            super(0, 0, 0, 0);
+            this.lastUpdatedTimestamp = lastUpdatedTimestamp;
+            formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withLocale(Locale.getDefault()).withZone(ZoneId.systemDefault());
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            PVScreen.DarkModeToggleWidget.drawImageWithFade(infoIconDark, infoIcon, x, y, width, height, ui);
+
+            if(hovered) {
+                String formatted = formatter.format(Instant.ofEpochMilli(lastUpdatedTimestamp));
+                ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, List.of(Text.of("Last updated at"), Text.of(formatted)), mouseX, mouseY);
             }
         }
     }
