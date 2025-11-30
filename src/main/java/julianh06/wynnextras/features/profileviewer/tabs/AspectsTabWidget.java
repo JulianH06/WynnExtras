@@ -149,6 +149,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
         }
 
         if (currentPlayerAspectData == null) {
+            ui.drawCenteredText("No data found for this player!", x + 900, y + 365, CustomColor.fromHexString("FF0000"), 4f);
             return;
         }
 

@@ -75,6 +75,7 @@ public class BankOverlay {
     public static HashMap<Integer, EasyTextInput> BankPageNameInputs = new HashMap<>();
     public static EnumMap<BankOverlayType, HashMap<Integer, EasyTextInput>> BankPageNameInputsByType = new EnumMap<>(BankOverlayType.class);
 
+    public static float pageBuyCustomModelData = 0;
 
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
