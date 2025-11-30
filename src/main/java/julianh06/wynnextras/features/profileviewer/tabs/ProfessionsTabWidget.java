@@ -36,11 +36,7 @@ public class ProfessionsTabWidget extends PVScreen.TabWidget {
             return;
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(profBackgroundTextureDark, x + 30, y + 30, 1740, 690);
-        } else {
-            ui.drawImage(profBackgroundTexture, x + 30, y + 30, 1740, 690);
-        }
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(profBackgroundTextureDark, profBackgroundTexture, x + 30, y + 30, 1740, 690, ui);
 
         int i = 0;
         for(Map.Entry<String, Profession> prof : profs.entrySet()) {

@@ -50,8 +50,6 @@ public class BankOverlay {
 
     public static int activeInv = -1;
 
-    public static boolean recentlySwitched = false;
-
     public static ItemStack heldItem = Items.AIR.getDefaultStack();
 
     public static Map<Integer, List<ItemAnnotation>> annotationCache = new HashMap<>();

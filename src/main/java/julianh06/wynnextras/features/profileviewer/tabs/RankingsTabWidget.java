@@ -154,31 +154,22 @@ public class RankingsTabWidget extends PVScreen.TabWidget {
             }
 
             if(i < 12) {
-                if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    ui.drawImage(rankingBackgroundTextureDark, xPos, yPos, 420, 126);
-                } else {
-                    ui.drawImage(rankingBackgroundTexture, xPos, yPos, 420, 126);
-                }
+                PVScreen.DarkModeToggleWidget.drawImageWithFade(rankingBackgroundTextureDark, rankingBackgroundTexture, xPos, yPos, 420, 126, ui);
+
                 ui.drawImage(texture, xPos + 12, yPos + 18, 90, 90);
                 ui.drawText(text, xPos + 111, yPos + 36, textColor);
                 ui.drawText("#" + globalPlacementString, xPos + 111, yPos + 66, textColor);
             } else if(i < 16){
                 xPos += (144 * (i % 3));
-                if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    ui.drawImage(rankingBackgroundWideTextureDark, xPos, yPos, 567, 126);
-                } else {
-                    ui.drawImage(rankingBackgroundWideTexture, xPos, yPos, 567, 126);
-                }
+                PVScreen.DarkModeToggleWidget.drawImageWithFade(rankingBackgroundWideTextureDark, rankingBackgroundWideTexture, xPos, yPos, 567, 126, ui);
+
                 ui.drawImage(texture, xPos + 12, yPos + 18, 90, 90);
                 ui.drawText(text, xPos + 111f, yPos + 36f, textColor);
                 ui.drawText("#" + globalPlacementString, xPos + 111f, yPos + 66f, textColor);
             } else {
                 xPos += (144 * ((i - 1) % 3));
-                if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    ui.drawImage(rankingBackgroundWideTextureDark, xPos, yPos, 567, 126);
-                } else {
-                    ui.drawImage(rankingBackgroundWideTexture, xPos, yPos, 567, 126);
-                }
+                PVScreen.DarkModeToggleWidget.drawImageWithFade(rankingBackgroundWideTextureDark, rankingBackgroundWideTexture, xPos, yPos, 567, 126, ui);
+
                 ui.drawImage(texture, xPos + 12, yPos + 18, 90, 90);
                 ui.drawText(text, xPos + 111f, yPos + 21f, textColor);
                 ui.drawText("#" + globalPlacementString, xPos + 111f, yPos + 51f, textColor);

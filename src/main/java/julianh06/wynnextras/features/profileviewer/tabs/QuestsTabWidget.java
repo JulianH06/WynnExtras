@@ -64,17 +64,12 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
         double rounded = Math.floor(value * 10) / 10.0;
         titleString = "Completed Quests on " + getClassName(selectedCharacter) + ": " + quests.size() + "/262 (" + rounded + "%)";
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(questBackgroundTextureDark, x + 30, y + 90, 1740, 600);
-            ui.drawImage(questSearchbarTextureDark, x + 600F, y + height, 1200, 60);
-        } else {
-           ui.drawImage(questBackgroundTexture, x + 30, y + 90, 1740, 600);
-            ui.drawImage(questSearchbarTexture, x + 600F, y + height, 1200, 60);
-        }
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(questBackgroundTextureDark, questBackgroundTexture, x + 30, y + 90, 1740, 600, ui);
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(questSearchbarTextureDark, questSearchbarTexture, x + 600F, y + height, 1050, 60, ui);
 
         questSearchBar.setX((int) ((x + 200 * 3) / ui.getScaleFactor()));
         questSearchBar.setY((int) ((y + height + 7 * 3) / ui.getScaleFactor()));
-        questSearchBar.setWidth((int) (400 * 3 / ui.getScaleFactor()));
+        questSearchBar.setWidth((int) (350 * 3 / ui.getScaleFactor()));
         questSearchBar.setHeight((int) (14 * 3 / ui.getScaleFactor()));
         questSearchBar.drawWithoutBackgroundButWithSearchtext(ctx, CustomColor.fromHexString("FFFFFF"));
 
@@ -133,11 +128,8 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
             i++;
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(questBackgroundBorderTextureDark, x + 30, y + 60, 1740, 660);
-        } else {
-            ui.drawImage(questBackgroundBorderTexture, x + 30, y + 60, 1740, 660);
-        }
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(questBackgroundBorderTextureDark, questBackgroundBorderTexture, x + 30, y + 60, 1740, 660, ui);
+
         ui.drawCenteredText(titleString, x + 900, y + 50, textColor, 4.5f);
     }
 }

@@ -59,8 +59,12 @@ public class SaveButtonWidget extends Widget {
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         //ui.drawRect(x, y, width, height, CustomColor.fromHexString("FFFFFF"));
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) ui.drawImage(hovered ? saveButtonTextureHoveredDark : saveButtonTextureDark, x, y, width, height);
-        else ui.drawImage(hovered ? saveButtonTextureHovered : saveButtonTexture, x, y, width, height);
+        if(hovered) {
+            PVScreen.DarkModeToggleWidget.drawImageWithFade(saveButtonTextureHoveredDark, saveButtonTextureHovered, x, y, width, height, ui);
+        } else {
+            PVScreen.DarkModeToggleWidget.drawImageWithFade(saveButtonTextureDark, saveButtonTexture, x, y, width, height, ui);
+        }
+
         ui.drawCenteredText("Save", x + 287.5f, y + 80, CustomColor.fromHexString("FFFFFF"), 6f);
         ui.drawCenteredText("Tree", x + 287.5f, y + 155, CustomColor.fromHexString("FFFFFF"), 6f);
     }

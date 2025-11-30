@@ -188,8 +188,9 @@ public class WynnExtrasConfig implements ConfigData {
                                     "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras (/we) discord\". " +
                                     "Buying pages is currently not possible but it will be added in the future. disable the feature to buy pages.";
 
-
-
+    @ConfigEntry.Category(Categories.bankOverlay)
+    @ConfigEntry.Name("Dark mode for the Bank overlay")
+    public boolean darkmodeToggle = false;
 
     @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Enable Raid timestamps")
@@ -210,8 +211,8 @@ public class WynnExtrasConfig implements ConfigData {
     public boolean showScales = true;
 
     @ConfigEntry.Category(Categories.misc)
-    @ConfigEntry.Name("Dark mode for the Bank overlay and profile viewer")
-    public boolean darkmodeToggle = false;
+    @ConfigEntry.Name("Dark mode for profile viewer")
+    public boolean pvDarkmodeToggle = false;
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Text

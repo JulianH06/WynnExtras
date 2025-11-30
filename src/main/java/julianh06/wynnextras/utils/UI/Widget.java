@@ -191,7 +191,7 @@ public abstract class Widget {
     public void setOnBlur(Consumer<Widget> callback) { this.onBlurCallback = callback; }
 
     // ---- Utilities ----
-    protected boolean contains(int mx, int my) {
+    public boolean contains(int mx, int my) {
         if(ui == null) return false;
         return mx >= ui.sx(x) && my >= ui.sy(y) && mx < ui.sx(x) + ui.sw(width) && my < ui.sy(y) + ui.sh(height);
     }

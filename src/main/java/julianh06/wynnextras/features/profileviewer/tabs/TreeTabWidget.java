@@ -204,16 +204,12 @@ public class TreeTabWidget extends PVScreen.TabWidget {
             children.add(saveButtonWidget);
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(questSearchbarTextureDark, x + 600F, y + height, 1200, 60);
-        } else {
-            ui.drawImage(questSearchbarTexture, x + 600F, y + height, 1200, 60);
-        }
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(questSearchbarTextureDark, questSearchbarTexture, x + 600F, y + height, 1050, 60, ui);
 
         //copied it from the quest search bar, its ugly but it works
         treeSearchBar.setX((int) ((x + 200 * 3) / ui.getScaleFactor()));
         treeSearchBar.setY((int) ((y + height + 7 * 3) / ui.getScaleFactor()));
-        treeSearchBar.setWidth((int) (400 * 3 / ui.getScaleFactor()));
+        treeSearchBar.setWidth((int) (350 * 3 / ui.getScaleFactor()));
         treeSearchBar.setHeight((int) (14 * 3 / ui.getScaleFactor()));
         treeSearchBar.drawWithoutBackgroundButWithSearchtext(ctx, CustomColor.fromHexString("FFFFFF"));
 
@@ -255,11 +251,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
 //        if (nodes == null) return;
 
         //ui.drawText(String.valueOf( "Strength: " + selectedCharacter.getSkillPoints().getStrength() + " Dexterity: " + selectedCharacter.getSkillPoints().getDexterity() + " Intelligence: " + selectedCharacter.getSkillPoints().getIntelligence()+ " Defence: " + selectedCharacter.getSkillPoints().getDefence()+ " Agility: " + selectedCharacter.getSkillPoints().getAgility()), x, y, CustomColor.fromHexString("FFFFFF"));
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(backgroundTextureDark, x + 30, y + 30, 1740, 690);
-        } else {
-            ui.drawImage(backgroundTexture, x + 30, y + 30, 1740, 690);
-        }
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(backgroundTextureDark, backgroundTexture, x + 30, y + 30, 1740, 690, ui);
 
         ui.drawCenteredText("Strength", x + 80 + 37.5f, y + 150, CustomColor.fromHexString("00a800"));
         ui.drawCenteredText(hasNoAssignedSkillpoints ? "unknown" : String.valueOf(selectedCharacter.getSkillPoints().getStrength()), x + 80 + 37.5f, y + 270, CustomColor.fromHexString("00a800"));
@@ -377,12 +369,8 @@ public class TreeTabWidget extends PVScreen.TabWidget {
             }
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(borderTextureDark, x, y, 1800, 750);
-        } else {
-            ui.drawImage(borderTexture, x, y, 1800, 750);
-            //ui.drawRect(x, y, 1800, 750);
-        }
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(borderTextureDark, borderTexture,  x, y, 1800, 750, ui);
+
         ui.drawCenteredText( PV.currentPlayerData.getUsername() + "'s build for " + getClassName(selectedCharacter), x + 900, y + 50, CustomColor.fromHexString("FFFFFF"), 3.9f);
         //ui.drawCenteredText( "coming soon", x + 730, y + 530, CustomColor.fromHexString("FF0000"), 6f);
         //ui.drawCenteredText( "coming soon", x + 240, y + 530, CustomColor.fromHexString("FF0000"), 6f);

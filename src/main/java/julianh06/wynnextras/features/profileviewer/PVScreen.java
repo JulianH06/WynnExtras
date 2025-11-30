@@ -198,6 +198,8 @@ public class PVScreen extends WEScreen {
     List<TabButtonWidget> tabButtonWidgets = new ArrayList<>();
     public static TabWidget currentTabWidget;
 
+    public static DarkModeToggleWidget darkModeToggleWidget = new DarkModeToggleWidget();
+
     public static List<String> lastViewedPlayers = new ArrayList<>();
     public static List<PlayerWidget> lastViewedPlayersWidget = new ArrayList<>();
     public static Map<String, Identifier> lastViewedPlayersSkins = new HashMap<>();
@@ -276,6 +278,7 @@ public class PVScreen extends WEScreen {
         if(currentTabWidget == null) currentTabWidget = new GeneralTabWidget(this);
 
         addRootWidget(backgroundImageWidget);
+        addRootWidget(darkModeToggleWidget);
         for(TabButtonWidget tabButtonWidget : tabButtonWidgets) {
             addRootWidget(tabButtonWidget);
         }
@@ -306,6 +309,7 @@ public class PVScreen extends WEScreen {
         int yStart = getLogicalHeight() / 2 - 375;
 
         backgroundImageWidget.setBounds(xStart, yStart, 1800, 750);
+        darkModeToggleWidget.setBounds(xStart + 1800 - 120, yStart + 750, 120, 60);
         int totalWidth = 24;
         for(TabButtonWidget tabButtonWidget : tabButtonWidgets) {
             int signWidth = drawDynamicNameSign(drawContext, tabButtonWidget.tab.toString(), xStart + totalWidth, yStart - 57);
@@ -405,19 +409,12 @@ public class PVScreen extends WEScreen {
             openInBrowserButton.setX((int) (xStart / scaleFactor));
             openInBrowserButton.setY((int) ((yStart + currentTabWidget.getHeight()) / scaleFactor) + 1);
             openInBrowserButton.buttonText = "Open in browser";
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                openInBrowserButton.drawWithTexture(context, openInBrowserButtonTextureDark);
-            } else {
-                openInBrowserButton.drawWithTexture(context, openInBrowserButtonTexture);
-            }
+            DarkModeToggleWidget.drawImageWithFade(openInBrowserButtonTextureDark, openInBrowserButtonTexture, xStart, yStart + currentTabWidget.getHeight(), 260, 60, ui);
+            openInBrowserButton.drawWithTexture(context, null);
         }
 
         //Player searchbar
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            drawImage(openInBrowserButtonTextureWDark, xStart + 267, yStart + currentTabWidget.getHeight(), 300, 60);
-        } else {
-            drawImage(openInBrowserButtonTextureW, xStart + 267, yStart + currentTabWidget.getHeight(), 300, 60);
-        }
+        DarkModeToggleWidget.drawImageWithFade(openInBrowserButtonTextureWDark, openInBrowserButtonTextureW, xStart + 267, yStart + currentTabWidget.getHeight(), 300, 60, ui);
 
         if(searchBar == null || searchBar.getInput().equals("Unknown user")) {
             searchBar = new Searchbar(-1, -1, (int) (14 * 3 / scaleFactor), (int) (100 * 3 / scaleFactor));
@@ -757,23 +754,13 @@ public class PVScreen extends WEScreen {
         int strWidth = textRenderer.getWidth(input) + 10;
         int strMidWidth = strWidth - 15;
         int amount = Math.max(0, Math.ceilDiv(strMidWidth, 10));
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(tabLeftDark, x, y, 30, 60);
-        } else {
-            ui.drawImage(tabLeft, x, y, 30, 60);
-        }
+        DarkModeToggleWidget.drawImageWithFade(tabLeftDark, tabLeft, x, y, 30, 60, ui);
+
         for (int i = 0; i < amount; i++) {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                ui.drawImage(tabMidDark, x + 30 * (i + 1), y, 30, 60);
-            } else {
-                ui.drawImage(tabMid, x + 30 * (i + 1), y, 30, 60);
-            }
+            DarkModeToggleWidget.drawImageWithFade(tabMidDark, tabMid, x + 30 * (i + 1), y, 30, 60, ui);
         }
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            ui.drawImage(tagRightDark, x + 30 * (amount + 1), y, 30, 60);
-        } else {
-            ui.drawImage(tagRight, x + 30 * (amount + 1), y, 30, 60);
-        }
+
+        DarkModeToggleWidget.drawImageWithFade(tagRightDark, tagRight, x + 30 * (amount + 1), y, 30, 60, ui);
         return 60 + amount * 30;
     }
 
@@ -800,11 +787,9 @@ public class PVScreen extends WEScreen {
         @Override
         protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(currentTab == Tab.General) {
-                if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) ui.drawImage(backgroundTextureDark, x, y, width, height);
-                else ui.drawImage(backgroundTexture, x, y, width, height);
+                DarkModeToggleWidget.drawImageWithFade(backgroundTextureDark, backgroundTexture, x, y, width, height, ui);
             } else {
-                if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) ui.drawImage(alsobackgroundTextureDark, x, y, width, height);
-                else ui.drawImage(alsobackgroundTexture, x, y, width,height);
+                DarkModeToggleWidget.drawImageWithFade(alsobackgroundTextureDark, alsobackgroundTexture, x, y, width, height, ui);
             }
         }
 
@@ -895,6 +880,82 @@ public class PVScreen extends WEScreen {
         @Override
         public boolean mouseReleased(double mx, double my, int button) {
             return super.mouseReleased(mx, my, button);
+        }
+    }
+
+    public static class DarkModeToggleWidget extends Widget {
+        static Identifier darkmodeToggleBackground = Identifier.of("wynnextras", "textures/gui/profileviewer/darkmodetogglebackground.png");
+        static Identifier darkmodeToggleBackgroundDark = Identifier.of("wynnextras", "textures/gui/profileviewer/darkmodetogglebackground_dark.png");
+
+        static Identifier sun = Identifier.of("wynnextras", "textures/gui/profileviewer/sun.png");
+        static Identifier moon = Identifier.of("wynnextras", "textures/gui/profileviewer/moon.png");
+
+        public Runnable action;
+
+        public static float targetX;
+        public static float currentX;
+
+        public DarkModeToggleWidget() {
+            super(0, 0, 120, 0);
+            if(SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle) {
+                targetX = width - 37.5f;
+            } else {
+                targetX = 7.5f;
+            }
+            this.action = () -> {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle = !SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle;
+                if(SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle) {
+                    targetX = width - 37.5f;
+                } else {
+                    targetX = 7.5f;
+                }
+                SimpleConfig.save(WynnExtrasConfig.class);
+            };
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            drawImageWithFade(darkmodeToggleBackgroundDark, darkmodeToggleBackground, x, y, width, height, ui);
+
+            float progress = Math.abs(currentX - 7.5f);
+            float maxDistance = width - 37.5f - 7.5f;
+            float alpha = (progress / maxDistance);
+
+            ui.drawImage(sun, x + currentX, y + 22.5f, 30, 30, 1 - alpha);
+            ui.drawImage(moon, x + currentX, y + 22.5f, 30, 30, alpha);
+
+            if(currentX < targetX) {
+                currentX += (10f * tickDelta);
+                if(currentX >= targetX) {
+                    currentX = targetX;
+                }
+            }
+
+            if(currentX > targetX) {
+                currentX -= (10f * tickDelta);
+                if(currentX <= targetX) {
+                    currentX = targetX;
+                }
+            }
+
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if (!isEnabled()) return false;
+            if (action != null) action.run();
+            return true;
+        }
+
+        public static void drawImageWithFade(Identifier dark, Identifier light, float x, float y, float width, float height, UIUtils ui) {
+            float progress = Math.abs(currentX - 7.5f);
+            float maxDistance = 120 - 37.5f - 7.5f;
+            float alpha = (progress / maxDistance);
+
+            ui.drawImage(light, x, y, width, height, 1 - alpha);
+
+            ui.drawImage(dark, x, y, width, height, alpha);
         }
     }
 }

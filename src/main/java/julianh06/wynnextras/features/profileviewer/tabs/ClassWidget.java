@@ -3,8 +3,6 @@ package julianh06.wynnextras.features.profileviewer.tabs;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
-import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -78,36 +76,16 @@ public class ClassWidget extends Widget {
 
         if(selectedCharacter == characterData) {
             if(hovered) {
-                if (SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    ui.drawImage(classBackgroundTextureActiveHoveredDark, x, y, 390, 132);
-                } else {
-                    ui.drawImage(classBackgroundTextureActiveHovered, x, y, 390, 132);
-                }
-            } else {
-                if (SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                    ui.drawImage(classBackgroundTextureActiveDark, x, y, 390, 132);
-                } else {
-                    ui.drawImage(classBackgroundTextureActive, x, y, 390, 132);
-                }
+                DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureActiveHoveredDark, classBackgroundTextureActiveHovered,  x, y, 390, 132, ui);
+           } else {
+                DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureActiveDark, classBackgroundTextureActive,  x, y, 390, 132, ui);
             }
         } else if(hovered) {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                ui.drawImage(classBackgroundTextureHoveredDark, x, y, 390, 132);
-            } else {
-                ui.drawImage(classBackgroundTextureHovered, x, y, 390, 132);
-            }
+            DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered,  x, y, 390, 132, ui);
         } else if(characterData.getTotalLevel() != 1690) {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                ui.drawImage(classBackgroundTextureDark, x, y, 390, 132);
-            } else {
-                ui.drawImage(classBackgroundTexture, x, y, 390, 132);
-            }
+            DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture,  x, y, 390, 132, ui);
         } else {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-                ui.drawImage(classBackgroundTextureGoldDark, x, y, 390, 132);
-            } else {
-                ui.drawImage(classBackgroundTextureGold, x, y, 390, 132);
-            }
+            DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureGoldDark, classBackgroundTextureGold,  x, y, 390, 132, ui);
         }
 
         if (classTexture != null) {
@@ -155,7 +133,7 @@ public class ClassWidget extends Widget {
         }
 
         if(isAtiveCharacter) {
-            ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? onlineCircleTextureDark : onlineCircleTexture, x + 6, y + 6, 20, 20);
+            DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, x + 6, y + 6, 18, 18, ui);
         }
     }
 }

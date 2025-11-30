@@ -88,14 +88,14 @@ public class maintracking {
                 }
             }
 
-            if(inRaidChest && !scanDone){
-                try {
-                    aspect.AspectsInRaidChest();
-                } catch (Exception e) {
-                    McUtils.sendMessageToClient(Text.of("crash"));
-                }
-                return;
-            }
+//            if(inRaidChest && !scanDone){
+//                try {
+//                    aspect.AspectsInRaidChest();
+//                } catch (Exception e) {
+//                    McUtils.sendMessageToClient(Text.of("crash"));
+//                }
+//                return;
+//            }
 
 //            if(inRaidChest && Raiddone){
 //                Raiddone = false;
