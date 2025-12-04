@@ -52,6 +52,7 @@
     "ShamanTotem.ShamanTotemCircleRemoved",
     "ShamanTotem.ShamanTotemCircleSummoned",
     "ShamanTotem.ShamanTotemCircleUpdated",
-    "ShamanTotem.ShamanTotemModelMixin"
+    "ShamanTotem.ShamanTotemModelMixin",
+    "War.GuildWarEventStartedMixin"
   ]
 }
