@@ -13,21 +13,19 @@ import julianh06.wynnextras.core.command.Command;
 @WEModule
 public class wartest {
     private Command testCMD = new Command(
-            "wartest",
-            "",
-            context -> {
-                for (TerritoryPoi poi : Models.Territory.getTerritoryPoisFromAdvancement()) {
-                    // name from Territories model vs name from WarBattleInfo
-                    if (!poi.isFakeTerritoryInfo()) {
-                        if(poi.getTerritoryInfo() != null) {
-                            System.out.println("[WynnExtras] Usable TerritoryInfo found for: " + poi.getName() + " defence: " + poi.getTerritoryInfo().getDefences());
-                        } else {
-                            System.out.println("[WynnExtras] No usable TerritoryInfo found for: " + poi.getName());
-                        }
+        "wartest",
+        context -> {
+            for (TerritoryPoi poi : Models.Territory.getTerritoryPoisFromAdvancement()) {
+                // name from Territories model vs name from WarBattleInfo
+                if (!poi.isFakeTerritoryInfo()) {
+                    if(poi.getTerritoryInfo() != null) {
+                        System.out.println("[WynnExtras] Usable TerritoryInfo found for: " + poi.getName() + " defence: " + poi.getTerritoryInfo().getDefences());
+                    } else {
+                        System.out.println("[WynnExtras] No usable TerritoryInfo found for: " + poi.getName());
                     }
                 }
-                return 1;
-            },
-            null, null
+            }
+            return 1;
+        }
     );
 }
