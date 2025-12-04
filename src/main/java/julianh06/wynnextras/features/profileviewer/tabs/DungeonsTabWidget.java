@@ -8,12 +8,20 @@ import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.Dungeons;
+import julianh06.wynnextras.utils.UI.Widget;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.text.DecimalFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import static julianh06.wynnextras.features.profileviewer.PVScreen.*;
@@ -34,6 +42,8 @@ public class DungeonsTabWidget extends PVScreen.TabWidget {
     static Identifier fallenFactoryTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/fallenfactory.png");
     static Identifier eldritchOutlookTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/eldritchoutlook.png");
     static List<Identifier> dungeonTextures = List.of(decrepitSewersTexture, infestedPitTexture, underworldCryptTexture, timelostSanctumTexture, sandSweptTombTexture, iceBarrowsTexture, undergrowthRuinsTexture, galleonsGraveyardTexture, fallenFactoryTexture, eldritchOutlookTexture);
+
+    private InfoWidget infoWidget = null;
 
     public DungeonsTabWidget() {
         super(0, 0, 0, 0);
@@ -90,25 +100,27 @@ public class DungeonsTabWidget extends PVScreen.TabWidget {
                 if(i < 8) {
                     ui.drawImage(dungeonKeyTexture, dungeonX + 60, dungeonY - 15, 60, 60);
                     ui.drawText(formatter.format(comps), dungeonX + 55, dungeonY, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
+
+                    ui.drawImage(corruptedDungeonKeyTexture, dungeonX + 120, dungeonY - 15, 60, 60);
+                    ui.drawText(formatter.format(cComps), dungeonX + 190, dungeonY, CustomColor.fromHexString("FFFFFF"));
                 } else {
                     ui.drawImage(dungeonKeyTexture, dungeonX + 90, dungeonY - 15, 60, 60);
                     ui.drawText(formatter.format(comps), dungeonX + 90, dungeonY, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-                }
-
-                if(i < 8) {
-                    ui.drawImage(corruptedDungeonKeyTexture, dungeonX + 120, dungeonY - 15, 60, 60);
-                    ui.drawText(formatter.format(cComps), dungeonX + 190, dungeonY, CustomColor.fromHexString("FFFFFF"));
                 }
             } else {
                 ui.drawImage(dungeon, dungeonX + 30, dungeonY + 45, 180, 180);
                 ui.drawCenteredText(getDungeonName(i), dungeonX + 120, dungeonY + 30, CustomColor.fromHexString("FFFFFF"), 3f);
 
-                ui.drawImage(dungeonKeyTexture, dungeonX + 60, dungeonY + 230, 60, 60);
-                ui.drawText(formatter.format(comps), dungeonX + 55, dungeonY + 250, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
 
-                if(i < 8) {
+                if(i != 3) {
+                    ui.drawImage(dungeonKeyTexture, dungeonX + 60, dungeonY + 230, 60, 60);
+                    ui.drawText(formatter.format(comps), dungeonX + 55, dungeonY + 250, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
+
                     ui.drawImage(corruptedDungeonKeyTexture, dungeonX + 120, dungeonY + 230, 60, 60);
                     ui.drawText(formatter.format(cComps), dungeonX + 190, dungeonY + 250, CustomColor.fromHexString("FFFFFF"));
+                } else {
+                    ui.drawImage(dungeonKeyTexture, dungeonX + 90, dungeonY + 230, 60, 60);
+                    ui.drawText(formatter.format(comps), dungeonX + 90, dungeonY+ 250, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
                 }
             }
             i++;
@@ -122,6 +134,47 @@ public class DungeonsTabWidget extends PVScreen.TabWidget {
             }
 
             ui.drawCenteredText("Total Completions" + characterNameString + formatter.format(TotalComps), x + 900, y + 45, CustomColor.fromHexString("FFFFFF"), 3.9f);
+        }
+
+        if(infoWidget == null) {
+            infoWidget = new InfoWidget(getDungeonComps(10, normalComps), getCorruptedComps(8, corruptedComps));
+            addChild(infoWidget);
+        }
+
+        infoWidget.setBounds(x + width - 80, y + 20, 50, 50);
+    }
+
+    private static class InfoWidget extends Widget {
+        static Identifier infoIcon = Identifier.of("wynnextras", "textures/gui/profileviewer/infoicon.png");
+        static Identifier infoIconDark = Identifier.of("wynnextras", "textures/gui/profileviewer/infoicon_dark.png");
+
+        int comps;
+        int corruptedComps;
+
+        public InfoWidget(int comps, int corruptedComps) {
+            super(0, 0, 0, 0);
+            this.comps = comps;
+            this.corruptedComps = corruptedComps;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            PVScreen.DarkModeToggleWidget.drawImageWithFade(infoIconDark, infoIcon, x, y, width, height, ui);
+
+            if(hovered) {
+                ctx.drawTooltip(MinecraftClient.getInstance().textRenderer,
+                    List.of(Text.of("Lost Sanctuary"),
+                        Text.of(""),
+                        Text.of("Normal Completions: " + comps),
+                        Text.of("Corrupted Completions: " + corruptedComps),
+                        Text.of(""),
+                        Text.of("§4The normal version of the Lost Sanctuary"),
+                        Text.of("§4has been replaced with the Timelost Sanctum"),
+                        Text.of("§4in 2023. The corrupted version has not been"),
+                        Text.of("§4updated yet and is still playable in the forgery.")
+                    ),
+                mouseX, mouseY);
+            }
         }
     }
 }

@@ -488,6 +488,7 @@ public class PVScreen extends WEScreen {
             case 7 -> map.getOrDefault("Galleon's Graveyard", 0);
             case 8 -> map.getOrDefault("Fallen Factory", 0);
             case 9 -> map.getOrDefault("Eldritch Outlook", 0);
+            case 10 -> map.getOrDefault("Lost Sanctuary", 0);
             default -> 0;
         };
     }
@@ -502,6 +503,7 @@ public class PVScreen extends WEScreen {
             case 5 -> map.getOrDefault("Corrupted Ice Barrows", 0);
             case 6 -> map.getOrDefault("Corrupted Undergrowth Ruins", 0);
             case 7 -> map.getOrDefault("Corrupted Galleon's Graveyard", 0);
+            case 8 -> map.getOrDefault("Corrupted Lost Sanctuary", 0);
             default -> 0;
         };
     }
