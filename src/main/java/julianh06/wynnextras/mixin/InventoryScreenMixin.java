@@ -25,13 +25,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import static julianh06.wynnextras.core.WynnExtras.normalGUIScale;
+
 @Mixin(Screen.class)
 public class InventoryScreenMixin {
     @Unique
     private static WynnExtrasConfig config;
-
-    @Unique
-    private static int normalGUIScale = -1;
 
     @Inject(method = "renderInGameBackground", at = @At("HEAD"), cancellable = true)
     public void renderInGameBackground(DrawContext context, CallbackInfo ci) {
@@ -47,8 +46,8 @@ public class InventoryScreenMixin {
         if(config.differentGUIScale) {
             if(normalGUIScale == -1) {
                 normalGUIScale = MinecraftClient.getInstance().options.getGuiScale().getValue();
+                MinecraftClient.getInstance().options.getGuiScale().setValue(config.customGUIScale);
             }
-            MinecraftClient.getInstance().options.getGuiScale().setValue(config.customGUIScale);
         }
 
         BankOverlay.updateOverlayType();
@@ -56,12 +55,6 @@ public class InventoryScreenMixin {
         if(BankOverlay.expectedOverlayType == null) {
             BankOverlay.expectedOverlayType = BankOverlay.currentOverlayType;
         }
-
-//        System.out.println("EXPECTED: " + BankOverlay.expectedOverlayType + " CURRENT: " + BankOverlay.currentOverlayType);
-//
-//        if(BankOverlay.expectedOverlayType != null && BankOverlay.expectedOverlayType != BankOverlay.currentOverlayType) return;
-//
-//        System.out.println("EXPECTED EQUALS CURRENT");
 
         if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
             ci.cancel();
@@ -80,15 +73,6 @@ public class InventoryScreenMixin {
 
             WynnExtras.testInv = currScreenHandler.slots;
             WynnExtras.testInvSize = currScreenHandler.slots.size() - 36;
-        }
-    }
-
-    @Inject(method = "close", at = @At("HEAD"))
-    public void close(CallbackInfo ci) {
-        if(config == null) config = SimpleConfig.getInstance(WynnExtrasConfig.class);
-        if(config.differentGUIScale && normalGUIScale != -1) {
-            MinecraftClient.getInstance().options.getGuiScale().setValue(normalGUIScale);
-            normalGUIScale = -1;
         }
     }
 }
