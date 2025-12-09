@@ -219,17 +219,8 @@ public class TerritoryInfoMixin implements TerritoryInfoMixinDuck {
         }
         ThisIsStupid = predictedResourceTime;
         // == Resolve connection boost == //
-        long connections = tradingRoutes.stream() // this stream filter is a crime :D
-                .filter(territoryName -> Models.Territory.getTerritoryPoisFromAdvancement().stream()
-                        .filter(territoryPoi -> territoryPoi.getName().equals(territoryName))
-                        .findFirst()
-                        .orElseThrow()
-                        .getTerritoryInfo()
-                        .getGuildPrefix()
-                        .equals(guildPrefix))
-                .count();
         double connectionBoost = 1 + 0.3 * getUniqueConnections(1);
-        if (headquarters) connectionBoost *= (1.25 + 0.25 * getUniqueConnections(3));
+        if (headquarters) connectionBoost *= (1.5 + 0.25 * getUniqueConnections(3));
         // == Get used resources == //
         // Assume 1 tier of Aura and Volley is in play, since it's Medium+
         Map<GuildResource, Integer> usedResources = estimateUsedResources(producedEmeralds);
