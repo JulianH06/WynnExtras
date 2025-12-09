@@ -39,6 +39,9 @@ import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
 import julianh06.wynnextras.utils.Pair;
+import julianh06.wynnextras.utils.UI.ImageWidget;
+import julianh06.wynnextras.utils.UI.UIUtils;
+import julianh06.wynnextras.utils.UI.WEHandledScreen;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -79,7 +82,7 @@ import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHover
 import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredWynnitem;
 import static julianh06.wynnextras.mixin.BankOverlay.HandledScreenMixin.*;
 
-public class BankOverlay2 {
+public class BankOverlay2 extends WEHandledScreen {
 
     @Unique
     ItemStack hoveredSlot = null;
@@ -197,6 +200,15 @@ public class BankOverlay2 {
     @Unique
     private final EnumSet<BankOverlayType> initializedTypes = EnumSet.noneOf(BankOverlayType.class);
 
+    CallbackInfo ci;
+    HandledScreen screen;
+
+    ImageWidget test;
+
+    public BankOverlay2(CallbackInfo ci, HandledScreen screen) {
+        this.ci = ci;
+        this.screen = screen;
+    }
 
     public void render(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci, HandledScreen screen, Function<Void, Void> close) {
         Pages = currentData;
@@ -205,9 +217,21 @@ public class BankOverlay2 {
         if(MinecraftClient.getInstance().player == null || MinecraftClient.getInstance().currentScreen == null) return;
         initializeOverlayState();
 
+        if(ui != null) if(test == null) {
+            test = new ImageWidget(lock_locked_dark, ui);
+            rootWidgets.add(test);
+        }
+
+
+//        if(true) {
+//            ci.cancel();
+//            //return;
+//        }
+
         Pair<Integer, Integer> xyRemain = calculateLayout();
         int xRemain = xyRemain.first();
         int yRemain = xyRemain.second();
+        test.setBounds((int) (xRemain * 0.5f * ui.getScaleFactor()), (int) (yRemain * 0.5f * ui.getScaleFactor()), (int) (162 * ui.getScaleFactor()), (int) (104 * ui.getScaleFactor()));
         int playerInvIndex = xFitAmount * yFitAmount - xFitAmount;
 
         RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
@@ -251,6 +275,7 @@ public class BankOverlay2 {
 
         //System.out.println(lastPage);
 
+        //if(true) return;
         for (int indexWithOffset = scrollOffset; indexWithOffset < visibleInventories; indexWithOffset++) {
             boolean pageContainsSearch = false;
             boolean isUnlocked = indexWithOffset < currentData.lastPage; // < instead of <= because the index starts at 0 and the pages at 1
@@ -1315,5 +1340,22 @@ public class BankOverlay2 {
         if (tooltipPos.y + tooltipHeight > screenHeight) {
             tooltipPos.y = screenHeight - tooltipHeight;
         }
+    }
+
+    @Override
+    protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+
+    }
+
+    @Override
+    protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        render(ctx, mouseX, mouseY, delta, ci, screen, close -> {
+            return null;
+        });
+    }
+
+    @Override
+    protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+
     }
 }
