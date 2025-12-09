@@ -94,18 +94,19 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        if(bankOverlay == null) bankOverlay = new BankOverlay2();
+        if(bankOverlay == null) bankOverlay = new BankOverlay2(ci, (HandledScreen) (Object) this);
         bankOverlay.render(context, mouseX, mouseY, delta, ci,  (HandledScreen) (Object) this, close -> {
             close();
             return null;
         });
+        bankOverlay.render(context, mouseX, mouseY, delta);
     }
 
 
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
-        if(bankOverlay == null) bankOverlay = new BankOverlay2();
+        if(bankOverlay == null) return;
 //        if(inClassSelection) {
 //            cir.cancel();
 //            return;
@@ -223,7 +224,7 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
     private void keyPressedPre(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
-        if(bankOverlay == null) bankOverlay = new BankOverlay2();
+        if(bankOverlay == null) return;
         InventoryKeyPressEvent event = new InventoryKeyPressEvent(keyCode, scanCode, modifiers, bankOverlay.touchHoveredSlot);
         event.post();
 
