@@ -188,6 +188,8 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "close", at = @At("HEAD"))
     public void onClose(CallbackInfo ci) {
+        bankOverlay = null;
+
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.world == null) {
             return;

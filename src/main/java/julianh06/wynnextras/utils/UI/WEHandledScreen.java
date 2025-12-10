@@ -9,27 +9,26 @@ import java.util.List;
 
 public abstract class WEHandledScreen {
     protected DrawContext drawContext;
-
-    protected double scaleFactor = 1;
+    protected double scaleFactor;
+    protected int xStart;
+    protected int yStart;
     protected int screenWidth;
     protected int screenHeight;
-    protected int xStart = 0;
-    protected int yStart = 0;
-
     protected UIUtils ui;
 
     protected final List<Widget> rootWidgets = new ArrayList<>();
     protected final List<WEElement<?>> listElements = new ArrayList<>();
-
     protected Widget focusedWidget = null;
     protected WEElement<?> focusedElement = null;
-
     protected float listX, listY, listWidth, listHeight;
     protected float listItemHeight;
     protected float listSpacing;
     protected float listScrollOffset = 0f;
     protected int firstVisibleIndex = 0;
     protected int lastVisibleIndex = -1;
+
+    private static long lastScrollTime = 0;
+    private static final long scrollCooldown = 0; // in ms
 
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         this.drawContext = ctx;
