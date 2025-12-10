@@ -16,6 +16,7 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
+import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.inventory.data.*;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -181,8 +182,10 @@ public class BankOverlay {
 
                     if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
                         if (verticalAmount > 0) {
+                            BankOverlay2.targetOffset -= 30;
                             scrollOffset -= xFitAmount; //Scroll up
                         } else if(canScrollFurther) {
+                            BankOverlay2.targetOffset += 30;
                             scrollOffset += xFitAmount; //Scroll down
                         }
                         if (scrollOffset < 0) {
