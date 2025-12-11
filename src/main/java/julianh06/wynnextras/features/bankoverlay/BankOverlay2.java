@@ -87,7 +87,7 @@ import static julianh06.wynnextras.mixin.BankOverlay.HandledScreenMixin.*;
 public class BankOverlay2 extends WEHandledScreen {
 
     @Unique
-    ItemStack hoveredSlot = null;
+    static ItemStack hoveredSlot = null;
     @Unique
     int hoveredX = -1;
     @Unique
@@ -203,7 +203,7 @@ public class BankOverlay2 extends WEHandledScreen {
     private final EnumSet<BankOverlayType> initializedTypes = EnumSet.noneOf(BankOverlayType.class);
 
     CallbackInfo ci;
-    HandledScreen screen;
+    static HandledScreen screen;
 
     ImageWidget test;
 
@@ -318,6 +318,12 @@ public class BankOverlay2 extends WEHandledScreen {
             context.disableScissor();
             //System.out.println(pages.size());
         }
+
+        renderButtons(context);
+        renderNameInputs(context);
+        renderHoveredSlotHighlight(context,  screen);
+        renderHoveredTooltip(context, screen, mouseX, mouseY);
+        renderHeldItemOverlay(context, mouseX, mouseY);
 
         if(true) return;
         for (int indexWithOffset = scrollOffset; indexWithOffset < visibleInventories; indexWithOffset++) {
@@ -728,24 +734,24 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     @Unique
-    private void applyAnnotation(ItemStack stack, List<ItemAnnotation> annotations, int index) {
-        if(stack.getItem() == Items.AIR) return;
-
-        if (stack == null) {
+    private static void applyAnnotation(ItemStack stack, List<ItemAnnotation> annotations, int index) {
+        if(stack == null) {
             annotations.add(null);
             return;
         }
 
-        if (annotations.size() <= index) return;
+        if(stack.getItem() == Items.AIR) return;
+
+        if(annotations.size() <= index) return;
 
         ItemAnnotation annotation = annotations.get(index);
-        if (annotation == null) {
+        if(annotation == null) {
             StyledText name = StyledText.fromComponent(stack.getName());
             annotation = ((ItemHandlerInvoker) (Object) Handlers.Item).invokeCalculateAnnotation(stack, name);
             annotations.set(index, annotation);
         }
 
-        if (annotation != null) {
+        if(annotation != null) {
             ((ItemStackExtension) (Object) stack).setAnnotation(annotation);
         }
     }
@@ -990,7 +996,7 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     @Unique
-    private void drawTooltip(TextRenderer textRenderer, List<TooltipComponent> components, int x, int y, @Nullable Identifier texture, DrawContext context) {
+    private static void drawTooltip(TextRenderer textRenderer, List<TooltipComponent> components, int x, int y, @Nullable Identifier texture, DrawContext context) {
         if (!components.isEmpty()) {
             int i = 0;
             int j = components.size() == 1 ? -2 : 0;
@@ -1290,7 +1296,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
 
     @Unique
-    public <T extends WynnItem> Optional<T> asWynnItem(ItemStack itemStack) {
+    public static <T extends WynnItem> Optional<T> asWynnItem(ItemStack itemStack) {
         Optional<ItemAnnotation> annotationOpt = ItemHandler.getItemStackAnnotation(itemStack);
         if(annotationOpt.isEmpty()) return Optional.empty();
         if (!(annotationOpt.get() instanceof WynnItem wynnItem)) return Optional.empty();
@@ -1459,6 +1465,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
     private static class PageWidget extends Widget {
         List<ItemStack> items;
+        List<SlotWidget> slots = new ArrayList<>();
         final int index;
         int topBorder;
         int botBorder;
@@ -1476,19 +1483,34 @@ public class BankOverlay2 extends WEHandledScreen {
             if(ui == null) return;
             if(y > botBorder || y + height < topBorder) return;
 
+            if (index == activeInv) {
+                ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF00ff") : CustomColor.fromInt(0).withAlpha(255));
+            } else {
+                ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromInt(9996647).withAlpha(255));
+            }
 
-//            if (index == activeInv) {
-//                ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF00ff") : CustomColor.fromInt(0).withAlpha(255));
-//            } else {
-//                ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromInt(9996647).withAlpha(255));
-//            }
+            if(slots.isEmpty()) {
+                int i = 0;
+                for (ItemStack itemStack : items) {
+                    SlotWidget slot = new SlotWidget(itemStack, i);
+                    slots.add(slot);
+                    addChild(slot);
+                    //slot.draw(ctx, mouseX, mouseY, tickDelta, ui);
+                    i++;
+                }
+            }
+
+            List<ItemAnnotation> annotations = annotationCache.computeIfAbsent(index, k -> new ArrayList<>(Collections.nCopies(slots.size(), null)));
+
+
             int i = 0;
-            for(ItemStack itemStack : items) {
-                if(itemStack == null) continue;
-                ctx.getMatrices().push();
-                ctx.getMatrices().translate(0, 0, 100);
-                ctx.drawItem(itemStack, 2 + (int) (x / ui.getScaleFactor() + 18 * (i % 9)), 2 + (int) (y / ui.getScaleFactor() + 18 * (i / 9)));
-                ctx.getMatrices().pop();
+            for(SlotWidget slot : slots) {
+                //slot.setBounds((int) (x + 18 * (i % 9)), (int) (y + 18 * (i / 9)), 18, 18);
+                //slot.setBounds((int) (x / ui.getScaleFactor() + 18 * (i % 9)), (int) (y / ui.getScaleFactor() + 18 * (i / 9)), 18, 18);
+                slot.setBounds((int) (x + 18 * (i % 9) * ui.getScaleFactor() + 3), (int) (y + 18 * (i / 9) * ui.getScaleFactor() + 3), (int) (18 * ui.getScaleFactor()), (int) (18 * ui.getScaleFactor()));
+
+                applyAnnotation(items.get(i), annotations, i);
+                slot.setStack(items.get(i));
                 i++;
             }
 
@@ -1501,6 +1523,73 @@ public class BankOverlay2 extends WEHandledScreen {
         }
         public void setItems(List<ItemStack> items) {
             this.items = items;
+        }
+    }
+
+    private static class SlotWidget extends Widget {
+        private ItemStack stack;
+        int index;
+
+        public SlotWidget(ItemStack stack, int index) {
+            super(0, 0, 0, 0);
+            this.stack = stack;
+            this.index = index;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if(stack == null) return;
+
+            if(hovered) {
+                ui.drawRect(x, y, width, height, CustomColor.fromHSV(0, 0, 1000, 0.25f));
+                hoveredSlot = stack;
+//                if (stack.getItem() == Items.AIR) return;
+//
+//                Optional<WynnItem> item = asWynnItem(stack);
+//                List<Text> tooltip = item.map(i -> {
+//                            currentHoveredStack = stack;
+//                            currentHoveredWynnitem = i;
+//                            return TooltipUtils.getWynnItemTooltip(stack, i);
+//                        }).filter(t -> !t.isEmpty())
+//                        .orElse(stack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.ADVANCED));
+//
+//                List<TooltipComponent> components = TooltipUtils.getClientTooltipComponent(tooltip);
+//                int tooltipHeight = TooltipUtils.getTooltipHeight(components);
+//                int screenHeight = screen.height;
+//                float scale = 1.0f;
+//
+//                int y = mouseY;
+//                boolean overflow = false;
+//                if (tooltipHeight > screenHeight) {
+//                    scale = (float) screenHeight / (float) tooltipHeight;
+//                    y = 0; //ganz unten am screen
+//                    overflow = true;
+//                }
+//
+//                ctx.getMatrices().push();
+//                ctx.getMatrices().scale(scale, scale, 1.0f);
+//
+//                if(!overflow) {
+//                    ctx.drawTooltip(screen.getTextRenderer(), tooltip, (int) (mouseX / scale), y);
+//                } else {
+//                    drawTooltip(screen.getTextRenderer(), components, (int)(mouseX / scale) + 12, y, null, ctx);
+//                }
+//
+//                ctx.getMatrices().pop();
+            }
+
+            ctx.getMatrices().push();
+            ctx.getMatrices().translate(0, 0, 100);
+            ctx.drawItem(stack, (int) (2 + x / ui.getScaleFactor()), (int) (2 + y / ui.getScaleFactor()));
+            ctx.getMatrices().pop();
+        }
+
+        public ItemStack getStack() {
+            return stack;
+        }
+
+        public void setStack(ItemStack stack) {
+            this.stack = stack;
         }
     }
 }
