@@ -2,6 +2,7 @@ package julianh06.wynnextras.mixin;
 
 import com.wynntils.core.components.Models;
 import com.wynntils.core.text.StyledText;
+import com.wynntils.models.marker.MarkerModel;
 import com.wynntils.models.territories.TerritoryInfo;
 import com.wynntils.models.territories.profile.TerritoryProfile;
 import com.wynntils.models.territories.type.GuildResource;
@@ -92,7 +93,7 @@ public class GuildMapScreenMixin extends AbstractMapScreen {
             renderedPois.addAll(advancementPois);
         }
 
-        Models.Marker.USER_WAYPOINTS_PROVIDER.getPois().forEach(renderedPois::add);
+        MarkerModel.USER_WAYPOINTS_PROVIDER.getPois().forEach(renderedPois::add);
 
         renderPois(
                 renderedPois,
