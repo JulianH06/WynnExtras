@@ -21,13 +21,11 @@ import java.util.function.Function;
 public class TerritoryInfoMixin implements TerritoryInfoMixinDuck {
     @Unique private static int ThisIsStupid = 60;
 
-    @Shadow private String guildName;
     @Shadow private String guildPrefix;
     @Shadow private GuildResourceValues defences;
     @Final @Shadow private boolean headquarters;
-    @Shadow private final List<String> tradingRoutes = new ArrayList();
-    @Shadow private final HashMap<GuildResource, Integer> generators = new HashMap();
-    @Shadow private final HashMap<GuildResource, CappedValue> storage = new HashMap();
+    @Shadow private final HashMap<GuildResource, Integer> generators = new HashMap<>();
+    @Shadow private final HashMap<GuildResource, CappedValue> storage = new HashMap<>();
 
     @Unique
     private int getUniqueConnections(Integer depth) {
@@ -239,12 +237,8 @@ public class TerritoryInfoMixin implements TerritoryInfoMixinDuck {
         Estimation speed = estimatedStats.get(GuildResource.CROPS);
         Estimation defence = estimatedStats.get(GuildResource.FISH);
         double dmgv = dmg.value() * connectionBoost;
-        BiFunction<String, Double, String> format = (fmt, n) -> {
-            return (n < 0) ? "(???)" : String.format(fmt, n);
-        };
-        Function<Estimation, String> tier = (est) -> {
-            return est.tier() < 0 ? "" : Formatting.GRAY + " (" + est.tier() + ")";
-        };
+        BiFunction<String, Double, String> format = (fmt, n) -> (n < 0) ? "(???)" : String.format(fmt, n);
+        Function<Estimation, String> tier = (est) -> est.tier() < 0 ? "" : Formatting.GRAY + " (" + est.tier() + ")";
         String connectionText = Formatting.DARK_GRAY + " (x" + String.format("%.2f", connectionBoost) + ")";
         result.add(Formatting.WHITE + "Ⓑ " + format.apply("%.0f", dmgv) + "-" + format.apply("%.0f", dmgv * 1.5)
                 + " Damage" + tier.apply(dmg) + connectionText);
@@ -258,6 +252,3 @@ public class TerritoryInfoMixin implements TerritoryInfoMixinDuck {
         return result;
     }
 }
-
-
-;
