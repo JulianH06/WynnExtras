@@ -33,6 +33,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Mixin(value = GuildMapScreen.class, remap = false)
 public class GuildMapScreenMixin extends AbstractMapScreen {
@@ -44,23 +47,29 @@ public class GuildMapScreenMixin extends AbstractMapScreen {
 
     @Unique
     private void fixTradeRoutes(List<TerritoryPoi> advancementPois) {
-        // The advancement menu sucks at its job so we ensure 2-way trade routes are properly defined
         int fixes = 0;
+
+        Map<String, TerritoryPoi> poiByName = advancementPois.stream()
+                .collect(Collectors.toMap(TerritoryPoi::getName, Function.identity(), (a, b) -> a));
+
         for (TerritoryPoi territoryPoi : advancementPois) {
             for (String route : territoryPoi.getTerritoryInfo().getTradingRoutes()) {
-                TerritoryPoi routePoi = advancementPois.stream()
-                        .filter(territory -> territory.getName().equals(route))
-                        .findFirst()
-                        .orElseThrow();
+                TerritoryPoi routePoi = poiByName.get(route);
+                if (routePoi == null) {
+                    continue;
+                }
+
                 List<String> tradeRoutes = routePoi.getTerritoryInfo().getTradingRoutes();
                 if (!tradeRoutes.contains(territoryPoi.getName())) {
                     tradeRoutes.add(territoryPoi.getName());
-                    fixes += 1;
+                    fixes++;
                 }
             }
         }
+
         if (fixes > 0) System.out.println("Applied " + fixes + " trade route fixes");
     }
+
 
     @Inject(method = "renderPois(Lnet/minecraft/client/util/math/MatrixStack;II)V", at = @At("HEAD"), cancellable = true, remap = false)
     private void renderPois(MatrixStack poseStack, int mouseX, int mouseY, CallbackInfo ci) {
