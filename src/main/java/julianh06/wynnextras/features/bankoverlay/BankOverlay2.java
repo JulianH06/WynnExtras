@@ -202,8 +202,9 @@ public class BankOverlay2 extends WEHandledScreen {
     @Unique
     private final EnumSet<BankOverlayType> initializedTypes = EnumSet.noneOf(BankOverlayType.class);
 
-    CallbackInfo ci;
-    static HandledScreen screen;
+    public CallbackInfo ci;
+    public HandledScreen screen;
+    public Function<Void, Void> close;
 
     ImageWidget test;
 
@@ -215,24 +216,27 @@ public class BankOverlay2 extends WEHandledScreen {
     public BankOverlay2(CallbackInfo ci, HandledScreen screen) {
         this.ci = ci;
         this.screen = screen;
+        actualOffset = 0;
+        targetOffset = 0;
         pages.clear();
     }
 
-    public void render(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci, HandledScreen screen, Function<Void, Void> close) {
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         Pages = currentData;
         if(currentOverlayType == BankOverlayType.NONE || MinecraftClient.getInstance() == null || Pages == null) return;
         if(MinecraftClient.getInstance().getWindow() == null || !MinecraftClient.getInstance().isRunning()) return;
         if(MinecraftClient.getInstance().player == null || MinecraftClient.getInstance().currentScreen == null) return;
-        if(ui == null) return;
+        if(ui == null) {
+            ui = new UIUtils(context, 1, 0, 0);
+        }
         initializeOverlayState();
 
         if (targetOffset > (yFitAmount) * 104) targetOffset = (yFitAmount) * 104; //TODO: make it work with different gui scales
         if (targetOffset < -0) targetOffset = -0;
 
-        {
-            float k = 0.2f;
-            actualOffset += (targetOffset - actualOffset) * k;
-        }
+        float speed = 0.25f;
+        actualOffset += (targetOffset - actualOffset) * speed * delta;
 
         if(pages.isEmpty()) {
             for (int i = 0; i < currentMaxPages; i++) {
@@ -241,26 +245,14 @@ public class BankOverlay2 extends WEHandledScreen {
             }
         }
 
-//        if(ui != null) if(test == null) {
-//            //test = new ImageWidget(lock_locked_dark, ui);
-//            //rootWidgets.add(test);
-//        }
-
-
-//        if(true) {
-//            ci.cancel();
-//            //return;
-//        }
-
         Pair<Integer, Integer> xyRemain = calculateLayout();
         int xRemain = xyRemain.first();
         int yRemain = xyRemain.second();
-        //test.setBounds((int) (xRemain * 0.5f * ui.getScaleFactor()), (int) (yRemain * 0.5f * ui.getScaleFactor()), (int) (162 * ui.getScaleFactor()), (int) (104 * ui.getScaleFactor()));
         int playerInvIndex = xFitAmount * yFitAmount - xFitAmount;
 
-//        RenderSystem.disableDepthTest();
-//        RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
-//        RenderSystem.enableDepthTest();
+        //        RenderSystem.disableDepthTest();
+        //        RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+        //        RenderSystem.enableDepthTest();
 
         int xStart = xRemain / 2 - 2;
         int yStart = yRemain / 2 - 2;
@@ -302,15 +294,17 @@ public class BankOverlay2 extends WEHandledScreen {
 
         //System.out.println(lastPage);
 
+
+
         {
             int i = 0;
             context.enableScissor(xStart, yStart, xStart + 166 * xFitAmount, yStart + 104 * (yFitAmount - 1) - 5);
             for(PageWidget page : pages) {
                 float invX = xStart + (i % xFitAmount) * (162 + 4);
                 float invY = yStart + Math.floorDiv(i, xFitAmount) * (90 + 4 + 10) - actualOffset;
-                page.setBounds((int) (invX * ui.getScaleFactor()), (int) (invY * ui.getScaleFactor()), (int) (164 * ui.getScaleFactor()), (int) (94 * ui.getScaleFactor()));
+                page.setBounds((int) (invX * ui.getScaleFactor()), (int) (invY * ui.getScaleFactor()), (int) (164 * ui.getScaleFactor()), (int) (92 * ui.getScaleFactor()));
                 page.setItems(buildInventoryForIndex2(i));
-
+                page.updateValues();
 
                 page.draw(context, mouseX, mouseY, delta, ui);
                 i++;
@@ -540,6 +534,8 @@ public class BankOverlay2 extends WEHandledScreen {
                 renderPageOverlay(context, indexWithOffset, i, playerInvIndex, playerXStart, playerYStart);
             }
         }
+
+        if(true) return;
 
         renderButtons(context);
         renderNameInputs(context);
@@ -1453,9 +1449,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        render(ctx, mouseX, mouseY, delta, ci, screen, close -> {
-            return null;
-        });
+
     }
 
     @Override
@@ -1486,7 +1480,7 @@ public class BankOverlay2 extends WEHandledScreen {
             if (index == activeInv) {
                 ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF00ff") : CustomColor.fromInt(0).withAlpha(255));
             } else {
-                ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromInt(9996647).withAlpha(255));
+                ui.drawRect(x, y, width, height, CustomColor.fromInt(9996647).withAlpha(255));
             }
 
             if(slots.isEmpty()) {
@@ -1505,15 +1499,14 @@ public class BankOverlay2 extends WEHandledScreen {
 
             int i = 0;
             for(SlotWidget slot : slots) {
-                //slot.setBounds((int) (x + 18 * (i % 9)), (int) (y + 18 * (i / 9)), 18, 18);
-                //slot.setBounds((int) (x / ui.getScaleFactor() + 18 * (i % 9)), (int) (y / ui.getScaleFactor() + 18 * (i / 9)), 18, 18);
-                slot.setBounds((int) (x + 18 * (i % 9) * ui.getScaleFactor() + 3), (int) (y + 18 * (i / 9) * ui.getScaleFactor() + 3), (int) (18 * ui.getScaleFactor()), (int) (18 * ui.getScaleFactor()));
-
                 applyAnnotation(items.get(i), annotations, i);
                 slot.setStack(items.get(i));
                 i++;
             }
+        }
 
+        @Override
+        protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(hovered) {
                 //TODO: checken welches item gehovered ist und den tooltip anzeigen
                 if(index != activeInv) {
@@ -1521,6 +1514,23 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             }
         }
+
+        @Override
+        protected void updateValues() {
+            if(slots.isEmpty()) return;
+
+            int i = 0;
+            for(SlotWidget slot : slots) {
+                slot.setBounds(
+                        (int) (x + 18 * (i % 9) * ui.getScaleFactor() + 3),
+                        (int) (y + 18 * (i / 9) * ui.getScaleFactor() + 3),
+                        (int) (18 * ui.getScaleFactor()),
+                        (int) (18 * ui.getScaleFactor())
+                );
+                i++;
+            }
+        }
+
         public void setItems(List<ItemStack> items) {
             this.items = items;
         }
@@ -1578,10 +1588,7 @@ public class BankOverlay2 extends WEHandledScreen {
 //                ctx.getMatrices().pop();
             }
 
-            ctx.getMatrices().push();
-            ctx.getMatrices().translate(0, 0, 100);
-            ctx.drawItem(stack, (int) (2 + x / ui.getScaleFactor()), (int) (2 + y / ui.getScaleFactor()));
-            ctx.getMatrices().pop();
+            ctx.drawItem(stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()));
         }
 
         public ItemStack getStack() {

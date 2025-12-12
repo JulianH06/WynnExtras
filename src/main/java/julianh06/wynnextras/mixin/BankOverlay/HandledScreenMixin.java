@@ -95,10 +95,12 @@ public abstract class HandledScreenMixin {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if(bankOverlay == null) bankOverlay = new BankOverlay2(ci, (HandledScreen) (Object) this);
-        bankOverlay.render(context, mouseX, mouseY, delta, ci,  (HandledScreen) (Object) this, close -> {
+        bankOverlay.ci = ci;
+        bankOverlay.screen = (HandledScreen) (Object) this;
+        bankOverlay.close = close -> {
             close();
             return null;
-        });
+        };
         bankOverlay.render(context, mouseX, mouseY, delta);
     }
 
