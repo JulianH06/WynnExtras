@@ -53,7 +53,7 @@ dependencies {
 	modImplementation "maven.modrinth:wynntils:v${project.wynntils_version}-fabric"
 	modRuntimeOnly "me.djtheredstoner:DevAuth-fabric:1.2.1"
 	modCompileOnly "maven.modrinth:wynnmod:1.15.1"
-	modRuntimeOnly "maven.modrinth:wynnmod:1.15.1"
+	//modRuntimeOnly "maven.modrinth:wynnmod:1.15.1"
 	modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
 	modImplementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
 
