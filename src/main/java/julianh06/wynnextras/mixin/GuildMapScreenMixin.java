@@ -256,7 +256,7 @@ public class GuildMapScreenMixin extends AbstractMapScreen {
                     .renderText(
                             poseStack,
                             StyledText.fromString(Formatting.GRAY + "Estimated Defences: "
-                                    + Formatting.DARK_GRAY + "(@drzxm)"),
+                                    + Formatting.DARK_GRAY + "(by @drzxm)"),
                             10 + xOffset,
                             10 + renderYOffset,
                             CommonColors.WHITE,
