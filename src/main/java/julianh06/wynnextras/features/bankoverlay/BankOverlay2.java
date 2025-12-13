@@ -1,6 +1,9 @@
 package julianh06.wynnextras.features.bankoverlay;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.wynnmod.feature.Feature;
+import com.wynnmod.feature.item.ItemOverlayFeature;
+import com.wynnmod.util.wynncraft.item.map.WynncraftItemDatabase;
 import com.wynntils.core.components.Handlers;
 import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
@@ -44,13 +47,13 @@ import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.WEHandledScreen;
 import julianh06.wynnextras.utils.UI.Widget;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.gui.widget.PageTurnWidget;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.Window;
 import net.minecraft.client.util.math.MatrixStack;
@@ -70,7 +73,6 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2i;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -82,7 +84,6 @@ import java.util.stream.Collectors;
 import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredStack;
 import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredWynnitem;
-import static julianh06.wynnextras.mixin.BankOverlay.HandledScreenMixin.*;
 
 public class BankOverlay2 extends WEHandledScreen {
 
@@ -212,6 +213,7 @@ public class BankOverlay2 extends WEHandledScreen {
     static float actualOffset = 0;
 
     public static List<PageWidget> pages = new ArrayList<>();
+    public static InventoryWidget inventoryWidget = null;
 
     public BankOverlay2(CallbackInfo ci, HandledScreen screen) {
         this.ci = ci;
@@ -219,6 +221,13 @@ public class BankOverlay2 extends WEHandledScreen {
         actualOffset = 0;
         targetOffset = 0;
         pages.clear();
+        inventoryWidget = null;
+
+        try {
+            if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
+                WynncraftItemDatabase.initialize();
+            }
+        } catch (Exception ignored) {}
     }
 
     @Override
@@ -232,17 +241,30 @@ public class BankOverlay2 extends WEHandledScreen {
         }
         initializeOverlayState();
 
-        if (targetOffset > (yFitAmount) * 104) targetOffset = (yFitAmount) * 104; //TODO: make it work with different gui scales
-        if (targetOffset < -0) targetOffset = -0;
+        float snapValue = 0.5f;
+        if (targetOffset > (yFitAmount) * 104) {
+            targetOffset = (yFitAmount) * 104; //TODO: make it work with different gui scales
+            snapValue = 0.75f;
+        }
+        if (targetOffset <= 0) {
+            targetOffset = 0;
+            snapValue = 0.75f;
+        }
 
-        float speed = 0.25f;
-        actualOffset += (targetOffset - actualOffset) * speed * delta;
+        float speed = 0.3f;
+        float diff = (targetOffset - actualOffset);
+        if(Math.abs(diff) < snapValue) actualOffset = targetOffset;
+        else actualOffset += diff * speed * delta;
 
         if(pages.isEmpty()) {
             for (int i = 0; i < currentMaxPages; i++) {
                 PageWidget pageWidget = new PageWidget(i, yStart, (int) (yStart + (yFitAmount) * (90 + 4 + 10) * Math.max(2, ui.getScaleFactor())));
                 pages.add(pageWidget);
             }
+        }
+
+        if(inventoryWidget == null) {
+            inventoryWidget = new InventoryWidget();
         }
 
         Pair<Integer, Integer> xyRemain = calculateLayout();
@@ -264,33 +286,33 @@ public class BankOverlay2 extends WEHandledScreen {
             WynnExtras.testInv = screen.getScreenHandler().slots;
         }
 
-//        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-//            RenderUtils.drawRect(
-//                    context.getMatrices(),
-//                    CustomColor.fromHexString("2c2d2f"),
-//                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15, 1000,
-//                    xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10
-//            );
-//            RenderUtils.drawRectBorders(
-//                    context.getMatrices(),
-//                    CustomColor.fromHexString("1b1b1c"),
-//                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15,
-//                    (float) xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, (float) yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 0, 1
-//            );
-//        } else {
-//            RenderUtils.drawRect(
-//                    context.getMatrices(),
-//                    CustomColor.fromHexString("81644b"),
-//                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15, 1000,
-//                    xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10
-//            );
-//            RenderUtils.drawRectBorders(
-//                    context.getMatrices(),
-//                    CustomColor.fromHexString("4f342c"),
-//                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15,
-//                    (float) xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, (float) yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 0, 1
-//            );
-//        }
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+            RenderUtils.drawRect(
+                    context.getMatrices(),
+                    CustomColor.fromHexString("2c2d2f"),
+                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15, 1000,
+                    xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10
+            );
+            RenderUtils.drawRectBorders(
+                    context.getMatrices(),
+                    CustomColor.fromHexString("1b1b1c"),
+                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15,
+                    (float) xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, (float) yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 0, 1
+            );
+        } else {
+            RenderUtils.drawRect(
+                    context.getMatrices(),
+                    CustomColor.fromHexString("81644b"),
+                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15, 1000,
+                    xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10
+            );
+            RenderUtils.drawRectBorders(
+                    context.getMatrices(),
+                    CustomColor.fromHexString("4f342c"),
+                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15,
+                    (float) xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, (float) yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 0, 1
+            );
+        }
 
         //System.out.println(lastPage);
 
@@ -298,18 +320,24 @@ public class BankOverlay2 extends WEHandledScreen {
 
         {
             int i = 0;
-            context.enableScissor(xStart, yStart, xStart + 166 * xFitAmount, yStart + 104 * (yFitAmount - 1) - 5);
+            context.enableScissor(xStart, yStart, xStart + 166 * xFitAmount, yStart + 100 * (yFitAmount - 1));
             for(PageWidget page : pages) {
                 float invX = xStart + (i % xFitAmount) * (162 + 4);
                 float invY = yStart + Math.floorDiv(i, xFitAmount) * (90 + 4 + 10) - actualOffset;
                 page.setBounds((int) (invX * ui.getScaleFactor()), (int) (invY * ui.getScaleFactor()), (int) (164 * ui.getScaleFactor()), (int) (92 * ui.getScaleFactor()));
-                page.setItems(buildInventoryForIndex2(i));
+                page.setItems(buildInventoryForIndex2(i + 1));
                 page.updateValues();
 
                 page.draw(context, mouseX, mouseY, delta, ui);
                 i++;
             }
+
             context.disableScissor();
+
+            inventoryWidget.setBounds(xStart + 160, yStart + (yFitAmount - 1) * (90 + 4 + 10) - 3, (int) (176 * ui.getScaleFactor()), (int) (86 * ui.getScaleFactor()));
+            inventoryWidget.setItems(buildInventoryForIndex2(0));
+            inventoryWidget.updateValues();
+            inventoryWidget.draw(context, mouseX, mouseY, delta, ui);
             //System.out.println(pages.size());
         }
 
@@ -657,7 +685,14 @@ public class BankOverlay2 extends WEHandledScreen {
     private List<ItemStack> buildInventoryForIndex2(int index) throws IndexOutOfBoundsException {
         List<ItemStack> inv = new ArrayList<>();
 
-        if (index == activeInv) {
+        if(index == 0) {
+            List<Slot> slots = BankOverlay.playerInvSlots;
+            if (slots != null && slots.size() >= 36) {
+                for (int j = 0; j < 36; j++) inv.add(slots.get(j).getStack());
+            } else {
+                for (int j = 0; j < 36; j++) inv.add(Items.AIR.getDefaultStack());
+            }
+        } else if (index == activeInv) {
             List<Slot> slots = BankOverlay.activeInvSlots;
             if (slots.size() < 45) {
                 retryLoad();
@@ -697,7 +732,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 inv.add(slots.get(j).getStack());
             }
         } else {
-            List<ItemStack> cached = Pages.BankPages.get(index);
+            List<ItemStack> cached = Pages.BankPages.get(index - 1);
             if (cached != null && cached.size() >= 45) {
                 inv.addAll(cached.subList(0, 45));
             } else {
@@ -1457,7 +1492,75 @@ public class BankOverlay2 extends WEHandledScreen {
 
     }
 
+    private static class InventoryWidget extends Widget {
+        Identifier invTexture = Identifier.of("wynnextras", "textures/gui/bankoverlay/inv.png");
+        Identifier invTextureDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/inv_dark.png");
+
+
+        List<ItemStack> items;
+        List<SlotWidget> slots = new ArrayList<>();
+
+        public InventoryWidget() {
+            super(0, 0, 0, 0);
+            items = new ArrayList<>();
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if(ui == null) return;
+
+            ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? invTextureDark : invTexture, x, y - 0.2f, width, height);
+
+            if(slots.isEmpty()) {
+                int i = 0;
+                for (ItemStack itemStack : items) {
+                    SlotWidget slot = new SlotWidget(itemStack == null ? null : itemStack.copy(), i);
+                    slots.add(slot);
+                    addChild(slot);
+                    //slot.draw(ctx, mouseX, mouseY, tickDelta, ui);
+                    i++;
+                }
+            }
+
+            List<ItemAnnotation> annotations = annotationCache.computeIfAbsent(0, k -> new ArrayList<>(Collections.nCopies(slots.size(), null)));
+
+            int i = 0;
+            for(SlotWidget slot : slots) {
+                applyAnnotation(items.get(i), annotations, i);
+                slot.setStack(items.get(i));
+                i++;
+            }
+        }
+
+        @Override
+        protected void updateValues() {
+            if(slots.isEmpty()) return;
+
+            int i = 0;
+            for(SlotWidget slot : slots) {
+                int hotbarOffset = 0;
+                if(i >= 27) hotbarOffset = 5;
+
+                slot.setBounds(
+                        (int) (x + 18 * (i % 9) * ui.getScaleFactor() + 7),
+                        (int) (y + 18 * (i / 9) * ui.getScaleFactor() + 1 + hotbarOffset),
+                        (int) (18 * ui.getScaleFactor()),
+                        (int) (18 * ui.getScaleFactor())
+                );
+                i++;
+            }
+        }
+
+        public void setItems(List<ItemStack> items) {
+            this.items = items;
+        }
+    }
+
     private static class PageWidget extends Widget {
+        Identifier bankTexture = Identifier.of("wynnextras", "textures/gui/bankoverlay/bank.png");
+        Identifier bankTextureDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/bank_dark.png");
+
+
         List<ItemStack> items;
         List<SlotWidget> slots = new ArrayList<>();
         final int index;
@@ -1477,16 +1580,12 @@ public class BankOverlay2 extends WEHandledScreen {
             if(ui == null) return;
             if(y > botBorder || y + height < topBorder) return;
 
-            if (index == activeInv) {
-                ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF00ff") : CustomColor.fromInt(0).withAlpha(255));
-            } else {
-                ui.drawRect(x, y, width, height, CustomColor.fromInt(9996647).withAlpha(255));
-            }
+            ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? bankTextureDark : bankTexture, x, y, width, height);
 
             if(slots.isEmpty()) {
                 int i = 0;
                 for (ItemStack itemStack : items) {
-                    SlotWidget slot = new SlotWidget(itemStack, i);
+                    SlotWidget slot = new SlotWidget(itemStack == null ? null : itemStack.copy(), i);
                     slots.add(slot);
                     addChild(slot);
                     //slot.draw(ctx, mouseX, mouseY, tickDelta, ui);
@@ -1522,8 +1621,8 @@ public class BankOverlay2 extends WEHandledScreen {
             int i = 0;
             for(SlotWidget slot : slots) {
                 slot.setBounds(
-                        (int) (x + 18 * (i % 9) * ui.getScaleFactor() + 3),
-                        (int) (y + 18 * (i / 9) * ui.getScaleFactor() + 3),
+                        (int) (x + 18 * (i % 9) * ui.getScaleFactor() + 1),
+                        (int) (y + 18 * (i / 9) * ui.getScaleFactor() + 1),
                         (int) (18 * ui.getScaleFactor()),
                         (int) (18 * ui.getScaleFactor())
                 );
@@ -1548,10 +1647,13 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if(hovered) {
+                ui.drawRect(x, y, width, height, CustomColor.fromHSV(0, 0, 1000, 0.25f));
+            }
+
             if(stack == null) return;
 
             if(hovered) {
-                ui.drawRect(x, y, width, height, CustomColor.fromHSV(0, 0, 1000, 0.25f));
                 hoveredSlot = stack;
 //                if (stack.getItem() == Items.AIR) return;
 //
@@ -1589,6 +1691,19 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             ctx.drawItem(stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()));
+
+            try {
+                if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
+                    if(stack.getCustomName().contains(Text.of("Heliophilia"))) {
+                        System.out.println("a");
+                    }
+                    ItemOverlayFeature itemOverlayFeature = Feature.getInstance(ItemOverlayFeature.class);
+                    ((wmd$ItemOverlayFeatureInvoker) itemOverlayFeature).callOnRenderItem(ctx, stack, x, y, false);
+                    if (index == 1) {
+                        System.out.println(WynncraftItemDatabase.getMap());
+                    }
+                }
+            } catch (Exception ignored) {}
         }
 
         public ItemStack getStack() {
