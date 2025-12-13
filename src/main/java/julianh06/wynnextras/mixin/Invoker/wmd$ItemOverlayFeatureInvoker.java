@@ -5,7 +5,7 @@ import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(targets = "com.wynnmod.feature.item.ItemOverlayFeature", remap = false)
+@Mixin(value = com.wynnmod.feature.item.ItemOverlayFeature.class, remap = false)
 public interface wmd$ItemOverlayFeatureInvoker {
     @Invoker(remap = false)
     boolean callOnRenderItem(DrawContext context, ItemStack stack, int x, int y, boolean hotbar);
