@@ -68,6 +68,7 @@ import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -215,6 +216,8 @@ public class BankOverlay2 extends WEHandledScreen {
     public static List<PageWidget> pages = new ArrayList<>();
     public static InventoryWidget inventoryWidget = null;
 
+    private static boolean isMouseInOverlay = false;
+
     public BankOverlay2(CallbackInfo ci, HandledScreen screen) {
         this.ci = ci;
         this.screen = screen;
@@ -257,7 +260,7 @@ public class BankOverlay2 extends WEHandledScreen {
         else actualOffset += diff * speed * delta;
 
         if(pages.isEmpty()) {
-            for (int i = 0; i < currentMaxPages; i++) {
+            for (int i = 1; i <= currentMaxPages; i++) {
                 PageWidget pageWidget = new PageWidget(i, yStart, (int) (yStart + (yFitAmount) * (90 + 4 + 10) * Math.max(2, ui.getScaleFactor())));
                 pages.add(pageWidget);
             }
@@ -316,11 +319,13 @@ public class BankOverlay2 extends WEHandledScreen {
 
         //System.out.println(lastPage);
 
+        isMouseInOverlay = false;
 
+        if(mouseY > yStart && mouseY < yStart + 100 * (yFitAmount - 1)) isMouseInOverlay = true;
 
         {
             int i = 0;
-            context.enableScissor(xStart, yStart, xStart + 166 * xFitAmount, yStart + 100 * (yFitAmount - 1));
+            context.enableScissor(xStart - 5, yStart, xStart + 166 * xFitAmount, yStart + 100 * (yFitAmount - 1));
             for(PageWidget page : pages) {
                 float invX = xStart + (i % xFitAmount) * (162 + 4);
                 float invY = yStart + Math.floorDiv(i, xFitAmount) * (90 + 4 + 10) - actualOffset;
@@ -328,7 +333,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 page.setItems(buildInventoryForIndex2(i + 1));
                 page.updateValues();
 
-                page.draw(context, mouseX, mouseY, delta, ui);
+                if(invY > yStart - 100 && invY < yStart + 100 * (yFitAmount - 1)) page.draw(context, mouseX, mouseY, delta, ui);
                 i++;
             }
 
@@ -572,6 +577,15 @@ public class BankOverlay2 extends WEHandledScreen {
         renderHeldItemOverlay(context, mouseX, mouseY);
     }
 
+    @Override
+    public boolean mouseClicked(double x, double y, int button) {
+        for(PageWidget page : pages) {
+            page.mouseClicked(x, y, button);
+        }
+        inventoryWidget.mouseClicked(x, y, button);
+        return true;
+    }
+
     @Unique
     private void initializeOverlayState() {
         if (!initializedTypes.contains(currentOverlayType)) {
@@ -593,7 +607,7 @@ public class BankOverlay2 extends WEHandledScreen {
         hoveredIndex = -1;
         hoveredSlot = Items.AIR.getDefaultStack();
 
-        if (activeInv == -1) activeInv = 0;
+        if (activeInv == -1) activeInv = 1;
     }
 
     @Unique
@@ -688,7 +702,7 @@ public class BankOverlay2 extends WEHandledScreen {
         if(index == 0) {
             List<Slot> slots = BankOverlay.playerInvSlots;
             if (slots != null && slots.size() >= 36) {
-                for (int j = 0; j < 36; j++) inv.add(slots.get(j).getStack());
+                for (int j = 0; j < 36; j++) inv.add(slots.get(j).getStack().copy());
             } else {
                 for (int j = 0; j < 36; j++) inv.add(Items.AIR.getDefaultStack());
             }
@@ -729,7 +743,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     continue;
                 }
 
-                inv.add(slots.get(j).getStack());
+                inv.add(slots.get(j).getStack().copy());
             }
         } else {
             List<ItemStack> cached = Pages.BankPages.get(index - 1);
@@ -1514,7 +1528,7 @@ public class BankOverlay2 extends WEHandledScreen {
             if(slots.isEmpty()) {
                 int i = 0;
                 for (ItemStack itemStack : items) {
-                    SlotWidget slot = new SlotWidget(itemStack == null ? null : itemStack.copy(), i);
+                    SlotWidget slot = new SlotWidget(itemStack == null ? null : itemStack.copy(), i, true, 0);
                     slots.add(slot);
                     addChild(slot);
                     //slot.draw(ctx, mouseX, mouseY, tickDelta, ui);
@@ -1538,12 +1552,12 @@ public class BankOverlay2 extends WEHandledScreen {
 
             int i = 0;
             for(SlotWidget slot : slots) {
-                int hotbarOffset = 0;
-                if(i >= 27) hotbarOffset = 5;
+                float hotbarOffset = 0;
+                if(i >= 27) hotbarOffset = 5.25f;
 
                 slot.setBounds(
                         (int) (x + 18 * (i % 9) * ui.getScaleFactor() + 7),
-                        (int) (y + 18 * (i / 9) * ui.getScaleFactor() + 1 + hotbarOffset),
+                        (int) (y + 18 * (i / 9) * ui.getScaleFactor() + 0.75 + hotbarOffset),
                         (int) (18 * ui.getScaleFactor()),
                         (int) (18 * ui.getScaleFactor())
                 );
@@ -1583,9 +1597,9 @@ public class BankOverlay2 extends WEHandledScreen {
             ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? bankTextureDark : bankTexture, x, y, width, height);
 
             if(slots.isEmpty()) {
-                int i = 0;
+                int i = 1;
                 for (ItemStack itemStack : items) {
-                    SlotWidget slot = new SlotWidget(itemStack == null ? null : itemStack.copy(), i);
+                    SlotWidget slot = new SlotWidget(itemStack == null ? null : itemStack.copy(), i, false, index);
                     slots.add(slot);
                     addChild(slot);
                     //slot.draw(ctx, mouseX, mouseY, tickDelta, ui);
@@ -1606,11 +1620,15 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if(hovered) {
+            if(hovered && isMouseInOverlay) {
                 //TODO: checken welches item gehovered ist und den tooltip anzeigen
                 if(index != activeInv) {
                     ui.drawRect(x, y, width, height, CustomColor.fromHSV(0, 0, 1000, 0.25f));
                 }
+            }
+
+            if(activeInv == index) {
+                ui.drawRectBorders(x, y + 0.5f, x + 164, y + 92, CustomColor.fromHexString("FFFF00"));
             }
         }
 
@@ -1638,22 +1656,40 @@ public class BankOverlay2 extends WEHandledScreen {
     private static class SlotWidget extends Widget {
         private ItemStack stack;
         int index;
+        final boolean isInventorySlot;
+        final Runnable action;
+        final int inventoryIndex;
 
-        public SlotWidget(ItemStack stack, int index) {
+        public SlotWidget(ItemStack stack, int index, boolean isInventorySlot, int inventoryIndex) {
             super(0, 0, 0, 0);
             this.stack = stack;
             this.index = index;
+            this.isInventorySlot = isInventorySlot;
+            this.inventoryIndex = inventoryIndex;
+            this.action = () -> {
+                handleClick();
+            };
+        }
+
+        private void handleClick() {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            if(activeInv == inventoryIndex || isInventorySlot) {
+                McUtils.sendMessageToClient(Text.of("Clicked " + stack.getCustomName()));
+            } else {
+                McUtils.sendMessageToClient(Text.of("Clicked page " + inventoryIndex));
+                activeInv = inventoryIndex;
+            }
         }
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if(hovered) {
+            if(hovered && (isMouseInOverlay || isInventorySlot)) {
                 ui.drawRect(x, y, width, height, CustomColor.fromHSV(0, 0, 1000, 0.25f));
             }
 
             if(stack == null) return;
 
-            if(hovered) {
+            if(hovered && (isMouseInOverlay || isInventorySlot)) {
                 hoveredSlot = stack;
 //                if (stack.getItem() == Items.AIR) return;
 //
@@ -1712,6 +1748,13 @@ public class BankOverlay2 extends WEHandledScreen {
 
         public void setStack(ItemStack stack) {
             this.stack = stack;
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if (!isEnabled()) return false;
+            if (action != null) action.run();
+            return true;
         }
     }
 }
