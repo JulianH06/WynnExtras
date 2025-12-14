@@ -225,6 +225,7 @@ public class BankOverlay2 extends WEHandledScreen {
         targetOffset = 0;
         pages.clear();
         inventoryWidget = null;
+        activeInv = 0;
 
         try {
             if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
@@ -260,7 +261,7 @@ public class BankOverlay2 extends WEHandledScreen {
         else actualOffset += diff * speed * delta;
 
         if(pages.isEmpty()) {
-            for (int i = 1; i <= currentMaxPages; i++) {
+            for (int i = 0; i <= currentMaxPages; i++) {
                 PageWidget pageWidget = new PageWidget(i, yStart, (int) (yStart + (yFitAmount) * (90 + 4 + 10) * Math.max(2, ui.getScaleFactor())));
                 pages.add(pageWidget);
             }
@@ -317,8 +318,6 @@ public class BankOverlay2 extends WEHandledScreen {
             );
         }
 
-        //System.out.println(lastPage);
-
         isMouseInOverlay = false;
 
         if(mouseY > yStart && mouseY < yStart + 100 * (yFitAmount - 1)) isMouseInOverlay = true;
@@ -330,7 +329,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 float invX = xStart + (i % xFitAmount) * (162 + 4);
                 float invY = yStart + Math.floorDiv(i, xFitAmount) * (90 + 4 + 10) - actualOffset;
                 page.setBounds((int) (invX * ui.getScaleFactor()), (int) (invY * ui.getScaleFactor()), (int) (164 * ui.getScaleFactor()), (int) (92 * ui.getScaleFactor()));
-                page.setItems(buildInventoryForIndex2(i + 1));
+                page.setItems(buildInventoryForIndex2(i, false));
                 page.updateValues();
 
                 if(invY > yStart - 100 && invY < yStart + 100 * (yFitAmount - 1)) page.draw(context, mouseX, mouseY, delta, ui);
@@ -340,7 +339,7 @@ public class BankOverlay2 extends WEHandledScreen {
             context.disableScissor();
 
             inventoryWidget.setBounds(xStart + 160, yStart + (yFitAmount - 1) * (90 + 4 + 10) - 3, (int) (176 * ui.getScaleFactor()), (int) (86 * ui.getScaleFactor()));
-            inventoryWidget.setItems(buildInventoryForIndex2(0));
+            inventoryWidget.setItems(buildInventoryForIndex2(0, true));
             inventoryWidget.updateValues();
             inventoryWidget.draw(context, mouseX, mouseY, delta, ui);
             //System.out.println(pages.size());
@@ -351,6 +350,8 @@ public class BankOverlay2 extends WEHandledScreen {
         renderHoveredSlotHighlight(context,  screen);
         renderHoveredTooltip(context, screen, mouseX, mouseY);
         renderHeldItemOverlay(context, mouseX, mouseY);
+
+        //System.out.println(activeInvSlots.getFirst().getStack().getCustomName());
 
         if(true) return;
         for (int indexWithOffset = scrollOffset; indexWithOffset < visibleInventories; indexWithOffset++) {
@@ -696,17 +697,20 @@ public class BankOverlay2 extends WEHandledScreen {
         return inv;
     }
 
-    private List<ItemStack> buildInventoryForIndex2(int index) throws IndexOutOfBoundsException {
+    private List<ItemStack> buildInventoryForIndex2(int index, boolean isPlayerInv) throws IndexOutOfBoundsException {
         List<ItemStack> inv = new ArrayList<>();
 
-        if(index == 0) {
+        if(isPlayerInv) {
             List<Slot> slots = BankOverlay.playerInvSlots;
             if (slots != null && slots.size() >= 36) {
                 for (int j = 0; j < 36; j++) inv.add(slots.get(j).getStack().copy());
             } else {
                 for (int j = 0; j < 36; j++) inv.add(Items.AIR.getDefaultStack());
             }
-        } else if (index == activeInv) {
+            return inv;
+        }
+
+        if (index == activeInv) {
             List<Slot> slots = BankOverlay.activeInvSlots;
             if (slots.size() < 45) {
                 retryLoad();
@@ -746,7 +750,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 inv.add(slots.get(j).getStack().copy());
             }
         } else {
-            List<ItemStack> cached = Pages.BankPages.get(index - 1);
+            List<ItemStack> cached = Pages.BankPages.get(index);
             if (cached != null && cached.size() >= 45) {
                 inv.addAll(cached.subList(0, 45));
             } else {
@@ -1006,6 +1010,10 @@ public class BankOverlay2 extends WEHandledScreen {
     private void renderHoveredTooltip(DrawContext context, HandledScreen<?> screen, int mouseX, int mouseY) {
         if (hoveredSlot.getItem() == Items.AIR) return;
 
+        if(hoveredSlot.getCustomName().contains(Text.of("Stardew"))) {
+            System.out.println("STARDEW");
+        }
+
         Optional<WynnItem> item = asWynnItem(hoveredSlot);
         List<Text> tooltip = item.map(i -> {
                     currentHoveredStack = hoveredSlot;
@@ -1248,7 +1256,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
 
     @Unique
-    private boolean shouldCancelEmeraldPouch(ItemStack oldHeld, ItemStack newHeld) {
+    private static boolean shouldCancelEmeraldPouch(ItemStack oldHeld, ItemStack newHeld) {
         if (oldHeld == null || newHeld == null || newHeld.getCustomName() == null) return false;
 
         return (oldHeld.getItem() == Items.EMERALD ||
@@ -1597,7 +1605,7 @@ public class BankOverlay2 extends WEHandledScreen {
             ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? bankTextureDark : bankTexture, x, y, width, height);
 
             if(slots.isEmpty()) {
-                int i = 1;
+                int i = 0;
                 for (ItemStack itemStack : items) {
                     SlotWidget slot = new SlotWidget(itemStack == null ? null : itemStack.copy(), i, false, index);
                     slots.add(slot);
@@ -1672,12 +1680,35 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         private void handleClick() {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            if(!isMouseInOverlay && !isInventorySlot) return;
+
             if(activeInv == inventoryIndex || isInventorySlot) {
-                McUtils.sendMessageToClient(Text.of("Clicked " + stack.getCustomName()));
+                if(index == 4 && isInventorySlot) return; //Ingredient pouch, clicking it within the bank overlay crashes the game
+
+                ItemStack oldHeld = heldItem;
+                heldItem = getHeldItem(index + (isInventorySlot ? 54 : 0), SlotActionType.PICKUP, 0);
+
+                if(heldItem.getCustomName() != null) {
+                    if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions"))) {// && button == 1) {
+                        heldItem = oldHeld == null ? Items.AIR.getDefaultStack() : oldHeld;
+                        return;
+                    }
+                }
+
+                if (shouldCancelEmeraldPouch(oldHeld, heldItem)) {
+                    heldItem = Items.AIR.getDefaultStack();
+                }
+
+                if (MinecraftClient.getInstance().interactionManager == null) return;
+
+                MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, index + (isInventorySlot ? 54 : 0), 0, SlotActionType.PICKUP, MinecraftClient.getInstance().player);
+                annotationCache.get(inventoryIndex).clear();
+                //lastClickedSlot = hoveredIndex + 54;
+
             } else {
                 McUtils.sendMessageToClient(Text.of("Clicked page " + inventoryIndex));
                 activeInv = inventoryIndex;
+                BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
             }
         }
 
@@ -1727,6 +1758,7 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             ctx.drawItem(stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()));
+            ctx.drawStackOverlay(MinecraftClient.getInstance().textRenderer, stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()), stack.getCount() == 1 ? "" : String.valueOf(stack.getCount()));
 
             try {
                 if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
