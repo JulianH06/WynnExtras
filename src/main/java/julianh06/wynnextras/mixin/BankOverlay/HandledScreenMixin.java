@@ -120,9 +120,12 @@ public abstract class HandledScreenMixin {
             return;
         }
 
+        bankOverlay.mouseClicked(mouseX, mouseY, button);
+
         if (shouldWait) return;
 
         BankOverlay.activeTextInput = null;
+
 
         int playerInvIndex = xFitAmount * yFitAmount - xFitAmount + scrollOffset;
         if(bankOverlay.hoveredInvIndex != playerInvIndex) {
@@ -218,7 +221,7 @@ public abstract class HandledScreenMixin {
                 Pages.BankPages.put(activeInv, stacks);
             }
             BankOverlay.activeInvSlots.clear();
-            activeInv = 0;
+            activeInv = 1;
             annotationCache.clear();
             scrollOffset = 0;
             Pages.save();

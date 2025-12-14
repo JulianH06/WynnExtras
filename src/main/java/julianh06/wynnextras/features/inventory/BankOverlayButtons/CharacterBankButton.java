@@ -37,7 +37,7 @@ public class CharacterBankButton extends EasyButton {
     public void click() {
         ScreenHandler currScreenHandler = McUtils.containerMenu();
 
-        activeInv = 0;
+        activeInv = 1;
         scrollOffset = 0;
         currentData.save();
         BankOverlay2.pages.clear();
