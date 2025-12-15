@@ -1107,10 +1107,11 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     @Unique
-    private long lastClickTime = 0;
+    private static long lastClickTime = 0;
 
     @Unique
     private int lastClickedSlot;
+    private static Pair<Integer, Integer> lastClickedSlot2;
 
     @Unique
     public void handleButtonClick(double mouseX, double mouseY) {
@@ -1536,7 +1537,7 @@ public class BankOverlay2 extends WEHandledScreen {
             if(slots.isEmpty()) {
                 int i = 0;
                 for (ItemStack itemStack : items) {
-                    SlotWidget slot = new SlotWidget(itemStack == null ? null : itemStack.copy(), i, true, 0);
+                    SlotWidget slot = new SlotWidget(itemStack == null ? null : itemStack.copy(), i, true, 99);
                     slots.add(slot);
                     addChild(slot);
                     //slot.draw(ctx, mouseX, mouseY, tickDelta, ui);
@@ -1544,7 +1545,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             }
 
-            List<ItemAnnotation> annotations = annotationCache.computeIfAbsent(0, k -> new ArrayList<>(Collections.nCopies(slots.size(), null)));
+            List<ItemAnnotation> annotations = annotationCache.computeIfAbsent(99, k -> new ArrayList<>(Collections.nCopies(slots.size(), null)));
 
             int i = 0;
             for(SlotWidget slot : slots) {
@@ -1636,7 +1637,10 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             if(activeInv == index) {
-                ui.drawRectBorders(x, y + 0.5f, x + 164, y + 92, CustomColor.fromHexString("FFFF00"));
+                CustomColor color = (!shouldWait)
+                        ? CustomColor.fromHexString("FFFF00")
+                        : CustomColor.fromHexString("FFFFFF");
+                ui.drawRectBorders(x, y + 0.5f, x + 164, y + 92, color);
             }
         }
 
@@ -1665,7 +1669,6 @@ public class BankOverlay2 extends WEHandledScreen {
         private ItemStack stack;
         int index;
         final boolean isInventorySlot;
-        final Runnable action;
         final int inventoryIndex;
 
         public SlotWidget(ItemStack stack, int index, boolean isInventorySlot, int inventoryIndex) {
@@ -1674,19 +1677,19 @@ public class BankOverlay2 extends WEHandledScreen {
             this.index = index;
             this.isInventorySlot = isInventorySlot;
             this.inventoryIndex = inventoryIndex;
-            this.action = () -> {
-                handleClick();
-            };
         }
 
-        private void handleClick() {
+        private void handleClick(int button) {
+            if(shouldWait) return;
             if(!isMouseInOverlay && !isInventorySlot) return;
 
             if(activeInv == inventoryIndex || isInventorySlot) {
                 if(index == 4 && isInventorySlot) return; //Ingredient pouch, clicking it within the bank overlay crashes the game
 
+                SlotActionType action = determineActionType(button);
+
                 ItemStack oldHeld = heldItem;
-                heldItem = getHeldItem(index + (isInventorySlot ? 54 : 0), SlotActionType.PICKUP, 0);
+                heldItem = getHeldItem(index + (isInventorySlot ? 54 : 0), action, button);
 
                 if(heldItem.getCustomName() != null) {
                     if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions"))) {// && button == 1) {
@@ -1701,19 +1704,24 @@ public class BankOverlay2 extends WEHandledScreen {
 
                 if (MinecraftClient.getInstance().interactionManager == null) return;
 
-                MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, index + (isInventorySlot ? 54 : 0), 0, SlotActionType.PICKUP, MinecraftClient.getInstance().player);
-                annotationCache.get(inventoryIndex).clear();
-                //lastClickedSlot = hoveredIndex + 54;
-
+                MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, index + (isInventorySlot ? 54 : 0), button, action, MinecraftClient.getInstance().player);
+                if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
+                lastClickedSlot2 = new Pair<>(inventoryIndex, index);
             } else {
-                McUtils.sendMessageToClient(Text.of("Clicked page " + inventoryIndex));
-                activeInv = inventoryIndex;
-                BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
+                if (inventoryIndex <= currentData.lastPage) {
+                    McUtils.sendMessageToClient(Text.of("Clicked page " + inventoryIndex));
+                    activeInv = inventoryIndex;
+                    BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
+                }
             }
         }
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if (inventoryIndex > currentData.lastPage && !isInventorySlot) {
+                return;
+            }
+
             if(hovered && (isMouseInOverlay || isInventorySlot)) {
                 ui.drawRect(x, y, width, height, CustomColor.fromHSV(0, 0, 1000, 0.25f));
             }
@@ -1782,10 +1790,29 @@ public class BankOverlay2 extends WEHandledScreen {
             this.stack = stack;
         }
 
+        private SlotActionType determineActionType(int mouseButton) {
+            SlotActionType actionType = SlotActionType.PICKUP;
+
+            if(mouseButton == 1) return actionType;
+
+            long now = System.currentTimeMillis();
+            if (heldItem != null && heldItem.getItem() != Items.AIR) {
+                if (now - lastClickTime < 250 && (lastClickedSlot2.equals(new Pair<>(inventoryIndex, index)))) {
+                    actionType = SlotActionType.PICKUP_ALL;
+                }
+            }
+            lastClickTime = now;
+
+            if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
+                actionType = SlotActionType.QUICK_MOVE;
+            }
+
+            return actionType;
+        }
+
         @Override
         protected boolean onClick(int button) {
-            if (!isEnabled()) return false;
-            if (action != null) action.run();
+            handleClick(button);
             return true;
         }
     }
