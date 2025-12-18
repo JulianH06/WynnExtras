@@ -129,6 +129,8 @@ public class BankOverlay2 extends WEHandledScreen {
     @Unique
     int lastPage = currentMaxPages;
 
+    public Identifier buttonBackground = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbg.png");
+
     @Unique
     Identifier ButtonTexture = Identifier.of("wynnextras", "textures/gui/bankoverlay/button.png");
 
@@ -277,7 +279,7 @@ public class BankOverlay2 extends WEHandledScreen {
         int playerInvIndex = xFitAmount * yFitAmount - xFitAmount;
 
         //        RenderSystem.disableDepthTest();
-        //        RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+        RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
         //        RenderSystem.enableDepthTest();
 
         int xStart = xRemain / 2 - 2;
@@ -367,10 +369,15 @@ public class BankOverlay2 extends WEHandledScreen {
             inventoryWidget.setItems(buildInventoryForIndex2(0, true));
             inventoryWidget.updateValues();
             inventoryWidget.draw(context, mouseX, mouseY, delta, ui);
+
+            ui.drawImage(buttonBackground, xStart - 8, yStart + (yFitAmount - 1) * (104) - 3, (int) (170 * ui.getScaleFactor()), (int) (86 * ui.getScaleFactor()));
+            ui.drawCenteredText("Switch to Character Bank", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, CustomColor.fromHexString("FFFFFF"), 1.1f);
+            ui.drawCenteredText("Quick Stash", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 44, CustomColor.fromHexString("FFFFFF"), 1.1f);
+            ui.drawCenteredText("Search...", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 71, CustomColor.fromHexString("FFFFFF"), 1.1f);
             //System.out.println(pages.size());
         }
 
-        renderButtons(context);
+        //renderButtons(context);
         renderNameInputs(context);
         renderHoveredSlotHighlight(context,  screen);
         renderHoveredTooltip(context, screen, mouseX, mouseY);
@@ -1870,3 +1877,7 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 }
+//TODO: Namensschilder wieder reinmachen
+//TODO: Alte buttons loeschen und neue clickbar machen
+//TODO: Wynnventory price ding supporten
+//TODO: an/aus toggle im bankoverlay + in normaler bank
