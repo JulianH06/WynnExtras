@@ -40,6 +40,7 @@ import julianh06.wynnextras.features.inventory.BankOverlayButtons.*;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
 import julianh06.wynnextras.utils.Pair;
+import julianh06.wynnextras.utils.UI.Widget;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -123,7 +124,15 @@ public abstract class HandledScreenMixin {
 
         bankOverlay.mouseClicked(mouseX, mouseY, button);
 
+        if(BankOverlay2.Searchbar != null) {
+            if (BankOverlay2.Searchbar.isClickInBounds((int) mouseX, (int) mouseY) != BankOverlay2.Searchbar.isActive()) {
+                BankOverlay2.Searchbar.click();
+            }
+        }
+
         if (shouldWait) return;
+
+        if(true) return;
 
         BankOverlay.activeTextInput = null;
 
