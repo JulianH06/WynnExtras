@@ -181,7 +181,10 @@ public class WynnExtras implements ClientModInitializer {
 					new KeyInputEvent(key, scancode, action, mods).post();//, character.get()).post();
 				}
 
-				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && BankOverlay2.searchbar2.isFocused() && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
+				if(BankOverlay2.searchbar2 != null) {
+					if (BankOverlay.currentOverlayType != BankOverlayType.NONE && BankOverlay2.searchbar2.isFocused() && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
+				}
+
 				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)) return;
 
 				if (previousCallback != null) {
@@ -192,7 +195,6 @@ public class WynnExtras implements ClientModInitializer {
 			GLFW.glfwSetCharCallback(MinecraftClient.getInstance().getWindow().getHandle(), (win, codepoint) -> {
 				new CharInputEvent((char) codepoint).post();
 			});
-
 		}
 	}
 
