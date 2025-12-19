@@ -17,6 +17,11 @@ import com.wynntils.features.tooltips.TooltipFittingFeature;
 import com.wynntils.handlers.item.ItemAnnotation;
 import com.wynntils.handlers.item.ItemHandler;
 import com.wynntils.mc.extension.ItemStackExtension;
+import com.wynntils.models.containers.Container;
+import com.wynntils.models.containers.containers.personal.AccountBankContainer;
+import com.wynntils.models.containers.containers.personal.BookshelfContainer;
+import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
+import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
 import com.wynntils.models.emeralds.type.EmeraldUnits;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.*;
@@ -48,6 +53,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
@@ -219,6 +225,7 @@ public class BankOverlay2 extends WEHandledScreen {
     public static SwitchButtonWidget switchButtonWidget = null;
     public static QuickActionWidget quickActionWidget = null;
     public static TextInputWidget searchbar2 = null;
+    public static ToggleOverlayWidget toggleOverlayWidget = null;
 
     private static boolean isMouseInOverlay = false;
 
@@ -244,12 +251,49 @@ public class BankOverlay2 extends WEHandledScreen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         Pages = currentData;
-        if(currentOverlayType == BankOverlayType.NONE || MinecraftClient.getInstance() == null || Pages == null) return;
         if(MinecraftClient.getInstance().getWindow() == null || !MinecraftClient.getInstance().isRunning()) return;
         if(MinecraftClient.getInstance().player == null || MinecraftClient.getInstance().currentScreen == null) return;
         if(ui == null) {
             ui = new UIUtils(context, 1, 0, 0);
         }
+
+        Pair<Integer, Integer> xyRemain = calculateLayout();
+        int xRemain = xyRemain.first();
+        int yRemain = xyRemain.second();
+        int playerInvIndex = xFitAmount * yFitAmount - xFitAmount;
+
+        int xStart = xRemain / 2 - 2;
+        int yStart = yRemain / 2 - 2;
+
+        Container container = Models.Container.getCurrentContainer();
+        if (container instanceof AccountBankContainer ||
+                container instanceof CharacterBankContainer ||
+                container instanceof BookshelfContainer ||
+                container instanceof MiscBucketContainer
+        ) {
+            if (toggleOverlayWidget == null) {
+                toggleOverlayWidget = new ToggleOverlayWidget();
+            }
+
+            RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+
+            float xPos = MinecraftClient.getInstance().currentScreen.width / 2f;
+            float yPos = yStart + (yFitAmount) * (90 + 4 + 10) - 20;
+
+            if (!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+                Screen screen = McUtils.screen();
+                if (!(screen instanceof HandledScreen<?> containerScreen)) return;
+                yPos = ((HandledScreenAccessor) containerScreen).getY() + (4 + McUtils.containerMenu().slots.size() / 9f) * 16;
+            }
+
+            toggleOverlayWidget.setBounds((int) xPos - 70, (int) yPos, 140, 17);
+            toggleOverlayWidget.draw(context, mouseX, mouseY, delta, ui);
+        } else {
+            RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+        }
+
+        if(currentOverlayType == BankOverlayType.NONE || MinecraftClient.getInstance() == null) return;
+
         initializeOverlayState();
 
         float snapValue = 0.5f;
@@ -266,6 +310,9 @@ public class BankOverlay2 extends WEHandledScreen {
         float diff = (targetOffset - actualOffset);
         if(Math.abs(diff) < snapValue) actualOffset = targetOffset;
         else actualOffset += diff * speed * delta;
+
+        if(!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return;
+        if(Pages == null) return;
 
         if(pages.isEmpty()) {
             for (int i = 0; i <= currentMaxPages; i++) {
@@ -327,17 +374,9 @@ public class BankOverlay2 extends WEHandledScreen {
             quickActionWidget = new QuickActionWidget();
         }
 
-        Pair<Integer, Integer> xyRemain = calculateLayout();
-        int xRemain = xyRemain.first();
-        int yRemain = xyRemain.second();
-        int playerInvIndex = xFitAmount * yFitAmount - xFitAmount;
-
         //        RenderSystem.disableDepthTest();
-        RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+        //RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
         //        RenderSystem.enableDepthTest();
-
-        int xStart = xRemain / 2 - 2;
-        int yStart = yRemain / 2 - 2;
 
         context.getMatrices().push();
         ci.cancel();
@@ -678,13 +717,18 @@ public class BankOverlay2 extends WEHandledScreen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
+        if(toggleOverlayWidget != null) toggleOverlayWidget.mouseClicked(x, y, button);
+
+        if (!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return false;
+        if (currentOverlayType == BankOverlayType.NONE) return false;
+
         for(PageWidget page : pages) {
             page.mouseClicked(x, y, button);
         }
-        inventoryWidget.mouseClicked(x, y, button);
-        switchButtonWidget.mouseClicked(x, y, button);
-        quickActionWidget.mouseClicked(x, y, button);
-        searchbar2.mouseClicked(x, y, button);
+        if(inventoryWidget != null) inventoryWidget.mouseClicked(x, y, button);
+        if(switchButtonWidget != null) switchButtonWidget.mouseClicked(x, y, button);
+        if(quickActionWidget != null) quickActionWidget.mouseClicked(x, y, button);
+        if(searchbar2 != null) searchbar2.mouseClicked(x, y, button);
         return true;
     }
 
@@ -1974,7 +2018,28 @@ public class BankOverlay2 extends WEHandledScreen {
             return true;
         }
     }
+
+    private static class ToggleOverlayWidget extends Widget {
+        public ToggleOverlayWidget() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 5, hovered);
+            ui.drawCenteredText("Click to " + ((SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) ? "disable" : "enable") + " the Bank Overlay", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 0.75f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay = !SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay;
+            return false;
+        }
+    }
 }
 //TODO: Namensschilder wieder reinmachen
 //TODO: Wynnventory price ding supporten
 //TODO: an/aus toggle im bankoverlay + in normaler bank
+//TODO: ADD BACK WYNNTILS EMERALD OVERLAY
+//TODO: MAKE DARKMODE TEXTURES

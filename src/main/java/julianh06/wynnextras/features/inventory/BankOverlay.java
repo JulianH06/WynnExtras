@@ -131,22 +131,18 @@ public class BankOverlay {
             BankOverlay.currentOverlayType = BankOverlayType.ACCOUNT;
             BankOverlay.currentData = AccountBankData.INSTANCE;
             currentMaxPages = 21;
-            System.out.println("IS ACCOUNT BANK");
         } else if (container instanceof CharacterBankContainer) {
             BankOverlay.currentOverlayType = BankOverlayType.CHARACTER;
             BankOverlay.currentData = CharacterBankData.INSTANCE;
             currentMaxPages = 12;
-            System.out.println("IS CHARACTER BANK");
         } else if (container instanceof BookshelfContainer) {
             BankOverlay.currentOverlayType = BankOverlayType.BOOKSHELF;
             BankOverlay.currentData = BookshelfData.INSTANCE;
             currentMaxPages = 12;
-            System.out.println("IS BOOKSHELF");
         } else if (container instanceof MiscBucketContainer) {
             BankOverlay.currentOverlayType = BankOverlayType.MISC;
             BankOverlay.currentData = MiscBucketData.INSTANCE;
             currentMaxPages = 12;
-            System.out.println("IS MISC BUCKET");
         } else {
             BankOverlay.currentOverlayType = BankOverlayType.NONE;
             BankOverlay.currentData = null;

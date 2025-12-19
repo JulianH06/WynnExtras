@@ -42,13 +42,26 @@ public class InventoryScreenMixin {
         if (currScreenHandler == null) return;
 
         if (config == null) config = SimpleConfig.getInstance(WynnExtrasConfig.class);
-        if (!config.toggleBankOverlay) return;
 
         if(config.differentGUIScale) {
             if(normalGUIScale == -1) {
                 normalGUIScale = MinecraftClient.getInstance().options.getGuiScale().getValue();
             }
             MinecraftClient.getInstance().options.getGuiScale().setValue(config.customGUIScale);
+        }
+
+        if(!config.toggleBankOverlay) {
+            Container container = Models.Container.getCurrentContainer();
+            if (container instanceof AccountBankContainer ||
+                container instanceof CharacterBankContainer ||
+                container instanceof BookshelfContainer ||
+                container instanceof MiscBucketContainer
+            ) {
+                BankOverlay.currentOverlayType = BankOverlayType.NONE;
+                BankOverlay.currentData = null;
+                ci.cancel();
+            }
+            return;
         }
 
         BankOverlay.updateOverlayType();
