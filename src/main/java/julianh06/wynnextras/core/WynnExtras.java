@@ -13,6 +13,7 @@ import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.aspects.maintracking;
+import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
@@ -180,7 +181,7 @@ public class WynnExtras implements ClientModInitializer {
 					new KeyInputEvent(key, scancode, action, mods).post();//, character.get()).post();
 				}
 
-				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && BankOverlay.activeTextInput != null && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
+				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && BankOverlay2.searchbar2.isFocused() && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
 				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)) return;
 
 				if (previousCallback != null) {

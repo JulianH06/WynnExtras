@@ -42,10 +42,7 @@ import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
 import julianh06.wynnextras.utils.Pair;
-import julianh06.wynnextras.utils.UI.ImageWidget;
-import julianh06.wynnextras.utils.UI.UIUtils;
-import julianh06.wynnextras.utils.UI.WEHandledScreen;
-import julianh06.wynnextras.utils.UI.Widget;
+import julianh06.wynnextras.utils.UI.*;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
@@ -82,6 +79,8 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
+import static com.wynntils.utils.wynn.ContainerUtils.shiftClickOnSlot;
 import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredStack;
 import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredWynnitem;
@@ -217,6 +216,9 @@ public class BankOverlay2 extends WEHandledScreen {
 
     public static List<PageWidget> pages = new ArrayList<>();
     public static InventoryWidget inventoryWidget = null;
+    public static SwitchButtonWidget switchButtonWidget = null;
+    public static QuickActionWidget quickActionWidget = null;
+    public static TextInputWidget searchbar2 = null;
 
     private static boolean isMouseInOverlay = false;
 
@@ -227,6 +229,9 @@ public class BankOverlay2 extends WEHandledScreen {
         targetOffset = 0;
         pages.clear();
         inventoryWidget = null;
+        switchButtonWidget = null;
+        quickActionWidget = null;
+        searchbar2 = null;
         activeInv = 0;
 
         try {
@@ -271,6 +276,55 @@ public class BankOverlay2 extends WEHandledScreen {
 
         if(inventoryWidget == null) {
             inventoryWidget = new InventoryWidget();
+        }
+
+        if(switchButtonWidget == null) {
+            switchButtonWidget = new SwitchButtonWidget();
+        }
+
+        if(searchbar2 == null) {
+            searchbar2 = new TextInputWidget(0, 0, 0, 0, 0, 0, 1) {
+                @Override
+                protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                    MinecraftClient client = MinecraftClient.getInstance();
+                    TextRenderer font = client.textRenderer;
+
+                    if (input.isEmpty() && !isFocused()) {
+                        ui.drawText(placeholder, x + 50, y + 7, CustomColor.fromHexString("FFFFFF"), 1.25f);
+                    } else {
+                        if (cursorPos > input.length()) cursorPos = input.length();
+                        ui.drawText(input, x + 7, y + 7, textColor, 1.25f);
+
+                        long now = System.currentTimeMillis();
+                        if (now - lastBlink > 500) {
+                            blinkToggle = !blinkToggle;
+                            lastBlink = now;
+                        }
+
+                        if (blinkToggle && isFocused()) {
+                            int cursorX = (int) (x + 8 + (font.getWidth(input.substring(0, cursorPos))) * 1.25f * ui.getScaleFactor());
+                            ui.drawLine(cursorX, y + 4, cursorX, y + 20, 1.25f, textColor);
+                        }
+                    }
+                }
+
+                @Override
+                protected boolean onClick(int button) {
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    if(button == 1) {
+                        input = "";
+                    }
+                    setFocused(true);
+
+                    cursorPos = input.length();
+                    return true;
+                }
+            };
+            rootWidgets.add(searchbar2);
+        }
+
+        if(quickActionWidget == null) {
+            quickActionWidget = new QuickActionWidget();
         }
 
         Pair<Integer, Integer> xyRemain = calculateLayout();
@@ -335,15 +389,15 @@ public class BankOverlay2 extends WEHandledScreen {
                 page.setItems(buildInventoryForIndex2(i, false));
                 page.updateValues();
 
-                if(Searchbar.getInput() != null && !Searchbar.getInput().isEmpty()) {
-                    boolean containsSearch = Searchbar.getInput().equals(page.lastInput);
+                if(searchbar2.getInput() != null && !searchbar2.getInput().isEmpty()) {
+                    boolean containsSearch = searchbar2.getInput().equals(page.lastInput);
                     for(ItemStack stack : page.getItems()) {
                         if(stack == null) continue;
                         if(stack.getCustomName() == null) continue;
 
-                        if (stack.getCustomName().getString().toLowerCase().contains(Searchbar.getInput().toLowerCase())) {
+                        if (stack.getCustomName().getString().toLowerCase().contains(searchbar2.getInput().toLowerCase())) {
                             containsSearch = true;
-                            page.lastInput = Searchbar.getInput();
+                            page.lastInput = searchbar2.getInput();
                             break;
                         }
                     }
@@ -370,10 +424,19 @@ public class BankOverlay2 extends WEHandledScreen {
             inventoryWidget.updateValues();
             inventoryWidget.draw(context, mouseX, mouseY, delta, ui);
 
-            ui.drawImage(buttonBackground, xStart - 8, yStart + (yFitAmount - 1) * (104) - 3, (int) (170 * ui.getScaleFactor()), (int) (86 * ui.getScaleFactor()));
-            ui.drawCenteredText("Switch to Character Bank", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, CustomColor.fromHexString("FFFFFF"), 1.1f);
-            ui.drawCenteredText("Quick Stash", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 44, CustomColor.fromHexString("FFFFFF"), 1.1f);
-            ui.drawCenteredText("Search...", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 71, CustomColor.fromHexString("FFFFFF"), 1.1f);
+            switchButtonWidget.setBounds(xStart, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+            switchButtonWidget.draw(context, mouseX, mouseY, delta, ui);
+
+            ui.drawImage(buttonBackground, xStart - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+
+            searchbar2.setBounds(xStart, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 59, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+            searchbar2.setTextColor(CustomColor.fromHexString("FFFFFF"));
+            searchbar2.setBackgroundColor(null);
+            searchbar2.draw(context, mouseX, mouseY, delta, ui);
+
+            ui.drawCenteredText("Switch to " + (currentOverlayType == BankOverlayType.ACCOUNT ? "Character" : "Account") + " Bank", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, CustomColor.fromHexString("FFFFFF"), 1.1f);
+            ui.drawCenteredText("Quick Actions", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 44, CustomColor.fromHexString("FFFFFF"), 1.1f);
+            //ui.drawCenteredText("Search...", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 71, CustomColor.fromHexString("FFFFFF"), 1.1f);
             //System.out.println(pages.size());
         }
 
@@ -382,6 +445,9 @@ public class BankOverlay2 extends WEHandledScreen {
         renderHoveredSlotHighlight(context,  screen);
         renderHoveredTooltip(context, screen, mouseX, mouseY);
         renderHeldItemOverlay(context, mouseX, mouseY);
+
+        quickActionWidget.setBounds(xStart, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 31, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+        quickActionWidget.draw(context, mouseX, mouseY, delta, ui);
 
         //System.out.println(activeInvSlots.getFirst().getStack().getCustomName());
 
@@ -616,6 +682,9 @@ public class BankOverlay2 extends WEHandledScreen {
             page.mouseClicked(x, y, button);
         }
         inventoryWidget.mouseClicked(x, y, button);
+        switchButtonWidget.mouseClicked(x, y, button);
+        quickActionWidget.mouseClicked(x, y, button);
+        searchbar2.mouseClicked(x, y, button);
         return true;
     }
 
@@ -856,7 +925,8 @@ public class BankOverlay2 extends WEHandledScreen {
         dumpExceptHotbarButton.setPosition(baseX, baseY + 18);
         dumpAllButton.setPosition(baseX, baseY + 32);
         resetSearchButton.setPosition(baseX, baseY + 46);
-        Searchbar.setPosition(baseX, baseY + 60);
+        //Searchbar.setPosition(baseX + 10, baseY + 60);
+        Searchbar.setPosition(0, 0);
     }
 
     @Unique
@@ -935,7 +1005,7 @@ public class BankOverlay2 extends WEHandledScreen {
         context.getMatrices().push();
         context.getMatrices().translate(0.0F, 0.0F, 250.0F);
 
-        String input = Searchbar.getInput().toLowerCase();
+        String input = searchbar2.getInput().toLowerCase();
         if(stack == null) {
             if(!input.isEmpty()) {
                 RenderUtils.drawRect(context.getMatrices(), CustomColor.fromHSV(0, 0, 0, 0.75f), x - 1, y - 1, 0, 18, 18);
@@ -980,7 +1050,7 @@ public class BankOverlay2 extends WEHandledScreen {
         boolean isHovered = indexWithOffset == hoveredInvIndex;
         boolean isActive = indexWithOffset == activeInv;
 
-        if (!isActive && Searchbar.getInput().isEmpty() && !isHovered) {
+        if (!isActive && searchbar2.getInput().isEmpty() && !isHovered) {
             RenderUtils.drawRect(context.getMatrices(), CustomColor.fromHSV(0, 0, 0, 0.25f), playerXStart, playerYStart, 0, 164, 92);
         } else if (isActive) {
             RenderUtils.drawRectBorders(context.getMatrices(), CustomColor.fromHexString("FFFF00"), playerXStart, playerYStart, playerXStart + 164, playerYStart + 92, 0, 1);
@@ -1742,7 +1812,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 heldItem = getHeldItem(index + (isInventorySlot ? 54 : 0), action, button);
 
                 if(heldItem.getCustomName() != null) {
-                    if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions"))) {// && button == 1) {
+                    if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
                         heldItem = oldHeld == null ? Items.AIR.getDefaultStack() : oldHeld;
                         return;
                     }
@@ -1783,39 +1853,6 @@ public class BankOverlay2 extends WEHandledScreen {
 
             if(hovered && (isMouseInOverlay || isInventorySlot)) {
                 hoveredSlot = stack;
-//                if (stack.getItem() == Items.AIR) return;
-//
-//                Optional<WynnItem> item = asWynnItem(stack);
-//                List<Text> tooltip = item.map(i -> {
-//                            currentHoveredStack = stack;
-//                            currentHoveredWynnitem = i;
-//                            return TooltipUtils.getWynnItemTooltip(stack, i);
-//                        }).filter(t -> !t.isEmpty())
-//                        .orElse(stack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.ADVANCED));
-//
-//                List<TooltipComponent> components = TooltipUtils.getClientTooltipComponent(tooltip);
-//                int tooltipHeight = TooltipUtils.getTooltipHeight(components);
-//                int screenHeight = screen.height;
-//                float scale = 1.0f;
-//
-//                int y = mouseY;
-//                boolean overflow = false;
-//                if (tooltipHeight > screenHeight) {
-//                    scale = (float) screenHeight / (float) tooltipHeight;
-//                    y = 0; //ganz unten am screen
-//                    overflow = true;
-//                }
-//
-//                ctx.getMatrices().push();
-//                ctx.getMatrices().scale(scale, scale, 1.0f);
-//
-//                if(!overflow) {
-//                    ctx.drawTooltip(screen.getTextRenderer(), tooltip, (int) (mouseX / scale), y);
-//                } else {
-//                    drawTooltip(screen.getTextRenderer(), components, (int)(mouseX / scale) + 12, y, null, ctx);
-//                }
-//
-//                ctx.getMatrices().pop();
             }
 
             renderDurabilityRing(ctx, stack, x + 1, y + 1);
@@ -1840,10 +1877,6 @@ public class BankOverlay2 extends WEHandledScreen {
                     }
                 }
             } catch (Exception ignored) {}
-        }
-
-        public ItemStack getStack() {
-            return stack;
         }
 
         public void setStack(ItemStack stack) {
@@ -1876,8 +1909,72 @@ public class BankOverlay2 extends WEHandledScreen {
             return true;
         }
     }
+
+    private static class QuickActionWidget extends Widget {
+        public QuickActionWidget() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if(hovered && McUtils.containerMenu().getSlot(46) != null && McUtils.containerMenu().getSlot(46).getStack() != null) {
+                ctx.drawTooltip(
+                    MinecraftClient.getInstance().textRenderer,
+                    McUtils.containerMenu().getSlot(46).getStack().getTooltip(
+                        Item.TooltipContext.DEFAULT,
+                        MinecraftClient.getInstance().player,
+                        TooltipType.BASIC
+                    ),
+                    mouseX,
+                    mouseY
+                );
+            }
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            ScreenHandler currScreenHandler = McUtils.containerMenu();
+            if(currScreenHandler == null) { return false; }
+            if(InputUtil.isKeyPressed(
+                MinecraftClient.getInstance().getWindow().getHandle(),
+                ((KeybindingAccessor) MinecraftClient.getInstance().options.sneakKey).getBoundKey().getCode())
+            ) {
+                shiftClickOnSlot(46, currScreenHandler.syncId, button, currScreenHandler.getStacks());
+            } else {
+                clickOnSlot(46, currScreenHandler.syncId, button, currScreenHandler.getStacks());
+            }
+            return true;
+        }
+    }
+
+    private static class SwitchButtonWidget extends Widget {
+        public SwitchButtonWidget() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            ScreenHandler currScreenHandler = McUtils.containerMenu();
+
+            activeInv = 0;
+            actualOffset = 0;
+            targetOffset = 0;
+            currentData.save();
+            BankOverlay2.pages.clear();
+
+            if(currentOverlayType == BankOverlayType.CHARACTER) expectedOverlayType = BankOverlayType.ACCOUNT;
+            else if (currentOverlayType == BankOverlayType.ACCOUNT) expectedOverlayType = BankOverlayType.CHARACTER;
+
+            if(currScreenHandler == null) { return false; }
+            clickOnSlot(47, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
+            return true;
+        }
+    }
 }
 //TODO: Namensschilder wieder reinmachen
-//TODO: Alte buttons loeschen und neue clickbar machen
 //TODO: Wynnventory price ding supporten
 //TODO: an/aus toggle im bankoverlay + in normaler bank
