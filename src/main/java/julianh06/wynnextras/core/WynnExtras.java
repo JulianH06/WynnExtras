@@ -185,6 +185,13 @@ public class WynnExtras implements ClientModInitializer {
 					if (BankOverlay.currentOverlayType != BankOverlayType.NONE && BankOverlay2.searchbar2.isFocused() && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
 				}
 
+				for(BankOverlay2.PageWidget page : BankOverlay2.pages) {
+					if(page.sign == null) continue;
+					if(page.sign.textInputWidget == null) continue;
+
+					if (BankOverlay.currentOverlayType != BankOverlayType.NONE && page.sign.textInputWidget.isFocused() && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
+				}
+
 				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)) return;
 
 				if (previousCallback != null) {

@@ -62,14 +62,14 @@ public class TextInputWidget extends Widget {
             }
 
             if (blinkToggle && isFocused()) {
-                int cursorX = (int) (textX + (font.getWidth(input.substring(0, cursorPos))) * ui.getScaleFactor());
-                ui.drawLine(cursorX, textY - 6, cursorX, textY + 28, 2, textColor);
+                int cursorX = (int) (textX + (font.getWidth(input.substring(0, cursorPos))) * ui.getScaleFactor() + 1);
+                ui.drawLine(cursorX, textY - 2 * textScale, cursorX, textY + 10 * textScale, 0.75f * textScale, textColor);
             }
         }
     }
 
     @Override
-    protected boolean onClick(int button) {
+    public boolean onClick(int button) {
         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         setFocused(true);
         cursorPos = input.length();

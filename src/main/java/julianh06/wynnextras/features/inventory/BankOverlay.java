@@ -83,6 +83,11 @@ public class BankOverlay {
         if(BankOverlay2.searchbar2 != null && (event.getAction() == GLFW.GLFW_PRESS || event.getAction() == GLFW.GLFW_REPEAT)) {
             BankOverlay2.searchbar2.keyPressed(event.getKey(), event.getScanCode(), 0);
         }
+        for(BankOverlay2.PageWidget page : BankOverlay2.pages) {
+            if((event.getAction() == GLFW.GLFW_PRESS || event.getAction() == GLFW.GLFW_REPEAT)) {
+                page.keyPressed(event.getKey(), event.getScanCode(), 0);
+            }
+        }
         if(!InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), GLFW.GLFW_KEY_LEFT_SHIFT) && SimpleConfig.getInstance(WynnExtrasConfig.class).enableScrollWithArrowKeys) {
             if (event.getKey() == GLFW.GLFW_KEY_UP && event.getAction() == GLFW.GLFW_PRESS) {
                 if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
@@ -107,6 +112,9 @@ public class BankOverlay {
     public void onChar(CharInputEvent event) {
         if(BankOverlay2.searchbar2 != null) {
             BankOverlay2.searchbar2.charTyped(event.getCharacter(), 0);
+        }
+        for(BankOverlay2.PageWidget page : BankOverlay2.pages) {
+            page.charTyped(event.getCharacter(), 0);
         }
         if(activeTextInput != null) {
             activeTextInput.onCharInput(event);

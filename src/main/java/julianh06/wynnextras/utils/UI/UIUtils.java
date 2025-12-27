@@ -7,6 +7,8 @@ import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.gui.DrawContext;
@@ -34,6 +36,24 @@ public final class UIUtils {
     Identifier buttonbotH = Identifier.of("wynnextras", "textures/general/button/both.png");
     Identifier buttonleftH = Identifier.of("wynnextras", "textures/general/button/lefth.png");
     Identifier buttonrightH = Identifier.of("wynnextras", "textures/general/button/righth.png");
+
+    Identifier sliderButtontl = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertl.png");
+    Identifier sliderButtontr = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertr.png");
+    Identifier sliderButtonbl = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbl.png");
+    Identifier sliderButtonbr = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbr.png");
+    Identifier sliderButtontop = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/top.png");
+    Identifier sliderButtonbot = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/bot.png");
+    Identifier sliderButtonleft = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/left.png");
+    Identifier sliderButtonright = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/right.png");
+
+    Identifier sliderButtontlDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertld.png");
+    Identifier sliderButtontrDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertrd.png");
+    Identifier sliderButtonblDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbld.png");
+    Identifier sliderButtonbrDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbrd.png");
+    Identifier sliderButtontopDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/topd.png");
+    Identifier sliderButtonbotDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/botd.png");
+    Identifier sliderButtonleftDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/leftd.png");
+    Identifier sliderButtonrightDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/rightd.png");
 
     private DrawContext drawContext;
     private double scaleFactor;
@@ -244,6 +264,45 @@ public final class UIUtils {
             if (height > scale * 2) {
                 drawImage(buttonleft, x, y + scale - 2, scale, height - scale * 2 + 4);
                 drawImage(buttonright, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
+            }
+        }
+    }
+
+    public void drawSliderBackground(float x, float y, float width, float height, int scale) {
+        if(width > scale * 2 || height > scale * 2) {
+            RenderUtils.drawRect(
+                    drawContext.getMatrices(),
+                    SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("50352d"),
+                    sx(x + scale) - 1, sy(y + scale) - 1, 0,
+                    sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
+            );
+        }
+
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+            drawImage(sliderButtontlDark, x, y, scale, scale);
+            drawImage(sliderButtontrDark, x + width - scale, y, scale, scale);
+            drawImage(sliderButtonblDark, x, y + height - scale, scale, scale);
+            drawImage(sliderButtonbrDark, x + width - scale, y + height - scale, scale, scale);
+            if (width > scale * 2) {
+                drawImage(sliderButtontopDark, x + scale - 2, y, width - scale * 2 + 4, scale);
+                drawImage(sliderButtonbotDark, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
+            }
+            if (height > scale * 2) {
+                drawImage(sliderButtonleftDark, x, y + scale - 2, scale, height - scale * 2 + 4);
+                drawImage(sliderButtonrightDark, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
+            }
+        } else {
+            drawImage(sliderButtontl, x, y, scale, scale);
+            drawImage(sliderButtontr, x + width - scale, y, scale, scale);
+            drawImage(sliderButtonbl, x, y + height - scale, scale, scale);
+            drawImage(sliderButtonbr, x + width - scale, y + height - scale, scale, scale);
+            if (width > scale * 2) {
+                drawImage(sliderButtontop, x + scale - 2, y, width - scale * 2 + 4, scale);
+                drawImage(sliderButtonbot, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
+            }
+            if (height > scale * 2) {
+                drawImage(sliderButtonleft, x, y + scale - 2, scale, height - scale * 2 + 4);
+                drawImage(sliderButtonright, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
             }
         }
     }

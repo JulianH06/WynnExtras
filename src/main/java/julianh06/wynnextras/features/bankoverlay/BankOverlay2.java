@@ -135,6 +135,9 @@ public class BankOverlay2 extends WEHandledScreen {
     int lastPage = currentMaxPages;
 
     public Identifier buttonBackground = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbg.png");
+    public Identifier buttonBackgroundShort = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbgshort.png");
+    public Identifier buttonBackgroundDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbg_dark.png");
+    public Identifier buttonBackgroundShortDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbgshort_dark.png");
 
     @Unique
     Identifier ButtonTexture = Identifier.of("wynnextras", "textures/gui/bankoverlay/button.png");
@@ -155,34 +158,34 @@ public class BankOverlay2 extends WEHandledScreen {
     Identifier bankTextureDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/bank_dark.png");
 
     @Unique
-    Identifier signLeft = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_left.png");
+    static Identifier signLeft = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_left.png");
 
     @Unique
-    Identifier signLeftDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_left_dark.png");
+    static Identifier signLeftDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_left_dark.png");
 
     @Unique
-    Identifier signRight = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_right.png");
+    static Identifier signRight = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_right.png");
 
     @Unique
-    Identifier signRightDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_right_dark.png");
+    static Identifier signRightDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_right_dark.png");
 
     @Unique
-    Identifier signMid1 = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m1.png");
+    static Identifier signMid1 = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m1.png");
 
     @Unique
-    Identifier signMid1D = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m1_dark.png");
+    static Identifier signMid1D = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m1_dark.png");
 
     @Unique
-    Identifier signMid2 = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m2.png");
+    static Identifier signMid2 = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m2.png");
 
     @Unique
-    Identifier signMid2D = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m2_dark.png");
+    static Identifier signMid2D = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m2_dark.png");
 
     @Unique
-    Identifier signMid3 = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m3.png");
+    static Identifier signMid3 = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m3.png");
 
     @Unique
-    Identifier signMid3D = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m3_dark.png");
+    static Identifier signMid3D = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m3_dark.png");
 
     @Unique
     Identifier lock_locked = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_locked.png");
@@ -197,7 +200,7 @@ public class BankOverlay2 extends WEHandledScreen {
     Identifier lock_unlocked_dark = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_unlocked_dark.png");
 
     @Unique
-    List<Identifier> signMids = new ArrayList<>();
+    static List<Identifier> signMids = new ArrayList<>();
 
     @Unique
     int visibleInventories;
@@ -220,9 +223,6 @@ public class BankOverlay2 extends WEHandledScreen {
     public static float targetOffset = 0;
     static float actualOffset = 0;
 
-    public static float scrollBarTartgetWidth = 0;
-    static float scrollBarActualWidth = 0;
-
     public static List<PageWidget> pages = new ArrayList<>();
     public static InventoryWidget inventoryWidget = null;
     public static SwitchButtonWidget switchButtonWidget = null;
@@ -235,18 +235,25 @@ public class BankOverlay2 extends WEHandledScreen {
 
     private static boolean isMouseInOverlay = false;
 
+    private static int scissorx1, scissory1, scissorx2, scissory2;
+
     public BankOverlay2(CallbackInfo ci, HandledScreen screen) {
         this.ci = ci;
         this.screen = screen;
         actualOffset = 0;
         targetOffset = 0;
         pages.clear();
+        signMids.clear();
         inventoryWidget = null;
         switchButtonWidget = null;
         quickActionWidget = null;
         searchbar2 = null;
         activeInv = 0;
         shownPages = 0;
+        scissorx1 = 0;
+        scissory1 = 0;
+        scissorx2 = 0;
+        scissory2 = 0;
 
         try {
             if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
@@ -260,6 +267,7 @@ public class BankOverlay2 extends WEHandledScreen {
         Pages = currentData;
         if(MinecraftClient.getInstance().getWindow() == null || !MinecraftClient.getInstance().isRunning()) return;
         if(MinecraftClient.getInstance().player == null || MinecraftClient.getInstance().currentScreen == null) return;
+
         if(ui == null) {
             ui = new UIUtils(context, 1, 0, 0);
         }
@@ -271,6 +279,23 @@ public class BankOverlay2 extends WEHandledScreen {
 
         int xStart = xRemain / 2 - 2;
         int yStart = yRemain / 2 - 2;
+
+        if(currentOverlayType != BankOverlayType.NONE && expectedOverlayType != BankOverlayType.NONE && currentOverlayType != expectedOverlayType) {
+            RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+            drawBackgroundRect(context, xRemain, yRemain);
+            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+                ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackgroundDark : buttonBackgroundShortDark, xStart - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+            } else {
+                ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackground : buttonBackgroundShort, xStart - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+            }
+            if(inventoryWidget != null) inventoryWidget.draw(context, mouseX, mouseY, delta, ui);
+            if(quickActionWidget != null) quickActionWidget.draw(context, mouseX, mouseY, delta, ui);
+            if(searchbar2 != null) searchbar2.draw(context, mouseX, mouseY, delta, ui);
+            if(scrollBarWidget != null) scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
+            if(toggleOverlayWidget != null) toggleOverlayWidget.draw(context, mouseX, mouseY, delta, ui);
+            ci.cancel();
+            return;
+        }
 
         Container container = Models.Container.getCurrentContainer();
         if (container instanceof AccountBankContainer ||
@@ -368,7 +393,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
 
                 @Override
-                protected boolean onClick(int button) {
+                public boolean onClick(int button) {
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     if(button == 1) {
                         input = "";
@@ -390,23 +415,7 @@ public class BankOverlay2 extends WEHandledScreen {
             scrollBarWidget = new ScrollBarWidget();
         }
 
-        if(shownPages <= xFitAmount * (yFitAmount - 1)) {
-            scrollBarTartgetWidth = 0;
-        } else {
-            scrollBarTartgetWidth = 15;
-        }
-
-        if(Math.abs(scrollBarTartgetWidth - scrollBarActualWidth) < 1) {
-            scrollBarActualWidth = scrollBarTartgetWidth;
-        }
-
-        if(scrollBarActualWidth < scrollBarTartgetWidth) {
-            scrollBarActualWidth += 3 * delta;
-        } else if (scrollBarActualWidth > scrollBarTartgetWidth) {
-            scrollBarActualWidth -= 3 * delta;
-        }
-
-        scrollBarWidget.setBounds(xStart + xFitAmount * 170, yStart - 12, (int) scrollBarActualWidth, (yFitAmount - 1) * 104 + 9);
+        scrollBarWidget.setBounds(xStart + xFitAmount * 170, yStart - 13, 15, (yFitAmount - 1) * 104 + 12);
         scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
 
         //        RenderSystem.disableDepthTest();
@@ -420,33 +429,7 @@ public class BankOverlay2 extends WEHandledScreen {
             WynnExtras.testInv = screen.getScreenHandler().slots;
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            RenderUtils.drawRect(
-                    context.getMatrices(),
-                    CustomColor.fromHexString("2c2d2f"),
-                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15, 1000,
-                    xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10
-            );
-            RenderUtils.drawRectBorders(
-                    context.getMatrices(),
-                    CustomColor.fromHexString("1b1b1c"),
-                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15,
-                    (float) xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, (float) yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 0, 1
-            );
-        } else {
-            RenderUtils.drawRect(
-                    context.getMatrices(),
-                    CustomColor.fromHexString("81644b"),
-                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15, 1000,
-                    xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10
-            );
-            RenderUtils.drawRectBorders(
-                    context.getMatrices(),
-                    CustomColor.fromHexString("4f342c"),
-                    (float) xRemain / 2 - 2 - 7, (float) yRemain / 2 - 15,
-                    (float) xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, (float) yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 0, 1
-            );
-        }
+        drawBackgroundRect(context, xRemain, yRemain);
 
         isMouseInOverlay = false;
 
@@ -456,7 +439,12 @@ public class BankOverlay2 extends WEHandledScreen {
         {
             int i = 0;
             int visuali = 0;
-            context.enableScissor(xStart - 5, yStart, xStart + 166 * xFitAmount, yStart + 100 * (yFitAmount - 1));
+            scissorx1 = xStart - 5;
+            scissory1 = yStart;
+            scissorx2 = xStart + 166 * xFitAmount;
+            scissory2 = yStart + 100 * (yFitAmount - 1);
+
+            context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
             for(PageWidget page : pages) {
                 float invX = xStart + (visuali % xFitAmount) * (162 + 4);
                 float invY = yStart + Math.floorDiv(visuali, xFitAmount) * (90 + 4 + 10) - actualOffset;
@@ -502,18 +490,37 @@ public class BankOverlay2 extends WEHandledScreen {
             inventoryWidget.updateValues();
             inventoryWidget.draw(context, mouseX, mouseY, delta, ui);
 
-            switchButtonWidget.setBounds(xStart, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
-            switchButtonWidget.draw(context, mouseX, mouseY, delta, ui);
+            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+                switchButtonWidget.setBounds(xStart, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+                switchButtonWidget.draw(context, mouseX, mouseY, delta, ui);
+            } else {
+                switchButtonWidget.setBounds(0, 0, 0, 0);
+            }
 
-            ui.drawImage(buttonBackground, xStart - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+                ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackgroundDark : buttonBackgroundShortDark, xStart - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+            } else {
+                ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackground : buttonBackgroundShort, xStart - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+            }
 
-            searchbar2.setBounds(xStart, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 59, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+                searchbar2.setBounds(xStart, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 59, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+            } else {
+                searchbar2.setBounds(xStart, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 31, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+            }
+
             searchbar2.setTextColor(CustomColor.fromHexString("FFFFFF"));
             searchbar2.setBackgroundColor(null);
             searchbar2.draw(context, mouseX, mouseY, delta, ui);
 
-            ui.drawCenteredText("Switch to " + (currentOverlayType == BankOverlayType.ACCOUNT ? "Character" : "Account") + " Bank", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, CustomColor.fromHexString("FFFFFF"), 1.1f);
-            ui.drawCenteredText("Quick Actions", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 44, CustomColor.fromHexString("FFFFFF"), 1.1f);
+            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+                ui.drawCenteredText("Switch to " + (currentOverlayType == BankOverlayType.ACCOUNT ? "Character" : "Account") + " Bank", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, CustomColor.fromHexString("FFFFFF"), 1.1f);
+            }
+            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+                ui.drawCenteredText("Quick Actions", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 44, CustomColor.fromHexString("FFFFFF"), 1.1f);
+            } else {
+                ui.drawCenteredText("Quick Actions", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, CustomColor.fromHexString("FFFFFF"), 1.1f);
+            }
             //ui.drawCenteredText("Search...", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 71, CustomColor.fromHexString("FFFFFF"), 1.1f);
             //System.out.println(pages.size());
         }
@@ -526,7 +533,12 @@ public class BankOverlay2 extends WEHandledScreen {
         renderHoveredTooltip(context, screen, mouseX, mouseY);
         renderHeldItemOverlay(context, mouseX, mouseY);
 
-        quickActionWidget.setBounds(xStart, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 31, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+        if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+            quickActionWidget.setBounds(xStart, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 31, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+        } else {
+            quickActionWidget.setBounds(xStart, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+        }
+
         quickActionWidget.draw(context, mouseX, mouseY, delta, ui);
 
         //System.out.println(activeInvSlots.getFirst().getStack().getCustomName());
@@ -756,6 +768,36 @@ public class BankOverlay2 extends WEHandledScreen {
         renderHeldItemOverlay(context, mouseX, mouseY);
     }
 
+    private void drawBackgroundRect(DrawContext context, float xRemain, float yRemain) {
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+            RenderUtils.drawRect(
+                    context.getMatrices(),
+                    CustomColor.fromHexString("2c2d2f"),
+                    xRemain / 2 - 2 - 7, yRemain / 2 - 15, 1000,
+                    xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10
+            );
+            RenderUtils.drawRectBorders(
+                    context.getMatrices(),
+                    CustomColor.fromHexString("1b1b1c"),
+                    xRemain / 2 - 2 - 7, yRemain / 2 - 15,
+                    xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 0, 1
+            );
+        } else {
+            RenderUtils.drawRect(
+                    context.getMatrices(),
+                    CustomColor.fromHexString("81644b"),
+                    xRemain / 2 - 2 - 7, yRemain / 2 - 15, 1000,
+                    xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10
+            );
+            RenderUtils.drawRectBorders(
+                    context.getMatrices(),
+                    CustomColor.fromHexString("4f342c"),
+                    xRemain / 2 - 2 - 7, yRemain / 2 - 15,
+                    xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 0, 1
+            );
+        }
+    }
+
     @Override
     public boolean mouseClicked(double x, double y, int button) {
         if(toggleOverlayWidget != null) toggleOverlayWidget.mouseClicked(x, y, button);
@@ -930,6 +972,7 @@ public class BankOverlay2 extends WEHandledScreen {
                             shouldWait = true;
                         } else if (oldShouldWait) {
                             Pages.BankPages.put(activeInv, slots.stream().map(Slot::getStack).toList());
+                            if(annotationCache.get(activeInv) != null) annotationCache.get(activeInv).clear();
                         }
                     }
                 }
@@ -1555,7 +1598,7 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     @Unique
-    public void drawDynamicNameSign(DrawContext context, String input, int x, int y) {
+    public static void drawDynamicNameSign(DrawContext context, String input, int x, int y) {
         if (signMids.isEmpty()) {
             if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
                 signMids.add(signMid1D);
@@ -1572,19 +1615,19 @@ public class BankOverlay2 extends WEHandledScreen {
         int strMidWidth = strWidth - 15;
         int amount = Math.max(0, Math.ceilDiv(strMidWidth, 10));
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            RenderUtils.drawTexturedRect(context.getMatrices(), signLeftDark, x, y - 13, 10, 15, 10, 15);
+            RenderUtils.drawTexturedRect(context.getMatrices(), signLeftDark, x, y - 15, 10, 15, 10, 15);
         } else {
-            RenderUtils.drawTexturedRect(context.getMatrices(), signLeft, x, y - 13, 10, 15, 10, 15);
+            RenderUtils.drawTexturedRect(context.getMatrices(), signLeft, x, y - 15, 10, 15, 10, 15);
         }
         if (strWidth > 15) {
             for (int i = 0; i < amount; i++) {
-                RenderUtils.drawTexturedRect(context.getMatrices(), signMids.get(i % 3), x + 10 + 10 * i, y - 13, 10, 15, 10, 15);
+                RenderUtils.drawTexturedRect(context.getMatrices(), signMids.get(i % 3), x + 10 + 10 * i, y - 15, 10, 15, 10, 15);
             }
         }
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            RenderUtils.drawTexturedRect(context.getMatrices(), signRightDark, x + 10 + 10 * amount, y - 13, 10, 15, 10, 15);
+            RenderUtils.drawTexturedRect(context.getMatrices(), signRightDark, x + 10 + 10 * amount, y - 15, 10, 15, 10, 15);
         } else {
-            RenderUtils.drawTexturedRect(context.getMatrices(), signRight, x + 10 + 10 * amount, y - 13, 10, 15, 10, 15);
+            RenderUtils.drawTexturedRect(context.getMatrices(), signRight, x + 10 + 10 * amount, y - 15, 10, 15, 10, 15);
         }
     }
 
@@ -1778,7 +1821,7 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 
-    private static class PageWidget extends Widget {
+    public static class PageWidget extends Widget {
         Identifier bankTexture = Identifier.of("wynnextras", "textures/gui/bankoverlay/bank.png");
         Identifier bankTextureDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/bank_dark.png");
 
@@ -1789,6 +1832,8 @@ public class BankOverlay2 extends WEHandledScreen {
         final int index;
         int topBorder;
         int botBorder;
+
+        public NameSignWidget sign;
 
         public PageWidget(int index, int topBorder, int botBorder) {
             super(0, 0, 0, 0);
@@ -1828,6 +1873,13 @@ public class BankOverlay2 extends WEHandledScreen {
                 slot.setStack(items.get(i));
                 i++;
             }
+
+            if(sign == null) {
+                sign = new NameSignWidget(index);
+                addChild(sign);
+            }
+
+            sign.setBounds(x, y - 10, width, 10);
         }
 
         @Override
@@ -1916,10 +1968,9 @@ public class BankOverlay2 extends WEHandledScreen {
                 lastClickedSlot2 = new Pair<>(inventoryIndex, index);
             } else {
                 if (inventoryIndex <= currentData.lastPage) {
-                    McUtils.sendMessageToClient(Text.of("Clicked page " + inventoryIndex));
                     activeInv = inventoryIndex;
                     BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
-                    annotationCache.get(activeInv).clear();
+                    if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
                 }
             }
         }
@@ -1998,6 +2049,48 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 
+    public static class NameSignWidget extends Widget {
+        public TextInputWidget textInputWidget;
+        int index;
+
+        public NameSignWidget(int index) {
+            super(0, 0, 0, 0);
+            this.index = index;
+            textInputWidget = new TextInputWidget(x, y, width, height, 3, 1, 1);
+            textInputWidget.setBackgroundColor(null);
+            addChild(textInputWidget);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ctx.disableScissor();
+            ctx.enableScissor(scissorx1, scissory1 - 12, scissorx2, scissory2);
+
+            drawDynamicNameSign(ctx, textInputWidget.getInput(), x, y + 12);
+
+            String pageName = textInputWidget.getInput().isEmpty()
+                    ? Pages.BankPageNames.getOrDefault(index, "Page " + (index + 1))
+                    : textInputWidget.getInput();
+
+            Pages.BankPageNames.put(index, pageName);
+
+            textInputWidget.setTextColor((activeInv == index && !shouldWait) ? CustomColor.fromHexString("FFEA00") : CustomColor.fromHexString("FFFFFF"));
+            textInputWidget.setBounds(x, y, width, height);
+            textInputWidget.setInput(pageName);
+            textInputWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+
+            ctx.disableScissor();
+            ctx.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            textInputWidget.onClick(button);
+            return true;
+        }
+    }
+
     private static class QuickActionWidget extends Widget {
         public QuickActionWidget() {
             super(0, 0, 0, 0);
@@ -2021,6 +2114,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             ScreenHandler currScreenHandler = McUtils.containerMenu();
             if(currScreenHandler == null) { return false; }
             if(InputUtil.isKeyPressed(
@@ -2046,6 +2140,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             ScreenHandler currScreenHandler = McUtils.containerMenu();
 
             activeInv = 0;
@@ -2104,7 +2199,7 @@ public class BankOverlay2 extends WEHandledScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-            ui.drawRect(x, y, width, height);
+            ui.drawSliderBackground(x, y, width, height, 5);
 
             int totalRows = (int) Math.ceil((double) shownPages / xFitAmount);
             int c = (xFitAmount % 2 == 0 ? 1 : 0);
@@ -2118,7 +2213,8 @@ public class BankOverlay2 extends WEHandledScreen {
                 actualOffset = targetOffset;
             }
 
-            scrollBarButtonWidget.setBounds(x, (int) (y + scrollAreaHeight * Math.min((actualOffset / maxOffset), 1)), width, buttonHeight);
+            int yPos = maxOffset == 0 ? y : (int) (y + scrollAreaHeight * Math.min((actualOffset / maxOffset), 1));
+            scrollBarButtonWidget.setBounds(x, yPos, width, buttonHeight);
         }
 
         @Override
@@ -2151,8 +2247,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                if(scrollBarActualWidth <= 0) return;
-                ui.drawButton(x, y, width, height, (int) (5 * (scrollBarActualWidth / scrollBarTartgetWidth)), hovered || isHold);
+                ui.drawButton(x, y, width, height, 5, hovered || isHold);
             }
 
             @Override
@@ -2170,11 +2265,9 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 }
-//TODO: Namensschilder wieder reinmachen
 //TODO: Wynnventory price ding supporten
-//TODO: an/aus toggle im bankoverlay + in normaler bank
 //TODO: ADD BACK WYNNTILS EMERALD OVERLAY
 //TODO: MAKE DARKMODE TEXTURES
-//TODO: improve Scrollbar (e.g. smooth fade out of the scroll bar when shownpages <= xFitAmount * (yFitAmount - 1))
-//TODO: hide switch to account bank sign when in tome shelf or misc bucket
-//TODO: BUG: CLICK SWITCH, SWITCH AGAIN -> MAX PAGES NOT CORRECT
+//TODO: BUG: CLICK SWITCH, SWITCH AGAIN -> MAX PAGES NOT CORRECT (ALSO MESSES WITH NAME PLATES)
+//TODO: BUG (KEINE AHNUNG OB DER NOCH DA IST): wenn man auf character bank switcht wird die page auf der man war nicht gesaved
+//TODO: BOXED ITEM CHANCES
