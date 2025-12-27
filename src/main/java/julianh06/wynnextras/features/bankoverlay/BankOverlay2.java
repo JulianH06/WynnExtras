@@ -220,12 +220,18 @@ public class BankOverlay2 extends WEHandledScreen {
     public static float targetOffset = 0;
     static float actualOffset = 0;
 
+    public static float scrollBarTartgetWidth = 0;
+    static float scrollBarActualWidth = 0;
+
     public static List<PageWidget> pages = new ArrayList<>();
     public static InventoryWidget inventoryWidget = null;
     public static SwitchButtonWidget switchButtonWidget = null;
     public static QuickActionWidget quickActionWidget = null;
     public static TextInputWidget searchbar2 = null;
     public static ToggleOverlayWidget toggleOverlayWidget = null;
+    static ScrollBarWidget scrollBarWidget = null;
+
+    static int shownPages;
 
     private static boolean isMouseInOverlay = false;
 
@@ -240,6 +246,7 @@ public class BankOverlay2 extends WEHandledScreen {
         quickActionWidget = null;
         searchbar2 = null;
         activeInv = 0;
+        shownPages = 0;
 
         try {
             if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
@@ -297,8 +304,13 @@ public class BankOverlay2 extends WEHandledScreen {
         initializeOverlayState();
 
         float snapValue = 0.5f;
-        if (targetOffset > (yFitAmount) * 104) {
-            targetOffset = (yFitAmount) * 104; //TODO: make it work with different gui scales
+
+        int totalRows = (int) Math.ceil((double) shownPages / xFitAmount);
+        int c = (xFitAmount % 2 == 0 ? 1 : 0);
+        int maxOffset = Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * xFitAmount) - 52 * c);
+
+        if (targetOffset > maxOffset) {
+            targetOffset = maxOffset;
             snapValue = 0.75f;
         }
         if (targetOffset <= 0) {
@@ -315,7 +327,7 @@ public class BankOverlay2 extends WEHandledScreen {
         if(Pages == null) return;
 
         if(pages.isEmpty()) {
-            for (int i = 0; i <= currentMaxPages; i++) {
+            for (int i = 0; i < currentMaxPages; i++) {
                 PageWidget pageWidget = new PageWidget(i, yStart, (int) (yStart + (yFitAmount) * (90 + 4 + 10) * Math.max(2, ui.getScaleFactor())));
                 pages.add(pageWidget);
             }
@@ -374,6 +386,29 @@ public class BankOverlay2 extends WEHandledScreen {
             quickActionWidget = new QuickActionWidget();
         }
 
+        if(scrollBarWidget == null) {
+            scrollBarWidget = new ScrollBarWidget();
+        }
+
+        if(shownPages <= xFitAmount * (yFitAmount - 1)) {
+            scrollBarTartgetWidth = 0;
+        } else {
+            scrollBarTartgetWidth = 15;
+        }
+
+        if(Math.abs(scrollBarTartgetWidth - scrollBarActualWidth) < 1) {
+            scrollBarActualWidth = scrollBarTartgetWidth;
+        }
+
+        if(scrollBarActualWidth < scrollBarTartgetWidth) {
+            scrollBarActualWidth += 3 * delta;
+        } else if (scrollBarActualWidth > scrollBarTartgetWidth) {
+            scrollBarActualWidth -= 3 * delta;
+        }
+
+        scrollBarWidget.setBounds(xStart + xFitAmount * 170, yStart - 12, (int) scrollBarActualWidth, (yFitAmount - 1) * 104 + 9);
+        scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
+
         //        RenderSystem.disableDepthTest();
         //RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
         //        RenderSystem.enableDepthTest();
@@ -417,6 +452,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         if(mouseY > yStart && mouseY < yStart + 100 * (yFitAmount - 1)) isMouseInOverlay = true;
 
+        int pageAmount = 0;
         {
             int i = 0;
             int visuali = 0;
@@ -448,7 +484,10 @@ public class BankOverlay2 extends WEHandledScreen {
                         continue;
                     } else {
                         page.setEnabled(true);
+                        pageAmount++;
                     }
+                } else {
+                    pageAmount++;
                 }
 
                 if(invY > yStart - 100 && invY < yStart + 100 * (yFitAmount - 1)) page.draw(context, mouseX, mouseY, delta, ui);
@@ -478,6 +517,8 @@ public class BankOverlay2 extends WEHandledScreen {
             //ui.drawCenteredText("Search...", xStart + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 71, CustomColor.fromHexString("FFFFFF"), 1.1f);
             //System.out.println(pages.size());
         }
+
+        shownPages = pageAmount;
 
         //renderButtons(context);
         renderNameInputs(context);
@@ -729,7 +770,14 @@ public class BankOverlay2 extends WEHandledScreen {
         if(switchButtonWidget != null) switchButtonWidget.mouseClicked(x, y, button);
         if(quickActionWidget != null) quickActionWidget.mouseClicked(x, y, button);
         if(searchbar2 != null) searchbar2.mouseClicked(x, y, button);
+        if(scrollBarWidget != null) scrollBarWidget.mouseClicked(x, y, button);
         return true;
+    }
+
+    @Override
+    public boolean mouseReleased(double x, double y, int button) {
+        if(scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
+        return super.mouseReleased(x, y, button);
     }
 
     @Unique
@@ -1162,10 +1210,6 @@ public class BankOverlay2 extends WEHandledScreen {
     @Unique
     private void renderHoveredTooltip(DrawContext context, HandledScreen<?> screen, int mouseX, int mouseY) {
         if (hoveredSlot.getItem() == Items.AIR) return;
-
-        if(hoveredSlot.getCustomName().contains(Text.of("Stardew"))) {
-            System.out.println("STARDEW");
-        }
 
         Optional<WynnItem> item = asWynnItem(hoveredSlot);
         List<Text> tooltip = item.map(i -> {
@@ -1672,7 +1716,6 @@ public class BankOverlay2 extends WEHandledScreen {
         Identifier invTexture = Identifier.of("wynnextras", "textures/gui/bankoverlay/inv.png");
         Identifier invTextureDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/inv_dark.png");
 
-
         List<ItemStack> items;
         List<SlotWidget> slots = new ArrayList<>();
 
@@ -1876,6 +1919,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     McUtils.sendMessageToClient(Text.of("Clicked page " + inventoryIndex));
                     activeInv = inventoryIndex;
                     BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
+                    annotationCache.get(activeInv).clear();
                 }
             }
         }
@@ -2037,9 +2081,100 @@ public class BankOverlay2 extends WEHandledScreen {
             return false;
         }
     }
+
+    private static class ScrollBarWidget extends Widget {
+        ScrollBarButtonWidget scrollBarButtonWidget;
+        int currentMouseY = 0;
+
+        public ScrollBarWidget() {
+            super(0, 0, 0, 0);
+            this.scrollBarButtonWidget = new ScrollBarButtonWidget();
+            addChild(scrollBarButtonWidget);
+        }
+
+        private void setOffset(int mouseY, int maxOffset, int scrollAreaHeight) {
+            float relativeY = mouseY - y - scrollBarButtonWidget.getHeight() / 2f;
+            relativeY = Math.max(0, Math.min(relativeY, scrollAreaHeight));
+
+            float scrollPercent = relativeY / scrollAreaHeight;
+
+            targetOffset = scrollPercent * maxOffset;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            currentMouseY = mouseY;
+            ui.drawRect(x, y, width, height);
+
+            int totalRows = (int) Math.ceil((double) shownPages / xFitAmount);
+            int c = (xFitAmount % 2 == 0 ? 1 : 0);
+            int maxOffset = Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * xFitAmount) - 52 * c);
+
+            int buttonHeight = 30;
+            int scrollAreaHeight = height - buttonHeight;
+
+            if (scrollBarButtonWidget.isHold) {
+                setOffset(mouseY, maxOffset, scrollAreaHeight);
+                actualOffset = targetOffset;
+            }
+
+            scrollBarButtonWidget.setBounds(x, (int) (y + scrollAreaHeight * Math.min((actualOffset / maxOffset), 1)), width, buttonHeight);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            int totalRows = (int) Math.ceil((double) shownPages / xFitAmount);
+            int c = (xFitAmount % 2 == 0 ? 1 : 0);
+            int maxOffset = Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * xFitAmount) - 52 * c);
+            int buttonHeight = 30;
+            int scrollAreaHeight = height - buttonHeight;
+
+            setOffset(currentMouseY, maxOffset, scrollAreaHeight);
+
+            return false;
+        }
+
+        @Override
+        public boolean mouseReleased(double mx, double my, int button) {
+            scrollBarButtonWidget.mouseReleased(mx, my, button);
+            return true;
+        }
+
+        private static class ScrollBarButtonWidget extends Widget {
+            public boolean isHold;
+
+            public ScrollBarButtonWidget() {
+                super(0, 0, 0, 0);
+                isHold = false;
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                if(scrollBarActualWidth <= 0) return;
+                ui.drawButton(x, y, width, height, (int) (5 * (scrollBarActualWidth / scrollBarTartgetWidth)), hovered || isHold);
+            }
+
+            @Override
+            protected boolean onClick(int button) {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                isHold = true;
+                return true;
+            }
+
+            @Override
+            public boolean mouseReleased(double mx, double my, int button) {
+                isHold = false;
+                return true;
+            }
+        }
+    }
 }
 //TODO: Namensschilder wieder reinmachen
 //TODO: Wynnventory price ding supporten
 //TODO: an/aus toggle im bankoverlay + in normaler bank
 //TODO: ADD BACK WYNNTILS EMERALD OVERLAY
 //TODO: MAKE DARKMODE TEXTURES
+//TODO: improve Scrollbar (e.g. smooth fade out of the scroll bar when shownpages <= xFitAmount * (yFitAmount - 1))
+//TODO: hide switch to account bank sign when in tome shelf or misc bucket
+//TODO: BUG: CLICK SWITCH, SWITCH AGAIN -> MAX PAGES NOT CORRECT

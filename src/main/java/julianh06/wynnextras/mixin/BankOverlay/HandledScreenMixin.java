@@ -179,6 +179,8 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "mouseReleased", at = @At("HEAD"), cancellable = true)
     private void onMouseReleased(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if(bankOverlay == null) return;
+        bankOverlay.mouseReleased(mouseX, mouseY, button);
         if(!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return;
         if (currentOverlayType != BankOverlayType.NONE) {
             cir.cancel();

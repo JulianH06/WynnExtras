@@ -184,10 +184,10 @@ public class BankOverlay {
 
                     if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
                         if (verticalAmount > 0) {
-                            BankOverlay2.targetOffset -= 34.5f * 3; //TODO: make it toggleable to scroll a full page or not (add * 3 for full scroll)
+                            BankOverlay2.targetOffset -= 34.75f * 3; //TODO: make it toggleable to scroll a full page or not (add * 3 for full scroll)
                             scrollOffset -= xFitAmount; //Scroll up
                         } else if(canScrollFurther) {
-                            BankOverlay2.targetOffset += 34.5f * 3;
+                            BankOverlay2.targetOffset += 34.75f * 3;
                             scrollOffset += xFitAmount; //Scroll down
                         }
                         if (scrollOffset < 0) {
