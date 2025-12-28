@@ -2,6 +2,7 @@ package julianh06.wynnextras.mixin;
 
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.Container;
+import com.wynntils.models.containers.containers.ItemIdentifierContainer;
 import com.wynntils.models.containers.containers.personal.*;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
@@ -40,6 +41,12 @@ public class InventoryScreenMixin {
 
         ScreenHandler currScreenHandler = McUtils.containerMenu();
         if (currScreenHandler == null) return;
+
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).sourceOfTruthToggle) {
+            if (Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
+                ci.cancel();
+            }
+        }
 
         if (config == null) config = SimpleConfig.getInstance(WynnExtrasConfig.class);
 

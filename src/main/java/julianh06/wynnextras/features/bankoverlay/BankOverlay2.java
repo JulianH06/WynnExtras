@@ -320,9 +320,10 @@ public class BankOverlay2 extends WEHandledScreen {
 
             toggleOverlayWidget.setBounds((int) xPos - 70, (int) yPos, 140, 17);
             toggleOverlayWidget.draw(context, mouseX, mouseY, delta, ui);
-        } else {
-            RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
         }
+//        else {
+//            RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+//        } i dont remember why i added this but ill keep it here for now if i need it again
 
         if(currentOverlayType == BankOverlayType.NONE || MinecraftClient.getInstance() == null) return;
 

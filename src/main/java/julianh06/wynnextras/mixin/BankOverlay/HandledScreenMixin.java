@@ -11,6 +11,7 @@ import com.wynntils.features.tooltips.TooltipFittingFeature;
 import com.wynntils.handlers.item.ItemAnnotation;
 import com.wynntils.handlers.item.ItemHandler;
 import com.wynntils.mc.extension.ItemStackExtension;
+import com.wynntils.models.containers.containers.ItemIdentifierContainer;
 import com.wynntils.models.emeralds.type.EmeraldUnits;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.*;
@@ -37,6 +38,7 @@ import julianh06.wynnextras.event.InventoryKeyPressEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.inventory.BankOverlayButtons.*;
+import julianh06.wynnextras.features.misc.IdentifierOverlay;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
 import julianh06.wynnextras.utils.Pair;
@@ -93,6 +95,8 @@ public abstract class HandledScreenMixin {
 
     @Unique private BankOverlay2 bankOverlay;
 
+    @Unique private IdentifierOverlay identifierOverlay;
+
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if(bankOverlay == null) bankOverlay = new BankOverlay2(ci, (HandledScreen) (Object) this);
@@ -103,12 +107,26 @@ public abstract class HandledScreenMixin {
             return null;
         };
         bankOverlay.render(context, mouseX, mouseY, delta);
+
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).sourceOfTruthToggle) {
+            if (identifierOverlay == null) {
+                identifierOverlay = new IdentifierOverlay();
+            }
+
+            identifierOverlay.render(context, mouseX, mouseY, delta);
+        }
     }
 
 
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).sourceOfTruthToggle) {
+            if (identifierOverlay != null && Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
+                identifierOverlay.mouseClicked(mouseX, mouseY, button);
+            }
+        }
+
         if(bankOverlay == null) return;
         bankOverlay.mouseClicked(mouseX, mouseY, button);
 
