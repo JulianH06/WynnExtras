@@ -32,6 +32,7 @@ import julianh06.wynnextras.features.raid.RaidListData;
 import julianh06.wynnextras.features.waypoints.WaypointData;
 import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
+import julianh06.wynnextras.sound.ModSounds;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -41,7 +42,10 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
@@ -111,6 +115,8 @@ public class WynnExtras implements ClientModInitializer {
 
 	public static String latestVersion = null;
 
+
+
 	static {
 		BACKGROUND_STYLE = Style.EMPTY.withFont(PILL_FONT).
 		withColor(Formatting.DARK_GREEN);
@@ -169,6 +175,9 @@ public class WynnExtras implements ClientModInitializer {
 			WynncraftApiHandler.load();
 			System.out.println("loaded bankdata");
 		});
+
+		//WynnExtrasSounds.register();
+		ModSounds.registerSounds();
 	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)
