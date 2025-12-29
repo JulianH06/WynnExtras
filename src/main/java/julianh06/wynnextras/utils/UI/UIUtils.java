@@ -37,6 +37,24 @@ public final class UIUtils {
     Identifier buttonleftH = Identifier.of("wynnextras", "textures/general/button/lefth.png");
     Identifier buttonrightH = Identifier.of("wynnextras", "textures/general/button/righth.png");
 
+    Identifier buttontld = Identifier.of("wynnextras", "textures/general/buttondark/cornertl.png");
+    Identifier buttontrd = Identifier.of("wynnextras", "textures/general/buttondark/cornertr.png");
+    Identifier buttonbld = Identifier.of("wynnextras", "textures/general/buttondark/cornerbl.png");
+    Identifier buttonbrd = Identifier.of("wynnextras", "textures/general/buttondark/cornerbr.png");
+    Identifier buttontopd = Identifier.of("wynnextras", "textures/general/buttondark/top.png");
+    Identifier buttonbotd = Identifier.of("wynnextras", "textures/general/buttondark/bot.png");
+    Identifier buttonleftd = Identifier.of("wynnextras", "textures/general/buttondark/left.png");
+    Identifier buttonrightd = Identifier.of("wynnextras", "textures/general/buttondark/right.png");
+
+    Identifier buttontlHd = Identifier.of("wynnextras", "textures/general/buttondark/cornertlh.png");
+    Identifier buttontrHd = Identifier.of("wynnextras", "textures/general/buttondark/cornertrh.png");
+    Identifier buttonblHd = Identifier.of("wynnextras", "textures/general/buttondark/cornerblh.png");
+    Identifier buttonbrHd = Identifier.of("wynnextras", "textures/general/buttondark/cornerbrh.png");
+    Identifier buttontopHd = Identifier.of("wynnextras", "textures/general/buttondark/toph.png");
+    Identifier buttonbotHd = Identifier.of("wynnextras", "textures/general/buttondark/both.png");
+    Identifier buttonleftHd = Identifier.of("wynnextras", "textures/general/buttondark/lefth.png");
+    Identifier buttonrightHd = Identifier.of("wynnextras", "textures/general/buttondark/righth.png");
+
     Identifier sliderButtontl = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertl.png");
     Identifier sliderButtontr = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertr.png");
     Identifier sliderButtonbl = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbl.png");
@@ -231,80 +249,66 @@ public final class UIUtils {
     }
 
     public void drawButton(float x, float y, float width, float height, int scale, boolean hovered) {
+        drawButton(x, y, width, height, scale, hovered, false);
+    }
+
+    public void drawButton(float x, float y, float width, float height, int scale, boolean hovered, boolean darkMode) {
         if(width > scale * 2 || height > scale * 2) {
             RenderUtils.drawRect(
                     drawContext.getMatrices(),
-                    CustomColor.fromHexString("82654C"),
+                    darkMode ? CustomColor.fromHexString("2c2d2f") : CustomColor.fromHexString("82654C"),
                     sx(x + scale) - 1, sy(y + scale) - 1, 0,
                     sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
             );
         }
-        if(hovered) {
-            drawImage(buttontlH, x, y, scale, scale);
-            drawImage(buttontrH, x + width - scale, y, scale, scale);
-            drawImage(buttonblH, x, y + height - scale, scale, scale);
-            drawImage(buttonbrH, x + width - scale, y + height - scale, scale, scale);
+        if(darkMode) {
+            drawButtonTextures(x, y, width, height, scale, hovered, buttontlHd, buttontrHd, buttonblHd, buttonbrHd, buttontopHd, buttonbotHd, buttonleftHd, buttonrightHd, buttontld, buttontrd, buttonbld, buttonbrd, buttontopd, buttonbotd, buttonleftd, buttonrightd);
+        } else {
+            drawButtonTextures(x, y, width, height, scale, hovered, buttontlH, buttontrH, buttonblH, buttonbrH, buttontopH, buttonbotH, buttonleftH, buttonrightH, buttontl, buttontr, buttonbl, buttonbr, buttontop, buttonbot, buttonleft, buttonright);
+        }
+    }
+
+    private void drawButtonTextures(float x, float y, float width, float height, int scale, boolean hovered, Identifier buttontlHd, Identifier buttontrHd, Identifier buttonblHd, Identifier buttonbrHd, Identifier buttontopHd, Identifier buttonbotHd, Identifier buttonleftHd, Identifier buttonrightHd, Identifier buttontld, Identifier buttontrd, Identifier buttonbld, Identifier buttonbrd, Identifier buttontopd, Identifier buttonbotd, Identifier buttonleftd, Identifier buttonrightd) {
+        if (hovered) {
+            drawImage(buttontlHd, x, y, scale, scale);
+            drawImage(buttontrHd, x + width - scale, y, scale, scale);
+            drawImage(buttonblHd, x, y + height - scale, scale, scale);
+            drawImage(buttonbrHd, x + width - scale, y + height - scale, scale, scale);
             if (width > scale * 2) {
-                drawImage(buttontopH, x + scale - 2, y, width - scale * 2 + 4, scale);
-                drawImage(buttonbotH, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
+                drawImage(buttontopHd, x + scale - 2, y, width - scale * 2 + 4, scale);
+                drawImage(buttonbotHd, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
             }
             if (height > scale * 2) {
-                drawImage(buttonleftH, x, y + scale - 2, scale, height - scale * 2 + 4);
-                drawImage(buttonrightH, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
+                drawImage(buttonleftHd, x, y + scale - 2, scale, height - scale * 2 + 4);
+                drawImage(buttonrightHd, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
             }
         } else {
-            drawImage(buttontl, x, y, scale, scale);
-            drawImage(buttontr, x + width - scale, y, scale, scale);
-            drawImage(buttonbl, x, y + height - scale, scale, scale);
-            drawImage(buttonbr, x + width - scale, y + height - scale, scale, scale);
+            drawImage(buttontld, x, y, scale, scale);
+            drawImage(buttontrd, x + width - scale, y, scale, scale);
+            drawImage(buttonbld, x, y + height - scale, scale, scale);
+            drawImage(buttonbrd, x + width - scale, y + height - scale, scale, scale);
             if (width > scale * 2) {
-                drawImage(buttontop, x + scale - 2, y, width - scale * 2 + 4, scale);
-                drawImage(buttonbot, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
+                drawImage(buttontopd, x + scale - 2, y, width - scale * 2 + 4, scale);
+                drawImage(buttonbotd, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
             }
             if (height > scale * 2) {
-                drawImage(buttonleft, x, y + scale - 2, scale, height - scale * 2 + 4);
-                drawImage(buttonright, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
+                drawImage(buttonleftd, x, y + scale - 2, scale, height - scale * 2 + 4);
+                drawImage(buttonrightd, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
             }
         }
     }
 
-    public void drawSliderBackground(float x, float y, float width, float height, int scale) {
+    public void drawSliderBackground(float x, float y, float width, float height, int scale, boolean darkMode) {
         if(width > scale * 2 || height > scale * 2) {
             RenderUtils.drawRect(
                     drawContext.getMatrices(),
-                    SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("50352d"),
+                    darkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("50352d"),
                     sx(x + scale) - 1, sy(y + scale) - 1, 0,
                     sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
             );
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            drawImage(sliderButtontlDark, x, y, scale, scale);
-            drawImage(sliderButtontrDark, x + width - scale, y, scale, scale);
-            drawImage(sliderButtonblDark, x, y + height - scale, scale, scale);
-            drawImage(sliderButtonbrDark, x + width - scale, y + height - scale, scale, scale);
-            if (width > scale * 2) {
-                drawImage(sliderButtontopDark, x + scale - 2, y, width - scale * 2 + 4, scale);
-                drawImage(sliderButtonbotDark, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
-            }
-            if (height > scale * 2) {
-                drawImage(sliderButtonleftDark, x, y + scale - 2, scale, height - scale * 2 + 4);
-                drawImage(sliderButtonrightDark, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
-            }
-        } else {
-            drawImage(sliderButtontl, x, y, scale, scale);
-            drawImage(sliderButtontr, x + width - scale, y, scale, scale);
-            drawImage(sliderButtonbl, x, y + height - scale, scale, scale);
-            drawImage(sliderButtonbr, x + width - scale, y + height - scale, scale, scale);
-            if (width > scale * 2) {
-                drawImage(sliderButtontop, x + scale - 2, y, width - scale * 2 + 4, scale);
-                drawImage(sliderButtonbot, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
-            }
-            if (height > scale * 2) {
-                drawImage(sliderButtonleft, x, y + scale - 2, scale, height - scale * 2 + 4);
-                drawImage(sliderButtonright, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
-            }
-        }
+        drawButtonTextures(x, y, width, height, scale, darkMode, sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark, sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark, sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr, sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright);
     }
 }
 
