@@ -38,6 +38,7 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.CappedValue;
+import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
@@ -188,16 +189,16 @@ public class BankOverlay2 extends WEHandledScreen {
     static Identifier signMid3D = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m3_dark.png");
 
     @Unique
-    Identifier lock_locked = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_locked.png");
+    static Identifier lock_locked = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_locked.png");
 
     @Unique
-    Identifier lock_unlocked = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_unlocked.png");
+    static Identifier lock_unlocked = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_unlocked.png");
 
     @Unique
-    Identifier lock_locked_dark = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_locked_dark.png");
+    static Identifier lock_locked_dark = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_locked_dark.png");
 
     @Unique
-    Identifier lock_unlocked_dark = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_unlocked_dark.png");
+    static Identifier lock_unlocked_dark = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_unlocked_dark.png");
 
     @Unique
     static List<Identifier> signMids = new ArrayList<>();
@@ -206,10 +207,10 @@ public class BankOverlay2 extends WEHandledScreen {
     int visibleInventories;
 
     @Unique
-    String priceText;
+    static String priceText;
 
     @Unique
-    String confirmText = "";
+    static String confirmText = "";
 
     @Unique
     private final EnumSet<BankOverlayType> initializedTypes = EnumSet.noneOf(BankOverlayType.class);
@@ -248,6 +249,7 @@ public class BankOverlay2 extends WEHandledScreen {
         switchButtonWidget = null;
         quickActionWidget = null;
         searchbar2 = null;
+        priceText = null;
         activeInv = 0;
         shownPages = 0;
         scissorx1 = 0;
@@ -975,6 +977,8 @@ public class BankOverlay2 extends WEHandledScreen {
                             Pages.BankPages.put(activeInv, slots.stream().map(Slot::getStack).toList());
                             if(annotationCache.get(activeInv) != null) annotationCache.get(activeInv).clear();
                         }
+                    } else if(activeInv != currentData.lastPage - 1) {
+                        shouldWait = true;
                     }
                 }
 
@@ -999,7 +1003,7 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     @Unique
-    public void retryLoad() {
+    public static void retryLoad() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.world == null) return;
 
@@ -1848,6 +1852,16 @@ public class BankOverlay2 extends WEHandledScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(ui == null) return;
             if(y > botBorder || y + height < topBorder) return;
+            if(index >= currentData.lastPage) {
+                if(sign == null) {
+                    sign = new NameSignWidget(index);
+                    addChild(sign);
+                }
+
+                sign.setBounds(x, y - 10, width, 10);
+                ui.drawRect(x, y, width, height, CustomColor.fromHSV(0, 0, 0, 0.25f));
+                return;
+            }
 
             ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? bankTextureDark : bankTexture, x, y, width, height);
 
@@ -1885,6 +1899,29 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if(McUtils.containerMenu() != null && index == currentData.lastPage) {
+                if(priceText == null) {
+                    String text = "§c✖ §7Price: §funknown.";
+                    String text2 = "§7Go to page §f" + currentData.lastPage + " §7to check.";
+
+                    ui.drawCenteredText(text, x + 81, y + 10, CustomColor.fromHexString("FFFFFF"), 1);
+                    ui.drawCenteredText(text2, x + 81, y + 20, CustomColor.fromHexString("FFFFFF"), 1);
+                } else {
+                    ui.drawCenteredText(priceText, x + 81, y + 15, CustomColor.fromHexString("FFFFFF"), 1);
+                }
+
+                if (hovered) {
+                    String buyText = confirmText.isEmpty() ? "§7Click to buy." : confirmText;
+
+                    ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? lock_unlocked_dark : lock_unlocked, x + 82 - 25, y + 46 - 19, 50, 50);
+                    ui.drawCenteredText(buyText, x + 81, y + 80, CustomColor.fromHexString("FFFFFF"), 1);
+                } else {
+                    ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? lock_locked_dark : lock_locked, x + 82 - 25, y + 46 - 19, 50, 50);
+                }
+            }
+
+            if(index >= currentData.lastPage) return;
+
             if(hovered && isMouseInOverlay) {
                 //TODO: checken welches item gehovered ist und den tooltip anzeigen
                 if(index != activeInv) {
@@ -1897,6 +1934,42 @@ public class BankOverlay2 extends WEHandledScreen {
                         ? CustomColor.fromHexString("FFFF00")
                         : CustomColor.fromHexString("FFFFFF");
                 ui.drawRectBorders(x, y + 0.5f, x + 164, y + 92, color);
+            }
+
+            try {
+                if (McUtils.containerMenu() != null && index == activeInv && !shouldWait && (expectedOverlayType == BankOverlayType.NONE || currentOverlayType == expectedOverlayType)) {
+                    ItemStack rightArrow = McUtils.containerMenu().getSlot(52).getStack();
+                    List<Text> lore = rightArrow.getComponents().get(DataComponentTypes.LORE).lines();
+
+                    if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_NAME).getString().contains(">§4>§c>§4>§c>") &&
+                            (pageBuyCustomModelData == 0 || rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0) == pageBuyCustomModelData)
+                    ) {
+                        currentData.lastPage = activeInv + 1;
+                        try {
+                            pageBuyCustomModelData = rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0);
+                        } catch (Exception ignored) {}
+
+                        for (Text text : lore) {
+                            if (text.getString().contains("§7Price")) {
+                                priceText = text.getString();
+                                confirmText = "";
+                                break;
+                            }
+                        }
+                    } else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_NAME).getString().contains(">§4>§c>§4>§c>") &&
+                            pageBuyCustomModelData != 0 && rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0) != pageBuyCustomModelData
+                    ) {
+                        confirmText = "§7Click again to confirm.";
+                    } else if (rightArrow.getCustomName().getString().contains(String.valueOf(currentData.lastPage + 1)) && activeInv == currentData.lastPage - 1) {
+                        currentData.lastPage++;
+                        pageBuyCustomModelData = 0;
+                        priceText = null;
+                        retryLoad();
+                    }
+                } else {
+                    confirmText = "§7Click to go to page " + currentData.lastPage;
+                }
+            } catch (Exception ignored) {
             }
         }
 
@@ -1914,6 +1987,27 @@ public class BankOverlay2 extends WEHandledScreen {
                 );
                 i++;
             }
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if(activeInv == currentData.lastPage - 1) {
+                ScreenHandler currScreenHandler = McUtils.containerMenu();
+                if (currScreenHandler == null) {
+                    return true;
+                }
+                ContainerUtils.clickOnSlot(52, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
+                return true;
+            } else if(index == currentData.lastPage) {
+                if(PersonalStorageUtils == null) return true;
+
+                activeInv = currentData.lastPage - 1;
+                BankOverlay.PersonalStorageUtils.jumpToDestination(activeInv + 1);
+                if(annotationCache.get(activeInv) != null) annotationCache.get(activeInv).clear();
+                retryLoad();
+            }
+
+            return true;
         }
 
         public List<ItemStack> getItems() {
@@ -1939,48 +2033,9 @@ public class BankOverlay2 extends WEHandledScreen {
             this.inventoryIndex = inventoryIndex;
         }
 
-        private void handleClick(int button) {
-            if(shouldWait) return;
-            if(!isMouseInOverlay && !isInventorySlot) return;
-
-            if(activeInv == inventoryIndex || isInventorySlot) {
-                if(index == 4 && isInventorySlot) return; //Ingredient pouch, clicking it within the bank overlay crashes the game
-
-                SlotActionType action = determineActionType(button);
-
-                ItemStack oldHeld = heldItem;
-                heldItem = getHeldItem(index + (isInventorySlot ? 54 : 0), action, button);
-
-                if(heldItem.getCustomName() != null) {
-                    if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
-                        heldItem = oldHeld == null ? Items.AIR.getDefaultStack() : oldHeld;
-                        return;
-                    }
-                }
-
-                if (shouldCancelEmeraldPouch(oldHeld, heldItem)) {
-                    heldItem = Items.AIR.getDefaultStack();
-                }
-
-                if (MinecraftClient.getInstance().interactionManager == null) return;
-
-                MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, index + (isInventorySlot ? 54 : 0), button, action, MinecraftClient.getInstance().player);
-                if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
-                lastClickedSlot2 = new Pair<>(inventoryIndex, index);
-            } else {
-                if (inventoryIndex <= currentData.lastPage) {
-                    activeInv = inventoryIndex;
-                    BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
-                    if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
-                }
-            }
-        }
-
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if (inventoryIndex > currentData.lastPage && !isInventorySlot) {
-                return;
-            }
+            if (inventoryIndex >= currentData.lastPage && !isInventorySlot) return;
 
             if(hovered && (isMouseInOverlay || isInventorySlot)) {
                 ui.drawRect(x, y, width, height, CustomColor.fromHSV(0, 0, 1000, 0.25f));
@@ -2045,7 +2100,41 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
-            handleClick(button);
+            if(shouldWait) return false;
+            if(!isMouseInOverlay && !isInventorySlot) return false;
+            if(inventoryIndex >= currentData.lastPage) return false;
+
+            if(activeInv == inventoryIndex || isInventorySlot) {
+                if(index == 4 && isInventorySlot) return false; //Ingredient pouch, clicking it within the bank overlay crashes the game
+
+                SlotActionType action = determineActionType(button);
+
+                ItemStack oldHeld = heldItem;
+                heldItem = getHeldItem(index + (isInventorySlot ? 54 : 0), action, button);
+
+                if(heldItem.getCustomName() != null) {
+                    if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
+                        heldItem = oldHeld == null ? Items.AIR.getDefaultStack() : oldHeld;
+                        return false;
+                    }
+                }
+
+                if (shouldCancelEmeraldPouch(oldHeld, heldItem)) {
+                    heldItem = Items.AIR.getDefaultStack();
+                }
+
+                if (MinecraftClient.getInstance().interactionManager == null) return false;
+
+                MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, index + (isInventorySlot ? 54 : 0), button, action, MinecraftClient.getInstance().player);
+                if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
+                lastClickedSlot2 = new Pair<>(inventoryIndex, index);
+            } else {
+                if (inventoryIndex <= currentData.lastPage) {
+                    activeInv = inventoryIndex;
+                    BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
+                    if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
+                }
+            }
             return true;
         }
     }
@@ -2166,7 +2255,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 5, hovered);
+            ui.drawButton(x, y, width, height, 5, hovered, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
             ui.drawCenteredText("Click to " + ((SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) ? "disable" : "enable") + " the Bank Overlay", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 0.75f);
         }
 
@@ -2200,7 +2289,7 @@ public class BankOverlay2 extends WEHandledScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-            ui.drawSliderBackground(x, y, width, height, 5);
+            ui.drawSliderBackground(x, y, width, height, 5, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
 
             int totalRows = (int) Math.ceil((double) shownPages / xFitAmount);
             int c = (xFitAmount % 2 == 0 ? 1 : 0);
@@ -2248,7 +2337,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 5, hovered || isHold);
+                ui.drawButton(x, y, width, height, 5, hovered || isHold, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
             }
 
             @Override
@@ -2266,9 +2355,11 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 }
+
 //TODO: Wynnventory price ding supporten
 //TODO: ADD BACK WYNNTILS EMERALD OVERLAY
-//TODO: MAKE DARKMODE TEXTURES
 //TODO: BUG: CLICK SWITCH, SWITCH AGAIN -> MAX PAGES NOT CORRECT (ALSO MESSES WITH NAME PLATES)
 //TODO: BUG (KEINE AHNUNG OB DER NOCH DA IST): wenn man auf character bank switcht wird die page auf der man war nicht gesaved
 //TODO: BOXED ITEM CHANCES
+//TODO: BUG: items werden beim page switchen nciht richtig gespeichert
+//TODO: BUG: OPEN CHARACTER BANK -> SWITCH TO CHARACTER WHICH DOESNT HAVE CHARACTER BANK LOADED YET -> PAGES FROM OTHER CHARACTER ARE SHOWN
