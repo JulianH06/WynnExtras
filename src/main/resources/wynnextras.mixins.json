@@ -10,6 +10,7 @@
     "requireAnnotations": true
   },
   "client": [
+    "GuildMapScreenMixin",
     "InventoryScreenMixin",
     "LivingEntityRendererMixin",
     "PerspectiveMixin",
@@ -32,6 +33,7 @@
     "ItemStatInfoFeatureMixin",
     "MessageFilterFeatureMixin",
     "ScreenHandlerMixin",
+    "TerritoryInfoMixin",
     "TooltipFittingFeatureMixin",
     "TooltipUtilsMixin",
     "Accessor.BannerBlockEntityAccessor",

@@ -33,6 +33,7 @@ import julianh06.wynnextras.features.waypoints.WaypointData;
 import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
+import julianh06.wynnextras.mixin.InventoryScreenMixin;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -223,8 +224,21 @@ public class WynnExtras implements ClientModInitializer {
 		}
 	}
 
+	public static int normalGUIScale = -1;
+	private static WynnExtrasConfig config;
+
 	@SubscribeEvent
 	public void onClientTick(TickEvent event) {
+		if (config == null) config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+		if(config.differentGUIScale) {
+			if (MinecraftClient.getInstance().currentScreen == null) {
+				if (normalGUIScale != -1) {
+					MinecraftClient.getInstance().options.getGuiScale().setValue(normalGUIScale);
+					normalGUIScale = -1;
+				}
+			}
+		}
+
 //		try {
 //			if(McUtils.containerMenu() != null) {
 //				ItemStack rightArrow = McUtils.containerMenu().getSlot(52).getStack();

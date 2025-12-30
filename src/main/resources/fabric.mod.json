@@ -3,17 +3,23 @@
 	"id": "wynnextras",
 	"version": "${version}",
 	"name": "WynnExtras",
-	"description": "The second best Wynncraft mod you'll probably find! \n\nSpecial Thanks to the Wynntils team for making a lot of helpful methods to build on!",
+	"description": "The second best Wynncraft mod you'll probably find!",
 	"authors": [
 		"JulianH06"
 	],
 	"contributors": [
-		"Mikecraft1224",
-		"Teslanator",
-		"elwood24",
-		"LegendaryVirus",
-		"pat_crafter07",
-		"BaltrazYT"
+        "WynnExtras Team:",
+		" Teslanator",
+		" pat_crafter07",
+		" Mikecraft1224",
+		" elwood24",
+		" LegendaryVirus",
+		" BaltrazYT",
+        " ",
+        "Special Credits:",
+        " Wynntils Team",
+        " IceBreaker",
+        " drzxm"
 	],
 	"contact": {
 		"issues": "https://discord.gg/UbC6vZDaD5",
