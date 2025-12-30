@@ -72,7 +72,6 @@ public class BankOverlay {
 
     public static boolean shouldWait = false;
 
-    public static HashMap<Integer, EasyTextInput> BankPageNameInputs = new HashMap<>();
     public static EnumMap<BankOverlayType, HashMap<Integer, EasyTextInput>> BankPageNameInputsByType = new EnumMap<>(BankOverlayType.class);
 
     public static float pageBuyCustomModelData = 0;
@@ -134,31 +133,35 @@ public class BankOverlay {
 
     public static void updateOverlayType() {
         Container container = Models.Container.getCurrentContainer();
-        if (container instanceof AccountBankContainer) {
-            BankOverlay.currentOverlayType = BankOverlayType.ACCOUNT;
-            BankOverlay.currentData = AccountBankData.INSTANCE;
-            currentMaxPages = 21;
-        } else if (container instanceof CharacterBankContainer) {
-            BankOverlay.currentOverlayType = BankOverlayType.CHARACTER;
-            BankOverlay.currentData = CharacterBankData.INSTANCE;
-            currentMaxPages = 12;
-        } else if (container instanceof BookshelfContainer) {
-            BankOverlay.currentOverlayType = BankOverlayType.BOOKSHELF;
-            BankOverlay.currentData = BookshelfData.INSTANCE;
-            currentMaxPages = 12;
-        } else if (container instanceof MiscBucketContainer) {
-            BankOverlay.currentOverlayType = BankOverlayType.MISC;
-            BankOverlay.currentData = MiscBucketData.INSTANCE;
-            currentMaxPages = 12;
-        } else {
-            BankOverlay.currentOverlayType = BankOverlayType.NONE;
-            BankOverlay.currentData = null;
+        switch (container) {
+            case AccountBankContainer accountBankContainer -> {
+                BankOverlay.currentOverlayType = BankOverlayType.ACCOUNT;
+                BankOverlay.currentData = AccountBankData.INSTANCE;
+                currentMaxPages = 21;
+            }
+            case CharacterBankContainer characterBankContainer -> {
+                BankOverlay.currentOverlayType = BankOverlayType.CHARACTER;
+                BankOverlay.currentData = CharacterBankData.INSTANCE;
+                currentMaxPages = 12;
+            }
+            case BookshelfContainer bookshelfContainer -> {
+                BankOverlay.currentOverlayType = BankOverlayType.BOOKSHELF;
+                BankOverlay.currentData = BookshelfData.INSTANCE;
+                currentMaxPages = 12;
+            }
+            case MiscBucketContainer miscBucketContainer -> {
+                BankOverlay.currentOverlayType = BankOverlayType.MISC;
+                BankOverlay.currentData = MiscBucketData.INSTANCE;
+                currentMaxPages = 12;
+            }
+            case null, default -> {
+                BankOverlay.currentOverlayType = BankOverlayType.NONE;
+                BankOverlay.currentData = null;
+            }
         }
     }
 
     public static void registerBankOverlay() {
-        String Bucketname = "\uDAFF\uDFF0\uE00F\uDAFF\uDF68"; //
-        String Tomename = "\uDAFF\uDFF0\uE00F\uDAFF\uDF68"; //both currently broken i think
         WynnExtras.LOGGER.info("Registering Bankoverlay for " + WynnExtras.MOD_ID);
 
         ClientTickEvents.START_CLIENT_TICK.register((tick) -> {
