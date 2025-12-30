@@ -326,7 +326,7 @@ public class WynnExtrasConfig implements ConfigData {
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Receive smart financial advise in the item identifier menu")
-    public boolean sourceOfTruthToggle = true;
+    public boolean sourceOfTruthToggle = false;
 
     @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Raid Personal Bests (internal)")
