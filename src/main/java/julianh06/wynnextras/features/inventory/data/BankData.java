@@ -63,6 +63,10 @@ public abstract class BankData {
                 System.err.println("[WynnExtras] Couldn't read bank data:");
                 e.printStackTrace();
             }
+        } else {
+            this.BankPages = new HashMap<>();
+            this.lastPage = 1;
+            this.BankPageNames = new HashMap<>();
         }
     }
 

@@ -21,12 +21,17 @@ public class TextInputWidget extends Widget {
     protected CustomColor focusedColor = CustomColor.fromHexString("FFEA00");
     protected CustomColor textColor = CustomColor.fromHexString("000000");
 
-    int textXOffset, textYOffset;
+    int textXOffset, textYOffset, textScale;
 
     public TextInputWidget(int x, int y, int width, int height, int textXOffset, int textYOffset) {
+        this(x, y, width, height, textXOffset, textYOffset, 3);
+    }
+
+    public TextInputWidget(int x, int y, int width, int height, int textXOffset, int textYOffset, int textScale) {
         super(x, y, width, height);
         this.textXOffset = textXOffset;
         this.textYOffset = textYOffset;
+        this.textScale = textScale;
     }
 
     @Override
@@ -45,10 +50,10 @@ public class TextInputWidget extends Widget {
         int textY = y + textYOffset;
 
         if (input.isEmpty() && !isFocused()) {
-            ui.drawText(placeholder, textX, textY, CustomColor.fromHexString("FFFFFF"));
+            ui.drawText(placeholder, textX, textY, CustomColor.fromHexString("FFFFFF"), textScale);
         } else {
             if (cursorPos > input.length()) cursorPos = input.length();
-            ui.drawText(input, textX, textY, textColor);
+            ui.drawText(input, textX, textY, textColor, textScale);
 
             long now = System.currentTimeMillis();
             if (now - lastBlink > 500) {
@@ -57,14 +62,14 @@ public class TextInputWidget extends Widget {
             }
 
             if (blinkToggle && isFocused()) {
-                int cursorX = (int) (textX + (font.getWidth(input.substring(0, cursorPos))) * ui.getScaleFactor());
-                ui.drawLine(cursorX, textY - 6, cursorX, textY + 28, 2, textColor);
+                int cursorX = (int) (textX + (font.getWidth(input.substring(0, cursorPos))) * ui.getScaleFactor() + 1);
+                ui.drawLine(cursorX, textY - 2 * textScale, cursorX, textY + 10 * textScale, 0.75f * textScale, textColor);
             }
         }
     }
 
     @Override
-    protected boolean onClick(int button) {
+    public boolean onClick(int button) {
         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         setFocused(true);
         cursorPos = input.length();

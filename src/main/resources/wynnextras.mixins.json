@@ -1,6 +1,7 @@
 {
   "required": true,
   "package": "julianh06.wynnextras.mixin",
+  "plugin": "julianh06.wynnextras.mixin.ModMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "injectors": {
     "defaultRequire": 1
@@ -21,12 +22,14 @@
     "BankOverlay.DrawContextMixin",
     "BankOverlay.HandledScreenMixin",
     "Invoker.BannerBlockEntityRendererInvoker",
-    "Invoker.HandledScreenInvoker"
+    "Invoker.HandledScreenInvoker",
+    "Invoker.wmd$ItemOverlayFeatureInvoker"
   ],
   "mixins": [
     "CharacterModelMixin",
     "ChatPacketRecievedEventMixin",
     "ChatScreenMixin",
+    "ItemGuessFeatureAccessor",
     "ItemStatInfoFeatureMixin",
     "MessageFilterFeatureMixin",
     "ScreenHandlerMixin",

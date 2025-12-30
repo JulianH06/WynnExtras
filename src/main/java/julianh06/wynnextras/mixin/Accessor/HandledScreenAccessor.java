@@ -14,9 +14,9 @@ public interface HandledScreenAccessor {
     @Accessor("touchDragStack")
     ItemStack getTouchDragStack();
 
-    @Accessor("x")
+    @Accessor
     int getX();
 
-    @Accessor("y")
+    @Accessor
     int getY();
 }

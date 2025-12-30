@@ -324,7 +324,9 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Name("Remove front person view")
     public boolean removeFrontPersonView = false;
 
-
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Name("Receive smart financial advise in the item identifier menu")
+    public boolean sourceOfTruthToggle = false;
 
     @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Raid Personal Bests (internal)")

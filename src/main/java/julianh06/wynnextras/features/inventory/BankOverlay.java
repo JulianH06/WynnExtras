@@ -16,6 +16,7 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
+import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.inventory.data.*;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -30,7 +31,6 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.collection.DefaultedList;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
-import org.spongepowered.asm.mixin.Unique;
 
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -72,13 +72,20 @@ public class BankOverlay {
 
     public static boolean shouldWait = false;
 
-    public static HashMap<Integer, EasyTextInput> BankPageNameInputs = new HashMap<>();
     public static EnumMap<BankOverlayType, HashMap<Integer, EasyTextInput>> BankPageNameInputsByType = new EnumMap<>(BankOverlayType.class);
 
     public static float pageBuyCustomModelData = 0;
 
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
+        if(BankOverlay2.searchbar2 != null && (event.getAction() == GLFW.GLFW_PRESS || event.getAction() == GLFW.GLFW_REPEAT)) {
+            BankOverlay2.searchbar2.keyPressed(event.getKey(), event.getScanCode(), 0);
+        }
+        for(BankOverlay2.PageWidget page : BankOverlay2.pages) {
+            if((event.getAction() == GLFW.GLFW_PRESS || event.getAction() == GLFW.GLFW_REPEAT)) {
+                page.keyPressed(event.getKey(), event.getScanCode(), 0);
+            }
+        }
         if(!InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), GLFW.GLFW_KEY_LEFT_SHIFT) && SimpleConfig.getInstance(WynnExtrasConfig.class).enableScrollWithArrowKeys) {
             if (event.getKey() == GLFW.GLFW_KEY_UP && event.getAction() == GLFW.GLFW_PRESS) {
                 if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
@@ -101,6 +108,12 @@ public class BankOverlay {
 
     @SubscribeEvent
     public void onChar(CharInputEvent event) {
+        if(BankOverlay2.searchbar2 != null) {
+            BankOverlay2.searchbar2.charTyped(event.getCharacter(), 0);
+        }
+        for(BankOverlay2.PageWidget page : BankOverlay2.pages) {
+            page.charTyped(event.getCharacter(), 0);
+        }
         if(activeTextInput != null) {
             activeTextInput.onCharInput(event);
         }
@@ -120,35 +133,35 @@ public class BankOverlay {
 
     public static void updateOverlayType() {
         Container container = Models.Container.getCurrentContainer();
-        if (container instanceof AccountBankContainer) {
-            BankOverlay.currentOverlayType = BankOverlayType.ACCOUNT;
-            BankOverlay.currentData = AccountBankData.INSTANCE;
-            currentMaxPages = 21;
-            System.out.println("IS ACCOUNT BANK");
-        } else if (container instanceof CharacterBankContainer) {
-            BankOverlay.currentOverlayType = BankOverlayType.CHARACTER;
-            BankOverlay.currentData = CharacterBankData.INSTANCE;
-            currentMaxPages = 12;
-            System.out.println("IS CHARACTER BANK");
-        } else if (container instanceof BookshelfContainer) {
-            BankOverlay.currentOverlayType = BankOverlayType.BOOKSHELF;
-            BankOverlay.currentData = BookshelfData.INSTANCE;
-            currentMaxPages = 12;
-            System.out.println("IS BOOKSHELF");
-        } else if (container instanceof MiscBucketContainer) {
-            BankOverlay.currentOverlayType = BankOverlayType.MISC;
-            BankOverlay.currentData = MiscBucketData.INSTANCE;
-            currentMaxPages = 12;
-            System.out.println("IS MISC BUCKET");
-        } else {
-            BankOverlay.currentOverlayType = BankOverlayType.NONE;
-            BankOverlay.currentData = null;
+        switch (container) {
+            case AccountBankContainer accountBankContainer -> {
+                BankOverlay.currentOverlayType = BankOverlayType.ACCOUNT;
+                BankOverlay.currentData = AccountBankData.INSTANCE;
+                currentMaxPages = 21;
+            }
+            case CharacterBankContainer characterBankContainer -> {
+                BankOverlay.currentOverlayType = BankOverlayType.CHARACTER;
+                BankOverlay.currentData = CharacterBankData.INSTANCE;
+                currentMaxPages = 12;
+            }
+            case BookshelfContainer bookshelfContainer -> {
+                BankOverlay.currentOverlayType = BankOverlayType.BOOKSHELF;
+                BankOverlay.currentData = BookshelfData.INSTANCE;
+                currentMaxPages = 12;
+            }
+            case MiscBucketContainer miscBucketContainer -> {
+                BankOverlay.currentOverlayType = BankOverlayType.MISC;
+                BankOverlay.currentData = MiscBucketData.INSTANCE;
+                currentMaxPages = 12;
+            }
+            case null, default -> {
+                BankOverlay.currentOverlayType = BankOverlayType.NONE;
+                BankOverlay.currentData = null;
+            }
         }
     }
 
     public static void registerBankOverlay() {
-        String Bucketname = "\uDAFF\uDFF0\uE00F\uDAFF\uDF68"; //
-        String Tomename = "\uDAFF\uDFF0\uE00F\uDAFF\uDF68"; //both currently broken i think
         WynnExtras.LOGGER.info("Registering Bankoverlay for " + WynnExtras.MOD_ID);
 
         ClientTickEvents.START_CLIENT_TICK.register((tick) -> {
@@ -181,8 +194,10 @@ public class BankOverlay {
 
                     if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
                         if (verticalAmount > 0) {
+                            BankOverlay2.targetOffset -= 104f;
                             scrollOffset -= xFitAmount; //Scroll up
                         } else if(canScrollFurther) {
+                            BankOverlay2.targetOffset += 104f;
                             scrollOffset += xFitAmount; //Scroll down
                         }
                         if (scrollOffset < 0) {
