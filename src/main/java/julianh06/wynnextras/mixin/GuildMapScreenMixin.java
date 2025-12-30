@@ -37,12 +37,12 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@Mixin(value = GuildMapScreen.class, remap = false)
+@Mixin(value = GuildMapScreen.class)
 public class GuildMapScreenMixin extends AbstractMapScreen {
-    @Shadow private boolean territoryDefenseFilterEnabled = false;
-    @Shadow private boolean hybridMode = true;
-    @Shadow private GuildResourceValues territoryDefenseFilterLevel;
-    @Shadow private TerritoryDefenseFilterType territoryDefenseFilterType;
+    @Shadow(remap = false) private boolean territoryDefenseFilterEnabled;
+    @Shadow(remap = false) private boolean hybridMode;
+    @Shadow(remap = false) private GuildResourceValues territoryDefenseFilterLevel;
+    @Shadow(remap = false) private TerritoryDefenseFilterType territoryDefenseFilterType;
 
 
     @Unique
@@ -71,7 +71,7 @@ public class GuildMapScreenMixin extends AbstractMapScreen {
     }
 
 
-    @Inject(method = "renderPois(Lnet/minecraft/client/util/math/MatrixStack;II)V", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = "renderPois(Lnet/minecraft/client/util/math/MatrixStack;II)V", at = @At("HEAD"), cancellable = true)
     private void renderPois(MatrixStack poseStack, int mouseX, int mouseY, CallbackInfo ci) {
         List<TerritoryPoi> advancementPois = territoryDefenseFilterEnabled
                 ? Models.Territory.getFilteredTerritoryPoisFromAdvancement(
@@ -115,7 +115,7 @@ public class GuildMapScreenMixin extends AbstractMapScreen {
         ci.cancel();
     }
 
-    @Inject(method = "renderTerritoryTooltip", at = @At("HEAD"), remap = false, cancellable = true)
+    @Inject(method = "renderTerritoryTooltip", at = @At("HEAD"), cancellable = true)
     private static void renderTerritoryTooltip(
             MatrixStack poseStack, int xOffset, int yOffset, TerritoryPoi territoryPoi, CallbackInfo ci) {
         final TerritoryInfo territoryInfo = territoryPoi.getTerritoryInfo();
