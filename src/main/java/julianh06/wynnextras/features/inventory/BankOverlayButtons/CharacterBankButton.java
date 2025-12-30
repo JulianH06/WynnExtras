@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.inventory.BankOverlayButtons;
 
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
+import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
@@ -36,9 +37,10 @@ public class CharacterBankButton extends EasyButton {
     public void click() {
         ScreenHandler currScreenHandler = McUtils.containerMenu();
 
-        activeInv = 0;
+        activeInv = 1;
         scrollOffset = 0;
         currentData.save();
+        BankOverlay2.pages.clear();
 
         if(currentOverlayType == BankOverlayType.CHARACTER) expectedOverlayType = BankOverlayType.ACCOUNT;
         else if (currentOverlayType == BankOverlayType.ACCOUNT) expectedOverlayType = BankOverlayType.CHARACTER;

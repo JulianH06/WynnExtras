@@ -1,0 +1,34 @@
+{
+  "yes": {
+    "sounds": [
+      "wynnextras:yes"
+    ]
+  },
+  "no": {
+    "sounds": [
+      "wynnextras:no",
+      "wynnextras:no2"
+    ]
+  },
+  "nothing": {
+    "sounds": [
+      "wynnextras:nothing",
+      "wynnextras:nothing2"
+    ]
+  },
+  "idts": {
+    "sounds": [
+      "wynnextras:idts"
+    ]
+  },
+  "askagain": {
+    "sounds": [
+      "wynnextras:askagain"
+    ]
+  },
+  "neither": {
+    "sounds": [
+      "wynnextras:neither"
+    ]
+  }
+}

@@ -13,6 +13,7 @@ import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.aspects.maintracking;
+import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
@@ -31,6 +32,7 @@ import julianh06.wynnextras.features.raid.RaidListData;
 import julianh06.wynnextras.features.waypoints.WaypointData;
 import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
+import julianh06.wynnextras.sound.ModSounds;
 import julianh06.wynnextras.mixin.InventoryScreenMixin;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.api.ClientModInitializer;
@@ -41,7 +43,10 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
@@ -111,6 +116,8 @@ public class WynnExtras implements ClientModInitializer {
 
 	public static String latestVersion = null;
 
+
+
 	static {
 		BACKGROUND_STYLE = Style.EMPTY.withFont(PILL_FONT).
 		withColor(Formatting.DARK_GREEN);
@@ -169,6 +176,9 @@ public class WynnExtras implements ClientModInitializer {
 			WynncraftApiHandler.load();
 			System.out.println("loaded bankdata");
 		});
+
+		//WynnExtrasSounds.register();
+		ModSounds.registerSounds();
 	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)
@@ -181,7 +191,17 @@ public class WynnExtras implements ClientModInitializer {
 					new KeyInputEvent(key, scancode, action, mods).post();//, character.get()).post();
 				}
 
-				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && BankOverlay.activeTextInput != null && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
+				if(BankOverlay2.searchbar2 != null) {
+					if (BankOverlay.currentOverlayType != BankOverlayType.NONE && BankOverlay2.searchbar2.isFocused() && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
+				}
+
+				for(BankOverlay2.PageWidget page : BankOverlay2.pages) {
+					if(page.sign == null) continue;
+					if(page.sign.textInputWidget == null) continue;
+
+					if (BankOverlay.currentOverlayType != BankOverlayType.NONE && page.sign.textInputWidget.isFocused() && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
+				}
+
 				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)) return;
 
 				if (previousCallback != null) {
@@ -192,7 +212,6 @@ public class WynnExtras implements ClientModInitializer {
 			GLFW.glfwSetCharCallback(MinecraftClient.getInstance().getWindow().getHandle(), (win, codepoint) -> {
 				new CharInputEvent((char) codepoint).post();
 			});
-
 		}
 	}
 

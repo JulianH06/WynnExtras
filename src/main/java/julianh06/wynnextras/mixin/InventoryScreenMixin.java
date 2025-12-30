@@ -2,6 +2,7 @@ package julianh06.wynnextras.mixin;
 
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.Container;
+import com.wynntils.models.containers.containers.ItemIdentifierContainer;
 import com.wynntils.models.containers.containers.personal.*;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
@@ -40,14 +41,33 @@ public class InventoryScreenMixin {
         ScreenHandler currScreenHandler = McUtils.containerMenu();
         if (currScreenHandler == null) return;
 
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).sourceOfTruthToggle) {
+            if (Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
+                ci.cancel();
+            }
+        }
+
         if (config == null) config = SimpleConfig.getInstance(WynnExtrasConfig.class);
-        if (!config.toggleBankOverlay) return;
 
         if(config.differentGUIScale) {
             if(normalGUIScale == -1) {
                 normalGUIScale = MinecraftClient.getInstance().options.getGuiScale().getValue();
                 MinecraftClient.getInstance().options.getGuiScale().setValue(config.customGUIScale);
             }
+        }
+
+        if(!config.toggleBankOverlay) {
+            Container container = Models.Container.getCurrentContainer();
+            if (container instanceof AccountBankContainer ||
+                container instanceof CharacterBankContainer ||
+                container instanceof BookshelfContainer ||
+                container instanceof MiscBucketContainer
+            ) {
+                BankOverlay.currentOverlayType = BankOverlayType.NONE;
+                BankOverlay.currentData = null;
+                ci.cancel();
+            }
+            return;
         }
 
         BankOverlay.updateOverlayType();
