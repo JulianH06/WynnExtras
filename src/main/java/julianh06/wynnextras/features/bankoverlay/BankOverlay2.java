@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.wynnmod.feature.Feature;
 import com.wynnmod.feature.item.ItemOverlayFeature;
 import com.wynnmod.util.wynncraft.item.map.WynncraftItemDatabase;
+import com.wynnventory.config.ConfigManager;
 import com.wynntils.core.components.Handlers;
 import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
@@ -13,6 +14,7 @@ import com.wynntils.features.inventory.InventoryEmeraldCountFeature;
 import com.wynntils.features.inventory.ItemHighlightFeature;
 import com.wynntils.features.inventory.ItemTextOverlayFeature;
 import com.wynntils.features.inventory.UnidentifiedItemIconFeature;
+import com.wynntils.features.tooltips.ItemGuessFeature;
 import com.wynntils.features.tooltips.TooltipFittingFeature;
 import com.wynntils.handlers.item.ItemAnnotation;
 import com.wynntils.handlers.item.ItemHandler;
@@ -39,6 +41,8 @@ import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.CappedValue;
 import com.wynntils.utils.wynn.ContainerUtils;
+import com.wynnventory.util.ItemStackUtils;
+import com.wynnventory.util.PriceTooltipHelper;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
@@ -47,6 +51,7 @@ import julianh06.wynnextras.features.inventory.BankOverlayButtons.*;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
+import julianh06.wynnextras.mixin.ItemGuessFeatureAccessor;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.UI.*;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
@@ -421,10 +426,6 @@ public class BankOverlay2 extends WEHandledScreen {
         scrollBarWidget.setBounds(xStart + xFitAmount * 170, yStart - 13, 15, (yFitAmount - 1) * 104 + 12);
         scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
 
-        //        RenderSystem.disableDepthTest();
-        //RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
-        //        RenderSystem.enableDepthTest();
-
         context.getMatrices().push();
         ci.cancel();
 
@@ -481,7 +482,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     pageAmount++;
                 }
 
-                if(invY > yStart - 100 && invY < yStart + 100 * (yFitAmount - 1)) page.draw(context, mouseX, mouseY, delta, ui);
+                if(invY > yStart - 100 && invY < yStart + 103 * (yFitAmount - 1)) page.draw(context, mouseX, mouseY, delta, ui);
                 i++;
                 visuali++;
             }
@@ -543,6 +544,8 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         quickActionWidget.draw(context, mouseX, mouseY, delta, ui);
+
+        drawEmeraldOverlay(context, xStart - 36, yStart - 14);
 
         //System.out.println(activeInvSlots.getFirst().getStack().getCustomName());
 
@@ -1100,20 +1103,22 @@ public class BankOverlay2 extends WEHandledScreen {
     @Unique
     private static void renderHighlightOverlay(DrawContext context, ItemStack stack, int x, int y) {
         if(stack.getItem() == Items.AIR) return;
-        if (itemHighlightFeature == null) itemHighlightFeature = new ItemHighlightFeature();
+        if (itemHighlightFeature == null) itemHighlightFeature = Managers.Feature.getFeatureInstance(ItemHighlightFeature.class);
 
         CustomColor color = ((ItemHighlightFeatureInvoker) itemHighlightFeature).invokeGetHighlightColor(stack, false);
         if (!Objects.equals(color, CustomColor.NONE)) {
-            RenderUtils.drawTexturedRectWithColor(
-                    context.getMatrices(),
-                    Texture.HIGHLIGHT.resource(),
-                    color.withAlpha(SimpleConfig.getInstance(WynnExtrasConfig.class).wynntilsItemRarityBackgroundAlpha),
-                    x - 1, y - 1, 100, 18, 18,
-                    highlightTexture.get().ordinal() * 18 + 18, 0,
-                    18, 18,
-                    Texture.HIGHLIGHT.width(),
-                    Texture.HIGHLIGHT.height()
-            );
+            try {
+                RenderUtils.drawTexturedRectWithColor(
+                        context.getMatrices(),
+                        Texture.HIGHLIGHT.resource(),
+                        color.withAlpha(SimpleConfig.getInstance(WynnExtrasConfig.class).wynntilsItemRarityBackgroundAlpha),
+                        x - 1, y - 1, 100, 18, 18,
+                        ((ItemHighlightFeature.HighlightTexture) itemHighlightFeature.getConfigOptionFromString("highlightTexture").get().get()).ordinal() * 18 + 18, 0,
+                        18, 18,
+                        Texture.HIGHLIGHT.width(),
+                        Texture.HIGHLIGHT.height()
+                );
+            } catch (Exception ignored) {}
         }
     }
 
@@ -1133,10 +1138,10 @@ public class BankOverlay2 extends WEHandledScreen {
 
                 context.getMatrices().push();
                 context.getMatrices().translate(0, 0, 100);
-                ((ItemTextOverlayFeatureMixin) new ItemTextOverlayFeature()).invokeDrawTextOverlay(context.getMatrices(), stack, x, y, false);
+                ((ItemTextOverlayFeatureMixin) Managers.Feature.getFeatureInstance(ItemTextOverlayFeature.class)).invokeDrawTextOverlay(context.getMatrices(), stack, x, y, false);
                 context.getMatrices().pop();
             }
-            ((UnidentifiedItemIconFeatureInvoker) new UnidentifiedItemIconFeature()).invokeDrawIcon(context.getMatrices(), stack, x, y, 100);
+            ((UnidentifiedItemIconFeatureInvoker) Managers.Feature.getFeatureInstance(UnidentifiedItemIconFeature.class)).invokeDrawIcon(context.getMatrices(), stack, x, y, 100);
         }
     }
 
@@ -1265,9 +1270,19 @@ public class BankOverlay2 extends WEHandledScreen {
                     currentHoveredWynnitem = i;
                     return TooltipUtils.getWynnItemTooltip(hoveredSlot, i);
                 }).filter(t -> !t.isEmpty())
-                .orElse(hoveredSlot.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.ADVANCED));
+                .orElse(hoveredSlot.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC));
 
-        List<TooltipComponent> components = TooltipUtils.getClientTooltipComponent(tooltip);
+        List<TooltipComponent> components = new ArrayList<>(TooltipUtils.getClientTooltipComponent(tooltip));
+
+        if (item.isPresent() && item.get() instanceof GearBoxItem gearBox) {
+            List<Text> addon = ((ItemGuessFeatureAccessor)
+                    Managers.Feature.getFeatureInstance(ItemGuessFeature.class))
+                    .callGetTooltipAddon(gearBox);
+
+            tooltip.addAll(addon);
+            components.addAll(TooltipUtils.getClientTooltipComponent(addon));
+        }
+
         int tooltipHeight = TooltipUtils.getTooltipHeight(components);
         int screenHeight = screen.height;
         float scale = 1.0f;
@@ -1291,6 +1306,29 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         context.getMatrices().pop();
+
+        try {
+            if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
+                //Slightly modified version of the wynnventory price overlay render
+                ConfigManager config = ConfigManager.getInstance();
+
+                ItemStack stack = hoveredSlot;
+
+                // Screen independent actions
+                if (config.isShowTooltips()) {
+                    Models.Item.getWynnItem(stack)
+                            .ifPresent(wynnItem -> renderPriceTooltip(context, mouseX, mouseY, stack));
+                }
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void renderPriceTooltip(DrawContext guiGraphics, int x, int y, ItemStack stack) {
+        ConfigManager config = ConfigManager.getInstance();
+        List<Text> tooltips = ItemStackUtils.getTooltips(stack);
+        PriceTooltipHelper.renderPriceInfoTooltip(
+                guiGraphics, x, y, stack, tooltips, config.isAnchorTooltips()
+        );
     }
 
     @Unique
@@ -1638,7 +1676,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
     @Unique
     void drawEmeraldOverlay(DrawContext context, int x, int y) {
-        InventoryEmeraldCountFeature emeraldCountFeature = new InventoryEmeraldCountFeature();
+        InventoryEmeraldCountFeature emeraldCountFeature = Managers.Feature.getFeatureInstance(InventoryEmeraldCountFeature.class);
         int emeraldAmountInt = Models.Emerald.getAmountInContainer();
         String[] emeraldAmounts = ((InventoryEmeraldCountFeatureInvoker) emeraldCountFeature).invokeGetRenderableEmeraldAmounts(emeraldAmountInt);
 
@@ -2062,14 +2100,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
             try {
                 if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-                    if(stack.getCustomName().contains(Text.of("Heliophilia"))) {
-                        System.out.println("a");
-                    }
                     ItemOverlayFeature itemOverlayFeature = Feature.getInstance(ItemOverlayFeature.class);
                     ((wmd$ItemOverlayFeatureInvoker) itemOverlayFeature).callOnRenderItem(ctx, stack, x, y, false);
-                    if (index == 1) {
-                        System.out.println(WynncraftItemDatabase.getMap());
-                    }
                 }
             } catch (Exception ignored) {}
         }
@@ -2102,7 +2134,7 @@ public class BankOverlay2 extends WEHandledScreen {
         protected boolean onClick(int button) {
             if(shouldWait) return false;
             if(!isMouseInOverlay && !isInventorySlot) return false;
-            if(inventoryIndex >= currentData.lastPage) return false;
+            if(inventoryIndex >= currentData.lastPage && !isInventorySlot) return false;
 
             if(activeInv == inventoryIndex || isInventorySlot) {
                 if(index == 4 && isInventorySlot) return false; //Ingredient pouch, clicking it within the bank overlay crashes the game
@@ -2129,11 +2161,14 @@ public class BankOverlay2 extends WEHandledScreen {
                 if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
                 lastClickedSlot2 = new Pair<>(inventoryIndex, index);
             } else {
-                if (inventoryIndex <= currentData.lastPage) {
-                    activeInv = inventoryIndex;
-                    BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
-                    if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
-                }
+                List<ItemStack> stacks = BankOverlay.activeInvSlots.stream()
+                        .map(Slot::getStack)
+                        .collect(Collectors.toList());
+
+                Pages.BankPages.put(activeInv, stacks);
+                activeInv = inventoryIndex;
+                BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
+                if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
             }
             return true;
         }
@@ -2233,6 +2268,11 @@ public class BankOverlay2 extends WEHandledScreen {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             ScreenHandler currScreenHandler = McUtils.containerMenu();
 
+            List<ItemStack> stacks = BankOverlay.activeInvSlots.stream()
+                    .map(Slot::getStack)
+                    .collect(Collectors.toList());
+
+            Pages.BankPages.put(activeInv, stacks);
             activeInv = 0;
             actualOffset = 0;
             targetOffset = 0;
@@ -2263,6 +2303,7 @@ public class BankOverlay2 extends WEHandledScreen {
         protected boolean onClick(int button) {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay = !SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay;
+            SimpleConfig.save(WynnExtrasConfig.class);
             return false;
         }
     }
@@ -2355,11 +2396,3 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 }
-
-//TODO: Wynnventory price ding supporten
-//TODO: ADD BACK WYNNTILS EMERALD OVERLAY
-//TODO: BUG: CLICK SWITCH, SWITCH AGAIN -> MAX PAGES NOT CORRECT (ALSO MESSES WITH NAME PLATES)
-//TODO: BUG (KEINE AHNUNG OB DER NOCH DA IST): wenn man auf character bank switcht wird die page auf der man war nicht gesaved
-//TODO: BOXED ITEM CHANCES
-//TODO: BUG: items werden beim page switchen nciht richtig gespeichert
-//TODO: BUG: OPEN CHARACTER BANK -> SWITCH TO CHARACTER WHICH DOESNT HAVE CHARACTER BANK LOADED YET -> PAGES FROM OTHER CHARACTER ARE SHOWN
