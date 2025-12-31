@@ -117,6 +117,7 @@ public class WaypointData {
             newWaypoint.show = waypoint.show;
             newWaypoint.showName = waypoint.showName;
             newWaypoint.showDistance = waypoint.showDistance;
+            newWaypoint.seeThrough = waypoint.seeThrough;
             newWaypoint.categoryName = waypoint.categoryName;
 
             for (WaypointCategory cat : copy.categories) {

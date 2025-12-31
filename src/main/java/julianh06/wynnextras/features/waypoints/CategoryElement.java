@@ -43,6 +43,8 @@ public class CategoryElement {
     public EasyButton showAllNamesButton;
     public EasyButton hideAllDistancesButton;
     public EasyButton showAllDistancesButton;
+    public EasyButton enableAllSeeTroughButton;
+    public EasyButton disableAllSeeTroughButton;
     //public EasyButton exportButton;
     public EasyColorPicker colorPicker;
     public EasySlider alphaSlider;
@@ -135,7 +137,7 @@ public class CategoryElement {
                     if(element.waypoint.categoryName.isEmpty()) continue;
                     if(element.waypoint.categoryName.equals(category.name)) {
                         element.waypoint.showDistance = false;
-                        }
+                    }
                 }
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                         Text.of("Now hiding distances to all waypoints of category " + category.name)));
@@ -154,6 +156,36 @@ public class CategoryElement {
                 }
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                         Text.of("Now showing distances to all waypoints of category " + category.name)));
+            }
+        };
+
+        enableAllSeeTroughButton = new EasyButton(-1, -1, -1, -1) {
+            @Override
+            public void click() {
+                for(WaypointElement element : WaypointScreen.elements) {
+                    if(element.waypoint.categoryName == null) continue;
+                    if(element.waypoint.categoryName.isEmpty()) continue;
+                    if(element.waypoint.categoryName.equals(category.name)) {
+                        element.waypoint.seeThrough = true;
+                    }
+                }
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                        Text.of("All waypoints of category " + category.name + " are now see-through")));
+            }
+        };
+
+        disableAllSeeTroughButton = new EasyButton(-1, -1, -1, -1) {
+            @Override
+            public void click() {
+                for(WaypointElement element : WaypointScreen.elements) {
+                    if(element.waypoint.categoryName == null) continue;
+                    if(element.waypoint.categoryName.isEmpty()) continue;
+                    if(element.waypoint.categoryName.equals(category.name)) {
+                        element.waypoint.seeThrough = false;
+                    }
+                }
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                        Text.of("All waypoints of category " + category.name + " are now non see-through")));
             }
         };
 
@@ -269,6 +301,18 @@ public class CategoryElement {
         hideAllDistancesButton.setHeight(15f * 3 / scaleFactor);
         hideAllDistancesButton.drawWithTexture(context, deleteTexture);
 
+        enableAllSeeTroughButton.setX(x + 174 * 3 / scaleFactor);
+        enableAllSeeTroughButton.setY(y + 20 * 3 / scaleFactor);
+        enableAllSeeTroughButton.setWidth(15f * 3 / scaleFactor);
+        enableAllSeeTroughButton.setHeight(15f * 3 / scaleFactor);
+        enableAllSeeTroughButton.drawWithTexture(context, activeTexture);
+
+        disableAllSeeTroughButton.setX(x + 174 * 3 / scaleFactor);
+        disableAllSeeTroughButton.setY(y + 40 * 3 / scaleFactor);
+        disableAllSeeTroughButton.setWidth(15f * 3 / scaleFactor);
+        disableAllSeeTroughButton.setHeight(15f * 3 / scaleFactor);
+        disableAllSeeTroughButton.drawWithTexture(context, deleteTexture);
+
 //        exportButton.setX(x + width / 2 - 150 / scaleFactor);
 //        exportButton.setY(y + height - 53 / scaleFactor);
 //        exportButton.setWidth(300f / scaleFactor);
@@ -290,11 +334,17 @@ public class CategoryElement {
         FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("For all")), x + (float) (136 * 3) / scaleFactor, y + 52f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
 
         colorPicker.setX(x + width - 15 * 3 / scaleFactor);
-        colorPicker.setY(y + 25 * 3 / scaleFactor);
+        colorPicker.setY(y + 190 / scaleFactor);
         colorPicker.setWidth(13f * 3 / scaleFactor);
         colorPicker.setHeight(13f * 3 / scaleFactor);
         colorPicker.draw(context);
-        RenderUtils.drawTexturedRect(context.getMatrices(), colorPickerBorderTexture, x + width - 16f * 3 / scaleFactor, y + 24f * 3 / scaleFactor, 15f * 3/ scaleFactor, 15f * 3/ scaleFactor, 15 * 3/ scaleFactor, 15 * 3/ scaleFactor);
+        RenderUtils.drawTexturedRect(context.getMatrices(), colorPickerBorderTexture, x + width - 16f * 3 / scaleFactor, y + 186f / scaleFactor, 15f * 3/ scaleFactor, 15f * 3/ scaleFactor, 15 * 3/ scaleFactor, 15 * 3/ scaleFactor);
+
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Enable/")), x + (float) (191 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Disable")), x + (float) (191 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("See through")), x + (float) (191 * 3) / scaleFactor, y + 43f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("For all")), x + (float) (191 * 3) / scaleFactor, y + 52f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+
     }
 
     public void click(int mouseX, int mouseY) {
@@ -320,6 +370,14 @@ public class CategoryElement {
 
         if (showAllDistancesButton.isClickInBounds(mouseX, mouseY)) {
             showAllDistancesButton.click();
+        }
+
+        if (enableAllSeeTroughButton.isClickInBounds(mouseX, mouseY)) {
+            enableAllSeeTroughButton.click();
+        }
+
+        if (disableAllSeeTroughButton.isClickInBounds(mouseX, mouseY)) {
+            disableAllSeeTroughButton.click();
         }
 
 //        if(exportButton.isClickInBounds(mouseX, mouseY)) {

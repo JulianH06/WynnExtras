@@ -7,6 +7,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin (DrawContext.class)
 public interface DrawContextAccessor {
-    @Accessor ("vertexConsumers")
-    public VertexConsumerProvider.Immediate getVertexConsumers();
+    @Accessor
+    VertexConsumerProvider.Immediate getVertexConsumers();
 }

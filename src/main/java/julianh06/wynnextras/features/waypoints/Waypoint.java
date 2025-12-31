@@ -8,6 +8,7 @@ public class Waypoint {
     public boolean show;
     public boolean showName;
     public boolean showDistance;
+    public boolean seeThrough;
     private transient WaypointCategory category;
     public String categoryName;
 
@@ -19,6 +20,7 @@ public class Waypoint {
         this.show = true;
         this.showName = true;
         this.showDistance = true;
+        this.seeThrough = false;
         category = null;
         categoryName = "";
     }
@@ -31,6 +33,7 @@ public class Waypoint {
         this.show = true;
         this.showName = true;
         this.showDistance = true;
+        this.seeThrough = false;
         category = null;
         categoryName = "";
     }

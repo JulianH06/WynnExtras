@@ -25,7 +25,7 @@ public class ShamanTotemCircleUpdated {
                 position.getZ()
         );
         //System.out.println("updated totem " + totemNumber +  " at: " + vec.toString() + " remaining time " + time);
-        if(time <= 1 || Models.ShamanMask.getCurrentMaskType() == ShamanMaskType.FANATIC) {
+        if(time <= 1) {
             ShamanTotemCircle.totemPositions.remove(totemNumber);
         } else {
             ShamanTotemCircle.totemPositions.put(totemNumber, vec);

@@ -29,6 +29,7 @@
     "CharacterModelMixin",
     "ChatPacketRecievedEventMixin",
     "ChatScreenMixin",
+    "ItemFavoriteFeatureAccessor",
     "ItemGuessFeatureAccessor",
     "ItemStatInfoFeatureMixin",
     "MessageFilterFeatureMixin",

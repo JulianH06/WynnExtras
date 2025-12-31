@@ -191,6 +191,20 @@ public class WaypointScreen extends Screen {
         backToPackagesButton = new EasyButton(-1, -1, -1, -1) {
             @Override
             public void click() {
+                for(WaypointElement element : elements) {
+                    element.waypoint.name = element.nameInput.getInput();
+                    try {
+                        int x = Integer.parseInt(element.xInput.getInput());
+                        int y = Integer.parseInt(element.yInput.getInput());
+                        int z = Integer.parseInt(element.zInput.getInput());
+
+                        element.waypoint.x = x;
+                        element.waypoint.y = y;
+                        element.waypoint.z = z;
+                    } catch (NumberFormatException e) {
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§cThe coordinates must be a number")));
+                    }
+                }
                 WaypointData.INSTANCE.activePackage = null;
             }
         };
@@ -322,6 +336,9 @@ public class WaypointScreen extends Screen {
 
             return;
         }
+
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("I know that this menu is ugly,")), 5, 25, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f / scaleFactor);
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("it will be reworked in the future")), 5, 35, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f / scaleFactor);
 
         if(inMainScreen) {
             for (WaypointElement element : elements) {

@@ -179,14 +179,12 @@ public class WynnExtrasConfig implements ConfigData {
     public int wynntilsItemRarityBackgroundAlpha = 150;
 
     @ConfigEntry.Category(Categories.bankOverlay)
-    @ConfigEntry.Name("Enable scroll with up/down arrow keys")
-    public boolean enableScrollWithArrowKeys = false;
+    @ConfigEntry.Name("Toggle smooth scroll")
+    public boolean smoothScrollToggle = true;
 
     @ConfigEntry.Category(Categories.bankOverlay)
-    @ConfigEntry.Text
-    public String bankInfoText = "This Feature is still Work in Progress, bugs can (and probably will) occur. " +
-                                    "Please report any issues you have on discord. If you haven't joined yet, run \"/WynnExtras (/we) discord\". ";
-
+    @ConfigEntry.Name("Show a button to quickly toggle the bank overlay")
+    public boolean bankQuickToggle = true;
 
     @ConfigEntry.Category(Categories.bankOverlay)
     @ConfigEntry.Name("Dark mode for the Bank overlay")

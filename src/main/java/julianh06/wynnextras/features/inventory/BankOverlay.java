@@ -86,21 +86,6 @@ public class BankOverlay {
                 page.keyPressed(event.getKey(), event.getScanCode(), 0);
             }
         }
-        if(!InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), GLFW.GLFW_KEY_LEFT_SHIFT) && SimpleConfig.getInstance(WynnExtrasConfig.class).enableScrollWithArrowKeys) {
-            if (event.getKey() == GLFW.GLFW_KEY_UP && event.getAction() == GLFW.GLFW_PRESS) {
-                if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
-                    scrollOffset -= xFitAmount; //Scroll up
-                    if (scrollOffset < 0) {
-                        scrollOffset = 0;
-                    }
-                }
-            }
-            if (event.getKey() == GLFW.GLFW_KEY_DOWN && event.getAction() == GLFW.GLFW_PRESS) {
-                if (BankOverlay.currentOverlayType != BankOverlayType.NONE && canScrollFurther) {
-                    scrollOffset += xFitAmount; //Scroll down
-                }
-            }
-        }
         if(activeTextInput != null) {
             activeTextInput.onInput(event);
         }
