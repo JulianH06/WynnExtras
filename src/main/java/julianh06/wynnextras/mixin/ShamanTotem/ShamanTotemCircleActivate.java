@@ -16,7 +16,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ShamanTotemCircleActivate {
     @Inject(method = "<init>", at = @At("TAIL"), remap = false)
     public void activated(int totemNumber, Position position, CallbackInfo ci) {
-        if(Models.ShamanMask.getCurrentMaskType() == ShamanMaskType.FANATIC) return;
         WEVec vec = new WEVec(
                 position.getX(),
                 Math.floor(position.getY()) + 0.5f,

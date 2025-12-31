@@ -4,15 +4,14 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.wynnmod.feature.Feature;
 import com.wynnmod.feature.item.ItemOverlayFeature;
 import com.wynnmod.util.wynncraft.item.map.WynncraftItemDatabase;
+import com.wynntils.features.inventory.*;
+import com.wynntils.utils.render.buffered.BufferedRenderUtils;
+import com.wynntils.utils.wynn.WynnUtils;
 import com.wynnventory.config.ConfigManager;
 import com.wynntils.core.components.Handlers;
 import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
 import com.wynntils.core.text.StyledText;
-import com.wynntils.features.inventory.InventoryEmeraldCountFeature;
-import com.wynntils.features.inventory.ItemHighlightFeature;
-import com.wynntils.features.inventory.ItemTextOverlayFeature;
-import com.wynntils.features.inventory.UnidentifiedItemIconFeature;
 import com.wynntils.features.tooltips.ItemGuessFeature;
 import com.wynntils.handlers.item.ItemAnnotation;
 import com.wynntils.handlers.item.ItemHandler;
@@ -48,6 +47,7 @@ import julianh06.wynnextras.features.inventory.BankOverlayButtons.*;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
+import julianh06.wynnextras.mixin.ItemFavoriteFeatureAccessor;
 import julianh06.wynnextras.mixin.ItemGuessFeatureAccessor;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.UI.*;
@@ -233,7 +233,7 @@ public class BankOverlay2 extends WEHandledScreen {
             if(quickActionWidget != null) quickActionWidget.draw(context, mouseX, mouseY, delta, ui);
             if(searchbar2 != null) searchbar2.draw(context, mouseX, mouseY, delta, ui);
             if(scrollBarWidget != null) scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
-            if(toggleOverlayWidget != null) toggleOverlayWidget.draw(context, mouseX, mouseY, delta, ui);
+            if(toggleOverlayWidget != null && SimpleConfig.getInstance(WynnExtrasConfig.class).bankQuickToggle) toggleOverlayWidget.draw(context, mouseX, mouseY, delta, ui);
             ci.cancel();
             return;
         }
@@ -259,8 +259,12 @@ public class BankOverlay2 extends WEHandledScreen {
                 yPos = ((HandledScreenAccessor) containerScreen).getY() + (4 + McUtils.containerMenu().slots.size() / 9f) * 16;
             }
 
-            toggleOverlayWidget.setBounds((int) xPos - 70, (int) yPos, 140, 17);
-            toggleOverlayWidget.draw(context, mouseX, mouseY, delta, ui);
+            if(SimpleConfig.getInstance(WynnExtrasConfig.class).bankQuickToggle) {
+                toggleOverlayWidget.setBounds((int) xPos - 70, (int) yPos, 140, 17);
+                toggleOverlayWidget.draw(context, mouseX, mouseY, delta, ui);
+            } else {
+                toggleOverlayWidget.setBounds(0, 0, 0, 0);
+            }
         }
 //        else {
 //            RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
@@ -287,7 +291,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         float speed = 0.3f;
         float diff = (targetOffset - actualOffset);
-        if(Math.abs(diff) < snapValue) actualOffset = targetOffset;
+        if(Math.abs(diff) < snapValue || !SimpleConfig.getInstance(WynnExtrasConfig.class).smoothScrollToggle) actualOffset = targetOffset;
         else actualOffset += diff * speed * delta;
 
         if(!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return;
@@ -508,7 +512,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if(toggleOverlayWidget != null) toggleOverlayWidget.mouseClicked(x, y, button);
+        if(toggleOverlayWidget != null && SimpleConfig.getInstance(WynnExtrasConfig.class).bankQuickToggle) toggleOverlayWidget.mouseClicked(x, y, button);
 
         if (!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return false;
         if (currentOverlayType == BankOverlayType.NONE) return false;
@@ -675,7 +679,14 @@ public class BankOverlay2 extends WEHandledScreen {
 
         ItemAnnotation annotation = annotations.get(index);
         if(annotation == null) {
-            StyledText name = StyledText.fromComponent(stack.getName());
+            Text stackName = stack.getName();
+            if(stack.getCustomName() != null) {
+                if (stack.getCustomName().toString().contains("Key")) {
+                    String clean = WynnUtils.normalizeBadString(stackName.getString());
+                    stackName = Text.of(clean);
+                }
+            }
+            StyledText name = StyledText.fromComponent(stackName);
             annotation = ((ItemHandlerInvoker) (Object) Handlers.Item).invokeCalculateAnnotation(stack, name);
             annotations.set(index, annotation);
         }
@@ -762,14 +773,29 @@ public class BankOverlay2 extends WEHandledScreen {
                     annotation instanceof GatheringToolItem ||
                     annotation instanceof HorseItem ||
                     annotation instanceof PowderItem ||
-                    annotation instanceof PotionItem) {
+                    annotation instanceof PotionItem ||
+                    annotation instanceof CrafterBagItem) {
 
                 context.getMatrices().push();
                 context.getMatrices().translate(0, 0, 100);
                 ((ItemTextOverlayFeatureMixin) Managers.Feature.getFeatureInstance(ItemTextOverlayFeature.class)).invokeDrawTextOverlay(context.getMatrices(), stack, x, y, false);
                 context.getMatrices().pop();
             }
+
             ((UnidentifiedItemIconFeatureInvoker) Managers.Feature.getFeatureInstance(UnidentifiedItemIconFeature.class)).invokeDrawIcon(context.getMatrices(), stack, x, y, 100);
+            if(((ItemFavoriteFeatureAccessor) Managers.Feature.getFeatureInstance(ItemFavoriteFeature.class)).callIsFavorited(stack)) {
+                BufferedRenderUtils.drawScalingTexturedRect(
+                        context.getMatrices(),
+                        ((DrawContextAccessor) context).getVertexConsumers(),
+                        Texture.FAVORITE_ICON.resource(),
+                        x + 10,
+                        y,
+                        200,
+                        9,
+                        9,
+                        Texture.FAVORITE_ICON.width(),
+                        Texture.FAVORITE_ICON.height());
+            }
         }
     }
 
@@ -1298,7 +1324,6 @@ public class BankOverlay2 extends WEHandledScreen {
             if(index >= currentData.lastPage) return;
 
             if(hovered && isMouseInOverlay) {
-                //TODO: checken welches item gehovered ist und den tooltip anzeigen
                 if(index != activeInv) {
                     ui.drawRect(x, y, width, height, CustomColor.fromHSV(0, 0, 1000, 0.25f));
                 }

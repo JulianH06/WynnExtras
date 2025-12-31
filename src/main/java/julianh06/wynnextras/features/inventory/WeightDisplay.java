@@ -301,9 +301,6 @@ public class WeightDisplay {
 
     @SubscribeEvent
     public void onKey(KeyInputEvent event) {
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).enableScrollWithArrowKeys && BankOverlay.currentOverlayType != BankOverlayType.NONE && !InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), GLFW.GLFW_KEY_LEFT_SHIFT)) {
-            return;
-        }
         if(event.getKey() == GLFW.GLFW_KEY_UP && event.getAction() == GLFW.GLFW_PRESS) {
             upPressed = true;
         }
@@ -357,9 +354,7 @@ public class WeightDisplay {
                         idx.incrementAndGet();
                     }
                     if(scaleData.data().size() > 1 && SimpleConfig.getInstance(WynnExtrasConfig.class).showScales) {
-                        if(SimpleConfig.getInstance(WynnExtrasConfig.class).enableScrollWithArrowKeys && BankOverlay.currentOverlayType != BankOverlayType.NONE) {
-                            modified.add(Text.literal("  ↳ Use LShift + ↑ / ↓ to cycle").formatted(Formatting.DARK_GRAY));
-                        } else modified.add(Text.literal("  ↳ Use ↑ / ↓ to cycle").formatted(Formatting.DARK_GRAY));
+                        modified.add(Text.literal("  ↳ Use ↑ / ↓ to cycle").formatted(Formatting.DARK_GRAY));
                     }
                 }
             }

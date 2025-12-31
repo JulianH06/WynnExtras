@@ -33,6 +33,7 @@ public class WaypointElement {
     public EasyButton showButton;
     public EasyButton showNameButton;
     public EasyButton showDistanceButton;
+    public EasyButton seeThroughButton;
     public EasyDropdown categoryDropdown;
 
     Identifier deleteTexture = Identifier.of("wynnextras", "textures/gui/waypoints/deletebutton.png");
@@ -83,6 +84,16 @@ public class WaypointElement {
             public void click() {
                 waypoint.showDistance = !waypoint.showDistance;
                 isActive = waypoint.showDistance;
+            }
+        };
+
+        seeThroughButton = new EasyButton(-1, -1, -1, -1) {
+            public boolean isActive = false;
+
+            @Override
+            public void click() {
+                waypoint.seeThrough = !waypoint.seeThrough;
+                isActive = waypoint.seeThrough;
             }
         };
 
@@ -173,10 +184,10 @@ public class WaypointElement {
         } else {
             showButton.drawWithTexture(context, inavtiveTexture);
         }
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Highlight")), x + (float) (20 * 3) / scaleFactor, y + 37f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Highlight")), x + (float) (20 * 3) / scaleFactor, y + 37f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.5f / scaleFactor);
         FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Block")), x + (float) (20 * 3) / scaleFactor, y + 45.5f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
 
-        showNameButton.setX(x + 3 * 3 / scaleFactor + width / 3);
+        showNameButton.setX(x + 3 * 3 / scaleFactor + width / 4);
         showNameButton.setY(y + 33 * 3 / scaleFactor);
         showNameButton.setWidth((float) (15 * 3) / scaleFactor);
         showNameButton.setHeight((float) (15 * 3) / scaleFactor);
@@ -185,10 +196,10 @@ public class WaypointElement {
         } else {
             showNameButton.drawWithTexture(context, inavtiveTexture);
         }
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Show")), x + (float) (20 * 3) / scaleFactor + (float) width / 3, y + 37f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Name")), x + (float) (20 * 3) / scaleFactor + (float) width / 3, y + 45.5f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Show")), x + (float) (20 * 3) / scaleFactor + (float) width / 4, y + 37f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Name")), x + (float) (20 * 3) / scaleFactor + (float) width / 4, y + 45.5f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
 
-        showDistanceButton.setX(x + 2 * 3 / scaleFactor + 2 * width / 3);
+        showDistanceButton.setX(x + 2 * 3 / scaleFactor + 2 * width / 4);
         showDistanceButton.setY(y + 33 * 3 / scaleFactor);
         showDistanceButton.setWidth((float) (15 * 3) / scaleFactor);
         showDistanceButton.setHeight((float) (15 * 3) / scaleFactor);
@@ -197,8 +208,20 @@ public class WaypointElement {
         } else {
             showDistanceButton.drawWithTexture(context, inavtiveTexture);
         }
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Show")), x + (float) (20 * 3) / scaleFactor + (float) 2 * width / 3, y + 37f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Distance")), x + (float) (20 * 3) / scaleFactor + (float) 2 * width / 3, y + 45.5f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Show")), x + (float) (20 * 3) / scaleFactor + (float) 2 * width / 4, y + 37f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Distance")), x + (float) (20 * 3) / scaleFactor + (float) 2 * width / 4, y + 45.5f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.25f / scaleFactor);
+
+        seeThroughButton.setX(x + 2 * 3 / scaleFactor + 3 * width / 4);
+        seeThroughButton.setY(y + 33 * 3 / scaleFactor);
+        seeThroughButton.setWidth((float) (15 * 3) / scaleFactor);
+        seeThroughButton.setHeight((float) (15 * 3) / scaleFactor);
+        if(waypoint.seeThrough) {
+            seeThroughButton.drawWithTexture(context, activeTexture);
+        } else {
+            seeThroughButton.drawWithTexture(context, inavtiveTexture);
+        }
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("See")), x + (float) (20 * 3) / scaleFactor + (float) 3 * width / 4, y + 37f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Through")), x + (float) (20 * 3) / scaleFactor + (float) 3 * width / 4, y + 45.5f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.25f / scaleFactor);
     }
 
     public void click(int mouseX, int mouseY) {
@@ -226,6 +249,7 @@ public class WaypointElement {
         if(showButton.isClickInBounds(mouseX, mouseY)) showButton.click();
         if(showNameButton.isClickInBounds(mouseX, mouseY)) showNameButton.click();
         if(showDistanceButton.isClickInBounds(mouseX, mouseY)) showDistanceButton.click();
+        if(seeThroughButton.isClickInBounds(mouseX, mouseY)) seeThroughButton.click();
 
         if(nameInput.isClickInBounds(mouseX, mouseY)) {
             nameInput.click();
