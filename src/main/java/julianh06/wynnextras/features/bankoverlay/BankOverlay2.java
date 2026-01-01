@@ -96,18 +96,6 @@ public class BankOverlay2 extends WEHandledScreen {
     public int hoveredIndex = -1;
     public int hoveredInvIndex = -1;
 
-    static CharacterBankButton personalStorageButton = new CharacterBankButton(-1000, -1000, 13, 162 + 4, "Switch to Character Bank");
-
-    static QuickStashButton quickStashButton = new QuickStashButton(-1000, -1000, 13, 162 + 4, "Quick stash");
-
-    static DumpExceptHotbarButton dumpExceptHotbarButton = new DumpExceptHotbarButton(-1000, -1000, 13, 162 + 4, "Dump except Hotbar");
-
-    static DumpAllButton dumpAllButton = new DumpAllButton(-1000, -1000, 13, 162 + 4, "Dump all");
-
-    public static EasyTextInput Searchbar = new EasyTextInput(-1000, -1000, 13, 162 + 4);
-
-    static ResetSearchButton resetSearchButton = new ResetSearchButton(-1000, -1000, 13, 162 + 4, Searchbar, "Clear Search Bar");
-
     static ItemHighlightFeature itemHighlightFeature;
 
     public Identifier buttonBackground = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbg.png");
@@ -116,36 +104,21 @@ public class BankOverlay2 extends WEHandledScreen {
     public Identifier buttonBackgroundShortDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbgshort_dark.png");
 
     static Identifier signLeft = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_left.png");
-
     static Identifier signLeftDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_left_dark.png");
-
     static Identifier signRight = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_right.png");
-
     static Identifier signRightDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_right_dark.png");
-
     static Identifier signMid1 = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m1.png");
-
     static Identifier signMid1D = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m1_dark.png");
-
     static Identifier signMid2 = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m2.png");
-
     static Identifier signMid2D = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m2_dark.png");
-
     static Identifier signMid3 = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m3.png");
-
     static Identifier signMid3D = Identifier.of("wynnextras", "textures/gui/bankoverlay/sign_m3_dark.png");
-
     static Identifier lock_locked = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_locked.png");
-
     static Identifier lock_unlocked = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_unlocked.png");
-
     static Identifier lock_locked_dark = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_locked_dark.png");
-
     static Identifier lock_unlocked_dark = Identifier.of("wynnextras", "textures/gui/bankoverlay/lock_unlocked_dark.png");
 
     static List<Identifier> signMids = new ArrayList<>();
-
-    int visibleInventories;
 
     static String priceText;
 
@@ -576,7 +549,6 @@ public class BankOverlay2 extends WEHandledScreen {
             yRemain = screenHeight - yFitAmount * 90 - (yFitAmount - 1) * 4;
         }
 
-        visibleInventories = xFitAmount * yFitAmount - (xFitAmount - 1) + scrollOffset;
         return new Pair<>(xRemain, yRemain);
     }
 
@@ -692,27 +664,6 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         ((ItemStackExtension) (Object) stack).setAnnotation(annotation);
-    }
-
-    private static void positionButtons(int x, int y) {
-        int baseX = x - 9;
-        int baseY = y + 7;
-
-        if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
-            if (currentOverlayType == BankOverlayType.ACCOUNT) {
-                personalStorageButton.buttonText = "Switch to Character Bank";
-            } else {
-                personalStorageButton.buttonText = "Switch to Account Bank";
-            }
-            personalStorageButton.setPosition(baseX, baseY - 10);
-        } else {
-            baseY -= 14;
-        }
-        quickStashButton.setPosition(baseX, baseY + 4);
-        dumpExceptHotbarButton.setPosition(baseX, baseY + 18);
-        dumpAllButton.setPosition(baseX, baseY + 32);
-        resetSearchButton.setPosition(baseX, baseY + 46);
-        Searchbar.setPosition(0, 0);
     }
 
     private static void renderDurabilityRing(DrawContext context, ItemStack stack, int x, int y) {
@@ -1179,7 +1130,6 @@ public class BankOverlay2 extends WEHandledScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(ui == null) return;
 
-            positionButtons(x - 158, y + 5);
             ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? invTextureDark : invTexture, x, y - 0.2f, width, height);
 
             if(slots.isEmpty()) {
