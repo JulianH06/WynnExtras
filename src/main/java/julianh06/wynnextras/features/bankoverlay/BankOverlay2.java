@@ -43,7 +43,6 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.inventory.BankOverlay;
-import julianh06.wynnextras.features.inventory.BankOverlayButtons.*;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
