@@ -75,20 +75,13 @@ public abstract class HandledScreenMixin {
             }
         }
 
-        if(bankOverlay == null) return;
-        bankOverlay.mouseClicked(mouseX, mouseY, button);
+        if(bankOverlay != null) {
+            bankOverlay.mouseClicked(mouseX, mouseY, button);
 
-        if(!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return;
-
-        if (currentOverlayType != BankOverlayType.NONE) {
-            cir.cancel();
-        } else {
-            return;
-        }
-
-        if(BankOverlay2.Searchbar != null) {
-            if (BankOverlay2.Searchbar.isClickInBounds((int) mouseX, (int) mouseY) != BankOverlay2.Searchbar.isActive()) {
-                BankOverlay2.Searchbar.click();
+            if (SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+                if (currentOverlayType != BankOverlayType.NONE) {
+                    cir.cancel();
+                }
             }
         }
     }
@@ -98,20 +91,24 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "mouseReleased", at = @At("HEAD"), cancellable = true)
     private void onMouseReleased(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
-        if(bankOverlay == null) return;
-        bankOverlay.mouseReleased(mouseX, mouseY, button);
-        if(!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return;
-        if (currentOverlayType != BankOverlayType.NONE) {
-            cir.cancel();
+        if(bankOverlay != null) {
+            bankOverlay.mouseReleased(mouseX, mouseY, button);
+
+            if (SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+                if (currentOverlayType != BankOverlayType.NONE) {
+                    cir.cancel();
+                }
+            }
         }
     }
 
     @Inject(method = "isClickOutsideBounds", at = @At("HEAD"), cancellable = true)
     private void onIsClickOutsideBounds(double mouseX, double mouseY, int left, int top, int button, CallbackInfoReturnable<Boolean> cir) {
-        if(!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return;
-        if (currentOverlayType != BankOverlayType.NONE) {
-            cir.setReturnValue(false);
-            cir.cancel();
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+            if (currentOverlayType != BankOverlayType.NONE) {
+                cir.setReturnValue(false);
+                cir.cancel();
+            }
         }
     }
 
@@ -153,7 +150,6 @@ public abstract class HandledScreenMixin {
             BankOverlay.activeInvSlots.clear();
             activeInv = 1;
             annotationCache.clear();
-            scrollOffset = 0;
             Pages.save();
         }
         currentOverlayType = BankOverlayType.NONE;
@@ -161,14 +157,16 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
     private void keyPressedPre(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
-        if(bankOverlay == null) return;
-        if(!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return;
-        InventoryKeyPressEvent event = new InventoryKeyPressEvent(keyCode, scanCode, modifiers, bankOverlay.touchHoveredSlot);
-        event.post();
+        if(bankOverlay != null) {
+            if (SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+                InventoryKeyPressEvent event = new InventoryKeyPressEvent(keyCode, scanCode, modifiers, bankOverlay.touchHoveredSlot);
+                event.post();
 
-        if (event.isCanceled()) {
-            cir.setReturnValue(true);
-            cir.cancel();
+                if (event.isCanceled()) {
+                    cir.setReturnValue(true);
+                    cir.cancel();
+                }
+            }
         }
     }
 }

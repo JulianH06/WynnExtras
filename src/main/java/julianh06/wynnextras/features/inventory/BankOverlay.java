@@ -9,9 +9,7 @@ import com.wynntils.models.containers.containers.personal.BookshelfContainer;
 import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
 import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
 import com.wynntils.utils.mc.McUtils;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
@@ -23,7 +21,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.ScreenHandler;
@@ -43,8 +40,6 @@ public class BankOverlay {
     public static DefaultedList<Slot> activeInvSlots = DefaultedList.of();
     public static int bankSyncid;
     public static PersonalStorageUtilitiesFeature PersonalStorageUtils;
-
-    public static int scrollOffset = 0;
 
     public static BankData Pages;
 
@@ -180,13 +175,8 @@ public class BankOverlay {
                     if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
                         if (verticalAmount > 0) {
                             BankOverlay2.targetOffset -= 104f;
-                            scrollOffset -= xFitAmount; //Scroll up
                         } else if(canScrollFurther) {
                             BankOverlay2.targetOffset += 104f;
-                            scrollOffset += xFitAmount; //Scroll down
-                        }
-                        if (scrollOffset < 0) {
-                            scrollOffset = 0;
                         }
                     }
                 });
