@@ -11,7 +11,6 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.InventoryKeyPressEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.inventory.*;
-import julianh06.wynnextras.features.inventory.BankOverlayButtons.*;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
