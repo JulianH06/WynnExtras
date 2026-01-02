@@ -1348,6 +1348,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            if(!isMouseInOverlay) return true;
+
             if(activeInv == currentData.lastPage - 1) {
                 ScreenHandler currScreenHandler = McUtils.containerMenu();
                 if (currScreenHandler == null) {
