@@ -2,6 +2,7 @@ package julianh06.wynnextras.mixin;
 
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.Container;
+import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.containers.containers.ItemIdentifierContainer;
 import com.wynntils.models.containers.containers.personal.*;
 import com.wynntils.utils.mc.McUtils;
@@ -45,6 +46,10 @@ public class InventoryScreenMixin {
             if (Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
                 ci.cancel();
             }
+        }
+
+        if (Models.Container.getCurrentContainer() instanceof CraftingStationContainer) {
+            ci.cancel();
         }
 
         if (config == null) config = SimpleConfig.getInstance(WynnExtrasConfig.class);

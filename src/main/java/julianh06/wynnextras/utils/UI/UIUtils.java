@@ -107,7 +107,7 @@ public final class UIUtils {
     public int sw(float logicalW) { return Math.max(0, (int)Math.round(logicalW / scaleFactor)); }
     public int sh(float logicalH) { return Math.max(0, (int)Math.round(logicalH / scaleFactor)); }
 
-    // --- Drawing helpers: Background / Text / Image (Overloads wie in deinem WEScreen) ---
+    // --- Drawing helpers: Background / Text / Image ---
     public void drawBackground() {
         if (MinecraftClient.getInstance().currentScreen == null) return;
         RenderUtils.drawRect(
