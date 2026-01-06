@@ -1,8 +1,9 @@
-package julianh06.wynnextras.features.crafting.data;
+package julianh06.wynnextras.features.crafting.data.materials;
 
+import julianh06.wynnextras.features.crafting.data.IMaterial;
 import net.minecraft.util.Identifier;
 
-public enum StringMaterial implements Material {
+public enum StringMaterial implements IMaterial {
     WHEAT("Wheat", Identifier.of("wynnextras", "textures/materials/string/wheat.png")),
     BARLEY("Barley", Identifier.of("wynnextras", "textures/materials/string/barley.png")),
     OAT("Oat", Identifier.of("wynnextras", "textures/materials/string/oat.png")),

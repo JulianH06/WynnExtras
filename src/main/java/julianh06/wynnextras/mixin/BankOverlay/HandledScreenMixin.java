@@ -124,10 +124,13 @@ public abstract class HandledScreenMixin {
     @Inject(method = "init", at = @At("HEAD"))
     public void onInit(CallbackInfo ci) {
         heldItem = Items.AIR.getDefaultStack();
+        craftingHelperOverlay = null;
     }
 
     @Inject(method = "close", at = @At("HEAD"))
     public void onClose(CallbackInfo ci) {
+        craftingHelperOverlay = null;
+
         if(!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return;
         bankOverlay = null;
 

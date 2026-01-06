@@ -1,8 +1,9 @@
-package julianh06.wynnextras.features.crafting.data;
+package julianh06.wynnextras.features.crafting.data.materials;
 
+import julianh06.wynnextras.features.crafting.data.IMaterial;
 import net.minecraft.util.Identifier;
 
-public enum Meat implements Material {
+public enum Meat implements IMaterial {
     GUDGEON("Gudgeon", Identifier.of("wynnextras", "textures/materials/meat/gudgeon.png")),
     TROUT("Trout", Identifier.of("wynnextras", "textures/materials/meat/trout.png")),
     SALMON("Salmon", Identifier.of("wynnextras", "textures/materials/meat/salmon.png")),
