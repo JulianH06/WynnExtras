@@ -1361,6 +1361,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 if(PersonalStorageUtils == null) return true;
 
                 activeInv = currentData.lastPage - 1;
+                if(PersonalStorageUtils == null) PersonalStorageUtils = new PersonalStorageUtilitiesFeature();
                 BankOverlay.PersonalStorageUtils.jumpToDestination(activeInv + 1);
                 if(annotationCache.get(activeInv) != null) annotationCache.get(activeInv).clear();
                 retryLoad();
@@ -1488,6 +1489,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
                 Pages.BankPages.put(activeInv, stacks);
                 activeInv = inventoryIndex;
+                if(PersonalStorageUtils == null) PersonalStorageUtils = new PersonalStorageUtilitiesFeature();
                 BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
                 if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
             }
