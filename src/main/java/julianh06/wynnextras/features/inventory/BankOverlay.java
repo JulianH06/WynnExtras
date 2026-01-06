@@ -71,6 +71,8 @@ public class BankOverlay {
 
     public static float pageBuyCustomModelData = 0;
 
+    private static boolean registeredScroll = false;
+
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
         if(BankOverlay2.searchbar2 != null && (event.getAction() == GLFW.GLFW_PRESS || event.getAction() == GLFW.GLFW_REPEAT)) {
@@ -152,13 +154,17 @@ public class BankOverlay {
 
             Screen currScreen = McUtils.mc().currentScreen;
             if(currScreen == null) {
+                registeredScroll = false;
                 return;
             }
+
+            if(registeredScroll) return;
 
             String InventoryTitle = currScreen.getTitle().getString();
             if(InventoryTitle == null) { return; }
 
             if(BankOverlay.currentOverlayType != BankOverlayType.NONE) {
+                registeredScroll = true;
                 ScreenMouseEvents.afterMouseScroll(MinecraftClient.getInstance().currentScreen).register((
                         screen,
                         mX,
