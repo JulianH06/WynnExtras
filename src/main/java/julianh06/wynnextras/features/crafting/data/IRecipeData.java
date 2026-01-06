@@ -5,5 +5,5 @@ import julianh06.wynnextras.utils.Pair;
 import java.util.List;
 
 public interface IRecipeData {
-    List<Pair<Material, Integer>> getMaterials(int level);
+    List<Pair<IMaterial, Integer>> getMaterials(int level);
 }

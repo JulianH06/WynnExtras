@@ -1,8 +1,9 @@
-package julianh06.wynnextras.features.crafting.data;
+package julianh06.wynnextras.features.crafting.data.materials;
 
+import julianh06.wynnextras.features.crafting.data.IMaterial;
 import net.minecraft.util.Identifier;
 
-public enum Gem implements Material {
+public enum Gem implements IMaterial {
     COPPER("Copper", Identifier.of("wynnextras", "textures/materials/gem/copper.png")),
     GRANITE("Granite", Identifier.of("wynnextras", "textures/materials/gem/granite.png")),
     GOLD("Gold", Identifier.of("wynnextras", "textures/materials/gem/gold.png")),

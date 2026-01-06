@@ -1,8 +1,9 @@
-package julianh06.wynnextras.features.crafting.data;
+package julianh06.wynnextras.features.crafting.data.materials;
 
+import julianh06.wynnextras.features.crafting.data.IMaterial;
 import net.minecraft.util.Identifier;
 
-public enum Paper implements Material {
+public enum Paper implements IMaterial {
     OAK("Oak",Identifier.of("wynnextras", "textures/materials/paper/white.png")),
     BIRCH("Birch", Identifier.of("wynnextras", "textures/materials/paper/white.png")),
     WILLOW("Willow", Identifier.of("wynnextras", "textures/materials/paper/cream.png")),

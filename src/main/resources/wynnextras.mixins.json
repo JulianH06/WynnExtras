@@ -33,6 +33,7 @@
     "ItemGuessFeatureAccessor",
     "ItemStatInfoFeatureMixin",
     "MessageFilterFeatureMixin",
+    "ProfessionHighlightFeatureMixin",
     "ScreenHandlerMixin",
     "TerritoryInfoMixin",
     "TooltipFittingFeatureMixin",
