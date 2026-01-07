@@ -109,6 +109,10 @@ public abstract class HandledScreenMixin {
                 }
             }
         }
+
+        if(craftingHelperOverlay != null) {
+            craftingHelperOverlay.mouseReleased(mouseX, mouseY, button);
+        }
     }
 
     @Inject(method = "isClickOutsideBounds", at = @At("HEAD"), cancellable = true)
