@@ -2,18 +2,10 @@ package julianh06.wynnextras.features.chat;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.core.components.Models;
-import com.wynntils.utils.type.Time;
-import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.core.command.Command;
-import julianh06.wynnextras.features.inventory.data.BankData;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.GameVersion;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
@@ -130,11 +122,6 @@ public class RaidChatNotifier {
                 "The Void Hole at the bottom of",
                 "§bVoid hole opened §c",
                 "voidholeopen"
-        ),
-        new SingleOccurrenceDetector(
-                "Destroy them and defeat the Despairing Crawler",
-                "§bDespairing Crawler spaned §c",
-                "despairingcrawlerspawn"
         ),
 
 
@@ -326,8 +313,7 @@ public class RaidChatNotifier {
         Pattern.compile("A miniboss has spawned! It has sped", Pattern.CASE_INSENSITIVE),
         Pattern.compile("The golem has been defeated, and", Pattern.CASE_INSENSITIVE),
         Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The Void Hole at the bottom of", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("Destroy them and defeat the Despairing Crawler", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("The Void Hole at the bottom of", Pattern.CASE_INSENSITIVE)
     );
 
 
