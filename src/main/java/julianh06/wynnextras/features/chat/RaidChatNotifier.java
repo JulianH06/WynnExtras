@@ -154,11 +154,6 @@ public class RaidChatNotifier {
                 "bulbcaptured"
         ),
         new MultiOccurrenceDetector(
-            "The void holes inside the tree are open!",
-            "§bTree Opened §c",
-            "openedtree"
-        ),
-        new MultiOccurrenceDetector(
                 "[+1 Void Matter]",
                 "§b[+1 Void Matter] §c",
                 "voidmattergathered"
@@ -232,17 +227,8 @@ public class RaidChatNotifier {
         return INSTANCE.raidPBs.get(key);
     }
 
-    private static final long MESSAGE_DELAY_MS = 250;
-    private static long lastMessageTime = 0;
-
     public static void handleMessage(String rawMsg) {
         if (!config.toggleRaidTimestamps) return;
-
-        long now = Time.now().timestamp();
-
-        if(now - lastMessageTime < MESSAGE_DELAY_MS) {
-            return;
-        }
 
         long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
                           ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()
@@ -269,8 +255,6 @@ public class RaidChatNotifier {
                         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(finalMsg)));
                     }
                 }).start();
-
-                lastMessageTime = now;
 
                 return;
             }
@@ -322,7 +306,6 @@ public class RaidChatNotifier {
         Pattern.compile("2 slimey goo", Pattern.CASE_INSENSITIVE),
         Pattern.compile("1 \\[isoptera heart", Pattern.CASE_INSENSITIVE),
         Pattern.compile("All the Void Rifts have been destroyed! A path", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The void holes inside the tree are open!", Pattern.CASE_INSENSITIVE),
         Pattern.compile("The Altar has opened to the void, you may leave through it.", Pattern.CASE_INSENSITIVE),
         Pattern.compile("A Red Bulb has been captured!", Pattern.CASE_INSENSITIVE),
         Pattern.compile("A Bulb Keeper has spawned!", Pattern.CASE_INSENSITIVE),
