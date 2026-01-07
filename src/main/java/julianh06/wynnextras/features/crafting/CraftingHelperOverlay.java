@@ -34,6 +34,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 
 import java.util.*;
@@ -58,6 +59,8 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
     Identifier background = Identifier.of("wynnextras", "textures/gui/craftinghelper/bg.png");
     Identifier backgroundBig = Identifier.of("wynnextras", "textures/gui/craftinghelper/bgbig.png");
+
+    static ScrollBarWidget scrollBarWidget = null;
 
     public CraftingHelperOverlay() {
         state = RecipeState.NONE;
@@ -160,6 +163,18 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 widgetWidth,
                 (int) ((big ? (widgetHeight + 22) : widgetHeight) * ui.getScaleFactor()));
 
+        int recipeWidgetHeight = 120;
+        int recipeWidgetAmount = 12;
+
+        int maxOffset = (recipeWidgetAmount - 2) * widgetHeight - 20;
+
+        if(scrollBarWidget == null) {
+            scrollBarWidget = new ScrollBarWidget(widgetHeight, recipeWidgetAmount - 2);
+        }
+
+        scrollBarWidget.setBounds((int) ((xStart + 5) * ui.getScaleFactor()) + widgetWidth, (int) (yStart * ui.getScaleFactor()), 20, (int) ((widgetHeight - 1) * ui.getScaleFactor()));
+        scrollBarWidget.draw(ctx, mouseX, mouseY, delta, ui);
+
         ctx.enableScissor(
                 xStart,
                 yStart + (big ? - 15 : 7),
@@ -225,6 +240,18 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         try {
             ctx.disableScissor();
         } catch (Exception ignored) {}
+    }
+
+    @Override
+    public boolean mouseClicked(double x, double y, int button) {
+        if(scrollBarWidget != null) scrollBarWidget.mouseClicked(x, y, button);
+        return super.mouseClicked(x, y, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double x, double y, int button) {
+        if(scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
+        return super.mouseReleased(x, y, button);
     }
 
     private static IRecipeData getRecipeDataInstance(ProfessionType type) {
@@ -326,8 +353,6 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             if(state == RecipeState.NONE) {
                 ui.drawCenteredText("Select the type", x + width / 2f, y + height / 2f - 30, CustomColor.fromHexString("FF0000"), 4);
                 ui.drawCenteredText("you want to craft.", x + width / 2f, y + height / 2f + 30, CustomColor.fromHexString("FF0000"), 4);
-            } else {
-                System.out.println(state);
             }
 
             if(recipeData == null) return;
@@ -343,6 +368,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 targetOffset = maxOffset;
                 snapValue = 0.75f;
             }
+
             if (targetOffset <= 0) {
                 targetOffset = 0;
                 snapValue = 0.75f;
@@ -526,6 +552,8 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+
             switch (index) {
                 case 0 -> {
                     if (state != RecipeState.FIRST) state =  RecipeState.FIRST;
@@ -565,6 +593,93 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             this.text = text;
         }
     }
+
+    private static class ScrollBarWidget extends Widget {
+        ScrollBarButtonWidget scrollBarButtonWidget;
+        int currentMouseY = 0;
+        int widgetHeight;
+        int widgetAmount;
+
+        public ScrollBarWidget(int widgetHeight, int widgetAmount) {
+            super(0, 0, 0, 0);
+            this.scrollBarButtonWidget = new ScrollBarButtonWidget();
+            addChild(scrollBarButtonWidget);
+            this.widgetHeight = widgetHeight;
+            this.widgetAmount = widgetAmount;
+        }
+
+        private void setOffset(int mouseY, int maxOffset, int scrollAreaHeight) {
+            float relativeY = mouseY * ui.getScaleFactorF() - y - scrollBarButtonWidget.getHeight() / 2f;
+            relativeY = Math.max(0, Math.min(relativeY, scrollAreaHeight));
+
+            float scrollPercent = relativeY / scrollAreaHeight;
+
+            targetOffset = scrollPercent * maxOffset;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            currentMouseY = mouseY;
+            ui.drawSliderBackground(x, y, width, height, 5, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
+
+            int maxOffset = (int) ((widgetAmount - 2) * widgetHeight + 27);
+            int buttonHeight = 30;
+            int scrollAreaHeight = height - buttonHeight;
+
+            if (scrollBarButtonWidget.isHold) {
+                setOffset(mouseY, maxOffset, scrollAreaHeight);
+                actualOffset = targetOffset;
+            }
+
+            int yPos = maxOffset == 0 ? y : (int) (y + scrollAreaHeight * Math.min((actualOffset / maxOffset), 1));
+            scrollBarButtonWidget.setBounds(x, yPos, width, buttonHeight);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            int maxOffset = (widgetAmount - 2) * widgetHeight - 20;
+            int buttonHeight = 30;
+            int scrollAreaHeight = height - buttonHeight;
+
+            setOffset(currentMouseY, maxOffset, scrollAreaHeight);
+
+            return false;
+        }
+
+        @Override
+        public boolean mouseReleased(double mx, double my, int button) {
+            scrollBarButtonWidget.mouseReleased(mx, my, button);
+            return true;
+        }
+
+        private static class ScrollBarButtonWidget extends Widget {
+            public boolean isHold;
+
+            public ScrollBarButtonWidget() {
+                super(0, 0, 0, 0);
+                isHold = false;
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                ui.drawButton(x, y, width, height, 5, hovered || isHold, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
+            }
+
+            @Override
+            protected boolean onClick(int button) {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                isHold = true;
+                return true;
+            }
+
+            @Override
+            public boolean mouseReleased(double mx, double my, int button) {
+                isHold = false;
+                return true;
+            }
+        }
+    }
 }
 //TODO: fix paper textures
 //TODO: remember which recipe was clicked on last and scroll to that and highlight that when reopening the station
@@ -572,3 +687,4 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 //TODO: add toggle for guild map estimate thing
 //TODO: save last scroll and last selected for each prof type
 //TODO: remove tree timestamps and cooldown for timestamps (maybe make it switch for the notg minibosses then)
+//TODO: fix different gui scales
