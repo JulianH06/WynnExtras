@@ -110,9 +110,9 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         }
 
         int xStart = ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth();
-        int yStart = ((HandledScreenAccessor) screen).getY() + 22;
+        int yStart = (int) (((HandledScreenAccessor) screen).getY() + (70 / ui.getScaleFactor()));
         int widgetWidth = 500;
-        int widgetHeight = ((HandledScreenAccessor) screen).getBackgroundHeight() - 24;
+        int widgetHeight = (int) (((HandledScreenAccessor) screen).getBackgroundHeight() - (24 * 3 / ui.getScaleFactor()));
 
         ProfessionType type = container.getProfessionType();
         lastState.put(type, state);
@@ -140,9 +140,9 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         switch (type) {
             case JEWELING, WOODWORKING -> {
-                setupSelectionWidget(selectionWidget1, type, 0, 3, xStart, yStart, widgetWidth);
-                setupSelectionWidget(selectionWidget2, type, 1, 3, xStart, yStart, widgetWidth);
-                setupSelectionWidget(selectionWidget3, type, 2, 3, xStart, yStart, widgetWidth);
+                setupSelectionWidget(selectionWidget1, type, 0, 3, xStart, ((HandledScreenAccessor) screen).getY(), widgetWidth);
+                setupSelectionWidget(selectionWidget2, type, 1, 3, xStart, ((HandledScreenAccessor) screen).getY(), widgetWidth);
+                setupSelectionWidget(selectionWidget3, type, 2, 3, xStart, ((HandledScreenAccessor) screen).getY(), widgetWidth);
             }
             case WEAPONSMITHING, ARMOURING, TAILORING -> {
                 setupSelectionWidget(selectionWidget1, type, 0, 2, xStart, yStart, widgetWidth);
@@ -159,9 +159,9 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         ui.drawImage(big ? backgroundBig : background,
                 (int) (xStart * ui.getScaleFactor() + 5),
-                (int) ((big ? (yStart - 22) : yStart) * ui.getScaleFactor()),
+                (int) (yStart * ui.getScaleFactor()) - (big ? 66 : 0),
                 widgetWidth,
-                (int) ((big ? (widgetHeight + 22) : widgetHeight) * ui.getScaleFactor()));
+                (int) (widgetHeight * ui.getScaleFactor()) + (big ? 66 : 0));
 
         int recipeWidgetHeight = 120;
         int recipeWidgetAmount = 12;
@@ -172,7 +172,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             scrollBarWidget = new ScrollBarWidget(widgetHeight, recipeWidgetAmount - 2);
         }
 
-        scrollBarWidget.setBounds((int) ((xStart + 5) * ui.getScaleFactor()) + widgetWidth, (int) (yStart * ui.getScaleFactor()), 20, (int) ((widgetHeight - 1) * ui.getScaleFactor()));
+        scrollBarWidget.setBounds((int) ((xStart + 5) * ui.getScaleFactor()) + widgetWidth, (int) (yStart * ui.getScaleFactor()), 30, (int) ((widgetHeight - 1) * ui.getScaleFactor()));
         scrollBarWidget.draw(ctx, mouseX, mouseY, delta, ui);
 
         ctx.enableScissor(
@@ -191,8 +191,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         int sectionWidth = (widgetWidth - totalSpacing) / maxWidgets;
 
         int x = (int) ((xStart + 2) * ui.getScaleFactor()) + i * (sectionWidth + spacing);
-        int y = (int) ((yStart - 20) * ui.getScaleFactor());
-
+        int y = (int) (yStart * ui.getScaleFactor()) - 60;
 
         selectionWidget.setBounds(x, y, sectionWidth, 50);
 
@@ -350,7 +349,10 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if(state == RecipeState.NONE) {
+            if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
+            ProfessionType type = container.getProfessionType();
+
+            if(state == RecipeState.NONE && type != ProfessionType.ALCHEMISM && type != ProfessionType.COOKING && type != ProfessionType.SCRIBING) {
                 ui.drawCenteredText("Select the type", x + width / 2f, y + height / 2f - 30, CustomColor.fromHexString("FF0000"), 4);
                 ui.drawCenteredText("you want to craft.", x + width / 2f, y + height / 2f + 30, CustomColor.fromHexString("FF0000"), 4);
             }
@@ -369,8 +371,8 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 snapValue = 0.75f;
             }
 
-            if (targetOffset <= 0) {
-                targetOffset = 0;
+            if (targetOffset <= - 10) {
+                targetOffset = - 10;
                 snapValue = 0.75f;
             }
 
@@ -378,9 +380,6 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             float diff = (targetOffset - actualOffset);
             if(Math.abs(diff) < snapValue || !SimpleConfig.getInstance(WynnExtrasConfig.class).smoothScrollToggle) actualOffset = targetOffset;
             else actualOffset += diff * speed * tickDelta;
-
-            if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
-            ProfessionType type = container.getProfessionType();
 
             Map<RecipeState, Float> map = lastOffset.get(type) == null ? new HashMap<>() : lastOffset.get(type);
             map.put(state, actualOffset);
@@ -400,7 +399,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             }
 
             for (int i = 0; i < widgetAmount; i++) {
-                recipeWidgets.get(i).setBounds(x + 30, (int) (y - actualOffset + 130 * i) + 10, width - 60, widgetHeight);
+                recipeWidgets.get(i).setBounds(x + 30, (int) (y - actualOffset + 130 * i), width - 60, widgetHeight);
             }
         }
 
@@ -623,7 +622,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             ui.drawSliderBackground(x, y, width, height, 5, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
 
             int maxOffset = (int) ((widgetAmount - 2) * widgetHeight + 27);
-            int buttonHeight = 30;
+            int buttonHeight = 50;
             int scrollAreaHeight = height - buttonHeight;
 
             if (scrollBarButtonWidget.isHold) {
@@ -688,3 +687,4 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 //TODO: save last scroll and last selected for each prof type
 //TODO: remove tree timestamps and cooldown for timestamps (maybe make it switch for the notg minibosses then)
 //TODO: fix different gui scales
+//TODO: remove duplicate timestamp (void hole opened and 2/2 pedastal)
