@@ -4,18 +4,18 @@ import julianh06.wynnextras.features.crafting.data.IMaterial;
 import net.minecraft.util.Identifier;
 
 public enum Grains implements IMaterial {
-    WHEAT("Wheat", Identifier.of("wynnextras", "textures/materials/grains/wheat.png")),
-    BARLEY("Barley", Identifier.of("wynnextras", "textures/materials/grains/barley.png")),
-    OAT("Oat", Identifier.of("wynnextras", "textures/materials/grains/oat.png")),
-    MALT("Malt", Identifier.of("wynnextras", "textures/materials/grains/malt.png")),
-    HOPS("Hops", Identifier.of("wynnextras", "textures/materials/grains/hops.png")),
-    RYE("Rye", Identifier.of("wynnextras", "textures/materials/grains/rye.png")),
-    MILLET("Millet", Identifier.of("wynnextras", "textures/materials/grains/millet.png")),
-    DECAY("Decay", Identifier.of("wynnextras", "textures/materials/grains/decay.png")),
-    RICE("Rice", Identifier.of("wynnextras", "textures/materials/grains/rice.png")),
-    SORGHUM("Sorghum", Identifier.of("wynnextras", "textures/materials/grains/sorghum.png")),
-    HEMP("Hemp", Identifier.of("wynnextras", "textures/materials/grains/hemp.png")),
-    DERNIC("Dernic", Identifier.of("wynnextras", "textures/materials/grains/dernic.png"));
+    WHEAT("Wheat", Identifier.of("wynnextras", "textures/materials/grains/yellow.png")),
+    BARLEY("Barley", Identifier.of("wynnextras", "textures/materials/grains/yellow.png")),
+    OAT("Oat", Identifier.of("wynnextras", "textures/materials/grains/green.png")),
+    MALT("Malt", Identifier.of("wynnextras", "textures/materials/grains/yellow.png")),
+    HOPS("Hops", Identifier.of("wynnextras", "textures/materials/grains/green.png")),
+    RYE("Rye", Identifier.of("wynnextras", "textures/materials/grains/yellow.png")),
+    MILLET("Millet", Identifier.of("wynnextras", "textures/materials/grains/yellow.png")),
+    DECAY("Decay", Identifier.of("wynnextras", "textures/materials/grains/brown.png")),
+    RICE("Rice", Identifier.of("wynnextras", "textures/materials/grains/yellow.png")),
+    SORGHUM("Sorghum", Identifier.of("wynnextras", "textures/materials/grains/brown.png")),
+    HEMP("Hemp", Identifier.of("wynnextras", "textures/materials/grains/green.png")),
+    DERNIC("Dernic", Identifier.of("wynnextras", "textures/materials/grains/brown.png"));
 
     private final String name;
     private final Identifier texture;
