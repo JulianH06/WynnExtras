@@ -4,18 +4,18 @@ import julianh06.wynnextras.features.crafting.data.IMaterial;
 import net.minecraft.util.Identifier;
 
 public enum Meat implements IMaterial {
-    GUDGEON("Gudgeon", Identifier.of("wynnextras", "textures/materials/meat/gudgeon.png")),
-    TROUT("Trout", Identifier.of("wynnextras", "textures/materials/meat/trout.png")),
-    SALMON("Salmon", Identifier.of("wynnextras", "textures/materials/meat/salmon.png")),
-    CARP("Carp", Identifier.of("wynnextras", "textures/materials/meat/carp.png")),
-    ICEFISH("Icefish", Identifier.of("wynnextras", "textures/materials/meat/icefish.png")),
-    PIRANHA("Piranha", Identifier.of("wynnextras", "textures/materials/meat/piranha.png")),
-    KOI("Koi", Identifier.of("wynnextras", "textures/materials/meat/koi.png")),
-    GYLIA("Gylia", Identifier.of("wynnextras", "textures/materials/meat/gylia.png")),
-    BASS("Bass", Identifier.of("wynnextras", "textures/materials/meat/bass.png")),
-    MOLTEN("Molten", Identifier.of("wynnextras", "textures/materials/meat/molten.png")),
-    STARFISH("Starfish", Identifier.of("wynnextras", "textures/materials/meat/starfish.png")),
-    DERNIC("Dernic", Identifier.of("wynnextras", "textures/materials/meat/dernic.png"));
+    GUDGEON("Gudgeon", Identifier.of("wynnextras", "textures/materials/meat/pink.png")),
+    TROUT("Trout", Identifier.of("wynnextras", "textures/materials/meat/blue.png")),
+    SALMON("Salmon", Identifier.of("wynnextras", "textures/materials/meat/filet.png")),
+    CARP("Carp", Identifier.of("wynnextras", "textures/materials/meat/yellow.png")),
+    ICEFISH("Icefish", Identifier.of("wynnextras", "textures/materials/meat/blue.png")),
+    PIRANHA("Piranha", Identifier.of("wynnextras", "textures/materials/meat/blue.png")),
+    KOI("Koi", Identifier.of("wynnextras", "textures/materials/meat/pink.png")),
+    GYLIA("Gylia", Identifier.of("wynnextras", "textures/materials/meat/pink.png")),
+    BASS("Bass", Identifier.of("wynnextras", "textures/materials/meat/black.png")),
+    MOLTEN("Molten", Identifier.of("wynnextras", "textures/materials/meat/filet.png")),
+    STARFISH("Starfish", Identifier.of("wynnextras", "textures/materials/meat/yellow.png")),
+    DERNIC("Dernic", Identifier.of("wynnextras", "textures/materials/meat/black.png"));
 
     private final String name;
     private final Identifier texture;

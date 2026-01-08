@@ -5,6 +5,8 @@ import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.profession.type.ProfessionType;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.render.type.HorizontalAlignment;
+import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
@@ -43,7 +45,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     private static boolean registeredScroll = false;
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 50; // in ms
-    public static float targetOffset = 0;
+    public static float targetOffset = -10;
     public static float actualOffset = 0;
 
     static HelperWidget helperWidget;
@@ -69,7 +71,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         selectionWidget2 = null;
         selectionWidget3 = null;
         actualOffset = 0;
-        targetOffset = 0;
+        targetOffset = -10;
 
         if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
         ProfessionType type = container.getProfessionType();
@@ -111,7 +113,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         int xStart = ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth();
         int yStart = (int) (((HandledScreenAccessor) screen).getY() + (70 / ui.getScaleFactor()));
-        int widgetWidth = 500;
+        int widgetWidth = 600;
         int widgetHeight = (int) (((HandledScreenAccessor) screen).getBackgroundHeight() - (24 * 3 / ui.getScaleFactor()));
 
         ProfessionType type = container.getProfessionType();
@@ -140,9 +142,9 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         switch (type) {
             case JEWELING, WOODWORKING -> {
-                setupSelectionWidget(selectionWidget1, type, 0, 3, xStart, ((HandledScreenAccessor) screen).getY(), widgetWidth);
-                setupSelectionWidget(selectionWidget2, type, 1, 3, xStart, ((HandledScreenAccessor) screen).getY(), widgetWidth);
-                setupSelectionWidget(selectionWidget3, type, 2, 3, xStart, ((HandledScreenAccessor) screen).getY(), widgetWidth);
+                setupSelectionWidget(selectionWidget1, type, 0, 3, xStart, yStart, widgetWidth);
+                setupSelectionWidget(selectionWidget2, type, 1, 3, xStart, yStart, widgetWidth);
+                setupSelectionWidget(selectionWidget3, type, 2, 3, xStart, yStart, widgetWidth);
             }
             case WEAPONSMITHING, ARMOURING, TAILORING -> {
                 setupSelectionWidget(selectionWidget1, type, 0, 2, xStart, yStart, widgetWidth);
@@ -163,7 +165,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 widgetWidth,
                 (int) (widgetHeight * ui.getScaleFactor()) + (big ? 66 : 0));
 
-        int recipeWidgetHeight = 120;
+        int recipeWidgetHeight = 130;
         int recipeWidgetAmount = 12;
 
         int maxOffset = (recipeWidgetAmount - 2) * widgetHeight - 20;
@@ -300,11 +302,11 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         //ui.drawRect(x, y, width, height, CustomColor.fromHexString("080808"));
 
-        ui.drawImage(materials.getFirst().getFirst().getTexture(), x, y + 10, 60, 60);
-        ui.drawText(materials.getFirst().getFirst().getName() + " " + materials.getFirst().getSecond(), x + 70, y + 20);
+        ui.drawImage(materials.getFirst().getFirst().getTexture(), x + 10, y + 5, 60, 60);
+        ui.drawText(materials.getFirst().getFirst().getName() + " " + materials.getFirst().getSecond(), x + 80, y + height / 4f + 4, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
 
-        ui.drawImage(materials.get(1).getFirst().getTexture(), x, y + 60, 60, 60);
-        ui.drawText(materials.get(1).getFirst().getName() + " " + materials.get(1).getSecond(), x + 70, y + 80);
+        ui.drawImage(materials.get(1).getFirst().getTexture(), x + 10, y + 60, 60, 60);
+        ui.drawText(materials.get(1).getFirst().getName() + " " + materials.get(1).getSecond(), x + 80, y + 3 * height / 4f - 4, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
     }
 
     private enum RecipeState {
@@ -361,10 +363,12 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
             float snapValue = 0.5f;
 
-            int widgetHeight = 120;
+            int widgetHeight = 130;
             int widgetAmount = 12;
 
-            int maxOffset = (widgetAmount - 2) * widgetHeight - 20;
+            boolean big = type == ProfessionType.ALCHEMISM || type == ProfessionType.COOKING || type == ProfessionType.SCRIBING;
+
+            int maxOffset = (widgetAmount - 2) * widgetHeight - 20 - (big ? 80 : 0);
 
             if (targetOffset > maxOffset) {
                 targetOffset = maxOffset;
@@ -399,7 +403,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             }
 
             for (int i = 0; i < widgetAmount; i++) {
-                recipeWidgets.get(i).setBounds(x + 30, (int) (y - actualOffset + 130 * i), width - 60, widgetHeight);
+                recipeWidgets.get(i).setBounds(x + 30, (int) (y - actualOffset + 140 * i), width - 60, widgetHeight);
             }
         }
 
@@ -444,6 +448,20 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 //ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromHexString("FFFFFF"));
                 ui.drawButton(x, y, width, height, 19, hovered && helperWidget.hovered);
                 drawRecipe(x, y, width, height, level, recipeData, hovered, ui);
+                ui.drawLine(x + width * 0.8f, y + 5, x + width * 0.8f, y + height - 9, ui.getScaleFactorF(), hovered ? CustomColor.fromHexString("c5b490") : CustomColor.fromHexString("a68a73"));
+                if(level < 100) {
+                    ui.drawCenteredText(String.valueOf(Math.max(1, level)), x + width * 0.9f, y + height / 4f + 4);
+                    ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
+                    ui.drawCenteredText(String.valueOf(level + 9), x + width * 0.9f, y + 3 * height / 4f - 4);
+                } else if(level == 103) {
+                    ui.drawCenteredText("100", x + width * 0.9f, y + height / 4f + 4);
+                    ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
+                    ui.drawCenteredText("103", x + width * 0.9f, y + 3 * height / 4f - 4);
+                } else if(level == 105) {
+                    ui.drawCenteredText("103", x + width * 0.9f, y + height / 4f + 4);
+                    ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
+                    ui.drawCenteredText("105", x + width * 0.9f, y + 3 * height / 4f - 4);
+                }
 
                 checkClick();
             }
@@ -540,7 +558,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             ui.drawCenteredText(text, x + width / 2f, y + height / 2f);
             int xStart = ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth();
             int yStart = ((HandledScreenAccessor) screen).getY() + 22;
-            int widgetWidth = 500;
+            int widgetWidth = 600;
             int widgetHeight = ((HandledScreenAccessor) screen).getBackgroundHeight() - 24;
             ctx.enableScissor(
                     xStart,
@@ -570,7 +588,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
             helperWidget.recipeData = null;
 
-            targetOffset = 0;
+            targetOffset = -10;
 
             if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return true;
             ProfessionType type = container.getProfessionType();
@@ -609,7 +627,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         private void setOffset(int mouseY, int maxOffset, int scrollAreaHeight) {
             float relativeY = mouseY * ui.getScaleFactorF() - y - scrollBarButtonWidget.getHeight() / 2f;
-            relativeY = Math.max(0, Math.min(relativeY, scrollAreaHeight));
+            relativeY = Math.max(-1.15f * ui.getScaleFactorF(), Math.min(relativeY, scrollAreaHeight));
 
             float scrollPercent = relativeY / scrollAreaHeight;
 
@@ -621,7 +639,12 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             currentMouseY = mouseY;
             ui.drawSliderBackground(x, y, width, height, 5, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
 
-            int maxOffset = (int) ((widgetAmount - 2) * widgetHeight + 27);
+            if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
+            ProfessionType type = container.getProfessionType();
+            boolean big = type == ProfessionType.ALCHEMISM || type == ProfessionType.COOKING || type == ProfessionType.SCRIBING;
+
+            int maxOffset = (widgetAmount - 2) * widgetHeight + 27 - (big ? 80 : 0);
+            //int maxOffset = (int) ((widgetAmount - 2) * widgetHeight + 27);
             int buttonHeight = 50;
             int scrollAreaHeight = height - buttonHeight;
 
@@ -681,10 +704,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     }
 }
 //TODO: fix paper textures
-//TODO: remember which recipe was clicked on last and scroll to that and highlight that when reopening the station
 //TODO: sky paper + starfish oil recipe is shown twice
 //TODO: add toggle for guild map estimate thing
-//TODO: save last scroll and last selected for each prof type
-//TODO: remove tree timestamps and cooldown for timestamps (maybe make it switch for the notg minibosses then)
-//TODO: fix different gui scales
 //TODO: remove duplicate timestamp (void hole opened and 2/2 pedastal)
+//TODO: fix some more gui scale issues :steamsad:
