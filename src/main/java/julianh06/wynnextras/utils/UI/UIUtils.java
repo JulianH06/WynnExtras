@@ -310,6 +310,30 @@ public final class UIUtils {
 
         drawButtonTextures(x, y, width, height, scale, darkMode, sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark, sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark, sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr, sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright);
     }
+
+    public void drawNineSlice(float x, float y, float width, float height, int scale, Identifier l, Identifier r, Identifier t, Identifier b, Identifier tl, Identifier tr, Identifier bl, Identifier br, CustomColor fillColor) {
+        if(width > scale * 2 || height > scale * 2) {
+            RenderUtils.drawRect(
+                    drawContext.getMatrices(),
+                    fillColor,
+                    sx(x + scale) - 1, sy(y + scale) - 1, 0,
+                    sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
+            );
+        }
+
+        drawImage(tl, x, y, scale, scale);
+        drawImage(tr, x + width - scale, y, scale, scale);
+        drawImage(bl, x, y + height - scale, scale, scale);
+        drawImage(br, x + width - scale, y + height - scale, scale, scale);
+        if (width > scale * 2) {
+            drawImage(t, x + scale - 2, y, width - scale * 2 + 4, scale);
+            drawImage(b, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
+        }
+        if (height > scale * 2) {
+            drawImage(l, x, y + scale - 2, scale, height - scale * 2 + 4);
+            drawImage(r, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
+        }
+    }
 }
 
 
