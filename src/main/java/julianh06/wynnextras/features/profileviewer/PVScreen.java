@@ -526,9 +526,13 @@ public class PVScreen extends WEScreen {
 
     public static String getClassName(CharacterData entry) {
         if(entry == null) return "";
-        if (entry.getNickname() != null) {
+        if(entry.getNickname() != null) {
             return "*§o" + entry.getNickname() + "§r";
+        } else if(entry.getReskin() != null) {
+            if(entry.getReskin().equals("DARKWIZARD")) return "Dark Wizard";
+            return entry.getReskin().charAt(0) + entry.getReskin().substring(1).toLowerCase();
         } else {
+            if(entry.getType() == null) return "";
             return entry.getType().charAt(0) + entry.getType().substring(1).toLowerCase();
         }
     }

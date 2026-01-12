@@ -48,7 +48,7 @@ public class InventoryScreenMixin {
             }
         }
 
-        if (Models.Container.getCurrentContainer() instanceof CraftingStationContainer) {
+        if (Models.Container.getCurrentContainer() instanceof CraftingStationContainer && SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay) {
             ci.cancel();
         }
 

@@ -36,7 +36,7 @@ public class ScribingRecipes implements IRecipeData {
             return List.of(new Pair<>(Paper.PINE, 5), new Pair<>(Oil.BASS, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Paper.AVO, 6), new Pair<>(Oil.MOLTEN, 6));
-        } else if (level < 104) {
+        } else if (level < 103) {
             return List.of(new Pair<>(Paper.SKY, 6), new Pair<>(Oil.STARFISH, 6));
         } else if (level < 106) {
             return List.of(new Pair<>(Paper.DERNIC, 6), new Pair<>(Oil.DERNIC, 6));

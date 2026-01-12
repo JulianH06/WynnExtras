@@ -105,7 +105,7 @@ public class RaidChatNotifier {
                 "You have unblocked the voidhole out!",
                 "§bVoid Room done §c",
                 "voidholeroompb"
-        ),
+        ), //TODO: theres still a duplicate timestamp, it`s probably this
         new SingleOccurrenceDetector(
                 "The Giant Void Hole has opened! Use it to escape!",
                 "§bVoidgather Room done §c",
@@ -130,11 +130,6 @@ public class RaidChatNotifier {
                 "The Void Hole at the bottom of",
                 "§bVoid hole opened §c",
                 "voidholeopen"
-        ),
-        new SingleOccurrenceDetector(
-                "Destroy them and defeat the Despairing Crawler",
-                "§bDespairing Crawler spaned §c",
-                "despairingcrawlerspawn"
         ),
 
 
@@ -343,8 +338,7 @@ public class RaidChatNotifier {
         Pattern.compile("A miniboss has spawned! It has sped", Pattern.CASE_INSENSITIVE),
         Pattern.compile("The golem has been defeated, and", Pattern.CASE_INSENSITIVE),
         Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The Void Hole at the bottom of", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("Destroy them and defeat the Despairing Crawler", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("The Void Hole at the bottom of", Pattern.CASE_INSENSITIVE)
     );
 
 

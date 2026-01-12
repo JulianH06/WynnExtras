@@ -39,6 +39,7 @@ public class WynnExtrasConfig implements ConfigData {
         String bankOverlay = "Bank Overlay";
         String chat = "Chat";
         String raid = "Raid";
+        String crafting = "Crafting";
         String misc = "Misc";
     }
 
@@ -194,6 +195,10 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Name("Enable Raid timestamps")
     public boolean toggleRaidTimestamps = true;
 
+    @ConfigEntry.Category(Categories.crafting)
+    @ConfigEntry.Name("Crafting helper overlay toggle")
+    public boolean craftingHelperOverlay = true;
+
     //TOTEM VISUALIZER
 
     @ConfigEntry.Category(Categories.raid)
@@ -274,10 +279,6 @@ public class WynnExtrasConfig implements ConfigData {
 
     //Provoke Timer
 
-    @ConfigEntry.Category(Categories.misc)
-    @ConfigEntry.Text
-    public String emptyy = " ";
-
     @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Toggle Provoke Timer [WIP]")
     public boolean provokeTimerToggle = false;
@@ -313,11 +314,6 @@ public class WynnExtrasConfig implements ConfigData {
     public int customGUIScale = 3;
 
     // Perspective
-
-    @ConfigEntry.Category(Categories.misc)
-    @ConfigEntry.Text
-    public String emptyyyy = " ";
-
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Remove front person view")
     public boolean removeFrontPersonView = false;
@@ -325,6 +321,10 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Receive smart financial advise in the item identifier menu")
     public boolean sourceOfTruthToggle = false;
+
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Name("Show territory estimates in the Wynntils guild map")
+    public boolean territoryEstimateToggle = false;
 
     @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Raid Personal Bests (internal)")

@@ -32,7 +32,7 @@ public class AlchemismRecipes implements IRecipeData {
             return List.of(new Pair<>(Grains.RICE, 10), new Pair<>(Oil.BASS, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Grains.SORGHUM, 12), new Pair<>(Oil.MOLTEN, 6));
-        } else if (level < 104) {
+        } else if (level < 103) {
             return List.of(new Pair<>(Grains.HEMP, 12), new Pair<>(Oil.STARFISH, 6));
         } else if (level < 106) {
             return List.of(new Pair<>(Grains.DERNIC, 12), new Pair<>(Oil.DERNIC, 6));

@@ -32,7 +32,7 @@ public class BraceletRecipes implements IRecipeData {
             return List.of(new Pair<>(Gem.DIAMOND, 10), new Pair<>(Oil.BASS, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Gem.MOLTEN, 12), new Pair<>(Oil.MOLTEN, 6));
-        } else if (level < 104) {
+        } else if (level < 103) {
             return List.of(new Pair<>(Gem.VOIDSTONE, 12), new Pair<>(Oil.STARFISH, 6));
         } else if (level < 106) {
             return List.of(new Pair<>(Gem.DERNIC, 12), new Pair<>(Oil.DERNIC, 6));

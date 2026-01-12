@@ -63,11 +63,13 @@ public abstract class HandledScreenMixin {
             identifierOverlay.render(context, mouseX, mouseY, delta);
         }
 
-        if (craftingHelperOverlay == null) {
-            craftingHelperOverlay = new CraftingHelperOverlay();
-        }
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay) {
+            if (craftingHelperOverlay == null) {
+                craftingHelperOverlay = new CraftingHelperOverlay();
+            }
 
-        craftingHelperOverlay.render(context, mouseX, mouseY, delta);
+            craftingHelperOverlay.render(context, mouseX, mouseY, delta);
+        }
     }
 
 
@@ -80,7 +82,7 @@ public abstract class HandledScreenMixin {
             }
         }
 
-        if (craftingHelperOverlay != null && Models.Container.getCurrentContainer() instanceof CraftingStationContainer) {
+        if (craftingHelperOverlay != null && Models.Container.getCurrentContainer() instanceof CraftingStationContainer && SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay) {
             craftingHelperOverlay.mouseClicked(mouseX, mouseY, button);
         }
 
@@ -110,7 +112,7 @@ public abstract class HandledScreenMixin {
             }
         }
 
-        if(craftingHelperOverlay != null) {
+        if(craftingHelperOverlay != null && SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay) {
             craftingHelperOverlay.mouseReleased(mouseX, mouseY, button);
         }
     }
