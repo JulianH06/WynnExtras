@@ -32,7 +32,7 @@ public class WandRecipes implements IRecipeData {
             return List.of(new Pair<>(Wood.PINE, 10), new Pair<>(StringMaterial.RICE, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Wood.AVO, 12), new Pair<>(StringMaterial.SORGHUM, 6));
-        } else if (level < 104) {
+        } else if (level < 103) {
             return List.of(new Pair<>(Wood.SKY, 12), new Pair<>(StringMaterial.HEMP, 6));
         } else if (level < 106) {
             return List.of(new Pair<>(Wood.DERNIC, 12), new Pair<>(StringMaterial.DERNIC, 6));

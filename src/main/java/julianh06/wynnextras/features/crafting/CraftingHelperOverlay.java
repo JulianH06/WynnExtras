@@ -419,8 +419,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             if(recipeWidgets.isEmpty()) {
                 for (int i = 0; i < widgetAmount; i++) {
                     int level = i * 10;
-                    if(i == 10) level = 103;
-                    if(i == 11) level = 105;
+                    if(i == 11) level = 103;
 
                     RecipeWidget recipeWidget = new RecipeWidget(recipeData, i, level);
 
@@ -488,11 +487,11 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                     ui.drawCenteredText(String.valueOf(Math.max(1, level)), x + width * 0.9f, y + height / 4f + 4);
                     ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
                     ui.drawCenteredText(String.valueOf(level + 9), x + width * 0.9f, y + 3 * height / 4f - 4);
-                } else if(level == 103) {
+                } else if(level == 100) {
                     ui.drawCenteredText("100", x + width * 0.9f, y + height / 4f + 4);
                     ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
                     ui.drawCenteredText("103", x + width * 0.9f, y + 3 * height / 4f - 4);
-                } else if(level == 105) {
+                } else if(level == 103) {
                     ui.drawCenteredText("103", x + width * 0.9f, y + height / 4f + 4);
                     ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
                     ui.drawCenteredText("105", x + width * 0.9f, y + 3 * height / 4f - 4);
@@ -528,7 +527,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 
-                List<Pair<IMaterial, Integer>> materials = recipeData.getMaterials(level);
+                List<Pair<IMaterial, Integer>> materials = recipeData.getMaterials(this.level);
 
                 if(materials.isEmpty() || materials.size() < 2) return true;
 
@@ -774,10 +773,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     }
 }
 //TODO: fix paper textures
-//TODO: sky paper + starfish oil recipe is shown twice
-//TODO: add toggle for guild map estimate thing
 //TODO: remove duplicate timestamp (void hole opened and 2/2 pedastal)
 //TODO: cant click on item after switching to account bank
-//TODO: add name of reskinned class in pv
 //TODO: bug in character bank when character is not known (when restarting game while in raid and joining again wynntils doesnt know which class you are on)
 //TODO: wynnbuilder loader: link at the left where you can paste a wynnbuilder link to load a recipe

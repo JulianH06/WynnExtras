@@ -32,7 +32,7 @@ public class BootsRecipes implements IRecipeData {
             return List.of(new Pair<>(Ingot.DIAMOND, 5), new Pair<>(StringMaterial.RICE, 10));
         } else if (level < 100) {
             return List.of(new Pair<>(Ingot.MOLTEN, 6), new Pair<>(StringMaterial.SORGHUM, 12));
-        } else if (level < 104) {
+        } else if (level < 103) {
             return List.of(new Pair<>(Ingot.VOIDSTONE, 6), new Pair<>(StringMaterial.HEMP, 12));
         } else if (level < 106) {
             return List.of(new Pair<>(Ingot.DERNIC, 6), new Pair<>(StringMaterial.DERNIC, 12));

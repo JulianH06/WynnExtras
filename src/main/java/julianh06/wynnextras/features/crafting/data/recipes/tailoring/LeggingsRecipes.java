@@ -32,7 +32,7 @@ public class LeggingsRecipes implements IRecipeData {
             return List.of(new Pair<>(Ingot.DIAMOND, 10), new Pair<>(StringMaterial.RICE, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Ingot.MOLTEN, 12), new Pair<>(StringMaterial.SORGHUM, 6));
-        } else if (level < 104) {
+        } else if (level < 103) {
             return List.of(new Pair<>(Ingot.VOIDSTONE, 12), new Pair<>(StringMaterial.HEMP, 6));
         } else if (level < 106) {
             return List.of(new Pair<>(Ingot.DERNIC, 12), new Pair<>(StringMaterial.DERNIC, 6));

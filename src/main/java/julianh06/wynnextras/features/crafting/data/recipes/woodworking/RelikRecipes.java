@@ -33,7 +33,7 @@ public class RelikRecipes implements IRecipeData {
             return List.of(new Pair<>(Wood.PINE, 5), new Pair<>(Oil.BASS, 10));
         } else if (level < 100) {
             return List.of(new Pair<>(Wood.AVO, 6), new Pair<>(Oil.MOLTEN, 12));
-        } else if (level < 104) {
+        } else if (level < 103) {
             return List.of(new Pair<>(Wood.SKY, 6), new Pair<>(Oil.STARFISH, 12));
         } else if (level < 106) {
             return List.of(new Pair<>(Wood.DERNIC, 6), new Pair<>(Oil.DERNIC, 12));

@@ -32,7 +32,7 @@ public class NecklaceRecipes implements IRecipeData {
             return List.of(new Pair<>(Gem.DIAMOND, 15), new Pair<>(Oil.BASS, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Gem.MOLTEN, 18), new Pair<>(Oil.MOLTEN, 6));
-        } else if (level < 104) {
+        } else if (level < 103) {
             return List.of(new Pair<>(Gem.VOIDSTONE, 18), new Pair<>(Oil.STARFISH, 6));
         } else if (level < 106) {
             return List.of(new Pair<>(Gem.DERNIC, 18), new Pair<>(Oil.DERNIC, 6));

@@ -32,7 +32,7 @@ public class ChestplateRecipes implements IRecipeData {
             return List.of(new Pair<>(Paper.PINE, 5), new Pair<>(Ingot.DIAMOND, 10));
         } else if (level < 100) {
             return List.of(new Pair<>(Paper.AVO, 6), new Pair<>(Ingot.MOLTEN, 12));
-        } else if (level < 104) {
+        } else if (level < 103) {
             return List.of(new Pair<>(Paper.SKY, 6), new Pair<>(Ingot.VOIDSTONE, 12));
         } else if (level < 106) {
             return List.of(new Pair<>(Paper.DERNIC, 6), new Pair<>(Ingot.DERNIC, 12));

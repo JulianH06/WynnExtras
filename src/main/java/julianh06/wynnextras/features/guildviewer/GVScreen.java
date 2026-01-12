@@ -88,7 +88,8 @@ public class GVScreen extends WEScreen {
 
     public static PVScreen.DarkModeToggleWidget darkModeToggleWidget = new PVScreen.DarkModeToggleWidget();
 
-    private static int scrollOffset = 0;
+    private static float targetOffset = 0;
+    private static float actualOffset = 0;
 
     List<GuildMemeberWidget> memeberWidgets = new ArrayList<>();
 
@@ -104,7 +105,8 @@ public class GVScreen extends WEScreen {
         super.init();
 
         registerScrolling();
-        scrollOffset = 0;
+        targetOffset = 0;
+        actualOffset = 0;
         rootWidgets.clear();
         addRootWidget(backgroundImageWidget);
         addRootWidget(darkModeToggleWidget);
@@ -140,7 +142,6 @@ public class GVScreen extends WEScreen {
         int yStart = getLogicalHeight() / 2 - 375;
         backgroundImageWidget.setBounds(xStart, yStart, 1800, 750);
         darkModeToggleWidget.setBounds(xStart + 1800 - 120, yStart + 750, 120, 60);
-
 //        int totalWidth = 24;
 //        for(PVScreen.TabButtonWidget tabButtonWidget : tabButtonWidgets) {
 //            int signWidth = drawDynamicNameSign(drawContext, tabButtonWidget.tab.toString(), xStart + totalWidth, yStart - 57);
@@ -204,6 +205,12 @@ public class GVScreen extends WEScreen {
         updateVisibleListRange();
         layoutListElements();
 
+        float snapValue = 0.5f;
+        float speed = 0.3f;
+        float diff = (targetOffset - actualOffset);
+        if(Math.abs(diff) < snapValue || !SimpleConfig.getInstance(WynnExtrasConfig.class).smoothScrollToggle) actualOffset = targetOffset;
+        else actualOffset += diff * speed * delta;
+
         int xStart = getLogicalWidth() / 2 - 900/* - (getLogicalWidth() - 1800 < 200 ? 50 : 0)*/;
         int yStart = getLogicalHeight() / 2 - 374;
 
@@ -245,7 +252,7 @@ public class GVScreen extends WEScreen {
 
         int textX = xStart + 1180;
         int spacing = 150;
-        int yOffset = spacing - scrollOffset - 50;
+        int yOffset = spacing - (int) actualOffset - 50;
         ui.drawText("[" + GV.currentGuildData.prefix + "] " + GV.currentGuildData.name, xStart + 19, yStart + 19);
 
         PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, xStart + 15, yStart + 60, 33, 33, ui);
@@ -585,8 +592,13 @@ public class GVScreen extends WEScreen {
 
     @Override
     protected void scrollList(float delta) {
-        scrollOffset -= (int) (delta);
-        if(scrollOffset < 0) scrollOffset = 0;
+        if (delta > 0) {
+            targetOffset -= 40f;
+        } else {
+            targetOffset += 40f;
+        }
+
+        if(targetOffset < 0) targetOffset = 0;
     }
 
     private static class GuildMemeberWidget extends Widget {

@@ -32,7 +32,7 @@ public class CookingRecipes implements IRecipeData {
             return List.of(new Pair<>(Meat.BASS, 10), new Pair<>(Grains.RICE, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Meat.MOLTEN, 12), new Pair<>(Grains.SORGHUM, 6));
-        } else if (level < 104) {
+        } else if (level < 103) {
             return List.of(new Pair<>(Meat.STARFISH, 12), new Pair<>(Grains.HEMP, 6));
         } else if (level < 106) {
             return List.of(new Pair<>(Meat.DERNIC, 12), new Pair<>(Grains.DERNIC, 6));
