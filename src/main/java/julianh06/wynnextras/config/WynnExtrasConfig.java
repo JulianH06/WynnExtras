@@ -64,12 +64,28 @@ public class WynnExtrasConfig implements ConfigData {
     public NotificationConfig notificationConfig = new NotificationConfig();
 
     public static class NotificationConfig implements ConfigData {
-        public boolean test = false;
-        public boolean hallo = true;
+        public boolean lostEye = true;
+        public boolean oneGoo = true;
+        public boolean twoGoo = true;
+        public boolean soul = true;
+        public boolean voidMatter = true;
+        public boolean fourOutOfFiveVoidMatter = true;
+        public boolean oneLightCrystal = true;
+        public boolean twoLightCrystal = true;
+        public boolean notgUpperPlatform = true;
+        public boolean notgLowerPlatform = true;
 
         public void syncPremades() {
-            premades.put("TEST|Testttttt", test);
-            premades.put("HALLO|Halo", hallo);
+            premades.put("You feel like thousands of eyes|LOST EYE", lostEye);
+            premades.put("+1 Slimey Goo|+1 Goo", oneGoo);
+            premades.put("+2 Slimey Goo|+2 Goos", twoGoo);
+            premades.put("Another Soul must be given!|NEXT SOUL", soul);
+            premades.put("+1 Void Matter|+1 Void Matter", voidMatter);
+            premades.put("The Void Holes have begun to desetabilize!|KILL THE VOID HOLES", fourOutOfFiveVoidMatter);
+            premades.put("+1 Light Crystal|+1 Crystal", oneLightCrystal);
+            premades.put("+2 Light Crystal|+2 Crystals", twoLightCrystal);
+            premades.put("The players on the|UPPER PLATFORM SPAWNED", notgUpperPlatform);
+            premades.put("A new platform has|LOWER PLATFORM SPAWNED", notgLowerPlatform);
         }
 
         public NotificationConfig() {
@@ -209,6 +225,10 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Fast requeue toggle (automatically runs /pf when closing a raid chest)")
     public boolean toggleFastRequeue = true;
+
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Chiropterror spawn timer")
+    public boolean chiropTimer = true;
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Show Wynnpool item weights")
