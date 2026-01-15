@@ -526,9 +526,13 @@ public class PVScreen extends WEScreen {
 
     public static String getClassName(CharacterData entry) {
         if(entry == null) return "";
-        if (entry.getNickname() != null) {
+        if(entry.getNickname() != null) {
             return "*§o" + entry.getNickname() + "§r";
+        } else if(entry.getReskin() != null) {
+            if(entry.getReskin().equals("DARKWIZARD")) return "Dark Wizard";
+            return entry.getReskin().charAt(0) + entry.getReskin().substring(1).toLowerCase();
         } else {
+            if(entry.getType() == null) return "";
             return entry.getType().charAt(0) + entry.getType().substring(1).toLowerCase();
         }
     }
@@ -897,6 +901,9 @@ public class PVScreen extends WEScreen {
         public static float targetX;
         public static float currentX;
 
+        public static float fade = 0f;
+        private static float targetFade = 0f;
+
         public DarkModeToggleWidget() {
             super(0, 0, 120, 0);
             if(SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle) {
@@ -907,11 +914,15 @@ public class PVScreen extends WEScreen {
             this.action = () -> {
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle = !SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle;
+
                 if(SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle) {
                     targetX = width - 37.5f;
                 } else {
                     targetX = 7.5f;
                 }
+
+                targetFade = SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle ? 1f : 0f;
+
                 SimpleConfig.save(WynnExtrasConfig.class);
             };
         }
@@ -920,12 +931,8 @@ public class PVScreen extends WEScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             drawImageWithFade(darkmodeToggleBackgroundDark, darkmodeToggleBackground, x, y, width, height, ui);
 
-            float progress = Math.abs(currentX - 7.5f);
-            float maxDistance = width - 37.5f - 7.5f;
-            float alpha = (progress / maxDistance);
-
-            ui.drawImage(sun, x + currentX, y + 22.5f, 30, 30, 1 - alpha);
-            ui.drawImage(moon, x + currentX, y + 22.5f, 30, 30, alpha);
+            ui.drawImage(sun, x + currentX, y + 22.5f, 30, 30, 1 - fade);
+            ui.drawImage(moon, x + currentX, y + 22.5f, 30, 30, fade);
 
             if(currentX < targetX) {
                 currentX += (10f * tickDelta);
@@ -941,6 +948,8 @@ public class PVScreen extends WEScreen {
                 }
             }
 
+            fade += (targetFade - fade) * 0.15f;
+            fade = Math.clamp(fade, 0f, 1f);
         }
 
         @Override
@@ -950,16 +959,19 @@ public class PVScreen extends WEScreen {
             return true;
         }
 
-        public static void drawImageWithFade(Identifier dark, Identifier light, float x, float y, float width, float height, UIUtils ui) {
-            float progress = Math.abs(currentX - 7.5f);
-            float maxDistance = 120 - 37.5f - 7.5f;
-            float alpha = (progress / maxDistance);
+        public static void drawImageWithFade(
+                Identifier dark,
+                Identifier light,
+                float x,
+                float y,
+                float width,
+                float height,
+                UIUtils ui
+        ) {
+            float a = DarkModeToggleWidget.fade;
 
-            ui.drawImage(light, x, y, width, height, 1 - alpha);
-
-            ui.drawImage(dark, x, y, width, height, alpha);
+            ui.drawImage(light, x, y, width, height, 1f - a);
+            ui.drawImage(dark, x, y, width, height, a);
         }
     }
 }
-
-//TODO: cleanup
