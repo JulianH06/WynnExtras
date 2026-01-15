@@ -1348,6 +1348,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            if(!isMouseInOverlay) return true;
+
             if(activeInv == currentData.lastPage - 1) {
                 ScreenHandler currScreenHandler = McUtils.containerMenu();
                 if (currScreenHandler == null) {
@@ -1359,7 +1361,12 @@ public class BankOverlay2 extends WEHandledScreen {
                 if(PersonalStorageUtils == null) return true;
 
                 activeInv = currentData.lastPage - 1;
-                BankOverlay.PersonalStorageUtils.jumpToDestination(activeInv + 1);
+                try {
+                    BankOverlay.PersonalStorageUtils.jumpToDestination(activeInv + 1);
+                } catch (Exception e) {
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils. Please create a bug report on discord if this still appears after you have enabled."));
+                    return true;
+                }
                 if(annotationCache.get(activeInv) != null) annotationCache.get(activeInv).clear();
                 retryLoad();
             }
@@ -1486,7 +1493,12 @@ public class BankOverlay2 extends WEHandledScreen {
 
                 Pages.BankPages.put(activeInv, stacks);
                 activeInv = inventoryIndex;
-                BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
+                try {
+                    BankOverlay.PersonalStorageUtils.jumpToDestination(inventoryIndex + 1);
+                } catch (Exception e) {
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils. Please create a bug report on discord if this still appears after you have enabled."));
+                    return true;
+                }
                 if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
             }
             return true;
