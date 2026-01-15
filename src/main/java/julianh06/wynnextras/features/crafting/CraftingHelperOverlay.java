@@ -1,10 +1,10 @@
 package julianh06.wynnextras.features.crafting;
 
-import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
-import com.wynntils.features.ui.CraftingProfessionLevelProgressBarFeature;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.profession.type.ProfessionType;
+import com.wynntils.models.worlds.type.BombInfo;
+import com.wynntils.models.worlds.type.BombType;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
@@ -41,7 +41,6 @@ import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.*;
@@ -64,9 +63,6 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     private final static Map<ProfessionType, Map<RecipeState, Float>> lastOffset = new HashMap<>();
     private final static Map<ProfessionType, RecipeState> lastState = new HashMap<>();
 
-    Identifier background = Identifier.of("wynnextras", "textures/gui/craftinghelper/bg.png");
-    Identifier backgroundBig = Identifier.of("wynnextras", "textures/gui/craftinghelper/bgbig.png");
-
     Identifier l = Identifier.of("wynnextras", "textures/gui/craftinghelper/l.png");
     Identifier r = Identifier.of("wynnextras", "textures/gui/craftinghelper/r.png");
     Identifier t = Identifier.of("wynnextras", "textures/gui/craftinghelper/t.png");
@@ -76,7 +72,12 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     Identifier bl = Identifier.of("wynnextras", "textures/gui/craftinghelper/bl.png");
     Identifier br = Identifier.of("wynnextras", "textures/gui/craftinghelper/br.png");
 
+    ProfBombWidget profSpeedBombWidget;
+    ProfBombWidget profXpBombWidget;
+
     static ScrollBarWidget scrollBarWidget = null;
+
+    static String statusMessage = "";
 
     public CraftingHelperOverlay() {
         state = RecipeState.NONE;
@@ -84,8 +85,11 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         selectionWidget1 = null;
         selectionWidget2 = null;
         selectionWidget3 = null;
+        profSpeedBombWidget = null;
+        profXpBombWidget = null;
         actualOffset = 0;
         targetOffset = ui == null ? -10 : -10 / ui.getScaleFactorF();
+        statusMessage = "";
 
         if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
         ProfessionType type = container.getProfessionType();
@@ -124,6 +128,31 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         int yStart = (int) (((HandledScreenAccessor) screen).getY() + (70 / ui.getScaleFactor()));
         int widgetWidth = 600;
         int widgetHeight = (int) (((HandledScreenAccessor) screen).getBackgroundHeight() - (24 * 3 / ui.getScaleFactor()));
+
+        if(profSpeedBombWidget == null) profSpeedBombWidget = new ProfBombWidget(BombType.PROFESSION_SPEED);
+        if(profXpBombWidget == null) profXpBombWidget = new ProfBombWidget(BombType.PROFESSION_XP);
+
+        int speedWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(profSpeedBombWidget.text) * ui.getScaleFactor());
+        int xpWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(profXpBombWidget.text) * ui.getScaleFactor());
+        profSpeedBombWidget.setBounds((int) ((screen.width / 2f) * ui.getScaleFactorF() - speedWidth / 2f), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 100), speedWidth, 30);
+        profXpBombWidget.setBounds((int) ((screen.width / 2f) * ui.getScaleFactorF() - xpWidth / 2f), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 140), xpWidth, 30);
+
+        profSpeedBombWidget.draw(ctx, mouseX, mouseY, delta, ui);
+        profXpBombWidget.draw(ctx, mouseX, mouseY, delta, ui);
+
+        boolean dontShowWorldText = false;
+
+        if(profSpeedBombWidget.bomb != null && profSpeedBombWidget.bomb.server().equals(Models.WorldState.getCurrentWorldName())) dontShowWorldText = true;
+        if(profXpBombWidget.bomb != null && profXpBombWidget.bomb.server().equals(Models.WorldState.getCurrentWorldName())) dontShowWorldText = true;
+
+        if ((profXpBombWidget.isActive || profSpeedBombWidget.isActive) && !dontShowWorldText) {
+            int currentWorldTextYOffset = profXpBombWidget.isActive ? 170 : 130;
+            ui.drawCenteredText("There are no active profession bombs on your world. Click below to switch worlds.", (screen.width / 2f) * ui.getScaleFactorF(), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - currentWorldTextYOffset), CustomColor.fromHexString("FF0000"));
+        }
+
+        if(!profXpBombWidget.isActive && !profSpeedBombWidget.isActive) {
+            ui.drawCenteredText("There are no active profession bombs.", (screen.width / 2f) * ui.getScaleFactorF(), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 90), CustomColor.fromHexString("FF0000"));
+        }
 
         ProfessionType type = container.getProfessionType();
         lastState.put(type, state);
@@ -200,13 +229,15 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         helperWidget.maxOffset = maxOffset;
         scrollBarWidget.maxOffset = maxOffset;
 
-        scrollBarWidget.setBounds((int) ((xStart + 5) * ui.getScaleFactor()) + widgetWidth, (int) (yStart * ui.getScaleFactor()), 30, (int) ((widgetHeight - 1) * ui.getScaleFactor()));
+        scrollBarWidget.setBounds((int) ((xStart + 5) * ui.getScaleFactor()) + widgetWidth, (int) ((int) (((HandledScreenAccessor) screen).getY() + (big ? 10 : 70) / ui.getScaleFactor()) * ui.getScaleFactor()), 30, (int) ((((HandledScreenAccessor) screen).getBackgroundHeight() - (big ? 12 : 75) / ui.getScaleFactor()) * ui.getScaleFactor()));
         scrollBarWidget.draw(ctx, mouseX, mouseY, delta, ui);
 
         int scissorX1 = xStart;
         int scissorY1 = (int) (yStart + Math.round((big ? - 46.5f : 20) / ui.getScaleFactor()));
         int scissorX2 = xStart + widgetWidth;
         int scissorY2 = (int) (yStart + widgetHeight - Math.round(20 / ui.getScaleFactor()));
+
+        ui.drawCenteredText(statusMessage, (xStart + (ui.getScaleFactorF() == 2 ? 40 : 0)) * ui.getScaleFactorF(), (((HandledScreenAccessor) screen).getY() + ((HandledScreenAccessor) screen).getBackgroundHeight() + 10) * ui.getScaleFactorF(), CustomColor.fromHexString("FF0000"));
 
         ctx.enableScissor(
                 scissorX1,
@@ -219,6 +250,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         selectionWidget3.setScissorBounds(scissorX1, scissorY1, scissorX2, scissorY2);
 
         helperWidget.setBounds((int) (xStart * ui.getScaleFactor() + 5), (int) ((yStart + (big ? - 15 : 7)) * ui.getScaleFactor()), widgetWidth, (int) ((widgetHeight + (big ? 12 : - 14)) * ui.getScaleFactor()));
+
     }
     
     private void setupSelectionWidget(SelectionWidget selectionWidget, ProfessionType type, int i, int maxWidgets, int xStart, int yStart, int widgetWidth) {
@@ -281,6 +313,8 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     @Override
     public boolean mouseClicked(double x, double y, int button) {
         if(scrollBarWidget != null) scrollBarWidget.mouseClicked(x, y, button);
+        if(profSpeedBombWidget != null) profSpeedBombWidget.mouseClicked(x, y, button);
+        if(profXpBombWidget != null) profXpBombWidget.mouseClicked(x, y, button);
         return super.mouseClicked(x, y, button);
     }
 
@@ -502,10 +536,10 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 ProfessionType profession = container.getProfessionType();
                 int level = Models.Profession.getLevel(profession);
 
-                if(level < this.level) {
+                if(level > 0 && level < this.level) {
                     ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHSV(0, 0, 0, 0.5f) : CustomColor.fromHSV(0, 0, 0, 0.75f));
                     ui.drawCenteredText("Requires " + profession.getDisplayName(), x + width / 2f, y + height / 2f - 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
-                    ui.drawCenteredText(" level " + this.level + " to craft.", x + width / 2f, y + height / 2f + 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
+                    ui.drawCenteredText("level " + this.level + " to craft.", x + width / 2f, y + height / 2f + 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
                 }
 
                 checkClick();
@@ -517,11 +551,12 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
                 if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return false;
 
+                statusMessage = "";
 
                 ProfessionType profession = container.getProfessionType();
                 int level = Models.Profession.getLevel(profession);
 
-                if(level < this.level) {
+                if(level > 0 && level < this.level) {
                     return false;
                 }
 
@@ -541,33 +576,27 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 int materialAmount = material.getSecond();
 
                 List<Slot> slots = McUtils.containerMenu().slots;
-                List<Pair<Slot, Integer>> clickableSlots = new ArrayList<>();
                 int available = 0;
 
+                boolean canClick = false;
                 for(Slot slot : slots) {
                     try {
                         if(!(slot.inventory instanceof PlayerInventory)) continue;
 
                         if(slot.getStack().getCustomName().getString().contains(material.getFirst().getName())) {
-                            int remaining = materialAmount - available;
-                            available += slot.getStack().getCount();
-                            int amount = Math.min(slot.getStack().getCount(), remaining);
-                            clickableSlots.add(new Pair<>(slot, amount));
+                            canClick = true;
+                            for (int i = 0; i < materialAmount; i++) {
+                                CLICK_QUEUE.add(slot.id);
+                            }
+                            break;
                         }
 
                         if(available >= materialAmount) break;
                     } catch (Exception ignored) {}
                 }
 
-                if(available < materialAmount) {
-                    System.out.println("Not enough in inventory");
-                    return;
-                }
-
-                for (Pair<Slot, Integer> slot : clickableSlots) {
-                    for (int i = 0; i < slot.getSecond(); i++) {
-                        CLICK_QUEUE.add(slot.getFirst().id);
-                    }
+                if(!canClick) {
+                    statusMessage = "You don't have the required materials to craft this.";
                 }
             }
 
@@ -709,7 +738,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-            ui.drawSliderBackground(x, y, width, height, 5, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
+            ui.drawSliderBackground(x, y, width, height, 5, false);
 
             int buttonHeight = 50;
             int scrollAreaHeight = height - buttonHeight;
@@ -754,7 +783,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 5, hovered || isHold, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
+                ui.drawButton(x, y, width, height, 5, hovered || isHold, false);
             }
 
             @Override
@@ -771,8 +800,84 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             }
         }
     }
+
+    private static class ProfBombWidget extends Widget {
+        final BombType type;
+        public BombInfo bomb;
+        public boolean isActive;
+        public String text;
+
+        public ProfBombWidget(BombType type) {
+            super(0, 0, 0, 0);
+            this.type = type;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            try {
+                if(bomb != null) {
+                    if (bomb.server().equals(Models.WorldState.getCurrentWorldName())) hovered = false;
+                }
+
+                String currentWorld = Models.WorldState.getCurrentWorldName();
+                isActive = false;
+                bomb = null;
+
+                for (BombInfo bomb : Models.Bomb.getBombBells()) {
+                    if (bomb.bomb() == type) {
+                        isActive = true;
+                        if (bomb.server().equals(currentWorld)) {
+                            this.bomb = bomb;
+                            break;
+                        }
+                        if (this.bomb == null || bomb.getRemainingLong() > this.bomb.getRemainingLong()) {
+                            this.bomb = bomb;
+                        }
+                    }
+                }
+
+                if (isActive) {
+                    String worldColor = bomb.server().equals(currentWorld) ? "§a" : "§f";
+                    worldColor += (hovered ? "§n" : "");
+                    String bombType = "?";
+                    if(type == BombType.PROFESSION_SPEED) bombType = "Speed";
+                    if(type == BombType.PROFESSION_XP) bombType = "XP";
+
+                    text = "§6" + (hovered ? "§n" : "") + "Profession " + bombType  + " §7" + (hovered ? "§n" : "") + "on " + worldColor + bomb.server() + " §6" + (hovered ? "§n" : "") + "(" + bomb.getRemainingString() + ")";
+
+                    if (bomb.getRemainingLong() < 30000) {
+                        long seconds = Time.now().timestamp() / 1000;
+
+                        String color = (seconds % 2 == 0) ? "§c" : "§4";
+                        color += (hovered ? "§n" : "");
+
+                        text = color + "Profession " + bombType + " on "
+                                + bomb.server()
+                                + " (" + bomb.getRemainingString() + ") (EXPIRING SOON)";
+                    }
+
+                    ui.drawCenteredText(text, x + width / 2f, y + height / 2f);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if(bomb.server().equals(Models.WorldState.getCurrentWorldName())) return true;
+
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            if(bomb == null) return true;
+            MinecraftClient client = MinecraftClient.getInstance();
+
+            if (client.player != null) {
+                McUtils.setScreen(null);
+                client.player.networkHandler.sendChatCommand("switch " + bomb.server());
+            }
+
+            return true;
+        }
+    }
 }
-//TODO: fix paper textures
 //TODO: remove duplicate timestamp (void hole opened and 2/2 pedastal)
 //TODO: cant click on item after switching to account bank
 //TODO: bug in character bank when character is not known (when restarting game while in raid and joining again wynntils doesnt know which class you are on)
