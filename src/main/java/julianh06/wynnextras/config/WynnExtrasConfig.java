@@ -1,31 +1,14 @@
 package julianh06.wynnextras.config;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.wynntils.models.raid.type.RaidRoomInfo;
 import julianh06.wynnextras.config.simpleconfig.ConfigData;
 import julianh06.wynnextras.config.simpleconfig.ConfigHolder;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.config.simpleconfig.annotations.Config;
 import julianh06.wynnextras.config.simpleconfig.annotations.ConfigEntry;
-import julianh06.wynnextras.features.misc.ItemStackDeserializer;
-import julianh06.wynnextras.features.misc.ItemStackSerializer;
-import julianh06.wynnextras.features.waypoints.Waypoint;
-import julianh06.wynnextras.features.waypoints.WaypointData;
-import julianh06.wynnextras.features.waypoints.Waypoints;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.item.ItemStack;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.BiFunction;
 
-import me.shedaniel.math.Color;
 import net.minecraft.util.ActionResult;
 
 @Config(name = "wynnextras/wynnextras", title = "WynnExtras Config")
@@ -74,6 +57,28 @@ public class WynnExtrasConfig implements ConfigData {
 
 
     //CHAT NOTIFIER
+
+    @ConfigEntry.Category(Categories.chat)
+    @ConfigEntry.Collapsible
+    @ConfigEntry.Name("Premade Notifications")
+    public NotificationConfig notificationConfig = new NotificationConfig();
+
+    public static class NotificationConfig implements ConfigData {
+        public boolean test = false;
+        public boolean hallo = true;
+
+        public void syncPremades() {
+            premades.put("TEST|Testttttt", test);
+            premades.put("HALLO|Halo", hallo);
+        }
+
+        public NotificationConfig() {
+            premades = new HashMap<>();
+        }
+
+        @ConfigEntry.Excluded
+        public Map<String, Boolean> premades;
+    }
 
     @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Name("Notified words")

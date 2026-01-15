@@ -197,12 +197,6 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 (int) (yStart * ui.getScaleFactor()) - (big ? 66 : 0), widgetWidth,
                 (int) (widgetHeight * ui.getScaleFactor()) + (big ? 66 : 0), 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
 
-//        ui.drawImage(big ? backgroundBig : background,
-//                (int) (xStart * ui.getScaleFactor() + 5),
-//                (int) (yStart * ui.getScaleFactor()) - (big ? 66 : 0),
-//                widgetWidth,
-//                (int) (widgetHeight * ui.getScaleFactor()) + (big ? 66 : 0));
-
         int step = 142;
         int recipeWidgetAmount = 12;
 
@@ -223,7 +217,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         }
 
         if(scrollBarWidget == null) {
-            scrollBarWidget = new ScrollBarWidget(widgetHeight, recipeWidgetAmount - 2, maxOffset);
+            scrollBarWidget = new ScrollBarWidget(maxOffset);
         }
 
         helperWidget.maxOffset = maxOffset;
@@ -534,14 +528,16 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
 
                 ProfessionType profession = container.getProfessionType();
-                int level = Models.Profession.getLevel(profession);
 
-                if(level > 0 && level < this.level) {
-                    ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHSV(0, 0, 0, 0.5f) : CustomColor.fromHSV(0, 0, 0, 0.75f));
-                    ui.drawCenteredText("Requires " + profession.getDisplayName(), x + width / 2f, y + height / 2f - 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
-                    ui.drawCenteredText("level " + this.level + " to craft.", x + width / 2f, y + height / 2f + 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
-                }
+                try {
+                    int level = Models.Profession.getLevel(profession);
 
+                    if (level > 0 && level < this.level) {
+                        ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHSV(0, 0, 0, 0.5f) : CustomColor.fromHSV(0, 0, 0, 0.75f));
+                        ui.drawCenteredText("Requires " + profession.getDisplayName(), x + width / 2f, y + height / 2f - 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
+                        ui.drawCenteredText("level " + this.level + " to craft.", x + width / 2f, y + height / 2f + 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
+                    }
+                } catch (Exception ignored) {}
                 checkClick();
             }
 
@@ -554,11 +550,13 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 statusMessage = "";
 
                 ProfessionType profession = container.getProfessionType();
-                int level = Models.Profession.getLevel(profession);
+                try {
+                    int level = Models.Profession.getLevel(profession);
 
-                if(level > 0 && level < this.level) {
-                    return false;
-                }
+                    if (level > 0 && level < this.level) {
+                        return false;
+                    }
+                } catch (Exception ignored) {}
 
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 
@@ -713,16 +711,12 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     private static class ScrollBarWidget extends Widget {
         ScrollBarButtonWidget scrollBarButtonWidget;
         int currentMouseY = 0;
-        int widgetHeight;
-        int widgetAmount;
         public int maxOffset;
 
-        public ScrollBarWidget(int widgetHeight, int widgetAmount, int maxOffset) {
+        public ScrollBarWidget(int maxOffset) {
             super(0, 0, 0, 0);
             this.scrollBarButtonWidget = new ScrollBarButtonWidget();
             addChild(scrollBarButtonWidget);
-            this.widgetHeight = widgetHeight;
-            this.widgetAmount = widgetAmount;
             this.maxOffset = maxOffset;
         }
 
@@ -743,7 +737,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             int buttonHeight = 50;
             int scrollAreaHeight = height - buttonHeight;
 
-            if (scrollBarButtonWidget.isHold) {
+            if (scrollBarButtonWidget.isHeld) {
                 setOffset(mouseY, maxOffset, scrollAreaHeight);
                 actualOffset = targetOffset;
             }
@@ -774,28 +768,28 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         }
 
         private static class ScrollBarButtonWidget extends Widget {
-            public boolean isHold;
+            public boolean isHeld;
 
             public ScrollBarButtonWidget() {
                 super(0, 0, 0, 0);
-                isHold = false;
+                isHeld = false;
             }
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 5, hovered || isHold, false);
+                ui.drawButton(x, y, width, height, 5, hovered || isHeld, false);
             }
 
             @Override
             protected boolean onClick(int button) {
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                isHold = true;
+                isHeld = true;
                 return true;
             }
 
             @Override
             public boolean mouseReleased(double mx, double my, int button) {
-                isHold = false;
+                isHeld = false;
                 return true;
             }
         }
