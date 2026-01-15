@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.chat;
 
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
@@ -43,6 +44,8 @@ public class ChatNotificator {
     }
 
     private static void notify(Text message) {
+        if(message.getString().equals("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
+
         if(config == null) return;
         for(String notificator : config.notifierWords) {
             if(!notificator.contains("|")) return;

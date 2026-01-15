@@ -244,7 +244,6 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         selectionWidget3.setScissorBounds(scissorX1, scissorY1, scissorX2, scissorY2);
 
         helperWidget.setBounds((int) (xStart * ui.getScaleFactor() + 5), (int) ((yStart + (big ? - 15 : 7)) * ui.getScaleFactor()), widgetWidth, (int) ((widgetHeight + (big ? 12 : - 14)) * ui.getScaleFactor()));
-
     }
     
     private void setupSelectionWidget(SelectionWidget selectionWidget, ProfessionType type, int i, int maxWidgets, int xStart, int yStart, int widgetWidth) {
@@ -872,7 +871,6 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         }
     }
 }
-//TODO: remove duplicate timestamp (void hole opened and 2/2 pedastal)
 //TODO: cant click on item after switching to account bank
 //TODO: bug in character bank when character is not known (when restarting game while in raid and joining again wynntils doesnt know which class you are on)
 //TODO: wynnbuilder loader: link at the left where you can paste a wynnbuilder link to load a recipe
