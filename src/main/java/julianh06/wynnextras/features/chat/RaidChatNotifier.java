@@ -118,7 +118,6 @@ public class RaidChatNotifier {
                 "wings"
         ),
 
-
         new MultiOccurrenceDetector(
             "A new platform has appeared on the Lower Area!",
             "§bLower Mini spawned §c",
@@ -133,11 +132,6 @@ public class RaidChatNotifier {
                 "A Red Bulb has been captured!",
                 "§bBulb captured §c",
                 "bulbcaptured"
-        ),
-        new MultiOccurrenceDetector(
-            "The void holes inside the tree are open!",
-            "§bTree Opened §c",
-            "openedtree"
         ),
         new MultiOccurrenceDetector(
                 "[+1 Void Matter]",
@@ -213,17 +207,8 @@ public class RaidChatNotifier {
         return INSTANCE.raidPBs.get(key);
     }
 
-    private static final long MESSAGE_DELAY_MS = 250;
-    private static long lastMessageTime = 0;
-
     public static void handleMessage(String rawMsg) {
         if (!config.toggleRaidTimestamps) return;
-
-        long now = Time.now().timestamp();
-
-        if(now - lastMessageTime < MESSAGE_DELAY_MS) {
-            return;
-        }
 
         long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
                           ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()
@@ -250,8 +235,6 @@ public class RaidChatNotifier {
                         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(finalMsg)));
                     }
                 }).start();
-
-                lastMessageTime = now;
 
                 return;
             }
