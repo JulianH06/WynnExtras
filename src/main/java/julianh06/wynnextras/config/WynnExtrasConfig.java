@@ -1,31 +1,14 @@
 package julianh06.wynnextras.config;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.wynntils.models.raid.type.RaidRoomInfo;
 import julianh06.wynnextras.config.simpleconfig.ConfigData;
 import julianh06.wynnextras.config.simpleconfig.ConfigHolder;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.config.simpleconfig.annotations.Config;
 import julianh06.wynnextras.config.simpleconfig.annotations.ConfigEntry;
-import julianh06.wynnextras.features.misc.ItemStackDeserializer;
-import julianh06.wynnextras.features.misc.ItemStackSerializer;
-import julianh06.wynnextras.features.waypoints.Waypoint;
-import julianh06.wynnextras.features.waypoints.WaypointData;
-import julianh06.wynnextras.features.waypoints.Waypoints;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.item.ItemStack;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.BiFunction;
 
-import me.shedaniel.math.Color;
 import net.minecraft.util.ActionResult;
 
 @Config(name = "wynnextras/wynnextras", title = "WynnExtras Config")
@@ -39,6 +22,7 @@ public class WynnExtrasConfig implements ConfigData {
         String bankOverlay = "Bank Overlay";
         String chat = "Chat";
         String raid = "Raid";
+        String crafting = "Crafting";
         String misc = "Misc";
     }
 
@@ -73,6 +57,44 @@ public class WynnExtrasConfig implements ConfigData {
 
 
     //CHAT NOTIFIER
+
+    @ConfigEntry.Category(Categories.chat)
+    @ConfigEntry.Collapsible
+    @ConfigEntry.Name("Premade Notifications")
+    public NotificationConfig notificationConfig = new NotificationConfig();
+
+    public static class NotificationConfig implements ConfigData {
+        public boolean lostEye = true;
+        public boolean oneGoo = true;
+        public boolean twoGoo = true;
+        public boolean soul = true;
+        public boolean voidMatter = true;
+        public boolean fourOutOfFiveVoidMatter = true;
+        public boolean oneLightCrystal = true;
+        public boolean twoLightCrystal = true;
+        public boolean notgUpperPlatform = true;
+        public boolean notgLowerPlatform = true;
+
+        public void syncPremades() {
+            premades.put("You feel like thousands of eyes|LOST EYE", lostEye);
+            premades.put("+1 Slimey Goo|+1 Goo", oneGoo);
+            premades.put("+2 Slimey Goo|+2 Goos", twoGoo);
+            premades.put("Another Soul must be given!|NEXT SOUL", soul);
+            premades.put("+1 Void Matter|+1 Void Matter", voidMatter);
+            premades.put("The Void Holes have begun to desetabilize!|KILL THE VOID HOLES", fourOutOfFiveVoidMatter);
+            premades.put("+1 Light Crystal|+1 Crystal", oneLightCrystal);
+            premades.put("+2 Light Crystal|+2 Crystals", twoLightCrystal);
+            premades.put("The players on the|UPPER PLATFORM SPAWNED", notgUpperPlatform);
+            premades.put("A new platform has|LOWER PLATFORM SPAWNED", notgLowerPlatform);
+        }
+
+        public NotificationConfig() {
+            premades = new HashMap<>();
+        }
+
+        @ConfigEntry.Excluded
+        public Map<String, Boolean> premades;
+    }
 
     @ConfigEntry.Category(Categories.chat)
     @ConfigEntry.Name("Notified words")
@@ -194,11 +216,19 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Name("Enable Raid timestamps")
     public boolean toggleRaidTimestamps = true;
 
+    @ConfigEntry.Category(Categories.crafting)
+    @ConfigEntry.Name("Crafting helper overlay toggle")
+    public boolean craftingHelperOverlay = true;
+
     //TOTEM VISUALIZER
 
     @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Fast requeue toggle (automatically runs /pf when closing a raid chest)")
     public boolean toggleFastRequeue = true;
+
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Chiropterror spawn timer")
+    public boolean chiropTimer = true;
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Show Wynnpool item weights")
@@ -274,10 +304,6 @@ public class WynnExtrasConfig implements ConfigData {
 
     //Provoke Timer
 
-    @ConfigEntry.Category(Categories.misc)
-    @ConfigEntry.Text
-    public String emptyy = " ";
-
     @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Toggle Provoke Timer [WIP]")
     public boolean provokeTimerToggle = false;
@@ -313,11 +339,6 @@ public class WynnExtrasConfig implements ConfigData {
     public int customGUIScale = 3;
 
     // Perspective
-
-    @ConfigEntry.Category(Categories.misc)
-    @ConfigEntry.Text
-    public String emptyyyy = " ";
-
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Remove front person view")
     public boolean removeFrontPersonView = false;
@@ -325,6 +346,10 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Receive smart financial advise in the item identifier menu")
     public boolean sourceOfTruthToggle = false;
+
+    @ConfigEntry.Category(Categories.misc)
+    @ConfigEntry.Name("Show territory estimates in the Wynntils guild map")
+    public boolean territoryEstimateToggle = false;
 
     @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Raid Personal Bests (internal)")

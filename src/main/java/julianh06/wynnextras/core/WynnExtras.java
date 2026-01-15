@@ -35,6 +35,7 @@ import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
 import julianh06.wynnextras.mixin.InventoryScreenMixin;
 import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.TickScheduler;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -151,6 +152,7 @@ public class WynnExtras implements ClientModInitializer {
 		latestVersion = CurrentVersionData.fetchLatestVersion();
 
 		WELoader.loadAll();
+		TickScheduler.init();
 
 		julianh06.wynnextras.event.ClickEvent.register();
 

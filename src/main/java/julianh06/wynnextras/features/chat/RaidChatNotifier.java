@@ -2,10 +2,17 @@ package julianh06.wynnextras.features.chat;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.wynntils.models.raid.raids.*;
+import com.wynntils.models.raid.type.RaidInfo;
+import com.wynntils.models.raid.type.RaidRoomInfo;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.core.components.Models;
+import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.mixin.RaidKindAccessor;
+import julianh06.wynnextras.utils.ChatUtils;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
@@ -25,6 +32,8 @@ import java.util.regex.Pattern;
 public class RaidChatNotifier {
     public static RaidChatNotifier INSTANCE = new RaidChatNotifier();
     public Map<String, Long> raidPBs = new HashMap<>();
+
+    public static long disableChiropUntil = 0;
 
     private static final List<RaidMessageDetector> detectors = Arrays.asList(
         new SlimeGatheringDetector(),
@@ -68,21 +77,11 @@ public class RaidChatNotifier {
             "§b[4/5] Void Matters §c",
                 "voidgathered"
         ),
-        new SingleOccurrenceDetector(
-                "The Altar has opened to the void, you may leave through it.",
-                "§bVoid Room Done §c",
-                "treedone"
-        ),
-        new SingleOccurrenceDetector(
-                "All the Void Rifts have been destroyed! A path",
-                "§bBerry Room Done §c",
-                "berryroom"
-        ),
-        new SingleOccurrenceDetector(
-                "has taken the Berserker Berry!",
-                "§bBerry Room Done §c",
-                "berrytaken"
-        ),
+//        new SingleOccurrenceDetector(
+//                "All the Void Rifts have been destroyed! A path",
+//                "§bBerry Room Done §c",
+//                "berryroom"
+//        ),
         new SingleOccurrenceDetector(
                 "A Void Pedestal has been activated! [1/2]",
                 "§bVoid Pedestal Activated [1/2] §c",
@@ -93,16 +92,16 @@ public class RaidChatNotifier {
                 "§bVoid Pedestal Activated [2/2] §c",
                 "voidpedestal2"
         ),
-        new SingleOccurrenceDetector(
-                "You have unblocked the voidhole out!",
-                "§bVoid Room done §c",
-                "voidholeroompb"
-        ),
-        new SingleOccurrenceDetector(
-                "The Giant Void Hole has opened! Use it to escape!",
-                "§bVoidgather Room done §c",
-                "voidgatherroompb"
-        ),
+//        new SingleOccurrenceDetector(
+//                "You have unblocked the voidhole out!",
+//                "§bVoid Room done §c",
+//                "voidholeroompb" //TNA 1st room
+//        ),
+//        new SingleOccurrenceDetector(
+//                "The Giant Void Hole has opened! Use it to escape!",
+//                "§bVoidgather Room done §c",
+//                "voidgatherroompb"
+//        ),
         new SingleOccurrenceDetector(
                 "The lower door has been unlocked",
                 "§bLower door unlocked §c",
@@ -118,12 +117,6 @@ public class RaidChatNotifier {
                 "§bWings picked up §c",
                 "wings"
         ),
-        new SingleOccurrenceDetector(
-                "The Void Hole at the bottom of",
-                "§bVoid hole opened §c",
-                "voidholeopen"
-        ),
-
 
         new MultiOccurrenceDetector(
             "A new platform has appeared on the Lower Area!",
@@ -292,14 +285,15 @@ public class RaidChatNotifier {
         Pattern.compile("1 slimey goo", Pattern.CASE_INSENSITIVE),
         Pattern.compile("2 slimey goo", Pattern.CASE_INSENSITIVE),
         Pattern.compile("1 \\[isoptera heart", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("All the Void Rifts have been destroyed! A path", Pattern.CASE_INSENSITIVE),
+        //Pattern.compile("All the Void Rifts have been destroyed! A path", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("The void holes inside the tree are open!", Pattern.CASE_INSENSITIVE),
         Pattern.compile("The Altar has opened to the void, you may leave through it.", Pattern.CASE_INSENSITIVE),
         Pattern.compile("A Red Bulb has been captured!", Pattern.CASE_INSENSITIVE),
         Pattern.compile("A Bulb Keeper has spawned!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The Giant Void Hole has opened! Use it to escape!", Pattern.CASE_INSENSITIVE),
+        //Pattern.compile("The Giant Void Hole has opened! Use it to escape!", Pattern.CASE_INSENSITIVE),
         Pattern.compile("A Void Pedestal has been activated! \\[1/2]", Pattern.CASE_INSENSITIVE),
         Pattern.compile("A Void Pedestal has been activated! \\[2/2]", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("You have unblocked the voidhole out!", Pattern.CASE_INSENSITIVE),
+        //Pattern.compile("You have unblocked the voidhole out!", Pattern.CASE_INSENSITIVE),
         Pattern.compile("\\[1 Void Matter]", Pattern.CASE_INSENSITIVE),
         Pattern.compile("has entered the tree", Pattern.CASE_INSENSITIVE),
         Pattern.compile("goo to the tower! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE),
@@ -312,8 +306,7 @@ public class RaidChatNotifier {
         Pattern.compile("A player must stand on the platform", Pattern.CASE_INSENSITIVE),
         Pattern.compile("A miniboss has spawned! It has sped", Pattern.CASE_INSENSITIVE),
         Pattern.compile("The golem has been defeated, and", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The Void Hole at the bottom of", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE)
     );
 
 
@@ -449,7 +442,8 @@ public class RaidChatNotifier {
     }
 
     private static class ShadowlingDetector implements RaidMessageDetector {
-        private static final Pattern PATTERN = Pattern.compile("has been killed! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE);
+        private static final Pattern PATTERN =
+                Pattern.compile("has been killed! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE);
         static final String PB_PREFIX = "shadowling";
 
         @Override
@@ -467,52 +461,54 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
 
-            String key = PB_PREFIX + "_" + progress;
+            if ("3/3".equals(progress) && Time.now().timestamp() >= disableChiropUntil && SimpleConfig.getInstance(WynnExtrasConfig.class).chiropTimer) {
+                startSpawnCountdown();
+            } else {
+                McUtils.sendMessageToClient(Text.of("Didnt start chíropTimer " + progress + " " + Time.now().timestamp() + " " + disableChiropUntil + " " + SimpleConfig.getInstance(WynnExtrasConfig.class).chiropTimer));
+            }
 
+            String key = PB_PREFIX + "_" + progress;
             Long pb = getPB(key);
 
             String output = "§bKilled Shadowling " + progress + " §c@ " + timestamp;
 
-            if (pb == null || currentMillis  < pb) {
-                savePB(key, currentMillis );
-
-                if (pb != null) {
-                    output += " §e[New PB! Old: " + formatTime(pb) + "]";
-                } else {
-                    output += " §e[First PB]";
-                }
-            }
-            else {
+            if (pb == null || currentMillis < pb) {
+                savePB(key, currentMillis);
+                output += (pb == null
+                        ? " §e[First PB]"
+                        : " §e[New PB! Old: " + formatTime(pb) + "]");
+            } else {
                 output += " §7[PB: " + formatTime(pb) + "]";
             }
+
             return output;
         }
-    }
 
+        private void startSpawnCountdown() {
+            new Thread(() -> {
+                try {
+                    for (int i = 7; i >= 0; i--) {
+                        int countdown = i;
 
+                        MinecraftClient.getInstance().execute(() ->
+                                ChatUtils.displayTitle(
+                                        "§cSPAWNING IN: §f" + countdown,
+                                        "",
+                                        20, 0, 0
+                                )
+                        );
 
-    private static class StaticMessageDetector implements RaidMessageDetector {
-        private final Pattern pattern;
-        private final String formattedMessage;
+                        Thread.sleep(1000);
+                    }
 
-        public StaticMessageDetector(String regex, String formattedMessage) {
-             this.pattern = Pattern.compile(Pattern.quote(regex), Pattern.CASE_INSENSITIVE);
-             this.formattedMessage = formattedMessage;
-        }
+                    MinecraftClient.getInstance().execute(() ->
+                            ChatUtils.displayTitle("", "", 0, 0, 0)
+                    );
 
-        @Override
-        public boolean matches(String msg) {
-            return pattern.matcher(msg).find();
-        }
-
-        @Override
-        public String extractProgress(String msg) {
-            return null;
-        }
-
-        @Override
-        public String getFormattedMessage(String progress, String timestamp) {
-            return formattedMessage + timestamp;
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
         }
     }
 
@@ -546,7 +542,6 @@ public class RaidChatNotifier {
             String message;
 
             if (lastWatchPhaseTime == -1) {
-                // Erste Watchphase im Raum
                 message = "§bFirst Watchphase started §c@ " + timestamp;
 
                 Long pb = INSTANCE.raidPBs.get("watch_phase_first");
@@ -560,7 +555,6 @@ public class RaidChatNotifier {
                 }
 
             } else {
-                // alle weiteren Watchphasen
                 long duration = currentTime - lastWatchPhaseTime;
                 message = "§bWatchphase started after §c" + formatTime(duration) + " §7(@" + timestamp + ")";
 
@@ -714,6 +708,92 @@ public class RaidChatNotifier {
 
             }
         }
+    }
+
+    public static void onRoomCompleted(RaidInfo raidInfo) {
+        if (!config.toggleRaidTimestamps) return;
+
+        int challengeIndex = raidInfo.completedChallengeCount();
+        RaidRoomInfo room = raidInfo.getRoomByNumber(challengeIndex);
+        if (room == null) return;
+
+        long time = room.getRoomTotalTime();
+        String timestamp = formatTime(time);
+
+        if (isBossChallenge(raidInfo, challengeIndex)) {
+            handleBossCompleted(raidInfo, room, challengeIndex, time, timestamp);
+        } else {
+            handleRoomCompleted(raidInfo, room, timestamp);
+        }
+    }
+
+    private static void handleRoomCompleted(
+            RaidInfo raidInfo,
+            RaidRoomInfo room,
+            String timestamp
+    ) {
+        String roomName = room.getRoomName();
+        long time = room.getRoomTotalTime();
+
+        String pbKey = raidInfo.getRaidKind().getAbbreviation() + "_" + roomName.replaceAll("\\s", "");
+
+        Long pb = getPB(pbKey);
+
+        String msg = "§b" + roomName + " done after §c" + timestamp;
+
+        if (pb == null || time < pb) {
+            savePB(pbKey, time);
+            msg += (pb == null)
+                    ? " §e[First PB]"
+                    : " §e[New PB! Old: " + formatTime(pb) + "]";
+        } else {
+            msg += " §7[PB: " + formatTime(pb) + "]";
+        }
+
+        McUtils.sendMessageToClient(
+                WynnExtras.addWynnExtrasPrefix(Text.of(msg))
+        );
+    }
+
+    private static void handleBossCompleted(
+            RaidInfo raidInfo,
+            RaidRoomInfo room,
+            int index,
+            long time,
+            String timestamp
+    ) {
+        String bossName = room.getRoomName();
+        String raidAbbr = raidInfo.getRaidKind().getAbbreviation();
+
+        String pbKey = "boss_" + raidAbbr + "_" + index;
+        Long pb = getPB(pbKey);
+
+        String msg = "§a§l" + bossName + " §r§bdefeated after §c" + timestamp;
+
+        if (pb == null || time < pb) {
+            savePB(pbKey, time);
+            msg += (pb == null)
+                    ? " §e[First PB]"
+                    : " §e[New PB! Old: " + formatTime(pb) + "]";
+        } else {
+            msg += " §7[PB: " + formatTime(pb) + "]";
+        }
+
+        McUtils.sendMessageToClient(
+            WynnExtras.addWynnExtrasPrefix(Text.of(msg))
+        );
+    }
+
+    private static boolean isBossChallenge(RaidInfo raidInfo, int challengeIndex) {
+        RaidKind kind = raidInfo.getRaidKind();
+
+        int totalChallenges = ((RaidKindAccessor) kind).getChallengeNames().size();
+
+        if ("NOL".equals(kind.getAbbreviation())) {
+            return challengeIndex >= totalChallenges - 1;
+        }
+
+        return challengeIndex == totalChallenges;
     }
 
     public void save() {
