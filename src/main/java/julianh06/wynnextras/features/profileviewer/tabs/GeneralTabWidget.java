@@ -13,7 +13,6 @@ import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.LivingEntity;
@@ -113,10 +112,10 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             ui.drawText("Last seen: " + formatted, x + 57, y + 66, CustomColor.fromHexString("FFFFFF"), 3f);
         }
         if (dummy != null) {
-            if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
+            if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
                 dummy.setPose(EntityPose.CROUCHING);
                 drawPlayer(ctx, x + 66 + 216, y + 102 + 387, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor()); //166 178
-            } else if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_RIGHT_SHIFT)) {
+            } else if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow(), InputUtil.GLFW_KEY_RIGHT_SHIFT)) {
                 dummy.setPose(EntityPose.SLEEPING);
                 drawPlayer(ctx, x + 66, y + 102 + 357, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor()); //166 178
             } else {
@@ -219,8 +218,8 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
         }
 
 
-        EntityRenderDispatcher dispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
-        dispatcher.setRenderShadows(false);
+        //EntityRenderDispatcher dispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
+        //dispatcher.setRenderShadows(false);
 
         float smolScale = 1;
         float thickScale = 1;
@@ -230,17 +229,17 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             thickScale = 1.5f;
         }
 
-        context.getMatrices().push();
-        context.getMatrices().translate(sleepOffsetX + (double) x / scaleFactor,  sleepOffsetY + flipOffset + (double) y / scaleFactor, 50.0);
-        context.getMatrices().scale(thickScale * scale, smolScale * scale, scale);
-        context.getMatrices().multiply(rotation);
-
-        VertexConsumerProvider.Immediate buffer = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
-        dispatcher.render(player, 0, 0, 0, 1.0F, context.getMatrices(), buffer, 15728880);
-        buffer.draw();
-
-        context.getMatrices().pop();
-        dispatcher.setRenderShadows(true);
+//        context.getMatrices().push();
+//        context.getMatrices().translate(sleepOffsetX + (double) x / scaleFactor,  sleepOffsetY + flipOffset + (double) y / scaleFactor, 50.0);
+//        context.getMatrices().scale(thickScale * scale, smolScale * scale, scale);
+//        context.getMatrices().multiply(rotation);
+//
+//        VertexConsumerProvider.Immediate buffer = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
+//        dispatcher.render(player, 0, 0, 0, 1.0F, context.getMatrices(), buffer, 15728880);
+//        buffer.draw();
+//
+//        context.getMatrices().pop();
+//        dispatcher.setRenderShadows(true);
     }
 
     @Override

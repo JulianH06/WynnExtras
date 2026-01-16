@@ -18,8 +18,6 @@ import java.util.*;
 import static julianh06.wynnextras.features.profileviewer.WynncraftApiHandler.fetchClassAbilityMap;
 import static julianh06.wynnextras.features.profileviewer.WynncraftApiHandler.parseStyledHtml;
 
-// Passe Imports/Packages an dein Projekt an.
-
 public class AbilityTreeWidget extends Widget {
     static Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/treetabbackground.png");
     static Identifier backgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/treetabbackground_dark.png");

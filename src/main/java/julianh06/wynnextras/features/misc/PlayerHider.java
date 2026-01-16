@@ -137,7 +137,7 @@ public class PlayerHider {
                     return;
                 }
 
-                double distance = player.getPos().distanceTo(me.getPos());
+                double distance = player.getBlockPos().toBottomCenterPos().distanceTo(me.getBlockPos().toBottomCenterPos());
                 if(config.printDebugToConsole) {
                     System.out.println("Distance to " + player.getName() + " is: " + distance + " max hide distance is: " + Distance);
                 }

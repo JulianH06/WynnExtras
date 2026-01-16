@@ -89,7 +89,7 @@ public class WaypointScreen extends Screen {
 
             @Override
             public void draw(DrawContext context) {
-                RenderUtils.drawTexturedRect(context.getMatrices(), addNewButtonTexture, x, y, width, height, (int) width, (int) height);
+                RenderUtils.drawTexturedRect(context, addNewButtonTexture, CustomColor.NONE, x, y, width, height, (int) width, (int) height);
             }
         };
 
@@ -129,7 +129,7 @@ public class WaypointScreen extends Screen {
 
             @Override
             public void draw(DrawContext context) {
-                RenderUtils.drawTexturedRect(context.getMatrices(), addNewButtonTexture, x, y, width, height, (int) width, (int) height);
+                RenderUtils.drawTexturedRect(context, addNewButtonTexture, CustomColor.NONE, x, y, width, height, (int) width, (int) height);
             }
         };
 
@@ -239,19 +239,19 @@ public class WaypointScreen extends Screen {
             public void draw(DrawContext context) {
                 List<WaypointCategory> categoriez = WaypointData.INSTANCE.activePackage.categories;
 
-                RenderUtils.drawTexturedRect(context.getMatrices(), nameBackgroundTexture, 0, 60f / scaleFactor, (float) (89 * 3) / scaleFactor, (float) (13 * 3) / scaleFactor, 89 * 3 / scaleFactor, 13 * 3 / scaleFactor);
+                RenderUtils.drawTexturedRect(context, nameBackgroundTexture, CustomColor.NONE, 0, 60f / scaleFactor, (float) (89 * 3) / scaleFactor, (float) (13 * 3) / scaleFactor, 89 * 3 / scaleFactor, 13 * 3 / scaleFactor);
 
 
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Category filter")), 8f / scaleFactor, 68f / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
+                FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Category filter")), 8f / scaleFactor, 68f / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
 
 
                 if (isExpanded) {
                     if(categories.size() <= 1) {
-                        RenderUtils.drawTexturedRect(context.getMatrices(), categorySingleTexture, x, y + height, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
+                        RenderUtils.drawTexturedRect(context, categorySingleTexture, CustomColor.NONE, x, y + height, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
                         if(categories.isEmpty()) {
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Create a category!")), x + 6f / scaleFactor, y + height + 10f / scaleFactor, CustomColor.fromHexString("FF0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2.65f / scaleFactor);
+                            FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Create a category!")), x + 6f / scaleFactor, y + height + 10f / scaleFactor, CustomColor.fromHexString("FF0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2.65f / scaleFactor);
                         } else {
-                            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(WaypointData.INSTANCE.activePackage.categories.getFirst().name)), x + 6f / scaleFactor, y + height + 10f / scaleFactor, WaypointData.INSTANCE.activePackage.categories.getFirst().color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f / scaleFactor);
+                            FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(WaypointData.INSTANCE.activePackage.categories.getFirst().name)), x + 6f / scaleFactor, y + height + 10f / scaleFactor, WaypointData.INSTANCE.activePackage.categories.getFirst().color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f / scaleFactor);
                         }
                         return;
                     }
@@ -259,12 +259,12 @@ public class WaypointScreen extends Screen {
                         Identifier texture = categoryMidTexture;
                         if(i == 0) texture = categoryTopTexture;
                         if(i == categoriez.size() - 1) texture = categoryBotTexture;
-                        RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y + height + i * 39f / scaleFactor, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
+                        RenderUtils.drawTexturedRect(context, texture, CustomColor.NONE, x, y + height + i * 39f / scaleFactor, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
                         CustomColor textColor = CustomColor.fromHexString("808080");
                         if(activeCategories.contains(categoriez.get(i))) {
                             textColor = WaypointData.INSTANCE.activePackage.categories.get(i).color;
                         }
-                        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(WaypointData.INSTANCE.activePackage.categories.get(i).name)), x + 6f / scaleFactor, y + height + i * 39f / scaleFactor + 10f / scaleFactor, textColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f / scaleFactor);
+                        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(WaypointData.INSTANCE.activePackage.categories.get(i).name)), x + 6f / scaleFactor, y + height + i * 39f / scaleFactor + 10f / scaleFactor, textColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f / scaleFactor);
                     }
                 }
             }
@@ -301,7 +301,7 @@ public class WaypointScreen extends Screen {
         WaypointScreen.mouseX = mouseX;
         WaypointScreen.mouseY = mouseY;
 
-        RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+        RenderUtils.drawRect(context, CustomColor.fromInt(-804253680), 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
 
         int i = 0;
         float yOffset = (float) 30 / scaleFactor;
@@ -323,7 +323,7 @@ public class WaypointScreen extends Screen {
             importButton.setWidth(360f / scaleFactor);
             importButton.setHeight(60f / scaleFactor);
             importButton.drawWithTexture(context, importButtonTexture);
-            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Import from clipboard")), 180f / scaleFactor, screenHeight - 30f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
+            FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Import from clipboard")), 180f / scaleFactor, screenHeight - 30f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
 
 
             addNewButton.setX(xStart + width / 2 - 750 / scaleFactor);
@@ -332,13 +332,13 @@ public class WaypointScreen extends Screen {
             addNewButton.setWidth(300f / scaleFactor);
 
             addNewButton.draw(context);
-            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Add new package")), xStart + (float) width / 2 - 600f / scaleFactor, (int) (yOffset + (j * 300f) / scaleFactor - scrollOffset + 30f / scaleFactor), CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
+            FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Add new package")), xStart + (float) width / 2 - 600f / scaleFactor, (int) (yOffset + (j * 300f) / scaleFactor - scrollOffset + 30f / scaleFactor), CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
 
             return;
         }
 
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("I know that this menu is ugly,")), 5, 25, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("it will be reworked in the future")), 5, 35, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("I know that this menu is ugly,")), 5, 25, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("it will be reworked in the future")), 5, 35, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f / scaleFactor);
 
         if(inMainScreen) {
             for (WaypointElement element : elements) {
@@ -398,7 +398,7 @@ public class WaypointScreen extends Screen {
         backToPackagesButton.setWidth(360f / scaleFactor);
         backToPackagesButton.setHeight(60f / scaleFactor);
         backToPackagesButton.drawWithTexture(context, importButtonTexture);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Back to packages")), 180f / scaleFactor, 30f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Back to packages")), 180f / scaleFactor, 30f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
 
         String addButtonText;
         String editCategoriesText;
@@ -418,8 +418,8 @@ public class WaypointScreen extends Screen {
         }
         addNewButton.draw(context);
         editCategoriesButton.draw(context);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(addButtonText)), x + 150f / scaleFactor, y + 30f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(editCategoriesText)), editCategoriesButton.getX() + 150f / scaleFactor, editCategoriesButton.getY() + 30f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(addButtonText)), x + 150f / scaleFactor, y + 30f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(editCategoriesText)), editCategoriesButton.getX() + 150f / scaleFactor, editCategoriesButton.getY() + 30f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
 
         for(WaypointElement element : elements) {
             if(element.categoryDropdown.isExpanded) {
@@ -437,11 +437,12 @@ public class WaypointScreen extends Screen {
                 mX,
                 mY,
                 horizontalAmount,
-                verticalAmount
+                verticalAmount,
+                consumed
         ) -> {
             long now = System.currentTimeMillis();
             if (now - lastScrollTime < scrollCooldown) {
-                return;
+                return true;
             }
             lastScrollTime = now;
 
@@ -453,6 +454,7 @@ public class WaypointScreen extends Screen {
             if(scrollOffset < 0) {
                 scrollOffset = 0;
             }
+            return true;
         });
     }
 

@@ -49,12 +49,12 @@ public class ShamanTotemModelMixin {
 
         assert McUtils.mc().world != null;
         List<ArmorStandEntity> possibleTotems = McUtils.mc().world.getNonSpectatingEntities(ArmorStandEntity.class, new Box(
-                textDisplay.getPos().x - TOTEM_SEARCH_RADIUS,
-                textDisplay.getPos().y - TOTEM_SEARCH_RADIUS,
-                textDisplay.getPos().z - TOTEM_SEARCH_RADIUS,
-                textDisplay.getPos().x + TOTEM_SEARCH_RADIUS,
-                textDisplay.getPos().y + TOTEM_SEARCH_RADIUS * 5,
-                textDisplay.getPos().z + TOTEM_SEARCH_RADIUS));
+                textDisplay.getBlockPos().toBottomCenterPos().x - TOTEM_SEARCH_RADIUS,
+                textDisplay.getBlockPos().toBottomCenterPos().y - TOTEM_SEARCH_RADIUS,
+                textDisplay.getBlockPos().toBottomCenterPos().z - TOTEM_SEARCH_RADIUS,
+                textDisplay.getBlockPos().toBottomCenterPos().x + TOTEM_SEARCH_RADIUS,
+                textDisplay.getBlockPos().toBottomCenterPos().y + TOTEM_SEARCH_RADIUS * 5,
+                textDisplay.getBlockPos().toBottomCenterPos().z + TOTEM_SEARCH_RADIUS));
 
         for (ArmorStandEntity possibleTotem : possibleTotems) {
             for (int i = 0; i < this.timerlessTotemVisibleIds.length; ++i) {
@@ -62,9 +62,9 @@ public class ShamanTotemModelMixin {
                     ShamanTotem totem = this.totems[i];
                     totem.setTimerEntityId(timerId);
                     totem.setTime(parsedTime);
-                    totem.setPosition(possibleTotem.getPos());
+                    totem.setPosition(possibleTotem.getBlockPos().toBottomCenterPos());
                     totem.setState(ShamanTotem.TotemState.ACTIVE);
-                    WynntilsMod.postEvent(new TotemEvent.Activated(totem.getTotemNumber(), possibleTotem.getPos()));
+                    WynntilsMod.postEvent(new TotemEvent.Activated(totem.getTotemNumber(), possibleTotem.getBlockPos().toBottomCenterPos()));
                     this.timerlessTotemVisibleIds[i] = null;
                     if (this.orphanedTimers.containsKey(timerId) && this.orphanedTimers.get(timerId) > 1) {
                         WynntilsMod.info("Matched an orphaned totem timer " + timerId + " to a totem " + totem.getTotemNumber() + " after " + String.valueOf(this.orphanedTimers.get(timerId)) + " attempts.");

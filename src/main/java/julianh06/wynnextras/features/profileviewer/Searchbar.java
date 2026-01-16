@@ -80,12 +80,12 @@ public class Searchbar extends EasyTextInput {
             if(cursorPos > input.length()) {
                 cursorPos = input.length();
             }
-            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(input)), x + (float) (3 * 3) / scaleFactor, y + (float) 3 / scaleFactor, color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+            FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(input)), x + (float) (3 * 3) / scaleFactor, y + (float) 3 / scaleFactor, color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
             if(now - lastBlink > 500) {
                 blinkToggle = !blinkToggle;
                 lastBlink = now;
             }
-            if(blinkToggle && isActive) RenderUtils.drawLine(context.getMatrices(), CustomColor.fromHexString("FFFFFF"), x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y, x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y + (float) (10 * 3) / scaleFactor, 0, 1f * 3 / scaleFactor);
+            if(blinkToggle && isActive) RenderUtils.drawLine(context, CustomColor.fromHexString("FFFFFF"), x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y, x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y + (float) (10 * 3) / scaleFactor, 1f * 3 / scaleFactor);
         }
     }
 

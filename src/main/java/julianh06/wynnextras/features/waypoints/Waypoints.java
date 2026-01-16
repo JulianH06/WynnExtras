@@ -93,7 +93,7 @@ public class Waypoints {
                             for (Waypoint waypoint : waypointPackage.waypoints) {
                                 if (MinecraftClient.getInstance().player == null) return 1;
                                 WEVec pos = new WEVec(waypoint.x + 0.5f, waypoint.y + 1.5f, waypoint.z + 0.5f);
-                                WEVec playerPos = new WEVec(MinecraftClient.getInstance().player.getPos());
+                                WEVec playerPos = new WEVec(MinecraftClient.getInstance().player.getBlockPos().toBottomCenterPos());
                                 double distance = pos.distanceTo(playerPos);
 
                                 if (closest == null || distance < smallestDistance) {

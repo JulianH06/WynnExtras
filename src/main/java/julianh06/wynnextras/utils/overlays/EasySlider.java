@@ -40,12 +40,12 @@ public class EasySlider extends EasyElement {
 
     @Override
     public void draw(DrawContext context) {
-        RenderUtils.drawTexturedRect(context.getMatrices(), sliderTexture, x, y + height / 2 - 2f * 3 / scaleFactor, width, 4f * 3 / scaleFactor, (int) width, 4 * 3 / scaleFactor);
+        RenderUtils.drawTexturedRect(context, sliderTexture, CustomColor.NONE, x, y + height / 2 - 2f * 3 / scaleFactor, width, 4f * 3 / scaleFactor, (int) width, 4 * 3 / scaleFactor);
 
         int handleX = x + (int) ((value - min) / (max - min) * (width - (float) handleWidth / scaleFactor));
-        RenderUtils.drawTexturedRect(context.getMatrices(), sliderButtonTexture, handleX, y, (float) handleWidth / scaleFactor, height,handleWidth / scaleFactor, (int) height);
+        RenderUtils.drawTexturedRect(context, sliderButtonTexture, CustomColor.NONE, handleX, y, (float) handleWidth / scaleFactor, height,handleWidth / scaleFactor, (int) height);
 
-        FontRenderer.getInstance().renderText(context.getMatrices(),
+        FontRenderer.getInstance().renderText(context,
                 StyledText.fromComponent(Text.of(String.format("%.2f", value))),
                 x + width + 8f * 3 / scaleFactor, y + height / 2f,
                 CustomColor.fromHexString("FFFFFF"),

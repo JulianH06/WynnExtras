@@ -172,11 +172,12 @@ public class BankOverlay {
                         mX,
                         mY,
                         horizontalAmount,
-                        verticalAmount
+                        verticalAmount,
+                        consumed
                 ) -> {
                     long now = System.currentTimeMillis();
                     if (now - lastScrollTime < scrollCooldown) {
-                        return;
+                        return true;
                     }
                     lastScrollTime = now;
 
@@ -187,6 +188,7 @@ public class BankOverlay {
                             BankOverlay2.targetOffset += 104f;
                         }
                     }
+                    return true;
                 });
             }
             bankSyncid = currScreenHandler.syncId;

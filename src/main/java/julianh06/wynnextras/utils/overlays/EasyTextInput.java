@@ -51,7 +51,7 @@ public class EasyTextInput extends EasyElement{
     @Override
     public void draw(DrawContext context) {
         long now = System.currentTimeMillis();
-        RenderUtils.drawRect(context.getMatrices(), color, x, y, 0.0f, width, height);
+        RenderUtils.drawRect(context, color, x, y, width, height);
         if(input.isEmpty() && !isActive) {
             context.drawText(MinecraftClient.getInstance().textRenderer, searchText, x + 1, y + 3, CustomColor.fromHexString("000000").asInt(), false);
         } else {
@@ -63,7 +63,7 @@ public class EasyTextInput extends EasyElement{
                 blinkToggle = !blinkToggle;
                 lastBlink = now;
             }
-            if(blinkToggle && isActive) RenderUtils.drawLine(context.getMatrices(), CustomColor.fromHexString("000000"), x + 1 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 2, x + 1 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 11, 0, 1);
+            if(blinkToggle && isActive) RenderUtils.drawLine(context, CustomColor.fromHexString("000000"), x + 1 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 2, x + 1 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 11, 1);
         }
     }
 
@@ -82,7 +82,7 @@ public class EasyTextInput extends EasyElement{
                 blinkToggle = !blinkToggle;
                 lastBlink = now;
             }
-            if(blinkToggle && isActive) RenderUtils.drawLine(context.getMatrices(), CustomColor.fromHexString("FFFFFF"), x + 3 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y, x + 3 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 9, 0, 1);
+            if(blinkToggle && isActive) RenderUtils.drawLine(context, CustomColor.fromHexString("FFFFFF"), x + 3 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y, x + 3 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 9, 1);
         }
     }
 
@@ -93,24 +93,24 @@ public class EasyTextInput extends EasyElement{
         long now = System.currentTimeMillis();
         if(input.isEmpty() && !isActive) {
             //context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 3, y + 1, CustomColor.fromHexString("FFFFFF").asInt());
-            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(searchText)), (float) x + (float) (3 * 3) / scaleFactor, (float) y + (float) (3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+            FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(searchText)), (float) x + (float) (3 * 3) / scaleFactor, (float) y + (float) (3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
         } else {
             if(cursorPos > input.length()) {
                 cursorPos = input.length();
             }
             //context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, input, x + 3, y + 1, color.asInt());
-            FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(input)), (float) x + (float) (3 * 3) / scaleFactor, (float) y + (float) (2 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
+            FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(input)), (float) x + (float) (3 * 3) / scaleFactor, (float) y + (float) (2 * 3) / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
             if(now - lastBlink > 500) {
                 blinkToggle = !blinkToggle;
                 lastBlink = now;
             }
-            if(blinkToggle && isActive) RenderUtils.drawLine(context.getMatrices(), CustomColor.fromHexString("FFFFFF"), x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y + (float) (1 * 3) / scaleFactor, x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y + (float) (10 * 3) / scaleFactor, 0, 1f * 3 / scaleFactor);
+            if(blinkToggle && isActive) RenderUtils.drawLine(context, CustomColor.fromHexString("FFFFFF"), x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y + (float) (1 * 3) / scaleFactor, x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y + (float) (10 * 3) / scaleFactor, 1f * 3 / scaleFactor);
         }
     }
 
     public void drawWithTexture(DrawContext context, Identifier texture) {
         long now = System.currentTimeMillis();
-        RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, 0.0f, width, height, (int) width, (int) height);
+        RenderUtils.drawTexturedRect(context, texture, CustomColor.NONE, x, y, width, height, (int) width, (int) height);
         if(input.isEmpty() && !isActive) {
             context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 2, y + 3, CustomColor.fromHexString("FFFFFF").asInt());
         } else {
@@ -122,7 +122,7 @@ public class EasyTextInput extends EasyElement{
                 blinkToggle = !blinkToggle;
                 lastBlink = now;
             }
-            if(blinkToggle && isActive) RenderUtils.drawLine(context.getMatrices(), CustomColor.fromHexString("FFFFFF"), x + 2 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 2, x + 2 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 11, 0, 1);
+            if(blinkToggle && isActive) RenderUtils.drawLine(context, CustomColor.fromHexString("FFFFFF"), x + 2 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 2, x + 2 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 11, 1);
         }
     }
 

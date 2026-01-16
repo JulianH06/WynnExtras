@@ -401,10 +401,10 @@ public class TreeLoader {
                 if(McUtils.mc().currentScreen != null) McUtils.mc().currentScreen.close();
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Finished loading the ability tree." + (loadSkillpoints ? " Continuing with skill points. " : ""))));
                 if(skillPointSet != null) {
-                    int currentSlot = player.getInventory().selectedSlot;
-                    player.getInventory().selectedSlot = 7;
+                    int currentSlot = player.getInventory().getSelectedSlot();
+                    player.getInventory().setSelectedSlot(7);
                     client.interactionManager.interactItem(player, Hand.MAIN_HAND);
-                    player.getInventory().selectedSlot = currentSlot;
+                    player.getInventory().setSelectedSlot(currentSlot);
                     loadingSkillpoints = true;
                     finishedTreeTime = Time.now().timestamp();
 //                    loadSkillpoints(skillPointSet);
@@ -978,12 +978,12 @@ public class TreeLoader {
 
 
     static public void openTreeMenu(MinecraftClient client, PlayerEntity player) {
-        int currentSlot = player.getInventory().selectedSlot;
-        player.getInventory().selectedSlot = 7;
-        client.player.networkHandler.sendPacket(new ClientCommandC2SPacket(player, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY));
+        int currentSlot = player.getInventory().getSelectedSlot();
+        player.getInventory().setSelectedSlot(7);
+        client.options.sneakKey.setPressed(true);
         client.interactionManager.interactItem(player, Hand.MAIN_HAND);
-        client.player.networkHandler.sendPacket(new ClientCommandC2SPacket(player, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY));
-        player.getInventory().selectedSlot = currentSlot;
+        client.options.sneakKey.setPressed(false);
+        player.getInventory().setSelectedSlot(currentSlot);
         treeMenuWasOpened = true;
     }
 

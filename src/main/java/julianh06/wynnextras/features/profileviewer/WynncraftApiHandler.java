@@ -17,10 +17,7 @@ import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextColor;
+import net.minecraft.text.*;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
 
@@ -593,7 +590,7 @@ public class WynncraftApiHandler {
 
 
     private static Text parseSpan(String html, Style inheritedStyle) {
-        MutableText result = null; // kein leeres Literal als Root
+        MutableText result = null;
 
         int index = 0;
         while (index < html.length()) {
@@ -632,26 +629,21 @@ public class WynncraftApiHandler {
             String inner = html.substring(contentStart, spanEnd);
             Style newStyle = inheritedStyle.withItalic(false);
 
-            // Farbe
             Matcher colorMatch = Pattern.compile("color:\\s*#([0-9a-fA-F]{6})").matcher(style);
             if (colorMatch.find()) {
                 int rgb = Integer.parseInt(colorMatch.group(1), 16);
                 newStyle = newStyle.withColor(TextColor.fromRgb(rgb));
             }
 
-            // Fett
             if (style.contains("font-weight:bold") || style.contains("font-weight:bolder")) {
                 newStyle = newStyle.withBold(true);
             }
 
-            // Font-Klassen erkennen und Font-Resource setzen
-            // Annahme: deine resourcepack definiert fonts unter namespace "wynn" oder ähnlich.
-            // Passe die Identifier-Namen an die tatsächlichen font-IDs im Resource Pack an.
             if (classAttr != null && !classAttr.isEmpty()) {
                 if (classAttr.contains("font-common")) {
-                    newStyle = newStyle.withFont(Identifier.of("minecraft", "common"));
+                    newStyle = newStyle.withFont(new StyleSpriteSource.Font(Identifier.of("minecraft", "common")));
                 } else if (classAttr.contains("font-ascii")) {
-                    newStyle = newStyle.withFont(Identifier.of("minecraft", "default")); // Beispiel
+                    newStyle = newStyle.withFont(new StyleSpriteSource.Font(Identifier.of("minecraft", "default")));
                 }
             }
 

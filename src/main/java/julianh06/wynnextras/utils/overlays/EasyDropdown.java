@@ -43,11 +43,11 @@ public class EasyDropdown extends EasyElement{
         categories = WaypointData.INSTANCE.activePackage.categories;
         if (isExpanded) {
             if(categories.size() <= 1) {
-                RenderUtils.drawTexturedRect(context.getMatrices(), categorySingleTexture, x, y + height, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
+                RenderUtils.drawTexturedRect(context, categorySingleTexture, CustomColor.NONE, x, y + height, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
                 if(categories.isEmpty()) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Create a category!")), x + 6f / scaleFactor, y + height + 10f / scaleFactor, CustomColor.fromHexString("FF0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2.65f / scaleFactor);
+                    FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Create a category!")), x + 6f / scaleFactor, y + height + 10f / scaleFactor, CustomColor.fromHexString("FF0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2.65f / scaleFactor);
                 } else {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(WaypointData.INSTANCE.activePackage.categories.getFirst().name)), x + 6f / scaleFactor, y + height + 10f / scaleFactor, WaypointData.INSTANCE.activePackage.categories.getFirst().color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f / scaleFactor);
+                    FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(WaypointData.INSTANCE.activePackage.categories.getFirst().name)), x + 6f / scaleFactor, y + height + 10f / scaleFactor, WaypointData.INSTANCE.activePackage.categories.getFirst().color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f / scaleFactor);
                 }
                 return;
             }
@@ -55,8 +55,8 @@ public class EasyDropdown extends EasyElement{
                 Identifier texture = categoryMidTexture;
                 if(i == 0) texture = categoryTopTexture;
                 if(i == categories.size() - 1) texture = categoryBotTexture;
-                RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y + height + i * 39f / scaleFactor, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of(WaypointData.INSTANCE.activePackage.categories.get(i).name)), x + 6f / scaleFactor, y + height + i * 39f / scaleFactor + 10f / scaleFactor, WaypointData.INSTANCE.activePackage.categories.get(i).color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f / scaleFactor);
+                RenderUtils.drawTexturedRect(context, texture, CustomColor.NONE, x, y + height + i * 39f / scaleFactor, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
+                FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(WaypointData.INSTANCE.activePackage.categories.get(i).name)), x + 6f / scaleFactor, y + height + i * 39f / scaleFactor + 10f / scaleFactor, WaypointData.INSTANCE.activePackage.categories.get(i).color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f / scaleFactor);
             }
         }
     }
@@ -67,7 +67,7 @@ public class EasyDropdown extends EasyElement{
     }
 
     public void drawWithTexture(DrawContext context, Identifier texture) {
-        RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, width, height, (int) width, (int) height);
+        RenderUtils.drawTexturedRect(context, texture, CustomColor.NONE, x, y, width, height, (int) width, (int) height);
     }
 
     public WaypointCategory clickAndGetCategory() {

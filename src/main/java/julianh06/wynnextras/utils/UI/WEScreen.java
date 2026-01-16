@@ -11,8 +11,11 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.annotations.WEModule;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.CharInput;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.util.Window;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -59,11 +62,12 @@ public abstract class WEScreen extends Screen {
                 mX,
                 mY,
                 horizontalAmount,
-                verticalAmount
+                verticalAmount,
+                consumed
         ) -> {
             long now = System.currentTimeMillis();
             if (now - lastScrollTime < scrollCooldown) {
-                return;
+                return true;
             }
             lastScrollTime = now;
 
@@ -72,14 +76,16 @@ public abstract class WEScreen extends Screen {
             } else {
                 scrollList(-30); //Scroll down
             }
+            return true;
         });
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         //this.renderPanoramaBackground(context, delta);
-        if(super.client == null) super.client = MinecraftClient.getInstance();
-        if(super.client != null) super.applyBlur();
+        try {
+            if (super.client != null) super.applyBlur(context);
+        } catch (Exception ignored) {}
 
         this.drawContext = context;
         computeScaleAndOffsets();
@@ -138,7 +144,11 @@ public abstract class WEScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(Click click, boolean doubleClick) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
+
         // root widgets (topmost-first)
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             Widget w = rootWidgets.get(i);
@@ -166,19 +176,28 @@ public abstract class WEScreen extends Screen {
         // click outside -> clear focus
         setFocusedWidget(null);
         setFocusedElement(null);
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(click, doubleClick);
     }
 
-    @Override public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    @Override public boolean mouseReleased(Click click) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
+
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             if (rootWidgets.get(i).mouseReleased(mouseX, mouseY, button)) return true;
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(click);
     }
 
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
+
+
         if(ui == null) return false;
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             Widget w = rootWidgets.get(i);
@@ -187,27 +206,34 @@ public abstract class WEScreen extends Screen {
                 return true;
             }
         }
-        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+        return super.mouseDragged(click, dx, dy);
     }
 
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyInput input) {
+        int keyCode = input.key();
+        int scanCode = input.scancode();
+        int modifiers = input.modifiers();
+
         if (focusedWidget != null && focusedWidget.keyPressed(keyCode, scanCode, modifiers)) return true;
         // fallback to focused-first then all widgets
         for (Widget w : rootWidgets) {
             if (w.keyPressed(keyCode, scanCode, modifiers)) return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(input);
     }
 
     @Override
-    public boolean charTyped(char chr, int modifiers) {
+    public boolean charTyped(CharInput input) {
+        char chr = (char) input.codepoint();
+        int modifiers = input.modifiers();
+
         if (focusedWidget != null && focusedWidget.charTyped(chr, modifiers)) return true;
         for (Widget w : rootWidgets) {
             if (w.charTyped(chr, modifiers)) return true;
         }
-        return super.charTyped(chr, modifiers);
+        return super.charTyped(input);
     }
 
     protected void setFocusedElement(WEElement<?> e) {

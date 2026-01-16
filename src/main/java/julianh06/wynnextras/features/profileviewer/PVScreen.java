@@ -19,15 +19,15 @@ import julianh06.wynnextras.utils.UI.Widget;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
-import net.minecraft.client.util.SkinTextures;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerModelPart;
+import net.minecraft.entity.player.SkinTextures;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -41,6 +41,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class PVScreen extends WEScreen {
     public static int mouseX = 0;
@@ -249,16 +250,20 @@ public class PVScreen extends WEScreen {
                 if (world != null) {
                     dummy = new AbstractClientPlayerEntity(world, profile) {
                         @Override
-                        public SkinTextures getSkinTextures() {
-                            return client.getSkinProvider().getSkinTextures(getGameProfile());
+                        public SkinTextures getSkin() {
+                            try {
+                                return client.getSkinProvider().fetchSkinTextures(getGameProfile()).get().get();
+                            } catch (Exception ignored) {
+                                return null;
+                            }
                         }
 
-                        @Override
-                        public boolean isPartVisible(PlayerModelPart part) {
-                            return part != PlayerModelPart.CAPE;
-                        }
+//                        @Override
+//                        public boolean isPartVisible(PlayerModelPart part) {
+//                            return part != PlayerModelPart.CAPE;
+//                        }
                     };
-                    dummy.getSkinTextures().texture();
+                    //dummy.getSkin().texture();
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -301,8 +306,8 @@ public class PVScreen extends WEScreen {
     @Override
     public void updateValues() {
         if(dummy != null) {
-            Identifier dummyTexture = dummy.getSkinTextures().texture();
-            lastViewedPlayersSkins.put(PV.currentPlayerData.getUsername(), dummyTexture);
+            //Identifier dummyTexture = dummy.getSkin().texture();
+            //lastViewedPlayersSkins.put(PV.currentPlayerData.getUsername(), dummyTexture);
         }
 
         int xStart = getLogicalWidth() / 2 - 900 - (getLogicalWidth() - 1800 < 200 ? 50 : 0);
@@ -355,7 +360,6 @@ public class PVScreen extends WEScreen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         PVScreen.mouseX = mouseX;
         PVScreen.mouseY = mouseY;
-        super.applyBlur();
 
         this.drawContext = context;
         computeScaleAndOffsets();
@@ -610,72 +614,19 @@ public class PVScreen extends WEScreen {
 
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+    public boolean mouseDragged(Click input, double deltaX, double deltaY) {
+        int button = input.button();
+
         if (button == 0 && draggingAllowed) {
             playerRotationY -= (float) deltaX * 1.25f;
             playerRotationY %= 360f;
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        return super.mouseDragged(input, deltaX, deltaY);
     }
 
 
-    public void drawPlayer(
-            DrawContext context,
-            int x, int y, int scale,
-            float mouseX, float mouseY,
-            LivingEntity player,
-            double scaleFactor
-    ) {
-        float flipOffset = 0;
 
-        Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
-        //rotation.rotateX((float) Math.toRadians(pitch));
-        rotation.rotateY((float) Math.toRadians(-20 + playerRotationY));
-
-        float sleepOffsetX;
-        float sleepOffsetY;
-
-        if(dummy.getPose() == EntityPose.SLEEPING) {
-            rotation.rotateY((float) Math.PI * 0.5f);
-            rotation.rotateX((float) Math.PI);
-            sleepOffsetX = (float) ((float) (60 * 3) / scaleFactor);
-            sleepOffsetY = (float) ((float) (10 * 3) / scaleFactor);
-        } else {
-            sleepOffsetX = 0;
-            sleepOffsetY = 0;
-        }
-
-        if(PV.currentPlayer.equalsIgnoreCase("teslanator")) {
-            rotation.rotateX((float) Math.PI);
-            flipOffset = (float) (-130 * 3 / scaleFactor);
-            rotation.rotateY((float) Math.PI);
-        }
-
-
-        EntityRenderDispatcher dispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
-        dispatcher.setRenderShadows(false);
-
-        float smolScale = 1;
-        float thickScale = 1;
-
-        if(PV.currentPlayer.equalsIgnoreCase("legendaryvirus")) {
-            smolScale = 0.5f;
-            thickScale = 1.5f;
-        }
-
-        context.getMatrices().push();
-        context.getMatrices().translate(sleepOffsetX + x,  sleepOffsetY + flipOffset + y, 50.0);
-        context.getMatrices().scale(thickScale * scale, smolScale * scale, scale);
-        context.getMatrices().multiply(rotation);
-
-        VertexConsumerProvider.Immediate buffer = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
-        dispatcher.render(player, 0, 0, 0, 1.0F, context.getMatrices(), buffer, 15728880);
-        buffer.draw();
-
-        context.getMatrices().pop();
-        dispatcher.setRenderShadows(true);
-    }
 
     public record SkinData(String value, String signature) {}
 
@@ -696,7 +647,7 @@ public class PVScreen extends WEScreen {
 
     public static GameProfile createProfileWithSkin(UUID uuid, String name, SkinData skin) {
         GameProfile profile = new GameProfile(uuid, name);
-        profile.getProperties().put("textures", new Property("textures", skin.value(), skin.signature()));
+        profile.properties().put("textures", new Property("textures", skin.value(), skin.signature()));
         return profile;
     }
 

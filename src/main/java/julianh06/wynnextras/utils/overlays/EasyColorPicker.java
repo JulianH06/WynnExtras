@@ -29,7 +29,7 @@ public class EasyColorPicker extends EasyElement{
     @Override
     public void draw(DrawContext context) {
         if(selectedColor == null) selectedColor = CustomColor.fromHexString("ffffff");
-        RenderUtils.drawRect(context.getMatrices(), selectedColor, x, y, 0, width, height);
+        RenderUtils.drawRect(context, selectedColor, x, y, width, height);
 
         if (expanded) {
             int pickerX = (int) (x + width + 25f / scaleFactor);
@@ -37,8 +37,8 @@ public class EasyColorPicker extends EasyElement{
 
             //RenderUtils.drawRect(context.getMatrices(), selectedColor, pickerX, pickerY, 0, (float) pickerWidth / scaleFactor, (float) pickerHeight / scaleFactor);
 
-            RenderUtils.drawTexturedRect(context.getMatrices(), hsvhueTexture, pickerX, pickerY, (float) pickerWidth / scaleFactor, (float) pickerHeight / scaleFactor, pickerWidth / scaleFactor, pickerHeight / scaleFactor);
-            RenderUtils.drawTexturedRect(context.getMatrices(), backgroundTexture, pickerX - 5f / scaleFactor, pickerY - 5f / scaleFactor,  210f / scaleFactor, 210f / scaleFactor, 210 / scaleFactor, 210 / scaleFactor);
+            RenderUtils.drawTexturedRect(context, hsvhueTexture, CustomColor.NONE, pickerX, pickerY, (float) pickerWidth / scaleFactor, (float) pickerHeight / scaleFactor, pickerWidth / scaleFactor, pickerHeight / scaleFactor);
+            RenderUtils.drawTexturedRect(context, backgroundTexture, CustomColor.NONE, pickerX - 5f / scaleFactor, pickerY - 5f / scaleFactor,  210f / scaleFactor, 210f / scaleFactor, 210 / scaleFactor, 210 / scaleFactor);
 
             //RenderUtils.drawTexturedRect(context.getMatrices(), grayscaleTexture, pickerX + (float) pickerWidth / scaleFactor + 10f / scaleFactor, pickerY, (float) 20 / scaleFactor, (float) pickerHeight / scaleFactor, 20 / scaleFactor, pickerHeight / scaleFactor);
 
