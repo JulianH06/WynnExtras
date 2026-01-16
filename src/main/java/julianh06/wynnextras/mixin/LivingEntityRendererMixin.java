@@ -3,12 +3,14 @@ package julianh06.wynnextras.mixin;
 import com.wynntils.mc.extension.EntityRenderStateExtension;
 import julianh06.wynnextras.features.render.PlayerRenderFilter;
 import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.render.entity.state.LivingEntityRenderState;
+import net.minecraft.client.render.state.CameraRenderState;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -27,8 +29,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
     }
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-    private void onRender(LivingEntityRenderState state, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
-        EntityRenderStateExtension entityRenderStateExtension = state instanceof EntityRenderStateExtension ? ((EntityRenderStateExtension) state) : null;
+    private void onRender(S state, MatrixStack matrices, OrderedRenderCommandQueue renderQueue, CameraRenderState camera, CallbackInfo ci) {    EntityRenderStateExtension entityRenderStateExtension = state instanceof EntityRenderStateExtension ? ((EntityRenderStateExtension) state) : null;
         if(entityRenderStateExtension != null) {
             PlayerEntity player = entityRenderStateExtension.getEntity() instanceof PlayerEntity ? ((PlayerEntity) entityRenderStateExtension.getEntity()) : null;
             if(player != null) {

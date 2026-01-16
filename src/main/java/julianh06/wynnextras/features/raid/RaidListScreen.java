@@ -15,6 +15,7 @@ import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.utils.Pair;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
@@ -93,11 +94,12 @@ public class RaidListScreen extends Screen {
                 mX,
                 mY,
                 horizontalAmount,
-                verticalAmount
+                verticalAmount,
+                consumed
         ) -> {
             long now = System.currentTimeMillis();
             if (now - lastScrollTime < scrollCooldown) {
-                return;
+                return true;
             }
             lastScrollTime = now;
 
@@ -109,6 +111,7 @@ public class RaidListScreen extends Screen {
             if (scrollOffset < 0) {
                 scrollOffset = 0;
             }
+            return true;
         });
     }
 
@@ -120,7 +123,7 @@ public class RaidListScreen extends Screen {
         int width = (int) Math.max(screenWidth * 0.5, 400);
         int xStart = screenWidth / 2 - width / 2;
 
-        RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+        RenderUtils.drawRect(context, CustomColor.fromInt(-804253680), 0,0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
 
         List<RaidData> filteredList = filterList(RaidListData.INSTANCE.raids.reversed());
         List<RaidData> sortedList = sort(filteredList);
@@ -136,31 +139,31 @@ public class RaidListScreen extends Screen {
 
             if (yPos + 80 + currentCollapsedProgress.get(i) >= 0 && yPos <= screenHeight) {
                 Identifier raidTexture = getTexture(raid.raidInfo.getRaidKind());
-                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureTopLeft, xStart, yPos, 0, 12, 20, 12, 20);
-                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureTopMid, xStart + 12, yPos, 0, width - 24, 20, width - 24, 20);
-                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureTopRight, xStart - 12 + width, yPos, 0, 12, 20, 12, 20);
+                RenderUtils.drawTexturedRect(context, ScrollTextureTopLeft, CustomColor.NONE, xStart, yPos, 12, 20, 12, 20);
+                RenderUtils.drawTexturedRect(context, ScrollTextureTopMid, CustomColor.NONE, xStart + 12, yPos, width - 24, 20, width - 24, 20);
+                RenderUtils.drawTexturedRect(context, ScrollTextureTopRight, CustomColor.NONE, xStart - 12 + width, yPos, 12, 20, 12, 20);
                 if(currentCollapsedProgress.get(i) >= 0) {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleLeft, xStart, yPos + 20, 0, 16, 20, 16, 20);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleMid, xStart + 16, yPos + 20, 0, width - 32, 20, width - 32, 20);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleRight, xStart + width - 16, yPos + 20, 0, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleLeft, CustomColor.NONE, xStart, yPos + 20, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleMid, CustomColor.NONE, xStart + 16, yPos + 20, width - 32, 20, width - 32, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleRight, CustomColor.NONE, xStart + width - 16, yPos + 20, 16, 20, 16, 20);
                 }
 
                 if(currentCollapsedProgress.get(i) >= 20) {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleLeft, xStart, yPos + 40, 0, 16, 20, 16, 20);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleMid, xStart + 16, yPos + 40, 0, width - 32, 20, width - 32, 20);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleRight, xStart + width - 16, yPos + 40, 0, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleLeft, CustomColor.NONE, xStart, yPos + 40, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleMid, CustomColor.NONE, xStart + 16, yPos + 40, width - 32, 20, width - 32, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleRight, CustomColor.NONE, xStart + width - 16, yPos + 40, 16, 20, 16, 20);
                 }
 
                 if(currentCollapsedProgress.get(i) >= 40) {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleLeft, xStart, yPos + 60, 0, 16, 20, 16, 20);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleMid, xStart + 16, yPos + 60, 0, width - 32, 20, width - 32, 20);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleRight, xStart + width - 16, yPos + 60, 0, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleLeft, CustomColor.NONE, xStart, yPos + 60, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleMid, CustomColor.NONE, xStart + 16, yPos + 60, width - 32, 20, width - 32, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleRight, CustomColor.NONE, xStart + width - 16, yPos + 60, 16, 20, 16, 20);
                 }
 
                 if(currentCollapsedProgress.get(i) >= 60) {
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleLeft, xStart, yPos + 80, 0, 16, 20, 16, 20);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleMid, xStart + 16, yPos + 80, 0, width - 32, 20, width - 32, 20);
-                    RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureMiddleRight, xStart + width - 16, yPos + 80, 0, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleLeft, CustomColor.NONE, xStart, yPos + 80, 16, 20, 16, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleMid, CustomColor.NONE, xStart + 16, yPos + 80, width - 32, 20, width - 32, 20);
+                    RenderUtils.drawTexturedRect(context, ScrollTextureMiddleRight, CustomColor.NONE, xStart + width - 16, yPos + 80, 16, 20, 16, 20);
                 }
 
                 for (int j = 0; j < 4; j++) {
@@ -173,7 +176,7 @@ public class RaidListScreen extends Screen {
 
                      if(currentCollapsedProgress.get(i) >= 20 * j) {
 
-                         FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(name), xStart + 20, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                         FontRenderer.getInstance().renderText(context, StyledText.fromString(name), xStart + 20, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                     }
                 }
                 Map<Integer, RaidRoomInfo> challenges = raid.raidInfo.getChallenges();
@@ -187,25 +190,25 @@ public class RaidListScreen extends Screen {
                             String roomString = room.getRoomName() + ": " + formatDuration(roomDuration);
 //                                16 for nol because parasite
                             if(raid.raidInfo.getRaidKind() instanceof OrphionsNexusOfLightRaid) {
-                                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 20, yPos + 24 + j * 16, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                                FontRenderer.getInstance().renderText(context, StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 20, yPos + 24 + j * 16, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                             } else {
-                                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 20, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                                FontRenderer.getInstance().renderText(context, StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 20, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                             }
                         }
                     }
                 }
 
-                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomLeft, xStart, yPos + 20 + currentCollapsedProgress.get(i), 0, 12, 20, 12, 20);
-                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomMid, xStart + 12, yPos + 20 + currentCollapsedProgress.get(i), 0, width - 24, 20, width - 24, 20);
-                RenderUtils.drawTexturedRect(context.getMatrices(), ScrollTextureBottomRight, xStart - 12 + width, yPos + 20 + currentCollapsedProgress.get(i), 0, 12, 20, 12, 20);
-                RenderUtils.drawTexturedRect(context.getMatrices(), raidTexture, xStart + width / 2 - 15, yPos - 5, 0, 30, 30, 30, 30);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(raid.raidInfo.getRaidKind().getRaidName()), xStart + 10, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(convertTime(raid.raidEndTime)), xStart + width - textRenderer.getWidth(convertTime(raid.raidEndTime)) - 8, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
-                FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(formatDuration(raid.duration)), xStart + width - textRenderer.getWidth(formatDuration(raid.duration)) - 8, (int) (yPos + 26 + currentCollapsedProgress.get(i)), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                RenderUtils.drawTexturedRect(context, ScrollTextureBottomLeft, CustomColor.NONE, xStart, yPos + 20 + currentCollapsedProgress.get(i), 12, 20, 12, 20);
+                RenderUtils.drawTexturedRect(context, ScrollTextureBottomMid, CustomColor.NONE, xStart + 12, yPos + 20 + currentCollapsedProgress.get(i), width - 24, 20, width - 24, 20);
+                RenderUtils.drawTexturedRect(context, ScrollTextureBottomRight, CustomColor.NONE, xStart - 12 + width, yPos + 20 + currentCollapsedProgress.get(i), 12, 20, 12, 20);
+                RenderUtils.drawTexturedRect(context, raidTexture, CustomColor.NONE, xStart + width / 2 - 15, yPos - 5, 30, 30, 30, 30);
+                FontRenderer.getInstance().renderText(context, StyledText.fromString(raid.raidInfo.getRaidKind().getRaidName()), xStart + 10, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                FontRenderer.getInstance().renderText(context, StyledText.fromString(convertTime(raid.raidEndTime)), xStart + width - textRenderer.getWidth(convertTime(raid.raidEndTime)) - 8, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                FontRenderer.getInstance().renderText(context, StyledText.fromString(formatDuration(raid.duration)), xStart + width - textRenderer.getWidth(formatDuration(raid.duration)) - 8, (int) (yPos + 26 + currentCollapsedProgress.get(i)), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 if(raid.completed) {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString("Completed"), xStart + 10, (int) (yPos + 26 + currentCollapsedProgress.get(i)), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                    FontRenderer.getInstance().renderText(context, StyledText.fromString("Completed"), xStart + 10, (int) (yPos + 26 + currentCollapsedProgress.get(i)), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 } else {
-                    FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString("FAILED"), xStart + 10, (int) (yPos + 26 + currentCollapsedProgress.get(i)), CustomColor.fromHexString("FF0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                    FontRenderer.getInstance().renderText(context, StyledText.fromString("FAILED"), xStart + 10, (int) (yPos + 26 + currentCollapsedProgress.get(i)), CustomColor.fromHexString("FF0000"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 }
                 //listElements.get(i).draw(context);
             }
@@ -214,9 +217,9 @@ public class RaidListScreen extends Screen {
 
         int MidButtonBackgroundWidth = width - 80;
 
-        RenderUtils.drawTexturedRect(context.getMatrices(), ButtonBackgroundLeftTexture,  xStart - 70, 0, 0, 120, 80, 120, 80);
-        RenderUtils.drawTexturedRect(context.getMatrices(), ButtonBackgroundMidTexture, xStart + 40, 0, 0, MidButtonBackgroundWidth, 80, MidButtonBackgroundWidth, 80);
-        RenderUtils.drawTexturedRect(context.getMatrices(), ButtonBackgroundRightTexture, xStart + width - 50, 0, 0, 120, 80, 120, 80);
+        RenderUtils.drawTexturedRect(context, ButtonBackgroundLeftTexture, CustomColor.NONE,  xStart - 70, 0, 120, 80, 120, 80);
+        RenderUtils.drawTexturedRect(context, ButtonBackgroundMidTexture, CustomColor.NONE, xStart + 40, 0, MidButtonBackgroundWidth, 80, MidButtonBackgroundWidth, 80);
+        RenderUtils.drawTexturedRect(context, ButtonBackgroundRightTexture, CustomColor.NONE, xStart + width - 50, 0, 120, 80, 120, 80);
 
         NOTGFilterButton.setX(xStart + width / 2 - 180);
         NOTGFilterButton.setY(16);
@@ -254,7 +257,7 @@ public class RaidListScreen extends Screen {
         String combined = completed + " " + total + " " + failed;
         int totalStringStart = Math.round(xStart + width / 2f - textRenderer.getWidth(total) / 2f) - 4;
 
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromString(combined), totalStringStart - textRenderer.getWidth(completed), 57, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+        FontRenderer.getInstance().renderText(context, StyledText.fromString(combined), totalStringStart - textRenderer.getWidth(completed), 57, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
 
 
         for (int j = 0; j < listElements.size(); j++) {
@@ -308,7 +311,10 @@ public class RaidListScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(Click click, boolean doubleClick) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+
         if ((!Filter.isActive() && Filter.isClickInBounds((int) mouseX, (int) mouseY))
                 || Filter.isActive() && !Filter.isClickInBounds((int) mouseX, (int) mouseY)) {
             Filter.click();

@@ -41,12 +41,12 @@ public class aspect {
     public static final Map<String, Pair<String, String>> allAspects = new HashMap<>();
 
     public static void openMenu(MinecraftClient client, PlayerEntity player){
-        int currentSlot = player.getInventory().selectedSlot;
-        player.getInventory().selectedSlot = 7;
-        client.player.networkHandler.sendPacket(new ClientCommandC2SPacket(player, ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY));
+        int currentSlot = player.getInventory().getSelectedSlot();
+        player.getInventory().setSelectedSlot(7);
+        client.options.sneakKey.setPressed(true);
         client.interactionManager.interactItem(player, Hand.MAIN_HAND);
-        client.player.networkHandler.sendPacket(new ClientCommandC2SPacket(player, ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY));
-        player.getInventory().selectedSlot = currentSlot;
+        client.options.sneakKey.setPressed(false);
+        player.getInventory().setSelectedSlot(currentSlot);
 //        clickOnNameInInventory("Aspects", screen, client);
         maintracking.setAspectScanreq(true);
     }

@@ -20,7 +20,7 @@ public class WaypointRenderer {
             for(Waypoint waypoint : pkg.waypoints) {
                 WEVec pos = new WEVec(waypoint.x + 0.5f, waypoint.y + 1.5f, waypoint.z + 0.5f);
                 if(MinecraftClient.getInstance().player != null && waypoint.showDistance) {
-                    WEVec playerPos = new WEVec(MinecraftClient.getInstance().player.getPos());
+                    WEVec playerPos = new WEVec(MinecraftClient.getInstance().player.getBlockPos().toBottomCenterPos());
                     WorldRenderUtils.drawText(event, pos, Text.of((int) pos.distanceTo(playerPos) + "m"), 0.75f, !waypoint.seeThrough);
                 }
                 WEVec namePos = new WEVec(waypoint.x + 0.5f, waypoint.y + 2f, waypoint.z + 0.5f);

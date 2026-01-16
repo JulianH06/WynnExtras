@@ -60,7 +60,7 @@ public class RaidListFilter extends EasyTextInput {
     @Override
     public void drawWithTexture(DrawContext context, Identifier texture) {
         long now = System.currentTimeMillis();
-        RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, 0.0f, width, height, (int) width, (int) height);
+        RenderUtils.drawTexturedRect(context, texture, CustomColor.NONE, x, y, width, height, (int) width, (int) height);
         if(input.isEmpty() && !isActive) {
             context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 4, y + 3, CustomColor.fromHexString("FFFFFF").asInt());
         } else {
@@ -72,7 +72,7 @@ public class RaidListFilter extends EasyTextInput {
                 blinkToggle = !blinkToggle;
                 lastBlink = now;
             }
-            if(blinkToggle && isActive) RenderUtils.drawLine(context.getMatrices(), CustomColor.fromHexString("FFFFFF"), x + 4 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 2, x + 4 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 11, 0, 1);
+            if(blinkToggle && isActive) RenderUtils.drawLine(context, CustomColor.fromHexString("FFFFFF"), x + 4 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 2, x + 4 + MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)), y + 11, 1);
         }
     }
 }

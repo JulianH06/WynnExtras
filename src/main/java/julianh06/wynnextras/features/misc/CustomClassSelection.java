@@ -9,6 +9,7 @@ import julianh06.wynnextras.utils.UI.WEScreen;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -80,14 +81,16 @@ public class CustomClassSelection {
                                 CustomClassSelectionOverlay.INSTANCE.getyStart()));
 
                 CustomClassSelectionOverlay.INSTANCE.render(drawContext, mouseX, mouseY, tickDelta);
-                if(!InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), GLFW.GLFW_KEY_SPACE)) return;
-                CustomClassSelectionOverlay.INSTANCE.mouseDragged(mouseX, mouseY, 0, dx, dy);
+                if(!InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow(), GLFW.GLFW_KEY_SPACE)) return;
+                Click click = new Click(mouseX, mouseY, null);
+                CustomClassSelectionOverlay.INSTANCE.mouseDragged(click, dx, dy);
             });
         }
     }
 
     @SubscribeEvent
     public void onClick(ClickEvent event) {
-        CustomClassSelectionOverlay.INSTANCE.mouseClicked(event.mouseX, event. mouseY, 0);
+        //Click click = new Click(event.mouseX, event.mouseY, null);
+        //CustomClassSelectionOverlay.INSTANCE.mouseClicked(click, false);
     }
 }

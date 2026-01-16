@@ -104,7 +104,7 @@ public class SkinManager {
 
     private static Identifier registerSkin(NativeImage image, UUID uuid) {
         Identifier id = Identifier.of("customskin", uuid.toString());
-        MinecraftClient.getInstance().getTextureManager().registerTexture(id, new NativeImageBackedTexture(image));
+        MinecraftClient.getInstance().getTextureManager().registerTexture(id, new NativeImageBackedTexture(() -> "customskin/" + uuid, image));
         return id;
     }
 

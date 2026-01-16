@@ -10,30 +10,21 @@ import julianh06.wynnextras.features.profileviewer.OpenInBrowserButton;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.Searchbar;
-import julianh06.wynnextras.mixin.Accessor.BannerBlockEntityAccessor;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.entity.BannerBlockEntity;
 import net.minecraft.block.entity.BannerPattern;
 import net.minecraft.block.entity.BannerPatterns;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.component.type.BannerPatternsComponent;
 import net.minecraft.registry.RegistryEntryLookup;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
-import net.minecraft.util.DyeColor;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
-import net.minecraft.util.math.RotationAxis;
 
 import java.text.DecimalFormat;
 import java.time.Instant;
@@ -116,7 +107,6 @@ public class GVScreen extends WEScreen {
         mouseInMenu = false;
         PVScreen.mouseX = mouseX;
         PVScreen.mouseY = mouseY;
-        super.applyBlur();
 
         this.drawContext = context;
         computeScaleAndOffsets();
@@ -219,7 +209,7 @@ public class GVScreen extends WEScreen {
 
         ui.drawCenteredText("Current territories: " + GV.currentGuildData.territories, xStart + 285, yStart + 710);
 
-        renderBanner(GV.currentGuildData.banner, context.getMatrices(), (int) ui.sx(xStart + 350), (int) ui.sy(yStart + 515), 210 / ui.getScaleFactorF());
+        //renderBanner(GV.currentGuildData.banner, context.getMatrices(), (int) ui.sx(xStart + 350), (int) ui.sy(yStart + 515), 210 / ui.getScaleFactorF());
 
         if (memeberWidgets.isEmpty()) {
             for (GuildData.Member member : GV.currentGuildData.members.owner.values()) {
@@ -386,7 +376,11 @@ public class GVScreen extends WEScreen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(Click click, boolean doubleClick) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
+
         if(scrollBarWidget != null) scrollBarWidget.mouseClicked(mouseX, mouseY, button);
         if(openInBrowserButton == null || searchBar == null || darkModeToggleWidget == null) return false;
 
@@ -413,62 +407,66 @@ public class GVScreen extends WEScreen {
             widget.mouseClicked(mouseX, mouseY, button);
         }
 
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(click, doubleClick);
     }
 
     @Override
-    public boolean mouseReleased(double x, double y, int button) {
-        if(scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
-        return super.mouseReleased(x, y, button);
+    public boolean mouseReleased(Click click) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
+
+        if(scrollBarWidget != null) scrollBarWidget.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(click);
     }
 
-    public static void renderBanner(GuildData.Banner banner, MatrixStack matrices, int x, int y, float scale) {
-        BlockState state = Blocks.WHITE_BANNER.getDefaultState();
-        BannerBlockEntity be = new BannerBlockEntity(MinecraftClient.getInstance().player.getBlockPos(), state, banner != null ? dyeColorFromName(banner.base) : DyeColor.WHITE);
-        be.setWorld(MinecraftClient.getInstance().world);
+//    public static void renderBanner(GuildData.Banner banner, MatrixStack matrices, int x, int y, float scale) {
+//        BlockState state = Blocks.WHITE_BANNER.getDefaultState();
+//        BannerBlockEntity be = new BannerBlockEntity(MinecraftClient.getInstance().player.getBlockPos(), state, banner != null ? dyeColorFromName(banner.base) : DyeColor.WHITE);
+//        be.setWorld(MinecraftClient.getInstance().world);
+//
+//        BannerPatternsComponent.Builder builder = new BannerPatternsComponent.Builder();
+//
+//        if (banner != null) {
+//            for (GuildData.BannerLayer layer : banner.layers) {
+//                String pattern = layer.pattern.toUpperCase();
+//                try {
+//                    RegistryEntry<BannerPattern> patternRegistryEntry = resolvePatternEntry(pattern);
+//                    DyeColor color = dyeColorFromName(layer.colour);
+//
+//                    if (patternRegistryEntry != null) builder.add(patternRegistryEntry, color);
+//                } catch (Exception e) {
+//                    return;
+//                }
+//            }
+//        }
+//
+//        BannerPatternsComponent patternsComponent = builder.build();
+//
+//        ((BannerBlockEntityAccessor) be).setPatterns(patternsComponent);
+//
+//        BlockEntityRenderManager dispatcher = MinecraftClient.getInstance().getBlockEntityRenderDispatcher();
+//
+//        matrices.push();
+//        matrices.translate(x, y, 0);
+//        matrices.scale(scale, scale, scale);
+//
+//        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(200));
+//        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(180));
+//
+//        VertexConsumerProvider.Immediate buffer = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
+//        dispatcher.render(be, 0, matrices, buffer);
+//        buffer.draw();
+//        matrices.pop();
+//    }
 
-        BannerPatternsComponent.Builder builder = new BannerPatternsComponent.Builder();
-
-        if (banner != null) {
-            for (GuildData.BannerLayer layer : banner.layers) {
-                String pattern = layer.pattern.toUpperCase();
-                try {
-                    RegistryEntry<BannerPattern> patternRegistryEntry = resolvePatternEntry(pattern);
-                    DyeColor color = dyeColorFromName(layer.colour);
-
-                    if (patternRegistryEntry != null) builder.add(patternRegistryEntry, color);
-                } catch (Exception e) {
-                    return;
-                }
-            }
-        }
-
-        BannerPatternsComponent patternsComponent = builder.build();
-
-        ((BannerBlockEntityAccessor) be).setPatterns(patternsComponent);
-
-        BlockEntityRenderDispatcher dispatcher = MinecraftClient.getInstance().getBlockEntityRenderDispatcher();
-
-        matrices.push();
-        matrices.translate(x, y, 0);
-        matrices.scale(scale, scale, scale);
-
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(200));
-        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(180));
-
-        VertexConsumerProvider.Immediate buffer = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
-        dispatcher.render(be, 0, matrices, buffer);
-        buffer.draw();
-        matrices.pop();
-    }
-
-    private static DyeColor dyeColorFromName(String base) {
-        try {
-            return DyeColor.byName(base.toLowerCase(), DyeColor.WHITE);
-        } catch (Exception e) {
-            return DyeColor.WHITE;
-        }
-    }
+//    private static DyeColor dyeColorFromName(String base) {
+//        try {
+//            return DyeColor.byName(base.toLowerCase(), DyeColor.WHITE);
+//        } catch (Exception e) {
+//            return DyeColor.WHITE;
+//        }
+//    }
 
     private static int getMaxMembers(int level) {
         if (level < 2) return 4;
@@ -728,11 +726,10 @@ public class GVScreen extends WEScreen {
 
             if (PVScreen.DarkModeToggleWidget.fade > 0.001f) {
                 RenderUtils.drawRect(
-                        ctx.getMatrices(),
+                        ctx,
                         CustomColor.fromHexString("1b1b1c").withAlpha(PVScreen.DarkModeToggleWidget.fade),
                         ui.sx(x + scale) - 1,
                         ui.sy(y + scale) - 1,
-                        0,
                         ui.sw(width - scale * 2) + 2,
                         ui.sh(height - scale * 2) + 2
                 );

@@ -352,7 +352,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                         continue;
                     }
                     int amount = getAspectAmountForClass(currentPage, warriorAspects, shamanAspects, mageAspects, archerAspects, assassinAspects);
-                    ctx.getMatrices().push();
+                    //ctx.getMatrices().push();
 
                     int xPos;
                     if(amount % 2 == 0) {
@@ -383,10 +383,10 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         if(currentHovered == null) return;
 
-        ctx.getMatrices().push();
-        ctx.getMatrices().translate(0.0F, 0.0F, 8000.0F);
+        //ctx.getMatrices().push();
+        //ctx.getMatrices().translate(0.0F, 0.0F, 8000.0F);
         ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, currentHovered.getTooltip(Item.TooltipContext.DEFAULT, McUtils.player(), TooltipType.BASIC), mouseX, mouseY);
-        ctx.getMatrices().pop();
+        //ctx.getMatrices().pop();
     }
 
     private static int getAspectAmountForClass(Page page, List<ApiAspect> warriorAspects, List<ApiAspect> shamanAspects, List<ApiAspect> mageAspects, List<ApiAspect> archerAspects, List<ApiAspect> assassinAspects) {
@@ -620,11 +620,11 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                 }
             }
             if (!Objects.equals(color, CustomColor.NONE)) {
-                RenderUtils.drawTexturedRectWithColor(
-                        ctx.getMatrices(),
-                        Texture.HIGHLIGHT.resource(),
+                RenderUtils.drawTexturedRect(
+                        ctx,
+                        Texture.HIGHLIGHT.identifier(),
                         color.withAlpha(255),
-                        x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), -1000, 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
+                        x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
                         highlightTexture.get().ordinal() * 18 + 18, 0,
                         18, 18,
                         Texture.HIGHLIGHT.width(),
@@ -634,10 +634,10 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             if(playerAspect == null) return;
             ItemStack stack = toItemStack(aspect, isMaxed(playerAspect), tierInt);
 
-            ctx.getMatrices().push();
-            ctx.getMatrices().scale(5 / ui.getScaleFactorF(), 5 / ui.getScaleFactorF(), 1);
+            ctx.getMatrices().pushMatrix();
+            ctx.getMatrices().scale(5 / ui.getScaleFactorF(), 5 / ui.getScaleFactorF());
             ctx.drawItem(stack, x / 5 + 2, y / 5 + 2);
-            ctx.getMatrices().pop();
+            ctx.getMatrices().popMatrix();
 
             ui.drawCenteredText((!progress.equals("MAX") ? String.valueOf(amount) : progress) + (!progress.equals("MAX") ? "/" + neededForNextLevel : ""), x + 50, y + 120);
             ui.drawCenteredText(tier, x + 50, y - 25);

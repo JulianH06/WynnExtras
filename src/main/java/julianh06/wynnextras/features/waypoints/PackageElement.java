@@ -124,9 +124,9 @@ public class PackageElement {
     public void draw(int x, int y, int width, int height, DrawContext context) {
         this.width = width;
         this.height = height;
-        RenderUtils.drawTexturedRect(context.getMatrices(), backgroundTexture, x, y, width + 1, height + 2, width + 1, height + 2);
+        RenderUtils.drawTexturedRect(context, backgroundTexture, CustomColor.NONE, x, y, width + 1, height + 2, width + 1, height + 2);
 
-        RenderUtils.drawTexturedRect(context.getMatrices(), nameBackgroundTexture, x + 3 * 3f / scaleFactor, y + 2.5f * 3 / scaleFactor, (float) (180 * 3) / scaleFactor, (float) (13 * 3) / scaleFactor, 180 * 3 / scaleFactor, 13 * 3 / scaleFactor);
+        RenderUtils.drawTexturedRect(context, nameBackgroundTexture, CustomColor.NONE, x + 3 * 3f / scaleFactor, y + 2.5f * 3 / scaleFactor, (float) (180 * 3) / scaleFactor, (float) (13 * 3) / scaleFactor, 180 * 3 / scaleFactor, 13 * 3 / scaleFactor);
         nameInput.setX(x + 3 * 3 / scaleFactor);
         nameInput.setY(y + 4 * 3 / scaleFactor);
         nameInput.setWidth(180 * 3 / scaleFactor);
@@ -146,14 +146,14 @@ public class PackageElement {
         enableButton.setWidth(15f * 3 / scaleFactor);
         enableButton.setHeight(15f * 3 / scaleFactor);
         enableButton.drawWithTexture(context, waypointPackage.enabled ? activeTexture : inactiveTexture);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Toggle package")), x + 65f / scaleFactor, y + 24f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Toggle package")), x + 65f / scaleFactor, y + 24f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
 
         selectButton.setX(x + width / 2 - 150 / scaleFactor);
         selectButton.setY(y + 60 * 3 / scaleFactor);
         selectButton.setWidth(300f / scaleFactor);
         selectButton.setHeight(36f / scaleFactor);
         selectButton.drawWithTexture(context, exportButtonTexture);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Edit package")), x + (float) width / 2, y + 62f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Edit package")), x + (float) width / 2, y + 62f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
 
 //        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Enable/")), x + (float) (20 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
 //        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Disable")), x + (float) (20 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
@@ -166,7 +166,7 @@ public class PackageElement {
         duplicateButton.setWidth(300f / scaleFactor);
         duplicateButton.setHeight(36f / scaleFactor);
         duplicateButton.drawWithTexture(context, exportButtonTexture);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Duplicate Package")), x + (float) width / 2, y + 48f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Duplicate Package")), x + (float) width / 2, y + 48f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
 
 //        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Enable/")), x + (float) (81 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
 //        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Disable")), x + (float) (81 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
@@ -179,7 +179,7 @@ public class PackageElement {
         exportButton.setWidth(300f / scaleFactor);
         exportButton.setHeight(36f / scaleFactor);
         exportButton.drawWithTexture(context, exportButtonTexture);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Export to clipboard")), x + (float) width / 2, y + height - 45f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Export to clipboard")), x + (float) width / 2, y + height - 45f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
 
 //        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Enable/")), x + (float) (136 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
 //        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Disable")), x + (float) (136 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);

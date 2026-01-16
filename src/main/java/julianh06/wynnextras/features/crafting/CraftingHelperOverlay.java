@@ -396,11 +396,12 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                     mX,
                     mY,
                     horizontalAmount,
-                    verticalAmount
+                    verticalAmount,
+                    consumed
             ) -> {
                 long now = System.currentTimeMillis();
                 if (now - lastScrollTime < scrollCooldown) {
-                    return;
+                    return true;
                 }
                 lastScrollTime = now;
 
@@ -411,6 +412,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                         targetOffset += 104f;
                     }
                 }
+                return true;
             });
         }
 

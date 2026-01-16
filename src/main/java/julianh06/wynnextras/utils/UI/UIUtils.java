@@ -1,5 +1,6 @@
 package julianh06.wynnextras.utils.UI;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.FontRenderer;
@@ -8,8 +9,8 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.utils.render.RenderLayers;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.*;
 import net.minecraft.client.util.math.MatrixStack;
@@ -110,9 +111,9 @@ public final class UIUtils {
     public void drawBackground() {
         if (MinecraftClient.getInstance().currentScreen == null) return;
         RenderUtils.drawRect(
-                drawContext.getMatrices(),
+                drawContext,
                 CustomColor.fromInt(-804253680),
-                0, 0, 0,
+                0, 0,
                 MinecraftClient.getInstance().currentScreen.width,
                 MinecraftClient.getInstance().currentScreen.height
         );
@@ -120,9 +121,9 @@ public final class UIUtils {
 
     public void drawRect(float x, float y, float width, float height, CustomColor color) {
         RenderUtils.drawRect(
-                drawContext.getMatrices(),
+                drawContext,
                 color,
-                sx(x), sy(y), 0,
+                sx(x), sy(y),
                 sw(width), sh(height)
         );
     }
@@ -133,27 +134,26 @@ public final class UIUtils {
 
     public void drawRectBorders(float x, float y, float width, float height, CustomColor color) {
         RenderUtils.drawRectBorders(
-                drawContext.getMatrices(),
+                drawContext,
                 color,
                 sx(x), sy(y),
-                sw(width), sh(height), 0, 1
+                sw(width), sh(height), 1
         );
     }
 
     public void drawLine(float x1, float y1, float x2, float y2, float width, CustomColor color) {
         RenderUtils.drawLine(
-                drawContext.getMatrices(),
+                drawContext,
                 color,
                 sx(x1), sy(y1),
                 sx(x2), sy(y2),
-                0.0f,
                 sw(width)
         );
     }
 
     public void drawText(String text, float x, float y, CustomColor color, HorizontalAlignment hAlign, VerticalAlignment vAlign, TextShadow shadow, float textScale) {
         FontRenderer.getInstance().renderText(
-                drawContext.getMatrices(),
+                drawContext,
                 StyledText.fromComponent(Text.of(text)),
                 sx(x),
                 sy(y),
@@ -195,8 +195,8 @@ public final class UIUtils {
 
     public void drawImage(Identifier texture, float x, float y, float width, float height) {
         RenderUtils.drawTexturedRect(
-                drawContext.getMatrices(),
-                texture,
+                drawContext,
+                texture, CustomColor.NONE,
                 sx(x), sy(y),
                 sw(width), sh(height),
                 sw(width), sh(height)
@@ -204,47 +204,14 @@ public final class UIUtils {
     }
 
     public void drawImage(Identifier texture, float x, float y, float width, float height, float alpha) {
-        drawTexturedRect(
-                drawContext.getMatrices(),
-                texture,
-                sx(x), sy(y), 0.0F,
+        RenderUtils.drawTexturedRect(
+                drawContext,
+                texture, CustomColor.NONE.withAlpha(alpha),
+                sx(x), sy(y),
                 sw(width), sh(height), 0, 0,
                 sw(width), sh(height),
-                sw(width), sh(height),
-                alpha
+                sw(width), sh(height)
         );
-    }
-
-    public static void drawTexturedRect(MatrixStack matrixStack, Identifier tex, float x, float y, float z, float width, float height, int uOffset, int vOffset, int u, int v, int textureWidth, int textureHeight, float alpha) {
-        float uScale = 1.0F / (float)textureWidth;
-        float vScale = 1.0F / (float)textureHeight;
-        Matrix4f matrix = matrixStack.peek().getPositionMatrix();
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
-        RenderSystem.setShaderTexture(0, tex);
-        BufferBuilder bufferBuilder = Tessellator.getInstance().begin(
-                VertexFormat.DrawMode.QUADS,
-                VertexFormats.POSITION_TEXTURE_COLOR
-        );
-
-        bufferBuilder.vertex(matrix, x, y + height, z)
-                .texture((float)uOffset * uScale, (float)(vOffset + v) * vScale)
-                .color(1f, 1f, 1f, alpha);
-
-        bufferBuilder.vertex(matrix, x + width, y + height, z)
-                .texture((float)(uOffset + u) * uScale, (float)(vOffset + v) * vScale)
-                .color(1f, 1f, 1f, alpha);
-
-        bufferBuilder.vertex(matrix, x + width, y, z)
-                .texture((float)(uOffset + u) * uScale, (float)vOffset * vScale)
-                .color(1f, 1f, 1f, alpha);
-
-        bufferBuilder.vertex(matrix, x, y, z)
-                .texture((float)uOffset * uScale, (float)vOffset * vScale)
-                .color(1f, 1f, 1f, alpha);
-
-        BufferRenderer.drawWithGlobalProgram(bufferBuilder.endNullable());
     }
 
     public void drawButton(float x, float y, float width, float height, int scale, boolean hovered) {
@@ -254,9 +221,9 @@ public final class UIUtils {
     public void drawButton(float x, float y, float width, float height, int scale, boolean hovered, boolean darkMode) {
         if(width > scale * 2 || height > scale * 2) {
             RenderUtils.drawRect(
-                    drawContext.getMatrices(),
+                    drawContext,
                     darkMode ? CustomColor.fromHexString("2c2d2f") : CustomColor.fromHexString("82654C"),
-                    sx(x + scale) - 1, sy(y + scale) - 1, 0,
+                    sx(x + scale) - 1, sy(y + scale) - 1,
                     sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
             );
         }
@@ -277,17 +244,17 @@ public final class UIUtils {
 
             // LIGHT base
             RenderUtils.drawRect(
-                    drawContext.getMatrices(),
+                    drawContext,
                     CustomColor.fromHexString("82654C").withAlpha(1f - a),
-                    sx(x + scale) - 1, sy(y + scale) - 1, 0,
+                    sx(x + scale) - 1, sy(y + scale) - 1,
                     sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
             );
 
             // DARK overlay
             RenderUtils.drawRect(
-                    drawContext.getMatrices(),
+                    drawContext,
                     CustomColor.fromHexString("2c2d2f").withAlpha(a),
-                    sx(x + scale) - 1, sy(y + scale) - 1, 0,
+                    sx(x + scale) - 1, sy(y + scale) - 1,
                     sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
             );
         }
@@ -365,9 +332,9 @@ public final class UIUtils {
     public void drawSliderBackground(float x, float y, float width, float height, int scale, boolean darkMode) {
         if(width > scale * 2 || height > scale * 2) {
             RenderUtils.drawRect(
-                    drawContext.getMatrices(),
+                    drawContext,
                     darkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("50352d"),
-                    sx(x + scale) - 1, sy(y + scale) - 1, 0,
+                    sx(x + scale) - 1, sy(y + scale) - 1,
                     sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
             );
         }
@@ -378,9 +345,9 @@ public final class UIUtils {
     public void drawNineSlice(float x, float y, float width, float height, int scale, Identifier l, Identifier r, Identifier t, Identifier b, Identifier tl, Identifier tr, Identifier bl, Identifier br, CustomColor fillColor) {
         if(width > scale * 2 || height > scale * 2) {
             RenderUtils.drawRect(
-                    drawContext.getMatrices(),
+                    drawContext,
                     fillColor,
-                    sx(x + scale) - 1, sy(y + scale) - 1, 0,
+                    sx(x + scale) - 1, sy(y + scale) - 1,
                     sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
             );
         }

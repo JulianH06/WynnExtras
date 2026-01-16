@@ -48,10 +48,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
+import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.DefaultedList;
@@ -62,6 +59,8 @@ import org.lwjgl.glfw.GLFWKeyCallbackI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -76,12 +75,14 @@ public class WynnExtras implements ClientModInitializer {
 			"discord",
 			"",
 			context -> {
-				McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal("")).append(Text.literal("https://discord.gg/UbC6vZDaD5").setStyle(Style.EMPTY
-						.withColor(Formatting.AQUA)
-						.withUnderline(true)
-						.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://discord.gg/UbC6vZDaD5")))
-				));
-				return 1;
+                try {
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal("")).append(Text.literal("https://discord.gg/UbC6vZDaD5").setStyle(Style.EMPTY
+                            .withColor(Formatting.AQUA)
+                            .withUnderline(true)
+                            .withClickEvent(new ClickEvent.OpenUrl(new URI("https://discord.gg/UbC6vZDaD5"))))
+                    ));
+                } catch (URISyntaxException ignored) {}
+                return 1;
 			},
 			null,
 			null
@@ -120,9 +121,9 @@ public class WynnExtras implements ClientModInitializer {
 
 
 	static {
-		BACKGROUND_STYLE = Style.EMPTY.withFont(PILL_FONT).
+		BACKGROUND_STYLE = Style.EMPTY.withFont(new StyleSpriteSource.Font(PILL_FONT)).
 		withColor(Formatting.DARK_GREEN);
-		FOREGROUND_STYLE = Style.EMPTY.withFont(PILL_FONT).
+		FOREGROUND_STYLE = Style.EMPTY.withFont(new StyleSpriteSource.Font(PILL_FONT)).
 		withColor(Formatting.WHITE);
 		WYNNEXTRAS_BACKGROUND_PILL = Text.literal("\uE060\uDAFF\uDFFF\uE046\uDAFF\uDFFF\uE048\uDAFF\uDFFF\uE03D\uDAFF\uDFFF\uE03D\uDAFF\uDFFF\uE034\uDAFF\uDFFF\uE047\uDAFF\uDFFF\uE043\uDAFF\uDFFF\uE041\uDAFF\uDFFF\uE030\uDAFF\uDFFF\uE042\uDAFF\uDFFF\uE062\uDAFF\uDFC2").
 		fillStyle(BACKGROUND_STYLE);
@@ -279,6 +280,12 @@ public class WynnExtras implements ClientModInitializer {
 	private static final Duration COOLDOWN = Duration.ofMinutes(15);
 
 	public static void tryNotifyVersionUpdate(String currentVersion, String latestVersion) {
+		McUtils.sendMessageToClient(
+				addWynnExtrasPrefix(Text.of("§aYou are using a test version for §b1.21.11§a! Some features might not work yet, please report any bugs you find on our discord. Run §b\"/we discord\" §ato join."))
+		);
+
+		if(true) return;
+
 		if (latestVersion == null || currentVersion.equals(latestVersion)) return;
 
 		Instant now = Instant.now();

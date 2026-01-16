@@ -12,6 +12,8 @@ import julianh06.wynnextras.utils.UI.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.CharInput;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -131,17 +133,24 @@ public class MainScreen extends WEScreen {
 
     // Helper overrides: forward keyboard to focused element if present
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyInput input) {
+        int keyCode = input.key();
+        int scanCode = input.scancode();
+        int modifiers = input.modifiers();
+
         if (focusedWidget != null && focusedWidget.keyPressed(keyCode, scanCode, modifiers)) return true;
         if (focusedElement != null && focusedElement.keyPressed(keyCode, scanCode, modifiers)) return true;
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(input);
     }
 
     @Override
-    public boolean charTyped(char chr, int modifiers) {
+    public boolean charTyped(CharInput input) {
+        char chr = (char) input.codepoint();
+        int modifiers = input.modifiers();
+
         if (focusedWidget != null && focusedWidget.charTyped(chr, modifiers)) return true;
         if (focusedElement != null && focusedElement.charTyped(chr, modifiers)) return true;
-        return super.charTyped(chr, modifiers);
+        return super.charTyped(input);
     }
 
     public static void open() {

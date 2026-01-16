@@ -13,9 +13,11 @@ import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.ScreenHandler;
@@ -75,7 +77,11 @@ public abstract class HandledScreenMixin {
 
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    private void onMouseClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+    private void onMouseClick(Click click, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
+
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).sourceOfTruthToggle) {
             if (identifierOverlay != null && Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
                 identifierOverlay.mouseClicked(mouseX, mouseY, button);
@@ -101,7 +107,11 @@ public abstract class HandledScreenMixin {
 
 
     @Inject(method = "mouseReleased", at = @At("HEAD"), cancellable = true)
-    private void onMouseReleased(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+    private void onMouseReleased(Click click, CallbackInfoReturnable<Boolean> cir) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
+
         if(bankOverlay != null) {
             bankOverlay.mouseReleased(mouseX, mouseY, button);
 
@@ -118,7 +128,7 @@ public abstract class HandledScreenMixin {
     }
 
     @Inject(method = "isClickOutsideBounds", at = @At("HEAD"), cancellable = true)
-    private void onIsClickOutsideBounds(double mouseX, double mouseY, int left, int top, int button, CallbackInfoReturnable<Boolean> cir) {
+    private void onIsClickOutsideBounds(double mouseX, double mouseY, int left, int top, CallbackInfoReturnable<Boolean> cir) {
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
             if (currentOverlayType != BankOverlayType.NONE) {
                 cir.setReturnValue(false);
@@ -173,8 +183,12 @@ public abstract class HandledScreenMixin {
         currentOverlayType = BankOverlayType.NONE;
     }
 
-    @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
-    private void keyPressedPre(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
+    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
+    private void keyPressedPre(KeyInput input, CallbackInfoReturnable<Boolean> cir) {
+        int keyCode = input.key();
+        int scanCode = input.scancode();
+        int modifiers = input.modifiers();
+
         if(bankOverlay != null) {
             if (SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
                 InventoryKeyPressEvent event = new InventoryKeyPressEvent(keyCode, scanCode, modifiers, bankOverlay.touchHoveredSlot);

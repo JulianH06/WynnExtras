@@ -24,11 +24,11 @@ public class EasyButton extends EasyElement{
     public void click() {}
 
     @Override
-    public void draw(DrawContext context) {RenderUtils.drawRect(context.getMatrices(), CustomColor.fromHexString("FFFFFF"), x, y, 0, width, height);}
+    public void draw(DrawContext context) {RenderUtils.drawRect(context, CustomColor.fromHexString("FFFFFF"), x, y, width, height);}
 
     public void drawWithTexture(DrawContext context, Identifier texture) {
         if(texture != null) {
-            RenderUtils.drawTexturedRect(context.getMatrices(), texture, x, y, width, height, (int) width, (int) height);
+            RenderUtils.drawTexturedRect(context, texture, CustomColor.NONE, x, y, width, height, (int) width, (int) height);
         }
         if(buttonText == null) {
             return;

@@ -5,7 +5,6 @@ import com.wynnmod.feature.Feature;
 import com.wynnmod.feature.item.ItemOverlayFeature;
 import com.wynnmod.util.wynncraft.item.map.WynncraftItemDatabase;
 import com.wynntils.features.inventory.*;
-import com.wynntils.utils.render.buffered.BufferedRenderUtils;
 import com.wynntils.utils.wynn.WynnUtils;
 import com.wynnventory.config.ConfigManager;
 import com.wynntils.core.components.Handlers;
@@ -198,7 +197,7 @@ public class BankOverlay2 extends WEHandledScreen {
         int yStart = yRemain / 2 - 2;
 
         if(currentOverlayType != BankOverlayType.NONE && expectedOverlayType != BankOverlayType.NONE && currentOverlayType != expectedOverlayType) {
-            RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+            RenderUtils.drawRect(context, CustomColor.fromInt(-804253680), 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
             drawBackgroundRect(context, xRemain, yRemain);
             if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
                 ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackgroundDark : buttonBackgroundShortDark, xStart - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
@@ -224,7 +223,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 toggleOverlayWidget = new ToggleOverlayWidget();
             }
 
-            RenderUtils.drawRect(context.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+            RenderUtils.drawRect(context, CustomColor.fromInt(-804253680), 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
 
             float xPos = MinecraftClient.getInstance().currentScreen.width / 2f;
             float yPos = yStart + (yFitAmount) * (90 + 4 + 10) - 20;
@@ -344,7 +343,7 @@ public class BankOverlay2 extends WEHandledScreen {
         scrollBarWidget.setBounds(xStart + xFitAmount * 170, yStart - 13, 15, (yFitAmount - 1) * 104 + 12);
         scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
 
-        context.getMatrices().push();
+        context.getMatrices().pushMatrix();
         ci.cancel();
 
         if (WynnExtras.testInv == null) {
@@ -463,29 +462,29 @@ public class BankOverlay2 extends WEHandledScreen {
     private void drawBackgroundRect(DrawContext context, float xRemain, float yRemain) {
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
             RenderUtils.drawRect(
-                    context.getMatrices(),
+                    context,
                     CustomColor.fromHexString("2c2d2f"),
-                    xRemain / 2 - 2 - 7, yRemain / 2 - 15, 1000,
+                    xRemain / 2 - 2 - 7, yRemain / 2 - 15,
                     xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10
             );
             RenderUtils.drawRectBorders(
-                    context.getMatrices(),
+                    context,
                     CustomColor.fromHexString("1b1b1c"),
                     xRemain / 2 - 2 - 7, yRemain / 2 - 15,
-                    xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 0, 1
+                    xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 1
             );
         } else {
             RenderUtils.drawRect(
-                    context.getMatrices(),
+                    context,
                     CustomColor.fromHexString("81644b"),
-                    xRemain / 2 - 2 - 7, yRemain / 2 - 15, 1000,
+                    xRemain / 2 - 2 - 7, yRemain / 2 - 15,
                     xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10
             );
             RenderUtils.drawRectBorders(
-                    context.getMatrices(),
+                    context,
                     CustomColor.fromHexString("4f342c"),
                     xRemain / 2 - 2 - 7, yRemain / 2 - 15,
-                    xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 0, 1
+                    xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 1
             );
         }
     }
@@ -680,9 +679,7 @@ public class BankOverlay2 extends WEHandledScreen {
             int colorInt = MathHelper.hsvToRgb(Math.max(0.0F, fraction) / 3.0F, 1.0F, 1.0F);
             CustomColor color = CustomColor.fromInt(colorInt).withAlpha(160);
 
-            RenderSystem.enableDepthTest();
-            RenderUtils.drawArc(context.getMatrices(), color, x, y, 100.0F, fraction, 6, 8);
-            RenderSystem.disableDepthTest();
+            RenderUtils.drawArc(context, color, x, y, fraction, 6, 8);
         });
     }
 
@@ -693,9 +690,7 @@ public class BankOverlay2 extends WEHandledScreen {
             int colorInt = MathHelper.hsvToRgb((1.0F - fraction) / 3.0F, 1.0F, 1.0F);
             CustomColor color = CustomColor.fromInt(colorInt).withAlpha(160);
 
-            RenderSystem.enableDepthTest();
-            RenderUtils.drawArc(context.getMatrices(), color, x - 2, y - 2, 100.0F, Math.min(1.0F, fraction), 8, 10);
-            RenderSystem.disableDepthTest();
+            RenderUtils.drawArc(context, color, x - 2, y - 2, Math.min(1.0F, fraction), 8, 10);
         });
     }
 
@@ -706,11 +701,11 @@ public class BankOverlay2 extends WEHandledScreen {
         CustomColor color = ((ItemHighlightFeatureInvoker) itemHighlightFeature).invokeGetHighlightColor(stack, false);
         if (!Objects.equals(color, CustomColor.NONE)) {
             try {
-                RenderUtils.drawTexturedRectWithColor(
-                        context.getMatrices(),
-                        Texture.HIGHLIGHT.resource(),
+                RenderUtils.drawTexturedRect(
+                        context,
+                        Texture.HIGHLIGHT.identifier(),
                         color.withAlpha(SimpleConfig.getInstance(WynnExtrasConfig.class).wynntilsItemRarityBackgroundAlpha),
-                        x - 1, y - 1, 100, 18, 18,
+                        x - 1, y - 1, 18, 18,
                         ((ItemHighlightFeature.HighlightTexture) itemHighlightFeature.getConfigOptionFromString("highlightTexture").get().get()).ordinal() * 18 + 18, 0,
                         18, 18,
                         Texture.HIGHLIGHT.width(),
@@ -734,21 +729,16 @@ public class BankOverlay2 extends WEHandledScreen {
                     annotation instanceof PotionItem ||
                     annotation instanceof CrafterBagItem) {
 
-                context.getMatrices().push();
-                context.getMatrices().translate(0, 0, 100);
-                ((ItemTextOverlayFeatureMixin) Managers.Feature.getFeatureInstance(ItemTextOverlayFeature.class)).invokeDrawTextOverlay(context.getMatrices(), stack, x, y, false);
-                context.getMatrices().pop();
+                ((ItemTextOverlayFeatureMixin) Managers.Feature.getFeatureInstance(ItemTextOverlayFeature.class)).invokeDrawTextOverlay(context, stack, x, y, false);
             }
 
-            ((UnidentifiedItemIconFeatureInvoker) Managers.Feature.getFeatureInstance(UnidentifiedItemIconFeature.class)).invokeDrawIcon(context.getMatrices(), stack, x, y, 100);
+            ((UnidentifiedItemIconFeatureInvoker) Managers.Feature.getFeatureInstance(UnidentifiedItemIconFeature.class)).invokeDrawIcon(context, stack, x, y, 100);
             if(((ItemFavoriteFeatureAccessor) Managers.Feature.getFeatureInstance(ItemFavoriteFeature.class)).callIsFavorited(stack)) {
-                BufferedRenderUtils.drawScalingTexturedRect(
-                        context.getMatrices(),
-                        ((DrawContextAccessor) context).getVertexConsumers(),
-                        Texture.FAVORITE_ICON.resource(),
+                RenderUtils.drawScalingTexturedRect(
+                        context,
+                        Texture.FAVORITE_ICON.identifier(),
                         x + 10,
                         y,
-                        200,
                         9,
                         9,
                         Texture.FAVORITE_ICON.width(),
@@ -758,28 +748,22 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static void renderSearchOverlay(DrawContext context, ItemStack stack, int x, int y) {
-        context.getMatrices().push();
-        context.getMatrices().translate(0.0F, 0.0F, 250.0F);
-
         String input = searchbar2.getInput().toLowerCase();
         if(stack == null) {
             if(!input.isEmpty()) {
-                RenderUtils.drawRect(context.getMatrices(), CustomColor.fromHSV(0, 0, 0, 0.75f), x - 1, y - 1, 0, 18, 18);
+                RenderUtils.drawRect(context, CustomColor.fromHSV(0, 0, 0, 0.75f), x - 1, y - 1, 18, 18);
             }
-            context.getMatrices().pop();
             return;
         }
         if (stack.getCustomName() != null && !input.isEmpty()) {
             if (stack.getCustomName().getString().toLowerCase().contains(input)) {
-                RenderUtils.drawRectBorders(context.getMatrices(), CustomColor.fromHexString("008000"), x, y, x + 16, y + 16, 0, 1);
+                RenderUtils.drawRectBorders(context, CustomColor.fromHexString("008000"), x, y, x + 16, y + 16, 1);
             } else {
-                RenderUtils.drawRect(context.getMatrices(), CustomColor.fromHSV(0, 0, 0, 0.75f), x - 1, y - 1, 0, 18, 18);
+                RenderUtils.drawRect(context, CustomColor.fromHSV(0, 0, 0, 0.75f), x - 1, y - 1, 18, 18);
             }
         } else if (!input.isEmpty() && stack.getItem().equals(Items.AIR)) {
-            RenderUtils.drawRect(context.getMatrices(), CustomColor.fromHSV(0, 0, 0, 0.75f), x - 1, y - 1, 0, 18, 18);
+            RenderUtils.drawRect(context, CustomColor.fromHSV(0, 0, 0, 0.75f), x - 1, y - 1, 18, 18);
         }
-
-        context.getMatrices().pop();
     }
 
     private void renderHoveredSlotHighlight(DrawContext context, HandledScreen<?> screen) {
@@ -829,16 +813,11 @@ public class BankOverlay2 extends WEHandledScreen {
             overflow = true;
         }
 
-        context.getMatrices().push();
-        context.getMatrices().scale(scale, scale, 1.0f);
-
         if(!overflow) {
             context.drawTooltip(screen.getTextRenderer(), tooltip, (int) (mouseX / scale), y);
         } else {
             drawTooltip(screen.getTextRenderer(), components, (int)(mouseX / scale) + 12, y, context);
         }
-
-        context.getMatrices().pop();
 
         try {
             if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
@@ -880,9 +859,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             int l = i;
             int m = j;
-            context.getMatrices().push();
-            TooltipBackgroundRenderer.render(context, x, y, i, j, 400, null);
-            context.getMatrices().translate(0.0F, 0.0F, 800.0F);
+            TooltipBackgroundRenderer.render(context, x, y, i, j, null);
 
             int q = y;
 
@@ -890,7 +867,7 @@ public class BankOverlay2 extends WEHandledScreen {
             TooltipComponent tooltipComponent2;
             for(r = 0; r < components.size(); ++r) {
                 tooltipComponent2 = components.get(r);
-                tooltipComponent2.drawText(textRenderer, x, q, context.getMatrices().peek().getPositionMatrix(), ((DrawContextAccessor) context).getVertexConsumers());
+                tooltipComponent2.drawText(context, textRenderer, x, q);
                 q += tooltipComponent2.getHeight(textRenderer) + (r == 0 ? 2 : 0);
             }
 
@@ -901,8 +878,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 tooltipComponent2.drawItems(textRenderer, x, q, l, m, context);
                 q += tooltipComponent2.getHeight(textRenderer) + (r == 0 ? 2 : 0);
             }
-
-            context.getMatrices().pop();
         }
     }
 
@@ -912,11 +887,11 @@ public class BankOverlay2 extends WEHandledScreen {
         int guiScale = MinecraftClient.getInstance().options.getGuiScale().getValue() + 1;
         String amountString = heldItem.getCount() == 1 ? "" : String.valueOf(heldItem.getCount());
 
-        context.getMatrices().push();
-        context.getMatrices().translate(0, 0, 300);
+//        context.getMatrices().push();
+//        context.getMatrices().translate(0, 0, 300);
         context.drawItem(heldItem, mouseX - 2 * guiScale, mouseY - 2 * guiScale);
         context.drawStackOverlay(MinecraftClient.getInstance().textRenderer, heldItem, mouseX - 2 * guiScale, mouseY - 2 * guiScale, amountString);
-        context.getMatrices().pop();
+        //context.getMatrices().pop();
     }
 
     private static boolean shouldCancelEmeraldPouch(ItemStack oldHeld, ItemStack newHeld) {
@@ -1032,19 +1007,19 @@ public class BankOverlay2 extends WEHandledScreen {
         int strMidWidth = strWidth - 15;
         int amount = Math.max(0, Math.ceilDiv(strMidWidth, 10));
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            RenderUtils.drawTexturedRect(context.getMatrices(), signLeftDark, x, y - 15, 10, 15, 10, 15);
+            RenderUtils.drawTexturedRect(context, signLeftDark, CustomColor.NONE, x, y - 15, 10, 15, 10, 15);
         } else {
-            RenderUtils.drawTexturedRect(context.getMatrices(), signLeft, x, y - 15, 10, 15, 10, 15);
+            RenderUtils.drawTexturedRect(context, signLeft, CustomColor.NONE, x, y - 15, 10, 15, 10, 15);
         }
         if (strWidth > 15) {
             for (int i = 0; i < amount; i++) {
-                RenderUtils.drawTexturedRect(context.getMatrices(), signMids.get(i % 3), x + 10 + 10 * i, y - 15, 10, 15, 10, 15);
+                RenderUtils.drawTexturedRect(context, signMids.get(i % 3), CustomColor.NONE, x + 10 + 10 * i, y - 15, 10, 15, 10, 15);
             }
         }
         if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
-            RenderUtils.drawTexturedRect(context.getMatrices(), signRightDark, x + 10 + 10 * amount, y - 15, 10, 15, 10, 15);
+            RenderUtils.drawTexturedRect(context, signRightDark, CustomColor.NONE, x + 10 + 10 * amount, y - 15, 10, 15, 10, 15);
         } else {
-            RenderUtils.drawTexturedRect(context.getMatrices(), signRight, x + 10 + 10 * amount, y - 15, 10, 15, 10, 15);
+            RenderUtils.drawTexturedRect(context, signRight, CustomColor.NONE, x + 10 + 10 * amount, y - 15, 10, 15, 10, 15);
         }
     }
 
@@ -1055,7 +1030,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         y += (3 * 28);
 
-        MatrixStack poseStack = context.getMatrices();
+        //MatrixStack poseStack = context.getMatrices();
 
         for (int i = emeraldAmounts.length - 1; i >= 0; i--) {
             String emeraldAmount = emeraldAmounts[i];
@@ -1063,11 +1038,10 @@ public class BankOverlay2 extends WEHandledScreen {
             if (emeraldAmount.equals("0")) continue;
 
             RenderUtils.drawTexturedRect(
-                    poseStack,
-                    Texture.EMERALD_COUNT_BACKGROUND.resource(),
+                    context,
+                    Texture.EMERALD_COUNT_BACKGROUND.identifier(),
                     x,
                     y - (i * 28),
-                    0,
                     28,
                     28,
                     0,
@@ -1077,8 +1051,8 @@ public class BankOverlay2 extends WEHandledScreen {
                     Texture.EMERALD_COUNT_BACKGROUND.width(),
                     Texture.EMERALD_COUNT_BACKGROUND.height());
 
-            poseStack.push();
-            poseStack.translate(0, 0, 200);
+//            poseStack.push();
+//            poseStack.translate(0, 0, 200);
             context.drawItem(EmeraldUnits.values()[i].getItemStack(), x + 6, y + 6 - (i * 28));
 
             if (EmeraldUnits.values()[i].getSymbol().equals("stx")) { // Make stx not look like normal LE
@@ -1092,7 +1066,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             FontRenderer.getInstance()
                     .renderAlignedTextInBox(
-                            poseStack,
+                            context,
                             StyledText.fromString(emeraldAmount),
                             x,
                             x + 28 - 2,
@@ -1103,7 +1077,7 @@ public class BankOverlay2 extends WEHandledScreen {
                             HorizontalAlignment.RIGHT,
                             VerticalAlignment.BOTTOM,
                             TextShadow.OUTLINE);
-            poseStack.pop();
+            //poseStack.pop();
         }
     }
 
@@ -1457,7 +1431,7 @@ public class BankOverlay2 extends WEHandledScreen {
             }
             lastClickTime = now;
 
-            if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
+            if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
                 actionType = SlotActionType.QUICK_MOVE;
             }
 
@@ -1582,7 +1556,7 @@ public class BankOverlay2 extends WEHandledScreen {
             ScreenHandler currScreenHandler = McUtils.containerMenu();
             if(currScreenHandler == null) { return false; }
             if(InputUtil.isKeyPressed(
-                MinecraftClient.getInstance().getWindow().getHandle(),
+                MinecraftClient.getInstance().getWindow(),
                 ((KeybindingAccessor) MinecraftClient.getInstance().options.sneakKey).getBoundKey().getCode())
             ) {
                 shiftClickOnSlot(46, currScreenHandler.syncId, button, currScreenHandler.getStacks());

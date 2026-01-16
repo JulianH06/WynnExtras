@@ -8,6 +8,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.render.*;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
@@ -24,14 +25,14 @@ public class WorldRenderUtils {
     }
 
     public static WEVec exactLocation(Entity entity, float partialTicks) {
-        if (!entity.isAlive()) return new WEVec(entity.getPos());
-        WEVec prev = new WEVec(entity.prevX, entity.prevY, entity.prevZ);
+        if (!entity.isAlive()) return new WEVec(entity.getBlockPos().toBottomCenterPos());
+        WEVec prev = new WEVec(entity.lastX, entity.lastY, entity.lastZ);
 
-        return prev.add(new WEVec(entity.getPos()).subtract(prev).multiply(partialTicks));
+        return prev.add(new WEVec(entity.getBlockPos().toBottomCenterPos()).subtract(prev).multiply(partialTicks));
     }
 
     public static WEVec exactLocation(Camera camera) {
-        return new WEVec(camera.getPos());
+        return new WEVec(camera.getCameraPos());
     }
 
     public static WEVec exactPlayerEyeLocation(RenderWorldEvent event) {
@@ -76,11 +77,11 @@ public class WorldRenderUtils {
                 box.maxX - viewerPos.x(), box.maxY - viewerPos.y(), box.maxZ - viewerPos.z()
         );
 
-        RenderLayer.MultiPhase layer = RenderLayers.getFilled(!depth);
+        RenderLayer layer = RenderLayers.getFilled(!depth);
         VertexConsumer buffer = event.vertexConsumerProvider.getBuffer(layer);
         event.matrices.push();
 
-        VertexRendering.drawFilledBox(
+        drawFilledBox(
                 event.matrices,
                 buffer,
                 adjustedBox.minX, adjustedBox.minY, adjustedBox.minZ,
@@ -91,6 +92,34 @@ public class WorldRenderUtils {
                 color.getAlpha() / 255f * alphaMultiplier
         );
         event.matrices.pop();
+    }
+
+    public static void drawFilledBox(MatrixStack matrices, VertexConsumer buffer,
+                                     double minX, double minY, double minZ,
+                                     double maxX, double maxY, double maxZ,
+                                     float red, float green, float blue, float alpha) {
+
+        MatrixStack.Entry entry = matrices.peek();
+
+        // Alle 8 Ecken der Box
+        float x1 = (float) minX;
+        float y1 = (float) minY;
+        float z1 = (float) minZ;
+        float x2 = (float) maxX;
+        float y2 = (float) maxY;
+        float z2 = (float) maxZ;
+
+        // Vorderseite
+        buffer.vertex(entry.getPositionMatrix(), x1, y1, z1).color(red, green, blue, alpha);
+        buffer.vertex(entry.getPositionMatrix(), x2, y1, z1).color(red, green, blue, alpha);
+        buffer.vertex(entry.getPositionMatrix(), x2, y2, z1).color(red, green, blue, alpha);
+        buffer.vertex(entry.getPositionMatrix(), x1, y2, z1).color(red, green, blue, alpha);
+
+        // Rückseite
+        buffer.vertex(entry.getPositionMatrix(), x1, y1, z2).color(red, green, blue, alpha);
+        buffer.vertex(entry.getPositionMatrix(), x2, y1, z2).color(red, green, blue, alpha);
+        buffer.vertex(entry.getPositionMatrix(), x2, y2, z2).color(red, green, blue, alpha);
+        buffer.vertex(entry.getPositionMatrix(), x1, y2, z2).color(red, green, blue, alpha);
     }
 
     public static void drawEdges(RenderWorldEvent event, Box box, Color color, int lineWidth, boolean depth) {

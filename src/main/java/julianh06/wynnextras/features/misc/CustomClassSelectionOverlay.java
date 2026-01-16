@@ -4,6 +4,7 @@ import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
@@ -65,7 +66,11 @@ public class CustomClassSelectionOverlay extends WEScreen {
 
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
+
         if(ui == null) return false;
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             Widget w = rootWidgets.get(i);
@@ -74,7 +79,7 @@ public class CustomClassSelectionOverlay extends WEScreen {
                 return true;
             }
         }
-        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+        return super.mouseDragged(click, dx, dy);
     }
 
     private static class ClassWidget extends Widget {

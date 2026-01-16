@@ -2,7 +2,7 @@ package julianh06.wynnextras.event.api;
 
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.RenderWorldEvent;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
 
@@ -13,9 +13,9 @@ public class RenderEvents {
             VertexConsumerProvider vertexConsumers = event.consumers();
             if (!(vertexConsumers instanceof VertexConsumerProvider.Immediate immediateVertexConsumers)) return;
 
-            MatrixStack stack = event.matrixStack() != null ? event.matrixStack() : new MatrixStack();
+            MatrixStack stack = event.matrices();
 
-            new RenderWorldEvent(stack, event.camera(), immediateVertexConsumers, event.tickCounter().getTickDelta(true)).post();
+            new RenderWorldEvent(stack, event.gameRenderer().getCamera(), immediateVertexConsumers, event.worldState().time).post();
         });
     }
 }

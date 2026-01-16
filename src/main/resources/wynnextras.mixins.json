@@ -10,18 +10,15 @@
     "requireAnnotations": true
   },
   "client": [
-    "GuildMapScreenMixin",
     "InventoryScreenMixin",
     "LivingEntityRendererMixin",
     "PerspectiveMixin",
     "StringListCellMixin",
     "Accessor.BannerBlockEntityRendererAccessor",
-    "Accessor.DrawContextAccessor",
     "Accessor.HandledScreenAccessor",
     "Accessor.KeybindingAccessor",
     "BankOverlay.DrawContextMixin",
     "BankOverlay.HandledScreenMixin",
-    "Invoker.BannerBlockEntityRendererInvoker",
     "Invoker.HandledScreenInvoker",
     "Invoker.wmd$ItemOverlayFeatureInvoker"
   ],
@@ -36,7 +33,6 @@
     "PressableWidgetMixin",
     "RaidKindAccessor",
     "ScreenHandlerMixin",
-    "TerritoryInfoMixin",
     "TooltipFittingFeatureMixin",
     "TooltipUtilsMixin",
     "Accessor.BannerBlockEntityAccessor",

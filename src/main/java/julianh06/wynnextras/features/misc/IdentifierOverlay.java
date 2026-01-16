@@ -25,8 +25,9 @@ public class IdentifierOverlay extends WEHandledScreen {
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
         if(!(Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer)) return;
+        if(MinecraftClient.getInstance().currentScreen == null) return;
 
-        RenderUtils.drawRect(ctx.getMatrices(), CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+        RenderUtils.drawRect(ctx, CustomColor.fromInt(-804253680), 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
 
         if(sourceOfThruthOpenerWidget == null) {
             sourceOfThruthOpenerWidget = new SourceOfThruthOpenerWidget(0, 0, 0, 0);

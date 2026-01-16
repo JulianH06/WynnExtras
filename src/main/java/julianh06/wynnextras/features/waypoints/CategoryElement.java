@@ -236,9 +236,9 @@ public class CategoryElement {
 
         this.width = width;
         this.height = height;
-        RenderUtils.drawTexturedRect(context.getMatrices(), backgroundTexture, x, y, width + 1, height + 2, width + 1, height + 2);
+        RenderUtils.drawTexturedRect(context, backgroundTexture, CustomColor.NONE, x, y, width + 1, height + 2, width + 1, height + 2);
 
-        RenderUtils.drawTexturedRect(context.getMatrices(), nameBackgroundTexture, x + 3 * 3f / scaleFactor, y + 2.5f * 3 / scaleFactor, (float) (180 * 3) / scaleFactor, (float) (13 * 3) / scaleFactor, 180 * 3 / scaleFactor, 13 * 3 / scaleFactor);
+        RenderUtils.drawTexturedRect(context, nameBackgroundTexture, CustomColor.NONE, x + 3 * 3f / scaleFactor, y + 2.5f * 3 / scaleFactor, (float) (180 * 3) / scaleFactor, (float) (13 * 3) / scaleFactor, 180 * 3 / scaleFactor, 13 * 3 / scaleFactor);
         nameInput.setX(x + 3 * 3 / scaleFactor);
         nameInput.setY(y + 4 * 3 / scaleFactor);
         nameInput.setWidth(180 * 3 / scaleFactor);
@@ -265,10 +265,10 @@ public class CategoryElement {
         hideAllBlocksButton.setHeight(15f * 3 / scaleFactor);
         hideAllBlocksButton.drawWithTexture(context, deleteTexture);
 
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Enable/")), x + (float) (20 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Disable")), x + (float) (20 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Highlight")), x + (float) (20 * 3) / scaleFactor, y + 43f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("For all")), x + (float) (20 * 3) / scaleFactor, y + 52f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Enable/")), x + (float) (20 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Disable")), x + (float) (20 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Highlight")), x + (float) (20 * 3) / scaleFactor, y + 43f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("For all")), x + (float) (20 * 3) / scaleFactor, y + 52f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
 
 
         showAllNamesButton.setX(x + 64 * 3 / scaleFactor);
@@ -283,11 +283,10 @@ public class CategoryElement {
         hideAllNamesButton.setHeight(15f * 3 / scaleFactor);
         hideAllNamesButton.drawWithTexture(context, deleteTexture);
 
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Enable/")), x + (float) (81 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Disable")), x + (float) (81 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Name")), x + (float) (81 * 3) / scaleFactor, y + 43f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("For all")), x + (float) (81 * 3) / scaleFactor, y + 52f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Enable/")), x + (float) (81 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Disable")), x + (float) (81 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Name")), x + (float) (81 * 3) / scaleFactor, y + 43f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("For all")), x + (float) (81 * 3) / scaleFactor, y + 52f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
 
         showAllDistancesButton.setX(x + 119 * 3 / scaleFactor);
         showAllDistancesButton.setY(y + 20 * 3 / scaleFactor);
@@ -321,29 +320,29 @@ public class CategoryElement {
 //        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Export to clipboard")), x + (float) width / 2, y + height - 45f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
 
 
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Opacity")), x + (float) (8 * 3) / scaleFactor, y + 200f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Opacity")), x + (float) (8 * 3) / scaleFactor, y + 200f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
         alphaSlider.setX(x + width / 2 - 150 / scaleFactor);
         alphaSlider.setY(y + 190 / scaleFactor);
         alphaSlider.setHeight(20f / scaleFactor);
         alphaSlider.setWidth(300f / scaleFactor);
         alphaSlider.draw(context);
 
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Enable/")), x + (float) (136 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Disable")), x + (float) (136 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Distance")), x + (float) (136 * 3) / scaleFactor, y + 43f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("For all")), x + (float) (136 * 3) / scaleFactor, y + 52f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Enable/")), x + (float) (136 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Disable")), x + (float) (136 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Distance")), x + (float) (136 * 3) / scaleFactor, y + 43f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("For all")), x + (float) (136 * 3) / scaleFactor, y + 52f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
 
         colorPicker.setX(x + width - 15 * 3 / scaleFactor);
         colorPicker.setY(y + 190 / scaleFactor);
         colorPicker.setWidth(13f * 3 / scaleFactor);
         colorPicker.setHeight(13f * 3 / scaleFactor);
         colorPicker.draw(context);
-        RenderUtils.drawTexturedRect(context.getMatrices(), colorPickerBorderTexture, x + width - 16f * 3 / scaleFactor, y + 186f / scaleFactor, 15f * 3/ scaleFactor, 15f * 3/ scaleFactor, 15 * 3/ scaleFactor, 15 * 3/ scaleFactor);
+        RenderUtils.drawTexturedRect(context, colorPickerBorderTexture, CustomColor.NONE, x + width - 16f * 3 / scaleFactor, y + 186f / scaleFactor, 15f * 3/ scaleFactor, 15f * 3/ scaleFactor, 15 * 3/ scaleFactor, 15 * 3/ scaleFactor);
 
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Enable/")), x + (float) (191 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("Disable")), x + (float) (191 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("See through")), x + (float) (191 * 3) / scaleFactor, y + 43f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
-        FontRenderer.getInstance().renderText(context.getMatrices(), StyledText.fromComponent(Text.of("For all")), x + (float) (191 * 3) / scaleFactor, y + 52f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Enable/")), x + (float) (191 * 3) / scaleFactor, y + 25f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Disable")), x + (float) (191 * 3) / scaleFactor, y + 34f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("See through")), x + (float) (191 * 3) / scaleFactor, y + 43f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("For all")), x + (float) (191 * 3) / scaleFactor, y + 52f * 3 / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 2.75f / scaleFactor);
 
     }
 
