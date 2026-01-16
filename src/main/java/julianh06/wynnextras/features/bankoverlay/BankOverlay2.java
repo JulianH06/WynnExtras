@@ -186,6 +186,10 @@ public class BankOverlay2 extends WEHandledScreen {
             ui = new UIUtils(context, 1, 0, 0);
         }
 
+        if(bankSyncid == 0) {
+            bankSyncid = McUtils.containerMenu().syncId;
+        }
+
         Pair<Integer, Integer> xyRemain = calculateLayout();
         int xRemain = xyRemain.first();
         int yRemain = xyRemain.second();
@@ -315,6 +319,10 @@ public class BankOverlay2 extends WEHandledScreen {
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     if(button == 1) {
                         input = "";
+                        for (PageWidget page : pages) {
+                            page.setEnabled(true);
+                            page.lastInput = "";
+                        }
                     }
                     setFocused(true);
 
@@ -1609,12 +1617,17 @@ public class BankOverlay2 extends WEHandledScreen {
             targetOffset = 0;
             currentData.save();
             BankOverlay2.pages.clear();
+            heldItem = Items.AIR.getDefaultStack();
+            BankOverlay.activeInvSlots.clear();
+            annotationCache.clear();
+            Pages.save();
 
             if(currentOverlayType == BankOverlayType.CHARACTER) expectedOverlayType = BankOverlayType.ACCOUNT;
-            else if (currentOverlayType == BankOverlayType.ACCOUNT) expectedOverlayType = BankOverlayType.CHARACTER;
+            else if(currentOverlayType == BankOverlayType.ACCOUNT) expectedOverlayType = BankOverlayType.CHARACTER;
 
             if(currScreenHandler == null) { return false; }
             clickOnSlot(47, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
+            registeredScroll = false;
             return true;
         }
     }
