@@ -159,8 +159,9 @@ public class BankOverlay {
             }
 
             if(registeredScroll) return;
-            if(expectedOverlayType != currentOverlayType) return;
-
+            if(expectedOverlayType != BankOverlayType.NONE) {
+                if (expectedOverlayType != currentOverlayType) return;
+            }
             String InventoryTitle = currScreen.getTitle().getString();
             if(InventoryTitle == null) { return; }
 
