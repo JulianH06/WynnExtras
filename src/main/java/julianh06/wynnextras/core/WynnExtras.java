@@ -14,6 +14,7 @@ import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
+import julianh06.wynnextras.features.crafting.data.MaterialTextureResolver;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.TradeMarketOverlay;
@@ -104,6 +105,20 @@ public class WynnExtras implements ClientModInitializer {
 			null
 	);
 
+	private static Command dynamicTexturesCmd = new Command(
+			"dynamictextures",
+			"",
+			context -> {
+				WynnExtrasConfig.INSTANCE.craftingDynamicTextures = !WynnExtrasConfig.INSTANCE.craftingDynamicTextures;
+				WynnExtrasConfig.save();
+				String state = WynnExtrasConfig.INSTANCE.craftingDynamicTextures ? "Enabled" : "Disabled";
+				McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal(state + " dynamic material textures")));
+				return 1;
+			},
+			null,
+			null
+	);
+
 	public static final String MOD_ID = "wynnextras";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -150,6 +165,7 @@ public class WynnExtras implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		Core.init(MOD_ID);
+		MaterialTextureResolver.register();
 		CurrentVersionData.INSTANCE.version = FabricLoader.getInstance().getModContainer("wynnextras").map(mod -> mod.getMetadata().getVersion().getFriendlyString()).orElse("unknown");
 		CurrentVersionData.save();
 		latestVersion = CurrentVersionData.fetchLatestVersion();
