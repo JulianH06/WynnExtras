@@ -38,9 +38,13 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.*;
@@ -355,7 +359,8 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         };
     }
 
-    private static void drawRecipe(int x, int y, int width, int height, int level, IRecipeData recipe, boolean hovered, UIUtils ui) {
+    private static void drawRecipe(DrawContext ctx, int x, int y, int width, int height, int level,
+                                   IRecipeData recipe, boolean hovered, UIUtils ui) {
         if(recipe == null) return;
 
         List<Pair<IMaterial, Integer>> materials = recipe.getMaterials(level);
@@ -364,11 +369,73 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         //ui.drawRect(x, y, width, height, CustomColor.fromHexString("080808"));
 
-        ui.drawImage(materials.getFirst().getFirst().getTexture(), x + 10, y + 5, 60, 60);
+        drawMaterialIcon(ctx, ui, materials.getFirst().getFirst(), x + 10, y + 5, 60);
         ui.drawText(materials.getFirst().getFirst().getName() + " " + materials.getFirst().getSecond(), x + 80, y + height / 4f + 4, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
 
-        ui.drawImage(materials.get(1).getFirst().getTexture(), x + 10, y + 60, 60, 60);
+        drawMaterialIcon(ctx, ui, materials.get(1).getFirst(), x + 10, y + 60, 60);
         ui.drawText(materials.get(1).getFirst().getName() + " " + materials.get(1).getSecond(), x + 80, y + 3 * height / 4f - 4, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
+    }
+
+    private static void drawMaterialIcon(DrawContext ctx, UIUtils ui, IMaterial material, float x, float y, float size) {
+        ItemStack stack = buildMaterialStack(material);
+        if (shouldUseVcit(stack)) {
+            drawItemScaled(ctx, ui, stack, x, y, size);
+            return;
+        }
+        ui.drawImage(material.getTexture(), x, y, size, size);
+    }
+
+    private static ItemStack buildMaterialStack(IMaterial material) {
+        ItemStack inventoryMatch = findInventoryMaterial(material);
+        if (inventoryMatch != null && !inventoryMatch.isEmpty()) {
+            return inventoryMatch;
+        }
+        ItemStack stack = new ItemStack(Items.POTION);
+        stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Refined " + material.getName() + " "));
+        return stack;
+    }
+
+    private static ItemStack findInventoryMaterial(IMaterial material) {
+        if (McUtils.containerMenu() == null) {
+            return null;
+        }
+        List<Slot> slots = McUtils.containerMenu().slots;
+        for (Slot slot : slots) {
+            try {
+                if (!(slot.inventory instanceof PlayerInventory)) {
+                    continue;
+                }
+                ItemStack stack = slot.getStack();
+                if (stack == null || stack.isEmpty()) {
+                    continue;
+                }
+                Text name = stack.getCustomName();
+                if (name != null && name.getString().contains(material.getName())) {
+                    return stack;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
+    }
+
+    private static boolean shouldUseVcit(ItemStack stack) {
+        WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        if (config != null && !config.craftingDynamicTextures) {
+            return false;
+        }
+        return VcitCompat.hasModel(stack);
+    }
+
+    private static void drawItemScaled(DrawContext ctx, UIUtils ui, ItemStack stack, float x, float y, float size) {
+        int px = Math.round(ui.sx(x));
+        int py = Math.round(ui.sy(y));
+        float scale = (float) ui.sw(size) / 16.0f;
+        ctx.getMatrices().push();
+        ctx.getMatrices().translate(px, py, 100.0f);
+        ctx.getMatrices().scale(scale, scale, 1.0f);
+        ctx.drawItem(stack, 0, 0);
+        ctx.getMatrices().pop();
     }
 
     private enum RecipeState {
@@ -508,7 +575,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 //ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromHexString("FFFFFF"));
                 ui.drawButton(x, y, width, height, 19, hovered && helperWidget.hovered);
-                drawRecipe(x, y, width, height, level, recipeData, hovered, ui);
+                drawRecipe(ctx, x, y, width, height, level, recipeData, hovered, ui);
                 ui.drawLine(x + width * 0.8f, y + 5, x + width * 0.8f, y + height - 9, ui.getScaleFactorF(), hovered ? CustomColor.fromHexString("c5b490") : CustomColor.fromHexString("a68a73"));
                 if(level < 100) {
                     ui.drawCenteredText(String.valueOf(Math.max(1, level)), x + width * 0.9f, y + height / 4f + 4);

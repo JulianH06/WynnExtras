@@ -220,6 +220,10 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Name("Crafting helper overlay toggle")
     public boolean craftingHelperOverlay = true;
 
+    @ConfigEntry.Category(Categories.crafting)
+    @ConfigEntry.Name("Use dynamic material textures")
+    public boolean craftingDynamicTextures = true;
+
     //TOTEM VISUALIZER
 
     @ConfigEntry.Category(Categories.raid)
