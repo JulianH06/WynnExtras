@@ -463,8 +463,6 @@ public class RaidChatNotifier {
 
             if ("3/3".equals(progress) && Time.now().timestamp() >= disableChiropUntil && SimpleConfig.getInstance(WynnExtrasConfig.class).chiropTimer) {
                 startSpawnCountdown();
-            } else {
-                McUtils.sendMessageToClient(Text.of("Didnt start chíropTimer " + progress + " " + Time.now().timestamp() + " " + disableChiropUntil + " " + SimpleConfig.getInstance(WynnExtrasConfig.class).chiropTimer));
             }
 
             String key = PB_PREFIX + "_" + progress;
