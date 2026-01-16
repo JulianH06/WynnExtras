@@ -71,7 +71,7 @@ public class BankOverlay {
 
     public static float pageBuyCustomModelData = 0;
 
-    private static boolean registeredScroll = false;
+    public static boolean registeredScroll = false;
 
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
@@ -159,6 +159,7 @@ public class BankOverlay {
             }
 
             if(registeredScroll) return;
+            if(expectedOverlayType != currentOverlayType) return;
 
             String InventoryTitle = currScreen.getTitle().getString();
             if(InventoryTitle == null) { return; }

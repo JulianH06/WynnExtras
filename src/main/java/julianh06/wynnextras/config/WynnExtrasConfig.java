@@ -228,7 +228,7 @@ public class WynnExtrasConfig implements ConfigData {
 
     @ConfigEntry.Category(Categories.raid)
     @ConfigEntry.Name("Chiropterror spawn timer")
-    public boolean chiropTimer = true;
+    public boolean chiropTimer = false;
 
     @ConfigEntry.Category(Categories.misc)
     @ConfigEntry.Name("Show Wynnpool item weights")
