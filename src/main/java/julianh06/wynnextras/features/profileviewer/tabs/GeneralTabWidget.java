@@ -12,13 +12,27 @@ import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ingame.InventoryScreen;
+import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.block.entity.BlockEntityRenderer;
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+import net.minecraft.client.render.entity.EntityRenderManager;
+import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactories;
+import net.minecraft.client.render.entity.state.EntityRenderState;
+import net.minecraft.client.render.entity.state.LivingEntityRenderState;
+import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
+import net.minecraft.client.render.state.CameraRenderState;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -114,14 +128,14 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
         if (dummy != null) {
             if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
                 dummy.setPose(EntityPose.CROUCHING);
-                drawPlayer(ctx, x + 66 + 216, y + 102 + 387, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor()); //166 178
+                drawPlayer(ctx, x + 66, y, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor(), tickDelta); //166 178
             } else if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow(), InputUtil.GLFW_KEY_RIGHT_SHIFT)) {
                 dummy.setPose(EntityPose.SLEEPING);
-                drawPlayer(ctx, x + 66, y + 102 + 357, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor()); //166 178
+                drawPlayer(ctx, x + 66, y, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor(), tickDelta); //166 178
             } else {
                 dummy.setPose(EntityPose.STANDING);
 //                drawPlayer(ctx, x, y, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor()); //166 178
-                drawPlayer(ctx, x + 66 + 216, y + 102 + 414, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor()); //166 178
+                drawPlayer(ctx, x + 66, y, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor(), tickDelta); //166 178
             }
         }
 
@@ -186,60 +200,40 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             DrawContext context,
             int x, int y, int scale,
             float mouseX, float mouseY,
-            LivingEntity player,
-            double scaleFactor
+            AbstractClientPlayerEntity player,
+            double scaleFactor, float tickDelta
     ) {
-        float flipOffset = 0;
-
-        if(scaleFactor == 1) flipOffset = 180;
-        //the player renderer is REALLY weird for gui scale 1, its still broken but this makes it a bit better
+        float teslerOffset = 0;
+        float sneakOffset = 0;
 
         Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
-        //rotation.rotateX((float) Math.toRadians(pitch));
-        rotation.rotateY((float) Math.toRadians(-20 + playerRotationY));
-
-        float sleepOffsetX;
-        float sleepOffsetY;
 
         if(dummy.getPose() == EntityPose.SLEEPING) {
             rotation.rotateY((float) Math.PI * 0.5f);
-            rotation.rotateX((float) Math.PI);
-            sleepOffsetX = (float) ((float) (60 * 3) / scaleFactor);
-            sleepOffsetY = (float) ((float) (10 * 3) / scaleFactor);
-        } else {
-            sleepOffsetX = 0;
-            sleepOffsetY = 0;
+        } else if(dummy.getPose() == EntityPose.CROUCHING){
+            sneakOffset = 0.137f;
         }
 
         if(PV.currentPlayer.equalsIgnoreCase("teslanator")) {
+            teslerOffset = 1.89f;
             rotation.rotateX((float) Math.PI);
-            flipOffset = (float) (-130 * 3 / scaleFactor);
-            rotation.rotateY((float) Math.PI);
+            rotation.rotateY((float) Math.toRadians(90 + playerRotationY));
+        } else {
+            rotation.rotateY((float) Math.toRadians(-28 - playerRotationY));
         }
 
+        EntityRenderManager dispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
+        EntityRenderState state = dispatcher.getPlayerRenderer(player).getAndUpdateRenderState(player, tickDelta);
 
-        //EntityRenderDispatcher dispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
-        //dispatcher.setRenderShadows(false);
+        Vector3f offset = new Vector3f(0f, 0.96f - teslerOffset - sneakOffset, 0f);
 
-        float smolScale = 1;
-        float thickScale = 1;
+        int x1 = x;
+        int x2 = x1 + 435;
+        int y1 = y + 99;
+        int y2 = y1 + 435;
 
-        if(PV.currentPlayer.equalsIgnoreCase("legendaryvirus")) {
-            smolScale = 0.5f;
-            thickScale = 1.5f;
-        }
-
-//        context.getMatrices().push();
-//        context.getMatrices().translate(sleepOffsetX + (double) x / scaleFactor,  sleepOffsetY + flipOffset + (double) y / scaleFactor, 50.0);
-//        context.getMatrices().scale(thickScale * scale, smolScale * scale, scale);
-//        context.getMatrices().multiply(rotation);
-//
-//        VertexConsumerProvider.Immediate buffer = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
-//        dispatcher.render(player, 0, 0, 0, 1.0F, context.getMatrices(), buffer, 15728880);
-//        buffer.draw();
-//
-//        context.getMatrices().pop();
-//        dispatcher.setRenderShadows(true);
+        context.addEntity(state, (int) (215 / scaleFactor), offset, rotation.rotateY(180), null,
+                (int) (x1 / scaleFactor), (int) (y1 / scaleFactor), (int) (x2 / scaleFactor), (int) (y2 / scaleFactor));
     }
 
     @Override

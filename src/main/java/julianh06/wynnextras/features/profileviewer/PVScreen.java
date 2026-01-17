@@ -1,12 +1,16 @@
 package julianh06.wynnextras.features.profileviewer;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.properties.PropertyMap;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.mc.SkinUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -23,6 +27,7 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.entity.LivingEntity;
@@ -248,22 +253,31 @@ public class PVScreen extends WEScreen {
                 ClientWorld world = client.world;
 
                 if (world != null) {
-                    dummy = new AbstractClientPlayerEntity(world, profile) {
-                        @Override
-                        public SkinTextures getSkin() {
-                            try {
-                                return client.getSkinProvider().fetchSkinTextures(getGameProfile()).get().get();
-                            } catch (Exception ignored) {
-                                return null;
-                            }
-                        }
+                    MinecraftClient.getInstance().execute(() -> {
+                        dummy = new AbstractClientPlayerEntity(world, profile) {
 
-//                        @Override
-//                        public boolean isPartVisible(PlayerModelPart part) {
-//                            return part != PlayerModelPart.CAPE;
-//                        }
-                    };
-                    //dummy.getSkin().texture();
+                            private SkinTextures skin;
+
+                            {
+                                MinecraftClient.getInstance().getSkinProvider()
+                                        .fetchSkinTextures(profile)
+                                        .thenAccept(opt -> opt.ifPresent(s -> this.skin = s));
+                            }
+
+                            @Override
+                            public SkinTextures getSkin() {
+                                return skin != null ? skin : DefaultSkinHelper.getSteve();
+                            }
+
+                            @Override
+                            public boolean isModelPartVisible(PlayerModelPart part) {
+                                return switch (part) {
+                                    case CAPE -> false;
+                                    default -> true;
+                                };
+                            }
+                        };
+                    });
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -306,8 +320,8 @@ public class PVScreen extends WEScreen {
     @Override
     public void updateValues() {
         if(dummy != null) {
-            //Identifier dummyTexture = dummy.getSkin().texture();
-            //lastViewedPlayersSkins.put(PV.currentPlayerData.getUsername(), dummyTexture);
+            Identifier dummyTexture = dummy.getSkin().body().texturePath();
+            lastViewedPlayersSkins.put(PV.currentPlayerData.getUsername(), dummyTexture);
         }
 
         int xStart = getLogicalWidth() / 2 - 900 - (getLogicalWidth() - 1800 < 200 ? 50 : 0);
@@ -646,9 +660,17 @@ public class PVScreen extends WEScreen {
     }
 
     public static GameProfile createProfileWithSkin(UUID uuid, String name, SkinData skin) {
-        GameProfile profile = new GameProfile(uuid, name);
-        profile.properties().put("textures", new Property("textures", skin.value(), skin.signature()));
-        return profile;
+        Multimap<String, Property> multimap = HashMultimap.create();
+
+        multimap.put("textures", new Property(
+                "textures",
+                skin.value(),
+                skin.signature()
+        ));
+
+        PropertyMap propertyMap = new PropertyMap(multimap);
+
+        return new GameProfile(uuid, name, propertyMap);
     }
 
     public static Identifier getClassTexture(String className) {
