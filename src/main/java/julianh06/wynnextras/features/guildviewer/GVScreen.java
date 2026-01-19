@@ -10,21 +10,51 @@ import julianh06.wynnextras.features.profileviewer.OpenInBrowserButton;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.Searchbar;
+import julianh06.wynnextras.mixin.Accessor.BannerBlockEntityAccessor;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.SmithingTableBlock;
+import net.minecraft.block.entity.BannerBlockEntity;
 import net.minecraft.block.entity.BannerPattern;
 import net.minecraft.block.entity.BannerPatterns;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.render.BannerResultGuiElementRenderer;
+import net.minecraft.client.gui.screen.ingame.SmithingScreen;
+import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.block.entity.BannerBlockEntityRenderer;
+import net.minecraft.client.render.block.entity.BlockEntityRenderManager;
+import net.minecraft.client.render.block.entity.BlockEntityRenderer;
+import net.minecraft.client.render.block.entity.state.BannerBlockEntityRenderState;
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+import net.minecraft.client.render.command.OrderedRenderCommandQueueImpl;
+import net.minecraft.client.render.command.RenderDispatcher;
+import net.minecraft.client.render.item.model.special.BannerModelRenderer;
+import net.minecraft.client.render.state.CameraRenderState;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.component.ComponentMap;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.BannerPatternsComponent;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.registry.RegistryEntryLookup;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import net.minecraft.util.DyeColor;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.Vec3d;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import java.text.DecimalFormat;
 import java.time.Instant;
@@ -210,6 +240,8 @@ public class GVScreen extends WEScreen {
         ui.drawCenteredText("Current territories: " + GV.currentGuildData.territories, xStart + 285, yStart + 710);
 
         //renderBanner(GV.currentGuildData.banner, context.getMatrices(), (int) ui.sx(xStart + 350), (int) ui.sy(yStart + 515), 210 / ui.getScaleFactorF());
+        renderBannerInGui(GV.currentGuildData.banner, context, 10, 10, 10, delta);
+
 
         if (memeberWidgets.isEmpty()) {
             for (GuildData.Member member : GV.currentGuildData.members.owner.values()) {
@@ -420,7 +452,7 @@ public class GVScreen extends WEScreen {
         return super.mouseReleased(click);
     }
 
-//    public static void renderBanner(GuildData.Banner banner, MatrixStack matrices, int x, int y, float scale) {
+//    public static void renderBanner(GuildData.Banner banner, MatrixStack matrices, int x, int y, float scale, float tickDelta) {
 //        BlockState state = Blocks.WHITE_BANNER.getDefaultState();
 //        BannerBlockEntity be = new BannerBlockEntity(MinecraftClient.getInstance().player.getBlockPos(), state, banner != null ? dyeColorFromName(banner.base) : DyeColor.WHITE);
 //        be.setWorld(MinecraftClient.getInstance().world);
@@ -442,10 +474,26 @@ public class GVScreen extends WEScreen {
 //        }
 //
 //        BannerPatternsComponent patternsComponent = builder.build();
+//        ComponentMap.Builder componentMapBuilder = ComponentMap.builder();
+//        componentMapBuilder.addAll(be.getComponents());
+//        componentMapBuilder.add(DataComponentTypes.BANNER_PATTERNS, patternsComponent);
 //
-//        ((BannerBlockEntityAccessor) be).setPatterns(patternsComponent);
+//        be.setComponents(componentMapBuilder.build());
 //
 //        BlockEntityRenderManager dispatcher = MinecraftClient.getInstance().getBlockEntityRenderDispatcher();
+//
+//        BlockEntityRenderer<BannerBlockEntity, BannerBlockEntityRenderState> renderer =
+//                dispatcher.get(be);
+//
+//        if(renderer == null) return;
+//
+//        BannerBlockEntityRenderState entityRenderState = renderer.createRenderState();
+//
+//        renderer.updateRenderState(be, entityRenderState, tickDelta, Vec3d.ZERO, null);
+//
+//        entityRenderState.standing = true;   // wichtig!
+//        entityRenderState.yaw = 180f;
+//        entityRenderState.pitch = 0f;
 //
 //        matrices.push();
 //        matrices.translate(x, y, 0);
@@ -453,20 +501,92 @@ public class GVScreen extends WEScreen {
 //
 //        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(200));
 //        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(180));
-//
 //        VertexConsumerProvider.Immediate buffer = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
 //        dispatcher.render(be, 0, matrices, buffer);
 //        buffer.draw();
 //        matrices.pop();
+//        BannerResultGuiElementRenderer
 //    }
 
-//    private static DyeColor dyeColorFromName(String base) {
-//        try {
-//            return DyeColor.byName(base.toLowerCase(), DyeColor.WHITE);
-//        } catch (Exception e) {
-//            return DyeColor.WHITE;
-//        }
-//    }
+    public static BannerBlockEntity createFakeBanner(GuildData.Banner banner) {
+        DyeColor base = banner != null ? dyeColorFromName(banner.base) : DyeColor.WHITE;
+        BannerBlockEntity be = new BannerBlockEntity(MinecraftClient.getInstance().player.getBlockPos(), Blocks.WHITE_BANNER.getDefaultState(), base);
+
+        BannerPatternsComponent.Builder builder = new BannerPatternsComponent.Builder();
+        if (banner != null) {
+            for (GuildData.BannerLayer layer : banner.layers) {
+                RegistryEntry<BannerPattern> entry = resolvePatternEntry(layer.pattern);
+                if (entry != null) {
+                    builder.add(entry, dyeColorFromName(layer.colour));
+                }
+            }
+        }
+
+        BannerPatternsComponent patterns = builder.build();
+
+        // ComponentMap setzen
+        ComponentMap.Builder componentMapBuilder = ComponentMap.builder();
+        componentMapBuilder.addAll(be.getComponents());
+        componentMapBuilder.add(DataComponentTypes.BANNER_PATTERNS, patterns);
+        be.setComponents(componentMapBuilder.build());
+
+        // Fake World notwendig für schwingende Flagge
+        be.setWorld(MinecraftClient.getInstance().world);
+
+        return be;
+    }
+
+    public static void renderBannerInGui(GuildData.Banner banner, DrawContext context, int x, int y, float scale, float tickDelta) {
+        BannerBlockEntity be = createFakeBanner(banner);
+
+        BlockEntityRenderManager dispatcher = MinecraftClient.getInstance().getBlockEntityRenderDispatcher();
+        BlockEntityRenderer<BannerBlockEntity, BannerBlockEntityRenderState> renderer = dispatcher.get(be);
+
+        if (renderer == null) return;
+
+        // RenderState erstellen
+        BannerBlockEntityRenderState state = renderer.createRenderState();
+        renderer.updateRenderState(be, state, tickDelta, Vec3d.ZERO, null);
+
+        state.standing = true;
+        state.yaw = 180f;
+        state.pitch = 0f;
+
+        // Dummy CameraRenderState für GUI
+        CameraRenderState camera = new CameraRenderState();
+        camera.blockPos = BlockPos.ORIGIN;
+        camera.pos = Vec3d.ZERO;
+        camera.entityPos = Vec3d.ZERO;
+        camera.orientation = new Quaternionf();
+        camera.initialized = true; // wichtig, sonst crash beim Rendern
+
+
+        // MatrixStack: 3D transformieren und auf GUI-Koordinaten bringen
+        MatrixStack matrices = new MatrixStack();
+        matrices.push();
+        matrices.translate(0, 0, 0); // z=100 für GUI
+        matrices.scale(scale, -scale, scale); // -scale für Y invertieren
+        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(180));
+
+        // VertexConsumerProvider / CommandQueue von DrawContext
+        RenderDispatcher renderDispatcher = MinecraftClient.getInstance().gameRenderer.getEntityRenderDispatcher();
+        OrderedRenderCommandQueueImpl queue = renderDispatcher.getQueue();
+
+        // Renderer aufrufen
+        renderer.render(state, matrices, queue, camera);
+
+        matrices.pop();
+    }
+
+
+
+    private static DyeColor dyeColorFromName(String base) {
+        try {
+            return DyeColor.byId(base.toLowerCase(), DyeColor.WHITE);
+        } catch (Exception e) {
+            return DyeColor.WHITE;
+        }
+    }
 
     private static int getMaxMembers(int level) {
         if (level < 2) return 4;
@@ -493,7 +613,7 @@ public class GVScreen extends WEScreen {
         return 150;
     }
 
-    public static RegistryEntry<BannerPattern> resolvePatternEntry(String patternName) throws Exception {
+    public static RegistryEntry<BannerPattern> resolvePatternEntry(String patternName) {
 
         if (patternName == null) return null;
 
