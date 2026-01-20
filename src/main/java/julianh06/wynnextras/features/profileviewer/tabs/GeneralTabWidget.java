@@ -3,8 +3,6 @@ package julianh06.wynnextras.features.profileviewer.tabs;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
-import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
@@ -12,23 +10,11 @@ import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.block.entity.BlockEntityRenderer;
-import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.entity.EntityRenderManager;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactories;
 import net.minecraft.client.render.entity.state.EntityRenderState;
-import net.minecraft.client.render.entity.state.LivingEntityRenderState;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.render.state.CameraRenderState;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.EntityPose;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 import org.joml.Quaternionf;
@@ -128,14 +114,14 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
         if (dummy != null) {
             if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
                 dummy.setPose(EntityPose.CROUCHING);
-                drawPlayer(ctx, x + 66, y, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor(), tickDelta); //166 178
+                drawPlayer(ctx, x + 66, y, dummy, ui.getScaleFactor(), tickDelta); //166 178
             } else if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow(), InputUtil.GLFW_KEY_RIGHT_SHIFT)) {
                 dummy.setPose(EntityPose.SLEEPING);
-                drawPlayer(ctx, x + 66, y, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor(), tickDelta); //166 178
+                drawPlayer(ctx, x + 66, y, dummy, ui.getScaleFactor(), tickDelta); //166 178
             } else {
                 dummy.setPose(EntityPose.STANDING);
 //                drawPlayer(ctx, x, y, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor()); //166 178
-                drawPlayer(ctx, x + 66, y, (int) (210 / ui.getScaleFactor()), mouseX, mouseY, dummy, ui.getScaleFactor(), tickDelta); //166 178
+                drawPlayer(ctx, x + 66, y, dummy, ui.getScaleFactor(), tickDelta); //166 178
             }
         }
 
@@ -198,8 +184,7 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
 
     public void drawPlayer(
             DrawContext context,
-            int x, int y, int scale,
-            float mouseX, float mouseY,
+            int x, int y,
             AbstractClientPlayerEntity player,
             double scaleFactor, float tickDelta
     ) {
@@ -214,6 +199,8 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             sneakOffset = 0.137f;
         }
 
+        player.lastHeadYaw = player.headYaw;
+
         if(PV.currentPlayer.equalsIgnoreCase("teslanator")) {
             teslerOffset = 1.89f;
             rotation.rotateX((float) Math.PI);
@@ -224,6 +211,7 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
 
         EntityRenderManager dispatcher = MinecraftClient.getInstance().getEntityRenderDispatcher();
         EntityRenderState state = dispatcher.getPlayerRenderer(player).getAndUpdateRenderState(player, tickDelta);
+        state.light = 0xF000F0;
 
         Vector3f offset = new Vector3f(0f, 0.96f - teslerOffset - sneakOffset, 0f);
 

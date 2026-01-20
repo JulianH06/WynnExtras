@@ -82,45 +82,63 @@ public class WorldRenderUtils {
         event.matrices.push();
 
         drawFilledBox(
-                event.matrices,
+                event.matrices.peek().getPositionMatrix(),
                 buffer,
                 adjustedBox.minX, adjustedBox.minY, adjustedBox.minZ,
                 adjustedBox.maxX, adjustedBox.maxY, adjustedBox.maxZ,
                 color.getRed() / 255f * 0.9f,
                 color.getGreen() / 255f * 0.9f,
                 color.getBlue() / 255f * 0.9f,
-                color.getAlpha() / 255f * alphaMultiplier
+                color.getAlpha() / 255f * alphaMultiplier, 0xF000F0
         );
         event.matrices.pop();
     }
 
-    public static void drawFilledBox(MatrixStack matrices, VertexConsumer buffer,
-                                     double minX, double minY, double minZ,
-                                     double maxX, double maxY, double maxZ,
-                                     float red, float green, float blue, float alpha) {
-
-        MatrixStack.Entry entry = matrices.peek();
-
-        // Alle 8 Ecken der Box
-        float x1 = (float) minX;
-        float y1 = (float) minY;
-        float z1 = (float) minZ;
-        float x2 = (float) maxX;
-        float y2 = (float) maxY;
-        float z2 = (float) maxZ;
+    private static void drawFilledBox(Matrix4f matrix, VertexConsumer buffer,
+                                      double minX, double minY, double minZ,
+                                      double maxX, double maxY, double maxZ,
+                                      float r, float g, float b, float a, int light) {
 
         // Vorderseite
-        buffer.vertex(entry.getPositionMatrix(), x1, y1, z1).color(red, green, blue, alpha);
-        buffer.vertex(entry.getPositionMatrix(), x2, y1, z1).color(red, green, blue, alpha);
-        buffer.vertex(entry.getPositionMatrix(), x2, y2, z1).color(red, green, blue, alpha);
-        buffer.vertex(entry.getPositionMatrix(), x1, y2, z1).color(red, green, blue, alpha);
+        buffer.vertex(matrix, (float)minX, (float)minY, (float)minZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
+        buffer.vertex(matrix, (float)maxX, (float)minY, (float)minZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
+        buffer.vertex(matrix, (float)maxX, (float)maxY, (float)minZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
+        buffer.vertex(matrix, (float)minX, (float)maxY, (float)minZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
 
         // Rückseite
-        buffer.vertex(entry.getPositionMatrix(), x1, y1, z2).color(red, green, blue, alpha);
-        buffer.vertex(entry.getPositionMatrix(), x2, y1, z2).color(red, green, blue, alpha);
-        buffer.vertex(entry.getPositionMatrix(), x2, y2, z2).color(red, green, blue, alpha);
-        buffer.vertex(entry.getPositionMatrix(), x1, y2, z2).color(red, green, blue, alpha);
+        buffer.vertex(matrix, (float)minX, (float)minY, (float)maxZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
+        buffer.vertex(matrix, (float)maxX, (float)minY, (float)maxZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
+        buffer.vertex(matrix, (float)maxX, (float)maxY, (float)maxZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
+        buffer.vertex(matrix, (float)minX, (float)maxY, (float)maxZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
     }
+
+//    public static void drawFilledBox(MatrixStack matrices, VertexConsumer buffer,
+//                                     double minX, double minY, double minZ,
+//                                     double maxX, double maxY, double maxZ,
+//                                     float red, float green, float blue, float alpha) {
+//
+//        MatrixStack.Entry entry = matrices.peek();
+//
+//        // Alle 8 Ecken der Box
+//        float x1 = (float) minX;
+//        float y1 = (float) minY;
+//        float z1 = (float) minZ;
+//        float x2 = (float) maxX;
+//        float y2 = (float) maxY;
+//        float z2 = (float) maxZ;
+//
+//        // Vorderseite
+//        buffer.vertex(entry.getPositionMatrix(), x1, y1, z1).color(red, green, blue, alpha);
+//        buffer.vertex(entry.getPositionMatrix(), x2, y1, z1).color(red, green, blue, alpha);
+//        buffer.vertex(entry.getPositionMatrix(), x2, y2, z1).color(red, green, blue, alpha);
+//        buffer.vertex(entry.getPositionMatrix(), x1, y2, z1).color(red, green, blue, alpha);
+//
+//        // Rückseite
+//        buffer.vertex(entry.getPositionMatrix(), x1, y1, z2).color(red, green, blue, alpha);
+//        buffer.vertex(entry.getPositionMatrix(), x2, y1, z2).color(red, green, blue, alpha);
+//        buffer.vertex(entry.getPositionMatrix(), x2, y2, z2).color(red, green, blue, alpha);
+//        buffer.vertex(entry.getPositionMatrix(), x1, y2, z2).color(red, green, blue, alpha);
+//    }
 
     public static void drawEdges(RenderWorldEvent event, Box box, Color color, int lineWidth, boolean depth) {
         LineDrawer.draw3D(event, lineWidth, depth, lineDrawer -> lineDrawer.drawEdges(box, color));
@@ -154,22 +172,21 @@ public class WorldRenderUtils {
 
     public static void drawText(RenderWorldEvent event, WEVec location, Text text, float scale, boolean depth) {
         Camera camera = MinecraftClient.getInstance().gameRenderer.getCamera();
-
         Matrix4f matrix = new Matrix4f();
         WEVec viewerPos = getViewerPos();
         TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
         float adjustedScale = scale * 0.05f;
 
         matrix.translate(
-                (float) (location.x() - viewerPos.x()),
-                (float) (location.y() - viewerPos.y()),
-                (float) (location.z() - viewerPos.z())
-        ).rotate(camera.getRotation()).scale(adjustedScale, -adjustedScale, adjustedScale);
+                        (float)(location.x() - viewerPos.x()),
+                        (float)(location.y() - viewerPos.y()),
+                        (float)(location.z() - viewerPos.z())
+                ).rotate(camera.getRotation())
+                .scale(adjustedScale, -adjustedScale, adjustedScale);
 
-        List<OrderedText> textLines = textRenderer.wrapLines(text, 1000000);
-
-        for (int i = 0; i < textLines.size(); i++) {
-            OrderedText line = textLines.get(i);
+        List<OrderedText> lines = textRenderer.wrapLines(text, 1000000);
+        for (int i = 0; i < lines.size(); i++) {
+            OrderedText line = lines.get(i);
             float yOffset = i * textRenderer.fontHeight * 1.3f;
             float xOffset = -textRenderer.getWidth(line) / 2f;
 
@@ -181,8 +198,43 @@ public class WorldRenderUtils {
                     matrix,
                     event.vertexConsumerProvider,
                     depth ? TextRenderer.TextLayerType.NORMAL : TextRenderer.TextLayerType.SEE_THROUGH,
-                    0, LightmapTextureManager.MAX_LIGHT_COORDINATE
+                    0,
+                    0xF000F0
             );
         }
     }
+
+//    public static void drawText(RenderWorldEvent event, WEVec location, Text text, float scale, boolean depth) {
+//        Camera camera = MinecraftClient.getInstance().gameRenderer.getCamera();
+//
+//        Matrix4f matrix = new Matrix4f();
+//        WEVec viewerPos = getViewerPos();
+//        TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
+//        float adjustedScale = scale * 0.05f;
+//
+//        matrix.translate(
+//                (float) (location.x() - viewerPos.x()),
+//                (float) (location.y() - viewerPos.y()),
+//                (float) (location.z() - viewerPos.z())
+//        ).rotate(camera.getRotation()).scale(adjustedScale, -adjustedScale, adjustedScale);
+//
+//        List<OrderedText> textLines = textRenderer.wrapLines(text, 1000000);
+//
+//        for (int i = 0; i < textLines.size(); i++) {
+//            OrderedText line = textLines.get(i);
+//            float yOffset = i * textRenderer.fontHeight * 1.3f;
+//            float xOffset = -textRenderer.getWidth(line) / 2f;
+//
+//            textRenderer.draw(
+//                    line,
+//                    xOffset, yOffset,
+//                    0xFFFFFF,
+//                    false,
+//                    matrix,
+//                    event.vertexConsumerProvider,
+//                    depth ? TextRenderer.TextLayerType.NORMAL : TextRenderer.TextLayerType.SEE_THROUGH,
+//                    0, LightmapTextureManager.MAX_LIGHT_COORDINATE
+//            );
+//        }
+//    }
 }
