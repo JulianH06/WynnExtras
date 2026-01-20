@@ -193,25 +193,94 @@ public final class UIUtils {
         drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f);
     }
 
-    public void drawImage(Identifier texture, float x, float y, float width, float height) {
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            int textureWidth, int textureHeight,
+            float alpha
+    ) {
         RenderUtils.drawTexturedRect(
                 drawContext,
-                texture, CustomColor.NONE,
+                texture,
+                CustomColor.NONE.withAlpha(alpha),
                 sx(x), sy(y),
                 sw(width), sh(height),
-                sw(width), sh(height)
+                u, v,
+                uWidth, vHeight,
+                textureWidth, textureHeight
         );
     }
 
-    public void drawImage(Identifier texture, float x, float y, float width, float height, float alpha) {
-        RenderUtils.drawTexturedRect(
-                drawContext,
-                texture, CustomColor.NONE.withAlpha(alpha),
-                sx(x), sy(y),
-                sw(width), sh(height), 0, 0,
-                sw(width), sh(height),
-                sw(width), sh(height)
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight
+    ) {
+        drawImage(
+                texture,
+                x, y, width, height,
+                u, v,
+                uWidth, vHeight,
+                (int) uWidth, (int) vHeight,
+                1.0f
         );
+    }
+
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            float alpha
+    ) {
+        drawImage(
+                texture,
+                x, y, width, height,
+                u, v,
+                uWidth, vHeight,
+                (int) uWidth, (int) vHeight,
+                alpha
+        );
+    }
+
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            int textureWidth, int textureHeight
+    ) {
+        drawImage(
+                texture,
+                x, y, width, height,
+                u, v,
+                uWidth, vHeight,
+                textureWidth, textureHeight,
+                1.0f
+        );
+    }
+
+
+    public void drawImage(Identifier texture, float x, float y, float width, float height, float alpha) {
+        drawImage(
+                texture,
+                x, y, width, height,
+                0, 0,
+                width, height,
+                (int) width, (int) height,
+                alpha
+        );
+    }
+
+    public void drawImage(Identifier texture, float x, float y, float width, float height) {
+        drawImage(texture, x, y, width, height, 1.0f);
     }
 
     public void drawButton(float x, float y, float width, float height, int scale, boolean hovered) {

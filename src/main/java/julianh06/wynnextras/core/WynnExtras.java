@@ -5,7 +5,6 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.command.Command;
-import julianh06.wynnextras.core.loader.CommandLoader;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
@@ -15,6 +14,7 @@ import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
+import julianh06.wynnextras.features.guildviewer.BannerGuiRenderer;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
@@ -22,7 +22,6 @@ import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.data.BookshelfData;
 import julianh06.wynnextras.features.inventory.data.CharacterBankData;
 import julianh06.wynnextras.features.inventory.data.MiscBucketData;
-import julianh06.wynnextras.features.misc.CustomClassSelection;
 import julianh06.wynnextras.features.misc.FastRequeue;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
@@ -33,21 +32,15 @@ import julianh06.wynnextras.features.waypoints.WaypointData;
 import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
-import julianh06.wynnextras.mixin.InventoryScreenMixin;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.TickScheduler;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
 import net.minecraft.screen.slot.Slot;
-import net.minecraft.sound.SoundEvent;
 import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
@@ -63,8 +56,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 
 // TODO: Use WELogger instead of normal logger
@@ -151,6 +142,8 @@ public class WynnExtras implements ClientModInitializer {
 		CurrentVersionData.INSTANCE.version = FabricLoader.getInstance().getModContainer("wynnextras").map(mod -> mod.getMetadata().getVersion().getFriendlyString()).orElse("unknown");
 		CurrentVersionData.save();
 		latestVersion = CurrentVersionData.fetchLatestVersion();
+
+		SpecialGuiElementRegistry.register(context -> new BannerGuiRenderer(context.vertexConsumers(), MinecraftClient.getInstance().getAtlasManager()));
 
 		WELoader.loadAll();
 		TickScheduler.init();
@@ -241,32 +234,6 @@ public class WynnExtras implements ClientModInitializer {
 				}
 			}
 		}
-
-//		try {
-//			if(McUtils.containerMenu() != null) {
-//				ItemStack rightArrow = McUtils.containerMenu().getSlot(52).getStack();
-//				List<Text> lore = rightArrow.getComponents().get(DataComponentTypes.LORE).lines();
-//				//System.out.println(lore);
-//				if(rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(240.0f)) {
-//					//System.out.println("RED ARROW");
-//					for(Text text : lore) {
-//						if(text.getString().contains("§7Price")) {
-//							//System.out.println(text.getString() + (text.getString().contains("✖") ? " CANNOT AFFORD" : " CAN AFFORD"));
-//							break;
-//						}
-//					}
-//				} else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(239.0f)) {
-//					System.out.println("GREEN ARROW");
-//				} else if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0).equals(237.0f)){
-//					System.out.println("BOUGHT");
-//				} else {
-////					System.out.println(rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0));
-//
-//				}
-//			}
-//		} catch (Exception ignored) {
-//			//System.out.println("crash");
-//		}
 
 		if (ticksUntilNotify < 0) return;
 

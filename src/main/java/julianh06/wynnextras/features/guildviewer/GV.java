@@ -92,10 +92,12 @@ public class GV {
             BlockState state = Blocks.WHITE_BANNER.getDefaultState();
 
             GVScreen.bannerBlockEntity = new BannerBlockEntity(
-                    BlockPos.ORIGIN,
+                    MinecraftClient.getInstance().player.getBlockPos().add(-1,0,0),
                     state,
                     GVScreen.dyeColorFromName(currentGuildData.banner.base)
             );
+
+            GVScreen.bannerBlockEntity.setWorld(MinecraftClient.getInstance().world);
 
             BannerPatternsComponent.Builder builder = new BannerPatternsComponent.Builder();
 
