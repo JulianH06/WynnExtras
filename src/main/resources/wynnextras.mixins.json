@@ -35,6 +35,7 @@
     "ScreenHandlerMixin",
     "TooltipFittingFeatureMixin",
     "TooltipUtilsMixin",
+    "WorldRendererAccessor",
     "Accessor.BannerBlockEntityAccessor",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
     "Accessor.SlotAccessor",

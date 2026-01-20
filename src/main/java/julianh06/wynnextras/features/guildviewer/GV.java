@@ -12,9 +12,17 @@ import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.PlayerData;
+import julianh06.wynnextras.mixin.Accessor.BannerBlockEntityAccessor;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.entity.BannerBlockEntity;
+import net.minecraft.block.entity.BannerPattern;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.component.type.BannerPatternsComponent;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.util.math.BlockPos;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
 
@@ -80,6 +88,27 @@ public class GV {
         currentGuildData = null;
         WynncraftApiHandler.fetchGuildData(guild).thenAccept(guildData -> {
             currentGuildData = guildData;
+
+            BlockState state = Blocks.WHITE_BANNER.getDefaultState();
+
+            GVScreen.bannerBlockEntity = new BannerBlockEntity(
+                    BlockPos.ORIGIN,
+                    state,
+                    GVScreen.dyeColorFromName(currentGuildData.banner.base)
+            );
+
+            BannerPatternsComponent.Builder builder = new BannerPatternsComponent.Builder();
+
+            for (GuildData.BannerLayer layer : GV.currentGuildData.banner.layers) {
+                RegistryEntry<BannerPattern> entry =
+                        GVScreen.resolvePatternEntry(layer.pattern.toUpperCase());
+                if (entry != null) {
+                    builder.add(entry, GVScreen.dyeColorFromName(layer.colour));
+                }
+            }
+
+            ((BannerBlockEntityAccessor) GVScreen.bannerBlockEntity)
+                    .setPatterns(builder.build());
         }).exceptionally(ex -> {
             System.err.println("Error while getting the data: " + ex.getMessage());
             return null;
