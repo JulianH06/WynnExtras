@@ -3,17 +3,15 @@ package julianh06.wynnextras.utils.render;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.render.LayeringTransform;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderSetup;
 import net.minecraft.client.render.VertexFormats;
 
-import java.util.List;
-import java.util.OptionalDouble;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class RenderLayers {
+public class WERenderLayers {
     private static final ConcurrentHashMap<Integer, RenderLayer> linesCache = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Integer, RenderLayer> linesThroughWallsCache = new ConcurrentHashMap<>();
 
@@ -49,17 +47,9 @@ public class RenderLayers {
         return throughWalls ? FILLED_XRAY : FILLED;
     }
 
-    // Pipeline für gefüllte Layer
-    private static final RenderPipeline FILLED_PIPELINE = RenderPipeline.builder()
-            .withLocation("wynnextras_filled")
-            .withVertexShader("shaders/vertex/filled.vsh")
-            .withFragmentShader("shaders/fragment/filled.fsh")
-            .withVertexFormat(VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.TRIANGLE_STRIP)
-            .build();
-
     private static final RenderLayer FILLED = RenderLayer.of(
             "wynnextras_filled",
-            RenderSetup.builder(FILLED_PIPELINE)
+            RenderSetup.builder(RenderPipelines.DEBUG_FILLED_BOX)
                     .translucent()
                     .expectedBufferSize(256)
                     .layeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
@@ -68,7 +58,7 @@ public class RenderLayers {
 
     private static final RenderLayer FILLED_XRAY = RenderLayer.of(
             "wynnextras_filled_xray",
-            RenderSetup.builder(FILLED_PIPELINE)
+            RenderSetup.builder(RenderPipelines.DEBUG_FILLED_BOX)
                     .translucent()
                     .expectedBufferSize(256)
                     .layeringTransform(LayeringTransform.NO_LAYERING)

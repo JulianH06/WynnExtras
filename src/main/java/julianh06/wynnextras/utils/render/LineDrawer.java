@@ -43,7 +43,7 @@ public class LineDrawer {
     private void drawQueuedLines() {
         if (queuedLines.isEmpty()) return;
 
-        RenderLayer layer = RenderLayers.getLines(lineWidth, !depth);
+        RenderLayer layer = WERenderLayers.getLines(lineWidth, !depth);
         VertexConsumer buffer = event.vertexConsumerProvider.getBuffer(layer);
         MatrixStack.Entry matrix = event.matrices.peek();
 

@@ -1,6 +1,5 @@
 package julianh06.wynnextras.utils.UI;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexFormat;
+
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.FontRenderer;
@@ -9,14 +8,10 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
-import julianh06.wynnextras.utils.render.RenderLayers;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.*;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import org.joml.Matrix4f;
 
 public final class UIUtils {
     Identifier buttontl = Identifier.of("wynnextras", "textures/general/button/cornertl.png");

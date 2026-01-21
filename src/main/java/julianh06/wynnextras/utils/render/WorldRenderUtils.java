@@ -1,14 +1,16 @@
 package julianh06.wynnextras.utils.render;
 
+import com.wynntils.utils.render.pipelines.CustomRenderPipelines;
 import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.WEVec;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.render.*;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.util.BufferAllocator;
 import net.minecraft.entity.Entity;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
@@ -77,7 +79,7 @@ public class WorldRenderUtils {
                 box.maxX - viewerPos.x(), box.maxY - viewerPos.y(), box.maxZ - viewerPos.z()
         );
 
-        RenderLayer layer = RenderLayers.getFilled(!depth);
+        RenderLayer layer = RenderLayers.debugQuads(); // WERenderLayers.getFilled(!depth);
         VertexConsumer buffer = event.vertexConsumerProvider.getBuffer(layer);
         event.matrices.push();
 
@@ -99,46 +101,37 @@ public class WorldRenderUtils {
                                       double maxX, double maxY, double maxZ,
                                       float r, float g, float b, float a, int light) {
 
-        // Vorderseite
-        buffer.vertex(matrix, (float)minX, (float)minY, (float)minZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
-        buffer.vertex(matrix, (float)maxX, (float)minY, (float)minZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
-        buffer.vertex(matrix, (float)maxX, (float)maxY, (float)minZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
-        buffer.vertex(matrix, (float)minX, (float)maxY, (float)minZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
-
-        // Rückseite
-        buffer.vertex(matrix, (float)minX, (float)minY, (float)maxZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
-        buffer.vertex(matrix, (float)maxX, (float)minY, (float)maxZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
-        buffer.vertex(matrix, (float)maxX, (float)maxY, (float)maxZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
-        buffer.vertex(matrix, (float)minX, (float)maxY, (float)maxZ).color(r, g, b, a).light(light).overlay(OverlayTexture.DEFAULT_UV);
+        buffer.vertex(matrix, (float) minX, (float) minY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) minY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) minY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) minY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) maxY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) maxY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) maxY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) minY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) maxY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) minY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) minY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) minY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) maxY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) maxY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) maxY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) minY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) maxY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) minY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) minY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) minY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) minY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) minY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) minY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) maxY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) maxY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) minX, (float) maxY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) maxY, (float) minZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) maxY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) maxY, (float) maxZ).color(r, g, b, a);
+        buffer.vertex(matrix, (float) maxX, (float) maxY, (float) maxZ).color(r, g, b, a);
     }
-
-//    public static void drawFilledBox(MatrixStack matrices, VertexConsumer buffer,
-//                                     double minX, double minY, double minZ,
-//                                     double maxX, double maxY, double maxZ,
-//                                     float red, float green, float blue, float alpha) {
-//
-//        MatrixStack.Entry entry = matrices.peek();
-//
-//        // Alle 8 Ecken der Box
-//        float x1 = (float) minX;
-//        float y1 = (float) minY;
-//        float z1 = (float) minZ;
-//        float x2 = (float) maxX;
-//        float y2 = (float) maxY;
-//        float z2 = (float) maxZ;
-//
-//        // Vorderseite
-//        buffer.vertex(entry.getPositionMatrix(), x1, y1, z1).color(red, green, blue, alpha);
-//        buffer.vertex(entry.getPositionMatrix(), x2, y1, z1).color(red, green, blue, alpha);
-//        buffer.vertex(entry.getPositionMatrix(), x2, y2, z1).color(red, green, blue, alpha);
-//        buffer.vertex(entry.getPositionMatrix(), x1, y2, z1).color(red, green, blue, alpha);
-//
-//        // Rückseite
-//        buffer.vertex(entry.getPositionMatrix(), x1, y1, z2).color(red, green, blue, alpha);
-//        buffer.vertex(entry.getPositionMatrix(), x2, y1, z2).color(red, green, blue, alpha);
-//        buffer.vertex(entry.getPositionMatrix(), x2, y2, z2).color(red, green, blue, alpha);
-//        buffer.vertex(entry.getPositionMatrix(), x1, y2, z2).color(red, green, blue, alpha);
-//    }
 
     public static void drawEdges(RenderWorldEvent event, Box box, Color color, int lineWidth, boolean depth) {
         LineDrawer.draw3D(event, lineWidth, depth, lineDrawer -> lineDrawer.drawEdges(box, color));
