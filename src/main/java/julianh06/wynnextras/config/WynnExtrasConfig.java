@@ -40,6 +40,7 @@ public class WynnExtrasConfig implements ConfigData {
         String chat = "Chat";
         String raid = "Raid";
         String misc = "Misc";
+        String Waypoints = "Waypoints";
     }
 
 
@@ -194,6 +195,41 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Name("Enable Raid timestamps")
     public boolean toggleRaidTimestamps = true;
 
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Enable Raid Loot Tracker")
+    public boolean toggleRaidLootTracker = true;
+
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Only show Raid Loot Tracker in inventory")
+    public boolean raidLootTrackerOnlyInInventory = false;
+
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Only show Raid Loot Tracker near reward chest")
+    public boolean raidLootTrackerOnlyNearChest = false;
+
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Raid Loot Tracker compact mode")
+    public boolean raidLootTrackerCompact = false;
+
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Raid Loot Tracker show session stats")
+    public boolean raidLootTrackerShowSession = false;
+
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Raid Loot Tracker X position")
+    @ConfigEntry.Excluded
+    public int raidLootTrackerX = 5;
+
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Raid Loot Tracker Y position")
+    @ConfigEntry.Excluded
+    public int raidLootTrackerY = 5;
+
+    @ConfigEntry.Category(Categories.raid)
+    @ConfigEntry.Name("Raid Loot Tracker hidden lines")
+    @ConfigEntry.Excluded
+    public List<String> raidLootTrackerHiddenLines = new ArrayList<>();
+
     //TOTEM VISUALIZER
 
     @ConfigEntry.Category(Categories.raid)
@@ -331,6 +367,10 @@ public class WynnExtrasConfig implements ConfigData {
     @ConfigEntry.Excluded
     public Map<String, Long> raidPBs = new HashMap<>();
 
+    // WAYPOINTS
+    @ConfigEntry.Category(Categories.Waypoints)
+    @ConfigEntry.Name("Disable all Default Waypoints")
+    public boolean disableAllDefaultWaypoints = false;
 
 //    //Hider
 //    public boolean partyMemberHide = true;
