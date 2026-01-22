@@ -5,6 +5,7 @@ import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.utils.WEVec;
 import julianh06.wynnextras.utils.render.WorldRenderUtils;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.Box;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -15,6 +16,11 @@ import java.awt.*;
 public class WaypointRenderer {
     @SubscribeEvent
     public void onRenderWorld(RenderWorldEvent event) {
+        if (WorldRenderUtils.INSTANCE.buffer == null) {
+            WorldRenderUtils.INSTANCE.buffer = new BufferBuilder(WorldRenderUtils.allocator, WorldRenderUtils.FILLED_BOX.getVertexFormatMode(), WorldRenderUtils.FILLED_BOX.getVertexFormat());
+        }
+
+        //Extraction phase
         for(WaypointPackage pkg : WaypointData.INSTANCE.packages) {
             if(!pkg.enabled) continue;
             for(Waypoint waypoint : pkg.waypoints) {
@@ -34,11 +40,14 @@ public class WaypointRenderer {
                     if(waypoint.getCategory() != null) {
                         alpha = waypoint.getCategory().alpha;
                     }
-                    WorldRenderUtils.drawFilledBoundingBox(event, new Box(waypoint.x, waypoint.y, waypoint.z, waypoint.x + 1, waypoint.y + 1, waypoint.z + 1), color, alpha, true);
+                    WorldRenderUtils.drawFilledBoundingBox(event, new Box(waypoint.x, waypoint.y, waypoint.z, waypoint.x + 1, waypoint.y + 1, waypoint.z + 1), color, alpha);
                 }
                 if(!waypoint.showName) continue;
                 WorldRenderUtils.drawText(event, namePos, Text.of(waypoint.name), 0.75f, !waypoint.seeThrough);
             }
         }
+
+        //Render phase
+        WorldRenderUtils.INSTANCE.drawFilledBoxes(MinecraftClient.getInstance(), WorldRenderUtils.FILLED_BOX);
     }
 }

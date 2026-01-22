@@ -10,6 +10,7 @@
     "requireAnnotations": true
   },
   "client": [
+    "GameRendererMixin",
     "InventoryScreenMixin",
     "LivingEntityRendererMixin",
     "PerspectiveMixin",
