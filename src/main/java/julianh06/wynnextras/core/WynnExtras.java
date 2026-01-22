@@ -29,6 +29,9 @@ import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidListData;
+import julianh06.wynnextras.features.raid.RaidLootConfig;
+import julianh06.wynnextras.features.raid.RaidLootTracker;
+import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.waypoints.WaypointData;
 import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
@@ -163,12 +166,23 @@ public class WynnExtras implements ClientModInitializer {
 		FastRequeue.registerFastRequeue();
 		TreeLoader.init();
 		maintracking.init();
+        RaidLootTracker.register();
+        RaidLootTrackerOverlay.register();
+        RaidLootConfig.INSTANCE.load();
 
 		RaidListData.load();
 		WaypointData.load();
 		RaidChatNotifier.INSTANCE.load();
+        WaypointData.applyDisableDefaultWaypoints(SimpleConfig.getInstance(WynnExtrasConfig.class).disableAllDefaultWaypoints);
 
-		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+        // Listener registrieren, dass Änderungen in der Config angewendet werden
+        WynnExtrasConfig.registerSave((holder, config) -> {
+            WaypointData.applyDisableDefaultWaypoints(config.disableAllDefaultWaypoints);
+            return null; // <- hier statt ActionResult.PASS
+        });
+
+
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			AccountBankData.INSTANCE.load();
 			CharacterBankData.INSTANCE.load();
 			BookshelfData.INSTANCE.load();

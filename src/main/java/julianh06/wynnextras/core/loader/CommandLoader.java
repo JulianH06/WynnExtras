@@ -11,6 +11,9 @@ import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.command.ChatCommands;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.raid.RaidLootConfig;
+import julianh06.wynnextras.features.raid.RaidLootData;
+import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -98,6 +101,66 @@ public class CommandLoader implements WELoader {
                     }, 600, TimeUnit.MILLISECONDS);
                     return 1;
                 })
+            );
+
+            // Raid Loot Tracker reset commands
+            dispatcher.register(
+                ClientCommandManager.literal("we")
+                    .then(ClientCommandManager.literal("raidloot")
+                        .then(ClientCommandManager.literal("reset")
+                            .executes(ctx -> {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we raidloot reset <all|session|notg|nol|tcc|tna>"));
+                                return 1;
+                            })
+                            .then(ClientCommandManager.literal("all")
+                                .executes(ctx -> {
+                                    RaidLootConfig.INSTANCE.data.resetAll();
+                                    RaidLootConfig.INSTANCE.save();
+                                    RaidLootTrackerOverlay.refreshData();
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset all raid loot data!"));
+                                    return 1;
+                                }))
+                            .then(ClientCommandManager.literal("session")
+                                .executes(ctx -> {
+                                    RaidLootConfig.INSTANCE.data.resetSession();
+                                    RaidLootTrackerOverlay.refreshData();
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset session raid loot data!"));
+                                    return 1;
+                                }))
+                            .then(ClientCommandManager.literal("notg")
+                                .executes(ctx -> {
+                                    RaidLootConfig.INSTANCE.data.resetRaid("NOTG");
+                                    RaidLootConfig.INSTANCE.save();
+                                    RaidLootTrackerOverlay.refreshData();
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset NOTG raid loot data!"));
+                                    return 1;
+                                }))
+                            .then(ClientCommandManager.literal("nol")
+                                .executes(ctx -> {
+                                    RaidLootConfig.INSTANCE.data.resetRaid("NOL");
+                                    RaidLootConfig.INSTANCE.save();
+                                    RaidLootTrackerOverlay.refreshData();
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset NOL raid loot data!"));
+                                    return 1;
+                                }))
+                            .then(ClientCommandManager.literal("tcc")
+                                .executes(ctx -> {
+                                    RaidLootConfig.INSTANCE.data.resetRaid("TCC");
+                                    RaidLootConfig.INSTANCE.save();
+                                    RaidLootTrackerOverlay.refreshData();
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset TCC raid loot data!"));
+                                    return 1;
+                                }))
+                            .then(ClientCommandManager.literal("tna")
+                                .executes(ctx -> {
+                                    RaidLootConfig.INSTANCE.data.resetRaid("TNA");
+                                    RaidLootConfig.INSTANCE.save();
+                                    RaidLootTrackerOverlay.refreshData();
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset TNA raid loot data!"));
+                                    return 1;
+                                }))
+                        )
+                    )
             );
         });
     }
