@@ -1,4 +1,7 @@
-package julianh06.wynnextras.utils.render;
+package julianh06.wynnextras.utils.worldRenderTest;
+
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
@@ -9,123 +12,74 @@ import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.event.RenderWorldEvent;
-import julianh06.wynnextras.utils.MinecraftUtils;
-import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.WEVec;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gl.MappableRingBuffer;
 import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.*;
+import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.BuiltBuffer;
+import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.util.BufferAllocator;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
-import org.joml.Matrix4f;
-import org.joml.Matrix4fc;
-import org.joml.Vector3f;
-import org.joml.Vector4f;
+import org.joml.*;
 import org.lwjgl.system.MemoryUtil;
 
-import java.awt.*;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.Set;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 
-public class WorldRenderUtils {
-    public static WorldRenderUtils INSTANCE = new WorldRenderUtils();
+import static julianh06.wynnextras.utils.render.WorldRenderUtils.getViewerPos;
 
-    public static final RenderPipeline FILLED_BOX = RenderPipelines.register(RenderPipeline.builder(RenderPipelines.POSITION_COLOR_SNIPPET)
-            .withLocation(Identifier.of(WynnExtras.MOD_ID, "pipeline/debug_filled_box"))
-            .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
+public class WorldRenderTest {
+    public static WorldRenderTest instance;
+    // :::custom-pipelines:define-pipeline
+    private static final RenderPipeline FILLED_THROUGH_WALLS = RenderPipelines.register(RenderPipeline.builder(RenderPipelines.POSITION_COLOR_SNIPPET)
+            .withLocation(Identifier.of(WynnExtras.MOD_ID, "pipeline/debug_filled_box_through_walls"))
+            .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST) //not through walls (im testing something)
             .withDepthBias(-1.0f, -1.0f)
             .build()
     );
+    // :::custom-pipelines:define-pipeline
+    // :::custom-pipelines:extraction-phase
+    private static final BufferAllocator allocator = new BufferAllocator(RenderLayer.field_64009);
+    private BufferBuilder buffer;
 
-    public static final BufferAllocator allocator = new BufferAllocator(RenderLayer.field_64009);
-    public BufferBuilder buffer;
+    // :::custom-pipelines:extraction-phase
+    // :::custom-pipelines:drawing-phase
     private static final Vector4f COLOR_MODULATOR = new Vector4f(1f, 1f, 1f, 1f);
     private static final Vector3f MODEL_OFFSET = new Vector3f();
     private static final Matrix4f TEXTURE_MATRIX = new Matrix4f();
     private MappableRingBuffer vertexBuffer;
 
-    public static WEVec getViewerPos() {
-        return exactLocation(MinecraftClient.getInstance().gameRenderer.getCamera());
+    public void extractAndDrawWaypoint(WorldRenderContext context) {
+        renderWaypoint(context);
+        renderWaypointText(context);
+        drawFilledThroughWalls(MinecraftClient.getInstance(), FILLED_THROUGH_WALLS);
     }
 
-    public static WEVec exactLocation(Entity entity, float partialTicks) {
-        if (!entity.isAlive()) return new WEVec(entity.getBlockPos().toBottomCenterPos());
-        WEVec prev = new WEVec(entity.lastX, entity.lastY, entity.lastZ);
-
-        return prev.add(new WEVec(entity.getBlockPos().toBottomCenterPos()).subtract(prev).multiply(partialTicks));
-    }
-
-    public static WEVec exactLocation(Camera camera) {
-        return new WEVec(camera.getCameraPos());
-    }
-
-    public static WEVec exactPlayerEyeLocation(RenderWorldEvent event) {
-        ClientPlayerEntity player = MinecraftUtils.localPlayer();
-        double eyeHeight = player.getEyeHeight(player.getPose());
-        return exactLocation(player, event.partialTicks).add(0, eyeHeight, 0);
-    }
-
-    public static Set<Pair<WEVec, WEVec>> calculateEdges(Box box) {
-        WEVec bottomLeftFront = new WEVec(box.minX, box.minY, box.minZ);
-        WEVec bottomLeftBack = new WEVec(box.minX, box.minY, box.maxZ);
-        WEVec topLeftFront = new WEVec(box.minX, box.maxY, box.minZ);
-        WEVec topLeftBack = new WEVec(box.minX, box.maxY, box.maxZ);
-        WEVec bottomRightFront = new WEVec(box.maxX, box.minY, box.minZ);
-        WEVec bottomRightBack = new WEVec(box.maxX, box.minY, box.maxZ);
-        WEVec topRightFront = new WEVec(box.maxX, box.maxY, box.minZ);
-        WEVec topRightBack = new WEVec(box.maxX, box.maxY, box.maxZ);
-
-        return Set.of(
-                new Pair<>(bottomLeftFront, bottomLeftBack),
-                new Pair<>(bottomLeftBack, bottomRightBack),
-                new Pair<>(bottomRightBack, bottomRightFront),
-                new Pair<>(bottomRightFront, bottomLeftFront),
-
-                new Pair<>(topLeftFront, topLeftBack),
-                new Pair<>(topLeftBack, topRightBack),
-                new Pair<>(topRightBack, topRightFront),
-                new Pair<>(topRightFront, topLeftFront),
-
-                new Pair<>(bottomLeftFront, topLeftFront),
-                new Pair<>(bottomLeftBack, topLeftBack),
-                new Pair<>(bottomRightBack, topRightBack),
-                new Pair<>(bottomRightFront, topRightFront)
-        );
-    }
-
-    // Draws
-    public static void drawFilledBoundingBox(RenderWorldEvent event, Box box, Color color, float alphaMultiplier) {
-        MatrixStack matrices = event.matrices;
-        Vec3d camera = event.camera.getCameraPos();
+    private void renderWaypoint(WorldRenderContext context) {
+        MatrixStack matrices = context.matrices();
+        Vec3d camera = context.worldState().cameraRenderState.pos;
 
         matrices.push();
         matrices.translate(-camera.x, -camera.y, -camera.z);
 
-        renderFilledBox(
-                event.matrices.peek().getPositionMatrix(),
-                INSTANCE.buffer,
-                (float) box.minX, (float) box.minY, (float) box.minZ,
-                (float) box.maxX, (float) box.maxY, (float) box.maxZ,
-                color.getRed() / 255f * 0.9f,
-                color.getGreen() / 255f * 0.9f,
-                color.getBlue() / 255f * 0.9f,
-                color.getAlpha() / 255f * alphaMultiplier
-        );
+        if (buffer == null) {
+            buffer = new BufferBuilder(allocator, FILLED_THROUGH_WALLS.getVertexFormatMode(), FILLED_THROUGH_WALLS.getVertexFormat());
+        }
+
+        float x = 0;
+        float y = 100;
+        float z = 0;
+
+        renderFilledBox(matrices.peek().getPositionMatrix(), buffer, x, y, z, x + 1, y + 1, z + 1, 0f, 1f, 0f, 0.5f);
 
         matrices.pop();
     }
 
-    private static void renderFilledBox(Matrix4fc positionMatrix, BufferBuilder buffer, float minX, float minY, float minZ, float maxX, float maxY, float maxZ, float red, float green, float blue, float alpha) {
+    private void renderFilledBox(Matrix4fc positionMatrix, BufferBuilder buffer, float minX, float minY, float minZ, float maxX, float maxY, float maxZ, float red, float green, float blue, float alpha) {
         // Front Face
         buffer.vertex(positionMatrix, minX, minY, maxZ).color(red, green, blue, alpha);
         buffer.vertex(positionMatrix, maxX, minY, maxZ).color(red, green, blue, alpha);
@@ -163,42 +117,36 @@ public class WorldRenderUtils {
         buffer.vertex(positionMatrix, minX, minY, maxZ).color(red, green, blue, alpha);
     }
 
-    public static void drawEdges(RenderWorldEvent event, Box box, Color color, int lineWidth, boolean depth) {
-        LineDrawer.draw3D(event, lineWidth, depth, lineDrawer -> lineDrawer.drawEdges(box, color));
+    private void renderWaypointText(WorldRenderContext context) {
+        MatrixStack matrices = context.matrices();
+        Vec3d camera = context.worldState().cameraRenderState.pos;
+
+        matrices.push();
+        matrices.translate(-camera.x, -camera.y, -camera.z);
+
+        double x = 0.5;
+        double y = 101.5;
+        double z = 0.5;
+
+        renderText(
+                matrices,
+                "Waypoint",
+                x, y, z,
+                0xFFFFFFFF,
+                context
+        );
+
+        matrices.pop();
     }
 
-    public static void drawEdges(RenderWorldEvent event, WEVec location, Color color, int lineWidth, boolean depth) {
-        LineDrawer.draw3D(event, lineWidth, depth, lineDrawer -> lineDrawer.drawEdges(location, color));
-    }
-
-    public static void draw3DLine(RenderWorldEvent event, WEVec p1, WEVec p2, Color color, int lineWidth, boolean depth) {
-        LineDrawer.draw3D(event, lineWidth, depth, lineDrawer -> lineDrawer.draw3DLine(p1, p2, color));
-    }
-
-    public static void drawLineToEye(RenderWorldEvent event, WEVec location, Color color, int lineWidth, boolean depth) {
-        WEVec rotationVec = new WEVec(MinecraftUtils.localPlayer().getRotationVec(event.partialTicks));
-        draw3DLine(event, exactPlayerEyeLocation(event).add(rotationVec.multiply(2)), location, color, lineWidth, depth);
-    }
-
-    public static void draw3DCircle(RenderWorldEvent event, WEVec location, double radius, Color color, int lineWidth, boolean depth) {
-        LineDrawer.draw3D(event, lineWidth, depth, lineDrawer -> {
-            WEVec lastPoint = location.add(radius, 0, 0);
-
-            for (int i = 1; i <= 360; i++) {
-                double rad = Math.toRadians(i);
-                WEVec newPoint = location.add(Math.cos(rad) * radius, 0, Math.sin(rad) * radius);
-                lineDrawer.draw3DLine(lastPoint, newPoint, color);
-                lastPoint = newPoint;
-            }
-        });
-    }
-
-    public static void drawText(
-            RenderWorldEvent event,
-            WEVec location,
-            Text text,
-            float scale,
-            boolean depth
+    private void renderText(
+            MatrixStack matrices,
+            String text,
+            double x,
+            double y,
+            double z,
+            int color,
+            WorldRenderContext context
     ) {
         MinecraftClient client = MinecraftClient.getInstance();
         TextRenderer textRenderer = client.textRenderer;
@@ -206,30 +154,36 @@ public class WorldRenderUtils {
 
         Matrix4f matrix = new Matrix4f();
         WEVec viewerPos = getViewerPos();
-        float adjustedScale = scale * 0.05f;
+        float adjustedScale = 1 * 0.05f;
 
         matrix.translate(
-                (float) (location.x() - viewerPos.x()),
-                (float) (location.y() - viewerPos.y()),
-                (float) (location.z() - viewerPos.z())
+                (float) (x - viewerPos.x()),
+                (float) (y - viewerPos.y()),
+                (float) (z - viewerPos.z())
         ).rotate(camera.getRotation()).scale(adjustedScale, -adjustedScale, adjustedScale);
 
         textRenderer.draw(
                 text,
                 -textRenderer.getWidth(text) / 2f,
                 0,
-                -1,
+                color,
                 false,
                 matrix,
-                event.nonImmediateVertexConsumerProvider,
-                depth ? TextRenderer.TextLayerType.NORMAL : TextRenderer.TextLayerType.SEE_THROUGH,
+                context.consumers(),
+                TextRenderer.TextLayerType.NORMAL,
                 0,
-                15728880
+                15728880 // full brightness
         );
     }
 
 
-    public void drawFilledBoxes(MinecraftClient client, @SuppressWarnings("SameParameterValue") RenderPipeline pipeline) {
+
+    // :::custom-pipelines:extraction-phase
+
+    // :::custom-pipelines:drawing-phase
+
+    private void drawFilledThroughWalls(MinecraftClient client, @SuppressWarnings("SameParameterValue") RenderPipeline pipeline) {
+        // Build the buffer
         BuiltBuffer builtBuffer = buffer.end();
         BuiltBuffer.DrawParameters drawParameters = builtBuffer.getDrawParameters();
         VertexFormat format = drawParameters.format();
@@ -238,21 +192,25 @@ public class WorldRenderUtils {
 
         draw(client, pipeline, builtBuffer, drawParameters, vertices, format);
 
+        // Rotate the vertex buffer so we are less likely to use buffers that the GPU is using
         vertexBuffer.rotate();
         buffer = null;
     }
 
     private GpuBuffer upload(BuiltBuffer.DrawParameters drawParameters, VertexFormat format, BuiltBuffer builtBuffer) {
+        // Calculate the size needed for the vertex buffer
         int vertexBufferSize = drawParameters.vertexCount() * format.getVertexSize();
 
+        // Initialize or resize the vertex buffer as needed
         if (vertexBuffer == null || vertexBuffer.size() < vertexBufferSize) {
             if (vertexBuffer != null) {
                 vertexBuffer.close();
             }
 
-            vertexBuffer = new MappableRingBuffer(() -> WynnExtras.MOD_ID + " render pipeline", GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_MAP_WRITE, vertexBufferSize);
+            vertexBuffer = new MappableRingBuffer(() -> WynnExtras.MOD_ID + " example render pipeline", GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_MAP_WRITE, vertexBufferSize);
         }
 
+        // Copy vertex data into the vertex buffer
         CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
 
         try (GpuBuffer.MappedView mappedView = commandEncoder.mapBuffer(vertexBuffer.getBlocking().slice(0, builtBuffer.getBuffer().remaining()), false, true)) {
@@ -267,15 +225,19 @@ public class WorldRenderUtils {
         VertexFormat.IndexType indexType;
 
         if (pipeline.getVertexFormatMode() == VertexFormat.DrawMode.QUADS) {
+            // Sort the quads if there is translucency
             builtBuffer.sortQuads(allocator, RenderSystem.getProjectionType().getVertexSorter());
+            // Upload the index buffer
             indices = pipeline.getVertexFormat().uploadImmediateIndexBuffer(builtBuffer.getSortedBuffer());
             indexType = builtBuffer.getDrawParameters().indexType();
         } else {
+            // Use the general shape index buffer for non-quad draw modes
             RenderSystem.ShapeIndexBuffer shapeIndexBuffer = RenderSystem.getSequentialBuffer(pipeline.getVertexFormatMode());
             indices = shapeIndexBuffer.getIndexBuffer(drawParameters.indexCount());
             indexType = shapeIndexBuffer.getIndexType();
         }
 
+        // Actually execute the draw
         GpuBufferSlice dynamicTransforms = RenderSystem.getDynamicUniforms()
                 .write(RenderSystem.getModelViewMatrix(), COLOR_MODULATOR, MODEL_OFFSET, TEXTURE_MATRIX);
         try (RenderPass renderPass = RenderSystem.getDevice()
@@ -286,15 +248,23 @@ public class WorldRenderUtils {
             RenderSystem.bindDefaultUniforms(renderPass);
             renderPass.setUniform("DynamicTransforms", dynamicTransforms);
 
+            // Bind texture if applicable:
+            // Sampler0 is used for texture inputs in vertices
+            // renderPass.bindTexture("Sampler0", textureSetup.texure0(), textureSetup.sampler0());
+
             renderPass.setVertexBuffer(0, vertices);
             renderPass.setIndexBuffer(indices, indexType);
 
+            // The base vertex is the starting index when we copied the data into the vertex buffer divided by vertex size
+            //noinspection ConstantValue
             renderPass.drawIndexed(0 / format.getVertexSize(), 0, drawParameters.indexCount(), 1);
         }
 
         builtBuffer.close();
     }
+    // :::custom-pipelines:drawing-phase
 
+    // :::custom-pipelines:clean-up
     public void close() {
         allocator.close();
 
@@ -303,4 +273,5 @@ public class WorldRenderUtils {
             vertexBuffer = null;
         }
     }
+    // :::custom-pipelines:clean-up
 }
