@@ -11,7 +11,6 @@ import com.wynntils.models.wynnitem.parsing.WynnItemParser;
 import com.wynntils.utils.wynn.ColorScaleUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.Core;
 import julianh06.wynnextras.event.KeyInputEvent;
 import net.minecraft.client.MinecraftClient;
@@ -335,12 +334,12 @@ public class WeightDisplay {
                     for(WeightData data : scaleData.data()) {
                         float score = data.score();
                         String scale = data.weightName();
-                        Formatting color = (index == idx.get() && scaleData.data().size() > 1 && SimpleConfig.getInstance(WynnExtrasConfig.class).showScales) ? Formatting.WHITE : Formatting.GRAY;
+                        Formatting color = (index == idx.get() && scaleData.data().size() > 1 && WynnExtrasConfig.INSTANCE.showScales) ? Formatting.WHITE : Formatting.GRAY;
 
                         ItemStatInfoFeature itemStatInfoFeature = Managers.Feature.getFeatureInstance(ItemStatInfoFeature.class);
                         Text statWeight = Text.literal("↳ " + scale + " Scale")
                                 .formatted(color)
-                                .styled(style -> index == idx.get() && scaleData.data().size() > 1 && SimpleConfig.getInstance(WynnExtrasConfig.class).showScales
+                                .styled(style -> index == idx.get() && scaleData.data().size() > 1 && WynnExtrasConfig.INSTANCE.showScales
                                         ? style.withBold(true)
                                         : style
                                 )
@@ -353,7 +352,7 @@ public class WeightDisplay {
                         modified.add(Text.literal("  ").append(statWeight));
                         idx.incrementAndGet();
                     }
-                    if(scaleData.data().size() > 1 && SimpleConfig.getInstance(WynnExtrasConfig.class).showScales) {
+                    if(scaleData.data().size() > 1 && WynnExtrasConfig.INSTANCE.showScales) {
                         modified.add(Text.literal("  ↳ Use ↑ / ↓ to cycle").formatted(Formatting.DARK_GRAY));
                     }
                 }
@@ -364,7 +363,7 @@ public class WeightDisplay {
             Text line = tooltips.get(i);
             modified.add(line);
 
-            if (!SimpleConfig.getInstance(WynnExtrasConfig.class).showScales) continue;
+            if (!WynnExtrasConfig.INSTANCE.showScales) continue;
 
             // Try to find matching stat
             StyledText normed = StyledText.fromComponent(line).getNormalized();

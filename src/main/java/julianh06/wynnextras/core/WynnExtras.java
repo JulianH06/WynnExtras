@@ -3,7 +3,6 @@ package julianh06.wynnextras.core;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.loader.CommandLoader;
 import julianh06.wynnextras.event.CharInputEvent;
@@ -93,7 +92,7 @@ public class WynnExtras implements ClientModInitializer {
 			"config",
 			"",
 			context -> {
-				Screen configScreen = SimpleConfig.getConfigScreen(WynnExtrasConfig.class, null).get();
+				Screen configScreen = WynnExtrasConfig.createConfigScreen(null);
 				MinecraftUtils.mc().send(() -> {
 					MinecraftUtils.mc().setScreen(configScreen);
 				});
@@ -173,12 +172,11 @@ public class WynnExtras implements ClientModInitializer {
 		RaidListData.load();
 		WaypointData.load();
 		RaidChatNotifier.INSTANCE.load();
-        WaypointData.applyDisableDefaultWaypoints(SimpleConfig.getInstance(WynnExtrasConfig.class).disableAllDefaultWaypoints);
+        WaypointData.applyDisableDefaultWaypoints(WynnExtrasConfig.INSTANCE.disableAllDefaultWaypoints);
 
-        // Listener registrieren, dass Änderungen in der Config angewendet werden
-        WynnExtrasConfig.registerSave((holder, config) -> {
+        // Register listener for config changes
+        WynnExtrasConfig.registerSaveListener(config -> {
             WaypointData.applyDisableDefaultWaypoints(config.disableAllDefaultWaypoints);
-            return null; // <- hier statt ActionResult.PASS
         });
 
 
@@ -239,11 +237,10 @@ public class WynnExtras implements ClientModInitializer {
 	}
 
 	public static int normalGUIScale = -1;
-	private static WynnExtrasConfig config;
 
 	@SubscribeEvent
 	public void onClientTick(TickEvent event) {
-		if (config == null) config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+		WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
 		if(config.differentGUIScale) {
 			if (MinecraftClient.getInstance().currentScreen == null) {
 				if (normalGUIScale != -1) {

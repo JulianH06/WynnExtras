@@ -4,7 +4,6 @@ import com.wynntils.screens.partymanagement.widgets.PartyMemberWidget;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.OpenInBrowserButton;
 import julianh06.wynnextras.features.profileviewer.PV;

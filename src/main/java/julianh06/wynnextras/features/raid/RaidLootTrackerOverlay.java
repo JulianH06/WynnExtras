@@ -7,7 +7,6 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -85,7 +84,7 @@ public class RaidLootTrackerOverlay {
 
     private static void loadConfig() {
         if (configLoaded) return;
-        WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         xPos = config.raidLootTrackerX;
         yPos = config.raidLootTrackerY;
         hiddenLines = new HashSet<>(config.raidLootTrackerHiddenLines);
@@ -93,11 +92,11 @@ public class RaidLootTrackerOverlay {
     }
 
     private static void saveConfig() {
-        WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         config.raidLootTrackerX = xPos;
         config.raidLootTrackerY = yPos;
         config.raidLootTrackerHiddenLines = new ArrayList<>(hiddenLines);
-        SimpleConfig.getConfigHolder(WynnExtrasConfig.class).save();
+        WynnExtrasConfig.save();
     }
 
     private static boolean isNearLootChest() {
@@ -122,7 +121,7 @@ public class RaidLootTrackerOverlay {
         // Don't render via HUD callback when screen is open
         if (mc.currentScreen != null) return;
 
-        WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         if (!config.toggleRaidLootTracker) return;
         if (config.raidLootTrackerOnlyInInventory) return;
         if (config.raidLootTrackerOnlyNearChest && !isNearLootChest()) return;
@@ -139,7 +138,7 @@ public class RaidLootTrackerOverlay {
         // Only show in player's own inventory, not escape menu, mod settings, etc.
         if (!(mc.currentScreen instanceof InventoryScreen)) return;
 
-        WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         if (!config.toggleRaidLootTracker) return;
         if (config.raidLootTrackerOnlyNearChest && !isNearLootChest()) return;
 
@@ -332,7 +331,7 @@ public class RaidLootTrackerOverlay {
     }
 
     public static boolean handleClick(double mouseX, double mouseY, int button, int action, boolean ctrlHeld, boolean shiftHeld) {
-        WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         if (!config.toggleRaidLootTracker) return false;
 
         loadConfig();
@@ -376,7 +375,7 @@ public class RaidLootTrackerOverlay {
             // Shift+click to toggle session/all-time
             if (shiftHeld && button == 0) {
                 config.raidLootTrackerShowSession = !config.raidLootTrackerShowSession;
-                SimpleConfig.getConfigHolder(WynnExtrasConfig.class).save();
+                WynnExtrasConfig.save();
                 return true;
             }
 

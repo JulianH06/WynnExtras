@@ -4,7 +4,6 @@ import com.wynntils.models.abilities.type.ShamanTotem;
 import com.wynntils.utils.colors.CustomColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.utils.WEVec;
 import julianh06.wynnextras.utils.render.WorldRenderUtils;
@@ -29,21 +28,21 @@ public class ShamanTotemCircle {
     @SubscribeEvent
     public void onRenderWorld(RenderWorldEvent event) {
         if(config == null) {
-            config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+            config = WynnExtrasConfig.INSTANCE;
         }
 
         if(!config.totemRangeVisualizerToggle) return;
         for (int i = 0; i < 4; i++) {
             if(totemPositions.containsKey(i)) {
                 Color totemColor;
-                CustomColor configTotemColor = CustomColor.fromChatFormatting(Objects.requireNonNull(Formatting.byName(config.totemColor)));
+                CustomColor configTotemColor = CustomColor.fromChatFormatting(Objects.requireNonNull(config.totemColor.getFormatting()));
                 int red = configTotemColor.r();
                 int green = configTotemColor.g();
                 int blue = configTotemColor.b();
                 totemColor = new Color(red, green, blue);
 
                 Color eldritchCallColor;
-                CustomColor configeldritchCallColor = CustomColor.fromChatFormatting(Objects.requireNonNull(Formatting.byName(config.eldritchCallColor)));
+                CustomColor configeldritchCallColor = CustomColor.fromChatFormatting(Objects.requireNonNull(config.eldritchCallColor.getFormatting()));
                 int red2 = configeldritchCallColor.r();
                 int green2 = configeldritchCallColor.g();
                 int blue2 = configeldritchCallColor.b();
