@@ -6,7 +6,6 @@ import com.wynntils.models.containers.containers.ItemIdentifierContainer;
 import com.wynntils.models.items.items.game.*;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.InventoryKeyPressEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
@@ -55,7 +54,7 @@ public abstract class HandledScreenMixin {
         };
         bankOverlay.render(context, mouseX, mouseY, delta);
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).sourceOfTruthToggle) {
+        if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
             if (identifierOverlay == null) {
                 identifierOverlay = new IdentifierOverlay();
             }
@@ -68,7 +67,7 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).sourceOfTruthToggle) {
+        if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
             if (identifierOverlay != null && Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
                 identifierOverlay.mouseClicked(mouseX, mouseY, button);
             }
@@ -77,7 +76,7 @@ public abstract class HandledScreenMixin {
         if(bankOverlay != null) {
             bankOverlay.mouseClicked(mouseX, mouseY, button);
 
-            if (SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+            if (WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
                 if (currentOverlayType != BankOverlayType.NONE) {
                     cir.cancel();
                 }
@@ -93,7 +92,7 @@ public abstract class HandledScreenMixin {
         if(bankOverlay != null) {
             bankOverlay.mouseReleased(mouseX, mouseY, button);
 
-            if (SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+            if (WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
                 if (currentOverlayType != BankOverlayType.NONE) {
                     cir.cancel();
                 }
@@ -103,7 +102,7 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "isClickOutsideBounds", at = @At("HEAD"), cancellable = true)
     private void onIsClickOutsideBounds(double mouseX, double mouseY, int left, int top, int button, CallbackInfoReturnable<Boolean> cir) {
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+        if(WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
             if (currentOverlayType != BankOverlayType.NONE) {
                 cir.setReturnValue(false);
                 cir.cancel();
@@ -118,7 +117,7 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "close", at = @At("HEAD"))
     public void onClose(CallbackInfo ci) {
-        if(!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return;
+        if(!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return;
         bankOverlay = null;
 
         MinecraftClient client = MinecraftClient.getInstance();
@@ -157,7 +156,7 @@ public abstract class HandledScreenMixin {
     @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
     private void keyPressedPre(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
         if(bankOverlay != null) {
-            if (SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+            if (WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
                 InventoryKeyPressEvent event = new InventoryKeyPressEvent(keyCode, scanCode, modifiers, bankOverlay.touchHoveredSlot);
                 event.post();
 

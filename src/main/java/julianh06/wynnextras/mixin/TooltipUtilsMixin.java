@@ -5,7 +5,6 @@ import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.GearItem;
 import com.wynntils.utils.mc.TooltipUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.inventory.WeightDisplay;
 import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.component.DataComponentTypes;
@@ -25,7 +24,7 @@ public class TooltipUtilsMixin {
     private static void injectWeights(ItemStack itemStack, WynnItem wynnItem, CallbackInfoReturnable<List<Text>> cir) {
         List<Text> tooltips = cir.getReturnValue();
 
-        if (!SimpleConfig.getInstance(WynnExtrasConfig.class).showWeight) {
+        if (!WynnExtrasConfig.INSTANCE.showWeight) {
             return;
         }
 

@@ -5,7 +5,6 @@ import com.wynntils.models.raid.raids.RaidKind;
 import com.wynntils.models.raid.type.RaidInfo;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
@@ -37,7 +36,7 @@ public class PlayerHider {
 
     public static void registerBossPlayerHider() {
         if(config == null) {
-            config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+            config = WynnExtrasConfig.INSTANCE;
         }
 
         ClientTickEvents.START_CLIENT_TICK.register((tick) -> {
@@ -53,7 +52,7 @@ public class PlayerHider {
                             } else {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Playerhider")));
                             }
-                            SimpleConfig.save(WynnExtrasConfig.class);
+                            WynnExtrasConfig.save();
                             return 1;
                         },
                         null,
@@ -71,7 +70,7 @@ public class PlayerHider {
                             }
                             config.hiddenPlayers.add(arg);
                             McUtils.sendMessageToClient(Text.of("Added " + arg + " to the player hider list."));
-                            SimpleConfig.save(WynnExtrasConfig.class);
+                            WynnExtrasConfig.save();
                             return 1;
                         },
                         null,
@@ -90,7 +89,7 @@ public class PlayerHider {
                             boolean removed = config.hiddenPlayers.remove(arg);
                             if(removed) {
                                 McUtils.sendMessageToClient(Text.of("Removed " + arg + " from the player hider list."));
-                                SimpleConfig.save(WynnExtrasConfig.class);
+                                WynnExtrasConfig.save();
                             } else {
                                 McUtils.sendMessageToClient(Text.of("Player is not in the player hider list!"));
                             }
@@ -114,7 +113,7 @@ public class PlayerHider {
 
                 commandsInitialized = true;
             }
-            int Distance = SimpleConfig.getInstance(WynnExtrasConfig.class).maxHideDistance;
+            int Distance = WynnExtrasConfig.INSTANCE.maxHideDistance;
 
             MinecraftClient client = MinecraftClient.getInstance();
             if(client.player == null || client.world == null) { return; }

@@ -2,7 +2,6 @@ package julianh06.wynnextras.features.raid;
 
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -54,7 +53,7 @@ public class RaidLootTracker {
 
     private static void parseChest() {
         // Check config toggle
-        WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         if (!config.toggleRaidLootTracker) return;
 
         ScreenHandler handler = McUtils.containerMenu();
