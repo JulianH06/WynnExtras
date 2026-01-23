@@ -7,7 +7,10 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.utils.WEVec;
+import julianh06.wynnextras.utils.render.WERenderLayers;
 import julianh06.wynnextras.utils.render.WorldRenderUtils;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.util.Formatting;
 import net.neoforged.bus.api.SubscribeEvent;
 
@@ -32,6 +35,10 @@ public class ShamanTotemCircle {
             config = SimpleConfig.getInstance(WynnExtrasConfig.class);
         }
 
+        if (WorldRenderUtils.INSTANCE_SHAMANTOTEM.buffer == null) {
+            WorldRenderUtils.INSTANCE_SHAMANTOTEM.buffer = new BufferBuilder(WorldRenderUtils.allocator, WERenderLayers.linePipeline.getVertexFormatMode(), WERenderLayers.linePipeline.getVertexFormat());
+        }
+
         if(!config.totemRangeVisualizerToggle) return;
         for (int i = 0; i < 4; i++) {
             if(totemPositions.containsKey(i)) {
@@ -53,5 +60,7 @@ public class ShamanTotemCircle {
                 WorldRenderUtils.draw3DCircle(event, totemPositions.get(i).add(0, -1.5, 0), config.eldritchCallRange, eldritchCallColor, 4, true);
             }
         }
+
+        WorldRenderUtils.INSTANCE_SHAMANTOTEM.drawLines(MinecraftClient.getInstance(), WERenderLayers.linePipeline);
     }
 }

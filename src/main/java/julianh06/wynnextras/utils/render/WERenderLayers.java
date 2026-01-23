@@ -19,7 +19,7 @@ public class WERenderLayers {
             .add("pos", VertexFormatElement.POSITION)
             .add("color", VertexFormatElement.COLOR).build();
 
-    public static RenderPipeline pipeline = RenderPipeline.builder()
+    public static RenderPipeline linePipeline = RenderPipeline.builder()
             .withLocation("wynnextras_lines")
             .withVertexShader("shaders/vertex/lines.vsh")
             .withFragmentShader("shaders/fragment/lines.fsh")
@@ -30,7 +30,7 @@ public class WERenderLayers {
     private static RenderLayer createLineRenderLayer(int lineWidth, boolean throughWalls) {
         return RenderLayer.of(
                 "wynnextras_lines_" + lineWidth + (throughWalls ? "_xray" : ""),
-                RenderSetup.builder(pipeline)
+                RenderSetup.builder(linePipeline)
                         .translucent()
                         .expectedBufferSize(256)
                         .layeringTransform(throughWalls ? LayeringTransform.NO_LAYERING : LayeringTransform.VIEW_OFFSET_Z_LAYERING)

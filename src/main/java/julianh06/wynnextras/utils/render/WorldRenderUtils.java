@@ -38,7 +38,8 @@ import java.util.OptionalInt;
 import java.util.Set;
 
 public class WorldRenderUtils {
-    public static WorldRenderUtils INSTANCE = new WorldRenderUtils();
+    public static WorldRenderUtils INSTANCE_WAYPOINTS = new WorldRenderUtils();
+    public static WorldRenderUtils INSTANCE_SHAMANTOTEM = new WorldRenderUtils();
 
     public static final RenderPipeline FILLED_BOX = RenderPipelines.register(RenderPipeline.builder(RenderPipelines.POSITION_COLOR_SNIPPET)
             .withLocation(Identifier.of(WynnExtras.MOD_ID, "pipeline/debug_filled_box"))
@@ -104,7 +105,7 @@ public class WorldRenderUtils {
     }
 
     // Draws
-    public static void drawFilledBoundingBox(RenderWorldEvent event, Box box, Color color, float alphaMultiplier) {
+    public void drawFilledBoundingBox(RenderWorldEvent event, Box box, Color color, float alphaMultiplier) {
         MatrixStack matrices = event.matrices;
         Vec3d camera = event.camera.getCameraPos();
 
@@ -113,7 +114,7 @@ public class WorldRenderUtils {
 
         renderFilledBox(
                 event.matrices.peek().getPositionMatrix(),
-                INSTANCE.buffer,
+                this.buffer,
                 (float) box.minX, (float) box.minY, (float) box.minZ,
                 (float) box.maxX, (float) box.maxY, (float) box.maxZ,
                 color.getRed() / 255f * 0.9f,
@@ -221,7 +222,7 @@ public class WorldRenderUtils {
                 -1,
                 false,
                 matrix,
-                event.nonImmediateVertexConsumerProvider,
+                event.vertexConsumerProvider,
                 depth ? TextRenderer.TextLayerType.NORMAL : TextRenderer.TextLayerType.SEE_THROUGH,
                 0,
                 15728880
@@ -240,6 +241,10 @@ public class WorldRenderUtils {
 
         vertexBuffer.rotate();
         buffer = null;
+    }
+
+    public void drawLines(MinecraftClient client, @SuppressWarnings("SameParameterValue") RenderPipeline pipeline) {
+        drawFilledBoxes(client, pipeline);
     }
 
     private GpuBuffer upload(BuiltBuffer.DrawParameters drawParameters, VertexFormat format, BuiltBuffer builtBuffer) {

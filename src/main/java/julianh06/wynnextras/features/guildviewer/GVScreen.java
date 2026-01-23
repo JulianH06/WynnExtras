@@ -639,9 +639,9 @@ public class GVScreen extends WEScreen {
     @Override
     protected void scrollList(float delta) {
         if (delta > 0) {
-            targetOffset -= 40f;
+            targetOffset -= 120f;
         } else {
-            targetOffset += 40f;
+            targetOffset += 120f;
         }
 
         if(targetOffset < 0) targetOffset = 0;

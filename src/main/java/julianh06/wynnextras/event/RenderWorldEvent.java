@@ -11,13 +11,11 @@ public final class RenderWorldEvent extends WEEvent {
     public VertexConsumerProvider.Immediate vertexConsumerProvider;
     public float partialTicks;
     public boolean isCurrentlyDeferring = true;
-    public VertexConsumerProvider nonImmediateVertexConsumerProvider;
 
-    public RenderWorldEvent(MatrixStack matrices, Camera camera, VertexConsumerProvider.Immediate vertexConsumerProvider, float partialTicks, VertexConsumerProvider nonImmediateVertexConsumerProvider) {
+    public RenderWorldEvent(MatrixStack matrices, Camera camera, VertexConsumerProvider.Immediate vertexConsumerProvider, float partialTicks) {
         this.matrices = matrices;
         this.camera = camera;
         this.vertexConsumerProvider = vertexConsumerProvider;
         this.partialTicks = partialTicks;
-        this.nonImmediateVertexConsumerProvider = nonImmediateVertexConsumerProvider;
     }
 }
