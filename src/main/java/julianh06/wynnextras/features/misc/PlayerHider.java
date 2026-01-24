@@ -46,8 +46,8 @@ public class PlayerHider {
                         "toggle",
                         "",
                         context -> {
-                            config.partyMemberHide = !config.partyMemberHide;
-                            if(config.partyMemberHide) {
+                            config.playerHiderToggle = !config.playerHiderToggle;
+                            if(config.playerHiderToggle) {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Playerhider")));
                             } else {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Playerhider")));
@@ -128,7 +128,7 @@ public class PlayerHider {
                     continue;
                 }
 
-                if(!config.partyMemberHide) {
+                if(!config.playerHiderToggle) {
                     if(isHidden(player)) { show(player); }
                     return;
                 }

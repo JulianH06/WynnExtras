@@ -119,8 +119,8 @@ public class WynncraftApiHandler {
         HttpRequest request;
 
         if (INSTANCE.API_KEY == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
-                    " Run \"/WynnExtras apikey\" to learn more.")));
+//            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
+//                    " Run \"/WynnExtras apikey\" to learn more.")));
 
 
             request = HttpRequest.newBuilder()
@@ -204,8 +204,8 @@ public class WynncraftApiHandler {
             HttpRequest request;
 
             if (INSTANCE.API_KEY == null) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
-                        " Run \"/WynnExtras apikey\" to learn more.")));
+//                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
+//                        " Run \"/WynnExtras apikey\" to learn more.")));
 
 
                 request = HttpRequest.newBuilder()
@@ -440,8 +440,8 @@ public class WynncraftApiHandler {
         HttpRequest request;
 
         if (INSTANCE.API_KEY == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
-                    " Run \"/WynnExtras apikey\" to learn more.")));
+//            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
+//                    " Run \"/WynnExtras apikey\" to learn more.")));
 
 
             request = HttpRequest.newBuilder()

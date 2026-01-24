@@ -44,7 +44,7 @@ public class ShamanTotemModelMixin {
 
     @Inject(method = "findAndLinkTotem", at = @At("HEAD"), remap = false, cancellable = true)
     void findAndLinkTotem(int timerId, int parsedTime, DisplayEntity.TextDisplayEntity textDisplay, CallbackInfo ci) {
-        //if(!SimpleConfig.getConfigHolder(WynnExtrasConfig.class).get().totemRangeVisualizerToggle) return;
+        if(!WynnExtrasConfig.INSTANCE.totemRangeVisualizerToggle) return;
 
         assert McUtils.mc().world != null;
         List<ArmorStandEntity> possibleTotems = McUtils.mc().world.getNonSpectatingEntities(ArmorStandEntity.class, new Box(

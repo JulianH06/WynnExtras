@@ -28,7 +28,7 @@ public class WynnExtrasConfig {
     private static final List<Consumer<WynnExtrasConfig>> saveListeners = new ArrayList<>();
 
     // ==================== PLAYER HIDER ====================
-    public boolean partyMemberHide = true;
+    public boolean playerHiderToggle = true;
     public int maxHideDistance = 3;
     public List<String> hiddenPlayers = new ArrayList<>();
 
@@ -55,6 +55,8 @@ public class WynnExtrasConfig {
     public boolean notgLowerPlatform = true;
 
     public void syncPremades() {
+        if(premades == null) premades = new HashMap<>();
+
         premades.put("You feel like thousands of eyes|LOST EYE", lostEye);
         premades.put("+1 Slimey Goo|+1 Goo", oneGoo);
         premades.put("+2 Slimey Goo|+2 Goos", twoGoo);
@@ -84,7 +86,7 @@ public class WynnExtrasConfig {
     public boolean toggleRaidTimestamps = true;
     public boolean toggleRaidLootTracker = true;
     public boolean raidLootTrackerOnlyInInventory = false;
-    public boolean raidLootTrackerOnlyNearChest = false;
+    public boolean raidLootTrackerOnlyNearChest = true;
     public boolean raidLootTrackerCompact = false;
     public boolean raidLootTrackerShowSession = false;
     public int raidLootTrackerX = 5;

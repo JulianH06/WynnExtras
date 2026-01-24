@@ -45,6 +45,7 @@ import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
+import julianh06.wynnextras.mixin.ItemFavoriteFeatureAccessor;
 import julianh06.wynnextras.mixin.ItemGuessFeatureAccessor;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.UI.*;
@@ -755,24 +756,23 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static void renderHighlightOverlay(DrawContext context, ItemStack stack, int x, int y) {
-        // TODO: ItemHighlightFeature API changed in Wynntils - highlight disabled for now
-        // if(stack.getItem() == Items.AIR) return;
-        // if (itemHighlightFeature == null) itemHighlightFeature = Managers.Feature.getFeatureInstance(ItemHighlightFeature.class);
-        // CustomColor color = ((ItemHighlightFeatureInvoker) itemHighlightFeature).invokeGetHighlightColor(stack, false);
-        // if (!Objects.equals(color, CustomColor.NONE)) {
-        //     try {
-        //         RenderUtils.drawTexturedRectWithColor(
-        //                 context.getMatrices(),
-        //                 Texture.HIGHLIGHT.resource(),
-        //                 color.withAlpha(cachedRarityAlpha),
-        //                 x - 1, y - 1, 100, 18, 18,
-        //                 ((ItemHighlightFeature.HighlightTexture) itemHighlightFeature.getConfigOptionFromString("highlightTexture").get().get()).ordinal() * 18 + 18, 0,
-        //                 18, 18,
-        //                 Texture.HIGHLIGHT.width(),
-        //                 Texture.HIGHLIGHT.height()
-        //         );
-        //     } catch (Exception ignored) {}
-        // }
+         if(stack.getItem() == Items.AIR) return;
+         if (itemHighlightFeature == null) itemHighlightFeature = Managers.Feature.getFeatureInstance(ItemHighlightFeature.class);
+         CustomColor color = ((ItemHighlightFeatureInvoker) itemHighlightFeature).invokeGetHighlightColor(stack, false);
+         if (!Objects.equals(color, CustomColor.NONE)) {
+             try {
+                 RenderUtils.drawTexturedRectWithColor(
+                         context.getMatrices(),
+                         Texture.HIGHLIGHT.resource(),
+                         color.withAlpha(cachedRarityAlpha),
+                         x - 1, y - 1, 100, 18, 18,
+                         ((ItemHighlightFeature.HighlightTexture) itemHighlightFeature.getConfigOptionFromString("highlightTexture").get().get()).ordinal() * 18 + 18, 0,
+                         18, 18,
+                         Texture.HIGHLIGHT.width(),
+                         Texture.HIGHLIGHT.height()
+                 );
+             } catch (Exception ignored) {}
+         }
     }
 
     private static void renderItemOverlays(DrawContext context, ItemStack stack, int x, int y) {
@@ -789,29 +789,26 @@ public class BankOverlay2 extends WEHandledScreen {
                     annotation instanceof PotionItem ||
                     annotation instanceof CrafterBagItem) {
 
-                // TODO: Wynntils API changed - text overlay disabled for now
-                // context.getMatrices().push();
-                // context.getMatrices().translate(0, 0, 100);
-                // ((ItemTextOverlayFeatureMixin) Managers.Feature.getFeatureInstance(ItemTextOverlayFeature.class)).invokeDrawTextOverlay(context.getMatrices(), stack, x, y, false);
-                // context.getMatrices().pop();
+                 context.getMatrices().push();
+                 context.getMatrices().translate(0, 0, 100);
+                 ((ItemTextOverlayFeatureMixin) Managers.Feature.getFeatureInstance(ItemTextOverlayFeature.class)).invokeDrawTextOverlay(context.getMatrices(), stack, x, y, false);
+                 context.getMatrices().pop();
             }
 
-            // TODO: Wynntils API changed - unidentified icon disabled for now
-            // ((UnidentifiedItemIconFeatureInvoker) Managers.Feature.getFeatureInstance(UnidentifiedItemIconFeature.class)).invokeDrawIcon(context.getMatrices(), stack, x, y, 100);
-            // TODO: ItemFavoriteFeature API changed in Wynntils - favorite icon disabled for now
-            // if(((ItemFavoriteFeatureAccessor) Managers.Feature.getFeatureInstance(ItemFavoriteFeature.class)).callIsFavorited(stack)) {
-            //     BufferedRenderUtils.drawScalingTexturedRect(
-            //             context.getMatrices(),
-            //             ((DrawContextAccessor) context).getVertexConsumers(),
-            //             Texture.FAVORITE_ICON.resource(),
-            //             x + 10,
-            //             y,
-            //             200,
-            //             9,
-            //             9,
-            //             Texture.FAVORITE_ICON.width(),
-            //             Texture.FAVORITE_ICON.height());
-            // }
+            ((UnidentifiedItemIconFeatureInvoker) Managers.Feature.getFeatureInstance(UnidentifiedItemIconFeature.class)).invokeDrawIcon(context.getMatrices(), stack, x, y, 100);
+            if(((ItemFavoriteFeatureAccessor) Managers.Feature.getFeatureInstance(ItemFavoriteFeature.class)).callIsFavorited(stack)) {
+                 BufferedRenderUtils.drawScalingTexturedRect(
+                         context.getMatrices(),
+                         ((DrawContextAccessor) context).getVertexConsumers(),
+                         Texture.FAVORITE_ICON.resource(),
+                         x + 10,
+                         y,
+                         200,
+                         9,
+                         9,
+                         Texture.FAVORITE_ICON.width(),
+                         Texture.FAVORITE_ICON.height());
+            }
         }
     }
 
@@ -1110,11 +1107,9 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     void drawEmeraldOverlay(DrawContext context, int x, int y) {
-        // TODO: Wynntils API changed - emerald overlay disabled for now
-        if (true) return;
         InventoryEmeraldCountFeature emeraldCountFeature = Managers.Feature.getFeatureInstance(InventoryEmeraldCountFeature.class);
         int emeraldAmountInt = Models.Emerald.getAmountInContainer();
-        String[] emeraldAmounts = null; // ((InventoryEmeraldCountFeatureInvoker) emeraldCountFeature).invokeGetRenderableEmeraldAmounts(emeraldAmountInt);
+        String[] emeraldAmounts = ((InventoryEmeraldCountFeatureInvoker) emeraldCountFeature).invokeGetRenderableEmeraldAmounts(emeraldAmountInt);
 
         y += (3 * 28);
 
@@ -1558,7 +1553,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 MinecraftClient.getInstance().interactionManager.clickSlot(BankOverlay.bankSyncid, index + (isInventorySlot ? 54 : 0), button, action, MinecraftClient.getInstance().player);
                 if(annotationCache.get(inventoryIndex) != null) annotationCache.get(inventoryIndex).clear();
                 lastClickedSlot = new Pair<>(inventoryIndex, index);
-            } else {
+            } else if(heldItem.isEmpty()) {
                 List<ItemStack> stacks = BankOverlay.activeInvSlots.stream()
                         .map(Slot::getStack)
                         .collect(Collectors.toList());

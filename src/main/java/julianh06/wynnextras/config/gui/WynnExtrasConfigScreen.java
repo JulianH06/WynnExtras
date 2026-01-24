@@ -186,7 +186,7 @@ public class WynnExtrasConfigScreen extends Screen {
         // ===== PARTY =====
         category("Player Hider", 0xFF673190)
             .add(toggle("Enable Player Hider", "Enable the Player Hider",
-                    () -> config.partyMemberHide, v -> config.partyMemberHide = v))
+                    () -> config.playerHiderToggle, v -> config.playerHiderToggle = v))
             .add(slider("Hide Distance", "Max distance to hide",
                     1, 20, () -> config.maxHideDistance, v -> config.maxHideDistance = v))
             .add(stringList("Hidden Players", "Always hide these players",
@@ -548,6 +548,7 @@ public class WynnExtrasConfigScreen extends Screen {
             //======== Save & Close =========
             if (mx >= width - 115 && mx < width - 15) {
                 WynnExtrasConfig.save();
+                WynnExtrasConfig.load();
                 client.setScreen(parent);
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
