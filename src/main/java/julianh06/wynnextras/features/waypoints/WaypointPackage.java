@@ -33,6 +33,8 @@ public class WaypointPackage {
         try (Reader reader = Files.newBufferedReader(file)) {
             WaypointPackage pkg = WaypointData.gson.fromJson(reader, WaypointPackage.class);
 
+            if(pkg == null) return null;
+
             for (Waypoint waypoint : pkg.waypoints) {
                 if (waypoint.categoryName != null) {
                     for (WaypointCategory cat : pkg.categories) {
