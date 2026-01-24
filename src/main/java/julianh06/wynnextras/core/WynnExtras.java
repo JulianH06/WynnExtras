@@ -3,7 +3,6 @@ package julianh06.wynnextras.core;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.loader.CommandLoader;
 import julianh06.wynnextras.event.CharInputEvent;
@@ -29,6 +28,9 @@ import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidListData;
+import julianh06.wynnextras.features.raid.RaidLootConfig;
+import julianh06.wynnextras.features.raid.RaidLootTracker;
+import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.waypoints.WaypointData;
 import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
@@ -91,7 +93,7 @@ public class WynnExtras implements ClientModInitializer {
 			"config",
 			"",
 			context -> {
-				Screen configScreen = SimpleConfig.getConfigScreen(WynnExtrasConfig.class, null).get();
+				Screen configScreen = WynnExtrasConfig.createConfigScreen(null);
 				MinecraftUtils.mc().send(() -> {
 					MinecraftUtils.mc().setScreen(configScreen);
 				});
@@ -165,12 +167,22 @@ public class WynnExtras implements ClientModInitializer {
 		FastRequeue.registerFastRequeue();
 		TreeLoader.init();
 		maintracking.init();
+        RaidLootTracker.register();
+        RaidLootTrackerOverlay.register();
+        RaidLootConfig.INSTANCE.load();
 
 		RaidListData.load();
 		WaypointData.load();
 		RaidChatNotifier.INSTANCE.load();
+        WaypointData.applyDisableDefaultWaypoints(WynnExtrasConfig.INSTANCE.disableAllDefaultWaypoints);
 
-		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+        // Register listener for config changes
+        WynnExtrasConfig.registerSaveListener(config -> {
+            WaypointData.applyDisableDefaultWaypoints(config.disableAllDefaultWaypoints);
+        });
+
+
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			AccountBankData.INSTANCE.load();
 			CharacterBankData.INSTANCE.load();
 			BookshelfData.INSTANCE.load();
@@ -227,11 +239,10 @@ public class WynnExtras implements ClientModInitializer {
 	}
 
 	public static int normalGUIScale = -1;
-	private static WynnExtrasConfig config;
 
 	@SubscribeEvent
 	public void onClientTick(TickEvent event) {
-		if (config == null) config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+		WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
 		if(config.differentGUIScale) {
 			if (MinecraftClient.getInstance().currentScreen == null) {
 				if (normalGUIScale != -1) {

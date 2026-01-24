@@ -11,7 +11,6 @@ import com.wynntils.models.wynnitem.parsing.WynnItemParser;
 import com.wynntils.utils.mc.TooltipUtils;
 import com.wynntils.utils.wynn.ColorScaleUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.inventory.WeightDisplay;
 import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.item.ItemStack;

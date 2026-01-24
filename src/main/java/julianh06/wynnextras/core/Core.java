@@ -1,8 +1,6 @@
 package julianh06.wynnextras.core;
 
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
-import julianh06.wynnextras.core.command.Command;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 
@@ -29,7 +27,8 @@ public class Core {
         VERSION = INSTANCE.get().getMetadata().getVersion().getFriendlyString();
         IS_DEV = VERSION.contains("dev");
 
-        SimpleConfig.register(WynnExtrasConfig.class);
+        // Load config
+        WynnExtrasConfig.load();
 
         return true;
     }

@@ -4,7 +4,6 @@ import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.utils.ChatUtils;
@@ -25,10 +24,8 @@ public class ChatNotificator {
             "notifiertest",
             "",
             context -> {
-//                CustomColor textColor = CustomColor.fromHexString(config.TextColor);
-                ChatUtils.displayTitle("test", "", config.TextDurationInMs/50, Formatting.byName(config.TextColor));
-                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.Sound)), config.SoundVolume, config.SoundPitch);
-//                System.out.println(Formatting.byColorIndex(textColor.asInt()));
+                ChatUtils.displayTitle("test", "", config.textDurationInMs/50, config.textColor.getFormatting());
+                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume, config.soundPitch);
                 return 1;
             },
             null,
@@ -38,7 +35,7 @@ public class ChatNotificator {
     @SubscribeEvent
     void recieveMessageGame(ChatEvent event) {
         if(config == null) {
-            config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+            config = WynnExtrasConfig.INSTANCE;
         }
         notify(event.message);
     }
@@ -51,8 +48,8 @@ public class ChatNotificator {
             if(!notificator.contains("|")) return;
             String[] parts = notificator.split("\\|");
             if(message.getString().toLowerCase().contains(parts[0].toLowerCase())) {
-                ChatUtils.displayTitle(parts[1], "", config.TextDurationInMs/50, Formatting.byName(config.TextColor));
-                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.Sound)), config.SoundVolume, config.SoundPitch);
+                ChatUtils.displayTitle(parts[1], "", config.textDurationInMs/50, config.textColor.getFormatting());
+                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume, config.soundPitch);
             }
         }
 

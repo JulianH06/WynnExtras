@@ -10,7 +10,6 @@ import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import julianh06.wynnextras.features.profileviewer.tabs.*;
 import julianh06.wynnextras.utils.UI.UIUtils;
@@ -906,24 +905,20 @@ public class PVScreen extends WEScreen {
 
         public DarkModeToggleWidget() {
             super(0, 0, 120, 0);
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle) {
+            if(WynnExtrasConfig.INSTANCE.pvDarkmodeToggle) {
                 targetX = width - 37.5f;
             } else {
                 targetX = 7.5f;
             }
             this.action = () -> {
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle = !SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle;
-
-                if(SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle) {
+                WynnExtrasConfig.INSTANCE.pvDarkmodeToggle = !WynnExtrasConfig.INSTANCE.pvDarkmodeToggle;
+                if(WynnExtrasConfig.INSTANCE.pvDarkmodeToggle) {
                     targetX = width - 37.5f;
                 } else {
                     targetX = 7.5f;
                 }
-
-                targetFade = SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle ? 1f : 0f;
-
-                SimpleConfig.save(WynnExtrasConfig.class);
+                WynnExtrasConfig.save();
             };
         }
 
