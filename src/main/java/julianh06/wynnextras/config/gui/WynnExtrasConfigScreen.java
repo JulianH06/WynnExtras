@@ -91,6 +91,8 @@ public class WynnExtrasConfigScreen extends Screen {
                 () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
             .add(toggle("Fast Requeue", "Auto /pf on chest close",
                 () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
+            .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
+                    () -> config.chiropTimer, v -> config.chiropTimer = v))
             .sub("Loot Tracker")
                 .add(toggle("Enable Tracker", "Track raid loot drops",
                     () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
@@ -122,10 +124,12 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // ===== INVENTORY =====
         category("Inventory", 0xFFea1219)
+            .add(toggle("Crafting helper", "Crafting Helper toggle",
+                    () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
             .sub("Bank Overlay")
-                .add(toggle("Enable Overlay", "Enhanced bank interface",
+                .add(toggle("Enable Bank Overlay", "Custom Bank Overlay",
                         () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v))
-                .add(toggle("Smooth Scroll", "Smooth scroll animation",
+                .add(toggle("Smooth Scroll", "Smooth scrolling",
                         () -> config.smoothScrollToggle, v -> config.smoothScrollToggle = v))
                 .add(toggle("Quick Toggle", "Show quick toggle button",
                         () -> config.bankQuickToggle, v -> config.bankQuickToggle = v))
@@ -134,9 +138,9 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(slider("Rarity BG Alpha", "Item rarity background opacity",
                         0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
             .sub("Tooltips")
-                .add(toggle("Item Weights", "Show Wynnpool weights",
+                .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
                         () -> config.showWeight, v -> config.showWeight = v))
-                .add(toggle("Stat Scales", "Show stat weights",
+                .add(toggle("Stat Scales", "Show weights for each stat",
                         () -> config.showScales, v -> config.showScales = v));
 
         // ===== CHAT =====
@@ -144,7 +148,7 @@ public class WynnExtrasConfigScreen extends Screen {
             .add(stringList("Blocked Words", "Hide messages with these",
                     () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
             .sub("Notifications")
-                .add(stringList("Notifier Words", "Format: trigger|display",
+                .add(stringList("Notifier Words (Format: trigger|display)", "Format: trigger|display",
                         () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
                 .add(sliderF("Duration (ms)", "How long notification shows",
                         500, 10000, 100, () -> (float) config.textDurationInMs, v -> config.textDurationInMs = v.intValue()))
@@ -155,7 +159,29 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(slider("Volume", "Sound volume",
                         0, 100, () -> (int)(config.soundVolume * 100), v -> config.soundVolume = v / 100f))
                 .add(slider("Pitch", "Sound pitch",
-                        50, 200, () -> (int)(config.soundPitch * 100), v -> config.soundPitch = v / 100f));
+                        50, 200, () -> (int)(config.soundPitch * 100), v -> config.soundPitch = v / 100f))
+            .sub("Premade Notifications")
+                .add(toggle("Lost Eye", "Lost Eye in TNA light room",
+                    () -> config.lostEye, v -> config.lostEye = v))
+                .add(toggle("+1 Goo", "+1 Goo in NOTG Slime Gathering",
+                    () -> config.oneGoo, v -> config.oneGoo = v))
+                .add(toggle("+2 Goos", "+2 Goos in NOTG Slime Gathering",
+                    () -> config.twoGoo, v -> config.twoGoo = v))
+                .add(toggle("Next Soul", "When next soul is ready in TNA tree room",
+                    () -> config.soul, v -> config.soul = v))
+                .add(toggle("+1 Void Matter", "+1 VM in TNA void gathering room",
+                    () -> config.voidMatter, v -> config.voidMatter = v))
+                .add(toggle("Kill the voidholes", "When holes can be attacked in TNA gathering room",
+                    () -> config.fourOutOfFiveVoidMatter, v -> config.fourOutOfFiveVoidMatter = v))
+                .add(toggle("+1 Crystal", "+1 Crystal in NOL gathering room",
+                    () -> config.oneLightCrystal, v -> config.oneLightCrystal = v))
+                .add(toggle("+2 Crystals", "+2 Crystals in NOL gathering room",
+                    () -> config.twoLightCrystal, v -> config.twoLightCrystal = v))
+                .add(toggle("Upper platform spawned", "Upper platform spawn in NOTG minibosses",
+                    () -> config.notgUpperPlatform, v -> config.notgUpperPlatform = v))
+                .add(toggle("Lower platform spawned", "Lower platform spawn in NOTG minibosses",
+                    () -> config.notgLowerPlatform, v -> config.notgLowerPlatform = v)
+                );
 
         // ===== PARTY =====
         category("Player Hider", 0xFF673190)
@@ -167,7 +193,7 @@ public class WynnExtrasConfigScreen extends Screen {
                     () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"));
 
 
-        // ===== GENERAL =====
+        // ===== MISC =====
         category("Misc", 0xFF0872bc)
                 .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
                         () -> config.differentGUIScale, v -> config.differentGUIScale = v))
@@ -178,7 +204,9 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("PV Dark Mode", "Dark theme for profile viewer",
                         () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
                 .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
-                        () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v));
+                        () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
+                .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
+                        () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v));
     }
 
     // ==================== BUILDER HELPERS ====================

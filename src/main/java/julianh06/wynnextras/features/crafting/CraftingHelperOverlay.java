@@ -12,7 +12,6 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.Time;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.crafting.data.*;
 import julianh06.wynnextras.features.crafting.data.recipes.AlchemismRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.CookingRecipes;
@@ -436,7 +435,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
             float speed = 0.3f;
             float diff = (targetOffset - actualOffset);
-            if(Math.abs(diff) < snapValue || !SimpleConfig.getInstance(WynnExtrasConfig.class).smoothScrollToggle) actualOffset = targetOffset;
+            if(Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffset = targetOffset;
             else actualOffset += diff * speed * tickDelta;
 
             Map<RecipeState, Float> map = lastOffset.get(type) == null ? new HashMap<>() : lastOffset.get(type);

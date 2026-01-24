@@ -53,14 +53,9 @@ public class ChatNotificator {
             }
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class) == null) return;
+        WynnExtrasConfig.INSTANCE.syncPremades();
 
-        WynnExtrasConfig.NotificationConfig notificationConfig = SimpleConfig.getInstance(WynnExtrasConfig.class).notificationConfig;
-        if(notificationConfig == null) return;
-
-        notificationConfig.syncPremades();
-
-        for(Map.Entry<String, Boolean> entry : notificationConfig.premades.entrySet()) {
+        for(Map.Entry<String, Boolean> entry : WynnExtrasConfig.INSTANCE.premades.entrySet()) {
             String[] parts = entry.getKey().split("\\|");
             if(parts.length != 2) continue;
             String trigger = parts[0];
@@ -70,8 +65,8 @@ public class ChatNotificator {
             if(!enabled) continue;
 
             if(message.getString().toLowerCase().contains(trigger.toLowerCase())) {
-                ChatUtils.displayTitle(display, "", config.TextDurationInMs/50, Formatting.byName(config.TextColor));
-                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.Sound)), config.SoundVolume, config.SoundPitch);
+                ChatUtils.displayTitle(display, "", config.textDurationInMs/50, config.textColor.getFormatting());
+                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume, config.soundPitch);
             }
         }
     }

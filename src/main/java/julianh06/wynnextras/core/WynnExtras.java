@@ -174,13 +174,6 @@ public class WynnExtras implements ClientModInitializer {
 		RaidListData.load();
 		WaypointData.load();
 		RaidChatNotifier.INSTANCE.load();
-        WaypointData.applyDisableDefaultWaypoints(WynnExtrasConfig.INSTANCE.disableAllDefaultWaypoints);
-
-        // Register listener for config changes
-        WynnExtrasConfig.registerSaveListener(config -> {
-            WaypointData.applyDisableDefaultWaypoints(config.disableAllDefaultWaypoints);
-        });
-
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			AccountBankData.INSTANCE.load();

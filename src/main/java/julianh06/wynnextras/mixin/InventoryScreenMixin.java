@@ -47,7 +47,7 @@ public class InventoryScreenMixin {
             }
         }
 
-        if (Models.Container.getCurrentContainer() instanceof CraftingStationContainer && SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+        if (Models.Container.getCurrentContainer() instanceof CraftingStationContainer && WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
             ci.cancel();
         }
 

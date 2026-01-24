@@ -22,7 +22,6 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.BoundingBox;
 import com.wynntils.utils.type.CappedValue;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.duckInterfaces.TerritoryInfoMixinDuck;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Formatting;
@@ -75,7 +74,7 @@ public class GuildMapScreenMixin extends AbstractMapScreen {
 
     @Inject(method = "renderPois(Lnet/minecraft/client/util/math/MatrixStack;II)V", at = @At("HEAD"), cancellable = true)
     private void renderPois(MatrixStack poseStack, int mouseX, int mouseY, CallbackInfo ci) {
-        if(!SimpleConfig.getInstance(WynnExtrasConfig.class).territoryEstimateToggle) return;
+        if(!WynnExtrasConfig.INSTANCE.territoryEstimateToggle) return;
 
         List<TerritoryPoi> advancementPois = territoryDefenseFilterEnabled
                 ? Models.Territory.getFilteredTerritoryPoisFromAdvancement(
@@ -122,7 +121,7 @@ public class GuildMapScreenMixin extends AbstractMapScreen {
     @Inject(method = "renderTerritoryTooltip", at = @At("HEAD"), cancellable = true)
     private static void renderTerritoryTooltip(
             MatrixStack poseStack, int xOffset, int yOffset, TerritoryPoi territoryPoi, CallbackInfo ci) {
-        if(!SimpleConfig.getInstance(WynnExtrasConfig.class).territoryEstimateToggle) return;
+        if(!WynnExtrasConfig.INSTANCE.territoryEstimateToggle) return;
 
         final TerritoryInfo territoryInfo = territoryPoi.getTerritoryInfo();
         final TerritoryProfile territoryProfile = territoryPoi.getTerritoryProfile();

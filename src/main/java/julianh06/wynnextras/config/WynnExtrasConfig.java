@@ -40,15 +40,45 @@ public class WynnExtrasConfig {
     public float soundVolume = 0.1f;
     public float soundPitch = 1.0f;
 
+    // ==================== CHAT NOTIFIER PREMADES ====================
+
+    public Map<String, Boolean> premades;
+    public boolean lostEye = true;
+    public boolean oneGoo = true;
+    public boolean twoGoo = true;
+    public boolean soul = true;
+    public boolean voidMatter = true;
+    public boolean fourOutOfFiveVoidMatter = true;
+    public boolean oneLightCrystal = true;
+    public boolean twoLightCrystal = true;
+    public boolean notgUpperPlatform = true;
+    public boolean notgLowerPlatform = true;
+
+    public void syncPremades() {
+        premades.put("You feel like thousands of eyes|LOST EYE", lostEye);
+        premades.put("+1 Slimey Goo|+1 Goo", oneGoo);
+        premades.put("+2 Slimey Goo|+2 Goos", twoGoo);
+        premades.put("Another Soul must be given!|NEXT SOUL", soul);
+        premades.put("+1 Void Matter|+1 Void Matter", voidMatter);
+        premades.put("The Void Holes have begun to desetabilize!|KILL THE VOID HOLES", fourOutOfFiveVoidMatter);
+        premades.put("+1 Light Crystal|+1 Crystal", oneLightCrystal);
+        premades.put("+2 Light Crystal|+2 Crystals", twoLightCrystal);
+        premades.put("The players on the|UPPER PLATFORM SPAWNED", notgUpperPlatform);
+        premades.put("A new platform has|LOWER PLATFORM SPAWNED", notgLowerPlatform);
+    }
+
     // ==================== CHAT BLOCKER ====================
     public List<String> blockedWords = new ArrayList<>();
 
-    // ==================== BANK OVERLAY ====================
+    // ==================== INVENTORY ====================
     public boolean toggleBankOverlay = true;
     public int wynntilsItemRarityBackgroundAlpha = 150;
     public boolean smoothScrollToggle = true;
     public boolean bankQuickToggle = true;
     public boolean darkmodeToggle = false;
+    public boolean showWeight = true;
+    public boolean showScales = true;
+    public boolean craftingHelperOverlay = true;
 
     // ==================== RAID ====================
     public boolean toggleRaidTimestamps = true;
@@ -63,10 +93,9 @@ public class WynnExtrasConfig {
     public boolean toggleFastRequeue = true;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
+    public boolean chiropTimer = false;
 
     // ==================== MISC ====================
-    public boolean showWeight = true;
-    public boolean showScales = true;
     public boolean pvDarkmodeToggle = false;
     public boolean totemRangeVisualizerToggle = true;
     public float totemRange = 10f;
@@ -78,9 +107,7 @@ public class WynnExtrasConfig {
     public int customGUIScale = 3;
     public boolean removeFrontPersonView = false;
     public boolean sourceOfTruthToggle = false;
-
-    // ==================== WAYPOINTS ====================
-    public boolean disableAllDefaultWaypoints = false;
+    public boolean territoryEstimateToggle = false;
 
     // ==================== ENUMS ====================
     public enum TextColor {

@@ -460,7 +460,7 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
 
-            if ("3/3".equals(progress) && Time.now().timestamp() >= disableChiropUntil && SimpleConfig.getInstance(WynnExtrasConfig.class).chiropTimer) {
+            if ("3/3".equals(progress) && Time.now().timestamp() >= disableChiropUntil && WynnExtrasConfig.INSTANCE.chiropTimer) {
                 startSpawnCountdown();
             }
 
