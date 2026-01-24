@@ -24,7 +24,6 @@ public class ShamanTotemCircleUpdated {
                 Math.floor(position.getY()) + 0.5f,
                 position.getZ()
         );
-        //System.out.println("updated totem " + totemNumber +  " at: " + vec.toString() + " remaining time " + time);
         if(time <= 1) {
             ShamanTotemCircle.totemPositions.remove(totemNumber);
         } else {

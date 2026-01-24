@@ -6,7 +6,6 @@ import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.containers.containers.ItemIdentifierContainer;
 import com.wynntils.models.containers.containers.personal.*;
 import com.wynntils.utils.mc.McUtils;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.inventory.BankOverlay;
@@ -42,17 +41,17 @@ public class InventoryScreenMixin {
         ScreenHandler currScreenHandler = McUtils.containerMenu();
         if (currScreenHandler == null) return;
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).sourceOfTruthToggle) {
+        if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
             if (Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
                 ci.cancel();
             }
         }
 
-        if (Models.Container.getCurrentContainer() instanceof CraftingStationContainer && SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+        if (Models.Container.getCurrentContainer() instanceof CraftingStationContainer && WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
             ci.cancel();
         }
 
-        if (config == null) config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        if (config == null) config = WynnExtrasConfig.INSTANCE;
 
         if(config.differentGUIScale) {
             if(normalGUIScale == -1) {

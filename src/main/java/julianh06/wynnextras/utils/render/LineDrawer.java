@@ -25,8 +25,14 @@ public class LineDrawer {
             this.p1 = p1;
             this.p2 = p2;
             this.color = color;
-
-            this.normal = p2.subtract(p1).normalize();
+            // Calculate normal for line direction (used for line width)
+            WEVec dir = p2.subtract(p1);
+            double len = Math.sqrt(dir.x() * dir.x() + dir.y() * dir.y() + dir.z() * dir.z());
+            if (len > 0) {
+                this.normal = new WEVec(dir.x() / len, dir.y() / len, dir.z() / len);
+            } else {
+                this.normal = new WEVec(0, 1, 0);
+            }
         }
     }
 
@@ -49,12 +55,12 @@ public class LineDrawer {
 
         for (QueuedLine line: queuedLines) {
             buffer.vertex(matrix.getPositionMatrix(), (float) line.p1.x(), (float) line.p1.y(), (float) line.p1.z())
-                    .normal(matrix, (float) line.normal.x(), (float) line.normal.y(), (float) line.normal.z())
-                    .color(line.color.getRed(), line.color.getGreen(), line.color.getBlue(), line.color.getAlpha());
+                    .color(line.color.getRed(), line.color.getGreen(), line.color.getBlue(), line.color.getAlpha())
+                    .normal(matrix, (float) line.normal.x(), (float) line.normal.y(), (float) line.normal.z());
 
             buffer.vertex(matrix.getPositionMatrix(), (float) line.p2.x(), (float) line.p2.y(), (float) line.p2.z())
-                    .normal(matrix, (float) line.normal.x(), (float) line.normal.y(), (float) line.normal.z())
-                    .color(line.color.getRed(), line.color.getGreen(), line.color.getBlue(), line.color.getAlpha());
+                    .color(line.color.getRed(), line.color.getGreen(), line.color.getBlue(), line.color.getAlpha())
+                    .normal(matrix, (float) line.normal.x(), (float) line.normal.y(), (float) line.normal.z());
         }
 
         queuedLines.clear();

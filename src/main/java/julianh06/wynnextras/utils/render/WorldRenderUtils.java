@@ -181,16 +181,12 @@ public class WorldRenderUtils {
     }
 
     public static void draw3DCircle(RenderWorldEvent event, WEVec location, double radius, Color color, int lineWidth, boolean depth) {
-        LineDrawer.draw3D(event, lineWidth, depth, lineDrawer -> {
-            WEVec lastPoint = location.add(radius, 0, 0);
-
-            for (int i = 1; i <= 360; i++) {
-                double rad = Math.toRadians(i);
-                WEVec newPoint = location.add(Math.cos(rad) * radius, 0, Math.sin(rad) * radius);
-                lineDrawer.draw3DLine(lastPoint, newPoint, color);
-                lastPoint = newPoint;
-            }
-        });
+        // Queue the circle for rendering using the dedicated CircleRenderer
+        // This uses manual buffer management which works reliably in 1.21.11
+        if (CircleRenderer.instance == null) {
+            CircleRenderer.instance = new CircleRenderer();
+        }
+        CircleRenderer.instance.queueCircle(location, radius, color);
     }
 
     public static void drawText(

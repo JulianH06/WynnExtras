@@ -1,7 +1,6 @@
 package julianh06.wynnextras.mixin;
 
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.misc.FastRequeue;
 import net.minecraft.entity.player.PlayerEntity;
@@ -18,7 +17,7 @@ public class ScreenHandlerMixin {
     private void onMouseClick(int slotIndex, int button, SlotActionType actionType, PlayerEntity player, CallbackInfo ci) {
         if(slotIndex == 4) {
             //maintracking.setRaiddone(true);
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).toggleFastRequeue) FastRequeue.notifyClick();
+            if(WynnExtrasConfig.INSTANCE.toggleFastRequeue) FastRequeue.notifyClick();
         }
     }
 }

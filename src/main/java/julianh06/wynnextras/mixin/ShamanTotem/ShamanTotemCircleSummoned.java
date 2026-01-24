@@ -12,7 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ShamanTotemCircleSummoned {
     @Inject(method = "<init>", at = @At("TAIL"), remap = false)
     public void summoned(int totemNumber, ArmorStandEntity totemEntity, CallbackInfo ci) {
-        //System.out.println("activated totem " + totemNumber +  " at: " + position.toString());
         ShamanTotemCircle.totemPositions.remove(totemNumber);
     }
 }

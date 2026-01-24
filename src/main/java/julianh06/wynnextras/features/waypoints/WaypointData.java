@@ -5,7 +5,6 @@ import com.google.gson.GsonBuilder;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.models.raid.raids.RaidKind;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.misc.StyledTextAdapter;
 import julianh06.wynnextras.features.raid.RaidData;
 import julianh06.wynnextras.features.raid.RaidKindAdapter;

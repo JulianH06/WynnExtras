@@ -6,14 +6,12 @@ import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.event.api.RenderEvents;
 import julianh06.wynnextras.utils.ChatUtils;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.neoforged.bus.api.SubscribeEvent;
 
 public class ProvokeTimer {
@@ -29,7 +27,7 @@ public class ProvokeTimer {
     private static int lastSeconds = -1;
 
     public static void init() {
-        config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+        config = WynnExtrasConfig.INSTANCE;
         ClientTickEvents.END_CLIENT_TICK.register(ProvokeTimer::provokeTimer);
     }
 
@@ -61,7 +59,7 @@ public class ProvokeTimer {
 
                 if (calculatedSeconds > 0 && calculatedSeconds != lastSeconds) {
 
-                    ChatUtils.displayTitle("PROVOKE TIME REMAINING: " + calculatedSeconds, "" ,20, 0, 0, Formatting.byName(config.provokeTimerColor));
+                    ChatUtils.displayTitle("PROVOKE TIME REMAINING: " + calculatedSeconds, "" ,20, 0, 0, config.provokeTimerColor.getFormatting());
 //                    McUtils.sendMessageToClient(
 //                            Text.literal("Provoke active for: " + calculatedSeconds + " seconds")
 //                    );

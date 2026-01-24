@@ -22,7 +22,6 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.BoundingBox;
 import com.wynntils.utils.type.CappedValue;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.duckInterfaces.TerritoryInfoMixinDuck;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Formatting;

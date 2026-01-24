@@ -2,7 +2,6 @@ package julianh06.wynnextras.mixin;
 
 
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import net.minecraft.client.option.Perspective;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -13,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class PerspectiveMixin {
     @Inject(method = "next", at = @At("HEAD"), cancellable = true)
     private void next(CallbackInfoReturnable<Perspective> cir) {
-        if (!SimpleConfig.getInstance(WynnExtrasConfig.class).removeFrontPersonView) {
+        if (!WynnExtrasConfig.INSTANCE.removeFrontPersonView) {
             return;
         }
         Perspective self = (Perspective)(Object)this;

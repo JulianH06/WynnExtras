@@ -5,7 +5,6 @@ import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.containers.containers.ItemIdentifierContainer;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.InventoryKeyPressEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
@@ -57,7 +56,7 @@ public abstract class HandledScreenMixin {
         };
         bankOverlay.render(context, mouseX, mouseY, delta);
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).sourceOfTruthToggle) {
+        if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
             if (identifierOverlay == null) {
                 identifierOverlay = new IdentifierOverlay();
             }
@@ -65,7 +64,7 @@ public abstract class HandledScreenMixin {
             identifierOverlay.render(context, mouseX, mouseY, delta);
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+        if(WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
             if (craftingHelperOverlay == null) {
                 craftingHelperOverlay = new CraftingHelperOverlay();
             }
@@ -82,20 +81,20 @@ public abstract class HandledScreenMixin {
         double mouseY = click.y();
         int button = click.button();
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).sourceOfTruthToggle) {
+        if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
             if (identifierOverlay != null && Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
                 identifierOverlay.mouseClicked(mouseX, mouseY, button);
             }
         }
 
-        if (craftingHelperOverlay != null && Models.Container.getCurrentContainer() instanceof CraftingStationContainer && SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+        if (craftingHelperOverlay != null && Models.Container.getCurrentContainer() instanceof CraftingStationContainer && WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
             craftingHelperOverlay.mouseClicked(mouseX, mouseY, button);
         }
 
         if(bankOverlay != null) {
             bankOverlay.mouseClicked(mouseX, mouseY, button);
 
-            if (SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+            if (WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
                 if (currentOverlayType != BankOverlayType.NONE) {
                     cir.cancel();
                 }
@@ -115,21 +114,21 @@ public abstract class HandledScreenMixin {
         if(bankOverlay != null) {
             bankOverlay.mouseReleased(mouseX, mouseY, button);
 
-            if (SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+            if (WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
                 if (currentOverlayType != BankOverlayType.NONE) {
                     cir.cancel();
                 }
             }
         }
 
-        if(craftingHelperOverlay != null && SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+        if(craftingHelperOverlay != null && WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
             craftingHelperOverlay.mouseReleased(mouseX, mouseY, button);
         }
     }
 
     @Inject(method = "isClickOutsideBounds", at = @At("HEAD"), cancellable = true)
     private void onIsClickOutsideBounds(double mouseX, double mouseY, int left, int top, CallbackInfoReturnable<Boolean> cir) {
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+        if(WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
             if (currentOverlayType != BankOverlayType.NONE) {
                 cir.setReturnValue(false);
                 cir.cancel();
@@ -147,7 +146,7 @@ public abstract class HandledScreenMixin {
     public void onClose(CallbackInfo ci) {
         craftingHelperOverlay = null;
 
-        if(!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return;
+        if(!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return;
         bankOverlay = null;
 
         MinecraftClient client = MinecraftClient.getInstance();
@@ -190,7 +189,7 @@ public abstract class HandledScreenMixin {
         int modifiers = input.modifiers();
 
         if(bankOverlay != null) {
-            if (SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+            if (WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
                 InventoryKeyPressEvent event = new InventoryKeyPressEvent(keyCode, scanCode, modifiers, bankOverlay.touchHoveredSlot);
                 event.post();
 

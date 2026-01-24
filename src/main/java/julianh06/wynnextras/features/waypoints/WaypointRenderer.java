@@ -16,6 +16,8 @@ import java.awt.*;
 public class WaypointRenderer {
     @SubscribeEvent
     public void onRenderWorld(RenderWorldEvent event) {
+        boolean hasVertices = false;
+
         if (WorldRenderUtils.INSTANCE.buffer == null) {
             WorldRenderUtils.INSTANCE.buffer = new BufferBuilder(WorldRenderUtils.allocator, WorldRenderUtils.FILLED_BOX.getVertexFormatMode(), WorldRenderUtils.FILLED_BOX.getVertexFormat());
         }
@@ -41,13 +43,19 @@ public class WaypointRenderer {
                         alpha = waypoint.getCategory().alpha;
                     }
                     WorldRenderUtils.drawFilledBoundingBox(event, new Box(waypoint.x, waypoint.y, waypoint.z, waypoint.x + 1, waypoint.y + 1, waypoint.z + 1), color, alpha);
+                    hasVertices = true;
                 }
                 if(!waypoint.showName) continue;
                 WorldRenderUtils.drawText(event, namePos, Text.of(waypoint.name), 0.75f, !waypoint.seeThrough);
             }
         }
 
-        //Render phase
-        WorldRenderUtils.INSTANCE.drawFilledBoxes(MinecraftClient.getInstance(), WorldRenderUtils.FILLED_BOX);
+        //Render phase - only draw if we added vertices
+        if (hasVertices) {
+            WorldRenderUtils.INSTANCE.drawFilledBoxes(MinecraftClient.getInstance(), WorldRenderUtils.FILLED_BOX);
+        } else {
+            // Reset buffer without drawing to avoid "BufferBuilder was empty" error
+            WorldRenderUtils.INSTANCE.buffer = null;
+        }
     }
 }

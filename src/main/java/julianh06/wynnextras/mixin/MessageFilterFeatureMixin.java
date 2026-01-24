@@ -5,7 +5,6 @@ import com.wynntils.handlers.chat.event.ChatMessageEvent;
 import com.wynntils.mc.event.SystemMessageEvent;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,7 +22,7 @@ public class MessageFilterFeatureMixin {
     @Inject(method = "onMessage", at = @At("TAIL"), remap = false)
     void blockMessage(ChatMessageEvent.Match e, CallbackInfo ci) {
         if(config == null) {
-            config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+            config = WynnExtrasConfig.INSTANCE;
         }
 
         String raw = e.getMessage().withoutFormatting().getString();

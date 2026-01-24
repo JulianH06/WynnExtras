@@ -639,13 +639,14 @@ public class WynncraftApiHandler {
                 newStyle = newStyle.withBold(true);
             }
 
-            if (classAttr != null && !classAttr.isEmpty()) {
-                if (classAttr.contains("font-common")) {
-                    newStyle = newStyle.withFont(new StyleSpriteSource.Font(Identifier.of("minecraft", "common")));
-                } else if (classAttr.contains("font-ascii")) {
-                    newStyle = newStyle.withFont(new StyleSpriteSource.Font(Identifier.of("minecraft", "default")));
-                }
-            }
+            // Font setting disabled - StyleSpriteSource has mapping issues in 1.21.11
+            // if (classAttr != null && !classAttr.isEmpty()) {
+            //     if (classAttr.contains("font-common")) {
+            //         newStyle = newStyle.withFont(new StyleSpriteSource.Font(Identifier.of("minecraft", "common")));
+            //     } else if (classAttr.contains("font-ascii")) {
+            //         newStyle = newStyle.withFont(new StyleSpriteSource.Font(Identifier.of("minecraft", "default")));
+            //     }
+            // }
 
             Text parsedInner = parseSpan(inner, newStyle);
             MutableText piece = parsedInner instanceof MutableText ? (MutableText) parsedInner : Text.literal(parsedInner.getString()).setStyle(newStyle);

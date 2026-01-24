@@ -39,13 +39,12 @@ import com.wynntils.utils.wynn.ContainerUtils;
 import com.wynnventory.util.ItemStackUtils;
 import com.wynnventory.util.PriceTooltipHelper;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
-import julianh06.wynnextras.mixin.ItemFavoriteFeatureAccessor;
+// import julianh06.wynnextras.mixin.ItemFavoriteFeatureAccessor; // Disabled - method no longer exists in Wynntils 4.0.0-beta.3
 import julianh06.wynnextras.mixin.ItemGuessFeatureAccessor;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.UI.*;
@@ -199,7 +198,7 @@ public class BankOverlay2 extends WEHandledScreen {
         if(currentOverlayType != BankOverlayType.NONE && expectedOverlayType != BankOverlayType.NONE && currentOverlayType != expectedOverlayType) {
             RenderUtils.drawRect(context, CustomColor.fromInt(-804253680), 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
             drawBackgroundRect(context, xRemain, yRemain);
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+            if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
                 ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackgroundDark : buttonBackgroundShortDark, xStart - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
             } else {
                 ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackground : buttonBackgroundShort, xStart - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
@@ -208,7 +207,7 @@ public class BankOverlay2 extends WEHandledScreen {
             if(quickActionWidget != null) quickActionWidget.draw(context, mouseX, mouseY, delta, ui);
             if(searchbar2 != null) searchbar2.draw(context, mouseX, mouseY, delta, ui);
             if(scrollBarWidget != null) scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
-            if(toggleOverlayWidget != null && SimpleConfig.getInstance(WynnExtrasConfig.class).bankQuickToggle) toggleOverlayWidget.draw(context, mouseX, mouseY, delta, ui);
+            if(toggleOverlayWidget != null && WynnExtrasConfig.INSTANCE.bankQuickToggle) toggleOverlayWidget.draw(context, mouseX, mouseY, delta, ui);
             ci.cancel();
             return;
         }
@@ -228,13 +227,13 @@ public class BankOverlay2 extends WEHandledScreen {
             float xPos = MinecraftClient.getInstance().currentScreen.width / 2f;
             float yPos = yStart + (yFitAmount) * (90 + 4 + 10) - 20;
 
-            if (!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) {
+            if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
                 Screen screen = McUtils.screen();
                 if (!(screen instanceof HandledScreen<?> containerScreen)) return;
                 yPos = ((HandledScreenAccessor) containerScreen).getY() + (4 + McUtils.containerMenu().slots.size() / 9f) * 16;
             }
 
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).bankQuickToggle) {
+            if(WynnExtrasConfig.INSTANCE.bankQuickToggle) {
                 toggleOverlayWidget.setBounds((int) xPos - 70, (int) yPos, 140, 17);
                 toggleOverlayWidget.draw(context, mouseX, mouseY, delta, ui);
             } else {
@@ -266,10 +265,10 @@ public class BankOverlay2 extends WEHandledScreen {
 
         float speed = 0.3f;
         float diff = (targetOffset - actualOffset);
-        if(Math.abs(diff) < snapValue || !SimpleConfig.getInstance(WynnExtrasConfig.class).smoothScrollToggle) actualOffset = targetOffset;
+        if(Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffset = targetOffset;
         else actualOffset += diff * speed * delta;
 
-        if(!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return;
+        if(!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return;
         if(Pages == null) return;
 
         if(pages.isEmpty()) {
@@ -416,7 +415,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 switchButtonWidget.setBounds(0, 0, 0, 0);
             }
 
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+            if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
                 ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackgroundDark : buttonBackgroundShortDark, xStart - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
             } else {
                 ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackground : buttonBackgroundShort, xStart - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
@@ -460,7 +459,7 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private void drawBackgroundRect(DrawContext context, float xRemain, float yRemain) {
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+        if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
             RenderUtils.drawRect(
                     context,
                     CustomColor.fromHexString("2c2d2f"),
@@ -491,9 +490,9 @@ public class BankOverlay2 extends WEHandledScreen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if(toggleOverlayWidget != null && SimpleConfig.getInstance(WynnExtrasConfig.class).bankQuickToggle) toggleOverlayWidget.mouseClicked(x, y, button);
+        if(toggleOverlayWidget != null && WynnExtrasConfig.INSTANCE.bankQuickToggle) toggleOverlayWidget.mouseClicked(x, y, button);
 
-        if (!SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) return false;
+        if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return false;
         if (currentOverlayType == BankOverlayType.NONE) return false;
 
         for(PageWidget page : pages) {
@@ -695,24 +694,25 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static void renderHighlightOverlay(DrawContext context, ItemStack stack, int x, int y) {
-        if(stack.getItem() == Items.AIR) return;
-        if (itemHighlightFeature == null) itemHighlightFeature = Managers.Feature.getFeatureInstance(ItemHighlightFeature.class);
-
-        CustomColor color = ((ItemHighlightFeatureInvoker) itemHighlightFeature).invokeGetHighlightColor(stack, false);
-        if (!Objects.equals(color, CustomColor.NONE)) {
-            try {
-                RenderUtils.drawTexturedRect(
-                        context,
-                        Texture.HIGHLIGHT.identifier(),
-                        color.withAlpha(SimpleConfig.getInstance(WynnExtrasConfig.class).wynntilsItemRarityBackgroundAlpha),
-                        x - 1, y - 1, 18, 18,
-                        ((ItemHighlightFeature.HighlightTexture) itemHighlightFeature.getConfigOptionFromString("highlightTexture").get().get()).ordinal() * 18 + 18, 0,
-                        18, 18,
-                        Texture.HIGHLIGHT.width(),
-                        Texture.HIGHLIGHT.height()
-                );
-            } catch (Exception ignored) {}
-        }
+        // TODO: Re-enable when Wynntils API is updated - getHighlightColor method no longer exists in 4.0.0-beta.3
+        // if(stack.getItem() == Items.AIR) return;
+        // if (itemHighlightFeature == null) itemHighlightFeature = Managers.Feature.getFeatureInstance(ItemHighlightFeature.class);
+        //
+        // CustomColor color = ((ItemHighlightFeatureInvoker) itemHighlightFeature).invokeGetHighlightColor(stack, false);
+        // if (!Objects.equals(color, CustomColor.NONE)) {
+        //     try {
+        //         RenderUtils.drawTexturedRect(
+        //                 context,
+        //                 Texture.HIGHLIGHT.identifier(),
+        //                 color.withAlpha(WynnExtrasConfig.INSTANCE.wynntilsItemRarityBackgroundAlpha),
+        //                 x - 1, y - 1, 18, 18,
+        //                 ((ItemHighlightFeature.HighlightTexture) itemHighlightFeature.getConfigOptionFromString("highlightTexture").get().get()).ordinal() * 18 + 18, 0,
+        //                 18, 18,
+        //                 Texture.HIGHLIGHT.width(),
+        //                 Texture.HIGHLIGHT.height()
+        //         );
+        //     } catch (Exception ignored) {}
+        // }
     }
 
     private static void renderItemOverlays(DrawContext context, ItemStack stack, int x, int y) {
@@ -729,21 +729,24 @@ public class BankOverlay2 extends WEHandledScreen {
                     annotation instanceof PotionItem ||
                     annotation instanceof CrafterBagItem) {
 
-                ((ItemTextOverlayFeatureMixin) Managers.Feature.getFeatureInstance(ItemTextOverlayFeature.class)).invokeDrawTextOverlay(context, stack, x, y, false);
+                // TODO: Re-enable when Wynntils API is updated - drawTextOverlay method no longer exists in 4.0.0-beta.3
+                // ((ItemTextOverlayFeatureMixin) Managers.Feature.getFeatureInstance(ItemTextOverlayFeature.class)).invokeDrawTextOverlay(context, stack, x, y, false);
             }
 
-            ((UnidentifiedItemIconFeatureInvoker) Managers.Feature.getFeatureInstance(UnidentifiedItemIconFeature.class)).invokeDrawIcon(context, stack, x, y, 100);
-            if(((ItemFavoriteFeatureAccessor) Managers.Feature.getFeatureInstance(ItemFavoriteFeature.class)).callIsFavorited(stack)) {
-                RenderUtils.drawScalingTexturedRect(
-                        context,
-                        Texture.FAVORITE_ICON.identifier(),
-                        x + 10,
-                        y,
-                        9,
-                        9,
-                        Texture.FAVORITE_ICON.width(),
-                        Texture.FAVORITE_ICON.height());
-            }
+            // TODO: Re-enable when Wynntils API is updated - drawIcon method signature may have changed
+            // ((UnidentifiedItemIconFeatureInvoker) Managers.Feature.getFeatureInstance(UnidentifiedItemIconFeature.class)).invokeDrawIcon(context, stack, x, y, 100);
+            // TODO: Re-enable when Wynntils API is updated - isFavorited method no longer exists in 4.0.0-beta.3
+            // if(((ItemFavoriteFeatureAccessor) Managers.Feature.getFeatureInstance(ItemFavoriteFeature.class)).callIsFavorited(stack)) {
+            //     RenderUtils.drawScalingTexturedRect(
+            //             context,
+            //             Texture.FAVORITE_ICON.identifier(),
+            //             x + 10,
+            //             y,
+            //             9,
+            //             9,
+            //             Texture.FAVORITE_ICON.width(),
+            //             Texture.FAVORITE_ICON.height());
+            // }
         }
     }
 
@@ -992,7 +995,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
     public static void drawDynamicNameSign(DrawContext context, String input, int x, int y) {
         if (signMids.isEmpty()) {
-            if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+            if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
                 signMids.add(signMid1D);
                 signMids.add(signMid2D);
                 signMids.add(signMid3D);
@@ -1006,7 +1009,7 @@ public class BankOverlay2 extends WEHandledScreen {
         int strWidth = textRenderer.getWidth(input);
         int strMidWidth = strWidth - 15;
         int amount = Math.max(0, Math.ceilDiv(strMidWidth, 10));
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+        if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
             RenderUtils.drawTexturedRect(context, signLeftDark, CustomColor.NONE, x, y - 15, 10, 15, 10, 15);
         } else {
             RenderUtils.drawTexturedRect(context, signLeft, CustomColor.NONE, x, y - 15, 10, 15, 10, 15);
@@ -1016,7 +1019,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 RenderUtils.drawTexturedRect(context, signMids.get(i % 3), CustomColor.NONE, x + 10 + 10 * i, y - 15, 10, 15, 10, 15);
             }
         }
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle) {
+        if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
             RenderUtils.drawTexturedRect(context, signRightDark, CustomColor.NONE, x + 10 + 10 * amount, y - 15, 10, 15, 10, 15);
         } else {
             RenderUtils.drawTexturedRect(context, signRight, CustomColor.NONE, x + 10 + 10 * amount, y - 15, 10, 15, 10, 15);
@@ -1111,7 +1114,7 @@ public class BankOverlay2 extends WEHandledScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(ui == null) return;
 
-            ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? invTextureDark : invTexture, x, y - 0.2f, width, height);
+            ui.drawImage(WynnExtrasConfig.INSTANCE.darkmodeToggle ? invTextureDark : invTexture, x, y - 0.2f, width, height);
 
             if(slots.isEmpty()) {
                 int i = 0;
@@ -1196,7 +1199,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 return;
             }
 
-            ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? bankTextureDark : bankTexture, x, y, width, height);
+            ui.drawImage(WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankTextureDark : bankTexture, x, y, width, height);
 
             if(items.isEmpty()) return;
 
@@ -1245,10 +1248,10 @@ public class BankOverlay2 extends WEHandledScreen {
                 if (hovered) {
                     String buyText = confirmText.isEmpty() ? "§7Click to buy." : confirmText;
 
-                    ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? lock_unlocked_dark : lock_unlocked, x + 82 - 25, y + 46 - 19, 50, 50);
+                    ui.drawImage(WynnExtrasConfig.INSTANCE.darkmodeToggle ? lock_unlocked_dark : lock_unlocked, x + 82 - 25, y + 46 - 19, 50, 50);
                     ui.drawCenteredText(buyText, x + 81, y + 80, CustomColor.fromHexString("FFFFFF"), 1);
                 } else {
-                    ui.drawImage(SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle ? lock_locked_dark : lock_locked, x + 82 - 25, y + 46 - 19, 50, 50);
+                    ui.drawImage(WynnExtrasConfig.INSTANCE.darkmodeToggle ? lock_locked_dark : lock_locked, x + 82 - 25, y + 46 - 19, 50, 50);
                 }
             }
 
@@ -1613,15 +1616,15 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 5, hovered, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
-            ui.drawCenteredText("Click to " + ((SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay) ? "disable" : "enable") + " the Bank Overlay", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 0.75f);
+            ui.drawButton(x, y, width, height, 5, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawCenteredText("Click to " + ((WynnExtrasConfig.INSTANCE.toggleBankOverlay) ? "disable" : "enable") + " the Bank Overlay", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 0.75f);
         }
 
         @Override
         protected boolean onClick(int button) {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-            SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay = !SimpleConfig.getInstance(WynnExtrasConfig.class).toggleBankOverlay;
-            SimpleConfig.save(WynnExtrasConfig.class);
+            WynnExtrasConfig.INSTANCE.toggleBankOverlay = !WynnExtrasConfig.INSTANCE.toggleBankOverlay;
+            WynnExtrasConfig.save();
             return false;
         }
     }
@@ -1648,7 +1651,7 @@ public class BankOverlay2 extends WEHandledScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-            ui.drawSliderBackground(x, y, width, height, 5, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
+            ui.drawSliderBackground(x, y, width, height, 5, WynnExtrasConfig.INSTANCE.darkmodeToggle);
 
             int totalRows = (int) Math.ceil((double) shownPages / xFitAmount);
             int c = (xFitAmount % 2 == 0 ? 1 : 0);
@@ -1695,7 +1698,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 5, hovered || isHold, SimpleConfig.getInstance(WynnExtrasConfig.class).darkmodeToggle);
+                ui.drawButton(x, y, width, height, 5, hovered || isHold, WynnExtrasConfig.INSTANCE.darkmodeToggle);
             }
 
             @Override
