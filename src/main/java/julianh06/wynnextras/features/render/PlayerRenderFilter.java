@@ -18,18 +18,12 @@ public class PlayerRenderFilter {
         if(config == null) {
             config = WynnExtrasConfig.INSTANCE;
         }
-        if(config.printDebugToConsole) {
-            System.out.println(player.getName() + " is now hidden");
-        }
         hiddenPlayers.add(player.getUuid());
     }
 
     public static void show(PlayerEntity player) {
         if(config == null) {
             config = WynnExtrasConfig.INSTANCE;
-        }
-        if(config.printDebugToConsole) {
-            System.out.println(player.getName() + " is now shown");
         }
         hiddenPlayers.remove(player.getUuid());
     }

@@ -31,8 +31,6 @@ public class WynnExtrasConfig {
     public boolean partyMemberHide = true;
     public int maxHideDistance = 3;
     public List<String> hiddenPlayers = new ArrayList<>();
-    public boolean onlyInNotg = false;
-    public boolean printDebugToConsole = false;
 
     // ==================== CHAT NOTIFIER ====================
     public List<String> notifierWords = new ArrayList<>();
