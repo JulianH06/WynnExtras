@@ -1,9 +1,11 @@
 package julianh06.wynnextras.config.gui;
 
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 
@@ -31,22 +33,21 @@ public class WynnExtrasConfigScreen extends Screen {
 
     // ==================== THEME COLORS ====================
     private static int BG_DARK = 0xFF1a1410;
-    private static int BG_MEDIUM = 0xFF2d2419;
-    private static int BG_LIGHT = 0xFF3d3222;
-    private static int PARCHMENT = 0xFF4a3c2a;
-    private static int PARCHMENT_LIGHT = 0xFF5c4d3a;
-    private static int PARCHMENT_HOVER = 0xFF6a5d4a;
-    private static int GOLD = 0xFFc9a227;
-    private static int GOLD_DARK = 0xFF8b7019;
-    private static int GOLD_LIGHT = 0xFFe8c252;
+    private static int BG_MEDIUM = 0xFF2e251c;
+    private static int BG_LIGHT = 0xFF4d3c2d;
+    private static int PARCHMENT = 0xFF6c4f36;
+    private static int PARCHMENT_LIGHT = 0xFF876141;
+    private static int PARCHMENT_HOVER = 0xFF705030;
+    private static int GOLD = 0xFFcca76f;
+    private static int GOLD_DARK = 0xFFecc600;
     private static int TEXT_LIGHT = 0xFFe8dcc8;
     private static int TEXT_DIM = 0xFF9a8b70;
-    private static int BORDER_DARK = 0xFF1a1410;
-    private static int BORDER_LIGHT = 0xFF5c4a35;
+    private static int BORDER_DARK = 0xFF3a2d24;
+    private static int BORDER_LIGHT = PARCHMENT_LIGHT;
     private static int TOGGLE_ON = 0xFF4a8c3a;
     private static int TOGGLE_OFF = 0xFF5c4535;
     private static int ACCENT_RED = 0xFFa83232;
-    private static int SUBCATEGORY_BG = 0xFF352a1e;
+    private static int SUBCATEGORY_BG = 0xFF694d33;
 
     // ==================== LAYOUT ====================
     private static final int SIDEBAR_WIDTH = 140;
@@ -58,6 +59,7 @@ public class WynnExtrasConfigScreen extends Screen {
 
     // ==================== STATE ====================
     private int selectedCategory = 0;
+    private int selectedCategoryColor = 0;
     private final List<Category> categories = new ArrayList<>();
     private double scrollOffset = 0;
     private double maxScroll = 0;
@@ -83,19 +85,24 @@ public class WynnExtrasConfigScreen extends Screen {
     private void initCategories() {
         categories.clear();
 
-        // ===== GENERAL =====
-        category("General", GOLD)
-            .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
-                    () -> config.differentGUIScale, v -> config.differentGUIScale = v))
-            .add(slider("GUI Scale", "Custom GUI scale value",
-                    1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
-            .add(toggle("Skip Front View", "Skip front-facing 3rd person",
-                    () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
-            .add(toggle("PV Dark Mode", "Dark theme for profile viewer",
-                    () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v));
+        // ===== RAIDS =====
+        category("Raiding", GOLD_DARK)
+            .add(toggle("Timestamps", "Show timestamps during raids",
+                () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
+            .add(toggle("Fast Requeue", "Auto /pf on chest close",
+                () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
+            .sub("Loot Tracker")
+                .add(toggle("Enable Tracker", "Track raid loot drops",
+                    () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
+                .add(toggle("Only in Inventory", "Show only when inventory open",
+                    () -> config.raidLootTrackerOnlyInInventory, v -> config.raidLootTrackerOnlyInInventory = v))
+                .add(toggle("Only Near Chest", "Show only near reward chest",
+                    () -> config.raidLootTrackerOnlyNearChest, v -> config.raidLootTrackerOnlyNearChest = v))
+                .add(toggle("Compact Mode", "Use compact display",
+                    () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v));
 
         // ===== COMBAT =====
-        category("Combat", 0xFFa83232)
+        category("Combat", 0xFFfda216)
             .sub("Shaman")
                 .add(toggle("Show Totem Range", "Display totem range circle",
                         () -> config.totemRangeVisualizerToggle, v -> config.totemRangeVisualizerToggle = v))
@@ -107,32 +114,14 @@ public class WynnExtrasConfigScreen extends Screen {
                         1f, 30f, 0.5f, () -> config.eldritchCallRange, v -> config.eldritchCallRange = v))
                 .add(dropdown("Eldritch Color", "Circle color",
                         WynnExtrasConfig.TextColor.class, () -> config.eldritchCallColor, v -> config.eldritchCallColor = v))
-            .sub("Provoke")
-                .add(toggle("Provoke Timer", "Show provoke timer [WIP]",
+            .sub("Provoke Timer [WIP]")
+                .add(toggle("Enable Provoke Timer", "Show provoke timer",
                         () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
                 .add(dropdown("Timer Color", "Timer text color",
                         WynnExtrasConfig.TextColor.class, () -> config.provokeTimerColor, v -> config.provokeTimerColor = v));
 
-        // ===== RAIDS =====
-        category("Raids", 0xFF7a3a9c)
-            .add(toggle("Timestamps", "Show timestamps during raids",
-                    () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
-            .add(toggle("Fast Requeue", "Auto /pf on chest close",
-                    () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
-            .sub("Loot Tracker")
-                .add(toggle("Enable Tracker", "Track raid loot drops",
-                        () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
-                .add(toggle("Only in Inventory", "Show only when inventory open",
-                        () -> config.raidLootTrackerOnlyInInventory, v -> config.raidLootTrackerOnlyInInventory = v))
-                .add(toggle("Only Near Chest", "Show only near reward chest",
-                        () -> config.raidLootTrackerOnlyNearChest, v -> config.raidLootTrackerOnlyNearChest = v))
-                .add(toggle("Compact Mode", "Use compact display",
-                        () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v))
-                .add(toggle("Session Stats", "Show current session stats",
-                        () -> config.raidLootTrackerShowSession, v -> config.raidLootTrackerShowSession = v));
-
         // ===== INVENTORY =====
-        category("Inventory", 0xFF3a7a9c)
+        category("Inventory", 0xFFea1219)
             .sub("Bank Overlay")
                 .add(toggle("Enable Overlay", "Enhanced bank interface",
                         () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v))
@@ -148,15 +137,17 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Item Weights", "Show Wynnpool weights",
                         () -> config.showWeight, v -> config.showWeight = v))
                 .add(toggle("Stat Scales", "Show stat weights",
-                        () -> config.showScales, v -> config.showScales = v))
-                .add(toggle("Financial Advice", "Identifier menu advice",
-                        () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v));
+                        () -> config.showScales, v -> config.showScales = v));
 
         // ===== CHAT =====
-        category("Chat", 0xFF4a8c3a)
+        category("Chat", 0xFFc80069)
+            .add(stringList("Blocked Words", "Hide messages with these",
+                    () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
             .sub("Notifications")
-                .add(slider("Duration (ms)", "How long notification shows",
-                        500, 10000, () -> config.textDurationInMs, v -> config.textDurationInMs = v))
+                .add(stringList("Notifier Words", "Format: trigger|display",
+                        () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
+                .add(sliderF("Duration (ms)", "How long notification shows",
+                        500, 10000, 100, () -> (float) config.textDurationInMs, v -> config.textDurationInMs = v.intValue()))
                 .add(dropdown("Text Color", "Notification color",
                         WynnExtrasConfig.TextColor.class, () -> config.textColor, v -> config.textColor = v))
                 .add(dropdown("Sound", "Notification sound",
@@ -164,34 +155,30 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(slider("Volume", "Sound volume",
                         0, 100, () -> (int)(config.soundVolume * 100), v -> config.soundVolume = v / 100f))
                 .add(slider("Pitch", "Sound pitch",
-                        50, 200, () -> (int)(config.soundPitch * 100), v -> config.soundPitch = v / 100f))
-            .sub("Filters")
-                .add(stringList("Notifier Words", "Format: trigger|display",
-                        () -> config.notifierWords, v -> config.notifierWords = v))
-                .add(stringList("Blocked Words", "Hide messages with these",
-                        () -> config.blockedWords, v -> config.blockedWords = v));
+                        50, 200, () -> (int)(config.soundPitch * 100), v -> config.soundPitch = v / 100f));
 
         // ===== PARTY =====
-        category("Party", ACCENT_RED)
-            .add(toggle("Player Hider", "Hide party members",
+        category("Player Hider", 0xFF673190)
+            .add(toggle("Enable Player Hider", "Enable the Player Hider",
                     () -> config.partyMemberHide, v -> config.partyMemberHide = v))
             .add(slider("Hide Distance", "Max distance to hide",
                     1, 20, () -> config.maxHideDistance, v -> config.maxHideDistance = v))
-            .add(toggle("Only in NOTG", "Only in Grootslangs",
-                    () -> config.onlyInNotg, v -> config.onlyInNotg = v))
-            .add(toggle("Debug Output", "Console debug messages",
-                    () -> config.printDebugToConsole, v -> config.printDebugToConsole = v))
             .add(stringList("Hidden Players", "Always hide these players",
-                    () -> config.hiddenPlayers, v -> config.hiddenPlayers = v));
+                    () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"));
 
-        // ===== WAYPOINTS =====
-        category("Waypoints", 0xFF7a5aa8)
-            .add(toggle("Disable Defaults", "Disable built-in waypoints",
-                    () -> config.disableAllDefaultWaypoints, v -> config.disableAllDefaultWaypoints = v));
 
-        category("TEST", 0xFFffffff);
-        category("TEST2", 0xFFffffff);
-        category("TEST3", 0xFFffffff);
+        // ===== GENERAL =====
+        category("Misc", 0xFF0872bc)
+                .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
+                        () -> config.differentGUIScale, v -> config.differentGUIScale = v))
+                .add(slider("GUI Scale", "Custom GUI scale value",
+                        1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
+                .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
+                        () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
+                .add(toggle("PV Dark Mode", "Dark theme for profile viewer",
+                        () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
+                .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
+                        () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v));
     }
 
     // ==================== BUILDER HELPERS ====================
@@ -217,8 +204,8 @@ public class WynnExtrasConfigScreen extends Screen {
         return new EnumOption<>(name, desc, cls, get, set);
     }
 
-    private ConfigOption stringList(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set) {
-        return new StringListOption(name, desc, get, set);
+    private ConfigOption stringList(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set, String itemName) {
+        return new StringListOption(name, desc, get, set, itemName);
     }
 
     // ==================== SCREEN LIFECYCLE ====================
@@ -238,48 +225,6 @@ public class WynnExtrasConfigScreen extends Screen {
     // ==================== RENDERING ====================
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        boolean oldColors = false;
-
-        if(oldColors) {
-            BG_DARK = 0xFF1a1410;
-            BG_MEDIUM = 0xFF2d2419;
-            BG_LIGHT = 0xFF3d3222;
-            PARCHMENT = 0xFF4a3c2a;
-            PARCHMENT_LIGHT = 0xFF5c4d3a;
-            PARCHMENT_HOVER = 0xFF6a5d4a;
-            GOLD = 0xFFc9a227;
-            GOLD_DARK = 0xFF8b7019;
-            //GOLD_LIGHT = 0xFFe8c252;
-            TEXT_LIGHT = 0xFFe8dcc8;
-            TEXT_DIM = 0xFF9a8b70;
-            BORDER_DARK = 0xFF1a1410;
-            BORDER_LIGHT = 0xFF5c4a35;
-            TOGGLE_ON = 0xFF4a8c3a;
-            TOGGLE_OFF = 0xFF5c4535;
-            ACCENT_RED = 0xFFa83232;
-            SUBCATEGORY_BG = 0xFF352a1e;
-        } else {
-            BG_DARK = 0xFF1a1410;
-            BG_MEDIUM = 0xFF2e251c;
-            //BG_MEDIUM = 0xFF2d2419;
-            //BG_MEDIUM = 0xFF2a1717;
-            BG_LIGHT = 0xFF4d3c2d;
-            PARCHMENT = 0xFF6c4f36;
-            PARCHMENT_LIGHT = 0xFF876141;
-            PARCHMENT_HOVER = 0xFF705030;
-            GOLD = 0xFFcca76f;
-            GOLD_DARK = 0xFFecc600;
-            //GOLD_LIGHT = 0xFFe8c252;
-            TEXT_LIGHT = 0xFFe8dcc8;
-            TEXT_DIM = 0xFF9a8b70;
-            BORDER_DARK = 0xFF3a2d24;
-            BORDER_LIGHT = PARCHMENT_LIGHT;
-            TOGGLE_ON = 0xFF4a8c3a;
-            TOGGLE_OFF = 0xFF5c4535;
-            ACCENT_RED = 0xFFa83232;
-            SUBCATEGORY_BG = 0xFF694d33;
-        }
-
         // Normal render
         ctx.fill(0, 0, width, height, BG_DARK);
 
@@ -297,6 +242,13 @@ public class WynnExtrasConfigScreen extends Screen {
         }
     }
 
+    private void drawDiamond(DrawContext context, int cx, int cy, int size, int color) {
+        for (int i = 0; i <= size; i++) {
+            context.fill(cx - i, cy - size + i, cx + i + 1, cy - size + i + 1, color);
+            context.fill(cx - i, cy + size - i, cx + i + 1, cy + size - i + 1, color);
+        }
+    }
+
     private void drawSidebar(DrawContext ctx, int mouseX, int mouseY) {
         // Clean solid background
         ctx.fill(0, 0, SIDEBAR_WIDTH, height, BG_MEDIUM);
@@ -311,20 +263,21 @@ public class WynnExtrasConfigScreen extends Screen {
         int y = 45;
         for (int i = 0; i < categories.size(); i++) {
             Category cat = categories.get(i);
-            boolean hovered = mouseX >= 8 && mouseX < SIDEBAR_WIDTH - 8 && mouseY >= y && mouseY < y + 24;
+            boolean hovered = mouseX >= 8 && mouseX < SIDEBAR_WIDTH - 8 && mouseY >= y && mouseY < y + 22;
             boolean selected = i == selectedCategory;
 
             // Background
             if (selected) {
-                ctx.fill(8, y, SIDEBAR_WIDTH - 8, y + 24, PARCHMENT);
-                ctx.fill(8, y, 12, y + 24, cat.color);
+                ctx.fill(8, y, SIDEBAR_WIDTH - 8, y + 22, PARCHMENT);
+                ctx.fill(8, y, 12, y + 22, cat.color);
             } else if (hovered) {
-                ctx.fill(8, y, SIDEBAR_WIDTH - 8, y + 24, BG_LIGHT);
+                ctx.fill(8, y, SIDEBAR_WIDTH - 8, y + 22, BG_LIGHT);
             }
 
             // Color dot and text
-            ctx.fill(18, y + 9, 24, y + 15, cat.color);
-            ctx.drawTextWithShadow(textRenderer, cat.name, 30, y + 8, selected ? TEXT_LIGHT : TEXT_DIM);
+            drawDiamond(ctx, 20, y + 10, 4, cat.color);
+            //ctx.fill(18, y + 9, 24, y + 15, cat.color);
+            ctx.drawTextWithShadow(textRenderer, cat.name, 30, y + 7, selected ? TEXT_LIGHT : TEXT_DIM);
 
             y += 28;
         }
@@ -336,14 +289,20 @@ public class WynnExtrasConfigScreen extends Screen {
 
         ctx.fill(panelX, 5, panelX + panelW, height - 5, BG_LIGHT);
 
-        // Header
-        ctx.fill(panelX + 5, 10, panelX + panelW - 5, HEADER_HEIGHT, PARCHMENT);
-        ctx.fill(panelX + 5, 10, panelX + panelW - 5, 12, GOLD_DARK);
-        ctx.drawCenteredTextWithShadow(textRenderer, "WynnExtras", panelX + panelW / 2, 25, GOLD);
-        ctx.drawCenteredTextWithShadow(textRenderer, "Configuration", panelX + panelW / 2, 38, TEXT_DIM);
-
         if (selectedCategory < 0 || selectedCategory >= categories.size()) return;
         Category cat = categories.get(selectedCategory);
+
+        selectedCategoryColor = cat.color;
+
+        // Header
+        ctx.fill(panelX + 5, 10, panelX + panelW - 5, HEADER_HEIGHT, PARCHMENT);
+        ctx.fill(panelX + 5, 10, panelX + panelW - 5, 12, cat.color);
+        ctx.drawCenteredTextWithShadow(textRenderer, "WynnExtras", panelX + panelW / 2, 19, TEXT_LIGHT);
+        ctx.drawCenteredTextWithShadow(textRenderer, "Configuration", panelX + panelW / 2, 32, TEXT_DIM);
+        ctx.fill(panelX + 15, 48, panelX + panelW - 15, 50, cat.color);
+
+        drawDiamond(ctx, panelX + 11, 4 + HEADER_HEIGHT / 2, 3, cat.color);
+        drawDiamond(ctx, panelX + panelW - 11, 4 + HEADER_HEIGHT / 2, 3, cat.color);
 
         int contentX = panelX + 15;
         int contentW = panelW - 30;
@@ -351,9 +310,11 @@ public class WynnExtrasConfigScreen extends Screen {
         int listBottom = height - FOOTER_HEIGHT - 10;
 
         // Category header
-        ctx.fill(contentX, listTop - 3, contentX + 6, listTop + 9, cat.color);
-        ctx.drawTextWithShadow(textRenderer, cat.name, contentX + 12, listTop - 2, cat.color);
-        ctx.fill(contentX, listTop + 12, contentX + contentW, listTop + 13, GOLD_DARK);
+
+        //ctx.fill(contentX, listTop - 3, contentX + 6, listTop + 9, cat.color);
+        drawDiamond(ctx, contentX + 5, listTop + 2, 5, cat.color);
+        ctx.drawTextWithShadow(textRenderer, cat.name, contentX + 16, listTop - 1, cat.color);
+        ctx.fill(contentX, listTop + 12, contentX + contentW, listTop + 13, cat.color);
 
         ctx.enableScissor(panelX, listTop + 15, panelX + panelW - 15, listBottom);
 
@@ -366,7 +327,7 @@ public class WynnExtrasConfigScreen extends Screen {
         for (ConfigOption opt : cat.options) {
             if (y + OPTION_HEIGHT > listTop && y < listBottom) {
                 boolean hovered = mouseX >= contentX && mouseX < contentX + contentW && mouseY >= y && mouseY < y + OPTION_HEIGHT - 5;
-                opt.render(ctx, contentX, y, contentW, OPTION_HEIGHT, mouseX, mouseY, hovered);
+                opt.render(ctx, contentX, y, contentW, OPTION_HEIGHT, mouseX, mouseY, hovered, cat.color);
             }
             y += OPTION_HEIGHT + OPTION_SPACING;
         }
@@ -382,7 +343,7 @@ public class WynnExtrasConfigScreen extends Screen {
             scrollbarThumbY = scrollbarY + (int)((scrollbarHeight - scrollbarThumbH) * (scrollOffset / maxScroll));
 
             ctx.fill(sbX, scrollbarY, sbX + 6, scrollbarY + scrollbarHeight, BORDER_DARK);
-            ctx.fill(sbX + 1, scrollbarThumbY, sbX + 5, scrollbarThumbY + scrollbarThumbH, GOLD_DARK);
+            ctx.fill(sbX + 1, scrollbarThumbY, sbX + 5, scrollbarThumbY + scrollbarThumbH, cat.color);
         }
     }
 
@@ -394,7 +355,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(x, y + SUBCATEGORY_HEADER_HEIGHT - 1, x + w, y + SUBCATEGORY_HEADER_HEIGHT, BORDER_DARK);
 
             String arrow = sub.expanded ? "\u25BC" : "\u25B6";
-            ctx.drawTextWithShadow(textRenderer, arrow, x + 8, y + 8, GOLD);
+            ctx.drawTextWithShadow(textRenderer, arrow, x + 8, y + 8, selectedCategoryColor);
             ctx.drawTextWithShadow(textRenderer, sub.name, x + 22, y + 8, TEXT_LIGHT);
         }
         y += SUBCATEGORY_HEADER_HEIGHT + 5;
@@ -403,8 +364,8 @@ public class WynnExtrasConfigScreen extends Screen {
             for (ConfigOption opt : sub.options) {
                 if (y + OPTION_HEIGHT > top && y < bot) {
                     boolean hovered = mX >= x + 8 && mX < x + w && mY >= y && mY < y + OPTION_HEIGHT - 5;
-                    ctx.fill(x, y, x + 4, y + OPTION_HEIGHT - 5, GOLD_DARK);
-                    opt.render(ctx, x + 8, y, w - 8, OPTION_HEIGHT, mX, mY, hovered);
+                    ctx.fill(x, y, x + 4, y + OPTION_HEIGHT - 5, selectedCategoryColor);
+                    opt.render(ctx, x + 8, y, w - 8, OPTION_HEIGHT, mX, mY, hovered, selectedCategoryColor);
                 }
                 y += OPTION_HEIGHT + OPTION_SPACING;
             }
@@ -414,6 +375,9 @@ public class WynnExtrasConfigScreen extends Screen {
 
     // Dropdown overlay - renders in place on top of content
     private void renderDropdownOverlay(DrawContext ctx, int mouseX, int mouseY) {
+        ctx.getMatrices().push();
+        ctx.getMatrices().translate(0, 0, 300);
+
         Object[] values = activeDropdown.enumClass.getEnumConstants();
         int totalContentH = values.length * DROPDOWN_ITEM_HEIGHT;
         int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
@@ -435,7 +399,7 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // Outer frame - solid border
         ctx.fill(ddX - 3, ddY - 3, ddX + ddW + 3, ddY + visibleH + 3, BORDER_DARK);
-        ctx.fill(ddX - 2, ddY - 2, ddX + ddW + 2, ddY + visibleH + 2, GOLD_DARK);
+        ctx.fill(ddX - 2, ddY - 2, ddX + ddW + 2, ddY + visibleH + 2, selectedCategoryColor);
         ctx.fill(ddX - 1, ddY - 1, ddX + ddW + 1, ddY + visibleH + 1, BG_MEDIUM);
 
         // Content area - FULLY OPAQUE solid background
@@ -455,7 +419,7 @@ public class WynnExtrasConfigScreen extends Screen {
             boolean selected = values[i].equals(activeDropdown.getter.get());
 
             // Item background - fully opaque
-            int itemBg = selected ? GOLD_DARK : (hovered ? PARCHMENT_HOVER : PARCHMENT);
+            int itemBg = selected ? selectedCategoryColor : (hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(ddX, iy, ddX + ddW - (needsScroll ? 8 : 0), iy + DROPDOWN_ITEM_HEIGHT, itemBg);
 
             // Separator
@@ -478,13 +442,19 @@ public class WynnExtrasConfigScreen extends Screen {
             int thumbY = ddY + (int)((sbH - thumbH) * (dropdownScroll / maxScroll));
 
             ctx.fill(sbX, ddY, sbX + 5, ddY + sbH, BG_DARK);
-            ctx.fill(sbX + 1, thumbY, sbX + 4, thumbY + thumbH, GOLD_DARK);
+            ctx.fill(sbX + 1, thumbY, sbX + 4, thumbY + thumbH, selectedCategoryColor);
         }
+
+        ctx.getMatrices().pop();
     }
 
     private void drawFooter(DrawContext ctx, int mouseX, int mouseY) {
         int footerY = height - FOOTER_HEIGHT + 5;
-        ctx.fill(SIDEBAR_WIDTH + 10, footerY, width - 10, footerY + 1, GOLD_DARK);
+
+        if (selectedCategory < 0 || selectedCategory >= categories.size()) return;
+        Category cat = categories.get(selectedCategory);
+
+        ctx.fill(SIDEBAR_WIDTH + 10, footerY, width - 10, footerY + 1, cat.color);
 
         int btnY = height - 35;
         int saveX = width - 115;
@@ -533,6 +503,7 @@ public class WynnExtrasConfigScreen extends Screen {
                         activeDropdown.setValueByIndex(i);
                         activeDropdown = null;
                         dropdownScroll = 0;
+                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }
                 }
@@ -546,14 +517,18 @@ public class WynnExtrasConfigScreen extends Screen {
 
         int btnY = height - 35;
         if (my >= btnY && my < btnY + 24) {
+            //======== Save & Close =========
             if (mx >= width - 115 && mx < width - 15) {
                 WynnExtrasConfig.save();
                 client.setScreen(parent);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
+            //======== Cancel =========
             if (mx >= width - 225 && mx < width - 125) {
                 WynnExtrasConfig.load();
                 client.setScreen(parent);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
@@ -565,6 +540,7 @@ public class WynnExtrasConfigScreen extends Screen {
                     selectedCategory = i;
                     scrollOffset = 0;
                     updateMaxScroll();
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 y += 28;
@@ -576,10 +552,12 @@ public class WynnExtrasConfigScreen extends Screen {
             if (my >= scrollbarThumbY && my < scrollbarThumbY + scrollbarThumbH) {
                 scrollbarDragging = true;
                 scrollbarDragOffset = my - scrollbarThumbY;
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             } else if (my >= scrollbarY && my < scrollbarY + scrollbarHeight) {
                 double clickPercent = (my - scrollbarY - scrollbarThumbH / 2.0) / (scrollbarHeight - scrollbarThumbH);
                 scrollOffset = MathHelper.clamp(clickPercent * maxScroll, 0, maxScroll);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
@@ -597,6 +575,7 @@ public class WynnExtrasConfigScreen extends Screen {
                 if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + SUBCATEGORY_HEADER_HEIGHT) && mx >= contentX && mx < contentX + contentW) {
                     sub.expanded = !sub.expanded;
                     updateMaxScroll();
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 y += SUBCATEGORY_HEADER_HEIGHT + 5;
@@ -737,14 +716,14 @@ public class WynnExtrasConfigScreen extends Screen {
         final String name;
         final List<ConfigOption> options = new ArrayList<>();
         boolean expanded = true;
-        SubCategory(String name) { this.name = name; }
+        SubCategory(String name) { this.name = name;}
     }
 
     // ==================== CONFIG OPTIONS ====================
     private static abstract class ConfigOption {
         final String name, desc;
         ConfigOption(String name, String desc) { this.name = name; this.desc = desc; }
-        abstract void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered);
+        abstract void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor);
         boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) { return false; }
         boolean mouseReleased(double mx, double my, int btn) { return false; }
         boolean mouseDragged(double mx, double my, int x, int y, int w, int h) { return false; }
@@ -761,7 +740,7 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered) {
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
@@ -783,6 +762,7 @@ public class WynnExtrasConfigScreen extends Screen {
             int tx = x + w - 55, ty = y + 12;
             if (mx >= tx && mx < tx + 44 && my >= ty && my < ty + 20) {
                 setter.accept(!getter.get());
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
             return false;
@@ -802,7 +782,7 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered) {
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
@@ -810,20 +790,20 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
             ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
 
-            sliderX = x + w - 170;
+            sliderX = x + w - 130;
             int sy = y + 15, val = getter.get();
             float pct = (float)(val - min) / (max - min);
 
             ctx.fill(sliderX, sy, sliderX + sliderW, sy + 8, BORDER_DARK);
             ctx.fill(sliderX + 1, sy + 1, sliderX + sliderW - 1, sy + 7, BG_MEDIUM);
             int fill = (int)((sliderW - 2) * pct);
-            if (fill > 0) ctx.fill(sliderX + 1, sy + 1, sliderX + 1 + fill, sy + 7, GOLD_DARK);
+            if (fill > 0) ctx.fill(sliderX + 1, sy + 1, sliderX + 1 + fill, sy + 7, categoryColor);
 
             int kx = sliderX + (int)(sliderW * pct) - 5;
             ctx.fill(kx, sy - 3, kx + 10, sy + 11, BORDER_DARK);
             ctx.fill(kx + 1, sy - 2, kx + 9, sy + 10, GOLD);
 
-            ctx.drawTextWithShadow(tr, String.valueOf(val), sliderX + sliderW + 10, sy, GOLD);
+            ctx.drawTextWithShadow(tr, String.valueOf(val), x + w - 135 - MinecraftClient.getInstance().textRenderer.getWidth(String.valueOf(val)), sy, GOLD);
         }
 
         @Override
@@ -832,6 +812,7 @@ public class WynnExtrasConfigScreen extends Screen {
             if (mx >= sliderX - 5 && mx < sliderX + sliderW + 10 && my >= sy && my < sy + 20) {
                 dragging = true;
                 updateValue(mx);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
             return false;
@@ -868,7 +849,7 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered) {
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
@@ -876,7 +857,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
             ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
 
-            sliderX = x + w - 170;
+            sliderX = x + w - 130;
             int sy = y + 15;
             float val = getter.get();
             float pct = (val - min) / (max - min);
@@ -884,14 +865,14 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(sliderX, sy, sliderX + sliderW, sy + 8, BORDER_DARK);
             ctx.fill(sliderX + 1, sy + 1, sliderX + sliderW - 1, sy + 7, BG_MEDIUM);
             int fill = (int)((sliderW - 2) * pct);
-            if (fill > 0) ctx.fill(sliderX + 1, sy + 1, sliderX + 1 + fill, sy + 7, GOLD_DARK);
+            if (fill > 0) ctx.fill(sliderX + 1, sy + 1, sliderX + 1 + fill, sy + 7, categoryColor);
 
             int kx = sliderX + (int)(sliderW * pct) - 5;
             ctx.fill(kx, sy - 3, kx + 10, sy + 11, BORDER_DARK);
             ctx.fill(kx + 1, sy - 2, kx + 9, sy + 10, GOLD);
 
             String valStr = step >= 1 ? String.valueOf((int)val) : String.format("%.1f", val);
-            ctx.drawTextWithShadow(tr, valStr, sliderX + sliderW + 10, sy, GOLD);
+            ctx.drawTextWithShadow(tr, valStr, x + w - 135 - MinecraftClient.getInstance().textRenderer.getWidth(valStr), sy, GOLD);
         }
 
         @Override
@@ -900,6 +881,7 @@ public class WynnExtrasConfigScreen extends Screen {
             if (mx >= sliderX - 5 && mx < sliderX + sliderW + 10 && my >= sy && my < sy + 20) {
                 dragging = true;
                 updateValue(mx);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
             return false;
@@ -937,7 +919,7 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered) {
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
@@ -966,6 +948,7 @@ public class WynnExtrasConfigScreen extends Screen {
                 dropdownY = btnY + btnH;
                 dropdownWidth = btnW;
                 dropdownScroll = 0; // Reset scroll when opening
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
             return false;
@@ -981,19 +964,22 @@ public class WynnExtrasConfigScreen extends Screen {
         final Supplier<List<String>> getter;
         final Consumer<List<String>> setter;
 
-        StringListOption(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set) {
+        final String itemName;
+
+        StringListOption(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set, String itemName) {
             super(name, desc);
             this.getter = get; this.setter = set;
+            this.itemName = itemName;
         }
 
         @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered) {
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
             ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, getter.get().size() + " items", x + 8, y + 22, TEXT_DIM);
+            ctx.drawTextWithShadow(tr, getter.get().size() + " " + itemName, x + 8, y + 22, TEXT_DIM);
 
             int bx = x + w - 75, by = y + 12;
             boolean btnHover = mx >= bx && mx < bx + 65 && my >= by && my < by + 20;
@@ -1008,6 +994,7 @@ public class WynnExtrasConfigScreen extends Screen {
             if (mx >= bx && mx < bx + 65 && my >= by && my < by + 20) {
                 MinecraftClient.getInstance().setScreen(new StringListEditorScreen(
                         MinecraftClient.getInstance().currentScreen, name, getter.get(), setter));
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
             return false;
@@ -1089,6 +1076,7 @@ public class WynnExtrasConfigScreen extends Screen {
             if (mx >= px + pw - 60 && mx < px + pw - 15 && my >= 60 && my < 84 && !input.isEmpty()) {
                 items.add(input);
                 input = "";
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
 
@@ -1096,10 +1084,12 @@ public class WynnExtrasConfigScreen extends Screen {
             if (mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24) {
                 setter.accept(items);
                 client.setScreen(parent);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
             if (mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24) {
                 client.setScreen(parent);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
 
@@ -1107,6 +1097,7 @@ public class WynnExtrasConfigScreen extends Screen {
             for (int i = 0; i < items.size(); i++) {
                 if (mx >= px + pw - 45 && mx < px + pw - 15 && my >= y && my < y + 24) {
                     items.remove(i);
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 y += 28;

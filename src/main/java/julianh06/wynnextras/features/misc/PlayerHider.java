@@ -121,9 +121,6 @@ public class PlayerHider {
 
             for (PlayerEntity player : client.world.getPlayers()) {
                 if (player == null) {
-                    if(config.printDebugToConsole) {
-                        System.out.println("PLAYER == NULL");
-                    }
                     return;
                 }
 
@@ -131,15 +128,12 @@ public class PlayerHider {
                     continue;
                 }
 
-                if(!config.partyMemberHide || (config.onlyInNotg && !inNotg)) {
+                if(!config.partyMemberHide) {
                     if(isHidden(player)) { show(player); }
                     return;
                 }
 
                 double distance = player.getPos().distanceTo(me.getPos());
-                if(config.printDebugToConsole) {
-                    System.out.println("Distance to " + player.getName() + " is: " + distance + " max hide distance is: " + Distance);
-                }
                 if (distance >= Distance) {
                     if(isHidden(player)) { show(player); }
                     continue;
