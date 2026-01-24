@@ -1,6 +1,7 @@
 package julianh06.wynnextras.mixin;
 
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
+import julianh06.wynnextras.features.trademarket.TradeMarketOverlay;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import org.spongepowered.asm.mixin.Mixin;
@@ -14,5 +15,6 @@ public class RaidLootOverlayScreenMixin {
     @Inject(method = "render", at = @At("TAIL"))
     private void renderOverlayOnScreen(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         RaidLootTrackerOverlay.renderOnScreen(context);
+        TradeMarketOverlay.renderOnScreen(context);
     }
 }

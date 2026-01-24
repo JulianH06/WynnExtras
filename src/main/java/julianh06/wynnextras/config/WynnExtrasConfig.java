@@ -32,6 +32,8 @@ public class WynnExtrasConfig {
     public int maxHideDistance = 3;
     public List<String> hiddenPlayers = new ArrayList<>();
     public boolean onlyInNotg = false;
+    public boolean hideAllPlayers = false;
+    public boolean hideAllPlayersInWar = false;
     public boolean printDebugToConsole = false;
 
     // ==================== CHAT NOTIFIER ====================
@@ -62,6 +64,10 @@ public class WynnExtrasConfig {
     public int raidLootTrackerX = 5;
     public int raidLootTrackerY = 5;
     public List<String> raidLootTrackerHiddenLines = new ArrayList<>();
+    public boolean raidLootTrackerBackground = true;
+    public int tradeMarketOverlayX = 10;
+    public int tradeMarketOverlayY = 10;
+    public boolean tradeMarketOverlayBackground = true;
     public boolean toggleFastRequeue = true;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();

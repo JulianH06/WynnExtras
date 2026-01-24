@@ -129,7 +129,9 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Compact Mode", "Use compact display",
                         () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v))
                 .add(toggle("Session Stats", "Show current session stats",
-                        () -> config.raidLootTrackerShowSession, v -> config.raidLootTrackerShowSession = v));
+                        () -> config.raidLootTrackerShowSession, v -> config.raidLootTrackerShowSession = v))
+                .add(toggle("Show Background", "Show dark background",
+                        () -> config.raidLootTrackerBackground, v -> config.raidLootTrackerBackground = v));
 
         // ===== INVENTORY =====
         category("Inventory", 0xFF3a7a9c)
@@ -150,7 +152,10 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Stat Scales", "Show stat weights",
                         () -> config.showScales, v -> config.showScales = v))
                 .add(toggle("Financial Advice", "Identifier menu advice",
-                        () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v));
+                        () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
+            .sub("Trade Market")
+                .add(toggle("Show Background", "Show dark background",
+                        () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v));
 
         // ===== CHAT =====
         category("Chat", 0xFF4a8c3a)
@@ -179,6 +184,10 @@ public class WynnExtrasConfigScreen extends Screen {
                     1, 20, () -> config.maxHideDistance, v -> config.maxHideDistance = v))
             .add(toggle("Only in NOTG", "Only in Grootslangs",
                     () -> config.onlyInNotg, v -> config.onlyInNotg = v))
+            .add(toggle("Hide All Players", "Hide all players in range",
+                    () -> config.hideAllPlayers, v -> config.hideAllPlayers = v))
+            .add(toggle("Hide All in Wars", "Hide all players during wars",
+                    () -> config.hideAllPlayersInWar, v -> config.hideAllPlayersInWar = v))
             .add(toggle("Debug Output", "Console debug messages",
                     () -> config.printDebugToConsole, v -> config.printDebugToConsole = v))
             .add(stringList("Hidden Players", "Always hide these players",

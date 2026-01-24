@@ -31,6 +31,8 @@ import julianh06.wynnextras.features.raid.RaidListData;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootTracker;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
+import julianh06.wynnextras.features.trademarket.TradeMarketDebug;
+import julianh06.wynnextras.features.trademarket.TradeMarketOverlay;
 import julianh06.wynnextras.features.waypoints.WaypointData;
 import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
@@ -168,6 +170,8 @@ public class WynnExtras implements ClientModInitializer {
         RaidLootTracker.register();
         RaidLootTrackerOverlay.register();
         RaidLootConfig.INSTANCE.load();
+        TradeMarketDebug.register(); // DEBUG: Remove after understanding Trade Market structure
+        TradeMarketOverlay.register();
 
 		RaidListData.load();
 		WaypointData.load();
