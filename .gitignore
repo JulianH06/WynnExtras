@@ -33,6 +33,8 @@ tream
 
 run/
 
+repo-backup/
+
 # java
 
 hs_err_*.log
