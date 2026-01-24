@@ -1,18 +1,16 @@
 package julianh06.wynnextras.mixin.BankOverlay;
 
 import com.wynntils.core.components.Models;
-import com.wynntils.features.inventory.*;
+import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.containers.containers.ItemIdentifierContainer;
-import com.wynntils.models.items.items.game.*;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.InventoryKeyPressEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
+import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
-import julianh06.wynnextras.mixin.Accessor.*;
-import julianh06.wynnextras.mixin.Invoker.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -43,6 +41,8 @@ public abstract class HandledScreenMixin {
 
     @Unique private IdentifierOverlay identifierOverlay;
 
+    @Unique private CraftingHelperOverlay craftingHelperOverlay;
+
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if(bankOverlay == null) bankOverlay = new BankOverlay2(ci, (HandledScreen<?>) (Object) this);
@@ -61,6 +61,14 @@ public abstract class HandledScreenMixin {
 
             identifierOverlay.render(context, mouseX, mouseY, delta);
         }
+
+        if(SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+            if (craftingHelperOverlay == null) {
+                craftingHelperOverlay = new CraftingHelperOverlay();
+            }
+
+            craftingHelperOverlay.render(context, mouseX, mouseY, delta);
+        }
     }
 
 
@@ -71,6 +79,10 @@ public abstract class HandledScreenMixin {
             if (identifierOverlay != null && Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
                 identifierOverlay.mouseClicked(mouseX, mouseY, button);
             }
+        }
+
+        if (craftingHelperOverlay != null && Models.Container.getCurrentContainer() instanceof CraftingStationContainer && SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+            craftingHelperOverlay.mouseClicked(mouseX, mouseY, button);
         }
 
         if(bankOverlay != null) {
@@ -98,6 +110,10 @@ public abstract class HandledScreenMixin {
                 }
             }
         }
+
+        if(craftingHelperOverlay != null && SimpleConfig.getInstance(WynnExtrasConfig.class).craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+            craftingHelperOverlay.mouseReleased(mouseX, mouseY, button);
+        }
     }
 
     @Inject(method = "isClickOutsideBounds", at = @At("HEAD"), cancellable = true)
@@ -113,6 +129,7 @@ public abstract class HandledScreenMixin {
     @Inject(method = "init", at = @At("HEAD"))
     public void onInit(CallbackInfo ci) {
         heldItem = Items.AIR.getDefaultStack();
+        craftingHelperOverlay = null;
     }
 
     @Inject(method = "close", at = @At("HEAD"))
