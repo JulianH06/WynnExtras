@@ -6,6 +6,7 @@ import java.util.Map;
 public class CharacterData {
     private String type;
     private String nickname;
+    private String reskin;
     private int level;
     private long xp;
     private int xpPercent;
@@ -210,6 +211,14 @@ public class CharacterData {
 
     public void setContentCompletion(int contentCompletion) {
         this.contentCompletion = contentCompletion;
+    }
+
+    public String getReskin() {
+        return reskin;
+    }
+
+    public void setReskin(String reskin) {
+        this.reskin = reskin;
     }
 }
 

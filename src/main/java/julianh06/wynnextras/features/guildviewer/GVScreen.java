@@ -1,23 +1,18 @@
 package julianh06.wynnextras.features.guildviewer;
 
-import com.wynntils.screens.partymanagement.widgets.PartyMemberWidget;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.OpenInBrowserButton;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.Searchbar;
-import julianh06.wynnextras.features.profileviewer.tabs.GeneralTabWidget;
-import julianh06.wynnextras.features.profileviewer.tabs.PlayerWidget;
 import julianh06.wynnextras.mixin.Accessor.BannerBlockEntityAccessor;
-import julianh06.wynnextras.mixin.Accessor.BannerBlockEntityRendererAccessor;
-import julianh06.wynnextras.mixin.Invoker.BannerBlockEntityRendererInvoker;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BannerBlockEntity;
@@ -25,45 +20,28 @@ import net.minecraft.block.entity.BannerPattern;
 import net.minecraft.block.entity.BannerPatterns;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.TexturedRenderLayers;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.block.entity.BannerBlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
-import net.minecraft.client.render.block.entity.BlockEntityRenderer;
-import net.minecraft.client.render.block.entity.model.BannerFlagBlockModel;
-import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.component.ComponentMap;
-import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.BannerPatternsComponent;
-import net.minecraft.component.type.BlockStateComponent;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.registry.RegistryEntryLookup;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.resource.Resource;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.DyeColor;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RotationAxis;
 
-import javax.xml.crypto.Data;
-import java.sql.Time;
 import java.text.DecimalFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.*;
+
+import static julianh06.wynnextras.utils.UI.UIUtils.*;
 
 public class GVScreen extends WEScreen {
     static Identifier onlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle_dark.png");
@@ -87,7 +65,13 @@ public class GVScreen extends WEScreen {
 
     public static PVScreen.DarkModeToggleWidget darkModeToggleWidget = new PVScreen.DarkModeToggleWidget();
 
-    private static int scrollOffset = 0;
+    private static float targetOffset = 0;
+    private static float actualOffset = 0;
+    float maxOffset = 0;
+
+    static ScrollBarWidget scrollBarWidget = null;
+
+    static boolean mouseInMenu = false;
 
     List<GuildMemeberWidget> memeberWidgets = new ArrayList<>();
 
@@ -103,82 +87,22 @@ public class GVScreen extends WEScreen {
         super.init();
 
         registerScrolling();
-        scrollOffset = 0;
+        targetOffset = 0;
+        actualOffset = 0;
         rootWidgets.clear();
         addRootWidget(backgroundImageWidget);
         addRootWidget(darkModeToggleWidget);
         memeberWidgets = new ArrayList<>();
         openInBrowserButton = null;
         searchBar = null;
-//        lastViewedPlayersWidget.clear();
-//        if(currentTabWidget instanceof GeneralTabWidget) {
-//            currentTabWidget = null;
-//        }
-//        if(currentTabWidget == null) currentTabWidget = new GeneralTabWidget();
-
-//        for(PVScreen.TabButtonWidget tabButtonWidget : tabButtonWidgets) {
-//            addRootWidget(tabButtonWidget);
-//        }
-//        for(int i = 0; i < lastViewedPlayers.size(); i++) {
-//            PlayerWidget widget = new PlayerWidget(i);
-//            lastViewedPlayersWidget.add(widget);
-//            addRootWidget(widget);
-//        }
-//        addedNewest = false;
-        //addRootWidget(hier jetzt alle verschiedenen tabs);
     }
 
     @Override
     public void updateValues() {
-//        if(dummy != null) {
-//            Identifier dummyTexture = dummy.getSkinTextures().texture();
-//            lastViewedPlayersSkins.put(PV.currentPlayerData.getUsername(), dummyTexture);
-//        }
-
         int xStart = getLogicalWidth() / 2 - 900/* - (getLogicalWidth() - 1800 < 200 ? 50 : 0)*/;
         int yStart = getLogicalHeight() / 2 - 375;
         backgroundImageWidget.setBounds(xStart, yStart, 1800, 750);
         darkModeToggleWidget.setBounds(xStart + 1800 - 120, yStart + 750, 120, 60);
-
-//        int totalWidth = 24;
-//        for(PVScreen.TabButtonWidget tabButtonWidget : tabButtonWidgets) {
-//            int signWidth = drawDynamicNameSign(drawContext, tabButtonWidget.tab.toString(), xStart + totalWidth, yStart - 57);
-//            //24; //+ totalXOffset + (float) signWidth / 2
-//            tabButtonWidget.setBounds(xStart + totalWidth, yStart - 55, signWidth, 55);
-//            tabButtonWidget.setTextOffset(signWidth / 2, 17);
-//            totalWidth += signWidth + 12;
-//        }
-//        if(currentTabWidget == null) return;
-//        if(!rootWidgets.contains(currentTabWidget)){
-//            addRootWidget(currentTabWidget);
-//        }
-//        currentTabWidget.setBounds(xStart, yStart, 1800, 750);
-//        if(!rootWidgets.contains(currentTabWidget)) {
-//            for (int i = 0; i < lastViewedPlayers.size(); i++) {
-//                PlayerWidget widget = new PlayerWidget(i);
-//                lastViewedPlayersWidget.add(widget);
-//                //addRootWidget(widget);
-//            }
-//        }
-//        for(PlayerWidget playerWidget : lastViewedPlayersWidget) {
-//            playerWidget.draw(super.drawContext, xStart + currentTabWidget.getWidth(), yStart + 100 * playerWidget.index + 30);
-//        }
-        //System.out.println(rootWidgets);
-//        for(int i = 0; i < lastViewedPlayers.size(); i++) {
-//            ui.drawText(lastViewedPlayers.get(i),  + 110, yStart + 100 * i + 55);
-//
-//            ui.drawImage(playerTabTexture, xStart + currentTabWidget.getWidth(), yStart + 100 * i + 25, 100, 80);
-//
-//            //to only draw the head
-//            RenderUtils.drawTexturedRect(
-//                    super.drawContext.getMatrices(),
-//                    lastViewedPlayersSkins.get(lastViewedPlayers.get(i)),
-//                    ui.sx(xStart + currentTabWidget.getWidth() + 25), ui.sy(yStart + 100 * i + 35), 0,
-//                    ui.sw(60), ui.sh(60),
-//                    8, 8, 8, 8,
-//                    64, 64
-//            );
-//        }
     }
 
     @Override
@@ -188,6 +112,7 @@ public class GVScreen extends WEScreen {
     @Override
     //im drawing the tab stuff in updateValues so the background has to be rendered first that's why this override exists
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        mouseInMenu = false;
         PVScreen.mouseX = mouseX;
         PVScreen.mouseY = mouseY;
         super.applyBlur();
@@ -203,8 +128,19 @@ public class GVScreen extends WEScreen {
         updateVisibleListRange();
         layoutListElements();
 
+        targetOffset = ui == null ? 0 : Math.clamp(targetOffset, 0, maxOffset);
+
+        float snapValue = 0.5f;
+        float speed = 0.3f;
+        float diff = (targetOffset - actualOffset);
+        if(Math.abs(diff) < snapValue || !SimpleConfig.getInstance(WynnExtrasConfig.class).smoothScrollToggle || scrollBarWidget.scrollBarButtonWidget.isHeld) actualOffset = targetOffset;
+        else actualOffset += diff * speed * delta;
+        if(actualOffset < 0) actualOffset = 0;
+
         int xStart = getLogicalWidth() / 2 - 900/* - (getLogicalWidth() - 1800 < 200 ? 50 : 0)*/;
         int yStart = getLogicalHeight() / 2 - 374;
+
+        if(backgroundImageWidget.contains(mouseX, mouseY)) mouseInMenu = true;
 
         if(openInBrowserButton == null && GV.currentGuildData != null) {
             openInBrowserButton = new OpenInBrowserButton(-1, -1, (int) (20 * 3 / scaleFactor), (int) (87 * 3 / scaleFactor), "https://wynncraft.com/stats/guild/" + GV.currentGuildData.prefix + "?prefix=true");
@@ -244,14 +180,17 @@ public class GVScreen extends WEScreen {
 
         int textX = xStart + 1180;
         int spacing = 150;
-        int yOffset = spacing - scrollOffset - 50;
+
+        int contentHeight = 100;
+
+        int yOffset = -(int) actualOffset;
+
         ui.drawText("[" + GV.currentGuildData.prefix + "] " + GV.currentGuildData.name, xStart + 19, yStart + 19);
 
         PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, xStart + 15, yStart + 60, 33, 33, ui);
 
         ui.drawText("Online: " + GV.currentGuildData.online + "/" + GV.currentGuildData.members.total, xStart + 57, yStart + 66, CustomColor.fromHexString("FFFFFF"), 3f);
 
-        //ui.drawRect(xStart + 565, yStart, 1800 - 565, 100);
         ui.drawCenteredText("Members: " + GV.currentGuildData.members.total + "/" + getMaxMembers(GV.currentGuildData.level), textX, yStart + 30);
 
         ui.drawCenteredText("Level " + GV.currentGuildData.level, xStart + 285, yStart + 590);
@@ -306,63 +245,134 @@ public class GVScreen extends WEScreen {
 
         context.enableScissor(0, (int) ui.sy(yStart + 50), getLogicalWidth(), (int) ui.sy(yStart + 738));
 
-        ui.drawCenteredText("★★★★★ OWNER ★★★★★", textX, yStart + yOffset, CustomColor.fromHexString("00FFFF"));
-        yOffset += 50;
+        ui.drawCenteredText("★★★★★ OWNER ★★★★★", textX, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
+        contentHeight += 50;
         {
-            Map<String, GuildData.Member> players = GV.currentGuildData.members.owner;
-            Pair<Integer, Integer> result = setWidgetBounds(memeberWidgets, count, players, textX - 175, yStart, yOffset, spacing);
-            count = 1;
-            yOffset = result.getRight();
-        }
+            Pair<Integer, Integer> result = setWidgetBounds(
+                    memeberWidgets,
+                    count,
+                    GV.currentGuildData.members.owner,
+                    textX - 175,
+                    yStart,
+                    yOffset + contentHeight,
+                    spacing
+            );
 
-        ui.drawCenteredText("★★★★ CHIEF ★★★★", xStart + 1180, yStart + yOffset, CustomColor.fromHexString("00FFFF"));
-        yOffset += 50;
-        {
-            Map<String, GuildData.Member> players = GV.currentGuildData.members.chief;
-            Pair<Integer, Integer> result = setWidgetBounds(memeberWidgets, count, players, textX - 175, yStart, yOffset, spacing);
             count = result.getLeft();
-            yOffset = result.getRight();
+            contentHeight += result.getRight();
         }
 
-        ui.drawCenteredText("★★★ STRATEGIST ★★★", xStart + 1180, yStart + yOffset, CustomColor.fromHexString("00FFFF"));
-        yOffset += 50;
+        contentHeight += 25;
+        ui.drawCenteredText("★★★★ CHIEF ★★★★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
+        contentHeight += 50;
         {
-            Map<String, GuildData.Member> players = GV.currentGuildData.members.strategist;
-            Pair<Integer, Integer> result = setWidgetBounds(memeberWidgets, count, players, textX - 175, yStart, yOffset, spacing);
+            Pair<Integer, Integer> result = setWidgetBounds(
+                    memeberWidgets,
+                    count,
+                    GV.currentGuildData.members.chief,
+                    textX - 175,
+                    yStart,
+                    yOffset + contentHeight,
+                    spacing
+            );
+
             count = result.getLeft();
-            yOffset = result.getRight();
+            contentHeight += result.getRight();
         }
 
-        ui.drawCenteredText("★★ CAPTAIN ★★", xStart + 1180, yStart + yOffset, CustomColor.fromHexString("00FFFF"));
-        yOffset += 50;
+        contentHeight += 25;
+        ui.drawCenteredText("★★★ STRATEGIST ★★★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
+        contentHeight += 50;
         {
-            Map<String, GuildData.Member> players = GV.currentGuildData.members.captain;
-            Pair<Integer, Integer> result = setWidgetBounds(memeberWidgets, count, players, textX - 175, yStart, yOffset, spacing);
+            Pair<Integer, Integer> result = setWidgetBounds(
+                    memeberWidgets,
+                    count,
+                    GV.currentGuildData.members.strategist,
+                    textX - 175,
+                    yStart,
+                    yOffset + contentHeight,
+                    spacing
+            );
+
             count = result.getLeft();
-            yOffset = result.getRight();
+            contentHeight += result.getRight();
         }
 
-        ui.drawCenteredText("★ RECRUITER ★", xStart + 1180, yStart + yOffset, CustomColor.fromHexString("00FFFF"));
-        yOffset += 50;
+        contentHeight += 25;
+        ui.drawCenteredText("★★ CAPTAIN ★★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
+        contentHeight += 50;
         {
-            Map<String, GuildData.Member> players = GV.currentGuildData.members.recruiter;
-            Pair<Integer, Integer> result = setWidgetBounds(memeberWidgets, count, players, textX - 175, yStart, yOffset, spacing);
+            Pair<Integer, Integer> result = setWidgetBounds(
+                    memeberWidgets,
+                    count,
+                    GV.currentGuildData.members.captain,
+                    textX - 175,
+                    yStart,
+                    yOffset + contentHeight,
+                    spacing
+            );
+
             count = result.getLeft();
-            yOffset = result.getRight();
+            contentHeight += result.getRight();
         }
 
-        ui.drawCenteredText("RECRUIT", xStart + 1180, yStart + yOffset, CustomColor.fromHexString("00FFFF"));
-        yOffset += 50;
+        contentHeight += 25;
+        ui.drawCenteredText("★ RECRUITER ★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
+        contentHeight += 50;
         {
-            Map<String, GuildData.Member> players = GV.currentGuildData.members.recruit;
-            Pair<Integer, Integer> result = setWidgetBounds(memeberWidgets, count, players, textX - 175, yStart, yOffset, spacing);
+            Pair<Integer, Integer> result = setWidgetBounds(
+                    memeberWidgets,
+                    count,
+                    GV.currentGuildData.members.recruiter,
+                    textX - 175,
+                    yStart,
+                    yOffset + contentHeight,
+                    spacing
+            );
+
+            count = result.getLeft();
+            contentHeight += result.getRight();
         }
+
+        contentHeight += 25;
+        ui.drawCenteredText("RECRUIT", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
+        contentHeight += 50;
+        {
+            Pair<Integer, Integer> result = setWidgetBounds(
+                    memeberWidgets,
+                    count,
+                    GV.currentGuildData.members.recruit,
+                    textX - 175,
+                    yStart,
+                    yOffset + contentHeight,
+                    spacing
+            );
+
+            contentHeight += result.getRight();
+        }
+
         for(GuildMemeberWidget widget : memeberWidgets) {
             widget.draw(context, mouseX, mouseY, delta, ui);
         }
         context.disableScissor();
 
         darkModeToggleWidget.draw(context, mouseX, mouseY, delta, ui);
+
+        int visibleHeight = 738 - 50;
+        maxOffset = Math.max(
+                0,
+                contentHeight - visibleHeight
+        );
+
+
+        if(scrollBarWidget == null) {
+            scrollBarWidget = new ScrollBarWidget(maxOffset);
+        }
+
+        scrollBarWidget.maxOffset = maxOffset;
+
+        scrollBarWidget.setBounds(xStart + 1820, yStart, 30, 750);
+        scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
     }
 
     @Override
@@ -376,6 +386,7 @@ public class GVScreen extends WEScreen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if(scrollBarWidget != null) scrollBarWidget.mouseClicked(mouseX, mouseY, button);
         if(openInBrowserButton == null || searchBar == null || darkModeToggleWidget == null) return false;
 
         if(darkModeToggleWidget.contains(PVScreen.mouseX, PVScreen.mouseY)) {
@@ -402,6 +413,12 @@ public class GVScreen extends WEScreen {
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double x, double y, int button) {
+        if(scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
+        return super.mouseReleased(x, y, button);
     }
 
     public static void renderBanner(GuildData.Banner banner, MatrixStack matrices, int x, int y, float scale) {
@@ -535,57 +552,73 @@ public class GVScreen extends WEScreen {
         };
     }
 
-    private static Pair<Integer, Integer> setWidgetBounds(List<GuildMemeberWidget> memeberWidgets, int count, Map<String, GuildData.Member> players, int textX, int yStart, int yOffset, int spacing) {
+    private static Pair<Integer, Integer> setWidgetBounds(
+            List<GuildMemeberWidget> memberWidgets,
+            int startIndex,
+            Map<String, GuildData.Member> players,
+            int centerX,
+            int yStart,
+            int yOffset,
+            int spacing
+    ) {
         int widgetHeight = 120;
         int widgetWidth = 350;
-        int i = 0;
-        boolean setCoordsOfFirstWidgetOfLastRow = false;
-        for (GuildData.Member member : players.values()) {
-            int lastRowAmount = players.keySet().size() % 3;
-            if (players.keySet().size() - i <= lastRowAmount) {
-                switch (lastRowAmount) {
-                    case 1 -> {
-                        memeberWidgets.get(count + i).setBounds(textX, yStart + yOffset, widgetWidth, widgetHeight);
-                        yOffset += spacing;
-                    }
-                    case 2 -> {
-                        if (i % 2 == 0) {
-                            memeberWidgets.get(count + i).setBounds(textX - 200, yStart + yOffset, widgetWidth, widgetHeight);
-                        } else {
-                            memeberWidgets.get(count + i).setBounds(textX + 200, yStart + yOffset, widgetWidth, widgetHeight);
-                        }
-                        if(!setCoordsOfFirstWidgetOfLastRow) {
-                            setCoordsOfFirstWidgetOfLastRow = true;
-                        } else {
-                            yOffset += spacing;
-                            setCoordsOfFirstWidgetOfLastRow = false;
-                        }
-                    }
+
+        int index = 0;
+        int row = 0;
+
+        int total = players.size();
+        int fullRows = total / 3;
+        int lastRowCount = total % 3;
+
+        for (GuildData.Member ignored : players.values()) {
+            int col = index % 3;
+            int x;
+
+            boolean isLastRow = row == fullRows && lastRowCount != 0;
+
+            if (isLastRow) {
+                if (lastRowCount == 1) {
+                    x = centerX;
+                } else {
+                    x = (col == 0)
+                            ? centerX - 200
+                            : centerX + 200;
                 }
             } else {
-                switch (i % 3) {
-                    case 0 ->
-                            memeberWidgets.get(count + i).setBounds(textX - 400, yStart + yOffset, widgetWidth, widgetHeight);
-                    case 1 ->
-                            memeberWidgets.get(count + i).setBounds(textX, yStart + yOffset, widgetWidth, widgetHeight);
-                    case 2 ->
-                            memeberWidgets.get(count + i).setBounds(textX + 400, yStart + yOffset, widgetWidth, widgetHeight);
-                }
+                x = switch (col) {
+                    case 0 -> centerX - 400;
+                    case 1 -> centerX;
+                    default -> centerX + 400;
+                };
             }
-            if ((i + 1) % 3 == 0) {
-                yOffset += spacing;
+
+            memberWidgets
+                    .get(startIndex + index)
+                    .setBounds(x, yStart + yOffset + row * spacing, widgetWidth, widgetHeight);
+
+            index++;
+
+            if (index % 3 == 0) {
+                row++;
             }
-            i++;
         }
-        yOffset += 50;
-        count += i;
-        return new Pair<>(count, yOffset);
+
+        int rowsUsed = fullRows + (lastRowCount > 0 ? 1 : 0);
+        int heightUsed = rowsUsed * spacing;
+
+        return new Pair<>(startIndex + total, heightUsed);
     }
 
     @Override
     protected void scrollList(float delta) {
-        scrollOffset -= (int) (delta);
-        if(scrollOffset < 0) scrollOffset = 0;
+        if (delta > 0) {
+            targetOffset -= 40f;
+        } else {
+            targetOffset += 40f;
+        }
+
+        if(targetOffset < 0) targetOffset = 0;
     }
 
     private static class GuildMemeberWidget extends Widget {
@@ -606,6 +639,7 @@ public class GVScreen extends WEScreen {
             super(0, 0, 0, 0);
             this.member = member;
             this.action = () -> {
+                if(!mouseInMenu) return;
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 parent.close();
                 PV.open(member.username);
@@ -621,7 +655,7 @@ public class GVScreen extends WEScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if(hovered) {
+            if(hovered && mouseInMenu) {
                 PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered, x, y, width, height, ui);
             } else {
                 PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture,  x, y, width, height, ui);
@@ -660,6 +694,120 @@ public class GVScreen extends WEScreen {
             }
         }
 
+    }
+
+    private static class ScrollBarWidget extends Widget {
+        ScrollBarButtonWidget scrollBarButtonWidget;
+        int currentMouseY = 0;
+        public float maxOffset;
+
+        public ScrollBarWidget(float maxOffset) {
+            super(0, 0, 0, 0);
+            this.scrollBarButtonWidget = new ScrollBarButtonWidget();
+            addChild(scrollBarButtonWidget);
+            this.maxOffset = maxOffset;
+        }
+
+        private void setOffset(int mouseY, float maxOffset, int scrollAreaHeight) {
+            float relativeY = mouseY * ui.getScaleFactorF() - y - scrollBarButtonWidget.getHeight() / 2f;
+            relativeY = Math.max(-1.15f * ui.getScaleFactorF(), Math.min(relativeY, scrollAreaHeight));
+
+            float scrollPercent = relativeY / scrollAreaHeight;
+
+            targetOffset = scrollPercent * maxOffset;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            currentMouseY = mouseY;
+
+            int scale = 5;
+
+            ui.drawSliderBackground(x, y, width, height, scale, false);
+
+            if (PVScreen.DarkModeToggleWidget.fade > 0.001f) {
+                RenderUtils.drawRect(
+                        ctx.getMatrices(),
+                        CustomColor.fromHexString("1b1b1c").withAlpha(PVScreen.DarkModeToggleWidget.fade),
+                        ui.sx(x + scale) - 1,
+                        ui.sy(y + scale) - 1,
+                        0,
+                        ui.sw(width - scale * 2) + 2,
+                        ui.sh(height - scale * 2) + 2
+                );
+            }
+
+            ui.drawButtonTextures(
+                    x, y, width, height, scale,
+                    SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle,
+                    sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark,
+                    sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark,
+                    sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr,
+                    sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright, 1
+            );
+
+            updateScrollButton(mouseY);
+        }
+
+        private void updateScrollButton(int mouseY) {
+            int buttonHeight = 50;
+            int scrollAreaHeight = height - buttonHeight;
+
+            if (scrollBarButtonWidget.isHeld) {
+                setOffset(mouseY, maxOffset, scrollAreaHeight);
+                actualOffset = targetOffset;
+            }
+
+            float percent = maxOffset == 0 ? 0 : actualOffset / maxOffset;
+            percent = Math.clamp(percent, 0f, 1f);
+
+            int yPos = y + (int) (scrollAreaHeight * percent);
+            scrollBarButtonWidget.setBounds(x, yPos, width, buttonHeight);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            int buttonHeight = 30;
+            int scrollAreaHeight = height - buttonHeight;
+
+            setOffset(currentMouseY, maxOffset, scrollAreaHeight);
+
+            return false;
+        }
+
+        @Override
+        public boolean mouseReleased(double mx, double my, int button) {
+            scrollBarButtonWidget.mouseReleased(mx, my, button);
+            return true;
+        }
+
+        private static class ScrollBarButtonWidget extends Widget {
+            public boolean isHeld;
+
+            public ScrollBarButtonWidget() {
+                super(0, 0, 0, 0);
+                isHeld = false;
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                ui.drawButtonFade(x, y, width, height, 5, hovered || isHeld);
+            }
+
+            @Override
+            protected boolean onClick(int button) {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                isHeld = true;
+                return true;
+            }
+
+            @Override
+            public boolean mouseReleased(double mx, double my, int button) {
+                isHeld = false;
+                return true;
+            }
+        }
     }
 }
 
