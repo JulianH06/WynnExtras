@@ -4,45 +4,73 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
+/**
+ * WynnExtras Configuration Screen
+ *
+ * HOW TO ADD/EDIT SETTINGS:
+ * 1. Find the category in initCategories()
+ * 2. Add options using the helper methods:
+ *    - toggle("Name", "Description", getter, setter)
+ *    - slider("Name", "Description", min, max, getter, setter)
+ *    - sliderF("Name", "Description", min, max, step, getter, setter)
+ *    - dropdown("Name", "Description", EnumClass.class, getter, setter)
+ *    - stringList("Name", "Description", getter, setter)
+ * 3. To add subcategories: category.sub("SubcategoryName").add(...)
+ */
 public class WynnExtrasConfigScreen extends Screen {
     private final Screen parent;
     private final WynnExtrasConfig config;
 
-    // Colors - Wynncraft Medieval Theme
-    private static final int BG_DARK = 0xFF1a1410;           // Dark wood/leather
-    private static final int BG_MEDIUM = 0xFF2d2419;         // Medium brown
-    private static final int BG_LIGHT = 0xFF3d3222;          // Light brown
-    private static final int SIDEBAR_BG = 0xFF251e15;        // Dark sidebar
-    private static final int PARCHMENT = 0xFF4a3c2a;         // Parchment-like
-    private static final int PARCHMENT_LIGHT = 0xFF5c4d3a;   // Lighter parchment
-    private static final int GOLD = 0xFFc9a227;              // Wynncraft gold
-    private static final int GOLD_DARK = 0xFF8b7019;         // Dark gold
-    private static final int GOLD_LIGHT = 0xFFe8c252;        // Light gold
-    private static final int TEXT_LIGHT = 0xFFe8dcc8;        // Light text (parchment white)
-    private static final int TEXT_GOLD = 0xFFdabc5e;         // Golden text
-    private static final int TEXT_DIM = 0xFF9a8b70;          // Dimmed text
-    private static final int BORDER_DARK = 0xFF1a1410;       // Dark border
-    private static final int BORDER_LIGHT = 0xFF5c4a35;      // Light border
-    private static final int TOGGLE_ON = 0xFF4a8c3a;         // Forest green (on)
-    private static final int TOGGLE_OFF = 0xFF5c4535;        // Brown (off)
-    private static final int ACCENT_RED = 0xFFa83232;        // Wynncraft red accent
+    // ==================== THEME COLORS ====================
+    private static final int BG_DARK = 0xFF1a1410;
+    private static final int BG_MEDIUM = 0xFF2d2419;
+    private static final int BG_LIGHT = 0xFF3d3222;
+    private static final int PARCHMENT = 0xFF4a3c2a;
+    private static final int PARCHMENT_LIGHT = 0xFF5c4d3a;
+    private static final int PARCHMENT_HOVER = 0xFF6a5d4a;
+    private static final int GOLD = 0xFFc9a227;
+    private static final int GOLD_DARK = 0xFF8b7019;
+    private static final int GOLD_LIGHT = 0xFFe8c252;
+    private static final int TEXT_LIGHT = 0xFFe8dcc8;
+    private static final int TEXT_DIM = 0xFF9a8b70;
+    private static final int BORDER_DARK = 0xFF1a1410;
+    private static final int BORDER_LIGHT = 0xFF5c4a35;
+    private static final int TOGGLE_ON = 0xFF4a8c3a;
+    private static final int TOGGLE_OFF = 0xFF5c4535;
+    private static final int ACCENT_RED = 0xFFa83232;
+    private static final int SUBCATEGORY_BG = 0xFF352a1e;
 
-    // Layout
-    private static final int SIDEBAR_WIDTH = 150;
+    // ==================== LAYOUT ====================
+    private static final int SIDEBAR_WIDTH = 140;
     private static final int HEADER_HEIGHT = 50;
     private static final int FOOTER_HEIGHT = 50;
+    private static final int OPTION_HEIGHT = 45;
+    private static final int OPTION_SPACING = 5;
+    private static final int SUBCATEGORY_HEADER_HEIGHT = 25;
 
+    // ==================== STATE ====================
     private int selectedCategory = 0;
     private final List<Category> categories = new ArrayList<>();
     private double scrollOffset = 0;
     private double maxScroll = 0;
+    private boolean scrollbarDragging = false;
+    private double scrollbarDragOffset = 0;
+    private int scrollbarY, scrollbarHeight, scrollbarThumbY, scrollbarThumbH;
+
+    // Dropdown state
+    private EnumOption<?> activeDropdown = null;
+    private int dropdownX, dropdownY, dropdownWidth;
+    private double dropdownScroll = 0;
+    private static final int DROPDOWN_MAX_HEIGHT = 150;
+    private static final int DROPDOWN_ITEM_HEIGHT = 22;
 
     public WynnExtrasConfigScreen(Screen parent) {
         super(Text.literal("WynnExtras Configuration"));
@@ -51,112 +79,145 @@ public class WynnExtrasConfigScreen extends Screen {
         initCategories();
     }
 
+    // ==================== CATEGORY DEFINITIONS ====================
     private void initCategories() {
         categories.clear();
 
-        // Player Hider
-        Category playerHider = new Category("Player Hider", ACCENT_RED);
-        playerHider.addOption(new BooleanOption("Enable Player Hider", "Toggle the player hiding feature",
-                () -> config.partyMemberHide, v -> config.partyMemberHide = v));
-        playerHider.addOption(new SliderOption("Max Hide Distance", "Players within this distance will be hidden",
-                1, 20, () -> config.maxHideDistance, v -> config.maxHideDistance = v));
-        playerHider.addOption(new BooleanOption("Only in NOTG", "Only hide in Nest of the Grootslangs",
-                () -> config.onlyInNotg, v -> config.onlyInNotg = v));
-        playerHider.addOption(new BooleanOption("Debug Output", "Print debug messages to console",
-                () -> config.printDebugToConsole, v -> config.printDebugToConsole = v));
-        playerHider.addOption(new StringListOption("Hidden Players", "Players to always hide",
-                () -> config.hiddenPlayers, v -> config.hiddenPlayers = v));
-        categories.add(playerHider);
+        // ===== GENERAL =====
+        category("General", GOLD)
+            .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
+                    () -> config.differentGUIScale, v -> config.differentGUIScale = v))
+            .add(slider("GUI Scale", "Custom GUI scale value",
+                    1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
+            .add(toggle("Skip Front View", "Skip front-facing 3rd person",
+                    () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
+            .add(toggle("PV Dark Mode", "Dark theme for profile viewer",
+                    () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v));
 
-        // Chat
-        Category chat = new Category("Chat", 0xFF4a8c3a);
-        chat.addOption(new SliderOption("Text Duration (ms)", "How long notification displays",
-                500, 10000, () -> config.textDurationInMs, v -> config.textDurationInMs = v));
-        chat.addOption(new EnumOption<>("Text Color", "Color of notification text",
-                WynnExtrasConfig.TextColor.class, () -> config.textColor, v -> config.textColor = v));
-        chat.addOption(new EnumOption<>("Sound", "Notification sound",
-                WynnExtrasConfig.NotificationSound.class, () -> config.notificationSound, v -> config.notificationSound = v));
-        chat.addOption(new SliderOption("Volume", "Sound volume",
-                0, 100, () -> (int)(config.soundVolume * 100), v -> config.soundVolume = v / 100f));
-        chat.addOption(new SliderOption("Pitch", "Sound pitch",
-                50, 200, () -> (int)(config.soundPitch * 100), v -> config.soundPitch = v / 100f));
-        chat.addOption(new StringListOption("Notifier Words", "Format: trigger|display text",
-                () -> config.notifierWords, v -> config.notifierWords = v));
-        chat.addOption(new StringListOption("Blocked Words", "Messages with these words are hidden",
-                () -> config.blockedWords, v -> config.blockedWords = v));
-        categories.add(chat);
+        // ===== COMBAT =====
+        category("Combat", 0xFFa83232)
+            .sub("Shaman")
+                .add(toggle("Show Totem Range", "Display totem range circle",
+                        () -> config.totemRangeVisualizerToggle, v -> config.totemRangeVisualizerToggle = v))
+                .add(sliderF("Totem Radius", "Size of totem circle",
+                        1f, 30f, 0.5f, () -> config.totemRange, v -> config.totemRange = v))
+                .add(dropdown("Totem Color", "Circle color",
+                        WynnExtrasConfig.TextColor.class, () -> config.totemColor, v -> config.totemColor = v))
+                .add(sliderF("Eldritch Radius", "Eldritch call range",
+                        1f, 30f, 0.5f, () -> config.eldritchCallRange, v -> config.eldritchCallRange = v))
+                .add(dropdown("Eldritch Color", "Circle color",
+                        WynnExtrasConfig.TextColor.class, () -> config.eldritchCallColor, v -> config.eldritchCallColor = v))
+            .sub("Provoke")
+                .add(toggle("Provoke Timer", "Show provoke timer [WIP]",
+                        () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
+                .add(dropdown("Timer Color", "Timer text color",
+                        WynnExtrasConfig.TextColor.class, () -> config.provokeTimerColor, v -> config.provokeTimerColor = v));
 
-        // Bank Overlay
-        Category bank = new Category("Bank Overlay", 0xFF3a7a9c);
-        bank.addOption(new BooleanOption("Enable Bank Overlay", "Toggle enhanced bank interface",
-                () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v));
-        bank.addOption(new BooleanOption("Smooth Scrolling", "Enable smooth scroll animation",
-                () -> config.smoothScrollToggle, v -> config.smoothScrollToggle = v));
-        bank.addOption(new BooleanOption("Quick Toggle", "Show quick toggle button",
-                () -> config.bankQuickToggle, v -> config.bankQuickToggle = v));
-        bank.addOption(new BooleanOption("Dark Mode", "Use dark theme",
-                () -> config.darkmodeToggle, v -> config.darkmodeToggle = v));
-        bank.addOption(new SliderOption("Rarity BG Intensity", "Item rarity background intensity",
-                0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v));
-        categories.add(bank);
+        // ===== RAIDS =====
+        category("Raids", 0xFF7a3a9c)
+            .add(toggle("Timestamps", "Show timestamps during raids",
+                    () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
+            .add(toggle("Fast Requeue", "Auto /pf on chest close",
+                    () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
+            .sub("Loot Tracker")
+                .add(toggle("Enable Tracker", "Track raid loot drops",
+                        () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
+                .add(toggle("Only in Inventory", "Show only when inventory open",
+                        () -> config.raidLootTrackerOnlyInInventory, v -> config.raidLootTrackerOnlyInInventory = v))
+                .add(toggle("Only Near Chest", "Show only near reward chest",
+                        () -> config.raidLootTrackerOnlyNearChest, v -> config.raidLootTrackerOnlyNearChest = v))
+                .add(toggle("Compact Mode", "Use compact display",
+                        () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v))
+                .add(toggle("Session Stats", "Show current session stats",
+                        () -> config.raidLootTrackerShowSession, v -> config.raidLootTrackerShowSession = v));
 
-        // Raid
-        Category raid = new Category("Raid", 0xFFa83232);
-        raid.addOption(new BooleanOption("Raid Timestamps", "Show timestamps during raids",
-                () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v));
-        raid.addOption(new BooleanOption("Loot Tracker", "Track raid loot",
-                () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v));
-        raid.addOption(new BooleanOption("Only in Inventory", "Show tracker only when inventory open",
-                () -> config.raidLootTrackerOnlyInInventory, v -> config.raidLootTrackerOnlyInInventory = v));
-        raid.addOption(new BooleanOption("Only Near Chest", "Show only near reward chest",
-                () -> config.raidLootTrackerOnlyNearChest, v -> config.raidLootTrackerOnlyNearChest = v));
-        raid.addOption(new BooleanOption("Compact Mode", "Use compact display",
-                () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v));
-        raid.addOption(new BooleanOption("Show Session Stats", "Show current session stats",
-                () -> config.raidLootTrackerShowSession, v -> config.raidLootTrackerShowSession = v));
-        raid.addOption(new BooleanOption("Fast Requeue", "Auto /pf on chest close",
-                () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v));
-        raid.addOption(new BooleanOption("Provoke Timer", "Show provoke timer [WIP]",
-                () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v));
-        categories.add(raid);
+        // ===== INVENTORY =====
+        category("Inventory", 0xFF3a7a9c)
+            .sub("Bank Overlay")
+                .add(toggle("Enable Overlay", "Enhanced bank interface",
+                        () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v))
+                .add(toggle("Smooth Scroll", "Smooth scroll animation",
+                        () -> config.smoothScrollToggle, v -> config.smoothScrollToggle = v))
+                .add(toggle("Quick Toggle", "Show quick toggle button",
+                        () -> config.bankQuickToggle, v -> config.bankQuickToggle = v))
+                .add(toggle("Dark Mode", "Dark bank theme",
+                        () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
+                .add(slider("Rarity BG Alpha", "Item rarity background opacity",
+                        0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
+            .sub("Tooltips")
+                .add(toggle("Item Weights", "Show Wynnpool weights",
+                        () -> config.showWeight, v -> config.showWeight = v))
+                .add(toggle("Stat Scales", "Show stat weights",
+                        () -> config.showScales, v -> config.showScales = v))
+                .add(toggle("Financial Advice", "Identifier menu advice",
+                        () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v));
 
-        // Misc
-        Category misc = new Category("Misc", GOLD);
-        misc.addOption(new BooleanOption("Show Item Weights", "Display Wynnpool weights",
-                () -> config.showWeight, v -> config.showWeight = v));
-        misc.addOption(new BooleanOption("Show Stat Scales", "Display stat weights",
-                () -> config.showScales, v -> config.showScales = v));
-        misc.addOption(new BooleanOption("Financial Advice", "Smart advice in identifier menu",
-                () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v));
-        misc.addOption(new BooleanOption("Totem Range", "Show totem range circle",
-                () -> config.totemRangeVisualizerToggle, v -> config.totemRangeVisualizerToggle = v));
-        misc.addOption(new SliderOption("Totem Range", "Radius of totem circle",
-                1, 30, () -> (int)config.totemRange, v -> config.totemRange = v));
-        misc.addOption(new EnumOption<>("Totem Color", "Totem circle color",
-                WynnExtrasConfig.TextColor.class, () -> config.totemColor, v -> config.totemColor = v));
-        misc.addOption(new SliderOption("Eldritch Range", "Eldritch call radius",
-                1, 30, () -> (int)config.eldritchCallRange, v -> config.eldritchCallRange = v));
-        misc.addOption(new EnumOption<>("Eldritch Color", "Eldritch call color",
-                WynnExtrasConfig.TextColor.class, () -> config.eldritchCallColor, v -> config.eldritchCallColor = v));
-        misc.addOption(new EnumOption<>("Provoke Timer Color", "Timer color",
-                WynnExtrasConfig.TextColor.class, () -> config.provokeTimerColor, v -> config.provokeTimerColor = v));
-        misc.addOption(new BooleanOption("PV Dark Mode", "Profile viewer dark theme",
-                () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v));
-        misc.addOption(new BooleanOption("Custom GUI Scale", "Use different scale for menus",
-                () -> config.differentGUIScale, v -> config.differentGUIScale = v));
-        misc.addOption(new SliderOption("GUI Scale", "Custom GUI scale value",
-                1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v));
-        misc.addOption(new BooleanOption("Skip Front View", "Skip front-facing 3rd person",
-                () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v));
-        categories.add(misc);
+        // ===== CHAT =====
+        category("Chat", 0xFF4a8c3a)
+            .sub("Notifications")
+                .add(slider("Duration (ms)", "How long notification shows",
+                        500, 10000, () -> config.textDurationInMs, v -> config.textDurationInMs = v))
+                .add(dropdown("Text Color", "Notification color",
+                        WynnExtrasConfig.TextColor.class, () -> config.textColor, v -> config.textColor = v))
+                .add(dropdown("Sound", "Notification sound",
+                        WynnExtrasConfig.NotificationSound.class, () -> config.notificationSound, v -> config.notificationSound = v))
+                .add(slider("Volume", "Sound volume",
+                        0, 100, () -> (int)(config.soundVolume * 100), v -> config.soundVolume = v / 100f))
+                .add(slider("Pitch", "Sound pitch",
+                        50, 200, () -> (int)(config.soundPitch * 100), v -> config.soundPitch = v / 100f))
+            .sub("Filters")
+                .add(stringList("Notifier Words", "Format: trigger|display",
+                        () -> config.notifierWords, v -> config.notifierWords = v))
+                .add(stringList("Blocked Words", "Hide messages with these",
+                        () -> config.blockedWords, v -> config.blockedWords = v));
 
-        // Waypoints
-        Category waypoints = new Category("Waypoints", 0xFF7a5aa8);
-        waypoints.addOption(new BooleanOption("Disable Default Waypoints", "Disable built-in waypoint packages",
-                () -> config.disableAllDefaultWaypoints, v -> config.disableAllDefaultWaypoints = v));
-        categories.add(waypoints);
+        // ===== PARTY =====
+        category("Party", ACCENT_RED)
+            .add(toggle("Player Hider", "Hide party members",
+                    () -> config.partyMemberHide, v -> config.partyMemberHide = v))
+            .add(slider("Hide Distance", "Max distance to hide",
+                    1, 20, () -> config.maxHideDistance, v -> config.maxHideDistance = v))
+            .add(toggle("Only in NOTG", "Only in Grootslangs",
+                    () -> config.onlyInNotg, v -> config.onlyInNotg = v))
+            .add(toggle("Debug Output", "Console debug messages",
+                    () -> config.printDebugToConsole, v -> config.printDebugToConsole = v))
+            .add(stringList("Hidden Players", "Always hide these players",
+                    () -> config.hiddenPlayers, v -> config.hiddenPlayers = v));
+
+        // ===== WAYPOINTS =====
+        category("Waypoints", 0xFF7a5aa8)
+            .add(toggle("Disable Defaults", "Disable built-in waypoints",
+                    () -> config.disableAllDefaultWaypoints, v -> config.disableAllDefaultWaypoints = v));
     }
 
+    // ==================== BUILDER HELPERS ====================
+    private Category category(String name, int color) {
+        Category cat = new Category(name, color);
+        categories.add(cat);
+        return cat;
+    }
+
+    private ConfigOption toggle(String name, String desc, Supplier<Boolean> get, Consumer<Boolean> set) {
+        return new BooleanOption(name, desc, get, set);
+    }
+
+    private ConfigOption slider(String name, String desc, int min, int max, Supplier<Integer> get, Consumer<Integer> set) {
+        return new SliderOption(name, desc, min, max, get, set);
+    }
+
+    private ConfigOption sliderF(String name, String desc, float min, float max, float step, Supplier<Float> get, Consumer<Float> set) {
+        return new FloatSliderOption(name, desc, min, max, step, get, set);
+    }
+
+    private <T extends Enum<T>> ConfigOption dropdown(String name, String desc, Class<T> cls, Supplier<T> get, Consumer<T> set) {
+        return new EnumOption<>(name, desc, cls, get, set);
+    }
+
+    private ConfigOption stringList(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set) {
+        return new StringListOption(name, desc, get, set);
+    }
+
+    // ==================== SCREEN LIFECYCLE ====================
     @Override
     protected void init() {
         updateMaxScroll();
@@ -164,401 +225,517 @@ public class WynnExtrasConfigScreen extends Screen {
 
     private void updateMaxScroll() {
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
-            Category cat = categories.get(selectedCategory);
-            int contentHeight = cat.options.size() * 50 + 20;
-            int visibleHeight = this.height - HEADER_HEIGHT - FOOTER_HEIGHT - 20;
+            int contentHeight = categories.get(selectedCategory).getTotalHeight();
+            int visibleHeight = this.height - HEADER_HEIGHT - FOOTER_HEIGHT - 40;
             maxScroll = Math.max(0, contentHeight - visibleHeight);
         }
     }
 
+    // ==================== RENDERING ====================
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        // Solid background
-        context.fill(0, 0, this.width, this.height, 0xFF000000);
-        context.fill(0, 0, this.width, this.height, BG_DARK);
+    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        // Normal render
+        ctx.fill(0, 0, width, height, BG_DARK);
 
-        // Sidebar background with wood texture effect
-        drawWoodPanel(context, 0, 0, SIDEBAR_WIDTH, this.height);
+        // Disable hover when dropdown is open
+        int effectiveMouseX = activeDropdown != null ? -1 : mouseX;
+        int effectiveMouseY = activeDropdown != null ? -1 : mouseY;
 
-        // Main content area - parchment style
-        drawParchmentPanel(context, SIDEBAR_WIDTH + 5, 5, this.width - SIDEBAR_WIDTH - 10, this.height - 10);
+        drawSidebar(ctx, effectiveMouseX, effectiveMouseY);
+        drawMainPanel(ctx, effectiveMouseX, effectiveMouseY);
+        drawFooter(ctx, effectiveMouseX, effectiveMouseY);
 
-        // Header with ornate border
-        drawOrnateHeader(context, SIDEBAR_WIDTH + 10, 10, this.width - SIDEBAR_WIDTH - 20, HEADER_HEIGHT - 5);
+        // Dropdown renders on top of everything
+        if (activeDropdown != null) {
+            renderDropdownOverlay(ctx, mouseX, mouseY);
+        }
+    }
+
+    private void drawSidebar(DrawContext ctx, int mouseX, int mouseY) {
+        // Clean solid background
+        ctx.fill(0, 0, SIDEBAR_WIDTH, height, BG_MEDIUM);
+
+        // Right border
+        ctx.fill(SIDEBAR_WIDTH - 2, 0, SIDEBAR_WIDTH, height, BORDER_DARK);
 
         // Title
-        context.drawCenteredTextWithShadow(this.textRenderer, "WynnExtras",
-                SIDEBAR_WIDTH + (this.width - SIDEBAR_WIDTH) / 2, 25, GOLD);
-        // Subtitle
-        context.drawCenteredTextWithShadow(this.textRenderer, "Configuration",
-                SIDEBAR_WIDTH + (this.width - SIDEBAR_WIDTH) / 2, 38, TEXT_DIM);
+        ctx.drawCenteredTextWithShadow(textRenderer, "Categories", SIDEBAR_WIDTH / 2, 18, GOLD);
+        ctx.fill(20, 32, SIDEBAR_WIDTH - 20, 33, GOLD_DARK);
 
-        // Sidebar title with decorative line
-        int sidebarTitleY = 15;
-        context.drawCenteredTextWithShadow(this.textRenderer, "Categories", SIDEBAR_WIDTH / 2, sidebarTitleY, GOLD);
-        // Decorative lines
-        context.fill(15, sidebarTitleY + 12, SIDEBAR_WIDTH - 15, sidebarTitleY + 13, GOLD_DARK);
-        context.fill(25, sidebarTitleY + 14, SIDEBAR_WIDTH - 25, sidebarTitleY + 15, BORDER_DARK);
-
-        // Sidebar categories
-        int categoryY = 40;
-        int categoryHeight = 28;
+        int y = 45;
         for (int i = 0; i < categories.size(); i++) {
             Category cat = categories.get(i);
-            boolean hovered = mouseX >= 5 && mouseX < SIDEBAR_WIDTH - 5 &&
-                             mouseY >= categoryY && mouseY < categoryY + categoryHeight;
+            boolean hovered = mouseX >= 8 && mouseX < SIDEBAR_WIDTH - 8 && mouseY >= y && mouseY < y + 24;
             boolean selected = i == selectedCategory;
 
-            int catX = 8;
-            int catWidth = SIDEBAR_WIDTH - 16;
-
+            // Background
             if (selected) {
-                // Selected background - embossed look
-                context.fill(catX, categoryY, catX + catWidth, categoryY + categoryHeight, PARCHMENT);
-                context.fill(catX, categoryY, catX + catWidth, categoryY + 1, BORDER_LIGHT);
-                context.fill(catX, categoryY + categoryHeight - 1, catX + catWidth, categoryY + categoryHeight, BORDER_DARK);
-                // Gold accent bar on left
-                context.fill(catX, categoryY + 2, catX + 3, categoryY + categoryHeight - 2, cat.color);
+                ctx.fill(8, y, SIDEBAR_WIDTH - 8, y + 24, PARCHMENT);
+                ctx.fill(8, y, 12, y + 24, cat.color);
             } else if (hovered) {
-                context.fill(catX, categoryY, catX + catWidth, categoryY + categoryHeight, BG_LIGHT);
+                ctx.fill(8, y, SIDEBAR_WIDTH - 8, y + 24, BG_LIGHT);
             }
 
-            // Category icon (diamond shape with color)
-            int iconX = catX + 12;
-            int iconY = categoryY + categoryHeight / 2;
-            drawDiamond(context, iconX, iconY, 4, cat.color);
+            // Color dot and text
+            ctx.fill(18, y + 9, 24, y + 15, cat.color);
+            ctx.drawTextWithShadow(textRenderer, cat.name, 30, y + 8, selected ? TEXT_LIGHT : TEXT_DIM);
 
-            // Category text - vertically centered
-            int textY = categoryY + (categoryHeight - 8) / 2; // 8 is approx font height
-            context.drawTextWithShadow(this.textRenderer, cat.name, catX + 24, textY,
-                    selected ? TEXT_LIGHT : TEXT_DIM);
+            y += 28;
+        }
+    }
 
-            categoryY += categoryHeight + 4;
+    private void drawMainPanel(DrawContext ctx, int mouseX, int mouseY) {
+        int panelX = SIDEBAR_WIDTH + 5;
+        int panelW = width - SIDEBAR_WIDTH - 10;
+
+        ctx.fill(panelX, 5, panelX + panelW, height - 5, BG_LIGHT);
+
+        // Header
+        ctx.fill(panelX + 5, 10, panelX + panelW - 5, HEADER_HEIGHT, PARCHMENT);
+        ctx.fill(panelX + 5, 10, panelX + panelW - 5, 12, GOLD_DARK);
+        ctx.drawCenteredTextWithShadow(textRenderer, "WynnExtras", panelX + panelW / 2, 25, GOLD);
+        ctx.drawCenteredTextWithShadow(textRenderer, "Configuration", panelX + panelW / 2, 38, TEXT_DIM);
+
+        if (selectedCategory < 0 || selectedCategory >= categories.size()) return;
+        Category cat = categories.get(selectedCategory);
+
+        int contentX = panelX + 15;
+        int contentW = panelW - 30;
+        int listTop = HEADER_HEIGHT + 15;
+        int listBottom = height - FOOTER_HEIGHT - 10;
+
+        // Category header
+        ctx.fill(contentX, listTop - 3, contentX + 6, listTop + 9, cat.color);
+        ctx.drawTextWithShadow(textRenderer, cat.name, contentX + 12, listTop - 2, cat.color);
+        ctx.fill(contentX, listTop + 12, contentX + contentW, listTop + 13, GOLD_DARK);
+
+        ctx.enableScissor(panelX, listTop + 15, panelX + panelW - 15, listBottom);
+
+        int y = listTop + 20 - (int)scrollOffset;
+
+        for (SubCategory sub : cat.subCategories) {
+            y = renderSubCategory(ctx, sub, contentX, y, contentW, mouseX, mouseY, listTop + 15, listBottom);
         }
 
-        // Content area
-        if (selectedCategory >= 0 && selectedCategory < categories.size()) {
-            Category cat = categories.get(selectedCategory);
+        for (ConfigOption opt : cat.options) {
+            if (y + OPTION_HEIGHT > listTop && y < listBottom) {
+                boolean hovered = mouseX >= contentX && mouseX < contentX + contentW && mouseY >= y && mouseY < y + OPTION_HEIGHT - 5;
+                opt.render(ctx, contentX, y, contentW, OPTION_HEIGHT, mouseX, mouseY, hovered);
+            }
+            y += OPTION_HEIGHT + OPTION_SPACING;
+        }
 
-            int contentX = SIDEBAR_WIDTH + 20;
-            int contentY = HEADER_HEIGHT + 15;
-            int contentWidth = this.width - SIDEBAR_WIDTH - 40;
+        ctx.disableScissor();
 
-            // Category title with decorative elements
-            drawDiamond(context, contentX + 6, contentY + 5, 5, cat.color);
-            context.drawTextWithShadow(this.textRenderer, cat.name, contentX + 18, contentY, cat.color);
+        // Scrollbar
+        if (maxScroll > 0) {
+            int sbX = panelX + panelW - 12;
+            scrollbarY = listTop + 15;
+            scrollbarHeight = listBottom - listTop - 20;
+            scrollbarThumbH = Math.max(30, (int)(scrollbarHeight * scrollbarHeight / (scrollbarHeight + maxScroll)));
+            scrollbarThumbY = scrollbarY + (int)((scrollbarHeight - scrollbarThumbH) * (scrollOffset / maxScroll));
 
-            // Decorative separator
-            int sepY = contentY + 14;
-            context.fill(contentX, sepY, contentX + contentWidth, sepY + 1, GOLD_DARK);
-            context.fill(contentX, sepY + 1, contentX + contentWidth, sepY + 2, BORDER_DARK);
+            ctx.fill(sbX, scrollbarY, sbX + 6, scrollbarY + scrollbarHeight, BORDER_DARK);
+            ctx.fill(sbX + 1, scrollbarThumbY, sbX + 5, scrollbarThumbY + scrollbarThumbH, GOLD_DARK);
+        }
+    }
 
-            // Enable scissor for scrolling content
-            int listTop = contentY + 20;
-            int listBottom = this.height - FOOTER_HEIGHT - 10;
-            context.enableScissor(SIDEBAR_WIDTH, listTop, this.width - 10, listBottom);
+    private int renderSubCategory(DrawContext ctx, SubCategory sub, int x, int y, int w, int mX, int mY, int top, int bot) {
+        if (y + SUBCATEGORY_HEADER_HEIGHT > top && y < bot) {
+            boolean hovered = mX >= x && mX < x + w && mY >= y && mY < y + SUBCATEGORY_HEADER_HEIGHT;
+            ctx.fill(x, y, x + w, y + SUBCATEGORY_HEADER_HEIGHT, hovered ? PARCHMENT_LIGHT : SUBCATEGORY_BG);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + SUBCATEGORY_HEADER_HEIGHT - 1, x + w, y + SUBCATEGORY_HEADER_HEIGHT, BORDER_DARK);
 
-            int optionY = listTop - (int)scrollOffset;
-            for (ConfigOption option : cat.options) {
-                if (optionY + 45 > listTop && optionY < listBottom) {
-                    option.render(context, contentX, optionY, contentWidth, 45, mouseX, mouseY, this);
+            String arrow = sub.expanded ? "\u25BC" : "\u25B6";
+            ctx.drawTextWithShadow(textRenderer, arrow, x + 8, y + 8, GOLD);
+            ctx.drawTextWithShadow(textRenderer, sub.name, x + 22, y + 8, TEXT_LIGHT);
+        }
+        y += SUBCATEGORY_HEADER_HEIGHT + 5;
+
+        if (sub.expanded) {
+            for (ConfigOption opt : sub.options) {
+                if (y + OPTION_HEIGHT > top && y < bot) {
+                    boolean hovered = mX >= x + 8 && mX < x + w && mY >= y && mY < y + OPTION_HEIGHT - 5;
+                    ctx.fill(x, y, x + 4, y + OPTION_HEIGHT - 5, GOLD_DARK);
+                    opt.render(ctx, x + 8, y, w - 8, OPTION_HEIGHT, mX, mY, hovered);
                 }
-                optionY += 50;
-            }
-
-            context.disableScissor();
-
-            // Scrollbar (medieval style)
-            if (maxScroll > 0) {
-                int scrollbarX = this.width - 18;
-                int scrollbarTop = listTop;
-                int scrollbarHeight = listBottom - listTop;
-                int thumbHeight = Math.max(30, (int)(scrollbarHeight * scrollbarHeight / (scrollbarHeight + maxScroll)));
-                int thumbY = scrollbarTop + (int)((scrollbarHeight - thumbHeight) * (scrollOffset / maxScroll));
-
-                // Track
-                context.fill(scrollbarX, scrollbarTop, scrollbarX + 8, scrollbarTop + scrollbarHeight, BORDER_DARK);
-                context.fill(scrollbarX + 1, scrollbarTop + 1, scrollbarX + 7, scrollbarTop + scrollbarHeight - 1, BG_MEDIUM);
-                // Thumb
-                context.fill(scrollbarX + 1, thumbY, scrollbarX + 7, thumbY + thumbHeight, GOLD_DARK);
-                context.fill(scrollbarX + 2, thumbY + 1, scrollbarX + 6, thumbY + thumbHeight - 1, GOLD);
+                y += OPTION_HEIGHT + OPTION_SPACING;
             }
         }
-
-        // Footer with buttons
-        int footerY = this.height - FOOTER_HEIGHT + 5;
-        context.fill(SIDEBAR_WIDTH + 10, footerY, this.width - 10, footerY + 1, GOLD_DARK);
-
-        // Custom medieval-style buttons
-        int buttonY = this.height - 35;
-        int buttonHeight = 24;
-
-        // Save & Close button
-        int saveX = this.width - 115;
-        boolean saveHovered = mouseX >= saveX && mouseX < saveX + 100 && mouseY >= buttonY && mouseY < buttonY + buttonHeight;
-        drawMedievalButton(context, saveX, buttonY, 100, buttonHeight, "Save & Close", saveHovered, TOGGLE_ON);
-
-        // Cancel button
-        int cancelX = this.width - 225;
-        boolean cancelHovered = mouseX >= cancelX && mouseX < cancelX + 100 && mouseY >= buttonY && mouseY < buttonY + buttonHeight;
-        drawMedievalButton(context, cancelX, buttonY, 100, buttonHeight, "Cancel", cancelHovered, ACCENT_RED);
+        return y;
     }
 
-    // Draw wood panel effect
-    private void drawWoodPanel(DrawContext context, int x, int y, int width, int height) {
-        context.fill(x, y, x + width, y + height, SIDEBAR_BG);
-        // Wood grain lines
-        for (int i = 0; i < height; i += 12) {
-            int shade = (i / 12) % 2 == 0 ? 0x08FFFFFF : 0x05000000;
-            context.fill(x, y + i, x + width, y + i + 6, shade);
+    // Dropdown overlay - renders in place on top of content
+    private void renderDropdownOverlay(DrawContext ctx, int mouseX, int mouseY) {
+        Object[] values = activeDropdown.enumClass.getEnumConstants();
+        int totalContentH = values.length * DROPDOWN_ITEM_HEIGHT;
+        int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
+        boolean needsScroll = totalContentH > DROPDOWN_MAX_HEIGHT;
+
+        // Position near the button
+        int ddW = dropdownWidth + (needsScroll ? 10 : 0);
+        int ddX = dropdownX;
+        int ddY = dropdownY;
+
+        // Make sure dropdown fits on screen
+        if (ddY + visibleH > height - 10) {
+            ddY = dropdownY - visibleH - 24;
         }
-        // Border
-        context.fill(x + width - 2, y, x + width, y + height, BORDER_DARK);
-        context.fill(x + width - 3, y, x + width - 2, y + height, BORDER_LIGHT);
-    }
 
-    // Draw parchment-style panel
-    private void drawParchmentPanel(DrawContext context, int x, int y, int width, int height) {
-        // Main fill
-        context.fill(x, y, x + width, y + height, BG_MEDIUM);
-        // Inner lighter area
-        context.fill(x + 3, y + 3, x + width - 3, y + height - 3, BG_LIGHT);
-        // Borders
-        context.fill(x, y, x + width, y + 2, BORDER_DARK);
-        context.fill(x, y + height - 2, x + width, y + height, BORDER_DARK);
-        context.fill(x, y, x + 2, y + height, BORDER_DARK);
-        context.fill(x + width - 2, y, x + width, y + height, BORDER_DARK);
-        // Inner highlight
-        context.fill(x + 2, y + 2, x + width - 2, y + 3, BORDER_LIGHT);
-        context.fill(x + 2, y + 2, x + 3, y + height - 2, BORDER_LIGHT);
-    }
+        // Clamp scroll
+        double maxScroll = Math.max(0, totalContentH - visibleH);
+        dropdownScroll = MathHelper.clamp(dropdownScroll, 0, maxScroll);
 
-    // Draw ornate header
-    private void drawOrnateHeader(DrawContext context, int x, int y, int width, int height) {
-        context.fill(x, y, x + width, y + height, PARCHMENT);
-        // Top border
-        context.fill(x, y, x + width, y + 2, GOLD_DARK);
-        // Bottom decorative border
-        context.fill(x + 10, y + height - 2, x + width - 10, y + height, GOLD_DARK);
-        // Corner accents
-        drawDiamond(context, x + 5, y + height / 2, 3, GOLD);
-        drawDiamond(context, x + width - 5, y + height / 2, 3, GOLD);
-    }
+        // Outer frame - solid border
+        ctx.fill(ddX - 3, ddY - 3, ddX + ddW + 3, ddY + visibleH + 3, BORDER_DARK);
+        ctx.fill(ddX - 2, ddY - 2, ddX + ddW + 2, ddY + visibleH + 2, GOLD_DARK);
+        ctx.fill(ddX - 1, ddY - 1, ddX + ddW + 1, ddY + visibleH + 1, BG_MEDIUM);
 
-    // Draw a diamond shape
-    private void drawDiamond(DrawContext context, int cx, int cy, int size, int color) {
-        for (int i = 0; i <= size; i++) {
-            context.fill(cx - i, cy - size + i, cx + i + 1, cy - size + i + 1, color);
-            context.fill(cx - i, cy + size - i, cx + i + 1, cy + size - i + 1, color);
+        // Content area - FULLY OPAQUE solid background
+        ctx.fill(ddX, ddY, ddX + ddW, ddY + visibleH, PARCHMENT);
+
+        // Scissor for scrolling content
+        ctx.enableScissor(ddX, ddY, ddX + ddW - (needsScroll ? 8 : 0), ddY + visibleH);
+
+        for (int i = 0; i < values.length; i++) {
+            int iy = ddY + i * DROPDOWN_ITEM_HEIGHT - (int)dropdownScroll;
+
+            // Skip if out of visible area
+            if (iy + DROPDOWN_ITEM_HEIGHT < ddY || iy > ddY + visibleH) continue;
+
+            boolean hovered = mouseX >= ddX && mouseX < ddX + ddW - (needsScroll ? 8 : 0)
+                    && mouseY >= Math.max(ddY, iy) && mouseY < Math.min(ddY + visibleH, iy + DROPDOWN_ITEM_HEIGHT);
+            boolean selected = values[i].equals(activeDropdown.getter.get());
+
+            // Item background - fully opaque
+            int itemBg = selected ? GOLD_DARK : (hovered ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.fill(ddX, iy, ddX + ddW - (needsScroll ? 8 : 0), iy + DROPDOWN_ITEM_HEIGHT, itemBg);
+
+            // Separator
+            if (i > 0) {
+                ctx.fill(ddX + 8, iy, ddX + ddW - (needsScroll ? 16 : 8), iy + 1, BG_LIGHT);
+            }
+
+            String text = values[i].toString();
+            if (text.length() > 14) text = text.substring(0, 12) + "..";
+            ctx.drawTextWithShadow(textRenderer, text, ddX + 8, iy + 7, selected ? GOLD : TEXT_LIGHT);
+        }
+
+        ctx.disableScissor();
+
+        // Scrollbar if needed
+        if (needsScroll) {
+            int sbX = ddX + ddW - 6;
+            int sbH = visibleH;
+            int thumbH = Math.max(20, (int)(sbH * visibleH / (double)totalContentH));
+            int thumbY = ddY + (int)((sbH - thumbH) * (dropdownScroll / maxScroll));
+
+            ctx.fill(sbX, ddY, sbX + 5, ddY + sbH, BG_DARK);
+            ctx.fill(sbX + 1, thumbY, sbX + 4, thumbY + thumbH, GOLD_DARK);
         }
     }
 
-    // Draw medieval-style button
-    private void drawMedievalButton(DrawContext context, int x, int y, int width, int height, String text, boolean hovered, int accentColor) {
-        int bgColor = hovered ? PARCHMENT_LIGHT : PARCHMENT;
-        context.fill(x, y, x + width, y + height, bgColor);
-        // Borders
-        context.fill(x, y, x + width, y + 1, hovered ? GOLD : BORDER_LIGHT);
-        context.fill(x, y + height - 1, x + width, y + height, BORDER_DARK);
-        context.fill(x, y, x + 1, y + height, hovered ? GOLD : BORDER_LIGHT);
-        context.fill(x + width - 1, y, x + width, y + height, BORDER_DARK);
-        // Accent line at bottom
-        context.fill(x + 2, y + height - 3, x + width - 2, y + height - 2, accentColor);
-        // Text
-        context.drawCenteredTextWithShadow(this.textRenderer, text, x + width / 2, y + (height - 8) / 2, TEXT_LIGHT);
+    private void drawFooter(DrawContext ctx, int mouseX, int mouseY) {
+        int footerY = height - FOOTER_HEIGHT + 5;
+        ctx.fill(SIDEBAR_WIDTH + 10, footerY, width - 10, footerY + 1, GOLD_DARK);
+
+        int btnY = height - 35;
+        int saveX = width - 115;
+        int cancelX = width - 225;
+
+        boolean saveHover = mouseX >= saveX && mouseX < saveX + 100 && mouseY >= btnY && mouseY < btnY + 24;
+        boolean cancelHover = mouseX >= cancelX && mouseX < cancelX + 100 && mouseY >= btnY && mouseY < btnY + 24;
+
+        drawButton(ctx, saveX, btnY, 100, 24, "Save & Close", saveHover, TOGGLE_ON);
+        drawButton(ctx, cancelX, btnY, 100, 24, "Cancel", cancelHover, ACCENT_RED);
     }
 
+    private void drawButton(DrawContext ctx, int x, int y, int w, int h, String text, boolean hover, int accent) {
+        ctx.fill(x, y, x + w, y + h, hover ? PARCHMENT_HOVER : PARCHMENT);
+        ctx.fill(x, y, x + w, y + 1, hover ? GOLD : BORDER_LIGHT);
+        ctx.fill(x, y + h - 1, x + w, y + h, BORDER_DARK);
+        ctx.fill(x + 2, y + h - 3, x + w - 2, y + h - 2, accent);
+        ctx.drawCenteredTextWithShadow(textRenderer, text, x + w / 2, y + 8, TEXT_LIGHT);
+    }
+
+    // ==================== INPUT HANDLING ====================
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Button clicks
-        int buttonY = this.height - 35;
-        int buttonHeight = 24;
+    public boolean mouseClicked(double mx, double my, int btn) {
+        if (activeDropdown != null) {
+            Object[] values = activeDropdown.enumClass.getEnumConstants();
+            int totalContentH = values.length * DROPDOWN_ITEM_HEIGHT;
+            int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
+            boolean needsScroll = totalContentH > DROPDOWN_MAX_HEIGHT;
+            int ddW = dropdownWidth + (needsScroll ? 10 : 0);
+            int ddX = dropdownX;
+            int ddY = dropdownY;
 
-        // Save & Close
-        int saveX = this.width - 115;
-        if (mouseX >= saveX && mouseX < saveX + 100 && mouseY >= buttonY && mouseY < buttonY + buttonHeight) {
-            WynnExtrasConfig.save();
-            this.client.setScreen(parent);
+            // Match the flip logic from render
+            if (ddY + visibleH > height - 10) {
+                ddY = dropdownY - visibleH - 24;
+            }
+
+            // Check if click is inside dropdown area
+            if (mx >= ddX && mx < ddX + ddW && my >= ddY && my < ddY + visibleH) {
+                for (int i = 0; i < values.length; i++) {
+                    int iy = ddY + i * DROPDOWN_ITEM_HEIGHT - (int)dropdownScroll;
+                    if (iy < ddY - DROPDOWN_ITEM_HEIGHT || iy > ddY + visibleH) continue;
+
+                    if (my >= Math.max(ddY, iy) && my < Math.min(ddY + visibleH, iy + DROPDOWN_ITEM_HEIGHT)
+                            && mx < ddX + ddW - (needsScroll ? 8 : 0)) {
+                        activeDropdown.setValueByIndex(i);
+                        activeDropdown = null;
+                        dropdownScroll = 0;
+                        return true;
+                    }
+                }
+                return true; // Clicked inside but not on item (scrollbar area)
+            }
+
+            activeDropdown = null;
+            dropdownScroll = 0;
             return true;
         }
 
-        // Cancel
-        int cancelX = this.width - 225;
-        if (mouseX >= cancelX && mouseX < cancelX + 100 && mouseY >= buttonY && mouseY < buttonY + buttonHeight) {
-            WynnExtrasConfig.load();
-            this.client.setScreen(parent);
-            return true;
+        int btnY = height - 35;
+        if (my >= btnY && my < btnY + 24) {
+            if (mx >= width - 115 && mx < width - 15) {
+                WynnExtrasConfig.save();
+                client.setScreen(parent);
+                return true;
+            }
+            if (mx >= width - 225 && mx < width - 125) {
+                WynnExtrasConfig.load();
+                client.setScreen(parent);
+                return true;
+            }
         }
 
-        // Category selection
-        if (mouseX >= 5 && mouseX < SIDEBAR_WIDTH - 5) {
-            int categoryY = 40;
-            int categoryHeight = 28;
+        if (mx >= 8 && mx < SIDEBAR_WIDTH - 8) {
+            int y = 45;
             for (int i = 0; i < categories.size(); i++) {
-                if (mouseY >= categoryY && mouseY < categoryY + categoryHeight) {
+                if (my >= y && my < y + 24) {
                     selectedCategory = i;
                     scrollOffset = 0;
                     updateMaxScroll();
                     return true;
                 }
-                categoryY += categoryHeight + 4;
+                y += 28;
             }
         }
 
-        // Option clicks
+        // Scrollbar
+        if (maxScroll > 0 && mx >= width - 17 && mx < width - 5) {
+            if (my >= scrollbarThumbY && my < scrollbarThumbY + scrollbarThumbH) {
+                scrollbarDragging = true;
+                scrollbarDragOffset = my - scrollbarThumbY;
+                return true;
+            } else if (my >= scrollbarY && my < scrollbarY + scrollbarHeight) {
+                double clickPercent = (my - scrollbarY - scrollbarThumbH / 2.0) / (scrollbarHeight - scrollbarThumbH);
+                scrollOffset = MathHelper.clamp(clickPercent * maxScroll, 0, maxScroll);
+                return true;
+            }
+        }
+
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category cat = categories.get(selectedCategory);
             int contentX = SIDEBAR_WIDTH + 20;
-            int contentY = HEADER_HEIGHT + 35;
-            int contentWidth = this.width - SIDEBAR_WIDTH - 40;
+            int contentW = width - SIDEBAR_WIDTH - 50;
+            int listTop = HEADER_HEIGHT + 30;
+            int listBot = height - FOOTER_HEIGHT - 10;
 
-            int optionY = contentY - (int)scrollOffset;
-            for (ConfigOption option : cat.options) {
-                int listTop = HEADER_HEIGHT + 35;
-                int listBottom = this.height - FOOTER_HEIGHT - 10;
-                if (mouseY >= Math.max(listTop, optionY) && mouseY < Math.min(listBottom, optionY + 45)) {
-                    if (option.mouseClicked(mouseX, mouseY, contentX, optionY, contentWidth, 45, button)) {
-                        return true;
+            int y = listTop - (int)scrollOffset;
+
+            for (SubCategory sub : cat.subCategories) {
+                if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + SUBCATEGORY_HEADER_HEIGHT) && mx >= contentX && mx < contentX + contentW) {
+                    sub.expanded = !sub.expanded;
+                    updateMaxScroll();
+                    return true;
+                }
+                y += SUBCATEGORY_HEADER_HEIGHT + 5;
+
+                if (sub.expanded) {
+                    for (ConfigOption opt : sub.options) {
+                        if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + OPTION_HEIGHT)) {
+                            if (opt.mouseClicked(mx, my, contentX + 8, y, contentW - 8, OPTION_HEIGHT, btn)) return true;
+                        }
+                        y += OPTION_HEIGHT + OPTION_SPACING;
                     }
                 }
-                optionY += 50;
+            }
+
+            for (ConfigOption opt : cat.options) {
+                if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + OPTION_HEIGHT)) {
+                    if (opt.mouseClicked(mx, my, contentX, y, contentW, OPTION_HEIGHT, btn)) return true;
+                }
+                y += OPTION_HEIGHT + OPTION_SPACING;
             }
         }
 
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(mx, my, btn);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(double mx, double my, int btn) {
+        scrollbarDragging = false;
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
-            for (ConfigOption option : categories.get(selectedCategory).options) {
-                option.mouseReleased(mouseX, mouseY, button);
+            Category cat = categories.get(selectedCategory);
+            for (SubCategory sub : cat.subCategories) {
+                for (ConfigOption opt : sub.options) opt.mouseReleased(mx, my, btn);
             }
+            for (ConfigOption opt : cat.options) opt.mouseReleased(mx, my, btn);
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(mx, my, btn);
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (mouseX > SIDEBAR_WIDTH) {
-            scrollOffset = MathHelper.clamp(scrollOffset - verticalAmount * 30, 0, maxScroll);
+    public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
+        if (scrollbarDragging && maxScroll > 0) {
+            double newThumbY = my - scrollbarDragOffset;
+            double percent = (newThumbY - scrollbarY) / (scrollbarHeight - scrollbarThumbH);
+            scrollOffset = MathHelper.clamp(percent * maxScroll, 0, maxScroll);
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+
+        if (selectedCategory >= 0 && selectedCategory < categories.size()) {
+            Category cat = categories.get(selectedCategory);
+            int contentX = SIDEBAR_WIDTH + 20;
+            int contentW = width - SIDEBAR_WIDTH - 50;
+            int y = HEADER_HEIGHT + 30 - (int)scrollOffset;
+
+            for (SubCategory sub : cat.subCategories) {
+                y += SUBCATEGORY_HEADER_HEIGHT + 5;
+                if (sub.expanded) {
+                    for (ConfigOption opt : sub.options) {
+                        if (opt.mouseDragged(mx, my, contentX + 8, y, contentW - 8, OPTION_HEIGHT)) return true;
+                        y += OPTION_HEIGHT + OPTION_SPACING;
+                    }
+                }
+            }
+
+            for (ConfigOption opt : cat.options) {
+                if (opt.mouseDragged(mx, my, contentX, y, contentW, OPTION_HEIGHT)) return true;
+                y += OPTION_HEIGHT + OPTION_SPACING;
+            }
+        }
+        return super.mouseDragged(mx, my, btn, dx, dy);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (selectedCategory >= 0 && selectedCategory < categories.size()) {
-            for (ConfigOption option : categories.get(selectedCategory).options) {
-                if (option.keyPressed(keyCode, scanCode, modifiers)) {
-                    return true;
-                }
-            }
+    public boolean mouseScrolled(double mx, double my, double hAmt, double vAmt) {
+        if (activeDropdown != null) {
+            // Scroll the dropdown
+            Object[] values = activeDropdown.enumClass.getEnumConstants();
+            int totalContentH = values.length * DROPDOWN_ITEM_HEIGHT;
+            int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
+            double maxDropScroll = Math.max(0, totalContentH - visibleH);
+            dropdownScroll = MathHelper.clamp(dropdownScroll - vAmt * 20, 0, maxDropScroll);
+            return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        if (mx > SIDEBAR_WIDTH) {
+            scrollOffset = MathHelper.clamp(scrollOffset - vAmt * 30, 0, maxScroll);
+            return true;
+        }
+        return super.mouseScrolled(mx, my, hAmt, vAmt);
     }
 
     @Override
-    public boolean charTyped(char chr, int modifiers) {
-        if (selectedCategory >= 0 && selectedCategory < categories.size()) {
-            for (ConfigOption option : categories.get(selectedCategory).options) {
-                if (option.charTyped(chr, modifiers)) {
-                    return true;
-                }
-            }
+    public boolean keyPressed(int key, int scan, int mod) {
+        if (activeDropdown != null && key == 256) {
+            activeDropdown = null;
+            return true;
         }
-        return super.charTyped(chr, modifiers);
+        return super.keyPressed(key, scan, mod);
     }
 
     @Override
     public void close() {
-        this.client.setScreen(parent);
+        client.setScreen(parent);
     }
 
-    // ==================== Category ====================
-    private static class Category {
+    // ==================== DATA CLASSES ====================
+    private class Category {
         final String name;
         final int color;
         final List<ConfigOption> options = new ArrayList<>();
+        final List<SubCategory> subCategories = new ArrayList<>();
+        private SubCategory currentSub = null;
 
-        Category(String name, int color) {
-            this.name = name;
-            this.color = color;
+        Category(String name, int color) { this.name = name; this.color = color; }
+
+        Category add(ConfigOption opt) {
+            if (currentSub != null) currentSub.options.add(opt);
+            else options.add(opt);
+            return this;
         }
 
-        void addOption(ConfigOption option) {
-            options.add(option);
+        Category sub(String name) {
+            currentSub = new SubCategory(name);
+            subCategories.add(currentSub);
+            return this;
+        }
+
+        int getTotalHeight() {
+            int h = 0;
+            for (SubCategory s : subCategories) {
+                h += SUBCATEGORY_HEADER_HEIGHT + 5;
+                if (s.expanded) h += s.options.size() * (OPTION_HEIGHT + OPTION_SPACING);
+            }
+            h += options.size() * (OPTION_HEIGHT + OPTION_SPACING);
+            return h + 20;
         }
     }
 
-    // ==================== Config Options ====================
-    private static abstract class ConfigOption {
+    private static class SubCategory {
         final String name;
-        final String description;
-
-        ConfigOption(String name, String description) {
-            this.name = name;
-            this.description = description;
-        }
-
-        abstract void render(DrawContext context, int x, int y, int width, int height, int mouseX, int mouseY, Screen screen);
-        boolean mouseClicked(double mouseX, double mouseY, int x, int y, int width, int height, int button) { return false; }
-        boolean mouseReleased(double mouseX, double mouseY, int button) { return false; }
-        boolean keyPressed(int keyCode, int scanCode, int modifiers) { return false; }
-        boolean charTyped(char chr, int modifiers) { return false; }
+        final List<ConfigOption> options = new ArrayList<>();
+        boolean expanded = true;
+        SubCategory(String name) { this.name = name; }
     }
 
-    // Boolean toggle - medieval lever style
+    // ==================== CONFIG OPTIONS ====================
+    private static abstract class ConfigOption {
+        final String name, desc;
+        ConfigOption(String name, String desc) { this.name = name; this.desc = desc; }
+        abstract void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered);
+        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) { return false; }
+        boolean mouseReleased(double mx, double my, int btn) { return false; }
+        boolean mouseDragged(double mx, double my, int x, int y, int w, int h) { return false; }
+    }
+
     private static class BooleanOption extends ConfigOption {
-        private final java.util.function.Supplier<Boolean> getter;
-        private final java.util.function.Consumer<Boolean> setter;
+        final Supplier<Boolean> getter;
+        final Consumer<Boolean> setter;
 
-        BooleanOption(String name, String description, java.util.function.Supplier<Boolean> getter, java.util.function.Consumer<Boolean> setter) {
-            super(name, description);
-            this.getter = getter;
-            this.setter = setter;
+        BooleanOption(String name, String desc, Supplier<Boolean> get, Consumer<Boolean> set) {
+            super(name, desc);
+            this.getter = get;
+            this.setter = set;
         }
 
         @Override
-        void render(DrawContext context, int x, int y, int width, int height, int mouseX, int mouseY, Screen screen) {
-            var textRenderer = MinecraftClient.getInstance().textRenderer;
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
+            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
+            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
 
-            // Option background
-            context.fill(x, y, x + width, y + height - 5, PARCHMENT);
-            context.fill(x, y, x + width, y + 1, BORDER_LIGHT);
-            context.fill(x, y + height - 6, x + width, y + height - 5, BORDER_DARK);
-
-            context.drawTextWithShadow(textRenderer, name, x + 8, y + 8, TEXT_LIGHT);
-            context.drawTextWithShadow(textRenderer, description, x + 8, y + 22, TEXT_DIM);
-
-            // Toggle switch - medieval style
-            int toggleX = x + width - 55;
-            int toggleY = y + 12;
-            int toggleWidth = 44;
-            int toggleHeight = 20;
-            boolean value = getter.get();
-
-            // Track background
-            context.fill(toggleX, toggleY, toggleX + toggleWidth, toggleY + toggleHeight, BORDER_DARK);
-            context.fill(toggleX + 1, toggleY + 1, toggleX + toggleWidth - 1, toggleY + toggleHeight - 1,
-                    value ? TOGGLE_ON : TOGGLE_OFF);
-
-            // Lever/knob
-            int knobWidth = 18;
-            int knobX = value ? toggleX + toggleWidth - knobWidth - 2 : toggleX + 2;
-            context.fill(knobX, toggleY + 2, knobX + knobWidth, toggleY + toggleHeight - 2, BORDER_DARK);
-            context.fill(knobX + 1, toggleY + 3, knobX + knobWidth - 1, toggleY + toggleHeight - 3, GOLD);
-            context.fill(knobX + 2, toggleY + 4, knobX + knobWidth - 2, toggleY + toggleHeight - 4, GOLD_LIGHT);
-            // Knob highlight
-            context.fill(knobX + 2, toggleY + 4, knobX + knobWidth - 2, toggleY + 6, 0x40FFFFFF);
+            int tx = x + w - 55, ty = y + 12;
+            boolean val = getter.get();
+            ctx.fill(tx, ty, tx + 44, ty + 20, BORDER_DARK);
+            ctx.fill(tx + 1, ty + 1, tx + 43, ty + 19, val ? TOGGLE_ON : TOGGLE_OFF);
+            int kx = val ? tx + 24 : tx + 2;
+            ctx.fill(kx, ty + 2, kx + 18, ty + 18, BORDER_DARK);
+            ctx.fill(kx + 1, ty + 3, kx + 17, ty + 17, GOLD);
         }
 
         @Override
-        boolean mouseClicked(double mouseX, double mouseY, int x, int y, int width, int height, int button) {
-            int toggleX = x + width - 55;
-            int toggleY = y + 12;
-            if (mouseX >= toggleX && mouseX < toggleX + 44 && mouseY >= toggleY && mouseY < toggleY + 20) {
+        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
+            int tx = x + w - 55, ty = y + 12;
+            if (mx >= tx && mx < tx + 44 && my >= ty && my < ty + 20) {
                 setter.accept(!getter.get());
                 return true;
             }
@@ -566,233 +743,240 @@ public class WynnExtrasConfigScreen extends Screen {
         }
     }
 
-    // Integer slider - medieval style
     private static class SliderOption extends ConfigOption {
-        private final int min, max;
-        private final java.util.function.Supplier<Integer> getter;
-        private final java.util.function.Consumer<Integer> setter;
-        private boolean dragging = false;
+        final int min, max;
+        final Supplier<Integer> getter;
+        final Consumer<Integer> setter;
+        boolean dragging = false;
+        int sliderX, sliderW = 120;
 
-        SliderOption(String name, String description, int min, int max,
-                     java.util.function.Supplier<Integer> getter, java.util.function.Consumer<Integer> setter) {
-            super(name, description);
-            this.min = min;
-            this.max = max;
-            this.getter = getter;
-            this.setter = setter;
+        SliderOption(String name, String desc, int min, int max, Supplier<Integer> get, Consumer<Integer> set) {
+            super(name, desc);
+            this.min = min; this.max = max; this.getter = get; this.setter = set;
         }
 
         @Override
-        void render(DrawContext context, int x, int y, int width, int height, int mouseX, int mouseY, Screen screen) {
-            var textRenderer = MinecraftClient.getInstance().textRenderer;
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
+            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
+            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
 
-            // Option background
-            context.fill(x, y, x + width, y + height - 5, PARCHMENT);
-            context.fill(x, y, x + width, y + 1, BORDER_LIGHT);
-            context.fill(x, y + height - 6, x + width, y + height - 5, BORDER_DARK);
+            sliderX = x + w - 170;
+            int sy = y + 15, val = getter.get();
+            float pct = (float)(val - min) / (max - min);
 
-            context.drawTextWithShadow(textRenderer, name, x + 8, y + 8, TEXT_LIGHT);
-            context.drawTextWithShadow(textRenderer, description, x + 8, y + 22, TEXT_DIM);
+            ctx.fill(sliderX, sy, sliderX + sliderW, sy + 8, BORDER_DARK);
+            ctx.fill(sliderX + 1, sy + 1, sliderX + sliderW - 1, sy + 7, BG_MEDIUM);
+            int fill = (int)((sliderW - 2) * pct);
+            if (fill > 0) ctx.fill(sliderX + 1, sy + 1, sliderX + 1 + fill, sy + 7, GOLD_DARK);
 
-            int sliderX = x + width - 170;
-            int sliderY = y + 15;
-            int sliderWidth = 120;
-            int sliderHeight = 8;
-            int value = getter.get();
-            float percent = (float)(value - min) / (max - min);
+            int kx = sliderX + (int)(sliderW * pct) - 5;
+            ctx.fill(kx, sy - 3, kx + 10, sy + 11, BORDER_DARK);
+            ctx.fill(kx + 1, sy - 2, kx + 9, sy + 10, GOLD);
 
-            // Track background
-            context.fill(sliderX, sliderY, sliderX + sliderWidth, sliderY + sliderHeight, BORDER_DARK);
-            context.fill(sliderX + 1, sliderY + 1, sliderX + sliderWidth - 1, sliderY + sliderHeight - 1, BG_MEDIUM);
-
-            // Fill
-            int fillWidth = (int)((sliderWidth - 2) * percent);
-            if (fillWidth > 0) {
-                context.fill(sliderX + 1, sliderY + 1, sliderX + 1 + fillWidth, sliderY + sliderHeight - 1, GOLD_DARK);
-            }
-
-            // Knob
-            int knobWidth = 10;
-            int knobHeight = 14;
-            int knobX = sliderX + (int)(sliderWidth * percent) - knobWidth / 2;
-            int knobY = sliderY - 3;
-            context.fill(knobX, knobY, knobX + knobWidth, knobY + knobHeight, BORDER_DARK);
-            context.fill(knobX + 1, knobY + 1, knobX + knobWidth - 1, knobY + knobHeight - 1, GOLD);
-            context.fill(knobX + 2, knobY + 2, knobX + knobWidth - 2, knobY + 4, 0x40FFFFFF);
-
-            // Value text - centered vertically with slider
-            String valueStr = String.valueOf(value);
-            int textWidth = textRenderer.getWidth(valueStr);
-            int textX = sliderX + sliderWidth + 10;
-            int textY = sliderY + (sliderHeight - 8) / 2; // Center text with slider
-            context.drawTextWithShadow(textRenderer, valueStr, textX, textY, GOLD);
-
-            if (dragging) {
-                float newPercent = MathHelper.clamp((float)(mouseX - sliderX) / sliderWidth, 0, 1);
-                int newValue = min + Math.round(newPercent * (max - min));
-                setter.accept(newValue);
-            }
+            ctx.drawTextWithShadow(tr, String.valueOf(val), sliderX + sliderW + 10, sy, GOLD);
         }
 
         @Override
-        boolean mouseClicked(double mouseX, double mouseY, int x, int y, int width, int height, int button) {
-            int sliderX = x + width - 170;
-            int sliderY = y + 10;
-            if (mouseX >= sliderX - 5 && mouseX < sliderX + 130 && mouseY >= sliderY && mouseY < sliderY + 20) {
+        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
+            int sy = y + 10;
+            if (mx >= sliderX - 5 && mx < sliderX + sliderW + 10 && my >= sy && my < sy + 20) {
                 dragging = true;
-                float percent = MathHelper.clamp((float)(mouseX - sliderX) / 120f, 0, 1);
-                int newValue = min + Math.round(percent * (max - min));
-                setter.accept(newValue);
+                updateValue(mx);
                 return true;
             }
             return false;
         }
 
         @Override
-        boolean mouseReleased(double mouseX, double mouseY, int button) {
-            if (dragging) {
-                dragging = false;
-                return true;
-            }
+        boolean mouseReleased(double mx, double my, int btn) {
+            if (dragging) { dragging = false; return true; }
             return false;
+        }
+
+        @Override
+        boolean mouseDragged(double mx, double my, int x, int y, int w, int h) {
+            if (dragging) { updateValue(mx); return true; }
+            return false;
+        }
+
+        void updateValue(double mx) {
+            float pct = MathHelper.clamp((float)(mx - sliderX) / sliderW, 0, 1);
+            setter.accept(min + Math.round(pct * (max - min)));
         }
     }
 
-    // Enum dropdown - medieval style
-    private static class EnumOption<T extends Enum<T>> extends ConfigOption {
-        private final Class<T> enumClass;
-        private final java.util.function.Supplier<T> getter;
-        private final java.util.function.Consumer<T> setter;
+    private static class FloatSliderOption extends ConfigOption {
+        final float min, max, step;
+        final Supplier<Float> getter;
+        final Consumer<Float> setter;
+        boolean dragging = false;
+        int sliderX, sliderW = 120;
 
-        EnumOption(String name, String description, Class<T> enumClass,
-                   java.util.function.Supplier<T> getter, java.util.function.Consumer<T> setter) {
-            super(name, description);
-            this.enumClass = enumClass;
-            this.getter = getter;
-            this.setter = setter;
+        FloatSliderOption(String name, String desc, float min, float max, float step, Supplier<Float> get, Consumer<Float> set) {
+            super(name, desc);
+            this.min = min; this.max = max; this.step = step; this.getter = get; this.setter = set;
         }
 
         @Override
-        void render(DrawContext context, int x, int y, int width, int height, int mouseX, int mouseY, Screen screen) {
-            var textRenderer = MinecraftClient.getInstance().textRenderer;
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
+            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
+            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
 
-            // Option background
-            context.fill(x, y, x + width, y + height - 5, PARCHMENT);
-            context.fill(x, y, x + width, y + 1, BORDER_LIGHT);
-            context.fill(x, y + height - 6, x + width, y + height - 5, BORDER_DARK);
+            sliderX = x + w - 170;
+            int sy = y + 15;
+            float val = getter.get();
+            float pct = (val - min) / (max - min);
 
-            context.drawTextWithShadow(textRenderer, name, x + 8, y + 8, TEXT_LIGHT);
-            context.drawTextWithShadow(textRenderer, description, x + 8, y + 22, TEXT_DIM);
+            ctx.fill(sliderX, sy, sliderX + sliderW, sy + 8, BORDER_DARK);
+            ctx.fill(sliderX + 1, sy + 1, sliderX + sliderW - 1, sy + 7, BG_MEDIUM);
+            int fill = (int)((sliderW - 2) * pct);
+            if (fill > 0) ctx.fill(sliderX + 1, sy + 1, sliderX + 1 + fill, sy + 7, GOLD_DARK);
 
-            int buttonX = x + width - 135;
-            int buttonY = y + 10;
-            int buttonWidth = 125;
-            int buttonHeight = 22;
-            T value = getter.get();
+            int kx = sliderX + (int)(sliderW * pct) - 5;
+            ctx.fill(kx, sy - 3, kx + 10, sy + 11, BORDER_DARK);
+            ctx.fill(kx + 1, sy - 2, kx + 9, sy + 10, GOLD);
 
-            boolean hovered = mouseX >= buttonX && mouseX < buttonX + buttonWidth &&
-                             mouseY >= buttonY && mouseY < buttonY + buttonHeight;
-
-            // Button background
-            context.fill(buttonX, buttonY, buttonX + buttonWidth, buttonY + buttonHeight, BORDER_DARK);
-            context.fill(buttonX + 1, buttonY + 1, buttonX + buttonWidth - 1, buttonY + buttonHeight - 1,
-                    hovered ? PARCHMENT_LIGHT : PARCHMENT);
-            // Top highlight
-            context.fill(buttonX + 1, buttonY + 1, buttonX + buttonWidth - 1, buttonY + 2, 0x20FFFFFF);
-
-            // Text
-            String displayText = value.toString();
-            if (displayText.length() > 12) {
-                displayText = displayText.substring(0, 10) + "..";
-            }
-            context.drawCenteredTextWithShadow(textRenderer, displayText, buttonX + buttonWidth / 2 - 6, buttonY + 7, TEXT_LIGHT);
-
-            // Arrow indicators
-            context.drawTextWithShadow(textRenderer, "<", buttonX + 5, buttonY + 7, TEXT_DIM);
-            context.drawTextWithShadow(textRenderer, ">", buttonX + buttonWidth - 10, buttonY + 7, TEXT_DIM);
+            String valStr = step >= 1 ? String.valueOf((int)val) : String.format("%.1f", val);
+            ctx.drawTextWithShadow(tr, valStr, sliderX + sliderW + 10, sy, GOLD);
         }
 
         @Override
-        boolean mouseClicked(double mouseX, double mouseY, int x, int y, int width, int height, int button) {
-            int buttonX = x + width - 135;
-            int buttonY = y + 10;
-            if (mouseX >= buttonX && mouseX < buttonX + 125 && mouseY >= buttonY && mouseY < buttonY + 22) {
-                T[] values = enumClass.getEnumConstants();
-                T current = getter.get();
-                int index = (current.ordinal() + (button == 0 ? 1 : values.length - 1)) % values.length;
-                setter.accept(values[index]);
+        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
+            int sy = y + 10;
+            if (mx >= sliderX - 5 && mx < sliderX + sliderW + 10 && my >= sy && my < sy + 20) {
+                dragging = true;
+                updateValue(mx);
                 return true;
             }
             return false;
         }
+
+        @Override
+        boolean mouseReleased(double mx, double my, int btn) {
+            if (dragging) { dragging = false; return true; }
+            return false;
+        }
+
+        @Override
+        boolean mouseDragged(double mx, double my, int x, int y, int w, int h) {
+            if (dragging) { updateValue(mx); return true; }
+            return false;
+        }
+
+        void updateValue(double mx) {
+            float pct = MathHelper.clamp((float)(mx - sliderX) / sliderW, 0, 1);
+            float rawVal = min + pct * (max - min);
+            float stepped = Math.round(rawVal / step) * step;
+            setter.accept(MathHelper.clamp(stepped, min, max));
+        }
     }
 
-    // String list option - medieval style
+    private class EnumOption<T extends Enum<T>> extends ConfigOption {
+        final Class<T> enumClass;
+        final Supplier<T> getter;
+        final Consumer<T> setter;
+        int btnX, btnY, btnW = 125, btnH = 22;
+
+        EnumOption(String name, String desc, Class<T> cls, Supplier<T> get, Consumer<T> set) {
+            super(name, desc);
+            this.enumClass = cls; this.getter = get; this.setter = set;
+        }
+
+        @Override
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
+            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
+            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+
+            btnX = x + w - 135; btnY = y + 10;
+            T val = getter.get();
+            boolean btnHover = mx >= btnX && mx < btnX + btnW && my >= btnY && my < btnY + btnH;
+
+            ctx.fill(btnX, btnY, btnX + btnW, btnY + btnH, BORDER_DARK);
+            ctx.fill(btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, btnHover ? PARCHMENT_HOVER : PARCHMENT);
+
+            String txt = val.toString();
+            if (txt.length() > 14) txt = txt.substring(0, 12) + "..";
+            ctx.drawTextWithShadow(tr, txt, btnX + 8, btnY + 7, TEXT_LIGHT);
+            ctx.drawTextWithShadow(tr, "\u25BC", btnX + btnW - 14, btnY + 7, TEXT_DIM);
+        }
+
+        @Override
+        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
+            if (mx >= btnX && mx < btnX + btnW && my >= btnY && my < btnY + btnH) {
+                activeDropdown = this;
+                dropdownX = btnX;
+                dropdownY = btnY + btnH;
+                dropdownWidth = btnW;
+                dropdownScroll = 0; // Reset scroll when opening
+                return true;
+            }
+            return false;
+        }
+
+        void setValueByIndex(int idx) {
+            T[] vals = enumClass.getEnumConstants();
+            if (idx >= 0 && idx < vals.length) setter.accept(vals[idx]);
+        }
+    }
+
     private static class StringListOption extends ConfigOption {
-        private final java.util.function.Supplier<List<String>> getter;
-        private final java.util.function.Consumer<List<String>> setter;
+        final Supplier<List<String>> getter;
+        final Consumer<List<String>> setter;
 
-        StringListOption(String name, String description,
-                         java.util.function.Supplier<List<String>> getter, java.util.function.Consumer<List<String>> setter) {
-            super(name, description);
-            this.getter = getter;
-            this.setter = setter;
+        StringListOption(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set) {
+            super(name, desc);
+            this.getter = get; this.setter = set;
         }
 
         @Override
-        void render(DrawContext context, int x, int y, int width, int height, int mouseX, int mouseY, Screen screen) {
-            var textRenderer = MinecraftClient.getInstance().textRenderer;
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
+            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
+            ctx.drawTextWithShadow(tr, getter.get().size() + " items", x + 8, y + 22, TEXT_DIM);
 
-            // Option background
-            context.fill(x, y, x + width, y + height - 5, PARCHMENT);
-            context.fill(x, y, x + width, y + 1, BORDER_LIGHT);
-            context.fill(x, y + height - 6, x + width, y + height - 5, BORDER_DARK);
-
-            context.drawTextWithShadow(textRenderer, name, x + 8, y + 8, TEXT_LIGHT);
-
-            List<String> list = getter.get();
-            String countText = list.size() + " item" + (list.size() != 1 ? "s" : "");
-            context.drawTextWithShadow(textRenderer, countText, x + 8, y + 22, TEXT_DIM);
-
-            // Edit button
-            int buttonX = x + width - 75;
-            int buttonY = y + 12;
-            int buttonWidth = 65;
-            int buttonHeight = 20;
-            boolean hovered = mouseX >= buttonX && mouseX < buttonX + buttonWidth && mouseY >= buttonY && mouseY < buttonY + buttonHeight;
-
-            context.fill(buttonX, buttonY, buttonX + buttonWidth, buttonY + buttonHeight, BORDER_DARK);
-            context.fill(buttonX + 1, buttonY + 1, buttonX + buttonWidth - 1, buttonY + buttonHeight - 1,
-                    hovered ? PARCHMENT_LIGHT : PARCHMENT);
-            context.fill(buttonX + 1, buttonY + 1, buttonX + buttonWidth - 1, buttonY + 2, 0x20FFFFFF);
-
-            context.drawCenteredTextWithShadow(textRenderer, "Edit...", buttonX + buttonWidth / 2, buttonY + 6, TEXT_LIGHT);
+            int bx = x + w - 75, by = y + 12;
+            boolean btnHover = mx >= bx && mx < bx + 65 && my >= by && my < by + 20;
+            ctx.fill(bx, by, bx + 65, by + 20, BORDER_DARK);
+            ctx.fill(bx + 1, by + 1, bx + 64, by + 19, btnHover ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.drawCenteredTextWithShadow(tr, "Edit...", bx + 32, by + 6, TEXT_LIGHT);
         }
 
         @Override
-        boolean mouseClicked(double mouseX, double mouseY, int x, int y, int width, int height, int button) {
-            int buttonX = x + width - 75;
-            int buttonY = y + 12;
-            if (mouseX >= buttonX && mouseX < buttonX + 65 && mouseY >= buttonY && mouseY < buttonY + 20) {
+        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
+            int bx = x + w - 75, by = y + 12;
+            if (mx >= bx && mx < bx + 65 && my >= by && my < by + 20) {
                 MinecraftClient.getInstance().setScreen(new StringListEditorScreen(
-                        (Screen) MinecraftClient.getInstance().currentScreen,
-                        name, getter.get(), setter
-                ));
+                        MinecraftClient.getInstance().currentScreen, name, getter.get(), setter));
                 return true;
             }
             return false;
         }
     }
 
-    // ==================== String List Editor Screen - Medieval Style ====================
+    // ==================== STRING LIST EDITOR ====================
     private static class StringListEditorScreen extends Screen {
-        private final Screen parent;
-        private final List<String> items;
-        private final java.util.function.Consumer<List<String>> setter;
-        private String newItemText = "";
-        private double scrollOffset = 0;
+        final Screen parent;
+        final List<String> items;
+        final Consumer<List<String>> setter;
+        String input = "";
+        double scroll = 0;
 
-        StringListEditorScreen(Screen parent, String title, List<String> items, java.util.function.Consumer<List<String>> setter) {
+        StringListEditorScreen(Screen parent, String title, List<String> items, Consumer<List<String>> setter) {
             super(Text.literal("Edit: " + title));
             this.parent = parent;
             this.items = new ArrayList<>(items);
@@ -800,178 +984,112 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         @Override
-        protected void init() {
-        }
+        public void render(DrawContext ctx, int mx, int my, float delta) {
+            ctx.fill(0, 0, width, height, BG_DARK);
 
-        @Override
-        public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-            context.fill(0, 0, this.width, this.height, 0xFF000000);
-            context.fill(0, 0, this.width, this.height, BG_DARK);
+            int px = width / 2 - 180, pw = 360;
+            ctx.fill(px, 20, px + pw, height - 20, BG_MEDIUM);
+            ctx.fill(px + 2, 22, px + pw - 2, height - 22, BG_LIGHT);
 
-            // Main panel
-            int panelX = this.width / 2 - 180;
-            int panelWidth = 360;
-            context.fill(panelX, 20, panelX + panelWidth, this.height - 20, BG_MEDIUM);
-            context.fill(panelX + 2, 22, panelX + panelWidth - 2, this.height - 22, BG_LIGHT);
-            // Border
-            context.fill(panelX, 20, panelX + panelWidth, 22, BORDER_DARK);
-            context.fill(panelX, this.height - 22, panelX + panelWidth, this.height - 20, BORDER_DARK);
-            context.fill(panelX, 20, panelX + 2, this.height - 20, BORDER_DARK);
-            context.fill(panelX + panelWidth - 2, 20, panelX + panelWidth, this.height - 20, BORDER_DARK);
+            ctx.drawCenteredTextWithShadow(textRenderer, title, width / 2, 35, GOLD);
+            ctx.fill(px + 20, 48, px + pw - 20, 49, GOLD_DARK);
 
-            // Title
-            context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 35, GOLD);
-            context.fill(panelX + 20, 48, panelX + panelWidth - 20, 49, GOLD_DARK);
+            ctx.fill(px + 15, 60, px + pw - 65, 84, BORDER_DARK);
+            ctx.fill(px + 16, 61, px + pw - 66, 83, PARCHMENT);
+            ctx.drawTextWithShadow(textRenderer, input + "_", px + 20, 68, TEXT_LIGHT);
 
-            // Add new item area
-            int inputY = 60;
-            context.fill(panelX + 15, inputY, panelX + panelWidth - 65, inputY + 24, BORDER_DARK);
-            context.fill(panelX + 16, inputY + 1, panelX + panelWidth - 66, inputY + 23, PARCHMENT);
-            context.drawTextWithShadow(this.textRenderer, newItemText + "_", panelX + 20, inputY + 8, TEXT_LIGHT);
+            boolean addH = mx >= px + pw - 60 && mx < px + pw - 15 && my >= 60 && my < 84;
+            ctx.fill(px + pw - 60, 60, px + pw - 15, 84, BORDER_DARK);
+            ctx.fill(px + pw - 59, 61, px + pw - 16, 83, addH ? TOGGLE_ON : PARCHMENT);
+            ctx.drawCenteredTextWithShadow(textRenderer, "+ Add", px + pw - 37, 68, TEXT_LIGHT);
 
-            // Add button
-            int addX = panelX + panelWidth - 60;
-            boolean addHovered = mouseX >= addX && mouseX < addX + 45 && mouseY >= inputY && mouseY < inputY + 24;
-            context.fill(addX, inputY, addX + 45, inputY + 24, BORDER_DARK);
-            context.fill(addX + 1, inputY + 1, addX + 44, inputY + 23, addHovered ? TOGGLE_ON : PARCHMENT);
-            context.drawCenteredTextWithShadow(this.textRenderer, "+ Add", addX + 22, inputY + 8, TEXT_LIGHT);
-
-            // Items list
-            int listY = 95;
-            int itemHeight = 28;
-            context.enableScissor(panelX + 10, listY, panelX + panelWidth - 10, this.height - 70);
-
-            int y = listY - (int)scrollOffset;
+            ctx.enableScissor(px + 10, 95, px + pw - 10, height - 70);
+            int y = 95 - (int)scroll;
             for (int i = 0; i < items.size(); i++) {
-                if (y + itemHeight > listY && y < this.height - 70) {
-                    // Item background
-                    context.fill(panelX + 15, y, panelX + panelWidth - 50, y + itemHeight - 4, PARCHMENT);
-                    context.fill(panelX + 15, y, panelX + panelWidth - 50, y + 1, BORDER_LIGHT);
-                    context.fill(panelX + 15, y + itemHeight - 5, panelX + panelWidth - 50, y + itemHeight - 4, BORDER_DARK);
+                if (y + 24 > 95 && y < height - 70) {
+                    ctx.fill(px + 15, y, px + pw - 50, y + 24, PARCHMENT);
+                    String t = items.get(i);
+                    if (t.length() > 35) t = t.substring(0, 33) + "..";
+                    ctx.drawTextWithShadow(textRenderer, t, px + 20, y + 8, TEXT_LIGHT);
 
-                    // Item text
-                    String text = items.get(i);
-                    if (text.length() > 35) text = text.substring(0, 33) + "..";
-                    context.drawTextWithShadow(this.textRenderer, text, panelX + 20, y + 8, TEXT_LIGHT);
-
-                    // Delete button
-                    int delX = panelX + panelWidth - 45;
-                    boolean delHovered = mouseX >= delX && mouseX < delX + 30 && mouseY >= y && mouseY < y + itemHeight - 4;
-                    context.fill(delX, y, delX + 30, y + itemHeight - 4, BORDER_DARK);
-                    context.fill(delX + 1, y + 1, delX + 29, y + itemHeight - 5, delHovered ? ACCENT_RED : PARCHMENT);
-                    context.drawCenteredTextWithShadow(this.textRenderer, "X", delX + 15, y + 8, TEXT_LIGHT);
+                    boolean delH = mx >= px + pw - 45 && mx < px + pw - 15 && my >= y && my < y + 24;
+                    ctx.fill(px + pw - 45, y, px + pw - 15, y + 24, BORDER_DARK);
+                    ctx.fill(px + pw - 44, y + 1, px + pw - 16, y + 23, delH ? ACCENT_RED : PARCHMENT);
+                    ctx.drawCenteredTextWithShadow(textRenderer, "X", px + pw - 30, y + 8, TEXT_LIGHT);
                 }
-                y += itemHeight;
+                y += 28;
             }
-            context.disableScissor();
+            ctx.disableScissor();
 
-            if (items.isEmpty()) {
-                context.drawCenteredTextWithShadow(this.textRenderer, "No items - type above and click Add", this.width / 2, this.height / 2, TEXT_DIM);
-            }
+            if (items.isEmpty()) ctx.drawCenteredTextWithShadow(textRenderer, "No items", width / 2, height / 2, TEXT_DIM);
 
-            // Bottom buttons
-            int buttonY = this.height - 55;
-            int doneX = this.width / 2 - 105;
-            int cancelX = this.width / 2 + 5;
-            boolean doneHovered = mouseX >= doneX && mouseX < doneX + 100 && mouseY >= buttonY && mouseY < buttonY + 24;
-            boolean cancelHovered = mouseX >= cancelX && mouseX < cancelX + 100 && mouseY >= buttonY && mouseY < buttonY + 24;
+            int by = height - 55;
+            boolean doneH = mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24;
+            boolean cancelH = mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24;
 
-            // Done button
-            context.fill(doneX, buttonY, doneX + 100, buttonY + 24, BORDER_DARK);
-            context.fill(doneX + 1, buttonY + 1, doneX + 99, buttonY + 23, doneHovered ? TOGGLE_ON : PARCHMENT);
-            context.drawCenteredTextWithShadow(this.textRenderer, "Done", doneX + 50, buttonY + 8, TEXT_LIGHT);
+            ctx.fill(width / 2 - 105, by, width / 2 - 5, by + 24, BORDER_DARK);
+            ctx.fill(width / 2 - 104, by + 1, width / 2 - 6, by + 23, doneH ? TOGGLE_ON : PARCHMENT);
+            ctx.drawCenteredTextWithShadow(textRenderer, "Done", width / 2 - 55, by + 8, TEXT_LIGHT);
 
-            // Cancel button
-            context.fill(cancelX, buttonY, cancelX + 100, buttonY + 24, BORDER_DARK);
-            context.fill(cancelX + 1, buttonY + 1, cancelX + 99, buttonY + 23, cancelHovered ? ACCENT_RED : PARCHMENT);
-            context.drawCenteredTextWithShadow(this.textRenderer, "Cancel", cancelX + 50, buttonY + 8, TEXT_LIGHT);
+            ctx.fill(width / 2 + 5, by, width / 2 + 105, by + 24, BORDER_DARK);
+            ctx.fill(width / 2 + 6, by + 1, width / 2 + 104, by + 23, cancelH ? ACCENT_RED : PARCHMENT);
+            ctx.drawCenteredTextWithShadow(textRenderer, "Cancel", width / 2 + 55, by + 8, TEXT_LIGHT);
         }
 
         @Override
-        public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            int panelX = this.width / 2 - 180;
-            int panelWidth = 360;
+        public boolean mouseClicked(double mx, double my, int btn) {
+            int px = width / 2 - 180, pw = 360;
 
-            // Add button
-            int inputY = 60;
-            int addX = panelX + panelWidth - 60;
-            if (mouseX >= addX && mouseX < addX + 45 && mouseY >= inputY && mouseY < inputY + 24) {
-                if (!newItemText.isEmpty()) {
-                    items.add(newItemText);
-                    newItemText = "";
-                }
+            if (mx >= px + pw - 60 && mx < px + pw - 15 && my >= 60 && my < 84 && !input.isEmpty()) {
+                items.add(input);
+                input = "";
                 return true;
             }
 
-            // Bottom buttons
-            int buttonY = this.height - 55;
-            int doneX = this.width / 2 - 105;
-            int cancelX = this.width / 2 + 5;
-
-            if (mouseX >= doneX && mouseX < doneX + 100 && mouseY >= buttonY && mouseY < buttonY + 24) {
+            int by = height - 55;
+            if (mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24) {
                 setter.accept(items);
-                this.client.setScreen(parent);
+                client.setScreen(parent);
+                return true;
+            }
+            if (mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24) {
+                client.setScreen(parent);
                 return true;
             }
 
-            if (mouseX >= cancelX && mouseX < cancelX + 100 && mouseY >= buttonY && mouseY < buttonY + 24) {
-                this.client.setScreen(parent);
-                return true;
-            }
-
-            // Delete buttons
-            int listY = 95;
-            int itemHeight = 28;
-            int y = listY - (int)scrollOffset;
+            int y = 95 - (int)scroll;
             for (int i = 0; i < items.size(); i++) {
-                int delX = panelX + panelWidth - 45;
-                if (mouseX >= delX && mouseX < delX + 30 && mouseY >= y && mouseY < y + itemHeight - 4) {
+                if (mx >= px + pw - 45 && mx < px + pw - 15 && my >= y && my < y + 24) {
                     items.remove(i);
                     return true;
                 }
-                y += itemHeight;
+                y += 28;
             }
-
-            return super.mouseClicked(mouseX, mouseY, button);
+            return super.mouseClicked(mx, my, btn);
         }
 
         @Override
-        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-            if (keyCode == 259 && !newItemText.isEmpty()) { // Backspace
-                newItemText = newItemText.substring(0, newItemText.length() - 1);
-                return true;
-            }
-            if (keyCode == 257 && !newItemText.isEmpty()) { // Enter
-                items.add(newItemText);
-                newItemText = "";
-                return true;
-            }
-            if (keyCode == 256) { // Escape
-                this.client.setScreen(parent);
-                return true;
-            }
-            return super.keyPressed(keyCode, scanCode, modifiers);
+        public boolean keyPressed(int key, int scan, int mod) {
+            if (key == 259 && !input.isEmpty()) { input = input.substring(0, input.length() - 1); return true; }
+            if (key == 257 && !input.isEmpty()) { items.add(input); input = ""; return true; }
+            if (key == 256) { client.setScreen(parent); return true; }
+            return super.keyPressed(key, scan, mod);
         }
 
         @Override
-        public boolean charTyped(char chr, int modifiers) {
-            if (chr >= 32) {
-                newItemText += chr;
-                return true;
-            }
-            return super.charTyped(chr, modifiers);
+        public boolean charTyped(char c, int mod) {
+            if (c >= 32) { input += c; return true; }
+            return super.charTyped(c, mod);
         }
 
         @Override
-        public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-            int maxScroll = Math.max(0, items.size() * 28 - (this.height - 165));
-            scrollOffset = MathHelper.clamp(scrollOffset - verticalAmount * 25, 0, maxScroll);
+        public boolean mouseScrolled(double mx, double my, double h, double v) {
+            int max = Math.max(0, items.size() * 28 - (height - 165));
+            scroll = MathHelper.clamp(scroll - v * 25, 0, max);
             return true;
         }
 
         @Override
-        public void close() {
-            this.client.setScreen(parent);
-        }
+        public void close() { client.setScreen(parent); }
     }
 }
