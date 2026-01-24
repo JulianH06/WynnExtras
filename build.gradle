@@ -59,6 +59,7 @@ dependencies {
 	modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
 	// Cloth Config needed for wynnventory compile compatibility
 	modCompileOnly "me.shedaniel.cloth:cloth-config-fabric:17.0.144"
+	modImplementation "me.shedaniel.cloth:cloth-config-fabric:17.0.144"
 
 	shadowImpl 'org.reflections:reflections:0.10.2'
 }

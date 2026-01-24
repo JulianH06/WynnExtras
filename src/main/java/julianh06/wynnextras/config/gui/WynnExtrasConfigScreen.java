@@ -30,23 +30,23 @@ public class WynnExtrasConfigScreen extends Screen {
     private final WynnExtrasConfig config;
 
     // ==================== THEME COLORS ====================
-    private static final int BG_DARK = 0xFF1a1410;
-    private static final int BG_MEDIUM = 0xFF2d2419;
-    private static final int BG_LIGHT = 0xFF3d3222;
-    private static final int PARCHMENT = 0xFF4a3c2a;
-    private static final int PARCHMENT_LIGHT = 0xFF5c4d3a;
-    private static final int PARCHMENT_HOVER = 0xFF6a5d4a;
-    private static final int GOLD = 0xFFc9a227;
-    private static final int GOLD_DARK = 0xFF8b7019;
-    private static final int GOLD_LIGHT = 0xFFe8c252;
-    private static final int TEXT_LIGHT = 0xFFe8dcc8;
-    private static final int TEXT_DIM = 0xFF9a8b70;
-    private static final int BORDER_DARK = 0xFF1a1410;
-    private static final int BORDER_LIGHT = 0xFF5c4a35;
-    private static final int TOGGLE_ON = 0xFF4a8c3a;
-    private static final int TOGGLE_OFF = 0xFF5c4535;
-    private static final int ACCENT_RED = 0xFFa83232;
-    private static final int SUBCATEGORY_BG = 0xFF352a1e;
+    private static int BG_DARK = 0xFF1a1410;
+    private static int BG_MEDIUM = 0xFF2d2419;
+    private static int BG_LIGHT = 0xFF3d3222;
+    private static int PARCHMENT = 0xFF4a3c2a;
+    private static int PARCHMENT_LIGHT = 0xFF5c4d3a;
+    private static int PARCHMENT_HOVER = 0xFF6a5d4a;
+    private static int GOLD = 0xFFc9a227;
+    private static int GOLD_DARK = 0xFF8b7019;
+    private static int GOLD_LIGHT = 0xFFe8c252;
+    private static int TEXT_LIGHT = 0xFFe8dcc8;
+    private static int TEXT_DIM = 0xFF9a8b70;
+    private static int BORDER_DARK = 0xFF1a1410;
+    private static int BORDER_LIGHT = 0xFF5c4a35;
+    private static int TOGGLE_ON = 0xFF4a8c3a;
+    private static int TOGGLE_OFF = 0xFF5c4535;
+    private static int ACCENT_RED = 0xFFa83232;
+    private static int SUBCATEGORY_BG = 0xFF352a1e;
 
     // ==================== LAYOUT ====================
     private static final int SIDEBAR_WIDTH = 140;
@@ -188,6 +188,10 @@ public class WynnExtrasConfigScreen extends Screen {
         category("Waypoints", 0xFF7a5aa8)
             .add(toggle("Disable Defaults", "Disable built-in waypoints",
                     () -> config.disableAllDefaultWaypoints, v -> config.disableAllDefaultWaypoints = v));
+
+        category("TEST", 0xFFffffff);
+        category("TEST2", 0xFFffffff);
+        category("TEST3", 0xFFffffff);
     }
 
     // ==================== BUILDER HELPERS ====================
@@ -234,6 +238,48 @@ public class WynnExtrasConfigScreen extends Screen {
     // ==================== RENDERING ====================
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        boolean oldColors = false;
+
+        if(oldColors) {
+            BG_DARK = 0xFF1a1410;
+            BG_MEDIUM = 0xFF2d2419;
+            BG_LIGHT = 0xFF3d3222;
+            PARCHMENT = 0xFF4a3c2a;
+            PARCHMENT_LIGHT = 0xFF5c4d3a;
+            PARCHMENT_HOVER = 0xFF6a5d4a;
+            GOLD = 0xFFc9a227;
+            GOLD_DARK = 0xFF8b7019;
+            //GOLD_LIGHT = 0xFFe8c252;
+            TEXT_LIGHT = 0xFFe8dcc8;
+            TEXT_DIM = 0xFF9a8b70;
+            BORDER_DARK = 0xFF1a1410;
+            BORDER_LIGHT = 0xFF5c4a35;
+            TOGGLE_ON = 0xFF4a8c3a;
+            TOGGLE_OFF = 0xFF5c4535;
+            ACCENT_RED = 0xFFa83232;
+            SUBCATEGORY_BG = 0xFF352a1e;
+        } else {
+            BG_DARK = 0xFF1a1410;
+            BG_MEDIUM = 0xFF2e251c;
+            //BG_MEDIUM = 0xFF2d2419;
+            //BG_MEDIUM = 0xFF2a1717;
+            BG_LIGHT = 0xFF4d3c2d;
+            PARCHMENT = 0xFF6c4f36;
+            PARCHMENT_LIGHT = 0xFF876141;
+            PARCHMENT_HOVER = 0xFF705030;
+            GOLD = 0xFFcca76f;
+            GOLD_DARK = 0xFFecc600;
+            //GOLD_LIGHT = 0xFFe8c252;
+            TEXT_LIGHT = 0xFFe8dcc8;
+            TEXT_DIM = 0xFF9a8b70;
+            BORDER_DARK = 0xFF3a2d24;
+            BORDER_LIGHT = PARCHMENT_LIGHT;
+            TOGGLE_ON = 0xFF4a8c3a;
+            TOGGLE_OFF = 0xFF5c4535;
+            ACCENT_RED = 0xFFa83232;
+            SUBCATEGORY_BG = 0xFF694d33;
+        }
+
         // Normal render
         ctx.fill(0, 0, width, height, BG_DARK);
 
