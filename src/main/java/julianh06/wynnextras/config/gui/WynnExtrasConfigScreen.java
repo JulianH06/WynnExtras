@@ -607,7 +607,7 @@ public class WynnExtrasConfigScreen extends Screen {
             int listTop = HEADER_HEIGHT + 30;
             int listBot = height - FOOTER_HEIGHT - 10;
 
-            int y = listTop - (int)scrollOffset;
+            int y = listTop - (int)scrollOffset + 5;
 
             for (SubCategory sub : cat.subCategories) {
                 if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + SUBCATEGORY_HEADER_HEIGHT) && mx >= contentX && mx < contentX + contentW) {
@@ -797,7 +797,7 @@ public class WynnExtrasConfigScreen extends Screen {
 
         @Override
         boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
-            int tx = x + w - 55, ty = y + 12;
+            int tx = x + w - 45, ty = y + 12;
             if (mx >= tx && mx < tx + 44 && my >= ty && my < ty + 20) {
                 setter.accept(!getter.get());
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());

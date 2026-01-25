@@ -265,7 +265,7 @@ public class RaidLootTrackerOverlay {
         // Calculate emerald totals
         // 1 stx = 64 le, 1 le = 64 eb, 1 eb = 64 e
         // So: 1 stx = 262144 e, 1 le = 4096 e, 1 eb = 64 e
-        long totalEmeralds = displayData.liquidEmeralds + (displayData.emeraldBlocks * 64);
+        long totalEmeralds = (displayData.liquidEmeralds * 64 * 64) + (displayData.emeraldBlocks * 64);
         long stacks = totalEmeralds / 262144;
         long remainingAfterStx = totalEmeralds % 262144;
         long le = remainingAfterStx / 4096;
