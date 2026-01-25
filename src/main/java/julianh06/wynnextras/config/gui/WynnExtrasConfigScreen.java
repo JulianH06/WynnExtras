@@ -204,6 +204,8 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // ===== MISC =====
         category("Misc", 0xFF0872bc)
+                .add(toggle("Chat Click Opens PV", "Click player names in chat to open /pv",
+                        () -> config.chatClickOpensPV, v -> config.chatClickOpensPV = v))
                 .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
                         () -> config.differentGUIScale, v -> config.differentGUIScale = v))
                 .add(slider("GUI Scale", "Custom GUI scale value",
