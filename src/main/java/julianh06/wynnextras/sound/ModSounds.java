@@ -9,12 +9,16 @@ import net.minecraft.util.Identifier;
 import static julianh06.wynnextras.features.misc.SourceOfThruth.sounds;
 
 public class ModSounds {
+    //Dont forget to edit the sounds.json if you want to add a new sound here
+
     public static final SoundEvent YES = registerSoundEvent("yes");
     public static final SoundEvent NO = registerSoundEvent("no");
     public static final SoundEvent NOTHING = registerSoundEvent("nothing");
     public static final SoundEvent IDTS = registerSoundEvent("idts");
     public static final SoundEvent ASKAGAIN = registerSoundEvent("askagain");
     public static final SoundEvent NEITHER = registerSoundEvent("neither");
+    public static final SoundEvent SKELETON = registerSoundEvent("skeleton");
+    public static final SoundEvent AMOGUS = registerSoundEvent("amogus");
 
     private static SoundEvent registerSoundEvent(String name) {
         Identifier id = Identifier.of(WynnExtras.MOD_ID, name);

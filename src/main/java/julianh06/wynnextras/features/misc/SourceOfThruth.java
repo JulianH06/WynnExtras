@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.misc;
 
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.sound.ModSounds;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -110,6 +111,14 @@ public class SourceOfThruth extends WEScreen {
                 if(distance > 300) {
                     SoundEvent sound = getRandomSound();
                     answer = getAnswerString(sound);
+
+                    if(MinecraftClient.getInstance().player != null) {
+                        int rnd = (int) (Math.random() * 5);
+                        if (MinecraftClient.getInstance().player.getName().getString().equals("D4MIT") && sound.equals(ModSounds.YES) && rnd == 0) {
+                            answer = "YES D4MIT YOU SHOULD GAMBLE A RESONANCE!!!!!!";
+                            sound = ModSounds.SKELETON;
+                        }
+                    }
 
                     if(sound == null) {
                         return true;

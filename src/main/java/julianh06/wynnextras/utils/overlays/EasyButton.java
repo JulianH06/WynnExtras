@@ -2,7 +2,7 @@ package julianh06.wynnextras.utils.overlays;
 
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.RenderUtils;
-import me.shedaniel.cloth.clothconfig.shadowed.blue.endless.jankson.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;

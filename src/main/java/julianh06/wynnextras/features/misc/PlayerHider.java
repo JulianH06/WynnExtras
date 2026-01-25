@@ -1,11 +1,11 @@
 package julianh06.wynnextras.features.misc;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.wynntils.core.components.Models;
 import com.wynntils.models.raid.raids.RaidKind;
 import com.wynntils.models.raid.type.RaidInfo;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
@@ -29,6 +29,10 @@ public class PlayerHider {
 
     private static SubCommand removeSubCmd;
 
+    private static SubCommand hideAllSubCmd;
+
+    private static SubCommand hideAllInWarSubCmd;
+
     private static Command playerhiderCmd;
 
     static boolean inNotg = false;
@@ -37,7 +41,7 @@ public class PlayerHider {
 
     public static void registerBossPlayerHider() {
         if(config == null) {
-            config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+            config = WynnExtrasConfig.INSTANCE;
         }
 
         ClientTickEvents.START_CLIENT_TICK.register((tick) -> {
@@ -47,13 +51,13 @@ public class PlayerHider {
                         "toggle",
                         "",
                         context -> {
-                            config.partyMemberHide = !config.partyMemberHide;
-                            if(config.partyMemberHide) {
+                            config.playerHiderToggle = !config.playerHiderToggle;
+                            if(config.playerHiderToggle) {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Playerhider")));
                             } else {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Playerhider")));
                             }
-                            SimpleConfig.save(WynnExtrasConfig.class);
+                            WynnExtrasConfig.save();
                             return 1;
                         },
                         null,
@@ -71,7 +75,7 @@ public class PlayerHider {
                             }
                             config.hiddenPlayers.add(arg);
                             McUtils.sendMessageToClient(Text.of("Added " + arg + " to the player hider list."));
-                            SimpleConfig.save(WynnExtrasConfig.class);
+                            WynnExtrasConfig.save();
                             return 1;
                         },
                         null,
@@ -90,7 +94,7 @@ public class PlayerHider {
                             boolean removed = config.hiddenPlayers.remove(arg);
                             if(removed) {
                                 McUtils.sendMessageToClient(Text.of("Removed " + arg + " from the player hider list."));
-                                SimpleConfig.save(WynnExtrasConfig.class);
+                                WynnExtrasConfig.save();
                             } else {
                                 McUtils.sendMessageToClient(Text.of("Player is not in the player hider list!"));
                             }
@@ -100,6 +104,40 @@ public class PlayerHider {
                         List.of(ClientCommandManager.argument("player", StringArgumentType.word()))
                 );
 
+                hideAllSubCmd = new SubCommand(
+                        "hideall",
+                        "",
+                        context -> {
+                            config.hideAllPlayers = !config.hideAllPlayers;
+                            if(config.hideAllPlayers) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players (range: " + config.maxHideDistance + ")")));
+                            } else {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Hide All Players")));
+                            }
+                            WynnExtrasConfig.save();
+                            return 1;
+                        },
+                        null,
+                        null
+                );
+
+                hideAllInWarSubCmd = new SubCommand(
+                        "hideallinwar",
+                        "",
+                        context -> {
+                            config.hideAllPlayersInWar = !config.hideAllPlayersInWar;
+                            if(config.hideAllPlayersInWar) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players in Wars (range: " + config.maxHideDistance + ")")));
+                            } else {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Hide All Players in Wars")));
+                            }
+                            WynnExtrasConfig.save();
+                            return 1;
+                        },
+                        null,
+                        null
+                );
+
                 playerhiderCmd = new Command(
                         "playerhider",
                         "",
@@ -107,14 +145,16 @@ public class PlayerHider {
                         List.of(
                                 addSubCmd,
                                 removeSubCmd,
-                                toggleSubCmd
+                                toggleSubCmd,
+                                hideAllSubCmd,
+                                hideAllInWarSubCmd
                         ),
                         null
                 );
 
                 commandsInitialized = true;
             }
-            int Distance = SimpleConfig.getInstance(WynnExtrasConfig.class).maxHideDistance;
+            int Distance = WynnExtrasConfig.INSTANCE.maxHideDistance;
 
             MinecraftClient client = MinecraftClient.getInstance();
             if(client.player == null || client.world == null) { return; }
@@ -122,9 +162,6 @@ public class PlayerHider {
 
             for (PlayerEntity player : client.world.getPlayers()) {
                 if (player == null) {
-                    if(config.printDebugToConsole) {
-                        System.out.println("PLAYER == NULL");
-                    }
                     return;
                 }
 
@@ -132,21 +169,22 @@ public class PlayerHider {
                     continue;
                 }
 
-                if(!config.partyMemberHide || (config.onlyInNotg && !inNotg)) {
+                if(!config.playerHiderToggle) {
                     if(isHidden(player)) { show(player); }
                     return;
                 }
 
                 double distance = player.getBlockPos().toBottomCenterPos().distanceTo(me.getBlockPos().toBottomCenterPos());
-                if(config.printDebugToConsole) {
-                    System.out.println("Distance to " + player.getName() + " is: " + distance + " max hide distance is: " + Distance);
-                }
                 if (distance >= Distance) {
                     if(isHidden(player)) { show(player); }
                     continue;
                 }
 
-                if(config.hiddenPlayers.toString().toLowerCase().contains(player.getName().getString().toLowerCase())) {
+                // Check if in war and hideAllInWar is enabled
+                boolean inWarAndHiding = config.hideAllPlayersInWar && Models.War.isWarActive();
+
+                // Hide all players mode, in war mode, or specific player in list
+                if(config.hideAllPlayers || inWarAndHiding || config.hiddenPlayers.toString().toLowerCase().contains(player.getName().getString().toLowerCase())) {
                     hide(player);
                 } else {
                     if(isHidden(player)) { show(player); }

@@ -4,7 +4,6 @@ import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.utils.ChatUtils;
@@ -19,16 +18,11 @@ import java.util.Map;
 
 @WEModule
 public class ChatNotificator {
-    private static WynnExtrasConfig config;
-
     private static Command testCmd = new Command(
             "notifiertest",
             "",
             context -> {
-//                CustomColor textColor = CustomColor.fromHexString(config.TextColor);
-                ChatUtils.displayTitle("test", "", config.TextDurationInMs/50, Formatting.byName(config.TextColor));
-                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.Sound)), config.SoundVolume, config.SoundPitch);
-//                System.out.println(Formatting.byColorIndex(textColor.asInt()));
+                displayAndPlaySound("test");
                 return 1;
             },
             null,
@@ -37,33 +31,23 @@ public class ChatNotificator {
 
     @SubscribeEvent
     void recieveMessageGame(ChatEvent event) {
-        if(config == null) {
-            config = SimpleConfig.getInstance(WynnExtrasConfig.class);
-        }
         notify(event.message);
     }
 
     private static void notify(Text message) {
-        if(message.getString().equals("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
+        if(message.getString().contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
 
-        if(config == null) return;
-        for(String notificator : config.notifierWords) {
+        for(String notificator : WynnExtrasConfig.INSTANCE.notifierWords) {
             if(!notificator.contains("|")) return;
             String[] parts = notificator.split("\\|");
             if(message.getString().toLowerCase().contains(parts[0].toLowerCase())) {
-                ChatUtils.displayTitle(parts[1], "", config.TextDurationInMs/50, Formatting.byName(config.TextColor));
-                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.Sound)), config.SoundVolume, config.SoundPitch);
+                displayAndPlaySound(parts[1]);
             }
         }
 
-        if(SimpleConfig.getInstance(WynnExtrasConfig.class) == null) return;
+        WynnExtrasConfig.INSTANCE.syncPremades();
 
-        WynnExtrasConfig.NotificationConfig notificationConfig = SimpleConfig.getInstance(WynnExtrasConfig.class).notificationConfig;
-        if(notificationConfig == null) return;
-
-        notificationConfig.syncPremades();
-
-        for(Map.Entry<String, Boolean> entry : notificationConfig.premades.entrySet()) {
+        for(Map.Entry<String, Boolean> entry : WynnExtrasConfig.INSTANCE.premades.entrySet()) {
             String[] parts = entry.getKey().split("\\|");
             if(parts.length != 2) continue;
             String trigger = parts[0];
@@ -73,9 +57,13 @@ public class ChatNotificator {
             if(!enabled) continue;
 
             if(message.getString().toLowerCase().contains(trigger.toLowerCase())) {
-                ChatUtils.displayTitle(display, "", config.TextDurationInMs/50, Formatting.byName(config.TextColor));
-                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.Sound)), config.SoundVolume, config.SoundPitch);
+                displayAndPlaySound(display);
             }
         }
+    }
+
+    private static void displayAndPlaySound(String display) {
+        ChatUtils.displayTitle(display, "", WynnExtrasConfig.INSTANCE.textDurationInMs / 50, WynnExtrasConfig.INSTANCE.textColor.getFormatting());
+        McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(WynnExtrasConfig.INSTANCE.notificationSound.getSoundId())), WynnExtrasConfig.INSTANCE.soundVolume / 100, WynnExtrasConfig.INSTANCE.soundPitch / 100);
     }
 }

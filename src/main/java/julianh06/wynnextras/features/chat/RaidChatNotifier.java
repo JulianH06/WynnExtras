@@ -15,7 +15,6 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -192,7 +191,7 @@ public class RaidChatNotifier {
 
 
 
-    private static final WynnExtrasConfig config = SimpleConfig.getInstance(WynnExtrasConfig.class);
+    private static final WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
 
     private static void savePB(String key, long time) {
         Long old = INSTANCE.raidPBs.get(key);
@@ -211,16 +210,16 @@ public class RaidChatNotifier {
         if (!config.toggleRaidTimestamps) return;
 
         long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
-                          ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()
-                          : 0;
+                ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()
+                : 0;
 
         String msg = stripColorCodes(rawMsg);
 
         for (RaidMessageDetector detector : detectors) {
             if (detector.matches(msg)) {
                 String timestamp = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
-                    ? formatTime(currentTime)
-                    : "??:??.???";
+                        ? formatTime(currentTime)
+                        : "??:??.???";
 
                 String progress = detector.extractProgress(msg);
                 String finalMsg = detector.getFormattedMessage(progress, timestamp);
@@ -461,10 +460,8 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
 
-            if ("3/3".equals(progress) && Time.now().timestamp() >= disableChiropUntil && SimpleConfig.getInstance(WynnExtrasConfig.class).chiropTimer) {
+            if ("3/3".equals(progress) && Time.now().timestamp() >= disableChiropUntil && WynnExtrasConfig.INSTANCE.chiropTimer) {
                 startSpawnCountdown();
-            } else {
-                McUtils.sendMessageToClient(Text.of("Didnt start chíropTimer " + progress + " " + Time.now().timestamp() + " " + disableChiropUntil + " " + SimpleConfig.getInstance(WynnExtrasConfig.class).chiropTimer));
             }
 
             String key = PB_PREFIX + "_" + progress;
@@ -547,7 +544,7 @@ public class RaidChatNotifier {
                 Long pb = INSTANCE.raidPBs.get("watch_phase_first");
                 if (pb == null || currentTime < pb) {
                     INSTANCE.raidPBs.put("watch_phase_first", currentTime);
-                    SimpleConfig.save(WynnExtrasConfig.class);
+                    WynnExtrasConfig.save();
 
                     message += (pb == null ? " §e[First PB]" : " §e[New PB! Old: " + formatTime(pb) + "]");
                 } else {
@@ -561,7 +558,7 @@ public class RaidChatNotifier {
                 Long pb = INSTANCE.raidPBs.get("watch_phase_duration");
                 if (pb == null || duration < pb) {
                     INSTANCE.raidPBs.put("watch_phase_duration", duration);
-                    SimpleConfig.save(WynnExtrasConfig.class);
+                    WynnExtrasConfig.save();
 
                     message += (pb == null ? " §e[First PB]" : " §e[New PB! Old: " + formatTime(pb) + "]");
                 } else {
@@ -704,7 +701,7 @@ public class RaidChatNotifier {
                 m.occurrenceCount = 0;
             }
             else if (detector instanceof WatchPhaseDetector w) {
-                        w.resetForNewRaid();
+                w.resetForNewRaid();
 
             }
         }

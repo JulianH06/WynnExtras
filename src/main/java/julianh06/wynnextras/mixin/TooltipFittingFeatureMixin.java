@@ -5,7 +5,6 @@ import com.wynntils.models.gear.type.GearTier;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.utils.mc.TooltipUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.inventory.WeightDisplay;
 import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
@@ -27,7 +26,7 @@ public class TooltipFittingFeatureMixin {
             )
     )
     private List<TooltipComponent> redirectGetClientTooltipComponent(List<Text> components) {
-        if (!SimpleConfig.getInstance(WynnExtrasConfig.class).showWeight) {
+        if (!WynnExtrasConfig.INSTANCE.showWeight) {
             return TooltipUtils.getClientTooltipComponent(components);
         }
 

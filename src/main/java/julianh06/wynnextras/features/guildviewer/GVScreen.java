@@ -4,7 +4,6 @@ import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.OpenInBrowserButton;
 import julianh06.wynnextras.features.profileviewer.PV;
@@ -146,7 +145,7 @@ public class GVScreen extends WEScreen {
         float snapValue = 0.5f;
         float speed = 0.3f;
         float diff = (targetOffset - actualOffset);
-        if(Math.abs(diff) < snapValue || !SimpleConfig.getInstance(WynnExtrasConfig.class).smoothScrollToggle || scrollBarWidget.scrollBarButtonWidget.isHeld) actualOffset = targetOffset;
+        if(Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle || scrollBarWidget.scrollBarButtonWidget.isHeld) actualOffset = targetOffset;
         else actualOffset += diff * speed * delta;
         if(actualOffset < 0) actualOffset = 0;
 
@@ -764,7 +763,7 @@ public class GVScreen extends WEScreen {
 
             ui.drawButtonTextures(
                     x, y, width, height, scale,
-                    SimpleConfig.getInstance(WynnExtrasConfig.class).pvDarkmodeToggle,
+                    WynnExtrasConfig.INSTANCE.pvDarkmodeToggle,
                     sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark,
                     sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark,
                     sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr,

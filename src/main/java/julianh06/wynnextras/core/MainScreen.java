@@ -3,7 +3,6 @@ package julianh06.wynnextras.core;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import julianh06.wynnextras.features.abilitytree.TreeScreen;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.utils.LinkUtils;
@@ -85,7 +84,7 @@ public class MainScreen extends WEScreen {
         switch (i) {
             case 0 -> {
                 MinecraftUtils.mc().send(() -> {
-                    MinecraftUtils.mc().setScreen(SimpleConfig.getConfigScreen(WynnExtrasConfig.class, parent).get());
+                    MinecraftUtils.mc().setScreen(WynnExtrasConfig.createConfigScreen(parent));
                 });
             }
             case 1 -> {

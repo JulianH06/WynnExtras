@@ -6,7 +6,6 @@ import com.wynntils.models.abilities.event.TotemEvent;
 import com.wynntils.models.abilities.type.ShamanTotem;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.simpleconfig.SimpleConfig;
 import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.obfuscate.DontObfuscate;
@@ -45,7 +44,7 @@ public class ShamanTotemModelMixin {
 
     @Inject(method = "findAndLinkTotem", at = @At("HEAD"), remap = false, cancellable = true)
     void findAndLinkTotem(int timerId, int parsedTime, DisplayEntity.TextDisplayEntity textDisplay, CallbackInfo ci) {
-        //if(!SimpleConfig.getConfigHolder(WynnExtrasConfig.class).get().totemRangeVisualizerToggle) return;
+        if(!WynnExtrasConfig.INSTANCE.totemRangeVisualizerToggle) return;
 
         assert McUtils.mc().world != null;
         List<ArmorStandEntity> possibleTotems = McUtils.mc().world.getNonSpectatingEntities(ArmorStandEntity.class, new Box(

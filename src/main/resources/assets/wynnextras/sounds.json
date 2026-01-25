@@ -30,5 +30,16 @@
     "sounds": [
       "wynnextras:neither"
     ]
+  },
+  "skeleton": {
+    "sounds": [
+      "wynnextras:skeleton"
+    ]
+  },
+  "amogus": {
+    "sounds": [
+      "wynnextras:amogus"
+    ]
   }
+
 }
