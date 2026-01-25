@@ -153,7 +153,7 @@ public class WynnExtrasConfigScreen extends Screen {
             .add(stringList("Blocked Words", "Hide messages with these",
                     () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
             .sub("Notifications")
-                .add(stringList("Notifier Words (Format: trigger|display)", "Format: trigger|display",
+                .add(stringListDual("Notifier Words", "Trigger word and display text",
                         () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
                 .add(sliderF("Duration (ms)", "How long notification shows",
                         500, 10000, 100, () -> (float) config.textDurationInMs, v -> config.textDurationInMs = v.intValue()))
@@ -242,7 +242,11 @@ public class WynnExtrasConfigScreen extends Screen {
     }
 
     private ConfigOption stringList(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set, String itemName) {
-        return new StringListOption(name, desc, get, set, itemName);
+        return new StringListOption(name, desc, get, set, itemName, false);
+    }
+
+    private ConfigOption stringListDual(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set, String itemName) {
+        return new StringListOption(name, desc, get, set, itemName, true);
     }
 
     // ==================== SCREEN LIFECYCLE ====================
@@ -1001,13 +1005,14 @@ public class WynnExtrasConfigScreen extends Screen {
     private static class StringListOption extends ConfigOption {
         final Supplier<List<String>> getter;
         final Consumer<List<String>> setter;
-
         final String itemName;
+        final boolean dualInput;
 
-        StringListOption(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set, String itemName) {
+        StringListOption(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set, String itemName, boolean dualInput) {
             super(name, desc);
             this.getter = get; this.setter = set;
             this.itemName = itemName;
+            this.dualInput = dualInput;
         }
 
         @Override
@@ -1031,7 +1036,7 @@ public class WynnExtrasConfigScreen extends Screen {
             int bx = x + w - 75, by = y + 12;
             if (mx >= bx && mx < bx + 65 && my >= by && my < by + 20) {
                 MinecraftClient.getInstance().setScreen(new StringListEditorScreen(
-                        MinecraftClient.getInstance().currentScreen, name, getter.get(), setter));
+                        MinecraftClient.getInstance().currentScreen, name, getter.get(), setter, dualInput));
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
@@ -1044,14 +1049,62 @@ public class WynnExtrasConfigScreen extends Screen {
         final Screen parent;
         final List<String> items;
         final Consumer<List<String>> setter;
-        String input = "";
+        final boolean dualInput;
+        String input1 = "";
+        String input2 = "";
+        int activeField = 0; // 0 = input1, 1 = input2
+        int editingIndex = -1; // -1 = adding new, >= 0 = editing existing
         double scroll = 0;
 
-        StringListEditorScreen(Screen parent, String title, List<String> items, Consumer<List<String>> setter) {
+        StringListEditorScreen(Screen parent, String title, List<String> items, Consumer<List<String>> setter, boolean dualInput) {
             super(Text.literal("Edit: " + title));
             this.parent = parent;
             this.items = new ArrayList<>(items);
             this.setter = setter;
+            this.dualInput = dualInput;
+        }
+
+        private String getActiveInput() {
+            return activeField == 0 ? input1 : input2;
+        }
+
+        private void setActiveInput(String val) {
+            if (activeField == 0) input1 = val;
+            else input2 = val;
+        }
+
+        private void clearInputs() {
+            input1 = "";
+            input2 = "";
+            editingIndex = -1;
+            activeField = 0;
+        }
+
+        private void loadItemForEditing(int index) {
+            if (index < 0 || index >= items.size()) return;
+            String item = items.get(index);
+            editingIndex = index;
+            if (dualInput && item.contains("|")) {
+                String[] parts = item.split("\\|", 2);
+                input1 = parts[0];
+                input2 = parts.length > 1 ? parts[1] : "";
+            } else {
+                input1 = item;
+                input2 = "";
+            }
+            activeField = 0;
+        }
+
+        private void saveCurrentInput() {
+            String value = dualInput ? input1 + "|" + input2 : input1;
+            if (value.isEmpty() || (dualInput && input1.isEmpty())) return;
+
+            if (editingIndex >= 0 && editingIndex < items.size()) {
+                items.set(editingIndex, value);
+            } else {
+                items.add(value);
+            }
+            clearInputs();
         }
 
         @Override
@@ -1065,23 +1118,65 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.drawCenteredTextWithShadow(textRenderer, title, width / 2, 35, GOLD);
             ctx.fill(px + 20, 48, px + pw - 20, 49, GOLD_DARK);
 
-            ctx.fill(px + 15, 60, px + pw - 65, 84, BORDER_DARK);
-            ctx.fill(px + 16, 61, px + pw - 66, 83, PARCHMENT);
-            ctx.drawTextWithShadow(textRenderer, input + "_", px + 20, 68, TEXT_LIGHT);
+            // Input fields
+            int inputY = 60;
+            if (dualInput) {
+                // Two input fields for trigger|display
+                int fieldW = (pw - 90) / 2;
 
-            boolean addH = mx >= px + pw - 60 && mx < px + pw - 15 && my >= 60 && my < 84;
-            ctx.fill(px + pw - 60, 60, px + pw - 15, 84, BORDER_DARK);
-            ctx.fill(px + pw - 59, 61, px + pw - 16, 83, addH ? TOGGLE_ON : PARCHMENT);
-            ctx.drawCenteredTextWithShadow(textRenderer, "+ Add", px + pw - 37, 68, TEXT_LIGHT);
+                // Trigger field
+                ctx.drawTextWithShadow(textRenderer, "Trigger:", px + 15, inputY - 10, TEXT_DIM);
+                ctx.fill(px + 15, inputY, px + 15 + fieldW, inputY + 24, BORDER_DARK);
+                ctx.fill(px + 16, inputY + 1, px + 14 + fieldW, inputY + 23, activeField == 0 ? PARCHMENT_LIGHT : PARCHMENT);
+                String t1 = input1.length() > 18 ? input1.substring(0, 16) + ".." : input1;
+                ctx.drawTextWithShadow(textRenderer, t1 + (activeField == 0 ? "_" : ""), px + 20, inputY + 8, TEXT_LIGHT);
 
-            ctx.enableScissor(px + 10, 95, px + pw - 10, height - 70);
-            int y = 95 - (int)scroll;
+                // Display field
+                ctx.drawTextWithShadow(textRenderer, "Display:", px + 20 + fieldW, inputY - 10, TEXT_DIM);
+                ctx.fill(px + 20 + fieldW, inputY, px + 20 + fieldW * 2, inputY + 24, BORDER_DARK);
+                ctx.fill(px + 21 + fieldW, inputY + 1, px + 19 + fieldW * 2, inputY + 23, activeField == 1 ? PARCHMENT_LIGHT : PARCHMENT);
+                String t2 = input2.length() > 18 ? input2.substring(0, 16) + ".." : input2;
+                ctx.drawTextWithShadow(textRenderer, t2 + (activeField == 1 ? "_" : ""), px + 25 + fieldW, inputY + 8, TEXT_LIGHT);
+            } else {
+                // Single input field
+                ctx.fill(px + 15, inputY, px + pw - 65, inputY + 24, BORDER_DARK);
+                ctx.fill(px + 16, inputY + 1, px + pw - 66, inputY + 23, PARCHMENT);
+                ctx.drawTextWithShadow(textRenderer, input1 + "_", px + 20, inputY + 8, TEXT_LIGHT);
+            }
+
+            // Add/Save and Cancel buttons
+            boolean isEditing = editingIndex >= 0;
+            if (isEditing) {
+                // Save button (left)
+                boolean saveH = mx >= px + pw - 105 && mx < px + pw - 58 && my >= inputY && my < inputY + 24;
+                ctx.fill(px + pw - 105, inputY, px + pw - 58, inputY + 24, BORDER_DARK);
+                ctx.fill(px + pw - 104, inputY + 1, px + pw - 59, inputY + 23, saveH ? TOGGLE_ON : PARCHMENT);
+                ctx.drawCenteredTextWithShadow(textRenderer, "Save", px + pw - 81, inputY + 8, TEXT_LIGHT);
+
+                // Cancel button (right)
+                boolean cancelEditH = mx >= px + pw - 53 && mx < px + pw - 6 && my >= inputY && my < inputY + 24;
+                ctx.fill(px + pw - 53, inputY, px + pw - 6, inputY + 24, BORDER_DARK);
+                ctx.fill(px + pw - 52, inputY + 1, px + pw - 7, inputY + 23, cancelEditH ? ACCENT_RED : PARCHMENT);
+                ctx.drawCenteredTextWithShadow(textRenderer, "Cancel", px + pw - 29, inputY + 8, TEXT_LIGHT);
+            } else {
+                // Add button
+                boolean addH = mx >= px + pw - 60 && mx < px + pw - 15 && my >= inputY && my < inputY + 24;
+                ctx.fill(px + pw - 60, inputY, px + pw - 15, inputY + 24, BORDER_DARK);
+                ctx.fill(px + pw - 59, inputY + 1, px + pw - 16, inputY + 23, addH ? TOGGLE_ON : PARCHMENT);
+                ctx.drawCenteredTextWithShadow(textRenderer, "+ Add", px + pw - 37, inputY + 8, TEXT_LIGHT);
+            }
+
+            int listTop = inputY + 30;
+            ctx.enableScissor(px + 10, listTop, px + pw - 10, height - 70);
+            int y = listTop - (int)scroll;
             for (int i = 0; i < items.size(); i++) {
-                if (y + 24 > 95 && y < height - 70) {
-                    ctx.fill(px + 15, y, px + pw - 50, y + 24, PARCHMENT);
+                if (y + 24 > listTop && y < height - 70) {
+                    boolean isSelected = i == editingIndex;
+                    boolean itemHover = mx >= px + 15 && mx < px + pw - 50 && my >= y && my < y + 24;
+                    ctx.fill(px + 15, y, px + pw - 50, y + 24, isSelected ? PARCHMENT_LIGHT : (itemHover ? PARCHMENT_HOVER : PARCHMENT));
                     String t = items.get(i);
                     if (t.length() > 35) t = t.substring(0, 33) + "..";
-                    ctx.drawTextWithShadow(textRenderer, t, px + 20, y + 8, TEXT_LIGHT);
+                    ctx.drawTextWithShadow(textRenderer, t, px + 20, y + 8, isSelected ? GOLD : TEXT_LIGHT);
 
                     boolean delH = mx >= px + pw - 45 && mx < px + pw - 15 && my >= y && my < y + 24;
                     ctx.fill(px + pw - 45, y, px + pw - 15, y + 24, BORDER_DARK);
@@ -1110,14 +1205,50 @@ public class WynnExtrasConfigScreen extends Screen {
         @Override
         public boolean mouseClicked(double mx, double my, int btn) {
             int px = width / 2 - 180, pw = 360;
+            int inputY = 60;
+            boolean isEditing = editingIndex >= 0;
 
-            if (mx >= px + pw - 60 && mx < px + pw - 15 && my >= 60 && my < 84 && !input.isEmpty()) {
-                items.add(input);
-                input = "";
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
+            // Click on input fields (for dual input mode)
+            if (dualInput) {
+                int fieldW = (pw - 90) / 2;
+                if (mx >= px + 15 && mx < px + 15 + fieldW && my >= inputY && my < inputY + 24) {
+                    activeField = 0;
+                    return true;
+                }
+                if (mx >= px + 20 + fieldW && mx < px + 20 + fieldW * 2 && my >= inputY && my < inputY + 24) {
+                    activeField = 1;
+                    return true;
+                }
             }
 
+            // Add/Save and Cancel buttons
+            if (isEditing) {
+                // Save button (left)
+                if (mx >= px + pw - 105 && mx < px + pw - 58 && my >= inputY && my < inputY + 24) {
+                    if (!input1.isEmpty()) {
+                        saveCurrentInput();
+                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    }
+                    return true;
+                }
+                // Cancel button (right)
+                if (mx >= px + pw - 53 && mx < px + pw - 6 && my >= inputY && my < inputY + 24) {
+                    clearInputs();
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    return true;
+                }
+            } else {
+                // Add button
+                if (mx >= px + pw - 60 && mx < px + pw - 15 && my >= inputY && my < inputY + 24) {
+                    if (!input1.isEmpty()) {
+                        saveCurrentInput();
+                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    }
+                    return true;
+                }
+            }
+
+            // Done/Cancel buttons
             int by = height - 55;
             if (mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24) {
                 setter.accept(items);
@@ -1131,12 +1262,25 @@ public class WynnExtrasConfigScreen extends Screen {
                 return true;
             }
 
-            int y = 95 - (int)scroll;
+            // List items
+            int listTop = inputY + 30;
+            int y = listTop - (int)scroll;
             for (int i = 0; i < items.size(); i++) {
-                if (mx >= px + pw - 45 && mx < px + pw - 15 && my >= y && my < y + 24) {
-                    items.remove(i);
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    return true;
+                if (my >= y && my < y + 24) {
+                    // Delete button
+                    if (mx >= px + pw - 45 && mx < px + pw - 15) {
+                        items.remove(i);
+                        if (editingIndex == i) clearInputs();
+                        else if (editingIndex > i) editingIndex--;
+                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                        return true;
+                    }
+                    // Click on item to edit
+                    if (mx >= px + 15 && mx < px + pw - 50) {
+                        loadItemForEditing(i);
+                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                        return true;
+                    }
                 }
                 y += 28;
             }
@@ -1145,15 +1289,38 @@ public class WynnExtrasConfigScreen extends Screen {
 
         @Override
         public boolean keyPressed(int key, int scan, int mod) {
-            if (key == 259 && !input.isEmpty()) { input = input.substring(0, input.length() - 1); return true; }
-            if (key == 257 && !input.isEmpty()) { items.add(input); input = ""; return true; }
-            if (key == 256) { client.setScreen(parent); return true; }
+            String current = getActiveInput();
+            if (key == 259 && !current.isEmpty()) {
+                setActiveInput(current.substring(0, current.length() - 1));
+                return true;
+            }
+            if (key == 257) { // Enter
+                if (!input1.isEmpty()) {
+                    saveCurrentInput();
+                }
+                return true;
+            }
+            if (key == 258 && dualInput) { // Tab - switch fields
+                activeField = activeField == 0 ? 1 : 0;
+                return true;
+            }
+            if (key == 256) { // Escape
+                if (editingIndex >= 0) {
+                    clearInputs();
+                } else {
+                    client.setScreen(parent);
+                }
+                return true;
+            }
             return super.keyPressed(key, scan, mod);
         }
 
         @Override
         public boolean charTyped(char c, int mod) {
-            if (c >= 32) { input += c; return true; }
+            if (c >= 32) {
+                setActiveInput(getActiveInput() + c);
+                return true;
+            }
             return super.charTyped(c, mod);
         }
 
