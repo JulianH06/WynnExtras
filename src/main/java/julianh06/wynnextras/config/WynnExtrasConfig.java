@@ -3,6 +3,7 @@ package julianh06.wynnextras.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import julianh06.wynnextras.config.gui.WynnExtrasConfigScreen;
+import julianh06.wynnextras.sound.ModSounds;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.util.Formatting;
@@ -39,8 +40,8 @@ public class WynnExtrasConfig {
     public int textDurationInMs = 2000;
     public TextColor textColor = TextColor.WHITE;
     public NotificationSound notificationSound = NotificationSound.EXPERIENCE_ORB;
-    public float soundVolume = 0.1f;
-    public float soundPitch = 1.0f;
+    public float soundVolume = 10f;
+    public float soundPitch = 100f;
 
     // ==================== CHAT NOTIFIER PREMADES ====================
 
@@ -166,7 +167,9 @@ public class WynnExtrasConfig {
         NOTE_FLUTE("block.note_block.flute", "Note Flute"),
         NOTE_HARP("block.note_block.harp", "Note Harp"),
         FIREWORK("entity.firework_rocket.launch", "Firework"),
-        ITEM_PICKUP("entity.item.pickup", "Item Pickup");
+        ITEM_PICKUP("entity.item.pickup", "Item Pickup"),
+        SKELETON("wynnextras:skeleton", "Skeleton"),
+        AMOGUS("wynnextras:amogus", "Amogus");
 
         private final String soundId;
         private final String displayName;

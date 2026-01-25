@@ -18,6 +18,7 @@ public class ModSounds {
     public static final SoundEvent ASKAGAIN = registerSoundEvent("askagain");
     public static final SoundEvent NEITHER = registerSoundEvent("neither");
     public static final SoundEvent SKELETON = registerSoundEvent("skeleton");
+    public static final SoundEvent AMOGUS = registerSoundEvent("amogus");
 
     private static SoundEvent registerSoundEvent(String name) {
         Identifier id = Identifier.of(WynnExtras.MOD_ID, name);

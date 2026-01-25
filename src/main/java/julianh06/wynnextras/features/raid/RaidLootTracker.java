@@ -5,6 +5,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
@@ -43,6 +44,16 @@ public class RaidLootTracker {
             }
 
             if (!REWARD_CHEST_TITLE.equals(screen.getTitle().getString())) {
+                loggedThisChest = false;
+                return;
+            }
+
+            if(!(screen instanceof HandledScreen<?> handledScreen)) {
+                loggedThisChest = false;
+                return;
+            }
+
+            if(!handledScreen.getScreenHandler().getSlot(4).hasStack()) {
                 loggedThisChest = false;
                 return;
             }

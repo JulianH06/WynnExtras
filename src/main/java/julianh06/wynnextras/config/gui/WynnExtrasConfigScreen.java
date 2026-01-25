@@ -6,8 +6,10 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
 import java.util.ArrayList;
@@ -172,9 +174,11 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(dropdown("Sound", "Notification sound",
                         WynnExtrasConfig.NotificationSound.class, () -> config.notificationSound, v -> config.notificationSound = v))
                 .add(slider("Volume", "Sound volume",
-                        0, 100, () -> (int)(config.soundVolume * 100), v -> config.soundVolume = v / 100f))
+                        0, 200, () -> (int)(config.soundVolume), v -> config.soundVolume = v))
                 .add(slider("Pitch", "Sound pitch",
-                        50, 200, () -> (int)(config.soundPitch * 100), v -> config.soundPitch = v / 100f))
+                        0, 200, () -> (int)(config.soundPitch), v -> config.soundPitch = v))
+                .add(button("Sound Test", "Click the button to test the sound",
+                    v -> McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test"))
             .sub("Premade Notifications")
                 .add(toggle("Lost Eye", "Lost Eye in TNA light room",
                     () -> config.lostEye, v -> config.lostEye = v))
@@ -257,6 +261,10 @@ public class WynnExtrasConfigScreen extends Screen {
 
     private ConfigOption stringListDual(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set, String itemName) {
         return new StringListOption(name, desc, get, set, itemName, true);
+    }
+
+    private ConfigOption button(String name, String desc, Consumer<Void> action, String buttonText) {
+        return new ButtonOption(name, desc, action, buttonText);
     }
 
     // ==================== SCREEN LIFECYCLE ====================
@@ -1047,6 +1055,44 @@ public class WynnExtrasConfigScreen extends Screen {
             if (mx >= bx && mx < bx + 65 && my >= by && my < by + 20) {
                 MinecraftClient.getInstance().setScreen(new StringListEditorScreen(
                         MinecraftClient.getInstance().currentScreen, name, getter.get(), setter, dualInput));
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            }
+            return false;
+        }
+    }
+
+    private static class ButtonOption extends ConfigOption {
+        final Consumer<Void> action;
+        final String buttonText;
+
+        ButtonOption(String name, String desc, Consumer<Void> action, String buttonText) {
+            super(name, desc);
+            this.action = action;
+            this.buttonText = buttonText;
+        }
+
+        @Override
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
+            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
+            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+
+            int bx = x + w - 75, by = y + 12;
+            boolean btnHover = mx >= bx && mx < bx + 65 && my >= by && my < by + 20;
+            ctx.fill(bx, by, bx + 65, by + 20, BORDER_DARK);
+            ctx.fill(bx + 1, by + 1, bx + 64, by + 19, btnHover ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.drawCenteredTextWithShadow(tr, buttonText, bx + 32, by + 6, TEXT_LIGHT);
+        }
+
+        @Override
+        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
+            int bx = x + w - 75, by = y + 12;
+            if (mx >= bx && mx < bx + 65 && my >= by && my < by + 20) {
+                action.accept(null);
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }

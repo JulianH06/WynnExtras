@@ -18,14 +18,11 @@ import java.util.Map;
 
 @WEModule
 public class ChatNotificator {
-    private static WynnExtrasConfig config;
-
     private static Command testCmd = new Command(
             "notifiertest",
             "",
             context -> {
-                ChatUtils.displayTitle("test", "", config.textDurationInMs/50, config.textColor.getFormatting());
-                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume, config.soundPitch);
+                displayAndPlaySound("test");
                 return 1;
             },
             null,
@@ -34,22 +31,17 @@ public class ChatNotificator {
 
     @SubscribeEvent
     void recieveMessageGame(ChatEvent event) {
-        if(config == null) {
-            config = WynnExtrasConfig.INSTANCE;
-        }
         notify(event.message);
     }
 
     private static void notify(Text message) {
-        if(message.getString().equals("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
+        if(message.getString().contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
 
-        if(config == null) return;
-        for(String notificator : config.notifierWords) {
+        for(String notificator : WynnExtrasConfig.INSTANCE.notifierWords) {
             if(!notificator.contains("|")) return;
             String[] parts = notificator.split("\\|");
             if(message.getString().toLowerCase().contains(parts[0].toLowerCase())) {
-                ChatUtils.displayTitle(parts[1], "", config.textDurationInMs/50, config.textColor.getFormatting());
-                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume, config.soundPitch);
+                displayAndPlaySound(parts[1]);
             }
         }
 
@@ -65,9 +57,13 @@ public class ChatNotificator {
             if(!enabled) continue;
 
             if(message.getString().toLowerCase().contains(trigger.toLowerCase())) {
-                ChatUtils.displayTitle(display, "", config.textDurationInMs/50, config.textColor.getFormatting());
-                McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume, config.soundPitch);
+                displayAndPlaySound(display);
             }
         }
+    }
+
+    private static void displayAndPlaySound(String display) {
+        ChatUtils.displayTitle(display, "", WynnExtrasConfig.INSTANCE.textDurationInMs / 50, WynnExtrasConfig.INSTANCE.textColor.getFormatting());
+        McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(WynnExtrasConfig.INSTANCE.notificationSound.getSoundId())), WynnExtrasConfig.INSTANCE.soundVolume / 100, WynnExtrasConfig.INSTANCE.soundPitch / 100);
     }
 }

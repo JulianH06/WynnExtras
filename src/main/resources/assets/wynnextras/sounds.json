@@ -35,5 +35,11 @@
     "sounds": [
       "wynnextras:skeleton"
     ]
+  },
+  "amogus": {
+    "sounds": [
+      "wynnextras:amogus"
+    ]
   }
+
 }
