@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.misc;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.wynntils.core.components.Models;
 import com.wynntils.models.raid.raids.RaidKind;
 import com.wynntils.models.raid.type.RaidInfo;
 import com.wynntils.utils.mc.McUtils;
@@ -27,6 +28,10 @@ public class PlayerHider {
     private static SubCommand addSubCmd;
 
     private static SubCommand removeSubCmd;
+
+    private static SubCommand hideAllSubCmd;
+
+    private static SubCommand hideAllInWarSubCmd;
 
     private static Command playerhiderCmd;
 
@@ -99,6 +104,40 @@ public class PlayerHider {
                         List.of(ClientCommandManager.argument("player", StringArgumentType.word()))
                 );
 
+                hideAllSubCmd = new SubCommand(
+                        "hideall",
+                        "",
+                        context -> {
+                            config.hideAllPlayers = !config.hideAllPlayers;
+                            if(config.hideAllPlayers) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players (range: " + config.maxHideDistance + ")")));
+                            } else {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Hide All Players")));
+                            }
+                            WynnExtrasConfig.save();
+                            return 1;
+                        },
+                        null,
+                        null
+                );
+
+                hideAllInWarSubCmd = new SubCommand(
+                        "hideallinwar",
+                        "",
+                        context -> {
+                            config.hideAllPlayersInWar = !config.hideAllPlayersInWar;
+                            if(config.hideAllPlayersInWar) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players in Wars (range: " + config.maxHideDistance + ")")));
+                            } else {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Hide All Players in Wars")));
+                            }
+                            WynnExtrasConfig.save();
+                            return 1;
+                        },
+                        null,
+                        null
+                );
+
                 playerhiderCmd = new Command(
                         "playerhider",
                         "",
@@ -106,7 +145,9 @@ public class PlayerHider {
                         List.of(
                                 addSubCmd,
                                 removeSubCmd,
-                                toggleSubCmd
+                                toggleSubCmd,
+                                hideAllSubCmd,
+                                hideAllInWarSubCmd
                         ),
                         null
                 );
@@ -139,7 +180,11 @@ public class PlayerHider {
                     continue;
                 }
 
-                if(config.hiddenPlayers.toString().toLowerCase().contains(player.getName().getString().toLowerCase())) {
+                // Check if in war and hideAllInWar is enabled
+                boolean inWarAndHiding = config.hideAllPlayersInWar && Models.War.isWarActive();
+
+                // Hide all players mode, in war mode, or specific player in list
+                if(config.hideAllPlayers || inWarAndHiding || config.hiddenPlayers.toString().toLowerCase().contains(player.getName().getString().toLowerCase())) {
                     hide(player);
                 } else {
                     if(isHidden(player)) { show(player); }

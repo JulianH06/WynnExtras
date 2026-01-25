@@ -101,7 +101,9 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Only Near Chest", "Show only near reward chest",
                     () -> config.raidLootTrackerOnlyNearChest, v -> config.raidLootTrackerOnlyNearChest = v))
                 .add(toggle("Compact Mode", "Use compact display",
-                    () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v));
+                    () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v))
+                .add(toggle("Show Background", "Show dark background",
+                        () -> config.raidLootTrackerBackground, v -> config.raidLootTrackerBackground = v));
 
         // ===== COMBAT =====
         category("Combat", 0xFFfda216)
@@ -141,7 +143,10 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
                         () -> config.showWeight, v -> config.showWeight = v))
                 .add(toggle("Stat Scales", "Show weights for each stat",
-                        () -> config.showScales, v -> config.showScales = v));
+                        () -> config.showScales, v -> config.showScales = v))
+            .sub("Trade Market")
+                .add(toggle("Show Background", "Show dark background",
+                        () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v));
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)
@@ -183,12 +188,16 @@ public class WynnExtrasConfigScreen extends Screen {
                     () -> config.notgLowerPlatform, v -> config.notgLowerPlatform = v)
                 );
 
-        // ===== PARTY =====
+        // ===== Player Hider =====
         category("Player Hider", 0xFF673190)
             .add(toggle("Enable Player Hider", "Enable the Player Hider",
                     () -> config.playerHiderToggle, v -> config.playerHiderToggle = v))
             .add(slider("Hide Distance", "Max distance to hide",
                     1, 20, () -> config.maxHideDistance, v -> config.maxHideDistance = v))
+            .add(toggle("Hide All Players", "Hide all players in range",
+                    () -> config.hideAllPlayers, v -> config.hideAllPlayers = v))
+            .add(toggle("Hide All Players while in Wars", "Hide all players during wars",
+                    () -> config.hideAllPlayersInWar, v -> config.hideAllPlayersInWar = v))
             .add(stringList("Hidden Players", "Always hide these players",
                     () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"));
 

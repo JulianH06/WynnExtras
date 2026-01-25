@@ -16,6 +16,7 @@ import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.features.inventory.TradeMarketOverlay;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.data.BookshelfData;
@@ -170,6 +171,7 @@ public class WynnExtras implements ClientModInitializer {
         RaidLootTracker.register();
         RaidLootTrackerOverlay.register();
         RaidLootConfig.INSTANCE.load();
+		TradeMarketOverlay.register();
 
 		RaidListData.load();
 		WaypointData.load();

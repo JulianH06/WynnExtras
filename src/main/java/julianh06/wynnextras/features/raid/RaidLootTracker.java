@@ -5,11 +5,14 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 
+import java.util.List;
 import java.util.Map;
 
 public class RaidLootTracker {
@@ -20,10 +23,10 @@ public class RaidLootTracker {
 
     // Reward chest coordinates for each raid
     private static final Map<String, double[]> REWARD_CHEST_COORDS = Map.of(
-        "NOTG", new double[]{10342, 41, 3111},
-        "NOL",  new double[]{11005, 58, 2909},
-        "TCC",  new double[]{10817, 45, 3901},
-        "TNA",  new double[]{24489, 8, -23878}
+            "NOTG", new double[]{10342, 41, 3111},
+            "NOL",  new double[]{11005, 58, 2909},
+            "TCC",  new double[]{10817, 45, 3901},
+            "TNA",  new double[]{24489, 8, -23878}
     );
 
     private static boolean loggedThisChest = false;
@@ -145,8 +148,9 @@ public class RaidLootTracker {
                 raidData.totalTomes += count;
                 data.sessionData.totalTomes += count;
                 sessionRaidData.totalTomes += count;
-                // Mythic uses dark purple (§5), Fabled uses light purple (§d)
-                if (rawName.contains("§5")) {
+                // Check tooltip for "Mythic" to determine rarity
+                boolean isMythic = checkTooltipForMythic(stack);
+                if (isMythic) {
                     data.mythicTomes += count;
                     raidData.mythicTomes += count;
                     data.sessionData.mythicTomes += count;
@@ -255,5 +259,22 @@ public class RaidLootTracker {
 
     private static String cleanName(String name) {
         return name.replaceAll("§.", "").trim();
+    }
+
+    private static boolean checkTooltipForMythic(ItemStack stack) {
+        try {
+            if (stack.getComponents() == null) return false;
+            LoreComponent loreComponent = stack.getComponents().get(DataComponentTypes.LORE);
+            if (loreComponent == null) return false;
+
+            List<Text> loreLines = loreComponent.lines();
+            for (Text line : loreLines) {
+                String lineStr = line.getString().toLowerCase();
+                if (lineStr.contains("mythic")) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
     }
 }

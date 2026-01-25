@@ -1,5 +1,6 @@
 package julianh06.wynnextras.mixin;
 
+import julianh06.wynnextras.features.inventory.TradeMarketOverlay;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
@@ -30,12 +31,11 @@ public class RaidLootOverlayClickMixin {
         boolean shiftHeld = (mods & GLFW.GLFW_MOD_SHIFT) != 0;
 
         RaidLootTrackerOverlay.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
+        TradeMarketOverlay.handleClick(mouseX, mouseY, button, action);
     }
 
     @Inject(method = "onCursorPos", at = @At("HEAD"))
     private void onMouseMove(long window, double x, double y, CallbackInfo ci) {
-        if (!RaidLootTrackerOverlay.isDragging()) return;
-
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.getWindow() != null) {
             double scale = mc.getWindow().getScaleFactor();
@@ -43,6 +43,11 @@ public class RaidLootOverlayClickMixin {
             y = y / scale;
         }
 
-        RaidLootTrackerOverlay.handleMouseMove(x, y);
+        if (RaidLootTrackerOverlay.isDragging()) {
+            RaidLootTrackerOverlay.handleMouseMove(x, y);
+        }
+        if (TradeMarketOverlay.isDragging()) {
+            TradeMarketOverlay.handleMouseMove(x, y);
+        }
     }
 }

@@ -7,17 +7,20 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.WynnExtras;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.render.RenderTickCounter;
+import net.minecraft.text.Text;
 
 import java.util.*;
 
 public class RaidLootTrackerOverlay {
 
-    private static final List<String> RAID_FILTERS = Arrays.asList("All", "TNA", "NOTG", "TCC", "NOL");
+    private static final List<String> RAID_FILTERS = Arrays.asList("All", "NOTG", "NOL", "TCC", "TNA");
     private static int selectedFilterIndex = 0;
 
     // Position - loaded from config
@@ -55,16 +58,25 @@ public class RaidLootTrackerOverlay {
     // Track line positions for click detection
     private static final Map<String, int[]> linePositions = new HashMap<>();
 
+    // Click regions for filter row
+    private static int[] leftArrowBounds = new int[4];  // x1, y1, x2, y2
+    private static int[] rightArrowBounds = new int[4];
+    private static int[] filterNameBounds = new int[4];
+    // Click regions for mode selector
+    private static int[] modeLeftArrowBounds = new int[4];
+    private static int[] modeRightArrowBounds = new int[4];
+    private static int[] modeNameBounds = new int[4];
+
     // Reward chest coordinates for proximity check
     private static final Map<String, double[]> REWARD_CHEST_COORDS = Map.of(
-        "NOTG", new double[]{10342, 41, 3111},
-        "NOL",  new double[]{11005, 58, 2909},
-        "TCC",  new double[]{10817, 45, 3901},
-        "TNA",  new double[]{24489, 8, -23878}
+            "NOTG", new double[]{10342, 41, 3111},
+            "NOL",  new double[]{11005, 58, 2909},
+            "TCC",  new double[]{10817, 45, 3901},
+            "TNA",  new double[]{24489, 8, -23878}
     );
 
     // Colors
-    private static final CustomColor BRAND_COLOR = CustomColor.fromHexString("2ECC71");
+    private static final CustomColor BRAND_COLOR = CustomColor.fromHexString("7DCEA0");
     private static final CustomColor TITLE_COLOR = CustomColor.fromHexString("FFAA00");
     private static final CustomColor FILTER_COLOR = CustomColor.fromHexString("55FFFF");
     private static final CustomColor FILTER_ARROW_COLOR = CustomColor.fromHexString("AAAAAA");
@@ -130,20 +142,26 @@ public class RaidLootTrackerOverlay {
         renderOverlay(context, config, false);
     }
 
+    private static final String RAID_CHEST_TITLE = "\uDAFF\uDFEA\uE00E";
+
     public static void renderOnScreen(DrawContext context) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.world == null) return;
         if (mc.currentScreen == null) return;
 
-        // Only show in player's own inventory, not escape menu, mod settings, etc.
-        if (!(mc.currentScreen instanceof InventoryScreen)) return;
+        // Show in player's inventory, chat screen, or raid chest
+        boolean isInventory = mc.currentScreen instanceof InventoryScreen;
+        boolean isChat = mc.currentScreen instanceof ChatScreen;
+        boolean isRaidChest = mc.currentScreen.getTitle().getString().equals(RAID_CHEST_TITLE);
+        if (!isInventory && !isChat && !isRaidChest) return;
 
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         if (!config.toggleRaidLootTracker) return;
         if (config.raidLootTrackerOnlyNearChest && !isNearLootChest()) return;
 
         loadConfig();
-        renderOverlay(context, config, true);
+        // Only show crossed out lines in inventory, not in chat/raid chest
+        renderOverlay(context, config, isInventory);
     }
 
     private static void renderOverlay(DrawContext context, WynnExtrasConfig config, boolean inInventory) {
@@ -158,24 +176,67 @@ public class RaidLootTrackerOverlay {
         context.getMatrices().push();
         context.getMatrices().translate(0, 0, 500);
 
+        // Draw background
+        if (config.raidLootTrackerBackground) {
+            int contentHeight = calculateContentHeight(compact, inInventory) + LINE_HEIGHT; // +1 line for safety
+            int padX = 4;
+            int padY = 3;
+            int bgX = xPos - padX;
+            int bgY = yPos - padY;
+            int bgWidth = WIDTH + padX * 2;
+            int bgHeight = contentHeight + padY * 2;
+            int bgColor = 0xCC1a1a1a; // Dark gray with transparency
+            drawBackground(context, bgX, bgY, bgX + bgWidth, bgY + bgHeight, bgColor);
+        }
+
         int y = yPos;
 
-        // Brand + Title
-        drawText(context, "WynnExtras", xPos, y, BRAND_COLOR);
-        float brandWidth = getTextWidth("WynnExtras ");
-        drawText(context, "Raid Loot", xPos + brandWidth, y, TITLE_COLOR);
+        // Brand pill + Title
+        MinecraftClient mc2 = MinecraftClient.getInstance();
+        Text pillWithTitle = WynnExtras.addWynnExtrasPrefix(Text.literal("Raid Loot").styled(s -> s.withColor(TITLE_COLOR.asInt())));
+        context.drawText(mc2.textRenderer, pillWithTitle, xPos, y, 0xFFFFFF, true);
         y += LINE_HEIGHT + 2;
 
-        // Raid selector - nicer design
+        // Raid selector - nicer design with clickable arrows
         String modeText = showSession ? "Session" : "All-Time";
-        drawText(context, "[\u25C0 ", xPos, y, FILTER_ARROW_COLOR);
-        float arrowWidth = getTextWidth("[\u25C0 ");
-        drawText(context, selectedFilter, xPos + arrowWidth, y, FILTER_COLOR);
-        float filterWidth = getTextWidth(selectedFilter);
-        drawText(context, " \u25B6]", xPos + arrowWidth + filterWidth, y, FILTER_ARROW_COLOR);
 
-        // Mode indicator on right
-        drawTextRight(context, modeText, xPos + WIDTH, y, showSession ? SESSION_COLOR : VALUE_COLOR);
+        // Left arrow [◀
+        String leftArrowText = "[\u25C0";
+        drawText(context, leftArrowText, xPos, y, FILTER_ARROW_COLOR);
+        float leftArrowWidth = getTextWidth(leftArrowText);
+        leftArrowBounds = new int[]{(int)xPos, y, (int)(xPos + leftArrowWidth), y + LINE_HEIGHT};
+
+        // Filter name
+        drawText(context, " ", xPos + leftArrowWidth, y, FILTER_ARROW_COLOR);
+        float spaceWidth = getTextWidth(" ");
+        float filterStartX = xPos + leftArrowWidth + spaceWidth;
+        drawText(context, selectedFilter, filterStartX, y, FILTER_COLOR);
+        float filterWidth = getTextWidth(selectedFilter);
+        filterNameBounds = new int[]{(int)filterStartX, y, (int)(filterStartX + filterWidth), y + LINE_HEIGHT};
+
+        // Right arrow ▶]
+        String rightArrowText = " \u25B6]";
+        drawText(context, rightArrowText, xPos + leftArrowWidth + spaceWidth + filterWidth, y, FILTER_ARROW_COLOR);
+        float rightArrowWidth = getTextWidth(rightArrowText);
+        rightArrowBounds = new int[]{(int)(xPos + leftArrowWidth + spaceWidth + filterWidth), y,
+                (int)(xPos + leftArrowWidth + spaceWidth + filterWidth + rightArrowWidth), y + LINE_HEIGHT};
+
+        // Mode selector on right with arrows [◀ Session ▶]
+        String modeRightArrow = "\u25B6]";
+        float modeRightArrowWidth = getTextWidth(modeRightArrow);
+        drawTextRight(context, modeRightArrow, xPos + WIDTH, y, FILTER_ARROW_COLOR);
+        modeRightArrowBounds = new int[]{(int)(xPos + WIDTH - modeRightArrowWidth), y, xPos + WIDTH, y + LINE_HEIGHT};
+
+        float modeNameWidth = getTextWidth(modeText);
+        float modeNameEndX = xPos + WIDTH - modeRightArrowWidth - getTextWidth(" ");
+        drawTextRight(context, modeText, modeNameEndX, y, showSession ? SESSION_COLOR : AMPLIFIER_COLOR);
+        modeNameBounds = new int[]{(int)(modeNameEndX - modeNameWidth), y, (int)modeNameEndX, y + LINE_HEIGHT};
+
+        String modeLeftArrow = "[\u25C0 ";
+        float modeLeftArrowWidth = getTextWidth(modeLeftArrow);
+        float modeLeftArrowX = modeNameEndX - modeNameWidth - getTextWidth(" ");
+        drawTextRight(context, modeLeftArrow, modeLeftArrowX, y, FILTER_ARROW_COLOR);
+        modeLeftArrowBounds = new int[]{(int)(modeLeftArrowX - modeLeftArrowWidth), y, (int)modeLeftArrowX, y + LINE_HEIGHT};
         y += LINE_HEIGHT + 3;
 
         // Get appropriate data
@@ -193,8 +254,8 @@ public class RaidLootTrackerOverlay {
         } else {
             if (showSession) {
                 displayData = data.sessionPerRaidData != null ?
-                    data.sessionPerRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot()) :
-                    new RaidLootData.RaidSpecificLoot();
+                        data.sessionPerRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot()) :
+                        new RaidLootData.RaidSpecificLoot();
             } else {
                 displayData = data.perRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot());
             }
@@ -202,14 +263,19 @@ public class RaidLootTrackerOverlay {
         }
 
         // Calculate emerald totals
-        long totalLE = displayData.liquidEmeralds + (displayData.emeraldBlocks * 64);
-        long stacks = totalLE / 4096;
-        long remainingLE = (totalLE % 4096) % 64;
-        long remainingEB = (totalLE % 4096) / 64;
+        // 1 stx = 64 le, 1 le = 64 eb, 1 eb = 64 e
+        // So: 1 stx = 262144 e, 1 le = 4096 e, 1 eb = 64 e
+        long totalEmeralds = displayData.liquidEmeralds + (displayData.emeraldBlocks * 64);
+        long stacks = totalEmeralds / 262144;
+        long remainingAfterStx = totalEmeralds % 262144;
+        long le = remainingAfterStx / 4096;
+        long remainingAfterLE = remainingAfterStx % 4096;
+        long eb = remainingAfterLE / 64;
 
         if (compact) {
             // Compact mode - just totals
-            y = drawCompactLine(context, LINE_EMERALDS, "Ems", stacks + "stx", EMERALD_COLOR, y, inInventory);
+            String compactEmeraldVal = formatEmeraldsCompact(stacks, le, eb);
+            y = drawCompactLine(context, LINE_EMERALDS, "Ems", compactEmeraldVal, EMERALD_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_AMPLIFIERS, "Amps", String.valueOf(displayData.getTotalAmplifiers()), AMPLIFIER_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_BAGS, "Bags", String.valueOf(displayData.totalBags), BAG_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_TOMES, "Tomes", String.valueOf(displayData.totalTomes), TOME_COLOR, y, inInventory);
@@ -217,7 +283,7 @@ public class RaidLootTrackerOverlay {
             drawCompactLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
         } else {
             // Full mode
-            String emeraldVal = stacks + "stx " + remainingLE + "le " + remainingEB + "eb";
+            String emeraldVal = formatEmeralds(stacks, le, eb);
             y = drawLine(context, LINE_EMERALDS, "Emeralds", emeraldVal, EMERALD_COLOR, y, inInventory);
 
             int totalAmps = displayData.getTotalAmplifiers();
@@ -297,12 +363,33 @@ public class RaidLootTrackerOverlay {
         return y + LINE_HEIGHT;
     }
 
-    private static int calculateContentHeight(boolean compact) {
-        int base = compact ? 8 : 17;
-        if (MinecraftClient.getInstance().currentScreen == null) {
-            base -= (int) hiddenLines.size();
+    private static int calculateContentHeight(boolean compact, boolean inInventory) {
+        // Title row: LINE_HEIGHT + 2
+        // Filter row: LINE_HEIGHT + 3
+        int headerHeight = LINE_HEIGHT + 2 + LINE_HEIGHT + 3;
+
+        int dataLines;
+        if (compact) {
+            dataLines = 6; // Ems, Amps, Bags, Tomes, Charms, Runs
+        } else {
+            dataLines = 13; // Emeralds, Amplifiers(4), Bags(4), Tomes(3), Charms, Runs
         }
-        return LINE_HEIGHT * base + 10;
+
+        // Subtract hidden lines when not showing them (not in inventory)
+        if (!inInventory) {
+            dataLines -= (int) hiddenLines.size();
+        }
+
+        // +2 for the gap before Runs in full mode
+        int dataHeight = dataLines * LINE_HEIGHT + (compact ? 0 : 2);
+
+        return headerHeight + dataHeight;
+    }
+
+    // Overload for click handling which doesn't know inInventory
+    private static int calculateContentHeight(boolean compact) {
+        boolean inInventory = MinecraftClient.getInstance().currentScreen instanceof InventoryScreen;
+        return calculateContentHeight(compact, inInventory);
     }
 
     private static void drawText(DrawContext context, String text, float x, float y, CustomColor color) {
@@ -330,6 +417,47 @@ public class RaidLootTrackerOverlay {
         return FontRenderer.getInstance().getFont().getWidth(text) * TEXT_SCALE;
     }
 
+    private static String formatEmeralds(long stacks, long le, long eb) {
+        StringBuilder sb = new StringBuilder();
+        if (stacks > 0) {
+            sb.append(stacks).append("stx ");
+        }
+        sb.append(le).append("le ").append(eb).append("eb");
+        return sb.toString();
+    }
+
+    private static String formatEmeraldsCompact(long stacks, long le, long eb) {
+        if (stacks > 0) {
+            return stacks + "stx";
+        } else if (le > 0) {
+            return le + "le";
+        } else {
+            return eb + "eb";
+        }
+    }
+
+    private static boolean isInBounds(double mouseX, double mouseY, int[] bounds) {
+        return mouseX >= bounds[0] && mouseX <= bounds[2] && mouseY >= bounds[1] && mouseY <= bounds[3];
+    }
+
+    private static void drawBackground(DrawContext context, int x1, int y1, int x2, int y2, int color) {
+        int r = 3; // corner radius
+        // Main center rectangle
+        context.fill(x1 + r, y1, x2 - r, y2, color);
+        // Left and right strips
+        context.fill(x1, y1 + r, x1 + r, y2 - r, color);
+        context.fill(x2 - r, y1 + r, x2, y2 - r, color);
+        // Corner fills (excluding the actual corner pixel for rounded effect)
+        // Top-left
+        context.fill(x1 + 1, y1 + 1, x1 + r, y1 + r, color);
+        // Top-right
+        context.fill(x2 - r, y1 + 1, x2 - 1, y1 + r, color);
+        // Bottom-left
+        context.fill(x1 + 1, y2 - r, x1 + r, y2 - 1, color);
+        // Bottom-right
+        context.fill(x2 - r, y2 - r, x2 - 1, y2 - 1, color);
+    }
+
     public static boolean handleClick(double mouseX, double mouseY, int button, int action, boolean ctrlHeld, boolean shiftHeld) {
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         if (!config.toggleRaidLootTracker) return false;
@@ -339,7 +467,7 @@ public class RaidLootTrackerOverlay {
         int contentHeight = calculateContentHeight(config.raidLootTrackerCompact);
 
         boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + WIDTH + 2 &&
-                           mouseY >= yPos - 2 && mouseY <= yPos + contentHeight + 4;
+                mouseY >= yPos - 2 && mouseY <= yPos + contentHeight + 4;
 
         if (action == 0) {
             if (button == 1 && isDragging) {
@@ -353,49 +481,75 @@ public class RaidLootTrackerOverlay {
         if (!inBounds) return false;
 
         boolean inInventoryScreen = mc.currentScreen instanceof InventoryScreen;
+        boolean inChatScreen = mc.currentScreen instanceof ChatScreen;
+        boolean inRaidChest = mc.currentScreen != null && mc.currentScreen.getTitle().getString().equals(RAID_CHEST_TITLE);
+        boolean canInteract = inInventoryScreen || inChatScreen || inRaidChest;
 
         if (action == 1) {
-            // Ctrl+click to toggle line visibility (only in inventory)
-            if (ctrlHeld && button == 0 && inInventoryScreen) {
-                for (Map.Entry<String, int[]> entry : linePositions.entrySet()) {
-                    int[] bounds = entry.getValue();
-                    if (mouseY >= bounds[0] && mouseY < bounds[1]) {
-                        String lineId = entry.getKey();
-                        if (hiddenLines.contains(lineId)) {
-                            hiddenLines.remove(lineId);
-                        } else {
-                            hiddenLines.add(lineId);
+            // Left click handling
+            if (button == 0) {
+                // Check if clicked on left arrow (previous filter)
+                if (isInBounds(mouseX, mouseY, leftArrowBounds)) {
+                    selectedFilterIndex = (selectedFilterIndex - 1 + RAID_FILTERS.size()) % RAID_FILTERS.size();
+                    return true;
+                }
+
+                // Check if clicked on right arrow or filter name (next filter)
+                if (isInBounds(mouseX, mouseY, rightArrowBounds) || isInBounds(mouseX, mouseY, filterNameBounds)) {
+                    selectedFilterIndex = (selectedFilterIndex + 1) % RAID_FILTERS.size();
+                    return true;
+                }
+
+                // Check if clicked on mode left arrow (toggle to other mode)
+                if (isInBounds(mouseX, mouseY, modeLeftArrowBounds)) {
+                    config.raidLootTrackerShowSession = !config.raidLootTrackerShowSession;
+                    WynnExtrasConfig.save();
+                    return true;
+                }
+
+                // Check if clicked on mode right arrow or mode name (toggle to other mode)
+                if (isInBounds(mouseX, mouseY, modeRightArrowBounds) || isInBounds(mouseX, mouseY, modeNameBounds)) {
+                    config.raidLootTrackerShowSession = !config.raidLootTrackerShowSession;
+                    WynnExtrasConfig.save();
+                    return true;
+                }
+
+                // Left click on data lines to toggle visibility (only in inventory)
+                if (inInventoryScreen) {
+                    for (Map.Entry<String, int[]> entry : linePositions.entrySet()) {
+                        int[] bounds = entry.getValue();
+                        if (mouseY >= bounds[0] && mouseY < bounds[1]) {
+                            String lineId = entry.getKey();
+                            if (hiddenLines.contains(lineId)) {
+                                hiddenLines.remove(lineId);
+                            } else {
+                                hiddenLines.add(lineId);
+                            }
+                            saveConfig();
+                            return true;
                         }
-                        saveConfig();
-                        return true;
                     }
                 }
             }
 
-            // Shift+click to toggle session/all-time
-            if (shiftHeld && button == 0) {
+            // Right click on filter area = prev filter (check before drag)
+            if (button == 1 && (isInBounds(mouseX, mouseY, filterNameBounds) || isInBounds(mouseX, mouseY, leftArrowBounds))) {
+                selectedFilterIndex = (selectedFilterIndex - 1 + RAID_FILTERS.size()) % RAID_FILTERS.size();
+                return true;
+            }
+
+            // Right click on mode area = toggle mode (check before drag)
+            if (button == 1 && (isInBounds(mouseX, mouseY, modeNameBounds) || isInBounds(mouseX, mouseY, modeLeftArrowBounds))) {
                 config.raidLootTrackerShowSession = !config.raidLootTrackerShowSession;
                 WynnExtrasConfig.save();
                 return true;
             }
 
-            // Right click while in inventory = start drag
-            if (button == 1 && inInventoryScreen) {
+            // Right click while in inventory/chat = start drag (only if not on filter/mode)
+            if (button == 1 && canInteract) {
                 isDragging = true;
                 dragOffsetX = (int) mouseX - xPos;
                 dragOffsetY = (int) mouseY - yPos;
-                return true;
-            }
-
-            // Left click = next filter
-            if (button == 0 && !ctrlHeld && !shiftHeld) {
-                selectedFilterIndex = (selectedFilterIndex + 1) % RAID_FILTERS.size();
-                return true;
-            }
-
-            // Right click no screen = prev filter
-            if (button == 1 && mc.currentScreen == null) {
-                selectedFilterIndex = (selectedFilterIndex - 1 + RAID_FILTERS.size()) % RAID_FILTERS.size();
                 return true;
             }
         }
