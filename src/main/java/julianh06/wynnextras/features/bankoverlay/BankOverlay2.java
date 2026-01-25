@@ -897,13 +897,10 @@ public class BankOverlay2 extends WEHandledScreen {
 
         try {
             if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
-                //Slightly modified version of the wynnventory price overlay render
-                ConfigManager config = ConfigManager.getInstance();
-
                 ItemStack stack = hoveredSlot;
 
                 // Screen independent actions
-                if (config.isShowTooltips()) {
+                if (WynnExtrasConfig.INSTANCE.wynnventoryOverlay) {
                     Models.Item.getWynnItem(stack)
                             .ifPresent(wynnItem -> renderPriceTooltip(context, mouseX, mouseY, stack));
                 }
@@ -912,10 +909,9 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private void renderPriceTooltip(DrawContext guiGraphics, int x, int y, ItemStack stack) {
-        ConfigManager config = ConfigManager.getInstance();
         List<Text> tooltips = ItemStackUtils.getTooltips(stack);
         PriceTooltipHelper.renderPriceInfoTooltip(
-                guiGraphics, x, y, stack, tooltips, config.isAnchorTooltips()
+                guiGraphics, x, y, stack, tooltips, true
         );
     }
 

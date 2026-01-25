@@ -2,6 +2,7 @@ package julianh06.wynnextras.config.gui;
 
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -125,33 +126,42 @@ public class WynnExtrasConfigScreen extends Screen {
                         WynnExtrasConfig.TextColor.class, () -> config.provokeTimerColor, v -> config.provokeTimerColor = v));
 
         // ===== INVENTORY =====
-        category("Inventory", 0xFFea1219)
-            .add(toggle("Crafting helper", "Crafting Helper toggle",
-                    () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
-            .sub("Bank Overlay")
-                .add(toggle("Enable Bank Overlay", "Custom Bank Overlay",
-                        () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v))
-                .add(toggle("Smooth Scroll", "Smooth scrolling",
-                        () -> config.smoothScrollToggle, v -> config.smoothScrollToggle = v))
-                .add(toggle("Quick Toggle", "Show quick toggle button",
-                        () -> config.bankQuickToggle, v -> config.bankQuickToggle = v))
-                .add(toggle("Dark Mode", "Dark bank theme",
-                        () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
-                .add(slider("Rarity BG Alpha", "Item rarity background opacity",
-                        0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
+        Category invCategory = category("Inventory", 0xFFea1219);
+
+        if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
+            invCategory.add(toggle("Wynnventory price overlay in bank", "Enable the Wynnventory price overlay in the bank overlay",
+                    () -> config.wynnventoryOverlay, v -> config.wynnventoryOverlay = v));
+        }
+
+        invCategory.sub("Bank Overlay")
+            .add(toggle("Enable Bank Overlay", "Custom Bank Overlay",
+                    () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v))
+            .add(toggle("Smooth Scroll", "Smooth scrolling",
+                    () -> config.smoothScrollToggle, v -> config.smoothScrollToggle = v))
+            .add(toggle("Quick Toggle", "Show quick toggle button",
+                    () -> config.bankQuickToggle, v -> config.bankQuickToggle = v))
+            .add(toggle("Dark Mode", "Dark bank theme",
+                    () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
+            .add(slider("Rarity BG Alpha", "Item rarity background opacity",
+                    0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
             .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
-                        () -> config.showWeight, v -> config.showWeight = v))
+                    () -> config.showWeight, v -> config.showWeight = v))
                 .add(toggle("Stat Scales", "Show weights for each stat",
-                        () -> config.showScales, v -> config.showScales = v))
+                    () -> config.showScales, v -> config.showScales = v))
             .sub("Trade Market")
                 .add(toggle("Show Background", "Show dark background",
-                        () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v));
+                    () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
+            .sub("Crafting")
+                .add(toggle("Crafting helper", "Crafting Helper toggle",
+                    () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v));
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)
             .add(stringList("Blocked Words", "Hide messages with these",
                     () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
+            .add(toggle("Quick PV/GV Access", "Click on a players name or guild to open the pv/gv!",
+                    () -> config.chatClickOpensPV, v -> config.chatClickOpensPV = v))
             .sub("Notifications")
                 .add(stringListDual("Notifier Words", "Trigger word and display text",
                         () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
@@ -174,7 +184,7 @@ public class WynnExtrasConfigScreen extends Screen {
                     () -> config.twoGoo, v -> config.twoGoo = v))
                 .add(toggle("Next Soul", "When next soul is ready in TNA tree room",
                     () -> config.soul, v -> config.soul = v))
-                .add(toggle("+1 Void Matter", "+1 VM in TNA void gathering room",
+                .add(toggle("+1 Void Matter", "+1 Void Matter in TNA void gathering room",
                     () -> config.voidMatter, v -> config.voidMatter = v))
                 .add(toggle("Kill the voidholes", "When holes can be attacked in TNA gathering room",
                     () -> config.fourOutOfFiveVoidMatter, v -> config.fourOutOfFiveVoidMatter = v))
@@ -204,8 +214,6 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // ===== MISC =====
         category("Misc", 0xFF0872bc)
-                .add(toggle("Chat Click Opens PV", "Click player names in chat to open /pv",
-                        () -> config.chatClickOpensPV, v -> config.chatClickOpensPV = v))
                 .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
                         () -> config.differentGUIScale, v -> config.differentGUIScale = v))
                 .add(slider("GUI Scale", "Custom GUI scale value",
@@ -1111,6 +1119,8 @@ public class WynnExtrasConfigScreen extends Screen {
 
         @Override
         public void render(DrawContext ctx, int mx, int my, float delta) {
+            boolean isEditing = editingIndex >= 0;
+
             ctx.fill(0, 0, width, height, BG_DARK);
 
             int px = width / 2 - 180, pw = 360;
@@ -1121,45 +1131,67 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(px + 20, 48, px + pw - 20, 49, GOLD_DARK);
 
             // Input fields
-            int inputY = 60;
+            int inputY = 65;
             if (dualInput) {
-                // Two input fields for trigger|display
-                int fieldW = (pw - 90) / 2;
+                if (isEditing) {
+                    // Two input fields for trigger|display
+                    int fieldW = (pw - 140) / 2;
 
-                // Trigger field
-                ctx.drawTextWithShadow(textRenderer, "Trigger:", px + 15, inputY - 10, TEXT_DIM);
-                ctx.fill(px + 15, inputY, px + 15 + fieldW, inputY + 24, BORDER_DARK);
-                ctx.fill(px + 16, inputY + 1, px + 14 + fieldW, inputY + 23, activeField == 0 ? PARCHMENT_LIGHT : PARCHMENT);
-                String t1 = input1.length() > 18 ? input1.substring(0, 16) + ".." : input1;
-                ctx.drawTextWithShadow(textRenderer, t1 + (activeField == 0 ? "_" : ""), px + 20, inputY + 8, TEXT_LIGHT);
+                    // Trigger field
+                    ctx.drawTextWithShadow(textRenderer, "Trigger:", px + 15, inputY - 10, TEXT_DIM);
+                    ctx.fill(px + 15, inputY, px + 15 + fieldW, inputY + 24, BORDER_DARK);
+                    ctx.fill(px + 16, inputY + 1, px + 14 + fieldW, inputY + 23, activeField == 0 ? PARCHMENT_LIGHT : PARCHMENT);
+                    ctx.drawTextWithShadow(textRenderer, input1 + (activeField == 0 ? "_" : ""), px + 20, inputY + 8, TEXT_LIGHT);
 
-                // Display field
-                ctx.drawTextWithShadow(textRenderer, "Display:", px + 20 + fieldW, inputY - 10, TEXT_DIM);
-                ctx.fill(px + 20 + fieldW, inputY, px + 20 + fieldW * 2, inputY + 24, BORDER_DARK);
-                ctx.fill(px + 21 + fieldW, inputY + 1, px + 19 + fieldW * 2, inputY + 23, activeField == 1 ? PARCHMENT_LIGHT : PARCHMENT);
-                String t2 = input2.length() > 18 ? input2.substring(0, 16) + ".." : input2;
-                ctx.drawTextWithShadow(textRenderer, t2 + (activeField == 1 ? "_" : ""), px + 25 + fieldW, inputY + 8, TEXT_LIGHT);
+                    // Display field
+                    ctx.drawTextWithShadow(textRenderer, "Display:", px + 20 + fieldW, inputY - 10, TEXT_DIM);
+                    ctx.fill(px + 20 + fieldW, inputY, px + 20 + fieldW * 2, inputY + 24, BORDER_DARK);
+                    ctx.fill(px + 21 + fieldW, inputY + 1, px + 19 + fieldW * 2, inputY + 23, activeField == 1 ? PARCHMENT_LIGHT : PARCHMENT);
+                    ctx.drawTextWithShadow(textRenderer, input2 + (activeField == 1 ? "_" : ""), px + 25 + fieldW, inputY + 8, TEXT_LIGHT);
+                } else {
+                    // Two input fields for trigger|display
+                    int fieldW = (pw - 90) / 2;
+
+                    // Trigger field
+                    ctx.drawTextWithShadow(textRenderer, "Trigger:", px + 15, inputY - 10, TEXT_DIM);
+                    ctx.fill(px + 15, inputY, px + 15 + fieldW, inputY + 24, BORDER_DARK);
+                    ctx.fill(px + 16, inputY + 1, px + 14 + fieldW, inputY + 23, activeField == 0 ? PARCHMENT_LIGHT : PARCHMENT);
+                    String t1 = input1.length() > 18 ? input1.substring(0, 16) + ".." : input1;
+                    ctx.drawTextWithShadow(textRenderer, t1 + (activeField == 0 ? "_" : ""), px + 20, inputY + 8, TEXT_LIGHT);
+
+                    // Display field
+                    ctx.drawTextWithShadow(textRenderer, "Display:", px + 23 + fieldW, inputY - 10, TEXT_DIM);
+                    ctx.fill(px + 23 + fieldW, inputY, px + 23 + fieldW * 2, inputY + 24, BORDER_DARK);
+                    ctx.fill(px + 24 + fieldW, inputY + 1, px + 22 + fieldW * 2, inputY + 23, activeField == 1 ? PARCHMENT_LIGHT : PARCHMENT);
+                    String t2 = input2.length() > 18 ? input2.substring(0, 16) + ".." : input2;
+                    ctx.drawTextWithShadow(textRenderer, t2 + (activeField == 1 ? "_" : ""), px + 28 + fieldW, inputY + 8, TEXT_LIGHT);
+                }
             } else {
                 // Single input field
-                ctx.fill(px + 15, inputY, px + pw - 65, inputY + 24, BORDER_DARK);
-                ctx.fill(px + 16, inputY + 1, px + pw - 66, inputY + 23, PARCHMENT);
-                ctx.drawTextWithShadow(textRenderer, input1 + "_", px + 20, inputY + 8, TEXT_LIGHT);
+                if (isEditing) {
+                    ctx.fill(px + 15, inputY, px + pw - 120, inputY + 24, BORDER_DARK);
+                    ctx.fill(px + 16, inputY + 1, px + pw - 121, inputY + 23, PARCHMENT);
+                    ctx.drawTextWithShadow(textRenderer, input1 + "_", px + 20, inputY + 8, TEXT_LIGHT);
+                } else {
+                    ctx.fill(px + 15, inputY, px + pw - 65, inputY + 24, BORDER_DARK);
+                    ctx.fill(px + 16, inputY + 1, px + pw - 66, inputY + 23, PARCHMENT);
+                    ctx.drawTextWithShadow(textRenderer, input1 + "_", px + 20, inputY + 8, TEXT_LIGHT);
+                }
             }
 
             // Add/Save and Cancel buttons
-            boolean isEditing = editingIndex >= 0;
             if (isEditing) {
                 // Save button (left)
-                boolean saveH = mx >= px + pw - 105 && mx < px + pw - 58 && my >= inputY && my < inputY + 24;
-                ctx.fill(px + pw - 105, inputY, px + pw - 58, inputY + 24, BORDER_DARK);
-                ctx.fill(px + pw - 104, inputY + 1, px + pw - 59, inputY + 23, saveH ? TOGGLE_ON : PARCHMENT);
-                ctx.drawCenteredTextWithShadow(textRenderer, "Save", px + pw - 81, inputY + 8, TEXT_LIGHT);
+                boolean saveH = mx >= px + pw - 115 && mx < px + pw - 68 && my >= inputY && my < inputY + 24;
+                ctx.fill(px + pw - 115, inputY, px + pw - 68, inputY + 24, BORDER_DARK);
+                ctx.fill(px + pw - 114, inputY + 1, px + pw - 69, inputY + 23, saveH ? TOGGLE_ON : PARCHMENT);
+                ctx.drawCenteredTextWithShadow(textRenderer, "Save", px + pw - 91, inputY + 8, TEXT_LIGHT);
 
                 // Cancel button (right)
-                boolean cancelEditH = mx >= px + pw - 53 && mx < px + pw - 6 && my >= inputY && my < inputY + 24;
-                ctx.fill(px + pw - 53, inputY, px + pw - 6, inputY + 24, BORDER_DARK);
-                ctx.fill(px + pw - 52, inputY + 1, px + pw - 7, inputY + 23, cancelEditH ? ACCENT_RED : PARCHMENT);
-                ctx.drawCenteredTextWithShadow(textRenderer, "Cancel", px + pw - 29, inputY + 8, TEXT_LIGHT);
+                boolean cancelEditH = mx >= px + pw - 63 && mx < px + pw - 16 && my >= inputY && my < inputY + 24;
+                ctx.fill(px + pw - 63, inputY, px + pw - 16, inputY + 24, BORDER_DARK);
+                ctx.fill(px + pw - 62, inputY + 1, px + pw - 17, inputY + 23, cancelEditH ? ACCENT_RED : PARCHMENT);
+                ctx.drawCenteredTextWithShadow(textRenderer, "Cancel", px + pw - 39, inputY + 8, TEXT_LIGHT);
             } else {
                 // Add button
                 boolean addH = mx >= px + pw - 60 && mx < px + pw - 15 && my >= inputY && my < inputY + 24;
@@ -1207,26 +1239,38 @@ public class WynnExtrasConfigScreen extends Screen {
         @Override
         public boolean mouseClicked(double mx, double my, int btn) {
             int px = width / 2 - 180, pw = 360;
-            int inputY = 60;
+            int inputY = 65;
             boolean isEditing = editingIndex >= 0;
 
             // Click on input fields (for dual input mode)
             if (dualInput) {
-                int fieldW = (pw - 90) / 2;
-                if (mx >= px + 15 && mx < px + 15 + fieldW && my >= inputY && my < inputY + 24) {
-                    activeField = 0;
-                    return true;
-                }
-                if (mx >= px + 20 + fieldW && mx < px + 20 + fieldW * 2 && my >= inputY && my < inputY + 24) {
-                    activeField = 1;
-                    return true;
+                if(isEditing) {
+                    int fieldW = (pw - 140) / 2;
+                    if (mx >= px + 15 && mx < px + 15 + fieldW && my >= inputY && my < inputY + 24) {
+                        activeField = 0;
+                        return true;
+                    }
+                    if (mx >= px + 20 + fieldW && mx < px + 20 + fieldW * 2 && my >= inputY && my < inputY + 24) {
+                        activeField = 1;
+                        return true;
+                    }
+                } else {
+                    int fieldW = (pw - 90) / 2;
+                    if (mx >= px + 15 && mx < px + 15 + fieldW && my >= inputY && my < inputY + 24) {
+                        activeField = 0;
+                        return true;
+                    }
+                    if (mx >= px + 23 + fieldW && mx < px + 23 + fieldW * 2 && my >= inputY && my < inputY + 24) {
+                        activeField = 1;
+                        return true;
+                    }
                 }
             }
 
             // Add/Save and Cancel buttons
             if (isEditing) {
                 // Save button (left)
-                if (mx >= px + pw - 105 && mx < px + pw - 58 && my >= inputY && my < inputY + 24) {
+                if (mx >= px + pw - 115 && mx < px + pw - 68 && my >= inputY && my < inputY + 24) {
                     if (!input1.isEmpty()) {
                         saveCurrentInput();
                         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
@@ -1234,7 +1278,7 @@ public class WynnExtrasConfigScreen extends Screen {
                     return true;
                 }
                 // Cancel button (right)
-                if (mx >= px + pw - 53 && mx < px + pw - 6 && my >= inputY && my < inputY + 24) {
+                if (mx >= px + pw - 63 && mx < px + pw - 16 && my >= inputY && my < inputY + 24) {
                     clearInputs();
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;

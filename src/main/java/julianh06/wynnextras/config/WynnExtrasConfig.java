@@ -83,6 +83,7 @@ public class WynnExtrasConfig {
     public boolean showWeight = true;
     public boolean showScales = true;
     public boolean craftingHelperOverlay = true;
+    public boolean wynnventoryOverlay = true;
 
     // ==================== RAID ====================
     public boolean toggleRaidTimestamps = true;
