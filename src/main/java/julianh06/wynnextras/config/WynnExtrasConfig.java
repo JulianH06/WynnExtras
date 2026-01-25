@@ -103,6 +103,9 @@ public class WynnExtrasConfig {
     public Map<String, Long> raidPBs = new HashMap<>();
     public boolean chiropTimer = false;
 
+    // ==================== CHAT CLICK ====================
+    public boolean chatClickOpensPV = true;
+
     // ==================== MISC ====================
     public boolean pvDarkmodeToggle = false;
     public boolean totemRangeVisualizerToggle = true;

@@ -10,6 +10,7 @@
     "requireAnnotations": true
   },
   "client": [
+    "ChatClickMixin",
     "GuildMapScreenMixin",
     "InventoryScreenMixin",
     "LivingEntityRendererMixin",
@@ -41,6 +42,7 @@
     "TooltipFittingFeatureMixin",
     "TooltipUtilsMixin",
     "Accessor.BannerBlockEntityAccessor",
+    "Accessor.ChatHudAccessor",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
     "Accessor.SlotAccessor",
     "Accessor.TooltipFittingFeatureAccessor",
