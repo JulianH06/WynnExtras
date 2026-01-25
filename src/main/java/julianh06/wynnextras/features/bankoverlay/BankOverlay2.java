@@ -79,6 +79,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
@@ -299,7 +301,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         int totalRows = (int) Math.ceil((double) shownPages / xFitAmount);
         int c = (xFitAmount % 2 == 0 ? 1 : 0);
-        int maxOffset = Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * xFitAmount) - 52 * c);
+        int maxOffset = Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * 3) - 104 * c);
 
         if (targetOffset > maxOffset) {
             targetOffset = maxOffset;
@@ -599,6 +601,9 @@ public class BankOverlay2 extends WEHandledScreen {
 
         xFitAmount = Math.min(3, Math.floorDiv(screenWidth - 84, 162));
         yFitAmount = Math.min(4, Math.floorDiv(screenHeight, 104));
+
+        xFitAmount = Math.min(xFitAmount, WynnExtrasConfig.INSTANCE.bankOverlayMaxColumns);
+        yFitAmount = Math.min(yFitAmount, WynnExtrasConfig.INSTANCE.bankOverlayMaxRows + 1);
 
         int xRemain = screenWidth - xFitAmount * 162 - (xFitAmount - 1) * 4;
         if (xRemain < 0) {
@@ -1476,12 +1481,41 @@ public class BankOverlay2 extends WEHandledScreen {
                 hoveredSlot = stack;
             }
 
+            boolean renderOne = false;
+            Optional<WynnItem> item = asWynnItem(stack);
+            if (item.isPresent()) {
+                ItemAnnotation annotation = item.get();
+                if (annotation instanceof PotionItem potionItem) {
+                    stack.setCount(potionItem.getCount());
+                }
+                if (annotation instanceof MultiHealthPotionItem potionItem) {
+                    int current = potionItem.getUses().current();
+                    if(current == 1) renderOne = true;
+                    else stack.setCount(current);
+                }
+                if (annotation instanceof CraftedConsumableItem consumableItem) {
+                    stack.setCount(consumableItem.getCount());
+                }
+            }
+
+            try {
+                if (stack.getCustomName().getString().contains("Potions")) {
+                    Pattern pattern = Pattern.compile("\\[(\\d+)/(\\d+)]");
+                    Matcher matcher = pattern.matcher(stack.getCustomName().getString());
+
+                    if (matcher.find()) {
+                        int remainingUses = Integer.parseInt(matcher.group(1));
+                        stack.setCount(remainingUses);
+                    }
+                }
+            } catch (Exception ignored) {}
+
             renderDurabilityRing(ctx, stack, x + 1, y + 1);
             renderEmeraldPouchRing(ctx, stack, x + 1, y + 1);
             renderHighlightOverlay(ctx, stack, x + 1, y + 1);
 
             ctx.drawItem(stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()));
-            ctx.drawStackOverlay(cachedClient.textRenderer, stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()), stack.getCount() == 1 ? "" : String.valueOf(stack.getCount()));
+            ctx.drawStackOverlay(cachedClient.textRenderer, stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()), renderOne ? "1" : stack.getCount() == 1 ? "" : String.valueOf(stack.getCount()));
 
             renderItemOverlays(ctx, stack, x + 1, y + 1);
             renderSearchOverlay(ctx, stack, x + 1, y + 1);
@@ -1733,7 +1767,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             int totalRows = (int) Math.ceil((double) shownPages / xFitAmount);
             int c = (xFitAmount % 2 == 0 ? 1 : 0);
-            int maxOffset = Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * xFitAmount) - 52 * c);
+            int maxOffset = Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * 3) - 104 * c);
             int buttonHeight = 30;
             int scrollAreaHeight = height - buttonHeight;
 
@@ -1751,7 +1785,7 @@ public class BankOverlay2 extends WEHandledScreen {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             int totalRows = (int) Math.ceil((double) shownPages / xFitAmount);
             int c = (xFitAmount % 2 == 0 ? 1 : 0);
-            int maxOffset = Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * xFitAmount) - 52 * c);
+            int maxOffset = Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * 3) - 104 * c);
             int buttonHeight = 30;
             int scrollAreaHeight = height - buttonHeight;
 

@@ -81,6 +81,8 @@ public class WynnExtrasConfig {
     public boolean smoothScrollToggle = true;
     public boolean bankQuickToggle = true;
     public boolean darkmodeToggle = false;
+    public int bankOverlayMaxRows = 3;
+    public int bankOverlayMaxColumns = 3;
     public boolean showWeight = true;
     public boolean showScales = true;
     public boolean craftingHelperOverlay = true;
@@ -89,7 +91,9 @@ public class WynnExtrasConfig {
     // ==================== RAID ====================
     public boolean toggleRaidTimestamps = true;
     public boolean toggleRaidLootTracker = true;
-    public boolean raidLootTrackerOnlyInInventory = false;
+    public boolean raidLootTrackerRenderInHud = true;
+    public boolean raidLootTrackerRenderInInventory = true;
+    public boolean raidLootTrackerRenderInChat = true;
     public boolean raidLootTrackerOnlyNearChest = true;
     public boolean raidLootTrackerCompact = false;
     public boolean raidLootTrackerShowSession = false;

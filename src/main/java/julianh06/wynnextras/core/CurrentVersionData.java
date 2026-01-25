@@ -8,6 +8,8 @@ import julianh06.wynnextras.features.raid.RaidData;
 import julianh06.wynnextras.features.raid.RaidKindAdapter;
 import julianh06.wynnextras.features.raid.RaidListData;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.SharedConstants;
+import net.minecraft.client.MinecraftClient;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -73,8 +75,10 @@ public class CurrentVersionData {
                 JsonObject obj = el.getAsJsonObject();
                 String version = obj.get("version_number").getAsString();
                 String date = obj.get("date_published").getAsString();
+                String gameVersion = obj.get("game_versions").getAsString();
 
-                // Vergleiche Datum, um die neueste Version zu finden
+                if(!gameVersion.equals(SharedConstants.getGameVersion().getName())) continue;
+
                 if (date.compareTo(latestDate) > 0) {
                     latest = version;
                     latestDate = date;

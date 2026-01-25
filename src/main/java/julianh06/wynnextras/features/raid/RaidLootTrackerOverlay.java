@@ -135,7 +135,7 @@ public class RaidLootTrackerOverlay {
 
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         if (!config.toggleRaidLootTracker) return;
-        if (config.raidLootTrackerOnlyInInventory) return;
+        if (!config.raidLootTrackerRenderInHud) return;
         if (config.raidLootTrackerOnlyNearChest && !isNearLootChest()) return;
 
         loadConfig();
@@ -154,6 +154,8 @@ public class RaidLootTrackerOverlay {
         boolean isChat = mc.currentScreen instanceof ChatScreen;
         boolean isRaidChest = mc.currentScreen.getTitle().getString().equals(RAID_CHEST_TITLE);
         if (!isInventory && !isChat && !isRaidChest) return;
+        if (isChat && !WynnExtrasConfig.INSTANCE.raidLootTrackerRenderInChat) return;
+        if (isInventory && !WynnExtrasConfig.INSTANCE.raidLootTrackerRenderInInventory) return;
 
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         if (!config.toggleRaidLootTracker) return;
