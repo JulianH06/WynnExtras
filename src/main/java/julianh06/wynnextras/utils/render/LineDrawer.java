@@ -3,10 +3,15 @@ package julianh06.wynnextras.utils.render;
 import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.WEVec;
-import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.RenderLayers;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3d;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -19,14 +24,11 @@ public class LineDrawer {
         public WEVec p1;
         public WEVec p2;
         public Color color;
-        public WEVec normal;
 
         public QueuedLine(WEVec p1, WEVec p2, Color color) {
             this.p1 = p1;
             this.p2 = p2;
             this.color = color;
-
-            this.normal = p2.subtract(p1).normalize();
         }
     }
 
@@ -43,17 +45,48 @@ public class LineDrawer {
     private void drawQueuedLines() {
         if (queuedLines.isEmpty()) return;
 
-        RenderLayer layer = WERenderLayers.getLines(lineWidth, !depth);
-        VertexConsumer buffer = event.vertexConsumerProvider.getBuffer(layer);
+        VertexConsumer buffer = event.vertexConsumerProvider.getBuffer(
+                RenderLayers.debugFilledBox()
+        );
+
+
         MatrixStack.Entry matrix = event.matrices.peek();
 
-        for (QueuedLine line: queuedLines) {
-            buffer.vertex(matrix.getPositionMatrix(), (float) line.p1.x(), (float) line.p1.y(), (float) line.p1.z())
-                    .normal(matrix, (float) line.normal.x(), (float) line.normal.y(), (float) line.normal.z())
+        Camera camera = MinecraftClient.getInstance().gameRenderer.getCamera();
+        Quaternionf q = camera.getRotation();
+
+        Vector3f forward = new Vector3f(0, 0, -1);
+        forward.rotate(q);
+
+        Vec3d cameraForward = new Vec3d(forward.x(), forward.y(), forward.z());
+
+        float halfWidth = lineWidth * 0.01f;
+
+        for (QueuedLine line : queuedLines) {
+            WEVec dir = line.p2.subtract(line.p1).normalize();
+            WEVec right = new WEVec(cameraForward).cross(dir);
+
+            if (right.lengthSquared() < 1e-6) {
+                right = new WEVec(0, 1, 0).cross(dir);
+            }
+
+            right = right.normalize().multiply(halfWidth);
+
+            WEVec p1a = line.p1.add(right);
+            WEVec p1b = line.p1.subtract(right);
+            WEVec p2a = line.p2.add(right);
+            WEVec p2b = line.p2.subtract(right);
+
+            buffer.vertex(matrix.getPositionMatrix(), (float)p1a.x(), (float)p1a.y(), (float)p1a.z())
                     .color(line.color.getRed(), line.color.getGreen(), line.color.getBlue(), line.color.getAlpha());
 
-            buffer.vertex(matrix.getPositionMatrix(), (float) line.p2.x(), (float) line.p2.y(), (float) line.p2.z())
-                    .normal(matrix, (float) line.normal.x(), (float) line.normal.y(), (float) line.normal.z())
+            buffer.vertex(matrix.getPositionMatrix(), (float)p2a.x(), (float)p2a.y(), (float)p2a.z())
+                    .color(line.color.getRed(), line.color.getGreen(), line.color.getBlue(), line.color.getAlpha());
+
+            buffer.vertex(matrix.getPositionMatrix(), (float)p2b.x(), (float)p2b.y(), (float)p2b.z())
+                    .color(line.color.getRed(), line.color.getGreen(), line.color.getBlue(), line.color.getAlpha());
+
+            buffer.vertex(matrix.getPositionMatrix(), (float)p1b.x(), (float)p1b.y(), (float)p1b.z())
                     .color(line.color.getRed(), line.color.getGreen(), line.color.getBlue(), line.color.getAlpha());
         }
 

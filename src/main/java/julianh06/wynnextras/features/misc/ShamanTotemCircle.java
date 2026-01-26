@@ -8,9 +8,7 @@ import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.utils.WEVec;
 import julianh06.wynnextras.utils.render.WERenderLayers;
 import julianh06.wynnextras.utils.render.WorldRenderUtils;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.util.Formatting;
 import net.neoforged.bus.api.SubscribeEvent;
 
 import java.awt.*;
@@ -21,12 +19,7 @@ import java.util.Objects;
 public class ShamanTotemCircle {
     private static WynnExtrasConfig config;
 
-
     public static HashMap<Integer, WEVec> totemPositions = new HashMap<>();
-
-    public Integer[] timerlessTotemVisibleIds = new Integer[4];
-
-    public ShamanTotem[] totems = new ShamanTotem[4];
 
     @SubscribeEvent
     public void onRenderWorld(RenderWorldEvent event) {
@@ -59,7 +52,5 @@ public class ShamanTotemCircle {
                 WorldRenderUtils.draw3DCircle(event, totemPositions.get(i).add(0, -1.5, 0), config.eldritchCallRange, eldritchCallColor, 4, true);
             }
         }
-
-        //WorldRenderUtils.INSTANCE_SHAMANTOTEM.drawLines(MinecraftClient.getInstance(), WERenderLayers.linePipeline);
     }
 }

@@ -102,8 +102,12 @@ public class WynnExtrasConfigScreen extends Screen {
             .sub("Loot Tracker")
                 .add(toggle("Enable Tracker", "Track raid loot drops",
                     () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
-                .add(toggle("Only in Inventory", "Show only when inventory open",
-                    () -> config.raidLootTrackerOnlyInInventory, v -> config.raidLootTrackerOnlyInInventory = v))
+                .add(toggle("Render in HUD", "Render the Overlay in the HUD",
+                    () -> config.raidLootTrackerRenderInHud, v -> config.raidLootTrackerRenderInHud = v))
+                .add(toggle("Render in Inventory", "Render the Overlay while in the inventory",
+                        () -> config.raidLootTrackerRenderInInventory, v -> config.raidLootTrackerRenderInInventory = v))
+                .add(toggle("Render in Chat", "Render the Overlay while the chat is open",
+                        () -> config.raidLootTrackerRenderInChat, v -> config.raidLootTrackerRenderInChat = v))
                 .add(toggle("Only Near Chest", "Show only near reward chest",
                     () -> config.raidLootTrackerOnlyNearChest, v -> config.raidLootTrackerOnlyNearChest = v))
                 .add(toggle("Compact Mode", "Use compact display",
@@ -149,6 +153,10 @@ public class WynnExtrasConfigScreen extends Screen {
                     () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
             .add(slider("Rarity BG Alpha", "Item rarity background opacity",
                     0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
+            .add(slider("Max Rows", "The maximum amount of rows (lower can reduce lag)",
+                    2, 3, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
+            .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
+                    2, 3, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
             .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
                     () -> config.showWeight, v -> config.showWeight = v))
