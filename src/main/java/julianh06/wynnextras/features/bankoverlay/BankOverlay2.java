@@ -1,6 +1,5 @@
 package julianh06.wynnextras.features.bankoverlay;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.wynnmod.feature.Feature;
 import com.wynnmod.feature.item.ItemOverlayFeature;
 import com.wynnmod.util.wynncraft.item.map.WynncraftItemDatabase;
@@ -57,7 +56,6 @@ import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
@@ -226,7 +224,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 toggleOverlayWidget = new ToggleOverlayWidget();
             }
 
-            RenderUtils.drawRect(context, CustomColor.fromInt(-804253680), 0, 0,  mc.currentScreen.width, mc.currentScreen.height);
 
             float xPos = mc.currentScreen.width / 2f;
             float yPos = yStart + (yFitAmount) * (90 + 4 + 10) - 20;
@@ -235,6 +232,12 @@ public class BankOverlay2 extends WEHandledScreen {
                 Screen screen = McUtils.screen();
                 if (!(screen instanceof HandledScreen<?> containerScreen)) return;
                 yPos = ((HandledScreenAccessor) containerScreen).getY() + (4 + McUtils.containerMenu().slots.size() / 9f) * 16;
+            } else {
+                context.fillGradient(
+                        0, 0, mc.currentScreen.width, mc.currentScreen.height,
+                        0xC0101010,
+                        0xD0101010
+                );
             }
 
             if(WynnExtrasConfig.INSTANCE.bankQuickToggle) {
@@ -366,7 +369,7 @@ public class BankOverlay2 extends WEHandledScreen {
             scissorx2 = xStart + 166 * xFitAmount;
             scissory2 = yStart + 100 * (yFitAmount - 1);
 
-            context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
+            //context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
             for(PageWidget page : pages) {
                 float invX = xStart + (visuali % xFitAmount) * (162 + 4);
                 float invY = yStart + Math.floorDiv(visuali, xFitAmount) * (90 + 4 + 10) - actualOffset;
@@ -416,7 +419,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 visuali++;
             }
 
-            context.disableScissor();
+            //context.disableScissor();
 
             inventoryWidget.setBounds(xStart + 160, yStart + (yFitAmount - 1) * (90 + 4 + 10) - 3, (int) (176 * ui.getScaleFactor()), (int) (86 * ui.getScaleFactor()));
             inventoryWidget.setItems(buildInventoryForIndex(0, true));
@@ -718,15 +721,13 @@ public class BankOverlay2 extends WEHandledScreen {
          if (!Objects.equals(color, CustomColor.NONE)) {
              try {
                  RenderUtils.drawTexturedRect(
-                         context,
-                         Texture.HIGHLIGHT.identifier(),
-                         color.withAlpha(WynnExtrasConfig.INSTANCE.wynntilsItemRarityBackgroundAlpha),
-                         x - 1, y - 1, 18, 18,
-                         ((ItemHighlightFeature.HighlightTexture) itemHighlightFeature.getConfigOptionFromString("highlightTexture").get().get()).ordinal() * 18 + 18, 0,
-                         18, 18,
-                         Texture.HIGHLIGHT.width(),
-                         Texture.HIGHLIGHT.height()
-                 );
+                     context,
+                     Texture.HIGHLIGHT.identifier(),
+                     color, (float)(x - 1), (float)(y - 1), 18.0F, 18.0F,
+                     ((ItemHighlightFeature.HighlightTexture) itemHighlightFeature.getConfigOptionFromString("highlightTexture").get().get()).ordinal() * 18,
+                     0.0F, 18.0F, 18.0F,
+                     Texture.HIGHLIGHT.width(),
+                     Texture.HIGHLIGHT.height());
              } catch (Exception ignored) {}
          }
     }

@@ -106,12 +106,10 @@ public final class UIUtils {
     // --- Drawing helpers: Background / Text / Image ---
     public void drawBackground() {
         if (MinecraftClient.getInstance().currentScreen == null) return;
-        RenderUtils.drawRect(
-                drawContext,
-                CustomColor.fromInt(-804253680),
-                0, 0,
-                MinecraftClient.getInstance().currentScreen.width,
-                MinecraftClient.getInstance().currentScreen.height
+        drawContext.fillGradient(
+                0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height,
+                0xC0101010,
+                0xD0101010
         );
     }
 

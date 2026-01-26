@@ -14,10 +14,10 @@ public interface HandledScreenAccessor {
     @Accessor("touchDragStack")
     ItemStack getTouchDragStack();
 
-    @Accessor
+    @Accessor("x")
     int getX();
 
-    @Accessor
+    @Accessor("y")
     int getY();
 
     @Accessor

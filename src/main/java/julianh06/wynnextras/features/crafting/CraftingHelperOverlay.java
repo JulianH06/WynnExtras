@@ -110,11 +110,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     }
 
     @Override
-    protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
-
-        ui.drawBackground();
-    }
+    protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float delta) { }
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {

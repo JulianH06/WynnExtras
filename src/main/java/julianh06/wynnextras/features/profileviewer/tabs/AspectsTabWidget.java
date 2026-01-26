@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
 import com.wynntils.core.components.Handlers;
+import com.wynntils.core.components.Managers;
 import com.wynntils.core.persisted.config.Config;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.features.inventory.ItemHighlightFeature;
@@ -620,15 +621,13 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             }
             if (!Objects.equals(color, CustomColor.NONE)) {
                 RenderUtils.drawTexturedRect(
-                        ctx,
-                        Texture.HIGHLIGHT.identifier(),
-                        color.withAlpha(255),
-                        x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
-                        highlightTexture.get().ordinal() * 18 + 18, 0,
-                        18, 18,
-                        Texture.HIGHLIGHT.width(),
-                        Texture.HIGHLIGHT.height()
-                );
+                    ctx,
+                    Texture.HIGHLIGHT.identifier(),
+                    color, x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
+                    highlightTexture.get().ordinal() * 18,
+                    0.0F, 18.0F, 18.0F,
+                    Texture.HIGHLIGHT.width(),
+                    Texture.HIGHLIGHT.height());
             }
             if(playerAspect == null) return;
             ItemStack stack = toItemStack(aspect, isMaxed(playerAspect), tierInt);

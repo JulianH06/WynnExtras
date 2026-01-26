@@ -45,6 +45,13 @@ public abstract class HandledScreenMixin {
 
     @Unique private CraftingHelperOverlay craftingHelperOverlay;
 
+    @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
+    private void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci){
+        if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) {
+            ci.cancel();
+        }
+    }
+    
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if(bankOverlay == null) bankOverlay = new BankOverlay2(ci, (HandledScreen<?>) (Object) this);
@@ -168,13 +175,13 @@ public abstract class HandledScreenMixin {
             heldItem = Items.AIR.getDefaultStack();
 
             List<ItemStack> stacks = new ArrayList<>();
-            for (Slot slot : BankOverlay.activeInvSlots) {
+            for (Slot slot : activeInvSlots) {
                 stacks.add(slot.getStack());
             }
             if(activeInv != -1) {
                 Pages.BankPages.put(activeInv, stacks);
             }
-            BankOverlay.activeInvSlots.clear();
+            activeInvSlots.clear();
             activeInv = 1;
             annotationCache.clear();
             Pages.save();

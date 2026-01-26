@@ -5,6 +5,8 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
@@ -18,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Mixin(Screen.class)
+@Mixin(TextRenderer.class)
 public class ChatClickMixin {
 //    // Pattern to extract username from various command formats
 //    private static final Pattern CMD_PATTERN = Pattern.compile("^/(?:msg|tell|w|p|g|r|party|guild)\\s+(\\S+)", Pattern.CASE_INSENSITIVE);
@@ -32,6 +34,7 @@ public class ChatClickMixin {
 //
 //    @Inject(method = "handleTextClick", at = @At("HEAD"), cancellable = true)
 //    private void onHandleTextClick(Style style, CallbackInfoReturnable<Boolean> cir) {
+//        MinecraftClient.getInstance().textRenderer
 //        if (!WynnExtrasConfig.INSTANCE.chatClickOpensPV) return;
 //        if (!Models.WorldState.onWorld()) return;
 //        if (style == null) return;

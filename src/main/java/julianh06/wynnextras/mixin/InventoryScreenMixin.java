@@ -40,12 +40,12 @@ public class InventoryScreenMixin {
 
         if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
             if (Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
-                ci.cancel();
+                //ci.cancel();
             }
         }
 
         if (Models.Container.getCurrentContainer() instanceof CraftingStationContainer && WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
-            ci.cancel();
+            //ci.cancel();
         }
 
         if(WynnExtrasConfig.INSTANCE.differentGUIScale) {
@@ -64,7 +64,7 @@ public class InventoryScreenMixin {
             ) {
                 BankOverlay.currentOverlayType = BankOverlayType.NONE;
                 BankOverlay.currentData = null;
-                ci.cancel();
+                //ci.cancel();
             }
             return;
         }
@@ -76,7 +76,7 @@ public class InventoryScreenMixin {
         }
 
         if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
-            ci.cancel();
+            //ci.cancel();
 
             Inventory playerInv = client.player.getInventory();
             BankOverlay.playerInvSlots.clear();
