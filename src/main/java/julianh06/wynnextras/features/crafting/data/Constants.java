@@ -74,6 +74,7 @@ public class Constants {
     };
 
     private static final Map<Pair<CraftableType, Vector2i>, Pair<Vector2i, Vector2i>> DAMAGES = new HashMap<>();
+
     static {
         DAMAGES.put(new Pair<>(CraftableType.SPEAR, new Vector2i(1, 3)), new Pair<>(new Vector2i(3, 4), new Vector2i(5, 6)));
         DAMAGES.put(new Pair<>(CraftableType.SPEAR, new Vector2i(3, 5)), new Pair<>(new Vector2i(6, 7), new Vector2i(8, 9)));

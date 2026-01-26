@@ -164,7 +164,9 @@ public class WynnExtrasConfigScreen extends Screen {
                     () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
             .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
-                    () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v));
+                    () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
+                .add(toggle("Crafting preview", "Crafting preview toggle",
+                    () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v));
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)

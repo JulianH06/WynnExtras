@@ -8,8 +8,6 @@ import julianh06.wynnextras.features.crafting.data.CraftableType;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.ScreenRect;
-import net.minecraft.client.gui.navigation.NavigationDirection;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -47,7 +45,8 @@ public class CraftingResultPreviewer {
         }
 
         DefaultedList<ItemStack> stacks = McUtils.containerMenu().getStacks();
-        if (stacks.equals(CraftingResultPreviewer.stacks)) return; // probably a slot changed even but i dont wanna find it
+        if (stacks.equals(CraftingResultPreviewer.stacks))
+            return; // probably a slot changed even but i dont wanna find it
         CraftingResultPreviewer.stacks = stacks;
         update();
     }

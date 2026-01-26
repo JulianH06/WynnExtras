@@ -104,7 +104,8 @@ public class Recipe {
     public Vector2i getDuration(int modifier) {
         Vector2d base;
         if (getType() == CraftableType.FOOD) base = new Vector2d(cookingDuration);
-        else if (getType() == CraftableType.POTION || getType() == CraftableType.SCROLL) base = new Vector2d(consuDuration);
+        else if (getType() == CraftableType.POTION || getType() == CraftableType.SCROLL)
+            base = new Vector2d(consuDuration);
         else return null;
         Vector2d finalDuration = base.add(modifier, modifier);
         return new Vector2i((int) finalDuration.x, (int) finalDuration.y);

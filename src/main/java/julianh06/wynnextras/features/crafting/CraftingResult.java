@@ -104,7 +104,7 @@ public class CraftingResult {
         for (Pair<Skill, Integer> req : requirements.skills()) {
             if (req.b() <= 0) continue;
             String name = req.a().name().charAt(0) + req.a().name().substring(1).toLowerCase();
-            addBaseFormat(tooltip, applyElementFormatting(name) + " Min", req.b());
+            addBaseFormat(tooltip, name + " Min", req.b());
         }
     }
 
