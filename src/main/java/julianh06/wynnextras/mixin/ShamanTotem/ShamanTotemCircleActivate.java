@@ -21,7 +21,7 @@ public class ShamanTotemCircleActivate {
                 Math.floor(position.getY()) + 0.5f,
                 position.getZ()
         );
-        System.out.println("activated totem " + totemNumber +  " at: " + vec.toString());
+        //System.out.println("activated totem " + totemNumber +  " at: " + vec.toString());
         ShamanTotemCircle.totemPositions.put(totemNumber, vec);
     }
 }

@@ -3,7 +3,6 @@ package julianh06.wynnextras.features.profileviewer.tabs;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
-import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.Dungeons;
@@ -14,13 +13,8 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.text.DecimalFormat;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import static julianh06.wynnextras.features.profileviewer.PVScreen.*;

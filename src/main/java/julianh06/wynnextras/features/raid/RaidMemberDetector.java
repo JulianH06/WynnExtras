@@ -43,7 +43,6 @@ public class RaidMemberDetector {
             }, Style.EMPTY);
 
             RaidListScreen.currentPlayers = names;
-            System.out.println("EXTRACTED NAMES: " + names);
         }
     }
 

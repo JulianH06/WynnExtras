@@ -1,25 +1,19 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.core.components.Handlers;
 import com.wynntils.core.persisted.config.Config;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.features.inventory.ItemHighlightFeature;
 import com.wynntils.handlers.item.ItemAnnotation;
-import com.wynntils.handlers.item.ItemHandler;
-import com.wynntils.mc.extension.ItemStackExtension;
-import com.wynntils.models.items.WynnItem;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.Texture;
-import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.features.profileviewer.data.Aspect;
 import julianh06.wynnextras.features.profileviewer.data.User;
-import julianh06.wynnextras.mixin.Invoker.ItemHandlerInvoker;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
@@ -29,14 +23,10 @@ import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.registry.Registries;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
 import net.minecraft.text.Text;
-import net.minecraft.text.TextColor;
 import net.minecraft.util.Identifier;
 
 import java.time.Instant;
@@ -45,8 +35,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static julianh06.wynnextras.features.profileviewer.PV.openedAspectPage;
 

@@ -189,10 +189,6 @@ public class RaidChatNotifier {
         )
     );
 
-
-
-    private static final WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
-
     private static void savePB(String key, long time) {
         Long old = INSTANCE.raidPBs.get(key);
 
@@ -207,7 +203,7 @@ public class RaidChatNotifier {
     }
 
     public static void handleMessage(String rawMsg) {
-        if (!config.toggleRaidTimestamps) return;
+        if (!WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) return;
 
         long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
                 ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()
@@ -708,7 +704,7 @@ public class RaidChatNotifier {
     }
 
     public static void onRoomCompleted(RaidInfo raidInfo) {
-        if (!config.toggleRaidTimestamps) return;
+        if (!WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) return;
 
         int challengeIndex = raidInfo.completedChallengeCount();
         RaidRoomInfo room = raidInfo.getRoomByNumber(challengeIndex);

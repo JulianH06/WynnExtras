@@ -1,9 +1,6 @@
 package julianh06.wynnextras.utils.UI;
 
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
@@ -11,10 +8,9 @@ import julianh06.wynnextras.utils.Pair;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
-import net.minecraft.text.Text;
+
 import java.util.*;
 
-import static julianh06.wynnextras.features.profileviewer.WynncraftApiHandler.fetchClassAbilityMap;
 import static julianh06.wynnextras.features.profileviewer.WynncraftApiHandler.parseStyledHtml;
 
 // Passe Imports/Packages an dein Projekt an.
