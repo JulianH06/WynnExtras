@@ -31,6 +31,10 @@ public class RaidListData {
 
     List<RaidData> raids = new ArrayList<>();
 
+    public List<RaidData> getRaids() {
+        return raids;
+    }
+
     static GsonBuilder builder = new GsonBuilder()
             .registerTypeAdapter(StyledText.class, new StyledTextAdapter());
 

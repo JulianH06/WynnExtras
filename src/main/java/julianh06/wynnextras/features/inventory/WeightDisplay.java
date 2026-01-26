@@ -42,11 +42,31 @@ public class WeightDisplay {
     public record WeightData(String weightName, Map<String, Float> identifications, Float score) {}
     public record ItemData(String name, List<WeightData> data, int index) {}
 
+    // Max cache size to prevent unbounded memory growth
+    private static final int MAX_CACHE_SIZE = 1000;
+
     //For the item info itself, e.g hero, warp
     public static Map<String, ItemData> itemCache = new ConcurrentHashMap<>();
 
     //For the individual items with calculated scales
     public static final Map<String, ItemData> weightCache = new ConcurrentHashMap<>();
+
+    // Cleanup cache if it exceeds max size
+    private static void cleanupCacheIfNeeded() {
+        if (weightCache.size() > MAX_CACHE_SIZE) {
+            // Remove oldest 20% of entries to avoid thrashing
+            int toRemove = (int) (MAX_CACHE_SIZE * 0.2);
+            weightCache.keySet().stream()
+                .limit(toRemove)
+                .forEach(weightCache::remove);
+        }
+        if (itemCache.size() > MAX_CACHE_SIZE) {
+            int toRemove = (int) (MAX_CACHE_SIZE * 0.2);
+            itemCache.keySet().stream()
+                .limit(toRemove)
+                .forEach(itemCache::remove);
+        }
+    }
 
     public static boolean upPressed = false;
     public static boolean downPressed = false;
@@ -114,6 +134,7 @@ public class WeightDisplay {
 
         ItemData result = new ItemData(encodedItem, calculatedList, 0);
         weightCache.put(encodedItem, result);
+        cleanupCacheIfNeeded();
     }
 
     public static Map<String, Float> extractIdentifications(List<Text> wynntilsTooltip) {
@@ -152,7 +173,9 @@ public class WeightDisplay {
                             }
 
                             if(isRaw && !key.equals("healthRegen") && !key.equals("manaRegen") && !key.contains("Steal") && !key.contains("poison") && !key.contains("jump") && !key.contains("AttackSpeed")) {
-                                key = key.substring(0,1).toUpperCase() + key.substring(1);
+                                if (key.length() > 0) {
+                                    key = key.substring(0,1).toUpperCase() + (key.length() > 1 ? key.substring(1) : "");
+                                }
                                 key = "raw" + key;
                             } else if (isRaw && key.equals("healthRegen")) {
                                 key = key + "Raw"; //healthRegen is the only stat that has "Raw" at the end of the string instead of the start
@@ -172,9 +195,10 @@ public class WeightDisplay {
 
 
     private static void getWeightsFromWynnpool() {
+        HttpURLConnection conn = null;
         try {
             URL url = new URI("https://api.wynnpool.com/item/weight/all").toURL();
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn = (HttpURLConnection) url.openConnection();
 
             conn.setRequestMethod("GET");
             conn.setDoOutput(false);
@@ -205,6 +229,10 @@ public class WeightDisplay {
             Core.LOGGER.logError("IOException while getting Weights from Wynnpool API: " + e.getMessage());
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
     }
 
@@ -266,8 +294,10 @@ public class WeightDisplay {
         if (parts.length == 0) return stat;
         StringBuilder builder = new StringBuilder(parts[0]);
         for (int i = 1; i < parts.length; i++) {
-            builder.append(Character.toUpperCase(parts[i].charAt(0)))
-                    .append(parts[i].substring(1));
+            if (parts[i].length() > 0) {
+                builder.append(Character.toUpperCase(parts[i].charAt(0)))
+                        .append(parts[i].length() > 1 ? parts[i].substring(1) : "");
+            }
         }
         return builder.toString();
     }

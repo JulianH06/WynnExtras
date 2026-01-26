@@ -100,19 +100,39 @@ public class WynnExtras implements ClientModInitializer {
 
 	GLFWKeyCallbackI previousCallback;
 
+	private static final StyleSpriteSource PILL_FONT = new StyleSpriteSource.Font(Identifier.ofVanilla("banner/pill"));
+	private static final Style BACKGROUND_STYLE;
+	private static final Style FOREGROUND_STYLE;
+	private static final Text WYNNEXTRAS_BACKGROUND_PILL;
+	private static final Text WYNNEXTRAS_FOREGROUND_PILL;
+
 	public static String latestVersion = null;
 
-	// Simple text prefix - the pill font approach has mapping issues in 1.21.11
+	static {
+		BACKGROUND_STYLE = Style.EMPTY.withFont(PILL_FONT).withColor(Formatting.DARK_GREEN);
+		FOREGROUND_STYLE = Style.EMPTY.withFont(PILL_FONT).withColor(Formatting.WHITE);
+		WYNNEXTRAS_BACKGROUND_PILL = Text.literal("\uE060\uDAFF\uDFFF\uE046\uDAFF\uDFFF\uE048\uDAFF\uDFFF\uE03D\uDAFF\uDFFF\uE03D\uDAFF\uDFFF\uE034\uDAFF\uDFFF\uE047\uDAFF\uDFFF\uE043\uDAFF\uDFFF\uE041\uDAFF\uDFFF\uE030\uDAFF\uDFFF\uE042\uDAFF\uDFFF\uE062\uDAFF\uDFC2").fillStyle(BACKGROUND_STYLE);
+		WYNNEXTRAS_FOREGROUND_PILL = Text.literal("\uE016\uE018\uE00D\uE00D\uE004\uE017\uE013\uE011\uE000\uE012\uDB00\uDC06").fillStyle(FOREGROUND_STYLE);
+	}
+
 	public static MutableText addWynnExtrasPrefix(Text text) {
 		return Text.empty()
-				.append(Text.literal("[").setStyle(Style.EMPTY.withColor(Formatting.DARK_GREEN)))
-				.append(Text.literal("WynnExtras").setStyle(Style.EMPTY.withColor(Formatting.GREEN)))
-				.append(Text.literal("] ").setStyle(Style.EMPTY.withColor(Formatting.DARK_GREEN)))
+				.append(WYNNEXTRAS_BACKGROUND_PILL)
+				.append(WYNNEXTRAS_FOREGROUND_PILL)
 				.append(text);
 	}
 
 	public static MutableText addWynnExtrasPrefix(String text) {
 		return addWynnExtrasPrefix(Text.of(text));
+	}
+
+	/**
+	 * Get just the WynnExtras pill (for rendering in GUIs)
+	 */
+	public static Text getWynnExtrasPill() {
+		return Text.empty()
+				.append(WYNNEXTRAS_BACKGROUND_PILL)
+				.append(WYNNEXTRAS_FOREGROUND_PILL);
 	}
 
 

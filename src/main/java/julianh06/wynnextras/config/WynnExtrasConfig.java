@@ -25,7 +25,8 @@ public class WynnExtrasConfig {
 
     public static WynnExtrasConfig INSTANCE = new WynnExtrasConfig();
 
-    private static final List<Consumer<WynnExtrasConfig>> saveListeners = new ArrayList<>();
+    // Use CopyOnWriteArrayList for thread-safe iteration during saves
+    private static final List<Consumer<WynnExtrasConfig>> saveListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     // ==================== PLAYER HIDER ====================
     public boolean partyMemberHide = true;
@@ -71,6 +72,7 @@ public class WynnExtrasConfig {
     public boolean craftingHelperOverlay = true;
 
     // ==================== MISC ====================
+    public boolean chatClickOpensPV = true;
     public boolean showWeight = true;
     public boolean showScales = true;
     public boolean pvDarkmodeToggle = false;

@@ -59,9 +59,10 @@ public class CurrentVersionData {
     private static final String MODRINTH_API = "https://api.modrinth.com/v2/project/cjWpppr5/version";
 
     public static String fetchLatestVersion() {
+        HttpURLConnection conn = null;
         try {
             URL url = new URL(MODRINTH_API);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
 
             JsonArray versions = JsonParser.parseReader(new InputStreamReader(conn.getInputStream())).getAsJsonArray();
@@ -85,6 +86,10 @@ public class CurrentVersionData {
         } catch (Exception e) {
             e.printStackTrace();
             return null;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
     }
 }

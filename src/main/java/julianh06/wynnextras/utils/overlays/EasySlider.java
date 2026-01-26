@@ -42,7 +42,12 @@ public class EasySlider extends EasyElement {
     public void draw(DrawContext context) {
         RenderUtils.drawTexturedRect(context, sliderTexture, CustomColor.NONE, x, y + height / 2 - 2f * 3 / scaleFactor, width, 4f * 3 / scaleFactor, (int) width, 4 * 3 / scaleFactor);
 
-        int handleX = x + (int) ((value - min) / (max - min) * (width - (float) handleWidth / scaleFactor));
+        // Prevent division by zero
+        float range = max - min;
+        float widthRange = width - (float) handleWidth / scaleFactor;
+        int handleX = (range != 0 && widthRange != 0)
+            ? x + (int) ((value - min) / range * widthRange)
+            : x;
         RenderUtils.drawTexturedRect(context, sliderButtonTexture, CustomColor.NONE, handleX, y, (float) handleWidth / scaleFactor, height,handleWidth / scaleFactor, (int) height);
 
         FontRenderer.getInstance().renderText(context,
@@ -62,7 +67,10 @@ public class EasySlider extends EasyElement {
     }
 
     public void updateValueFromMouse(int mouseX) {
-        float ratio = Math.max(0, Math.min(1, (float)(mouseX - x - 15f / scaleFactor) / (width - (float) handleWidth / scaleFactor)));
+        float widthRange = width - (float) handleWidth / scaleFactor;
+        float ratio = (widthRange != 0)
+            ? Math.max(0, Math.min(1, (float)(mouseX - x - 15f / scaleFactor) / widthRange))
+            : 0;
         value = min + ratio * (max - min);
         onValueChanged.accept(value);
     }

@@ -655,6 +655,8 @@ public class PVScreen extends WEScreen {
             String value = skinProperty.get("value").getAsString();
             String signature = skinProperty.get("signature").getAsString();
             return new SkinData(value, signature);
+        } finally {
+            connection.disconnect();
         }
     }
 
@@ -886,15 +888,11 @@ public class PVScreen extends WEScreen {
             this.action = () -> {
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 WynnExtrasConfig.INSTANCE.pvDarkmodeToggle = !WynnExtrasConfig.INSTANCE.pvDarkmodeToggle;
-
                 if(WynnExtrasConfig.INSTANCE.pvDarkmodeToggle) {
                     targetX = width - 37.5f;
                 } else {
                     targetX = 7.5f;
                 }
-
-                targetFade = WynnExtrasConfig.INSTANCE.pvDarkmodeToggle ? 1f : 0f;
-
                 WynnExtrasConfig.save();
             };
         }

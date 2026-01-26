@@ -40,27 +40,36 @@ public class FastRequeue {
             if(currScreenHandler == null) { return; }
             McUtils.sendChat("/partyfinder");
 
-            //atomicboolean instead of normal because it can be final (needed for lambda) while still being able to be changed
+            // Use TickScheduler instead of registering event listener (avoids leak)
             final AtomicBoolean opened = new AtomicBoolean(false);
-            ClientTickEvents.END_CLIENT_TICK.register(clientt -> {
-                if(opened.get()) return;
-                if(McUtils.player() == null) { return; }
-                if(clientt.currentScreen == null) { return; }
+            final int[] ticksWaited = {0};
+            final int maxTicks = 100;
 
-                ScreenHandler menu = McUtils.containerMenu();
-                if(menu == null) return;
-                if(menu.slots.size() < 50) return;
+            julianh06.wynnextras.utils.TickScheduler.runUntil(
+                // Stop condition: either found and clicked, or timeout
+                () -> opened.get() || ticksWaited[0] >= maxTicks,
+                // Action to run each tick
+                () -> {
+                    ticksWaited[0]++;
 
-                Slot slot = menu.getSlot(49);
+                    if(McUtils.player() == null) { return; }
+                    MinecraftClient mc = MinecraftClient.getInstance();
+                    if(mc.currentScreen == null) { return; }
 
-                if(slot == null) return;
-                if(slot.getStack() == null) return;
-                if(slot.getStack().getCustomName() == null) return;
-                if(slot.getStack().getCustomName().getString().contains("Queue")) {
-                    clickOnSlot(49, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
-                    opened.set(true);
+                    ScreenHandler menu = McUtils.containerMenu();
+                    if(menu == null) return;
+                    if(menu.slots.size() < 50) return;
+
+                    Slot slot = menu.getSlot(49);
+
+                    if(slot != null && slot.getStack() != null && slot.getStack().getCustomName() != null) {
+                        if(slot.getStack().getCustomName().getString().contains("Queue")) {
+                            clickOnSlot(49, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+                            opened.set(true);
+                        }
+                    }
                 }
-            });
+            );
         }
     }
 }

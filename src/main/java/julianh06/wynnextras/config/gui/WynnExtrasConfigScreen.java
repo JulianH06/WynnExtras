@@ -108,6 +108,8 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // Misc
         Category misc = new Category("Misc", GOLD);
+        misc.addOption(new BooleanOption("Chat Click Opens PV/GV", "Click player names in chat to open profile/guild",
+                () -> config.chatClickOpensPV, v -> config.chatClickOpensPV = v));
         misc.addOption(new BooleanOption("Show Item Weights", "Display Wynnpool weights",
                 () -> config.showWeight, v -> config.showWeight = v));
         misc.addOption(new BooleanOption("Show Stat Scales", "Display stat weights",

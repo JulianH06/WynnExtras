@@ -939,9 +939,10 @@ public class TreeLoader {
 
 
     private static String makeHttpRequest(String urlString) {
+        HttpURLConnection connection = null;
         try {
             URL url = new URL(urlString);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setRequestProperty("User-Agent", "WynnExtras-Mod/1.0");
             if(WynncraftApiHandler.INSTANCE.API_KEY != null) {
@@ -951,14 +952,14 @@ public class TreeLoader {
             }
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                StringBuilder response = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    response.append(line);
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line);
+                    }
+                    return response.toString();
                 }
-                reader.close();
-                return response.toString();
             } else if (responseCode == 403) {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("HTTP Request failed: 403")));
                 return null;
@@ -973,6 +974,10 @@ public class TreeLoader {
             System.err.println("[WynnExtras] Network error:");
             e.printStackTrace();
             return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
     }
 

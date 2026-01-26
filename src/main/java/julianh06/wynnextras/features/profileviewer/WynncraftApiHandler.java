@@ -45,8 +45,14 @@ import java.util.stream.Collectors;
 public class WynncraftApiHandler {
     public static WynncraftApiHandler INSTANCE = new WynncraftApiHandler();
 
-    public List<ApiAspect> aspectList = new ArrayList<>();
+    // Reuse HttpClient instance instead of creating new ones
+    private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+
+    // Use synchronized list to prevent concurrent modification
+    public List<ApiAspect> aspectList = java.util.Collections.synchronizedList(new ArrayList<>());
     public boolean[] waitingForAspectResponse = new boolean[5];
+    // Lock object for synchronizing array access
+    private final Object aspectLock = new Object();
 
     private static Command apiKeyCmd = new Command(
             "apikey",
@@ -86,13 +92,12 @@ public class WynncraftApiHandler {
     public String API_KEY;
 
     public static CompletableFuture<String> fetchUUID(String playerName) {
-        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.mojang.com/users/profiles/minecraft/" + playerName))
                 .GET()
                 .build();
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(body -> {
                     try {
@@ -112,12 +117,11 @@ public class WynncraftApiHandler {
     }
 
     public static CompletableFuture<GuildData> fetchGuildData(String prefix) {
-        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request;
 
         if (INSTANCE.API_KEY == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
-                    " Run \"/WynnExtras apikey\" to learn more.")));
+//            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
+//                    " Run \"/WynnExtras apikey\" to learn more.")));
 
 
             request = HttpRequest.newBuilder()
@@ -132,18 +136,17 @@ public class WynncraftApiHandler {
                     .build();
         }
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseGuildData);
     }
 
     public static CompletableFuture<List<ApiAspect>> fetchAspectList(String className) {
-        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request;
 
         if(INSTANCE.API_KEY == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set you api-key to upload your aspects. For more info run \"/WynnExtras apikey\""));
-            return null;
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set your api-key to upload your aspects. For more info run \"/WynnExtras apikey\""));
+            return CompletableFuture.completedFuture(null);
         } else {
             request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.wynncraft.com/v3/aspects/" + className))
@@ -152,7 +155,7 @@ public class WynncraftApiHandler {
                     .build();
         }
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAspectData);
     }
@@ -161,29 +164,73 @@ public class WynncraftApiHandler {
         List<String> classes = List.of("warrior", "shaman", "mage", "archer", "assassin");
         List<ApiAspect> aspectList = WynncraftApiHandler.INSTANCE.aspectList;
 
-        if(!aspectList.isEmpty()) return aspectList;
+        if(!aspectList.isEmpty()) {
+            return aspectList;
+        }
 
+        // Check API key before attempting fetch
+        if (INSTANCE.API_KEY == null) {
+            return aspectList; // Return empty list, message already shown by fetchAspectList
+        }
 
-        int i = 0;
-        for(String className : classes) {
-            if(WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i]) continue;
+        // Synchronize access to waitingForAspectResponse array
+        synchronized (INSTANCE.aspectLock) {
+            // Check if ALL classes are marked as waiting but list is still empty - means previous fetch failed
+            boolean allWaiting = true;
+            for (int j = 0; j < 5; j++) {
+                if (!WynncraftApiHandler.INSTANCE.waitingForAspectResponse[j]) {
+                    allWaiting = false;
+                    break;
+                }
+            }
+            if (allWaiting && aspectList.isEmpty()) {
+                // Reset all flags - previous fetch must have failed
+                for (int j = 0; j < 5; j++) {
+                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[j] = false;
+                }
+            }
 
-            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i] = true;
+            int i = 0;
+            for(String className : classes) {
+                if(WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i]) {
+                    i++;
+                    continue;
+                }
 
-            int finalI = i;
-            WynncraftApiHandler.fetchAspectList(className)
-                    .thenAccept(result -> {
-                        if(result == null) return;
-                        if(result.isEmpty()) return;
+                WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i] = true;
 
-                        WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
-                        aspectList.addAll(result);
-                    })
-                    .exceptionally(ex -> {
-                        System.err.println("Unexpected error: " + ex.getMessage());
-                        return null;
-                    });
-            i++;
+                int finalI = i;
+                CompletableFuture<List<ApiAspect>> future = WynncraftApiHandler.fetchAspectList(className);
+                if (future != null) {
+                    future.thenAccept(result -> {
+                                if(result == null) return;
+                                if(result.isEmpty()) return;
+
+                                synchronized (INSTANCE.aspectLock) {
+                                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                                }
+                                // Only add aspects that aren't already in the list (prevent duplicates)
+                                // aspectList is already synchronized, but we need to check-then-add atomically
+                                synchronized (aspectList) {
+                                    for (ApiAspect aspect : result) {
+                                        boolean alreadyExists = aspectList.stream()
+                                            .anyMatch(existing -> existing.getName().equals(aspect.getName()));
+                                        if (!alreadyExists) {
+                                            aspectList.add(aspect);
+                                        }
+                                    }
+                                }
+                            })
+                            .exceptionally(ex -> {
+                                System.err.println("Unexpected error fetching aspects: " + ex.getMessage());
+                                synchronized (INSTANCE.aspectLock) {
+                                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                                }
+                                return null;
+                            });
+                }
+                i++;
+            }
         }
 
         return aspectList;
@@ -197,12 +244,11 @@ public class WynncraftApiHandler {
             }
 
             String formattedUUID = formatUUID(rawUUID);
-            HttpClient client = HttpClient.newHttpClient();
             HttpRequest request;
 
             if (INSTANCE.API_KEY == null) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
-                        " Run \"/WynnExtras apikey\" to learn more.")));
+//                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
+//                        " Run \"/WynnExtras apikey\" to learn more.")));
 
 
                 request = HttpRequest.newBuilder()
@@ -217,7 +263,7 @@ public class WynncraftApiHandler {
                         .build();
             }
 
-            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenApply(HttpResponse::body)
                     .thenApply(WynncraftApiHandler::parsePlayerData);
         });
@@ -230,7 +276,7 @@ public class WynncraftApiHandler {
         }
 
         if(INSTANCE.API_KEY == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set you api-key to upload your aspects. For more info run \"/we apikey\""));
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set your api-key to upload your aspects. For more info run \"/we apikey\""));
             return CompletableFuture.completedFuture(new FetchResult(FetchStatus.NOKEYSET, null));
         }
 
@@ -290,7 +336,7 @@ public class WynncraftApiHandler {
 
     public static void processAspects(Map<String, Pair<String, String>> map) {
         if(INSTANCE.API_KEY == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set you api-key to upload your aspects. For more info run \"/WynnExtras apikey\""));
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set your api-key to upload your aspects. For more info run \"/WynnExtras apikey\""));
             return;
         }
 
@@ -304,6 +350,11 @@ public class WynncraftApiHandler {
             aspects.add(aspect);
         }
 
+        if (McUtils.player() == null) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cCannot upload aspects - player not loaded"));
+            return;
+        }
+
         User user = new User();
         user.setUuid(McUtils.player().getUuidAsString());
         user.setPlayerName(McUtils.playerName());
@@ -314,11 +365,11 @@ public class WynncraftApiHandler {
         postPlayerAspectData(user).thenAccept(result -> {
             if (result.status() == FetchStatus.OK) {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSuccessfully uploaded your aspects!"));
-            } else if (result.status == FetchStatus.NOKEYSET) {
+            } else if (result.status() == FetchStatus.NOKEYSET) {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§You need to set your api-key to use this feature. Run \"/we apikey\" for more information."));
-            } else if (result.status == FetchStatus.FORBIDDEN) {
+            } else if (result.status() == FetchStatus.FORBIDDEN) {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4You need to upload your own aspects first to view other peoples aspects. Run \"/we apikey\" for more information."));
-            } else if (result.status == FetchStatus.UNAUTHORIZED) {
+            } else if (result.status() == FetchStatus.UNAUTHORIZED) {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4The api-key you have set is not connected to your minecraft account. Run \"/we apikey\" for more information."));
             } else {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4Error: " + result.status()));
@@ -433,12 +484,11 @@ public class WynncraftApiHandler {
 
 
     public static CompletableFuture<AbilityMapData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {
-        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request;
 
         if (INSTANCE.API_KEY == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
-                    " Run \"/WynnExtras apikey\" to learn more.")));
+//            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§4You currently don't have an api key set, some stats may be hidden to you." +
+//                    " Run \"/WynnExtras apikey\" to learn more.")));
 
 
             request = HttpRequest.newBuilder()
@@ -453,35 +503,29 @@ public class WynncraftApiHandler {
                     .build();
         }
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAbilityMapData);
     }
 
     public static CompletableFuture<AbilityMapData> fetchClassAbilityMap(String className) {
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request;
-
-        request = HttpRequest.newBuilder()
+        HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.wynncraft.com/v3/ability/map/" + className))
                 .GET()
                 .build();
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAbilityMapData);
     }
 
     public static CompletableFuture<AbilityTreeData> fetchClassAbilityTree(String className) {
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request;
-
-        request = HttpRequest.newBuilder()
+        HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.wynncraft.com/v3/ability/tree/" + className))
                 .GET()
                 .build();
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAbilityTreeData);
     }
@@ -507,8 +551,6 @@ public class WynncraftApiHandler {
     }
 
     private static List<ApiAspect> parseAspectData(String json) {
-        System.out.println(json);
-
         Gson gson = new GsonBuilder()
                 .registerTypeAdapter(ApiAspect.Icon.class, new ApiAspect.IconDeserializer())
                 .create();
@@ -547,6 +589,11 @@ public class WynncraftApiHandler {
 
 
     public static void load() {
+        if (McUtils.player() == null) {
+            System.err.println("[WynnExtras] Cannot load API key - player not loaded");
+            return;
+        }
+
         Path CONFIG_PATH = FabricLoader.getInstance()
                 .getConfigDir()
                 .resolve("wynnextras/" + McUtils.player().getUuid().toString() + "/apikeyDoNotShare.json");
@@ -566,6 +613,11 @@ public class WynncraftApiHandler {
     }
 
     public static void save() {
+        if (McUtils.player() == null) {
+            System.err.println("[WynnExtras] Cannot save API key - player not loaded");
+            return;
+        }
+
         Path CONFIG_PATH = FabricLoader.getInstance()
                 .getConfigDir()
                 .resolve("wynnextras/" + McUtils.player().getUuid().toString() + "/apikeyDoNotShare.json");
@@ -639,14 +691,13 @@ public class WynncraftApiHandler {
                 newStyle = newStyle.withBold(true);
             }
 
-            // Font setting disabled - StyleSpriteSource has mapping issues in 1.21.11
-            // if (classAttr != null && !classAttr.isEmpty()) {
-            //     if (classAttr.contains("font-common")) {
-            //         newStyle = newStyle.withFont(new StyleSpriteSource.Font(Identifier.of("minecraft", "common")));
-            //     } else if (classAttr.contains("font-ascii")) {
-            //         newStyle = newStyle.withFont(new StyleSpriteSource.Font(Identifier.of("minecraft", "default")));
-            //     }
-            // }
+            if (classAttr != null && !classAttr.isEmpty()) {
+                if (classAttr.contains("font-common")) {
+                    newStyle = newStyle.withFont(new StyleSpriteSource.Font(Identifier.of("minecraft", "common")));
+                } else if (classAttr.contains("font-ascii")) {
+                    newStyle = newStyle.withFont(new StyleSpriteSource.Font(Identifier.of("minecraft", "default")));
+                }
+            }
 
             Text parsedInner = parseSpan(inner, newStyle);
             MutableText piece = parsedInner instanceof MutableText ? (MutableText) parsedInner : Text.literal(parsedInner.getString()).setStyle(newStyle);

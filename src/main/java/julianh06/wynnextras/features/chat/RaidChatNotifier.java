@@ -224,16 +224,12 @@ public class RaidChatNotifier {
                 String progress = detector.extractProgress(msg);
                 String finalMsg = detector.getFormattedMessage(progress, timestamp);
 
-                new Thread(() -> {
-                    try {
-                        Thread.sleep(20);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
+                // Use TickScheduler instead of creating a thread (1 tick delay instead of 20ms)
+                julianh06.wynnextras.utils.TickScheduler.runAfterTicks(1, () -> {
                     if (!finalMsg.isEmpty()) {
                         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(finalMsg)));
                     }
-                }).start();
+                });
 
                 return;
             }
@@ -376,6 +372,10 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
+            if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
+                return "§bCompleted Seal " + progress + " §c@ " + timestamp;
+            }
+
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
 
             String key = PB_PREFIX + "_" + progress;
@@ -417,6 +417,10 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
+            if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
+                return "§bAdded light " + progress + " §c@ " + timestamp;
+            }
+
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
             String key = PB_PREFIX + "_" + progress;
 
@@ -458,6 +462,10 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
+            if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
+                return "§bKilled Shadowling " + progress + " §c@ " + timestamp;
+            }
+
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
 
             if ("3/3".equals(progress) && Time.now().timestamp() >= disableChiropUntil && WynnExtrasConfig.INSTANCE.chiropTimer) {
@@ -484,30 +492,22 @@ public class RaidChatNotifier {
         }
 
         private void startSpawnCountdown() {
-            new Thread(() -> {
-                try {
-                    for (int i = 7; i >= 0; i--) {
-                        int countdown = i;
-
-                        MinecraftClient.getInstance().execute(() ->
-                                ChatUtils.displayTitle(
-                                        "§cSPAWNING IN: §f" + countdown,
-                                        "",
-                                        20, 0, 0
-                                )
-                        );
-
-                        Thread.sleep(1000);
-                    }
-
-                    MinecraftClient.getInstance().execute(() ->
-                            ChatUtils.displayTitle("", "", 0, 0, 0)
+            // Use TickScheduler instead of creating a thread (20 ticks = 1 second)
+            for (int i = 7; i >= 0; i--) {
+                final int countdown = i;
+                julianh06.wynnextras.utils.TickScheduler.runAfterTicks((7 - i) * 20, () -> {
+                    ChatUtils.displayTitle(
+                            "§cSPAWNING IN: §f" + countdown,
+                            "",
+                            20, 0, 0
                     );
+                });
+            }
 
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }).start();
+            // Clear title after countdown finishes (after 8 seconds)
+            julianh06.wynnextras.utils.TickScheduler.runAfterTicks(8 * 20, () -> {
+                ChatUtils.displayTitle("", "", 0, 0, 0);
+            });
         }
     }
 

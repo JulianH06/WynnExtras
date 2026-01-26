@@ -92,8 +92,10 @@ public class SkinManager {
                     return textureJson.getAsJsonObject("textures").getAsJsonObject("SKIN").get("url").getAsString();
                 }
             }
+            throw new IOException("Skin-URL not found");
+        } finally {
+            connection.disconnect();
         }
-        throw new IOException("Skin-URL not found");
     }
 
     private static NativeImage downloadSkin(String skinUrl) throws IOException {
@@ -120,6 +122,8 @@ public class SkinManager {
                     "(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})",
                     "$1-$2-$3-$4-$5"
             ));
+        } finally {
+            connection.disconnect();
         }
     }
 }
