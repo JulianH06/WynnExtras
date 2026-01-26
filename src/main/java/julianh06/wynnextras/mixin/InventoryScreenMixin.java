@@ -30,9 +30,6 @@ import static julianh06.wynnextras.core.WynnExtras.normalGUIScale;
 
 @Mixin(Screen.class)
 public class InventoryScreenMixin {
-    @Unique
-    private static WynnExtrasConfig config;
-
     @Inject(method = "renderInGameBackground", at = @At("HEAD"), cancellable = true)
     public void renderInGameBackground(DrawContext context, CallbackInfo ci) {
         MinecraftClient client = MinecraftClient.getInstance();
@@ -51,16 +48,14 @@ public class InventoryScreenMixin {
             ci.cancel();
         }
 
-        if (config == null) config = WynnExtrasConfig.INSTANCE;
-
-        if(config.differentGUIScale) {
+        if(WynnExtrasConfig.INSTANCE.differentGUIScale) {
             if(normalGUIScale == -1) {
                 normalGUIScale = MinecraftClient.getInstance().options.getGuiScale().getValue();
-                MinecraftClient.getInstance().options.getGuiScale().setValue(config.customGUIScale);
+                MinecraftClient.getInstance().options.getGuiScale().setValue(WynnExtrasConfig.INSTANCE.customGUIScale);
             }
         }
 
-        if(!config.toggleBankOverlay) {
+        if(!WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
             Container container = Models.Container.getCurrentContainer();
             if (container instanceof AccountBankContainer ||
                 container instanceof CharacterBankContainer ||
