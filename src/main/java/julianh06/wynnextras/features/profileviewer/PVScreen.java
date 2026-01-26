@@ -899,6 +899,10 @@ public class PVScreen extends WEScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             drawImageWithFade(darkmodeToggleBackgroundDark, darkmodeToggleBackground, x, y, width, height, ui);
 
+            float progress = Math.abs(currentX - 7.5f);
+            float maxDistance = width - 37.5f - 7.5f;
+            float targetFade = (progress / maxDistance);
+
             ui.drawImage(sun, x + currentX, y + 22.5f, 30, 30, 1 - fade);
             ui.drawImage(moon, x + currentX, y + 22.5f, 30, 30, fade);
 
@@ -917,6 +921,8 @@ public class PVScreen extends WEScreen {
             }
 
             fade += (targetFade - fade) * 0.15f;
+            if(fade + 0.01 > targetFade) fade = targetFade;
+            if(fade - 0.01 < targetFade) fade = targetFade;
             fade = Math.clamp(fade, 0f, 1f);
         }
 
