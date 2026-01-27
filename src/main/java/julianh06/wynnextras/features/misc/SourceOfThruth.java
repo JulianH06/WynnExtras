@@ -17,7 +17,7 @@ import java.util.List;
 
 public class SourceOfThruth extends WEScreen {
     private static Command conchCommand = new Command(
-            "conch",
+            "magicconch",
             "",
             context -> {
                 WEScreen.open(SourceOfThruth::new);
