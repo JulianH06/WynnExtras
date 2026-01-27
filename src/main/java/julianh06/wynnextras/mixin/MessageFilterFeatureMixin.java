@@ -15,16 +15,8 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 @Mixin(MessageFilterFeature.class)
 public class MessageFilterFeatureMixin {
-    @Unique
-    private static WynnExtrasConfig config;
-
-
     @Inject(method = "onMessage", at = @At("TAIL"), remap = false)
     void blockMessage(ChatMessageEvent.Match e, CallbackInfo ci) {
-        if(config == null) {
-            config = WynnExtrasConfig.INSTANCE;
-        }
-
         String raw = e.getMessage().withoutFormatting().getString();
         String msgLower = raw.toLowerCase(Locale.ROOT);
 
@@ -32,7 +24,7 @@ public class MessageFilterFeatureMixin {
             for (Pattern pattern : RaidChatNotifier.BLOCKED_PATTERNS) {
                 if (pattern.matcher(msgLower).find()
                         && !msgLower.contains("[wynnextras]")
-                        && config.toggleRaidTimestamps) {
+                        && WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) {
                     RaidChatNotifier.handleMessage(e.getMessage().withoutFormatting().getString());
                     e.cancelChat();
                     return;
@@ -40,7 +32,7 @@ public class MessageFilterFeatureMixin {
             }
         }
 
-        for (String blockedWord : config.blockedWords) {
+        for (String blockedWord : WynnExtrasConfig.INSTANCE.blockedWords) {
             if (msgLower.contains(blockedWord.toLowerCase())) {
                 e.cancelChat();
             }

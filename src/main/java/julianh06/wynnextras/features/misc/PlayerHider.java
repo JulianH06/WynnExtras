@@ -21,8 +21,6 @@ import java.util.List;
 import static julianh06.wynnextras.features.render.PlayerRenderFilter.*;
 
 public class PlayerHider {
-    private static WynnExtrasConfig config;
-
     private static SubCommand toggleSubCmd;
 
     private static SubCommand addSubCmd;
@@ -40,19 +38,15 @@ public class PlayerHider {
     static boolean commandsInitialized = false;
 
     public static void registerBossPlayerHider() {
-        if(config == null) {
-            config = WynnExtrasConfig.INSTANCE;
-        }
-
         ClientTickEvents.START_CLIENT_TICK.register((tick) -> {
 
-            if(config != null && !commandsInitialized) {
+            if(WynnExtrasConfig.INSTANCE != null && !commandsInitialized) {
                 toggleSubCmd = new SubCommand(
                         "toggle",
                         "",
                         context -> {
-                            config.playerHiderToggle = !config.playerHiderToggle;
-                            if(config.playerHiderToggle) {
+                            WynnExtrasConfig.INSTANCE.playerHiderToggle = !WynnExtrasConfig.INSTANCE.playerHiderToggle;
+                            if(WynnExtrasConfig.INSTANCE.playerHiderToggle) {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Playerhider")));
                             } else {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Playerhider")));
@@ -73,7 +67,7 @@ public class PlayerHider {
                                 McUtils.sendMessageToClient(Text.of("Name argument is empty! Usage: /WynnExtras playerhider add <player>"));
                                 return 1;
                             }
-                            config.hiddenPlayers.add(arg);
+                            WynnExtrasConfig.INSTANCE.hiddenPlayers.add(arg);
                             McUtils.sendMessageToClient(Text.of("Added " + arg + " to the player hider list."));
                             WynnExtrasConfig.save();
                             return 1;
@@ -91,7 +85,7 @@ public class PlayerHider {
                                 McUtils.sendMessageToClient(Text.of("Name argument is empty! Usage: /WynnExtras playerhider remove <player>"));
                                 return 1;
                             }
-                            boolean removed = config.hiddenPlayers.remove(arg);
+                            boolean removed = WynnExtrasConfig.INSTANCE.hiddenPlayers.remove(arg);
                             if(removed) {
                                 McUtils.sendMessageToClient(Text.of("Removed " + arg + " from the player hider list."));
                                 WynnExtrasConfig.save();
@@ -108,9 +102,9 @@ public class PlayerHider {
                         "hideall",
                         "",
                         context -> {
-                            config.hideAllPlayers = !config.hideAllPlayers;
-                            if(config.hideAllPlayers) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players (range: " + config.maxHideDistance + ")")));
+                            WynnExtrasConfig.INSTANCE.hideAllPlayers = !WynnExtrasConfig.INSTANCE.hideAllPlayers;
+                            if(WynnExtrasConfig.INSTANCE.hideAllPlayers) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players (range: " + WynnExtrasConfig.INSTANCE.maxHideDistance + ")")));
                             } else {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Hide All Players")));
                             }
@@ -125,9 +119,9 @@ public class PlayerHider {
                         "hideallinwar",
                         "",
                         context -> {
-                            config.hideAllPlayersInWar = !config.hideAllPlayersInWar;
-                            if(config.hideAllPlayersInWar) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players in Wars (range: " + config.maxHideDistance + ")")));
+                            WynnExtrasConfig.INSTANCE.hideAllPlayersInWar = !WynnExtrasConfig.INSTANCE.hideAllPlayersInWar;
+                            if(WynnExtrasConfig.INSTANCE.hideAllPlayersInWar) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players in Wars (range: " + WynnExtrasConfig.INSTANCE.maxHideDistance + ")")));
                             } else {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Hide All Players in Wars")));
                             }
@@ -169,7 +163,7 @@ public class PlayerHider {
                     continue;
                 }
 
-                if(!config.playerHiderToggle) {
+                if(!WynnExtrasConfig.INSTANCE.playerHiderToggle) {
                     if(isHidden(player)) { show(player); }
                     return;
                 }
@@ -181,10 +175,10 @@ public class PlayerHider {
                 }
 
                 // Check if in war and hideAllInWar is enabled
-                boolean inWarAndHiding = config.hideAllPlayersInWar && Models.War.isWarActive();
+                boolean inWarAndHiding = WynnExtrasConfig.INSTANCE.hideAllPlayersInWar && Models.War.isWarActive();
 
                 // Hide all players mode, in war mode, or specific player in list
-                if(config.hideAllPlayers || inWarAndHiding || config.hiddenPlayers.toString().toLowerCase().contains(player.getName().getString().toLowerCase())) {
+                if(WynnExtrasConfig.INSTANCE.hideAllPlayers || inWarAndHiding || WynnExtrasConfig.INSTANCE.hiddenPlayers.toString().toLowerCase().contains(player.getName().getString().toLowerCase())) {
                     hide(player);
                 } else {
                     if(isHidden(player)) { show(player); }

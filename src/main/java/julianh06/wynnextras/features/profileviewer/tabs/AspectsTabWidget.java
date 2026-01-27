@@ -1,7 +1,6 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
 import com.wynntils.core.components.Handlers;
-import com.wynntils.core.components.Managers;
 import com.wynntils.core.persisted.config.Config;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.features.inventory.ItemHighlightFeature;
@@ -13,7 +12,6 @@ import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.Texture;
-import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
@@ -352,7 +350,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                         continue;
                     }
                     int amount = getAspectAmountForClass(currentPage, warriorAspects, shamanAspects, mageAspects, archerAspects, assassinAspects);
-                    //ctx.getMatrices().push();
 
                     int xPos;
                     if(amount % 2 == 0) {
@@ -383,10 +380,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         if(currentHovered == null) return;
 
-        //ctx.getMatrices().push();
-        //ctx.getMatrices().translate(0.0F, 0.0F, 8000.0F);
         ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, currentHovered.getTooltip(Item.TooltipContext.DEFAULT, McUtils.player(), TooltipType.BASIC), mouseX, mouseY);
-        //ctx.getMatrices().pop();
     }
 
     private static int getAspectAmountForClass(Page page, List<ApiAspect> warriorAspects, List<ApiAspect> shamanAspects, List<ApiAspect> mageAspects, List<ApiAspect> archerAspects, List<ApiAspect> assassinAspects) {
@@ -621,13 +615,13 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             }
             if (!Objects.equals(color, CustomColor.NONE)) {
                 RenderUtils.drawTexturedRect(
-                    ctx,
-                    Texture.HIGHLIGHT.identifier(),
-                    color, x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
-                    highlightTexture.get().ordinal() * 18,
-                    0.0F, 18.0F, 18.0F,
-                    Texture.HIGHLIGHT.width(),
-                    Texture.HIGHLIGHT.height());
+                        ctx,
+                        Texture.HIGHLIGHT.identifier(),
+                        color, x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
+                        highlightTexture.get().ordinal() * 18,
+                        0.0F, 18.0F, 18.0F,
+                        Texture.HIGHLIGHT.width(),
+                        Texture.HIGHLIGHT.height());
             }
             if(playerAspect == null) return;
             ItemStack stack = toItemStack(aspect, isMaxed(playerAspect), tierInt);

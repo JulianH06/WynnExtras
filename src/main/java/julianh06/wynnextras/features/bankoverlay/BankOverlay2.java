@@ -369,7 +369,7 @@ public class BankOverlay2 extends WEHandledScreen {
             scissorx2 = xStart + 166 * xFitAmount;
             scissory2 = yStart + 100 * (yFitAmount - 1);
 
-            //context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
+            context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
             for(PageWidget page : pages) {
                 float invX = xStart + (visuali % xFitAmount) * (162 + 4);
                 float invY = yStart + Math.floorDiv(visuali, xFitAmount) * (90 + 4 + 10) - actualOffset;
@@ -419,7 +419,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 visuali++;
             }
 
-            //context.disableScissor();
+            context.disableScissor();
 
             inventoryWidget.setBounds(xStart + 160, yStart + (yFitAmount - 1) * (90 + 4 + 10) - 3, (int) (176 * ui.getScaleFactor()), (int) (86 * ui.getScaleFactor()));
             inventoryWidget.setItems(buildInventoryForIndex(0, true));

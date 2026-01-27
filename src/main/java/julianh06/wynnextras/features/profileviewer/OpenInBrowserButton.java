@@ -7,6 +7,7 @@ import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.utils.LinkUtils;
 import julianh06.wynnextras.utils.overlays.EasyButton;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -29,7 +30,7 @@ public class OpenInBrowserButton extends EasyButton {
     public void click() {
         try {
             if (Desktop.isDesktopSupported()) {
-                Desktop.getDesktop().browse(new URI(url));
+                LinkUtils.openLink(url);
             } else {
                 System.err.println("Error while opening the link");
             }
