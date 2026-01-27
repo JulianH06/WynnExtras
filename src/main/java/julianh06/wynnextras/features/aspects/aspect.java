@@ -440,6 +440,9 @@ public class aspect {
                 for (String gambit : gambitsForChat) {
                     McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("  " + gambit));
                 }
+
+                // Upload to crowdsourcing API
+                WynncraftApiHandler.uploadGambits(gambitsForSave);
             } else {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo gambits detected"));
             }
@@ -590,10 +593,10 @@ public class aspect {
             if (foundAspects.isEmpty()) {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§c  No aspects detected"));
             } else {
-                // Upload to API with throttling (once per minute per raid, unless reset time)
+                // Upload to crowdsourcing API (loot pool without personal progress)
                 if (canUpload(selectedRaid)) {
-                    System.out.println("[WynnExtras] Found " + foundAspects.size() + " aspects, uploading to API...");
-                    WynncraftApiHandler.processAspects(foundAspects);
+                    System.out.println("[WynnExtras] Found " + foundAspects.size() + " aspects, uploading to crowdsourcing API...");
+                    WynncraftApiHandler.uploadLootPool(selectedRaid, lootPoolDataFull);
                     lastUploadTime.put(selectedRaid, System.currentTimeMillis());
                 } else {
                     long timeSinceLastUpload = System.currentTimeMillis() - lastUploadTime.get(selectedRaid);

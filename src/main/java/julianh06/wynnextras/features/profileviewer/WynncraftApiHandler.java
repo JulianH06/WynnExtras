@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.profileviewer;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
@@ -485,7 +486,268 @@ public class WynncraftApiHandler {
         return sum;
     }
 
+    /**
+     * Upload loot pool to crowdsourcing API (without personal progress)
+     * @param raidType NOTG, NOL, TCC, TNA
+     * @param aspects List of aspects with name, rarity, requiredClass (no amount/tier)
+     */
+    public static void uploadLootPool(String raidType, List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry> aspects) {
+        if(INSTANCE.API_KEY == null) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cYou need to set your api-key to upload loot pools. Run \"/we apikey\" for more info."));
+            return;
+        }
 
+        try {
+            // Build JSON payload
+            JsonObject payload = new JsonObject();
+            JsonArray aspectsArray = new JsonArray();
+
+            for (julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry aspect : aspects) {
+                JsonObject aspectJson = new JsonObject();
+                aspectJson.addProperty("name", aspect.name);
+                aspectJson.addProperty("rarity", aspect.rarity);
+                aspectJson.addProperty("requiredClass", extractRequiredClass(aspect.tierInfo));
+                aspectsArray.add(aspectJson);
+            }
+
+            payload.add("aspects", aspectsArray);
+
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://wynnextras.com/lootpool/" + raidType))
+                    .header("Content-Type", "application/json")
+                    .header("Wynncraft-Api-Key", INSTANCE.API_KEY)
+                    .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                    .timeout(Duration.ofSeconds(8))
+                    .build();
+
+            client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(response -> {
+                        int code = response.statusCode();
+                        if (code == 200) {
+                            JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
+                            String status = result.get("status").getAsString();
+
+                            if (status.equals("approved")) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aLoot pool for §e" + raidType + " §aapproved!"));
+                            } else {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Loot pool submitted. Waiting for more confirmations."));
+                            }
+                        } else if (code == 401) {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cInvalid API key"));
+                        } else {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading loot pool: " + code));
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Failed to upload loot pool: " + ex.getMessage());
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cFailed to upload loot pool"));
+                        return null;
+                    });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError preparing loot pool upload"));
+        }
+    }
+
+    /**
+     * Upload gambits to crowdsourcing API
+     * @param gambits List of gambits with name and description
+     */
+    public static void uploadGambits(List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry> gambits) {
+        if(INSTANCE.API_KEY == null) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cYou need to set your api-key to upload gambits. Run \"/we apikey\" for more info."));
+            return;
+        }
+
+        try {
+            // Build JSON payload
+            JsonObject payload = new JsonObject();
+            JsonArray gambitsArray = new JsonArray();
+
+            for (julianh06.wynnextras.features.aspects.GambitData.GambitEntry gambit : gambits) {
+                JsonObject gambitJson = new JsonObject();
+                gambitJson.addProperty("name", gambit.name);
+                gambitJson.addProperty("description", gambit.description);
+                gambitsArray.add(gambitJson);
+            }
+
+            payload.add("gambits", gambitsArray);
+
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://wynnextras.com/gambit"))
+                    .header("Content-Type", "application/json")
+                    .header("Wynncraft-Api-Key", INSTANCE.API_KEY)
+                    .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                    .timeout(Duration.ofSeconds(8))
+                    .build();
+
+            client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(response -> {
+                        int code = response.statusCode();
+                        if (code == 200) {
+                            JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
+                            String status = result.get("status").getAsString();
+
+                            if (status.equals("approved")) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aGambits approved for today!"));
+                            } else {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Gambits submitted. Waiting for confirmation."));
+                            }
+                        } else if (code == 401) {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cInvalid API key"));
+                        } else {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading gambits: " + code));
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Failed to upload gambits: " + ex.getMessage());
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cFailed to upload gambits"));
+                        return null;
+                    });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError preparing gambits upload"));
+        }
+    }
+
+    /**
+     * Extract required class from tier info string
+     * Format: "Class Req: Warrior" or similar
+     */
+    private static String extractRequiredClass(String tierInfo) {
+        if (tierInfo == null) return null;
+
+        String[] lines = tierInfo.split("\n");
+        for (String line : lines) {
+            if (line.contains("Class Req:")) {
+                return line.replace("Class Req:", "").trim();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Fetch crowdsourced loot pool from API
+     * @param raidType NOTG, NOL, TCC, TNA
+     * @return CompletableFuture with list of aspects or null if not available
+     */
+    public static CompletableFuture<List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry>> fetchCrowdsourcedLootPool(String raidType) {
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(3))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://wynnextras.com/lootpool/" + raidType))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+
+            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(response -> {
+                        if (response.statusCode() != 200) {
+                            System.out.println("No crowdsourced loot pool for " + raidType + ": " + response.statusCode());
+                            return null;
+                        }
+
+                        try {
+                            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                            JsonArray aspects = json.getAsJsonArray("aspects");
+
+                            List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry> result = new ArrayList<>();
+                            for (int i = 0; i < aspects.size(); i++) {
+                                JsonObject aspect = aspects.get(i).getAsJsonObject();
+                                String name = aspect.get("name").getAsString();
+                                String rarity = aspect.get("rarity").getAsString();
+                                String requiredClass = aspect.has("requiredClass") && !aspect.get("requiredClass").isJsonNull()
+                                        ? aspect.get("requiredClass").getAsString() : null;
+
+                                result.add(new julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry(
+                                        name, rarity, "", ""
+                                ));
+                            }
+
+                            System.out.println("Fetched " + result.size() + " aspects from crowdsourced pool for " + raidType);
+                            return result;
+                        } catch (Exception e) {
+                            System.err.println("Error parsing crowdsourced loot pool: " + e.getMessage());
+                            return null;
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Failed to fetch crowdsourced loot pool: " + ex.getMessage());
+                        return null;
+                    });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    /**
+     * Fetch crowdsourced gambits from API
+     * @return CompletableFuture with list of gambits or null if not available
+     */
+    public static CompletableFuture<List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry>> fetchCrowdsourcedGambits() {
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(3))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://wynnextras.com/gambit"))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+
+            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(response -> {
+                        if (response.statusCode() != 200) {
+                            System.out.println("No crowdsourced gambits: " + response.statusCode());
+                            return null;
+                        }
+
+                        try {
+                            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                            JsonArray gambits = json.getAsJsonArray("gambits");
+
+                            List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry> result = new ArrayList<>();
+                            for (int i = 0; i < gambits.size(); i++) {
+                                JsonObject gambit = gambits.get(i).getAsJsonObject();
+                                String name = gambit.get("name").getAsString();
+                                String description = gambit.get("description").getAsString();
+
+                                result.add(new julianh06.wynnextras.features.aspects.GambitData.GambitEntry(name, description));
+                            }
+
+                            System.out.println("Fetched " + result.size() + " gambits from crowdsourced data");
+                            return result;
+                        } catch (Exception e) {
+                            System.err.println("Error parsing crowdsourced gambits: " + e.getMessage());
+                            return null;
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Failed to fetch crowdsourced gambits: " + ex.getMessage());
+                        return null;
+                    });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(null);
+        }
+    }
 
 
     public static CompletableFuture<AbilityMapData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {
