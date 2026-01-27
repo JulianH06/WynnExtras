@@ -37,6 +37,7 @@ public class maintracking {
 
     //TODO: interfaces tracken und dann zeug aufrufen
     static boolean inTreeMenu = false;
+    static boolean inCompassMenu = false;
     static boolean AspectScanreq = false;
     static boolean inAspectMenu = false;
     static boolean nextPage = false;
@@ -58,6 +59,7 @@ public class maintracking {
             if (client.player == null || client.world == null) {
                 return;
             }
+
             Screen currScreen = client.currentScreen;
             if (currScreen == null) {
                 scanDone = false;
@@ -72,9 +74,15 @@ public class maintracking {
 
             String InventoryTitle = currScreen.getTitle().getString();
             inTreeMenu = InventoryTitle.equals("\uDAFF\uDFEA\uE000");
+            inCompassMenu = InventoryTitle.equals("\uDAFF\uDFDC\uE003");
             inAspectMenu = InventoryTitle.equals("\uDAFF\uDFEA\uE002");
             inRaidChest = InventoryTitle.equals("\uDAFF\uDFEA\uE00E");
 
+            if(inCompassMenu && AspectScanreq) {
+                TreeLoader.clickOnNameInInventory("Ability Tree", screen, MinecraftClient.getInstance());
+                aspect.setSearchedPages(0);
+                return;
+            }
             if(inTreeMenu && AspectScanreq){
                 TreeLoader.clickOnNameInInventory("Aspects", screen, MinecraftClient.getInstance());
                 aspect.setSearchedPages(0);

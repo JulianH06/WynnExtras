@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.misc;
 
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.sound.ModSounds;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -15,6 +16,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SourceOfThruth extends WEScreen {
+    private static Command conchCommand = new Command(
+            "conch",
+            "",
+            context -> {
+                WEScreen.open(SourceOfThruth::new);
+                return 1;
+            },null, null
+    );
+
     SourceOfTruthWidget sourceOfTruthWidget = null;
     public static List<SoundEvent> sounds = new ArrayList<>();
     static String answer = "";

@@ -49,6 +49,7 @@ public class TreeLoader {
     static int ticksSinceLastAction = 0;
     static int socketClicksPerformed = 0;
 
+    static boolean inCompassMenu = false;
     static boolean inTreeMenu = false;
     static boolean inResetMenu = false;
     static boolean wasStarted = false;
@@ -94,10 +95,10 @@ public class TreeLoader {
 
     private static class PendingClick {
         AbilityMapData.Node node;
-        String abilityName; // "Unlock <Ability>" bereinigt
+        String abilityName;
         int attempts;
-        int ticksWaiting; // Ticks seit letztem Klick
-        int expectedPage; // Seite, auf der der Klick ausgeführt wurde
+        int ticksWaiting;
+        int expectedPage;
         PendingClick(AbilityMapData.Node node, String abilityName, int expectedPage) {
             this.node = node;
             this.abilityName = abilityName;
@@ -113,14 +114,13 @@ public class TreeLoader {
 
     private static final int CLICK_CONFIRM_TIMEOUT_TICKS = 1;
     private static final int MAX_ATTEMPTS_PER_ABILITY = 15;
-    private static final int GUI_SETTLE_TICKS_DEFAULT = GUI_SETTLE_TICKS; // vorhandener Wert
+    private static final int GUI_SETTLE_TICKS_DEFAULT = GUI_SETTLE_TICKS;
     private static PendingClick pendingClick = null;
     private static int lagTickCounter = 0;
     private static boolean fastMode = true;
 
-    // --- Neue/zusätzliche Felder in deiner Klasse ---
     private static class PendingResetClick {
-        String stage; // "socket" oder "confirm"
+        String stage;
         int ticksWaiting;
         int attempts;
         PendingResetClick(String stage) {
@@ -154,14 +154,19 @@ public class TreeLoader {
 
             String InventoryTitle = currScreen.getTitle().getString();
             boolean oneTrue = inTreeMenu || inResetMenu;
+
+            inCompassMenu = InventoryTitle.equals("\uDAFF\uDFDC\uE003");
+            if(inCompassMenu && resetTree) {
+                TreeLoader.clickOnNameInInventory("Ability Tree", screen, MinecraftClient.getInstance());
+                return;
+            }
+
             inTreeMenu = InventoryTitle.equals("\uDAFF\uDFEA\uE000");
             inResetMenu = InventoryTitle.equals("\uDAFF\uDFEA\uE001");
             if (!inTreeMenu && !inResetMenu && !wasStarted && oneTrue) resetAll();
             if (wasStarted && inTreeMenu) wasStarted = false;
         });
 
-
-// --- Ersetzter / verbesserter Reset-Tickhandler ---
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
             if (!resetTree) return;
             MinecraftClient client = MinecraftClient.getInstance();
@@ -174,7 +179,6 @@ public class TreeLoader {
             //hasTreeManipulation = false;
             if (ticksSinceLastAction < GUI_SETTLE_TICKS) return;
 
-            // --- PendingClick / Retry logic für Shards + Confirm ---
             if (pendingReset != null && screen != null) {
                 pendingReset.ticksWaiting++;
                 if (pendingReset.ticksWaiting >= RESET_CLICK_TIMEOUT) {
@@ -194,9 +198,7 @@ public class TreeLoader {
                     return;
                 }
 
-                // prüfen ob Erfolg erkannt werden kann
                 if (pendingReset.stage.equals("socket")) {
-                    // Erfolg wenn weniger als 3 Ability Shards in screen
                     if (countOccurences("Ability Shard", screen) < 3) {
                         pendingReset = null;
                         ticksSinceLastAction = 0;
@@ -205,7 +207,6 @@ public class TreeLoader {
                         pendingReset.stage = "confirm";
                     }
                 } else if (pendingReset.stage.equals("confirm")) {
-                    // Erfolg wenn Tree Menu wieder offen oder reset beendet
                     if (inTreeMenu && !inResetMenu) {
                         pendingReset = null;
                         resetTree = false;
@@ -213,11 +214,9 @@ public class TreeLoader {
                     }
                 }
 
-                // noch warten
                 return;
             }
 
-            // --- Normale Reset-Logik ---
             if (!treeMenuWasOpened) {
                 openTreeMenu(client, player);
                 return;
@@ -236,7 +235,6 @@ public class TreeLoader {
                 return;
             }
 
-            // Shards einlegen
             if (inResetMenu && !wasReset) {
                 int shardCount = countOccurences("Ability Shard", screen);
                 if (shardCount < 3) {
@@ -268,10 +266,9 @@ public class TreeLoader {
             }
         });
 
-        // Ability Selection
         int[] abilityClickTicks = {0};
         int[] currentPage = {1};
-        AtomicInteger failCycles = new AtomicInteger(); // How many times we've cycled the list
+        AtomicInteger failCycles = new AtomicInteger();
         final int MAX_FAIL_CYCLES = 30;
 
 
@@ -281,10 +278,8 @@ public class TreeLoader {
         AtomicInteger pageSwitchTicks = new AtomicInteger();
 
 
-        // --- Ersetzter/verbesserter Tick-Handler (Ability Selection) ---
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
-            // Basisprüfungen (unverändert)
-            if(Time.now().timestamp() - lastResetTryClick < 1000) return; //wait a second after resetting the tree
+            if(Time.now().timestamp() - lastResetTryClick < 1000) return;
 
             if (abilitiesToClick2 == null || abilitiesToClick2.isEmpty()) {
                 abilityClickTicks[0] = 0;
@@ -315,7 +310,6 @@ public class TreeLoader {
             abilityClickTicks[0]++;
             if (abilityClickTicks[0] < GUI_SETTLE_TICKS_DEFAULT) return;
 
-            // Wenn gerade ein Page-Switch läuft: warten bis Inventar anders aussieht
             if (pendingPageSwitch.get()) {
                 pageSwitchTicks.incrementAndGet();
 
@@ -350,7 +344,6 @@ public class TreeLoader {
                     return;
                 }
 
-                // Solange der Wechsel nicht fertig ist → alles andere aussetzen
                 return;
             }
 
@@ -366,23 +359,19 @@ public class TreeLoader {
                 return;
             }
 
-            // Wenn ein Klick pending ist: prüfen ob bestätigt oder timeout -> retry oder skip
             if (pendingClick != null) {
                 pendingClick.ticksWaiting++;
 
                 boolean stillHasUnlock = hasUnlockPrefix(pendingClick.abilityName, screen);
 
-                // Fast Confirm: Wenn Button verschwindet → sofort weiter
                 if (!stillHasUnlock) {
                     abilitiesToClick2.removeFirst();
                     failCycles.set(0);
                     pendingClick = null;
                     abilityClickTicks[0] = 0;
-                    fastMode = true; // zurück in fast mode
+                    fastMode = true;
                 } else {
-                    // Wenn Unlock noch da ist
-                    if (pendingClick.ticksWaiting >= 2) { // nur 2 Ticks warten für schnelles Feedback
-                        // Wir nehmen an, es laggt → wechsel in "slow mode"
+                    if (pendingClick.ticksWaiting >= 2) {
                         fastMode = false;
                         lagTickCounter++;
                         if (lagTickCounter > CLICK_CONFIRM_TIMEOUT_TICKS) {
@@ -394,7 +383,6 @@ public class TreeLoader {
                     }
                 }
             }
-            // end pendingClick handling
             if(abilitiesToClick2 == null) return;
             if(abilitiesToClick2.isEmpty()) {
                 resetAll();
@@ -418,7 +406,6 @@ public class TreeLoader {
             String abilityName = extractAbilityNameFromHtml(abilityFromNode.name);
             if (abilityName == null) return; //{ abilitiesToClick2.removeFirst(); return; }
 
-            //wenn page switch: pfeil pending machen, itemstacks speichern, clicken, stacks durch iterieren, sobald einer anders ist: page switch hat geklappt
             int pageOffset = abilityNode.meta.page - currentPage[0];
             if (pageOffset != 0 && !pendingPageSwitch.get()) {
                 List<ItemStack> inv = new ArrayList<>(McUtils.containerMenu().getStacks());
@@ -438,7 +425,6 @@ public class TreeLoader {
                 pendingClick = new PendingClick(abilityNode, abilityName, currentPage[0]);
                 pendingClick.ticksWaiting = 0;
 
-                // Fast mode → sofort nächste Node vorbereiten (nicht warten)
                 if (fastMode) {
                     abilityClickTicks[0] = 0; // keine Pause
                 } else {

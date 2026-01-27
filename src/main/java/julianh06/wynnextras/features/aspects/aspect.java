@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.aspects;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.utils.TickScheduler;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -43,13 +44,11 @@ public class aspect {
     public static void openMenu(MinecraftClient client, PlayerEntity player){
         int currentSlot = player.getInventory().getSelectedSlot();
         player.getInventory().setSelectedSlot(7);
-        client.options.sneakKey.setPressed(true);
         client.interactionManager.interactItem(player, Hand.MAIN_HAND);
-        client.options.sneakKey.setPressed(false);
         player.getInventory().setSelectedSlot(currentSlot);
-//        clickOnNameInInventory("Aspects", screen, client);
         maintracking.setAspectScanreq(true);
     }
+
     public static Map<String, Pair<String, String>> AspectsInMenu() {
         currScreen = MinecraftClient.getInstance().currentScreen;
         screen = (currScreen instanceof HandledScreen) ? (HandledScreen<?>) currScreen : null;
