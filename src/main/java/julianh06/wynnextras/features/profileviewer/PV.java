@@ -1,0 +1,105 @@
+package julianh06.wynnextras.features.profileviewer;
+
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.event.ClickEvent;
+import julianh06.wynnextras.event.KeyInputEvent;
+import julianh06.wynnextras.event.TickEvent;
+import julianh06.wynnextras.features.profileviewer.data.PlayerData;
+import julianh06.wynnextras.features.profileviewer.tabs.AspectsTabWidget;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.MinecraftClient;
+import net.neoforged.bus.api.SubscribeEvent;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.List;
+
+@WEModule
+public class PV {
+    public static boolean inPV = false;
+    static boolean commandsInitialized = false;
+
+    private static Command pvCmd;
+    private static Command pvCmdNoArgs;
+
+    public static String currentPlayer = "";
+    public static PlayerData currentPlayerData;
+
+    public static Boolean openedAspectPage;
+
+    public static void register() {
+        ClientTickEvents.END_CLIENT_TICK.register((client) -> {
+            if(commandsInitialized) return;
+
+            pvCmd = new Command(
+                    "pv",
+                    "",
+                    context -> {
+                        String arg = StringArgumentType.getString(context, "player");
+                        open(arg);
+                        return 1;
+                    },
+                    null,
+                    List.of(ClientCommandManager.argument("player", StringArgumentType.word()))
+            );
+
+            pvCmdNoArgs = new Command(
+                    "pv",
+                    "",
+                    context -> {
+                        open(McUtils.player().getName().getString());
+                        return 1;
+                    },
+                    null,
+                    null
+            );
+            commandsInitialized = true;
+        });
+    }
+
+    @SubscribeEvent
+    void onTick(TickEvent event) {
+        if(PVScreen.dummy != null) {
+            PVScreen.dummy.age++;
+        }
+        if(inPV) {
+            MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new PVScreen(currentPlayer)));
+            inPV = false;
+        }
+    }
+
+    @SubscribeEvent
+    void onInput(KeyInputEvent event) {
+        if(event.getKey() != GLFW.GLFW_KEY_ENTER || event.getAction() != GLFW.GLFW_PRESS) return;
+        if(PVScreen.searchBar != null) {
+            open(PVScreen.searchBar.getInput());
+        }
+    }
+
+    public static void open(String player) {
+        currentPlayerData = null;
+        WynncraftApiHandler.fetchPlayerData(player).thenAccept(playerData -> {
+            currentPlayerData = playerData;
+        }).exceptionally(ex -> {
+            System.err.println("Error while getting the data: " + ex.getMessage());
+            return null;
+        });
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        client.send(() -> client.setScreen(null));
+        currentPlayer = player;
+        openedAspectPage = false;
+        AspectsTabWidget.currentPlayerAspectData = null;
+        AspectsTabWidget.fetchStatus = null;
+        PVScreen.dummy = null;
+        inPV = true;
+    }
+
+    @SubscribeEvent
+    void onClick(ClickEvent event) {
+        PVScreen.onClick();
+    }
+}
