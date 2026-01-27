@@ -19,6 +19,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Pair;
 
+import java.time.DayOfWeek;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +31,10 @@ public class aspect {
     //TODO: aus tree stuff zeug klauen, auf aspects page gehen, dann ausgeben aspect x:100
     static int SearchedPages = 0;
     public static final Map<String, Pair<String, String>> allAspects = new HashMap<>();
+
+    // Upload throttling for preview chests (once per minute per raid, unless it's reset time)
+    private static final Map<String, Long> lastUploadTime = new HashMap<>();
+    private static final long UPLOAD_COOLDOWN_MS = 60000; // 60 seconds
 
     public static void openMenu(MinecraftClient client, PlayerEntity player){
         int currentSlot = player.getInventory().getSelectedSlot();
@@ -317,6 +324,51 @@ public class aspect {
     }
 
     /**
+     * Check if it's currently loot pool reset time (Friday 19:00 CET, ±30 min window)
+     * During reset time, upload throttling is disabled
+     */
+    private static boolean isResetTime() {
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
+
+        // Only on Friday
+        if (now.getDayOfWeek() != DayOfWeek.FRIDAY) {
+            return false;
+        }
+
+        // Check if within 30 minutes of 19:00 (18:30 - 19:30)
+        int hour = now.getHour();
+        int minute = now.getMinute();
+
+        if (hour == 19 && minute <= 30) {
+            return true; // 19:00 - 19:30
+        }
+        if (hour == 18 && minute >= 30) {
+            return true; // 18:30 - 19:00
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if enough time has passed since last upload for this raid
+     * Returns true if upload is allowed
+     */
+    private static boolean canUpload(String raidType) {
+        // Always allow during reset time
+        if (isResetTime()) {
+            return true;
+        }
+
+        Long lastUpload = lastUploadTime.get(raidType);
+        if (lastUpload == null) {
+            return true; // Never uploaded before
+        }
+
+        long timeSinceLastUpload = System.currentTimeMillis() - lastUpload;
+        return timeSinceLastUpload >= UPLOAD_COOLDOWN_MS;
+    }
+
+    /**
      * Detects and displays all 4 daily gambits from the Party Finder menu
      * Gambit format: "Name Gambit" or "Name Name's Gambit"
      * Example: "Glutton's Gambit", "Dull Blade's Gambit"
@@ -538,9 +590,17 @@ public class aspect {
             if (foundAspects.isEmpty()) {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§c  No aspects detected"));
             } else {
-                System.out.println("[WynnExtras] Found " + foundAspects.size() + " aspects, uploading to API...");
-                // Send aspects to API (same as /we scanaspects)
-                WynncraftApiHandler.processAspects(foundAspects);
+                // Upload to API with throttling (once per minute per raid, unless reset time)
+                if (canUpload(selectedRaid)) {
+                    System.out.println("[WynnExtras] Found " + foundAspects.size() + " aspects, uploading to API...");
+                    WynncraftApiHandler.processAspects(foundAspects);
+                    lastUploadTime.put(selectedRaid, System.currentTimeMillis());
+                } else {
+                    long timeSinceLastUpload = System.currentTimeMillis() - lastUploadTime.get(selectedRaid);
+                    long secondsRemaining = (UPLOAD_COOLDOWN_MS - timeSinceLastUpload) / 1000;
+                    System.out.println("[WynnExtras] Upload throttled for " + selectedRaid + ", wait " + secondsRemaining + "s");
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Upload cooldown: wait " + secondsRemaining + "s"));
+                }
             }
 
         } catch (Exception e) {

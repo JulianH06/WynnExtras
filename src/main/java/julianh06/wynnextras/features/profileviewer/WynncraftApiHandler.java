@@ -313,14 +313,17 @@ public class WynncraftApiHandler {
                         }
 
                         if (code == 400) {
+                            System.err.println("GET ERROR 400: " + response.body());
                             return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
                         }
 
                         if (code >= 500) {
+                            System.err.println("GET SERVER ERROR: " + code + " → " + response.body());
                             return new FetchResult(FetchStatus.SERVER_ERROR, null);
                         }
 
                         if (code != 200) {
+                            System.err.println("GET ERROR: " + code + " → " + response.body());
                             return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
                         }
 
@@ -417,6 +420,8 @@ public class WynncraftApiHandler {
                         }
 
                         if (code >= 500) {
+                            System.err.println("SERVER ERROR: " + code + " → " + response.body());
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cServer error (" + code + "): " + response.body()));
                             return new FetchResult(FetchStatus.SERVER_ERROR, null);
                         }
 

@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.aspects;
 
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -13,6 +14,8 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.item.ItemStack;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 
 import java.util.ArrayList;
@@ -127,6 +130,7 @@ public class maintracking {
     static String lastPreviewChestTitle = "";
     static boolean needToClickAbilityTree = false;
     static boolean inCharacterMenu = false;
+    static int characterMenuWaitTicks = 0;
 
     public static void init(){
         // Load saved loot pool data
@@ -154,7 +158,7 @@ public class maintracking {
                 aspectsInChest = new ItemStack[5];
                 gambitDetected = false;
                 lastPreviewChestTitle = "";
-                needToClickAbilityTree = false;
+                // DON'T reset needToClickAbilityTree - it needs to persist across screen changes
                 return;
             }
 
@@ -162,38 +166,44 @@ public class maintracking {
             else screen = null;
 
             String InventoryTitle = currScreen.getTitle().getString();
+
             inTreeMenu = InventoryTitle.equals("\uDAFF\uDFEA\uE000");
             inAspectMenu = InventoryTitle.equals("\uDAFF\uDFEA\uE002");
             inRaidChest = InventoryTitle.equals("\uDAFF\uDFEA\uE00E");
             inPartyFinder = InventoryTitle.equals("\uDAFF\uDFE1\uE00C");
             // Character menu (opened with right-click on slot 7 without sneaking)
             inCharacterMenu = InventoryTitle.equals("\uDAFF\uDFDC\uE003");
+
             // Preview chests have different titles for each raid
             inPreviewChest = InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00B") || // NOTG
                              InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00C") || // NOL
                              InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00D") || // TCC
                              InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00E");   // TNA
 
-            // Character menu: click on "Ability Tree" to get to the tree menu
+            // Character menu: wait 5 ticks then click slot 9 (Ability Tree) to open the tree menu
             if(inCharacterMenu && needToClickAbilityTree){
-                needToClickAbilityTree = false;
-                // Debug: print all slot names to find Ability Tree
-                if (screen != null) {
-                    for (int i = 0; i < screen.getScreenHandler().slots.size(); i++) {
-                        var slot = screen.getScreenHandler().slots.get(i);
-                        if (slot.hasStack()) {
-                            String name = slot.getStack().getName().getString().replaceAll("§.", "");
-                            if (!name.isEmpty() && !name.equals("Air")) {
-                                System.out.println("[WynnExtras] Slot " + i + ": " + name);
+                ScreenHandler menu = McUtils.containerMenu();
+                if(menu == null) return;
+
+                characterMenuWaitTicks++;
+                if(characterMenuWaitTicks >= 5){
+                    if(menu.slots.size() > 9) {
+                        Slot slot = menu.getSlot(9);
+                        if(slot != null && slot.getStack() != null && slot.getStack().getName() != null) {
+                            String name = slot.getStack().getName().getString();
+                            if(name.contains("Ability Tree")) {
+                                ContainerUtils.clickOnSlot(9, menu.syncId, 0, menu.getStacks());
+                                needToClickAbilityTree = false;
+                                characterMenuWaitTicks = 0;
                             }
                         }
                     }
                 }
-                TreeLoader.clickOnNameInInventory("Ability Tree", screen, MinecraftClient.getInstance());
                 return;
             }
 
             if(inTreeMenu && AspectScanreq){
+                needToClickAbilityTree = false; // Reset flag since we're now in the tree menu
                 TreeLoader.clickOnNameInInventory("Aspects", screen, MinecraftClient.getInstance());
                 aspect.setSearchedPages(0);
                 return;
