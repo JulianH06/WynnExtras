@@ -36,6 +36,17 @@ public class aspect {
     private static final Map<String, Long> lastUploadTime = new HashMap<>();
     private static final long UPLOAD_COOLDOWN_MS = 60000; // 60 seconds
 
+    // Reward chest aspect collection
+    private static final List<String> collectedRewardAspects = new ArrayList<>();
+
+    // Reward chest coordinates for raid detection
+    private static final Map<String, double[]> REWARD_CHEST_COORDS = Map.of(
+            "NOTG", new double[]{10342, 41, 3111},
+            "NOL",  new double[]{11005, 58, 2909},
+            "TCC",  new double[]{10817, 45, 3901},
+            "TNA",  new double[]{24489, 8, -23878}
+    );
+
     public static void openMenu(MinecraftClient client, PlayerEntity player){
         int currentSlot = player.getInventory().getSelectedSlot();
         player.getInventory().setSelectedSlot(7);
@@ -205,12 +216,6 @@ public class aspect {
         HandledScreen<?> screen = (currScreen instanceof HandledScreen) ? (HandledScreen<?>) currScreen : null;
         if (screen == null) return;
 
-        if(maintracking.goingBack) {
-            if(!screen.getScreenHandler().slots.get(16).getStack().isEmpty()) {
-                PrevPageRaid(screen);
-            }
-        }
-
         int[] slotsToRead = {11,12,13,14,15};
         List<String> foundNames = new ArrayList<>();
 
@@ -248,13 +253,6 @@ public class aspect {
 
         maintracking.aspectsInChest = new ItemStack[5];
 
-        if(maintracking.goingBack) {
-            if(screen.getScreenHandler().slots.get(10).getStack().isEmpty()) {
-                maintracking.scanDone = true;
-                maintracking.goingBack = false;
-            }
-        }
-
         for(int i = 11; i < 16; i++) {
             int arrayIndex = i - 11; // Map slot 11-15 to array index 0-4
             Slot slot = screen.getScreenHandler().slots.get(i);
@@ -278,18 +276,86 @@ public class aspect {
             foundNames.add(name);
         }
 
-        // Print all aspects found this page, in order, with duplicates if there are any
-        if (MinecraftClient.getInstance().player != null) {
+        // Collect all aspects found this page
+        collectedRewardAspects.addAll(foundNames);
+
+        // Print found aspects to chat
+        if (MinecraftClient.getInstance().player != null && !foundNames.isEmpty()) {
             for (String aspectName : foundNames) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Found aspect: " + aspectName));
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Found aspect: §e" + aspectName));
             }
         }
 
-        // If all 5 slots contained aspects, go to next page
+        // Check if there's a next page (slot 16)
         if (!screen.getScreenHandler().slots.get(16).getStack().isEmpty()) {
+            System.out.println("[WynnExtras] Next page available, total collected so far: " + collectedRewardAspects.size());
             NextPageRaid(screen);
         } else {
-            maintracking.goingBack = true;
+            // Last page - upload now
+            System.out.println("[WynnExtras] Last page reached, total aspects found: " + collectedRewardAspects.size());
+            maintracking.scanDone = true;
+
+            if (!collectedRewardAspects.isEmpty()) {
+                uploadCollectedAspects();
+            }
+        }
+    }
+
+    private static void uploadCollectedAspects() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player == null) return;
+
+        // Detect which raid based on player position
+        String currentRaid = detectRaidFromPosition();
+
+        if (currentRaid.equals("UNKNOWN")) {
+            System.err.println("[WynnExtras] Cannot determine raid type for aspect upload");
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cCannot detect raid type - too far from reward chest"));
+            collectedRewardAspects.clear();
+            return;
+        }
+
+        System.out.println("[WynnExtras] Uploading " + collectedRewardAspects.size() + " aspects from " + currentRaid);
+        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Uploading §e" + collectedRewardAspects.size() + " §7aspect(s) from §6" + currentRaid + "§7..."));
+
+        // Upload to API
+        WynncraftApiHandler.uploadRewardedAspects(currentRaid, new ArrayList<>(collectedRewardAspects));
+
+        // Clear the collection for next raid
+        collectedRewardAspects.clear();
+    }
+
+    private static String detectRaidFromPosition() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player == null) return "UNKNOWN";
+
+        double px = mc.player.getX();
+        double py = mc.player.getY();
+        double pz = mc.player.getZ();
+
+        String closest = "UNKNOWN";
+        double minDist = Double.MAX_VALUE;
+
+        for (Map.Entry<String, double[]> entry : REWARD_CHEST_COORDS.entrySet()) {
+            double[] pos = entry.getValue();
+            double dist = Math.sqrt(Math.pow(px - pos[0], 2) + Math.pow(py - pos[1], 2) + Math.pow(pz - pos[2], 2));
+            if (dist < minDist) {
+                minDist = dist;
+                closest = entry.getKey();
+            }
+        }
+
+        // Sanity check: if player is too far from any known chest, return UNKNOWN
+        return minDist < 100 ? closest : "UNKNOWN";
+    }
+
+    /**
+     * Reset collected reward aspects (called when screen closes)
+     */
+    public static void resetRewardAspects() {
+        if (!collectedRewardAspects.isEmpty()) {
+            System.out.println("[WynnExtras] Clearing " + collectedRewardAspects.size() + " collected reward aspects");
+            collectedRewardAspects.clear();
         }
     }
 
@@ -338,13 +404,16 @@ public class aspect {
         }
     }
     private static void NextPageRaid(HandledScreen<?> screen) {
-        System.out.println("all slots read");
+        System.out.println("[WynnExtras] Clicking next page in reward chest");
         TreeLoader.clickOnNameInInventory("Next Page",screen,MinecraftClient.getInstance());
-        //das hat nichts mit dem treeloader direkt zu tun, ist nur ne util funktion
+        maintracking.NextPageRaid = true;
+        maintracking.GuiSettleTicks = 0;
     }
     public static void PrevPageRaid(HandledScreen<?> screen) {
-        System.out.println("go back");
+        System.out.println("[WynnExtras] Clicking previous page in reward chest");
         TreeLoader.clickOnNameInInventory("Previous Page",screen,MinecraftClient.getInstance());
+        maintracking.PrevPageRaid = true;
+        maintracking.GuiSettleTicks = 0;
     }
     public static void setSearchedPages(int searchedPages) {
         SearchedPages = searchedPages;

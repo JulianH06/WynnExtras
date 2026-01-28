@@ -11,13 +11,19 @@ import java.time.*;
 
 /**
  * Notifies players about gambit resets
- * Gambits reset daily at 00:00 UTC
+ * Gambits reset daily at 05:00 UTC (midnight EST/America/New_York)
+ * Wynncraft uses US Eastern time for daily resets
  */
 public class GambitNotifier {
     private static final Logger LOGGER = LoggerFactory.getLogger(GambitNotifier.class);
     private static boolean hasSent5MinuteWarning = false;
     private static boolean hasSentResetNotification = false;
-    private static String lastCheckDate = "";
+    private static LocalDate lastResetDate = null;
+    private static int debugTickCounter = 0;
+
+    // Wynncraft reset time - 05:00 UTC = midnight EST
+    private static final int RESET_HOUR_UTC = 5;
+    private static final int RESET_MINUTE_UTC = 0;
 
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -32,19 +38,30 @@ public class GambitNotifier {
 
     private static void checkGambitReset() {
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        ZonedDateTime nextReset = now.withHour(0).withMinute(0).withSecond(0).withNano(0);
 
-        // If it's past midnight today, next reset is tomorrow
-        if (now.getHour() > 0 || now.getMinute() > 0) {
+        // Calculate next reset time (05:00 UTC = midnight EST)
+        ZonedDateTime nextReset = now.withHour(RESET_HOUR_UTC).withMinute(RESET_MINUTE_UTC).withSecond(0).withNano(0);
+
+        // If we're past reset time today, next reset is tomorrow
+        if (now.isAfter(nextReset)) {
             nextReset = nextReset.plusDays(1);
         }
 
-        // Reset notifications when new day starts
-        String currentDate = now.toLocalDate().toString();
-        if (!currentDate.equals(lastCheckDate)) {
+        // Calculate which "gambit day" we're in (resets at 05:00 UTC)
+        // If before 05:00 UTC, we're still in "yesterday's" gambit day
+        LocalDate currentGambitDay;
+        if (now.getHour() < RESET_HOUR_UTC) {
+            currentGambitDay = now.toLocalDate().minusDays(1);
+        } else {
+            currentGambitDay = now.toLocalDate();
+        }
+
+        // Reset notifications when new gambit day starts
+        if (lastResetDate == null || !currentGambitDay.equals(lastResetDate)) {
+            LOGGER.info("New gambit day detected: {} (was {})", currentGambitDay, lastResetDate);
             hasSent5MinuteWarning = false;
             hasSentResetNotification = false;
-            lastCheckDate = currentDate;
+            lastResetDate = currentGambitDay;
         }
 
         // Calculate time until reset
@@ -52,23 +69,31 @@ public class GambitNotifier {
         long minutesUntilReset = timeUntilReset.toMinutes();
         long secondsUntilReset = timeUntilReset.getSeconds();
 
-        // Send 5 minute warning
-        if (minutesUntilReset == 5 && secondsUntilReset >= 295 && secondsUntilReset <= 300 && !hasSent5MinuteWarning) {
-            hasSent5MinuteWarning = true;
-            sendGambitWarning();
+        // Debug logging every 60 seconds
+        debugTickCounter++;
+        if (debugTickCounter >= 60) {
+            debugTickCounter = 0;
+            LOGGER.debug("Gambit check - UTC time: {}:{}, minutes until reset: {}",
+                    now.getHour(), now.getMinute(), minutesUntilReset);
         }
 
-        // Send reset notification (within 10 seconds of reset)
-        if (minutesUntilReset == 0 && secondsUntilReset <= 10 && !hasSentResetNotification) {
+        // Send 5 minute warning (between 4:55 and 5:00 remaining)
+        if (minutesUntilReset >= 4 && minutesUntilReset <= 5 && !hasSent5MinuteWarning) {
+            hasSent5MinuteWarning = true;
+            sendGambitWarning(minutesUntilReset);
+        }
+
+        // Send reset notification (within 30 seconds of reset)
+        if (minutesUntilReset == 0 && secondsUntilReset <= 30 && !hasSentResetNotification) {
             hasSentResetNotification = true;
             sendGambitResetNotification();
         }
     }
 
-    private static void sendGambitWarning() {
-        Text message = WynnExtras.addWynnExtrasPrefix(Text.literal("§eDaily gambits reset in §65 minutes§e! Open §6/pf§e to scan new gambits."));
+    private static void sendGambitWarning(long minutes) {
+        Text message = WynnExtras.addWynnExtrasPrefix(Text.literal("§eDaily gambits reset in §6~" + minutes + " minutes§e! Open §6/pf§e to scan new gambits."));
         McUtils.sendMessageToClient(message);
-        LOGGER.info("Gambit 5-minute warning sent");
+        LOGGER.info("Gambit warning sent - {} minutes until reset", minutes);
     }
 
     private static void sendGambitResetNotification() {

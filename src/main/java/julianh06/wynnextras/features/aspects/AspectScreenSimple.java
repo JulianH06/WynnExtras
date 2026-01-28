@@ -15,6 +15,8 @@ import julianh06.wynnextras.features.profileviewer.data.Aspect;
 import julianh06.wynnextras.features.profileviewer.data.User;
 import julianh06.wynnextras.features.raid.RaidData;
 import julianh06.wynnextras.features.raid.RaidListData;
+import julianh06.wynnextras.features.raid.RaidLootConfig;
+import julianh06.wynnextras.features.raid.RaidLootData;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import julianh06.wynnextras.utils.UI.WEScreen;
@@ -63,6 +65,7 @@ public class AspectScreenSimple extends WEScreen {
     private LootPoolData.AspectEntry hoveredAspect = null;
     private int hoveredAspectX = 0;
     private int hoveredAspectY = 0;
+    private int hoveredAspectColumnX = 0; // Track which column the hovered aspect is in
 
     // For My Aspects page
     private User myAspectsData = null;
@@ -89,6 +92,8 @@ public class AspectScreenSimple extends WEScreen {
 
     // Filter for Loot Pools page
     private boolean hideMaxInLootPools = false; // Hide maxed aspects in loot pools
+    private boolean showOnlyFavoritesInLootPools = false; // Show only favorite aspects in loot pools
+    private int exploreSortMode = 0; // 0 = Most Max Aspects, 1 = Username
 
     // Progress bar mode: true = show "max" counts, false = show "unlocked" counts
     private boolean progressBarShowMax = true;
@@ -328,14 +333,45 @@ public class AspectScreenSimple extends WEScreen {
         String countdown = String.format("Friday (in §e%d§7 days §e%d§7 hours §e%d§7 minutes)", days, hours, minutes);
         drawCenteredText(context, "§7Weekly reset: " + countdown, centerX, 110);
 
-        // Hide Max toggle button (in logical coords) - aligned with Import button
+        // Toggle buttons (in logical coords)
         int toggleWidth = 200;
+        int favToggleWidth = 260; // Wider for favorites
         int toggleHeight = 44;
-        int toggleX = logicalW - toggleWidth - 60;
+        int toggleSpacing = 15;
         int toggleY = 14;
         // Convert mouse to logical for hover check
         int logicalMouseX = (int)(mouseX * scaleFactor);
         int logicalMouseY = (int)(mouseY * scaleFactor);
+
+        // Favorite toggle (left of Hide Max)
+        int favToggleX = logicalW - toggleWidth - favToggleWidth - toggleSpacing - 60;
+        boolean hoverFavToggle = logicalMouseX >= favToggleX && logicalMouseX <= favToggleX + favToggleWidth && logicalMouseY >= toggleY && logicalMouseY <= toggleY + toggleHeight;
+
+        if (showOnlyFavoritesInLootPools) {
+            drawRect(favToggleX, toggleY, favToggleWidth, toggleHeight, 0xAA4e392d);
+            drawRect(favToggleX, toggleY, favToggleWidth, 3, 0xFFFFAA00);
+            drawRect(favToggleX, toggleY + toggleHeight - 3, favToggleWidth, 3, 0xFFFFAA00);
+            drawRect(favToggleX, toggleY, 3, toggleHeight, 0xFFFFAA00);
+            drawRect(favToggleX + favToggleWidth - 3, toggleY, 3, toggleHeight, 0xFFFFAA00);
+        } else if (hoverFavToggle) {
+            drawRect(favToggleX, toggleY, favToggleWidth, toggleHeight, 0xAA333333);
+            drawRect(favToggleX, toggleY, favToggleWidth, 3, 0xFFAAAA00);
+            drawRect(favToggleX, toggleY + toggleHeight - 3, favToggleWidth, 3, 0xFFAAAA00);
+            drawRect(favToggleX, toggleY, 3, toggleHeight, 0xFFAAAA00);
+            drawRect(favToggleX + favToggleWidth - 3, toggleY, 3, toggleHeight, 0xFFAAAA00);
+        } else {
+            drawRect(favToggleX, toggleY, favToggleWidth, toggleHeight, 0xAA1a1a1a);
+            drawRect(favToggleX, toggleY, favToggleWidth, 3, 0xFF4e392d);
+            drawRect(favToggleX, toggleY + toggleHeight - 3, favToggleWidth, 3, 0xFF4e392d);
+            drawRect(favToggleX, toggleY, 3, toggleHeight, 0xFF4e392d);
+            drawRect(favToggleX + favToggleWidth - 3, toggleY, 3, toggleHeight, 0xFF4e392d);
+        }
+
+        String favToggleText = showOnlyFavoritesInLootPools ? "§e§l⭐ Favorites Only" : "§7§l☆ Favorites Only";
+        drawCenteredText(context, favToggleText, favToggleX + favToggleWidth / 2, toggleY + toggleHeight / 2);
+
+        // Hide Max toggle button
+        int toggleX = logicalW - toggleWidth - 60;
         boolean hoverToggle = logicalMouseX >= toggleX && logicalMouseX <= toggleX + toggleWidth && logicalMouseY >= toggleY && logicalMouseY <= toggleY + toggleHeight;
 
         // Draw Wynncraft-style toggle box using UIUtils
@@ -390,18 +426,26 @@ public class AspectScreenSimple extends WEScreen {
         raidContentStartY = startY + 150; // Content starts below header
         raidPanelHeight = logicalH - startY - getRaidPanelBottomMargin() - 150; // Content area height
 
+        // FIRST PASS: Check hover for all columns before any drawing
+        // This ensures hoveredAspect is set correctly before we draw
         for (int i = 0; i < 4; i++) {
             int x = startX + (i * (columnWidth + columnSpacing));
             raidColumnX[i] = x;
             raidColumnWidth[i] = columnWidth;
+            checkRaidColumnHover(x, startY, raids[i], columnWidth, logicalMouseX, logicalMouseY, mythicSeparatorY, fabledSeparatorY, i);
+        }
+
+        // SECOND PASS: Draw all columns (now hoveredAspect is already set correctly)
+        for (int i = 0; i < 4; i++) {
+            int x = startX + (i * (columnWidth + columnSpacing));
             drawRaidColumn(context, x, startY, raids[i], raidNames[i], columnWidth, logicalMouseX, logicalMouseY, mythicSeparatorY, fabledSeparatorY, i);
         }
 
-        // Instructions at very bottom - only show if no data
+        // Instructions above navigation - only show if no data
         boolean hasAnyData = LootPoolData.INSTANCE.hasData("NOTG") || LootPoolData.INSTANCE.hasData("NOL")
                           || LootPoolData.INSTANCE.hasData("TCC") || LootPoolData.INSTANCE.hasData("TNA");
         if (!hasAnyData) {
-            drawCenteredText(context, "§7Open raid preview chests to scan loot pools", centerX, logicalH - 80);
+            drawCenteredText(context, "§7Open raid preview chests to scan loot pools", centerX, logicalH - 165);
         }
     }
 
@@ -537,7 +581,11 @@ public class AspectScreenSimple extends WEScreen {
 
         // Calculate and show score
         double score = calculateRaidScore(aspects);
-        String scoreText = score == 0 ? "§a§lMAXED" : String.format("§7Score: §e%.2f", score);
+        // Check if all aspects are actually maxed (have valid tierInfo that indicates max)
+        boolean allMaxed = !aspects.isEmpty() && aspects.stream().allMatch(a ->
+            a.tierInfo != null && (a.tierInfo.isEmpty() || a.tierInfo.contains("[MAX]"))
+        );
+        String scoreText = allMaxed ? "§a§lMAXED" : String.format("§7Score: §e%.2f", score);
         drawCenteredText(context, scoreText, x + colWidth / 2, y + 100);
 
         // Show data source indicator
@@ -600,9 +648,8 @@ public class AspectScreenSimple extends WEScreen {
             // Apply scroll offset to content Y (start 12px lower to give room for first flame)
             int textY = contentStartY + 12 - scrollOffset;
 
-            // Draw aspects by rarity and check for hover (no prefix)
+            // Draw aspects by rarity (hover is already checked in pre-pass)
             textY = drawAspectsByRarity(context, x, textY, aspects, "Mythic", "", "§5", colWidth);
-            checkAspectHover(mouseX, mouseY, x, contentStartY + 12 - scrollOffset, aspects, "Mythic", "", colWidth);
 
             // Draw separator line after mythic (adjusted for scroll)
             int adjustedMythicSepY = mythicSeparatorY - scrollOffset;
@@ -612,9 +659,6 @@ public class AspectScreenSimple extends WEScreen {
             textY = mythicSeparatorY + 20 - scrollOffset; // Position for fabled start
 
             textY = drawAspectsByRarity(context, x, textY, aspects, "Fabled", "", "§c", colWidth);
-            // Calculate correct Y for fabled group hover
-            int fabledY = mythicSeparatorY + 20;
-            checkAspectHover(mouseX, mouseY, x, fabledY - scrollOffset, aspects, "Fabled", "", colWidth);
 
             // Draw separator line after fabled (adjusted for scroll)
             int adjustedFabledSepY = fabledSeparatorY - scrollOffset;
@@ -624,9 +668,6 @@ public class AspectScreenSimple extends WEScreen {
             textY = fabledSeparatorY + 20 - scrollOffset; // Position for legendary start
 
             textY = drawAspectsByRarity(context, x, textY, aspects, "Legendary", "", "§b", colWidth);
-            // Calculate correct Y for legendary group hover
-            int legendaryY = fabledSeparatorY + 20;
-            checkAspectHover(mouseX, mouseY, x, legendaryY - scrollOffset, aspects, "Legendary", "", colWidth);
 
             // Disable scissor
             context.disableScissor();
@@ -635,6 +676,33 @@ public class AspectScreenSimple extends WEScreen {
             if (totalContentHeight > contentHeight) {
                 drawScrollBar(context, x + colWidth - 18, contentStartY, 12, contentHeight, scrollOffset, totalContentHeight);
             }
+        }
+    }
+
+    /**
+     * Pre-pass to check hover state for a raid column before drawing
+     * This ensures hoveredAspect is set before any column is drawn
+     */
+    private void checkRaidColumnHover(int x, int y, String raidCode, int colWidth, int mouseX, int mouseY, int mythicSeparatorY, int fabledSeparatorY, int raidIndex) {
+        int logicalH = getLogicalHeight();
+        int panelHeight = logicalH - y - getRaidPanelBottomMargin();
+
+        // Get aspects (same logic as drawRaidColumn)
+        List<LootPoolData.AspectEntry> aspects = getLootPoolForRaid(raidCode);
+
+        if (!aspects.isEmpty()) {
+            int contentStartY = y + 150;
+            int contentHeight = panelHeight - 150 - 10;
+            int scrollOffset = raidScrollOffsets[raidIndex];
+
+            // Check hover for all rarities
+            checkAspectHover(mouseX, mouseY, x, contentStartY + 12 - scrollOffset, aspects, "Mythic", "", colWidth);
+
+            int fabledY = mythicSeparatorY + 20;
+            checkAspectHover(mouseX, mouseY, x, fabledY - scrollOffset, aspects, "Fabled", "", colWidth);
+
+            int legendaryY = fabledSeparatorY + 20;
+            checkAspectHover(mouseX, mouseY, x, legendaryY - scrollOffset, aspects, "Legendary", "", colWidth);
         }
     }
 
@@ -649,6 +717,7 @@ public class AspectScreenSimple extends WEScreen {
         int mythicCount = (int) aspects.stream()
             .filter(a -> a.rarity.equalsIgnoreCase("Mythic"))
             .filter(a -> !hideMaxInLootPools || a.tierInfo == null || !a.tierInfo.contains("[MAX]"))
+            .filter(a -> !showOnlyFavoritesInLootPools || FavoriteAspectsData.INSTANCE.isFavorite(a.name))
             .count();
         if (mythicCount > 0) {
             height += mythicCount * spacing + 6; // Aspects + spacing between groups
@@ -661,6 +730,7 @@ public class AspectScreenSimple extends WEScreen {
         int fabledCount = (int) aspects.stream()
             .filter(a -> a.rarity.equalsIgnoreCase("Fabled"))
             .filter(a -> !hideMaxInLootPools || a.tierInfo == null || !a.tierInfo.contains("[MAX]"))
+            .filter(a -> !showOnlyFavoritesInLootPools || FavoriteAspectsData.INSTANCE.isFavorite(a.name))
             .count();
         if (fabledCount > 0) {
             height += fabledCount * spacing + 6;
@@ -673,6 +743,7 @@ public class AspectScreenSimple extends WEScreen {
         int legendaryCount = (int) aspects.stream()
             .filter(a -> a.rarity.equalsIgnoreCase("Legendary"))
             .filter(a -> !hideMaxInLootPools || a.tierInfo == null || !a.tierInfo.contains("[MAX]"))
+            .filter(a -> !showOnlyFavoritesInLootPools || FavoriteAspectsData.INSTANCE.isFavorite(a.name))
             .count();
         if (legendaryCount > 0) {
             height += legendaryCount * spacing + 6;
@@ -703,12 +774,13 @@ public class AspectScreenSimple extends WEScreen {
         List<LootPoolData.AspectEntry> filtered = aspects.stream()
             .filter(a -> a.rarity.equalsIgnoreCase(rarity))
             .filter(a -> !hideMaxInLootPools || a.tierInfo == null || !a.tierInfo.contains("[MAX]"))
+            .filter(a -> !showOnlyFavoritesInLootPools || FavoriteAspectsData.INSTANCE.isFavorite(a.name))
             .toList();
 
         if (filtered.isEmpty()) return y;
 
-        // Truncation - 34 chars max
-        int maxChars = 34;
+        // Truncation - 32 chars max
+        int maxChars = 32;
 
         for (LootPoolData.AspectEntry aspect : filtered) {
             // Check if aspect is maxed
@@ -721,20 +793,32 @@ public class AspectScreenSimple extends WEScreen {
             }
             String displayText = prefix.isEmpty() ? displayName : prefix + " " + displayName;
 
-            // Check if favorited and add underline
+            // Check if favorited
             boolean isFavorite = FavoriteAspectsData.INSTANCE.isFavorite(aspect.name);
-            String underline = isFavorite ? "§n" : "";
+
+            // Check if this specific aspect instance is being hovered (same name AND same column)
+            boolean isHovered = hoveredAspect != null && hoveredAspect.name.equals(aspect.name) && hoveredAspectColumnX == x;
+
+            // Show star: filled if favorite, empty if hovered but not favorite, nothing otherwise
+            String favoriteStar;
+            if (isFavorite) {
+                favoriteStar = " §e⭐";
+            } else if (isHovered) {
+                favoriteStar = " §7☆";
+            } else {
+                favoriteStar = "";
+            }
 
             // Draw text at y position
-            drawLeftText(context, color + underline + displayText, x + 55, y);
+            drawLeftText(context, color + displayText + favoriteStar, x + 55, y);
 
-            // Draw flame icon - moved DOWN to align with text
+            // Draw flame icon
             ApiAspect apiAspect = findApiAspectByName(aspect.name);
             ItemStack flameItem = createAspectFlameIcon(apiAspect, isMaxed);
             if (!flameItem.isEmpty() && ui != null) {
                 int screenX = (int)ui.sx(x + 20);
-                int screenY = (int)ui.sy(y + 10); // Move flame DOWN to align with text
-                float flameScale = 0.5f; // Slightly bigger
+                int screenY = (int)ui.sy(y); // Move flame up
+                float flameScale = 0.6f;
                 context.getMatrices().pushMatrix();
                 context.getMatrices().scale(flameScale, flameScale);
                 context.drawItem(flameItem, (int)(screenX / flameScale), (int)(screenY / flameScale));
@@ -753,6 +837,7 @@ public class AspectScreenSimple extends WEScreen {
         List<LootPoolData.AspectEntry> filtered = aspects.stream()
             .filter(a -> a.rarity.equalsIgnoreCase(rarity))
             .filter(a -> !hideMaxInLootPools || a.tierInfo == null || !a.tierInfo.contains("[MAX]"))
+            .filter(a -> !showOnlyFavoritesInLootPools || FavoriteAspectsData.INSTANCE.isFavorite(a.name))
             .toList();
 
         if (filtered.isEmpty()) return;
@@ -767,6 +852,7 @@ public class AspectScreenSimple extends WEScreen {
                 hoveredAspect = aspect;
                 hoveredAspectX = mouseX;
                 hoveredAspectY = mouseY;
+                hoveredAspectColumnX = x; // Track which column this aspect is in
                 return;
             }
             currentY += lineHeight;
@@ -1292,9 +1378,14 @@ public class AspectScreenSimple extends WEScreen {
     private double calculateRaidScore(List<LootPoolData.AspectEntry> aspects) {
         double score = 0.0;
 
+        System.out.println("[WynnExtras DEBUG] calculateRaidScore called with " + aspects.size() + " aspects");
+
         for (LootPoolData.AspectEntry aspect : aspects) {
             String tierInfo = aspect.tierInfo;
+            System.out.println("[WynnExtras DEBUG] Aspect: " + aspect.name + " | tierInfo: " + tierInfo);
+
             if (tierInfo == null || tierInfo.isEmpty() || tierInfo.contains("[MAX]")) {
+                System.out.println("[WynnExtras DEBUG] Skipping (maxed or no data)");
                 continue; // Already maxed or no data, no score contribution
             }
 
@@ -1307,44 +1398,56 @@ public class AspectScreenSimple extends WEScreen {
             java.util.regex.Pattern progressPattern = java.util.regex.Pattern.compile("\\[(\\d+)/(\\d+)\\]");
             java.util.regex.Matcher progressMatcher = progressPattern.matcher(tierInfo);
             if (!progressMatcher.find()) {
+                System.out.println("[WynnExtras DEBUG] Failed to parse progress pattern");
                 continue; // Can't parse progress, skip this aspect
             }
 
             int current = Integer.parseInt(progressMatcher.group(1));
             int max = Integer.parseInt(progressMatcher.group(2));
             remaining = max - current;
+            System.out.println("[WynnExtras DEBUG] Progress: " + current + "/" + max + " | Remaining: " + remaining);
 
-            // Extract tiers
-            java.util.regex.Pattern tierPattern = java.util.regex.Pattern.compile("Tier\\s+(I+)");
+            // Extract tiers (match I, II, III, IV properly)
+            java.util.regex.Pattern tierPattern = java.util.regex.Pattern.compile("Tier\\s+(IV|III|II|I)");
             java.util.regex.Matcher tierMatcher = tierPattern.matcher(tierInfo);
             if (tierMatcher.find()) {
                 currentTierStr = tierMatcher.group(1); // First match = current tier
                 if (tierMatcher.find()) {
                     targetTierStr = tierMatcher.group(1); // Second match = target tier
+                } else {
+                    // No target tier found - working to max out current tier
+                    targetTierStr = currentTierStr;
                 }
             } else {
+                System.out.println("[WynnExtras DEBUG] Failed to parse tier pattern");
                 continue; // Can't parse tiers, skip this aspect
             }
+
+            System.out.println("[WynnExtras DEBUG] Current tier: " + currentTierStr + " | Target tier: " + targetTierStr);
 
             int currentTier = romanToInt(currentTierStr);
             int targetTier = romanToInt(targetTierStr);
 
             if (currentTier == 0 || targetTier == 0) {
+                System.out.println("[WynnExtras DEBUG] Invalid tier numbers");
                 continue; // Invalid tier, skip
             }
 
             // Apply tier-based weights
             double weight = getTierWeight(aspect.rarity, currentTier, targetTier);
             double contribution = remaining * weight;
+            System.out.println("[WynnExtras DEBUG] Weight: " + weight + " | Contribution: " + contribution);
 
             // Favorite aspects count 3x more
             if (FavoriteAspectsData.INSTANCE.isFavorite(aspect.name)) {
                 contribution *= 3.0;
+                System.out.println("[WynnExtras DEBUG] Favorite! Contribution after 3x: " + contribution);
             }
 
             score += contribution;
         }
 
+        System.out.println("[WynnExtras DEBUG] Final score: " + score);
         return score;
     }
 
@@ -1355,15 +1458,37 @@ public class AspectScreenSimple extends WEScreen {
         String key = rarity.toLowerCase() + "_" + currentTier + "_" + targetTier;
 
         return switch (key) {
+            // Known weights from data
             case "mythic_2_3" -> 13.55;
             case "fabled_1_2" -> 10.4;
             case "fabled_2_3" -> 0.65;
             case "legendary_3_4" -> 0.905;
-            // Fallback weights (estimated based on rarity pattern)
+
+            // Tier progressions (estimated based on rarity pattern)
             case "mythic_1_2" -> 20.0;
+            case "mythic_3_4" -> 10.0;
             case "fabled_3_4" -> 0.5;
             case "legendary_1_2" -> 15.0;
             case "legendary_2_3" -> 1.5;
+
+            // Same-tier progression (finishing current tier)
+            case "mythic_1_1" -> 20.0;
+            case "mythic_2_2" -> 13.55;
+            case "mythic_3_3" -> 10.0;
+            case "mythic_4_4" -> 5.0;
+            case "fabled_1_1" -> 10.4;
+            case "fabled_2_2" -> 5.0;
+            case "fabled_3_3" -> 0.65;
+            case "fabled_4_4" -> 0.5;
+            case "legendary_1_1" -> 15.0;
+            case "legendary_2_2" -> 5.0;
+            case "legendary_3_3" -> 1.5;
+            case "legendary_4_4" -> 0.905;
+
+            // Rare weights
+            case "rare_1_1", "rare_2_2", "rare_3_3", "rare_4_4" -> 1.0;
+            case "rare_1_2", "rare_2_3", "rare_3_4" -> 1.0;
+
             default -> 1.0; // Default weight
         };
     }
@@ -1641,8 +1766,8 @@ public class AspectScreenSimple extends WEScreen {
             renderMyAspectTooltip(context, mouseX, mouseY);
         }
 
-        // Instructions - make it clickable (in logical coords)
-        int scanTextY = logicalH - 80;
+        // Instructions above navigation - make it clickable (in logical coords)
+        int scanTextY = logicalH - 165;
         boolean hoverScan = logicalMouseY >= scanTextY - 20 && logicalMouseY <= scanTextY + 40 &&
                            logicalMouseX >= centerX - 400 && logicalMouseX <= centerX + 400;
 
@@ -2261,27 +2386,38 @@ public class AspectScreenSimple extends WEScreen {
                 displayName = displayName.substring(0, maxChars - 3) + "...";
             }
 
-            // Check if favorited and add underline
-            boolean isFavorite = FavoriteAspectsData.INSTANCE.isFavorite(aspect.getName());
-            String underline = isFavorite ? "§n" : "";
-
             // Check hover using full row width for easier hit detection (mouseX/Y are already logical)
             // Hitbox aligned with text position (y is where text is drawn)
+            boolean isHovered = false;
             if (mouseX >= x + 16 && mouseX <= x + colWidth - 16 &&
                 mouseY >= y - 10 && mouseY <= y + 25) {
                 hoveredMyAspect = aspect;
                 hoveredMyAspectProgress = playerAspect;
+                isHovered = true;
+            }
+
+            // Check if favorited
+            boolean isFavorite = FavoriteAspectsData.INSTANCE.isFavorite(aspect.getName());
+
+            // Show star: filled if favorite, empty if hovered but not favorite, nothing otherwise
+            String favoriteStar;
+            if (isFavorite) {
+                favoriteStar = " §e⭐";
+            } else if (isHovered) {
+                favoriteStar = " §7☆";
+            } else {
+                favoriteStar = "";
             }
 
             // Draw text at y position
-            drawLeftText(context, color + underline + displayName, x + 45, y);
+            drawLeftText(context, color + displayName + favoriteStar, x + 45, y);
 
-            // Draw flame icon - BIGGER and moved DOWN to align with text
+            // Draw flame icon
             ItemStack flameItem = createAspectFlameIcon(aspect, isMaxed);
             if (!flameItem.isEmpty() && ui != null) {
-                float flameScale = 0.55f; // Bigger flames (was 0.35)
+                float flameScale = 0.6f;
                 int screenX = (int) ui.sx(x + 12);
-                int screenY = (int) ui.sy(y + 12); // Move flame DOWN to align with text
+                int screenY = (int) ui.sy(y + 2); // Move flame up
                 context.getMatrices().pushMatrix();
                 context.getMatrices().scale(flameScale, flameScale);
                 context.drawItem(flameItem, (int)(screenX / flameScale), (int)(screenY / flameScale));
@@ -2414,6 +2550,37 @@ public class AspectScreenSimple extends WEScreen {
                             logicalMouseY >= navY - 20 && logicalMouseY <= navY + 50;
 
         drawCenteredText(context, hoverRight ? "§6§lNext >" : "§e§lNext >", rightX, navY);
+
+        // Quick page buttons at the bottom
+        int buttonY = navY + 45;
+        int buttonWidth = 165;
+        int buttonHeight = 40;
+        int buttonSpacing = 12;
+        String[] pageNames = {"Loot Pools", "Aspects", "Gambits", "Raid Loot", "Explore", "Leaderboard"};
+        int totalButtonsWidth = (buttonWidth * 6) + (buttonSpacing * 5);
+        int buttonStartX = (logicalW - totalButtonsWidth) / 2;
+
+        for (int i = 0; i <= MAX_PAGE; i++) {
+            int bx = buttonStartX + (i * (buttonWidth + buttonSpacing));
+            boolean isCurrentPage = (currentPage == i);
+            boolean hovering = logicalMouseX >= bx && logicalMouseX <= bx + buttonWidth &&
+                              logicalMouseY >= buttonY && logicalMouseY <= buttonY + buttonHeight;
+
+            // Background
+            int bgColor = isCurrentPage ? 0xAA4e392d : (hovering ? 0xAA333333 : 0xAA1a1a1a);
+            drawRect(bx, buttonY, buttonWidth, buttonHeight, bgColor);
+
+            // Border
+            int borderColor = isCurrentPage ? 0xFFFFAA00 : (hovering ? 0xFFAAAA00 : 0xFF4e392d);
+            drawRect(bx, buttonY, buttonWidth, 2, borderColor);
+            drawRect(bx, buttonY + buttonHeight - 2, buttonWidth, 2, borderColor);
+            drawRect(bx, buttonY, 2, buttonHeight, borderColor);
+            drawRect(bx + buttonWidth - 2, buttonY, 2, buttonHeight, borderColor);
+
+            // Text
+            String text = isCurrentPage ? "§6§l" + pageNames[i] : (hovering ? "§e" + pageNames[i] : "§7" + pageNames[i]);
+            drawCenteredText(context, text, bx + buttonWidth / 2, buttonY + (buttonHeight - 10) / 2);
+        }
     }
 
     @Override
@@ -2459,9 +2626,8 @@ public class AspectScreenSimple extends WEScreen {
         int centerX = logicalW / 2;
         int navY = logicalH - 120;
 
-        // Check for shift+left click on aspects to favorite them
-        boolean shiftDown = InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow(), InputUtil.GLFW_KEY_LEFT_SHIFT);
-        if (button == 0 && shiftDown) {
+        // Check for left click on aspects to favorite them (click the star)
+        if (button == 0) {
             // Check if clicking on loot pool aspect (page 0)
             if (currentPage == 0 && hoveredAspect != null) {
                 FavoriteAspectsData.INSTANCE.toggleFavorite(hoveredAspect.name);
@@ -2516,6 +2682,26 @@ public class AspectScreenSimple extends WEScreen {
             return true;
         }
 
+        // Check quick page button clicks
+        int pageBtnY = navY + 45;
+        int pageBtnWidth = 165;
+        int pageBtnHeight = 40;
+        int pageBtnSpacing = 12;
+        int totalPageBtnsWidth = (pageBtnWidth * 6) + (pageBtnSpacing * 5);
+        int pageBtnStartX = (logicalW - totalPageBtnsWidth) / 2;
+
+        for (int i = 0; i <= MAX_PAGE; i++) {
+            int pbx = pageBtnStartX + (i * (pageBtnWidth + pageBtnSpacing));
+            if (logicalMouseX >= pbx && logicalMouseX <= pbx + pageBtnWidth &&
+                logicalMouseY >= pageBtnY && logicalMouseY <= pageBtnY + pageBtnHeight) {
+                if (currentPage != i) {
+                    currentPage = i;
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                }
+                return true;
+            }
+        }
+
         // Check "Click to open Party Finder" click (on gambits page when no data)
         if (currentPage == 2) {
             GambitData gambitData = GambitData.INSTANCE;
@@ -2534,13 +2720,25 @@ public class AspectScreenSimple extends WEScreen {
             }
         }
 
-        // Check Hide Max toggle click (on loot pools page) - using logical coords
+        // Check toggle clicks (on loot pools page) - using logical coords
         if (currentPage == 0) {
             int toggleWidth = 200;
+            int favToggleWidth = 260;
             int toggleHeight = 44;
-            int toggleX = logicalW - toggleWidth - 60;
+            int toggleSpacing = 15;
             int toggleY = 14;
 
+            // Favorite toggle (left of Hide Max)
+            int favToggleX = logicalW - toggleWidth - favToggleWidth - toggleSpacing - 60;
+            if (logicalMouseX >= favToggleX && logicalMouseX <= favToggleX + favToggleWidth &&
+                logicalMouseY >= toggleY && logicalMouseY <= toggleY + toggleHeight) {
+                showOnlyFavoritesInLootPools = !showOnlyFavoritesInLootPools;
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            }
+
+            // Hide Max toggle
+            int toggleX = logicalW - toggleWidth - 60;
             if (logicalMouseX >= toggleX && logicalMouseX <= toggleX + toggleWidth &&
                 logicalMouseY >= toggleY && logicalMouseY <= toggleY + toggleHeight) {
                 hideMaxInLootPools = !hideMaxInLootPools;
@@ -2687,8 +2885,9 @@ public class AspectScreenSimple extends WEScreen {
 
         // Check raid toggle clicks on Raid Loot page (page 3)
         if (currentPage == 3) {
-            int toggleWidth = 180;
-            int toggleHeight = 40;
+            // Raid toggle buttons - must match rendering sizes!
+            int toggleWidth = 220;
+            int toggleHeight = 50;
             int toggleSpacing = 20;
             int toggleY = 120;
 
@@ -2705,9 +2904,9 @@ public class AspectScreenSimple extends WEScreen {
                 }
             }
 
-            // Check "Show Rates" button click
-            int ratesButtonWidth = 200;
-            int ratesButtonHeight = 40;
+            // Check "Show Rates" button click - must match rendering sizes!
+            int ratesButtonWidth = 450;
+            int ratesButtonHeight = 50;
             int ratesButtonX = centerX - ratesButtonWidth / 2;
             int ratesButtonY = 180;
 
@@ -2719,21 +2918,49 @@ public class AspectScreenSimple extends WEScreen {
             }
         }
 
+        // Check filter button clicks on Explore page (page 4)
+        if (currentPage == 4) {
+            int filterButtonWidth = 300;
+            int filterButtonHeight = 50;
+            int filterSpacing = 30;
+            int filterY = 125;
+            int totalFilterWidth = (filterButtonWidth * 2) + filterSpacing;
+            int filterStartX = (logicalW - totalFilterWidth) / 2;
+
+            for (int i = 0; i < 2; i++) {
+                int fx = filterStartX + (i * (filterButtonWidth + filterSpacing));
+                if (button == 0 && logicalMouseX >= fx && logicalMouseX <= fx + filterButtonWidth &&
+                    logicalMouseY >= filterY && logicalMouseY <= filterY + filterButtonHeight) {
+                    exploreSortMode = i;
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    return true;
+                }
+            }
+        }
+
         // Check player entry clicks on Explore page (page 4)
         if (currentPage == 4 && playerList != null && !playerList.isEmpty()) {
+            // Sort the list same as rendering
+            List<julianh06.wynnextras.features.profileviewer.data.PlayerListEntry> sortedList = new java.util.ArrayList<>(playerList);
+            if (exploreSortMode == 0) {
+                sortedList.sort((a, b) -> Integer.compare(b.getAspectCount(), a.getAspectCount()));
+            } else {
+                sortedList.sort((a, b) -> a.getPlayerName().compareToIgnoreCase(b.getPlayerName()));
+            }
+
             int columnCount = 3;
-            int entryWidth = 400;
-            int entryHeight = 70;
-            int spacing = 20;
-            int startY = 180;
+            int entryWidth = 280;
+            int entryHeight = 85;
+            int spacing = 30;
+            int startY = 190;
             int totalWidth = (entryWidth * columnCount) + (spacing * (columnCount - 1));
             int startX = (logicalW - totalWidth) / 2;
 
             int perPage = 15;
-            int maxEntries = Math.min(playerList.size(), perPage);
+            int maxEntries = Math.min(sortedList.size(), perPage);
 
             for (int i = 0; i < maxEntries; i++) {
-                julianh06.wynnextras.features.profileviewer.data.PlayerListEntry player = playerList.get(i);
+                julianh06.wynnextras.features.profileviewer.data.PlayerListEntry player = sortedList.get(i);
 
                 int row = i / columnCount;
                 int col = i % columnCount;
@@ -2847,8 +3074,8 @@ public class AspectScreenSimple extends WEScreen {
                 }
             }
 
-            // Check click on "scan your aspects" text - use logical coords
-            int scanTextY = logicalH - 80;
+            // Check click on "scan your aspects" text - use logical coords (above navigation)
+            int scanTextY = logicalH - 165;
             boolean clickedScan = logicalMouseY >= scanTextY - 20 && logicalMouseY <= scanTextY + 40 &&
                                  logicalMouseX >= centerX - 400 && logicalMouseX <= centerX + 400;
 
@@ -2912,43 +3139,52 @@ public class AspectScreenSimple extends WEScreen {
                 }
             }
 
-            // Wait 10 ticks (0.5 seconds) after clicking queue before clicking raid
+            // Wait 8 ticks after clicking queue before clicking raid
             if (clickedQueue.get() && !clickedRaid.get()) {
                 ticksSinceQueueClick[0]++;
-                if (ticksSinceQueueClick[0] < 10) {
+                if (ticksSinceQueueClick[0] < 8) {
                     return; // Wait more
                 }
             }
 
-            // Step 2: Click the specific raid button
+            // Step 2: Click the specific raid button - search by name instead of hardcoded slot
             if (clickedQueue.get() && !clickedRaid.get() && menu.slots.size() > 20) {
-                // Find the raid button - NOTG=11, NOL=12, TCC=14, TNA=15
-                int raidSlot = switch (pendingRaidJoin) {
-                    case "NOTG" -> 11;
-                    case "NOL" -> 12;
-                    case "TCC" -> 14;
-                    case "TNA" -> 15;
-                    default -> -1;
+                // Search for the raid by name in slots 10-20
+                String searchName = switch (pendingRaidJoin) {
+                    case "NOTG" -> "Nest of the Grootslangs";
+                    case "NOL" -> "Orphion's Nexus of Light";
+                    case "TCC" -> "The Canyon Colossus";
+                    case "TNA" -> "The Nameless Anomaly";
+                    default -> "";
                 };
 
                 if (debugMode) {
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§e[Debug] Trying to click raid " + pendingRaidJoin + " (slot " + raidSlot + ")"));
-                    System.out.println("[RaidDebug] Attempting to click raid " + pendingRaidJoin + " at slot " + raidSlot);
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§e[Debug] Searching for raid: " + searchName));
+                    System.out.println("[RaidDebug] Searching for raid: " + searchName);
                 }
 
-                if (raidSlot != -1 && menu.slots.size() > raidSlot) {
-                    Slot slot = menu.getSlot(raidSlot);
-                    if (slot != null && slot.getStack() != null) {
+                for (int slotIdx = 10; slotIdx <= 20; slotIdx++) {
+                    if (menu.slots.size() <= slotIdx) continue;
+                    Slot slot = menu.getSlot(slotIdx);
+                    if (slot != null && slot.getStack() != null && slot.getStack().getName() != null) {
+                        String itemName = slot.getStack().getName().getString();
                         if (debugMode) {
-                            String itemName = slot.getStack().getName().getString();
-                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§e[Debug] Found item at slot " + raidSlot + ": " + itemName));
-                            System.out.println("[RaidDebug] Found item at slot " + raidSlot + ": " + itemName);
+                            System.out.println("[RaidDebug] Slot " + slotIdx + ": " + itemName);
                         }
-                        clickOnSlot(raidSlot, menu.syncId, 0, menu.getStacks());
-                        clickedRaid.set(true);
-                        pendingRaidJoin = null;
-                        return;
+                        if (itemName.contains(searchName) || itemName.contains(pendingRaidJoin)) {
+                            if (debugMode) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§e[Debug] Found " + pendingRaidJoin + " at slot " + slotIdx));
+                            }
+                            clickOnSlot(slotIdx, menu.syncId, 0, menu.getStacks());
+                            clickedRaid.set(true);
+                            pendingRaidJoin = null;
+                            return;
+                        }
                     }
+                }
+
+                if (debugMode) {
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§c[Debug] Could not find raid " + pendingRaidJoin + " in menu"));
                 }
             }
         });
@@ -3199,21 +3435,59 @@ public class AspectScreenSimple extends WEScreen {
         int logicalMouseX = (int)(mouseX * scaleFactor);
         int logicalMouseY = (int)(mouseY * scaleFactor);
 
+        // Sort filter buttons
+        int filterButtonWidth = 300;
+        int filterButtonHeight = 50;
+        int filterSpacing = 30;
+        int filterY = 125;
+        int totalFilterWidth = (filterButtonWidth * 2) + filterSpacing;
+        int filterStartX = (logicalW - totalFilterWidth) / 2;
+
+        String[] filterNames = {"Most Aspects", "Username (A-Z)"};
+        for (int i = 0; i < 2; i++) {
+            int fx = filterStartX + (i * (filterButtonWidth + filterSpacing));
+            boolean active = exploreSortMode == i;
+            boolean hovering = logicalMouseX >= fx && logicalMouseX <= fx + filterButtonWidth &&
+                              logicalMouseY >= filterY && logicalMouseY <= filterY + filterButtonHeight;
+
+            int bgColor = active ? 0xAA4e392d : (hovering ? 0xAA333333 : 0xAA1a1a1a);
+            drawRect(fx, filterY, filterButtonWidth, filterButtonHeight, bgColor);
+
+            int borderColor = active ? 0xFFFFAA00 : (hovering ? 0xFFAAAA00 : 0xFF4e392d);
+            drawRect(fx, filterY, filterButtonWidth, 3, borderColor);
+            drawRect(fx, filterY + filterButtonHeight - 3, filterButtonWidth, 3, borderColor);
+            drawRect(fx, filterY, 3, filterButtonHeight, borderColor);
+            drawRect(fx + filterButtonWidth - 3, filterY, 3, filterButtonHeight, borderColor);
+
+            String text = active ? "§6§l" + filterNames[i] : "§7" + filterNames[i];
+            drawCenteredText(context, text, fx + filterButtonWidth / 2, filterY + (filterButtonHeight - 10) / 2);
+        }
+
+        // Sort the player list based on mode
+        List<julianh06.wynnextras.features.profileviewer.data.PlayerListEntry> sortedList = new java.util.ArrayList<>(playerList);
+        if (exploreSortMode == 0) {
+            // Sort by most aspects (descending)
+            sortedList.sort((a, b) -> Integer.compare(b.getAspectCount(), a.getAspectCount()));
+        } else {
+            // Sort by username (A-Z)
+            sortedList.sort((a, b) -> a.getPlayerName().compareToIgnoreCase(b.getPlayerName()));
+        }
+
         // Display players in a grid - 3 columns
         int columnCount = 3;
         int entryWidth = 280;
         int entryHeight = 85;
         int spacing = 30;
-        int startY = 180;
+        int startY = 190;
 
         int totalWidth = (entryWidth * columnCount) + (spacing * (columnCount - 1));
         int startX = (logicalW - totalWidth) / 2;
 
         int perPage = 15; // 5 rows × 3 columns
-        int maxEntries = Math.min(playerList.size(), perPage);
+        int maxEntries = Math.min(sortedList.size(), perPage);
 
         for (int i = 0; i < maxEntries; i++) {
-            julianh06.wynnextras.features.profileviewer.data.PlayerListEntry player = playerList.get(i);
+            julianh06.wynnextras.features.profileviewer.data.PlayerListEntry player = sortedList.get(i);
 
             int row = i / columnCount;
             int col = i % columnCount;
@@ -3242,8 +3516,8 @@ public class AspectScreenSimple extends WEScreen {
             drawCenteredText(context, "§7" + player.getAspectCount() + " aspects", x + entryWidth / 2, y + 60);
         }
 
-        // Instructions at bottom
-        drawCenteredText(context, "§7Click on a player to view their aspects", centerX, logicalH - 80);
+        // Instructions above navigation
+        drawCenteredText(context, "§7Click on a player to view their aspects", centerX, logicalH - 165);
     }
 
     private void renderLeaderboardPage(DrawContext context, int mouseX, int mouseY) {
@@ -3332,8 +3606,8 @@ public class AspectScreenSimple extends WEScreen {
             drawLeftText(context, countText, startX + entryWidth - 200, y + entryHeight / 2 - 5);
         }
 
-        // Instructions at bottom
-        drawCenteredText(context, "§7Click on a player to view their aspects", centerX, logicalH - 80);
+        // Instructions above navigation
+        drawCenteredText(context, "§7Click on a player to view their aspects", centerX, logicalH - 165);
     }
 
     private void renderRaidLootPage(DrawContext context, int mouseX, int mouseY) {
@@ -3376,9 +3650,9 @@ public class AspectScreenSimple extends WEScreen {
             drawRect(x, toggleY, 3, toggleHeight, borderColor);
             drawRect(x + toggleWidth - 3, toggleY, 3, toggleHeight, borderColor);
 
-            // Text
+            // Text - centered in button
             String text = active ? raidColors[i] + "§l" + raidNames[i] : "§7" + raidNames[i];
-            drawCenteredText(context, text, x + toggleWidth / 2, toggleY + toggleHeight / 2 - 5);
+            drawCenteredText(context, text, x + toggleWidth / 2, toggleY + (toggleHeight - 10) / 2);
         }
 
         // Show Rates button
@@ -3397,45 +3671,38 @@ public class AspectScreenSimple extends WEScreen {
         drawRect(ratesButtonX + ratesButtonWidth - 3, ratesButtonY, 3, ratesButtonHeight, ratesBorder);
 
         String ratesText = showRates ? "§a§lShowing: Average/Run" : "§e§lShowing: Totals";
-        drawCenteredText(context, ratesText, ratesButtonX + ratesButtonWidth / 2, ratesButtonY + ratesButtonHeight / 2 - 5);
+        drawCenteredText(context, ratesText, ratesButtonX + ratesButtonWidth / 2, ratesButtonY + (ratesButtonHeight - 10) / 2);
 
-        // Calculate stats based on selected raids
-        List<RaidData> allRaids = RaidListData.INSTANCE.getRaids();
-        List<RaidData> filteredRaids = new ArrayList<>();
+        // Get loot tracker data
+        RaidLootData lootData = RaidLootConfig.INSTANCE.data;
 
-        for (RaidData raid : allRaids) {
-            String raidName = raid.raidInfo.toString();
-            if ((raidToggles[0] && raidName.contains("Grootslang")) ||
-                (raidToggles[1] && raidName.contains("Orphion")) ||
-                (raidToggles[2] && raidName.contains("Colossus")) ||
-                (raidToggles[3] && raidName.contains("Nameless"))) {
-                filteredRaids.add(raid);
-            }
-        }
+        // Calculate combined stats based on selected raids
+        RaidLootData.RaidSpecificLoot combinedStats = new RaidLootData.RaidSpecificLoot();
+        int totalRuns = 0;
 
-        int totalRuns = filteredRaids.size();
-        int completedRuns = (int) filteredRaids.stream().filter(r -> r.completed).count();
-        int failedRuns = totalRuns - completedRuns;
-
-        // Calculate aspect stats from player's personal data
-        int totalAspectsPulled = 0;
-        int mythicAspectsPulled = 0;
-
-        if (this.myAspectsData != null && this.myAspectsData.getAspects() != null) {
-            List<ApiAspect> allAspects = WynncraftApiHandler.fetchAllAspects();
-            for (Aspect playerAspect : this.myAspectsData.getAspects()) {
-                totalAspectsPulled += playerAspect.getAmount();
-
-                for (ApiAspect apiAspect : allAspects) {
-                    if (apiAspect.getName().equals(playerAspect.getName())) {
-                        if (apiAspect.getRarity().equalsIgnoreCase("mythic")) {
-                            mythicAspectsPulled += playerAspect.getAmount();
-                        }
-                        break;
-                    }
+        String[] raidCodes = {"NOTG", "NOL", "TCC", "TNA"};
+        for (int i = 0; i < 4; i++) {
+            if (raidToggles[i]) {
+                RaidLootData.RaidSpecificLoot raidStats = lootData.perRaidData.get(raidCodes[i]);
+                if (raidStats != null) {
+                    combinedStats.emeraldBlocks += raidStats.emeraldBlocks;
+                    combinedStats.liquidEmeralds += raidStats.liquidEmeralds;
+                    combinedStats.amplifierTier1 += raidStats.amplifierTier1;
+                    combinedStats.amplifierTier2 += raidStats.amplifierTier2;
+                    combinedStats.amplifierTier3 += raidStats.amplifierTier3;
+                    combinedStats.totalBags += raidStats.totalBags;
+                    combinedStats.stuffedBags += raidStats.stuffedBags;
+                    combinedStats.packedBags += raidStats.packedBags;
+                    combinedStats.variedBags += raidStats.variedBags;
+                    combinedStats.totalTomes += raidStats.totalTomes;
+                    combinedStats.mythicTomes += raidStats.mythicTomes;
+                    combinedStats.fabledTomes += raidStats.fabledTomes;
+                    combinedStats.totalCharms += raidStats.totalCharms;
+                    combinedStats.completionCount += raidStats.completionCount;
                 }
             }
         }
+        totalRuns = combinedStats.completionCount;
 
         // Display stats
         int startY = 260;
@@ -3444,30 +3711,76 @@ public class AspectScreenSimple extends WEScreen {
         drawCenteredText(context, "§6§lSTATISTICS", centerX, startY);
         startY += 50;
 
+        // Calculate emeralds
+        long totalEmeralds = (combinedStats.liquidEmeralds * 64 * 64) + (combinedStats.emeraldBlocks * 64);
+        long stacks = totalEmeralds / 262144;
+        long remainingAfterStx = totalEmeralds % 262144;
+        long le = remainingAfterStx / 4096;
+        long remainingAfterLE = remainingAfterStx % 4096;
+        long eb = remainingAfterLE / 64;
+
         if (showRates && totalRuns > 0) {
             // Show averages per run
-            double avgAspects = (double) totalAspectsPulled / totalRuns;
-            double avgMythics = (double) mythicAspectsPulled / totalRuns;
-
-            drawCenteredText(context, "§6§lTotal Runs: §f" + totalRuns + " §8(§a" + completedRuns + " §7completed, §c" + failedRuns + " §7failed§8)", centerX, startY);
+            drawCenteredText(context, "§6§lTotal Runs: §f" + totalRuns, centerX, startY);
             startY += lineHeight;
 
-            drawCenteredText(context, "§6§lAspects Per Run: §f" + String.format("%.2f", avgAspects), centerX, startY);
+            // Calculate total LE (including stx converted to LE)
+            long totalLeValue = (stacks * 64) + le;
+            double avgLe = (double) totalLeValue / totalRuns;
+
+            String emeraldAvgText;
+            if (avgLe >= 64) {
+                // Show in stx if average is at least 1 stx (64 LE)
+                emeraldAvgText = String.format("%.2fstx", avgLe / 64);
+            } else {
+                emeraldAvgText = String.format("%.1fle", avgLe);
+            }
+            drawCenteredText(context, "§a§lEmeralds/Run: §f" + emeraldAvgText, centerX, startY);
             startY += lineHeight;
 
-            drawCenteredText(context, "§5§lMythic Aspects Per Run: §f" + String.format("%.2f", avgMythics), centerX, startY);
-            startY += lineHeight + 20;
+            drawCenteredText(context, "§e§lAmplifiers/Run: §f" + String.format("%.2f", (double)combinedStats.getTotalAmplifiers() / totalRuns), centerX, startY);
+            startY += lineHeight + 8;
+
+            drawCenteredText(context, "§b§lBags/Run: §f" + String.format("%.2f", (double)combinedStats.totalBags / totalRuns), centerX, startY);
+            startY += lineHeight + 8;
+
+            drawCenteredText(context, "§d§lTomes/Run: §f" + String.format("%.2f", (double)combinedStats.totalTomes / totalRuns) + " §7(§5" + String.format("%.2f", (double)combinedStats.mythicTomes / totalRuns) + " §7mythic§7)", centerX, startY);
+            startY += lineHeight + 8;
+
+            drawCenteredText(context, "§5§lAspects/Run: §f" + String.format("%.2f", (double)combinedStats.totalAspects / totalRuns) + " §7(§5" + String.format("%.2f", (double)combinedStats.mythicAspects / totalRuns) + " §7mythic§7)", centerX, startY);
+            startY += lineHeight + 25;
 
         } else {
             // Show totals
-            drawCenteredText(context, "§6§lTotal Runs: §f" + totalRuns + " §8(§a" + completedRuns + " §7completed, §c" + failedRuns + " §7failed§8)", centerX, startY);
+            drawCenteredText(context, "§6§lTotal Runs: §f" + totalRuns, centerX, startY);
             startY += lineHeight;
 
-            drawCenteredText(context, "§6§lTotal Aspects Pulled: §f" + totalAspectsPulled, centerX, startY);
+            // Build emerald text - always show stx + le if stx exists
+            StringBuilder emeraldText = new StringBuilder();
+            if (stacks > 0) {
+                emeraldText.append(stacks).append("stx");
+                if (le > 0) {
+                    emeraldText.append(" + ").append(le).append("le");
+                }
+            } else if (le > 0) {
+                emeraldText.append(le).append("le");
+            } else {
+                emeraldText.append(eb).append("eb");
+            }
+            drawCenteredText(context, "§a§lEmeralds: §f" + emeraldText.toString(), centerX, startY);
             startY += lineHeight;
 
-            drawCenteredText(context, "§5§lMythic Aspects Pulled: §f" + mythicAspectsPulled, centerX, startY);
-            startY += lineHeight + 20;
+            drawCenteredText(context, "§e§lAmplifiers: §f" + combinedStats.getTotalAmplifiers() + " §7(I: " + combinedStats.amplifierTier1 + " | II: " + combinedStats.amplifierTier2 + " | III: " + combinedStats.amplifierTier3 + ")", centerX, startY);
+            startY += lineHeight + 8;
+
+            drawCenteredText(context, "§b§lBags: §f" + combinedStats.totalBags + " §7(Stuffed: " + combinedStats.stuffedBags + " | Packed: " + combinedStats.packedBags + " | Varied: " + combinedStats.variedBags + ")", centerX, startY);
+            startY += lineHeight + 8;
+
+            drawCenteredText(context, "§d§lTomes: §f" + combinedStats.totalTomes + " §7(§5" + combinedStats.mythicTomes + " §7mythic, §d" + combinedStats.fabledTomes + " §7fabled§7)", centerX, startY);
+            startY += lineHeight + 8;
+
+            drawCenteredText(context, "§5§lAspects: §f" + combinedStats.totalAspects + " §7(§5" + combinedStats.mythicAspects + " §7mythic, §c" + combinedStats.fabledAspects + " §7fabled, §b" + combinedStats.legendaryAspects + " §7legendary§7)", centerX, startY);
+            startY += lineHeight + 25;
         }
 
         // Per-raid breakdown
@@ -3478,23 +3791,49 @@ public class AspectScreenSimple extends WEScreen {
             for (int i = 0; i < 4; i++) {
                 if (!raidToggles[i]) continue;
 
-                String searchTerm = switch(i) {
-                    case 0 -> "Grootslang";
-                    case 1 -> "Orphion";
-                    case 2 -> "Colossus";
-                    case 3 -> "Nameless";
-                    default -> "";
-                };
+                RaidLootData.RaidSpecificLoot raidStats = lootData.perRaidData.get(raidCodes[i]);
+                if (raidStats == null) {
+                    drawCenteredText(context, raidColors[i] + "§l" + raidNames[i] + ": §7No data", centerX, startY);
+                    startY += 30;
+                    continue;
+                }
 
-                long raidRuns = allRaids.stream()
-                    .filter(r -> r.raidInfo.toString().contains(searchTerm))
-                    .count();
+                int runs = raidStats.completionCount;
+                long raidTotalEmeralds = (raidStats.liquidEmeralds * 64 * 64) + (raidStats.emeraldBlocks * 64);
+                long raidStacks = raidTotalEmeralds / 262144;
+                long raidRemaining = raidTotalEmeralds % 262144;
+                long raidLe = raidRemaining / 4096;
+                long raidRemaining2 = raidRemaining % 4096;
+                long raidEb = raidRemaining2 / 64;
 
-                long raidCompleted = allRaids.stream()
-                    .filter(r -> r.raidInfo.toString().contains(searchTerm) && r.completed)
-                    .count();
+                if (showRates && runs > 0) {
+                    // Calculate total LE (including stx converted to LE)
+                    // 1 stx = 64 LE, so totalLE = (stacks * 64) + remainderLE
+                    long totalLeValue = (raidStacks * 64) + raidLe;
+                    double avgLe = (double) totalLeValue / runs;
 
-                drawCenteredText(context, raidColors[i] + "§l" + raidNames[i] + ": §f" + raidRuns + " §8(§a" + raidCompleted + " §7completed§8)", centerX, startY);
+                    String emeraldText;
+                    if (avgLe >= 64) {
+                        // Show in stx if average is at least 1 stx (64 LE)
+                        emeraldText = String.format("%.2fstx/run", avgLe / 64);
+                    } else {
+                        emeraldText = String.format("%.1fle/run", avgLe);
+                    }
+                    drawCenteredText(context, raidColors[i] + "§l" + raidNames[i] + ": §f" + runs + " runs §8| §a" + emeraldText, centerX, startY);
+                } else {
+                    // Show totals - always show stx + le if both exist
+                    String emeraldText;
+                    if (raidStacks > 0 && raidLe > 0) {
+                        emeraldText = raidStacks + "stx + " + raidLe + "le";
+                    } else if (raidStacks > 0) {
+                        emeraldText = raidStacks + "stx";
+                    } else if (raidLe > 0) {
+                        emeraldText = raidLe + "le";
+                    } else {
+                        emeraldText = raidEb + "eb";
+                    }
+                    drawCenteredText(context, raidColors[i] + "§l" + raidNames[i] + ": §f" + runs + " runs §8| §a" + emeraldText + " total", centerX, startY);
+                }
                 startY += 30;
             }
         }

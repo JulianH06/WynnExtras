@@ -35,8 +35,10 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -535,6 +537,101 @@ public class WynncraftApiHandler {
     }
 
     /**
+     * Upload rewarded aspects from raid chest to API
+     * @param raidType NOTG, NOL, TCC, TNA
+     * @param aspectNames List of aspect names received from reward chest
+     */
+    public static void uploadRewardedAspects(String raidType, List<String> aspectNames) {
+        if (McUtils.player() == null) {
+            System.err.println("Cannot upload rewarded aspects - player not loaded");
+            return;
+        }
+
+        // Validate raid type
+        if (!raidType.equals("NOTG") && !raidType.equals("NOL") &&
+            !raidType.equals("TCC") && !raidType.equals("TNA")) {
+            System.err.println("Unknown raid type: " + raidType);
+            return;
+        }
+
+        if (aspectNames == null || aspectNames.isEmpty()) {
+            System.out.println("No aspects to upload");
+            return;
+        }
+
+        // Authenticate with Mojang first
+        julianh06.wynnextras.utils.MojangAuth.getAuthData().thenAccept(authData -> {
+            if (authData == null) {
+                System.err.println("Failed to authenticate with Mojang");
+                return;
+            }
+
+            try {
+                // Build JSON payload
+                JsonObject payload = new JsonObject();
+                payload.addProperty("raidType", raidType);
+
+                JsonArray aspectsArray = new JsonArray();
+                for (String aspectName : aspectNames) {
+                    aspectsArray.add(aspectName);
+                }
+                payload.add("aspects", aspectsArray);
+
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(5))
+                        .build();
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("http://wynnextras.com/raid/rewarded-aspects"))
+                        .header("Content-Type", "application/json")
+                        .header("Username", authData.username)
+                        .header("Server-ID", authData.serverId)
+                        .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                        .timeout(Duration.ofSeconds(8))
+                        .build();
+
+                client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                        .thenAccept(response -> {
+                            int code = response.statusCode();
+                            if (code == 200) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aUploaded " + aspectNames.size() + " aspect(s) from §e" + raidType));
+                                System.out.println("[WynnExtras] Successfully uploaded rewarded aspects for " + raidType);
+                            } else if (code == 401) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                            } else {
+                                System.err.println("Error uploading rewarded aspects: " + code);
+                            }
+                        })
+                        .exceptionally(ex -> {
+                            System.err.println("Failed to upload rewarded aspects: " + ex.getMessage());
+                            return null;
+                        });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.err.println("Error preparing rewarded aspects upload");
+            }
+        });
+    }
+
+    /**
+     * Wipe all aspect data for the current player from the database (DEBUG)
+     * Works by uploading an empty aspects list, which overwrites existing data
+     */
+    public static void wipePlayerAspects() {
+        if (McUtils.player() == null) {
+            System.err.println("Cannot wipe aspects - player not loaded");
+            return;
+        }
+
+        System.out.println("[WynnExtras] wipePlayerAspects() called - uploading empty aspects list");
+
+        // Just upload an empty map - this will overwrite all existing aspects with nothing
+        processAspects(new java.util.HashMap<>());
+        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eWiping aspects by uploading empty data..."));
+    }
+
+    /**
      * Upload loot pool to crowdsourcing API (without personal progress)
      * NO API KEY REQUIRED - uses player UUID from authenticated Minecraft session
      * @param raidType NOTG, NOL, TCC, TNA
@@ -743,6 +840,12 @@ public class WynncraftApiHandler {
                                 result.add(player);
                             }
 
+                            // Deduplicate by playerUuid (keep first occurrence, which is most recent)
+                            Set<String> seen = new HashSet<>();
+                            result = result.stream()
+                                    .filter(p -> seen.add(p.getPlayerUuid()))
+                                    .collect(Collectors.toList());
+
                             System.out.println("Fetched " + result.size() + " players from list");
                             return result;
                         } catch (Exception e) {
@@ -773,13 +876,18 @@ public class WynncraftApiHandler {
                     .build();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://wynnextras.com/user/leaderboard?limit=" + limit))
+                    .uri(URI.create("http://wynnextras.com/aspects/leaderboard?limit=" + limit))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
 
+            System.out.println("[WynnExtras] Fetching leaderboard from: http://wynnextras.com/aspects/leaderboard?limit=" + limit);
+
             return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenApply(response -> {
+                        System.out.println("[WynnExtras] Leaderboard response code: " + response.statusCode());
+                        System.out.println("[WynnExtras] Leaderboard response body: " + response.body().substring(0, Math.min(500, response.body().length())));
+
                         if (response.statusCode() != 200) {
                             System.out.println("Failed to fetch leaderboard: " + response.statusCode());
                             return new ArrayList<LeaderboardEntry>();
@@ -793,17 +901,20 @@ public class WynncraftApiHandler {
                                 JsonObject entry = json.get(i).getAsJsonObject();
                                 LeaderboardEntry player = gson.fromJson(entry, LeaderboardEntry.class);
                                 result.add(player);
+                                System.out.println("[WynnExtras] Parsed leaderboard entry: " + player.getPlayerName() + " - " + player.getMaxAspectCount() + " maxed");
                             }
 
-                            System.out.println("Fetched " + result.size() + " leaderboard entries");
+                            System.out.println("[WynnExtras] Fetched " + result.size() + " leaderboard entries");
                             return result;
                         } catch (Exception e) {
                             System.err.println("Error parsing leaderboard: " + e.getMessage());
+                            e.printStackTrace();
                             return new ArrayList<LeaderboardEntry>();
                         }
                     })
                     .exceptionally(ex -> {
                         System.err.println("Failed to fetch leaderboard: " + ex.getMessage());
+                        ex.printStackTrace();
                         return new ArrayList<LeaderboardEntry>();
                     });
 

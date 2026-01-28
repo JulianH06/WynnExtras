@@ -25,6 +25,16 @@ public class MojangAuth {
     private static final HttpClient httpClient = HttpClient.newHttpClient();
     private static final String MOJANG_JOIN_SERVER = "https://sessionserver.mojang.com/session/minecraft/join";
 
+    // Cache authentication to avoid rapid-fire Mojang API calls
+    // 5 minutes is safe - Mojang session tokens last for hours
+    private static AuthData cachedAuthData = null;
+    private static long cacheTimestamp = 0;
+    private static final long CACHE_DURATION_MS = 300000; // 5 minutes
+    private static final Object cacheLock = new Object();
+
+    // Track in-progress authentication to prevent multiple simultaneous auths
+    private static CompletableFuture<AuthData> pendingAuth = null;
+
     /**
      * Authenticate with Mojang and get a server ID for API calls
      * This performs the standard Minecraft server join flow
@@ -63,6 +73,12 @@ public class MojangAuth {
                 try {
                     // joinServer takes UUID, accessToken, and serverId
                     sessionService.joinServer(playerUuid, session.getAccessToken(), serverId);
+
+                    // Small delay to let Mojang propagate the session before we use it
+                    // Without this, the first request often fails because hasJoined check
+                    // happens before Mojang has fully processed the joinServer call
+                    Thread.sleep(200);
+
                     WynnExtras.LOGGER.info("Successfully authenticated with Mojang sessionserver");
                     return serverId;
                 } catch (AuthenticationException e) {
@@ -121,20 +137,70 @@ public class MojangAuth {
      * Get authentication data for API calls
      * Call this before making authenticated API requests
      *
+     * Caches authentication for 5 minutes to prevent rapid-fire Mojang API calls.
+     * Also ensures only one authentication happens at a time - other callers wait
+     * for the in-progress auth to complete.
+     *
      * @return CompletableFuture with AuthData, or null if authentication failed
      */
     public static CompletableFuture<AuthData> getAuthData() {
-        return authenticateForAPI().thenApply(serverId -> {
-            if (serverId == null) {
-                return null;
+        synchronized (cacheLock) {
+            // Check if we have a valid cached auth
+            long now = System.currentTimeMillis();
+            if (cachedAuthData != null && (now - cacheTimestamp) < CACHE_DURATION_MS) {
+                WynnExtras.LOGGER.info("Reusing cached Mojang authentication (age: {}ms)", now - cacheTimestamp);
+                return CompletableFuture.completedFuture(cachedAuthData);
             }
 
-            String username = McUtils.playerName();
-            if (username == null) {
-                return null;
+            // Check if auth is already in progress - wait for it instead of starting another
+            if (pendingAuth != null) {
+                WynnExtras.LOGGER.info("Waiting for in-progress Mojang authentication");
+                return pendingAuth;
             }
 
-            return new AuthData(username, serverId);
-        });
+            // Start new authentication and track it
+            WynnExtras.LOGGER.info("Starting fresh Mojang authentication");
+            pendingAuth = authenticateForAPI().thenApply(serverId -> {
+                if (serverId == null) {
+                    synchronized (cacheLock) {
+                        pendingAuth = null;
+                    }
+                    return null;
+                }
+
+                String username = McUtils.playerName();
+                if (username == null) {
+                    synchronized (cacheLock) {
+                        pendingAuth = null;
+                    }
+                    return null;
+                }
+
+                AuthData authData = new AuthData(username, serverId);
+
+                // Cache the result and clear pending flag
+                synchronized (cacheLock) {
+                    cachedAuthData = authData;
+                    cacheTimestamp = System.currentTimeMillis();
+                    pendingAuth = null;
+                }
+
+                return authData;
+            });
+
+            return pendingAuth;
+        }
+    }
+
+    /**
+     * Manually invalidate the authentication cache
+     * Useful if an API request fails with auth error
+     */
+    public static void invalidateCache() {
+        synchronized (cacheLock) {
+            cachedAuthData = null;
+            cacheTimestamp = 0;
+            WynnExtras.LOGGER.info("Mojang auth cache invalidated");
+        }
     }
 }

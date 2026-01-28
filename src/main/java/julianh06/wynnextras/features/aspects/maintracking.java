@@ -161,6 +161,21 @@ public class maintracking {
             null
     );
 
+    // Subcommand: /we aspects wipe
+    private static SubCommand wipeSubCmd = new SubCommand(
+            "wipe",
+            "Wipe your aspect data from the database (DEBUG)",
+            (ctx) -> {
+                MinecraftUtils.mc().send(() -> {
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eWiping your aspect data..."));
+                    WynncraftApiHandler.wipePlayerAspects();
+                });
+                return 1;
+            },
+            null,
+            null
+    );
+
     // Main command with player argument: /we aspects <player>
     private static Command aspectsCmdWithArg = new Command(
             "aspects",
@@ -173,7 +188,7 @@ public class maintracking {
                 return 1;
             },
             List.of(scanSubCmd, debugSubCmd, raidDebugSubCmd, lootpoolSubCmd, mySubCmd, miscSubCmd,
-                    gambitSubCmd, raidlootSubCmd, exploreSubCmd, leaderboardSubCmd),
+                    gambitSubCmd, raidlootSubCmd, exploreSubCmd, leaderboardSubCmd, wipeSubCmd),
             List.of(ClientCommandManager.argument("player", StringArgumentType.word()))
     );
 
@@ -189,7 +204,7 @@ public class maintracking {
                 return 1;
             },
             List.of(scanSubCmd, debugSubCmd, raidDebugSubCmd, lootpoolSubCmd, mySubCmd, miscSubCmd,
-                    gambitSubCmd, raidlootSubCmd, exploreSubCmd, leaderboardSubCmd),
+                    gambitSubCmd, raidlootSubCmd, exploreSubCmd, leaderboardSubCmd, wipeSubCmd),
             null
     );
 
@@ -281,6 +296,7 @@ public class maintracking {
                 aspectsInChest = new ItemStack[5];
                 gambitDetected = false;
                 lastPreviewChestTitle = "";
+                aspect.resetRewardAspects();
                 // DON'T reset needToClickAbilityTree - it needs to persist across screen changes
                 return;
             }
@@ -374,45 +390,28 @@ public class maintracking {
                 return;
             }
 
-//            if(inRaidChest && !scanDone){
-//                try {
-//                    aspect.AspectsInRaidChest();
-//                } catch (Exception e) {
-//                    McUtils.sendMessageToClient(Text.of("crash"));
-//                }
-//                return;
-//            }
+            // Reward chest: scan aspects from slots 11-15 and upload
+            if(inRaidChest && !scanDone){
+                try {
+                    aspect.AspectsInRaidChest();
+                } catch (Exception e) {
+                    System.err.println("[WynnExtras] Error scanning raid chest: " + e.getMessage());
+                    e.printStackTrace();
+                }
+                return;
+            }
 
-//            if(inRaidChest && Raiddone){
-//                Raiddone = false;
-//                aspect.AspectsInRaidChest();
-//                return;
-//            }
-//            if(inRaidChest && NextPageRaid){
-//                if(GuiSettleTicks>7){
-//                    NextPageRaid=false;
-//                    GuiSettleTicks=0;
-//                    aspect.AspectsInRaidChest();
-//                    return;
-//                } else{
-//                    GuiSettleTicks++;
-//                    return;
-//                }
-//            }
-//            if(inRaidChest && PrevPageRaid){
-//                if(GuiSettleTicks>7){
-//                    if(counter == 4) {
-//                        PrevPageRaid = false;
-//                        GuiSettleTicks = 0;
-//                        counter = 0;
-//                    }
-//                    aspect.PrevPageRaid();
-//                    counter++;
-//                }
-//                else{
-//                    GuiSettleTicks++;
-//                }
-//            }
+            if(inRaidChest && NextPageRaid){
+                if(GuiSettleTicks>7){
+                    NextPageRaid=false;
+                    GuiSettleTicks=0;
+                    aspect.AspectsInRaidChest();
+                    return;
+                } else{
+                    GuiSettleTicks++;
+                    return;
+                }
+            }
         });
     }
     public static boolean getinTreeMenu(){

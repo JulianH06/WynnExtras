@@ -19,7 +19,23 @@ public class RaidData {
         this.players = players;
         this.raidEndTime = raidEndTime;
         this.completed = completed;
-        this.raidStartTime = System.currentTimeMillis() - raidInfo.getTimeInRaid();
+
+        // Calculate start time from end time minus duration
+        // Use the raidStartTime from raidInfo if available, otherwise calculate it
+        long startTimeFromEvent = raidInfo.getRaidStartTime();
+        if (startTimeFromEvent > 0) {
+            this.raidStartTime = startTimeFromEvent;
+        } else {
+            // Fallback: calculate from end time
+            this.raidStartTime = raidEndTime - raidInfo.getTimeInRaid();
+        }
+
         this.duration = ((RaidInfoInvoker) raidInfo).invokeGetTimeInRooms();
+
+        // Debug logging
+        System.out.println("[WynnExtras] RaidData created:");
+        System.out.println("  Start time: " + this.raidStartTime);
+        System.out.println("  End time: " + this.raidEndTime);
+        System.out.println("  Duration: " + this.duration);
     }
 }
