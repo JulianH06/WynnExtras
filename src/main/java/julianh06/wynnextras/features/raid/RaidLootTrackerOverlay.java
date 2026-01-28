@@ -53,6 +53,11 @@ public class RaidLootTrackerOverlay {
     public static final String LINE_TOMES_MYTHIC = "tomes_mythic";
     public static final String LINE_TOMES_FABLED = "tomes_fabled";
     public static final String LINE_CHARMS = "charms";
+    public static final String LINE_ASPECTS = "aspects";
+    public static final String LINE_ASPECTS_MYTHIC = "aspects_mythic";
+    public static final String LINE_ASPECTS_FABLED = "aspects_fabled";
+    public static final String LINE_ASPECTS_LEGENDARY = "aspects_legendary";
+    public static final String LINE_ASPECTS_RARE = "aspects_rare";
     public static final String LINE_COMPLETIONS = "completions";
 
     // Track line positions for click detection
@@ -87,6 +92,7 @@ public class RaidLootTrackerOverlay {
     private static final CustomColor BAG_COLOR = CustomColor.fromHexString("55FFFF");
     private static final CustomColor TOME_COLOR = CustomColor.fromHexString("FF55FF");
     private static final CustomColor CHARM_COLOR = CustomColor.fromHexString("FF5555");
+    private static final CustomColor ASPECT_COLOR = CustomColor.fromHexString("AA55FF");
     private static final CustomColor HIDDEN_COLOR = CustomColor.fromHexString("555555");
     private static final CustomColor SESSION_COLOR = CustomColor.fromHexString("55FF55");
 
@@ -170,6 +176,20 @@ public class RaidLootTrackerOverlay {
         linePositions.clear();
         RaidLootData data = RaidLootConfig.INSTANCE.data;
         data.initSession();
+
+        // DEBUG: Print data values once per second
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player != null && mc.player.age % 20 == 0) {
+            System.out.println("[WynnExtras DEBUG] Overlay data: " +
+                    "EB=" + data.emeraldBlocks + ", " +
+                    "LE=" + data.liquidEmeralds + ", " +
+                    "T1=" + data.amplifierTier1 + ", " +
+                    "Bags=" + data.totalBags + ", " +
+                    "Tomes=" + data.totalTomes + ", " +
+                    "Charms=" + data.totalCharms);
+            System.out.println("[WynnExtras DEBUG] Per-raid data size: " +
+                    (data.perRaidData != null ? data.perRaidData.size() : "null"));
+        }
 
         boolean showSession = config.raidLootTrackerShowSession;
         boolean compact = config.raidLootTrackerCompact;
@@ -282,6 +302,7 @@ public class RaidLootTrackerOverlay {
             y = drawCompactLine(context, LINE_BAGS, "Bags", String.valueOf(displayData.totalBags), BAG_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_TOMES, "Tomes", String.valueOf(displayData.totalTomes), TOME_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_CHARMS, "Charms", String.valueOf(displayData.totalCharms), CHARM_COLOR, y, inInventory);
+            y = drawCompactLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.totalAspects), ASPECT_COLOR, y, inInventory);
             drawCompactLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
         } else {
             // Full mode
@@ -304,6 +325,12 @@ public class RaidLootTrackerOverlay {
             y = drawLine(context, LINE_TOMES_FABLED, "  Fabled", String.valueOf(displayData.fabledTomes), TOME_COLOR, y, inInventory);
 
             y = drawLine(context, LINE_CHARMS, "Charms", String.valueOf(displayData.totalCharms), CHARM_COLOR, y, inInventory);
+
+            y = drawLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.totalAspects), ASPECT_COLOR, y, inInventory);
+            y = drawLine(context, LINE_ASPECTS_MYTHIC, "  Mythic", String.valueOf(displayData.mythicAspects), ASPECT_COLOR, y, inInventory);
+            y = drawLine(context, LINE_ASPECTS_FABLED, "  Fabled", String.valueOf(displayData.fabledAspects), ASPECT_COLOR, y, inInventory);
+            y = drawLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), ASPECT_COLOR, y, inInventory);
+            y = drawLine(context, LINE_ASPECTS_RARE, "  Rare", String.valueOf(displayData.rareAspects), ASPECT_COLOR, y, inInventory);
 
             y += 2;
             drawLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
@@ -370,9 +397,9 @@ public class RaidLootTrackerOverlay {
 
         int dataLines;
         if (compact) {
-            dataLines = 6; // Ems, Amps, Bags, Tomes, Charms, Runs
+            dataLines = 7; // Ems, Amps, Bags, Tomes, Charms, Aspects, Runs
         } else {
-            dataLines = 13; // Emeralds, Amplifiers(4), Bags(4), Tomes(3), Charms, Runs
+            dataLines = 18; // Emeralds, Amplifiers(4), Bags(4), Tomes(3), Charms, Aspects(5), Runs
         }
 
         // Subtract hidden lines when not showing them (not in inventory)

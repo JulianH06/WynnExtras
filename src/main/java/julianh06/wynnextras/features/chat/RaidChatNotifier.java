@@ -8,6 +8,7 @@ import com.wynntils.models.raid.type.RaidRoomInfo;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.core.components.Models;
 import com.wynntils.utils.type.Time;
+import com.wynntils.core.text.StyledText;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.mixin.RaidKindAccessor;
 import julianh06.wynnextras.utils.ChatUtils;
@@ -227,7 +228,7 @@ public class RaidChatNotifier {
                         Thread.currentThread().interrupt();
                     }
                     if (!finalMsg.isEmpty()) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(finalMsg)));
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(StyledText.fromString(finalMsg).getComponent()));
                     }
                 }).start();
 
@@ -326,17 +327,13 @@ public class RaidChatNotifier {
                 return "§aAdded Slime " + progress + " §c@ " + timestamp;
             }
 
-
             long elapsed = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
 
-
             String key = PB_PREFIX + "_" + progress;
-
             Long pb = getPB(key);
 
             String output = "§aAdded Slime " + progress +
                     " §c@ " + formatTime(elapsed);
-
 
             if (pb == null || elapsed < pb) {
                 savePB(key, elapsed);
@@ -375,12 +372,11 @@ public class RaidChatNotifier {
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
 
             String key = PB_PREFIX + "_" + progress;
-
             Long pb = getPB(key);
 
             String output = "§bCompleted Seal " + progress + " §c@ " + timestamp;
 
-            if (pb == null || currentMillis  < pb) {
+            if (pb == null || currentMillis < pb) {
                 savePB(key, currentMillis);
 
                 if (pb != null) {
@@ -420,8 +416,8 @@ public class RaidChatNotifier {
 
             String output = "§bAdded light " + progress + " §c@ " + timestamp;
 
-            if (pb == null || currentMillis  < pb) {
-                savePB(key, currentMillis );
+            if (pb == null || currentMillis < pb) {
+                savePB(key, currentMillis);
 
                 if (pb != null) {
                     output += " §e[New PB! Old: " + formatTime(pb) + "]";
@@ -593,7 +589,6 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             String message = formattedMessage + timestamp;
 
-
             if (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null) {
                 long currentTime = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
                 Long pb = getPB(pbKey);
@@ -633,10 +628,6 @@ public class RaidChatNotifier {
 
         @Override
         public String extractProgress(String msg) {
-            if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
-                return null;
-            }
-
             long now = System.currentTimeMillis();
             if (lastTriggerTime != -1 && (now - lastTriggerTime) < 555) {
                 return null; // anti-spam
@@ -657,7 +648,6 @@ public class RaidChatNotifier {
             }
 
             String key = pbKeyPrefix + "_" + occurrenceCount;
-
             String msg;
 
             if (Models.Raid.getCurrentRaid() != null
@@ -698,7 +688,6 @@ public class RaidChatNotifier {
             }
             else if (detector instanceof WatchPhaseDetector w) {
                 w.resetForNewRaid();
-
             }
         }
     }
@@ -744,7 +733,7 @@ public class RaidChatNotifier {
         }
 
         McUtils.sendMessageToClient(
-                WynnExtras.addWynnExtrasPrefix(Text.of(msg))
+                WynnExtras.addWynnExtrasPrefix(StyledText.fromString(msg).getComponent())
         );
     }
 

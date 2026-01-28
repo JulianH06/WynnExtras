@@ -80,6 +80,11 @@ public class WynnExtrasConfigScreen extends Screen {
     private static final int DROPDOWN_MAX_HEIGHT = 150;
     private static final int DROPDOWN_ITEM_HEIGHT = 22;
 
+    // Search state
+    private String searchQuery = "";
+    private boolean searchFocused = false;
+    private static final int SEARCH_BAR_HEIGHT = 28;
+
     public WynnExtrasConfigScreen(Screen parent) {
         super(Text.literal("WynnExtras Configuration"));
         this.parent = parent;
@@ -250,6 +255,38 @@ public class WynnExtrasConfigScreen extends Screen {
         return cat;
     }
 
+    // Check if option matches search query
+    private boolean matchesSearch(ConfigOption opt) {
+        if (searchQuery.isEmpty()) return true;
+        String query = searchQuery.toLowerCase();
+        return opt.name.toLowerCase().contains(query) || opt.desc.toLowerCase().contains(query);
+    }
+
+    // Check if subcategory has any matching options
+    private boolean subHasMatches(SubCategory sub) {
+        if (searchQuery.isEmpty()) return true;
+        for (ConfigOption opt : sub.options) {
+            if (matchesSearch(opt)) return true;
+        }
+        return false;
+    }
+
+    // Check if category has any matching options
+    private boolean categoryHasMatches(Category cat) {
+        if (searchQuery.isEmpty()) return true;
+        // Check if category name matches
+        if (cat.name.toLowerCase().contains(searchQuery.toLowerCase())) return true;
+        // Check top-level options
+        for (ConfigOption opt : cat.options) {
+            if (matchesSearch(opt)) return true;
+        }
+        // Check subcategories
+        for (SubCategory sub : cat.subCategories) {
+            if (subHasMatches(sub)) return true;
+        }
+        return false;
+    }
+
     private ConfigOption toggle(String name, String desc, Supplier<Boolean> get, Consumer<Boolean> set) {
         return new BooleanOption(name, desc, get, set);
     }
@@ -330,9 +367,38 @@ public class WynnExtrasConfigScreen extends Screen {
         ctx.drawCenteredTextWithShadow(textRenderer, "Categories", SIDEBAR_WIDTH / 2, 18, GOLD);
         ctx.fill(20, 32, SIDEBAR_WIDTH - 20, 33, GOLD_DARK);
 
-        int y = 45;
+        // Search bar
+        int searchY = 40;
+        boolean searchHovered = mouseX >= 8 && mouseX < SIDEBAR_WIDTH - 8
+                && mouseY >= searchY && mouseY < searchY + SEARCH_BAR_HEIGHT;
+
+        ctx.fill(8, searchY, SIDEBAR_WIDTH - 8, searchY + SEARCH_BAR_HEIGHT, BORDER_DARK);
+        ctx.fill(9, searchY + 1, SIDEBAR_WIDTH - 9, searchY + SEARCH_BAR_HEIGHT - 1,
+                searchFocused ? PARCHMENT_LIGHT : (searchHovered ? PARCHMENT_HOVER : PARCHMENT));
+
+        String searchText = searchQuery.isEmpty() ? (searchFocused ? "" : "Search...") : searchQuery;
+        int searchTextColor = searchQuery.isEmpty() && !searchFocused ? TEXT_DIM : TEXT_LIGHT;
+        String displayText = searchText;
+        if (displayText.length() > 12) displayText = displayText.substring(0, 10) + "..";
+        ctx.drawTextWithShadow(textRenderer, displayText + (searchFocused ? "_" : ""),
+                14, searchY + 10, searchTextColor);
+
+        // Clear button if there's text
+        if (!searchQuery.isEmpty()) {
+            int clearX = SIDEBAR_WIDTH - 28;
+            boolean clearHovered = mouseX >= clearX && mouseX < clearX + 20
+                    && mouseY >= searchY + 4 && mouseY < searchY + 24;
+            ctx.fill(clearX, searchY + 4, clearX + 20, searchY + 24, clearHovered ? ACCENT_RED : BG_DARK);
+            ctx.drawCenteredTextWithShadow(textRenderer, "X", clearX + 10, searchY + 10, TEXT_LIGHT);
+        }
+
+        int y = searchY + SEARCH_BAR_HEIGHT + 8;
         for (int i = 0; i < categories.size(); i++) {
             Category cat = categories.get(i);
+
+            // Filter categories - only show if they have matching options
+            if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) continue;
+
             boolean hovered = mouseX >= 8 && mouseX < SIDEBAR_WIDTH - 8 && mouseY >= y && mouseY < y + 22;
             boolean selected = i == selectedCategory;
 
@@ -346,7 +412,6 @@ public class WynnExtrasConfigScreen extends Screen {
 
             // Color dot and text
             drawDiamond(ctx, 20, y + 10, 4, cat.color);
-            //ctx.fill(18, y + 9, 24, y + 15, cat.color);
             ctx.drawTextWithShadow(textRenderer, cat.name, 30, y + 7, selected ? TEXT_LIGHT : TEXT_DIM);
 
             y += 28;
@@ -380,8 +445,6 @@ public class WynnExtrasConfigScreen extends Screen {
         int listBottom = height - FOOTER_HEIGHT - 10;
 
         // Category header
-
-        //ctx.fill(contentX, listTop - 3, contentX + 6, listTop + 9, cat.color);
         drawDiamond(ctx, contentX + 5, listTop + 2, 5, cat.color);
         ctx.drawTextWithShadow(textRenderer, cat.name, contentX + 16, listTop - 1, cat.color);
         ctx.fill(contentX, listTop + 12, contentX + contentW, listTop + 13, cat.color);
@@ -390,16 +453,22 @@ public class WynnExtrasConfigScreen extends Screen {
 
         int y = listTop + 20 - (int)scrollOffset;
 
+        // Render subcategories with filtering
         for (SubCategory sub : cat.subCategories) {
-            y = renderSubCategory(ctx, sub, contentX, y, contentW, mouseX, mouseY, listTop + 15, listBottom);
+            if (subHasMatches(sub)) {
+                y = renderSubCategory(ctx, sub, contentX, y, contentW, mouseX, mouseY, listTop + 15, listBottom);
+            }
         }
 
+        // Render top-level options with filtering
         for (ConfigOption opt : cat.options) {
-            if (y + OPTION_HEIGHT > listTop && y < listBottom) {
-                boolean hovered = mouseX >= contentX && mouseX < contentX + contentW && mouseY >= y && mouseY < y + OPTION_HEIGHT - 5;
-                opt.render(ctx, contentX, y, contentW, OPTION_HEIGHT, mouseX, mouseY, hovered, cat.color);
+            if (matchesSearch(opt)) {
+                if (y + OPTION_HEIGHT > listTop && y < listBottom) {
+                    boolean hovered = mouseX >= contentX && mouseX < contentX + contentW && mouseY >= y && mouseY < y + OPTION_HEIGHT - 5;
+                    opt.render(ctx, contentX, y, contentW, OPTION_HEIGHT, mouseX, mouseY, hovered, cat.color);
+                }
+                y += OPTION_HEIGHT + OPTION_SPACING;
             }
-            y += OPTION_HEIGHT + OPTION_SPACING;
         }
 
         ctx.disableScissor();
@@ -432,12 +501,14 @@ public class WynnExtrasConfigScreen extends Screen {
 
         if (sub.expanded) {
             for (ConfigOption opt : sub.options) {
-                if (y + OPTION_HEIGHT > top && y < bot) {
-                    boolean hovered = mX >= x + 8 && mX < x + w && mY >= y && mY < y + OPTION_HEIGHT - 5;
-                    ctx.fill(x, y, x + 4, y + OPTION_HEIGHT - 5, selectedCategoryColor);
-                    opt.render(ctx, x + 8, y, w - 8, OPTION_HEIGHT, mX, mY, hovered, selectedCategoryColor);
+                if (matchesSearch(opt)) {
+                    if (y + OPTION_HEIGHT > top && y < bot) {
+                        boolean hovered = mX >= x + 8 && mX < x + w && mY >= y && mY < y + OPTION_HEIGHT - 5;
+                        ctx.fill(x, y, x + 4, y + OPTION_HEIGHT - 5, selectedCategoryColor);
+                        opt.render(ctx, x + 8, y, w - 8, OPTION_HEIGHT, mX, mY, hovered, selectedCategoryColor);
+                    }
+                    y += OPTION_HEIGHT + OPTION_SPACING;
                 }
-                y += OPTION_HEIGHT + OPTION_SPACING;
             }
         }
         return y;
@@ -608,9 +679,41 @@ public class WynnExtrasConfigScreen extends Screen {
             }
         }
 
+        // Search bar in sidebar
+        int sidebarSearchY = 40;
+        if (mx >= 8 && mx < SIDEBAR_WIDTH - 8 && my >= sidebarSearchY && my < sidebarSearchY + SEARCH_BAR_HEIGHT) {
+            // Clear button
+            if (!searchQuery.isEmpty()) {
+                int clearX = SIDEBAR_WIDTH - 28;
+                if (mx >= clearX && mx < clearX + 20) {
+                    searchQuery = "";
+                    scrollOffset = 0;
+                    updateMaxScroll();
+                    autoSelectMatchingCategory();
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    return true;
+                }
+            }
+            // Click on search bar
+            searchFocused = true;
+            return true;
+        }
+
+        // Click outside search bar removes focus
+        if (searchFocused && (my < sidebarSearchY || my >= sidebarSearchY + SEARCH_BAR_HEIGHT || mx < 8 || mx >= SIDEBAR_WIDTH - 8)) {
+            if (mx < SIDEBAR_WIDTH) {
+                searchFocused = false;
+            }
+        }
+
+        // Categories in sidebar
         if (mx >= 8 && mx < SIDEBAR_WIDTH - 8) {
-            int y = 45;
+            int y = sidebarSearchY + SEARCH_BAR_HEIGHT + 8;
             for (int i = 0; i < categories.size(); i++) {
+                Category cat = categories.get(i);
+                // Skip filtered categories
+                if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) continue;
+
                 if (my >= y && my < y + 24) {
                     selectedCategory = i;
                     scrollOffset = 0;
@@ -647,29 +750,35 @@ public class WynnExtrasConfigScreen extends Screen {
             int y = listTop - (int)scrollOffset + 5;
 
             for (SubCategory sub : cat.subCategories) {
-                if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + SUBCATEGORY_HEADER_HEIGHT) && mx >= contentX && mx < contentX + contentW) {
-                    sub.expanded = !sub.expanded;
-                    updateMaxScroll();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    return true;
-                }
-                y += SUBCATEGORY_HEADER_HEIGHT + 5;
+                if (subHasMatches(sub)) {
+                    if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + SUBCATEGORY_HEADER_HEIGHT) && mx >= contentX && mx < contentX + contentW) {
+                        sub.expanded = !sub.expanded;
+                        updateMaxScroll();
+                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                        return true;
+                    }
+                    y += SUBCATEGORY_HEADER_HEIGHT + 5;
 
-                if (sub.expanded) {
-                    for (ConfigOption opt : sub.options) {
-                        if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + OPTION_HEIGHT)) {
-                            if (opt.mouseClicked(mx, my, contentX + 8, y, contentW - 8, OPTION_HEIGHT, btn)) return true;
+                    if (sub.expanded) {
+                        for (ConfigOption opt : sub.options) {
+                            if (matchesSearch(opt)) {
+                                if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + OPTION_HEIGHT)) {
+                                    if (opt.mouseClicked(mx, my, contentX + 8, y, contentW - 8, OPTION_HEIGHT, btn)) return true;
+                                }
+                                y += OPTION_HEIGHT + OPTION_SPACING;
+                            }
                         }
-                        y += OPTION_HEIGHT + OPTION_SPACING;
                     }
                 }
             }
 
             for (ConfigOption opt : cat.options) {
-                if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + OPTION_HEIGHT)) {
-                    if (opt.mouseClicked(mx, my, contentX, y, contentW, OPTION_HEIGHT, btn)) return true;
+                if (matchesSearch(opt)) {
+                    if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + OPTION_HEIGHT)) {
+                        if (opt.mouseClicked(mx, my, contentX, y, contentW, OPTION_HEIGHT, btn)) return true;
+                    }
+                    y += OPTION_HEIGHT + OPTION_SPACING;
                 }
-                y += OPTION_HEIGHT + OPTION_SPACING;
             }
         }
 
@@ -713,18 +822,24 @@ public class WynnExtrasConfigScreen extends Screen {
             int y = HEADER_HEIGHT + 30 - (int)scrollOffset;
 
             for (SubCategory sub : cat.subCategories) {
-                y += SUBCATEGORY_HEADER_HEIGHT + 5;
-                if (sub.expanded) {
-                    for (ConfigOption opt : sub.options) {
-                        if (opt.mouseDragged(mx, my, contentX + 8, y, contentW - 8, OPTION_HEIGHT)) return true;
-                        y += OPTION_HEIGHT + OPTION_SPACING;
+                if (subHasMatches(sub)) {
+                    y += SUBCATEGORY_HEADER_HEIGHT + 5;
+                    if (sub.expanded) {
+                        for (ConfigOption opt : sub.options) {
+                            if (matchesSearch(opt)) {
+                                if (opt.mouseDragged(mx, my, contentX + 8, y, contentW - 8, OPTION_HEIGHT)) return true;
+                                y += OPTION_HEIGHT + OPTION_SPACING;
+                            }
+                        }
                     }
                 }
             }
 
             for (ConfigOption opt : cat.options) {
-                if (opt.mouseDragged(mx, my, contentX, y, contentW, OPTION_HEIGHT)) return true;
-                y += OPTION_HEIGHT + OPTION_SPACING;
+                if (matchesSearch(opt)) {
+                    if (opt.mouseDragged(mx, my, contentX, y, contentW, OPTION_HEIGHT)) return true;
+                    y += OPTION_HEIGHT + OPTION_SPACING;
+                }
             }
         }
         return super.mouseDragged(click, dx, dy);
@@ -755,7 +870,59 @@ public class WynnExtrasConfigScreen extends Screen {
             activeDropdown = null;
             return true;
         }
+
+        // Handle search bar input
+        if (searchFocused) {
+            if (key == 259) { // Backspace
+                if (!searchQuery.isEmpty()) {
+                    searchQuery = searchQuery.substring(0, searchQuery.length() - 1);
+                    scrollOffset = 0;
+                    updateMaxScroll();
+                    autoSelectMatchingCategory();
+                }
+                return true;
+            } else if (key == 256) { // Escape
+                searchFocused = false;
+                return true;
+            } else if (key == 257) { // Enter
+                searchFocused = false;
+                return true;
+            }
+        }
+
         return super.keyPressed(input);
+    }
+
+    @Override
+    public boolean charTyped(CharInput charInput) {
+        if (searchFocused) {
+            char c = (char) charInput.codepoint();
+            if (c >= 32 && c < 127) { // Printable ASCII
+                searchQuery += c;
+                scrollOffset = 0;
+                updateMaxScroll();
+                autoSelectMatchingCategory();
+                return true;
+            }
+        }
+        return super.charTyped(charInput);
+    }
+
+    // Auto-select first category with matches when searching
+    private void autoSelectMatchingCategory() {
+        if (!searchQuery.isEmpty() && selectedCategory >= 0 && selectedCategory < categories.size()) {
+            Category currentCat = categories.get(selectedCategory);
+            if (!categoryHasMatches(currentCat)) {
+                // Find first category with matches
+                for (int i = 0; i < categories.size(); i++) {
+                    if (categoryHasMatches(categories.get(i))) {
+                        selectedCategory = i;
+                        updateMaxScroll();
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -788,10 +955,22 @@ public class WynnExtrasConfigScreen extends Screen {
         int getTotalHeight() {
             int h = 0;
             for (SubCategory s : subCategories) {
-                h += SUBCATEGORY_HEADER_HEIGHT + 5;
-                if (s.expanded) h += s.options.size() * (OPTION_HEIGHT + OPTION_SPACING);
+                if (subHasMatches(s)) {
+                    h += SUBCATEGORY_HEADER_HEIGHT + 5;
+                    if (s.expanded) {
+                        for (ConfigOption opt : s.options) {
+                            if (matchesSearch(opt)) {
+                                h += OPTION_HEIGHT + OPTION_SPACING;
+                            }
+                        }
+                    }
+                }
             }
-            h += options.size() * (OPTION_HEIGHT + OPTION_SPACING);
+            for (ConfigOption opt : options) {
+                if (matchesSearch(opt)) {
+                    h += OPTION_HEIGHT + OPTION_SPACING;
+                }
+            }
             return h + 20;
         }
     }
