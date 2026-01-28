@@ -21,6 +21,8 @@ import julianh06.wynnextras.features.raid.RaidLootData;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import julianh06.wynnextras.utils.UI.WEScreen;
+import julianh06.wynnextras.utils.UI.Widget;
+import julianh06.wynnextras.features.aspects.pages.*;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.input.CharInput;
@@ -48,6 +50,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
 
@@ -57,7 +60,7 @@ import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
  * Page 1: Gambits (today's 4 gambits + countdown)
  * Page 2: My Aspects (player's own aspects from API)
  */
-public class AspectScreenSimple extends WEScreen {
+public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
 
     private int currentPage = 0; // 0 = Loot Pools, 1 = Gambits, 2 = My Aspects, 3 = Raid Loot, 4 = Explore, 5 = Leaderboard
     private static final int MAX_PAGE = 5; // 6 pages total
@@ -143,6 +146,25 @@ public class AspectScreenSimple extends WEScreen {
 
     public AspectScreenSimple() {
         super(Text.of("WynnExtras Aspects"));
+    }
+
+    // Page instances (for extracted pages)
+    private GambitsPage gambitsPage;
+    private RaidLootPage raidLootPage;
+    private ExplorePage explorePage;
+    private LeaderboardPage leaderboardPage;
+
+    @Override
+    protected void init() {
+        super.init();
+
+        // Initialize page instances
+        if (gambitsPage == null) {
+            gambitsPage = new GambitsPage(this);
+            raidLootPage = new RaidLootPage(this);
+            explorePage = new ExplorePage(this);
+            leaderboardPage = new LeaderboardPage(this);
+        }
     }
 
     // For showing import result feedback
@@ -250,13 +272,22 @@ public class AspectScreenSimple extends WEScreen {
         } else if (currentPage == 1) {
             renderMyAspectsPage(context, mouseX, mouseY);
         } else if (currentPage == 2) {
-            renderGambitsPage(context, mouseX, mouseY);
+            // Use extracted GambitsPage
+            gambitsPage.setUi(ui);
+            gambitsPage.setPlayerData(myAspectsData);
+            gambitsPage.render(context, mouseX, mouseY, delta);
         } else if (currentPage == 3) {
-            renderRaidLootPage(context, mouseX, mouseY);
+            // Use extracted RaidLootPage
+            raidLootPage.setUi(ui);
+            raidLootPage.render(context, mouseX, mouseY, delta);
         } else if (currentPage == 4) {
-            renderExplorePage(context, mouseX, mouseY);
+            // Use extracted ExplorePage
+            explorePage.setUi(ui);
+            explorePage.render(context, mouseX, mouseY, delta);
         } else if (currentPage == 5) {
-            renderLeaderboardPage(context, mouseX, mouseY);
+            // Use extracted LeaderboardPage
+            leaderboardPage.setUi(ui);
+            leaderboardPage.render(context, mouseX, mouseY, delta);
         }
 
         // Page indicator and arrows (on top)
@@ -336,7 +367,7 @@ public class AspectScreenSimple extends WEScreen {
 
         // Toggle buttons (in logical coords)
         int toggleWidth = 200;
-        int favToggleWidth = 260; // Wider for favorites
+        int favToggleWidth = 320; // Wider for favorites
         int toggleHeight = 44;
         int toggleSpacing = 15;
         int toggleY = 14;
@@ -2063,9 +2094,11 @@ public class AspectScreenSimple extends WEScreen {
         boolean isMaxed = current >= total && total > 0;
 
         // Label on left (move further left to avoid overlapping with bar)
-        // Add rainbow effect to label if maxed
-        if (isMaxed) {
-            drawRainbowText(context, label, x - 320, y + (height / 2) - 8);
+        // Use CommonColors.RAINBOW for maxed (same as front page maxed aspects)
+        if (isMaxed && ui != null) {
+            // Strip formatting codes for rainbow text
+            String plainLabel = label.replaceAll("§.", "");
+            ui.drawText(plainLabel, x - 320, y + (height / 2) - 8, CommonColors.RAINBOW, 3f);
         } else {
             drawLeftText(context, label, x - 320, y + (height / 2) - 8);
         }
@@ -2089,14 +2122,15 @@ public class AspectScreenSimple extends WEScreen {
             }
         }
 
-        // Stats on right - golden if maxed, just star (no 100%!)
+        // Stats on right - rainbow if maxed, otherwise normal
         String statsText;
-        if (isMaxed) {
-            statsText = "§6§l" + current + "§8/§6§l" + total + " §6§l★";
+        if (isMaxed && ui != null) {
+            statsText = current + "/" + total + " ★";
+            ui.drawText(statsText, x + barWidth + 20, y + (height / 2) - 8, CommonColors.RAINBOW, 3f);
         } else {
             statsText = "§7" + current + "§8/§7" + total + " §8(§e" + String.format("%.1f", progress * 100) + "%§8)";
+            drawLeftText(context, statsText, x + barWidth + 20, y + (height / 2) - 8);
         }
-        drawLeftText(context, statsText, x + barWidth + 20, y + (height / 2) - 8);
     }
 
     /**
@@ -2491,7 +2525,7 @@ public class AspectScreenSimple extends WEScreen {
 
         // Quick page buttons at the bottom
         int buttonY = navY + 45;
-        int buttonWidth = 210;
+        int buttonWidth = 240;
         int buttonHeight = 50;
         int buttonSpacing = 10;
         String[] pageNames = {"Loot Pools", "Aspects", "Gambits", "Raid Loot", "Explore", "Leaderboard"};
@@ -2614,18 +2648,18 @@ public class AspectScreenSimple extends WEScreen {
             return true;
         }
 
-        // Check quick page button clicks
-        int pageBtnY = navY + 45;
-        int pageBtnWidth = 165;
-        int pageBtnHeight = 40;
-        int pageBtnSpacing = 12;
-        int totalPageBtnsWidth = (pageBtnWidth * 6) + (pageBtnSpacing * 5);
-        int pageBtnStartX = (logicalW - totalPageBtnsWidth) / 2;
+        // Quick page button clicks - must match renderNavigation dimensions exactly!
+        int navBtnY = navY + 45;
+        int navBtnWidth = 240;
+        int navBtnHeight = 50;
+        int navBtnSpacing = 10;
+        int totalNavBtnsWidth = (navBtnWidth * 6) + (navBtnSpacing * 5);
+        int navBtnStartX = (logicalW - totalNavBtnsWidth) / 2;
 
         for (int i = 0; i <= MAX_PAGE; i++) {
-            int pbx = pageBtnStartX + (i * (pageBtnWidth + pageBtnSpacing));
-            if (logicalMouseX >= pbx && logicalMouseX <= pbx + pageBtnWidth &&
-                logicalMouseY >= pageBtnY && logicalMouseY <= pageBtnY + pageBtnHeight) {
+            int bx = navBtnStartX + (i * (navBtnWidth + navBtnSpacing));
+            if (logicalMouseX >= bx && logicalMouseX <= bx + navBtnWidth &&
+                logicalMouseY >= navBtnY && logicalMouseY <= navBtnY + navBtnHeight) {
                 if (currentPage != i) {
                     currentPage = i;
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
@@ -2634,28 +2668,24 @@ public class AspectScreenSimple extends WEScreen {
             }
         }
 
-        // Check "Click to open Party Finder" click (on gambits page when no data)
-        if (currentPage == 2) {
-            GambitData gambitData = GambitData.INSTANCE;
-            if (!gambitData.hasToday() || gambitData.gambits.isEmpty()) {
-                int pfTextY = 180 + 200; // startY + 200 from renderGambitsPage
-                if (logicalMouseY >= pfTextY - 20 && logicalMouseY <= pfTextY + 30 &&
-                    logicalMouseX >= centerX - 400 && logicalMouseX <= centerX + 400) {
-                    // Open party finder
-                    if (client != null && client.player != null) {
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                        client.setScreen(null);
-                        client.player.networkHandler.sendChatCommand("pf");
-                    }
-                    return true;
-                }
-            }
+        // Delegate to extracted page classes for pages 2-5
+        if (currentPage == 2 && gambitsPage.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+        if (currentPage == 3 && raidLootPage.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+        if (currentPage == 4 && explorePage.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+        if (currentPage == 5 && leaderboardPage.mouseClicked(mouseX, mouseY, button)) {
+            return true;
         }
 
         // Check toggle clicks (on loot pools page) - using logical coords
         if (currentPage == 0) {
             int toggleWidth = 200;
-            int favToggleWidth = 260;
+            int favToggleWidth = 320;
             int toggleHeight = 44;
             int toggleSpacing = 15;
             int toggleY = 14;
@@ -2815,125 +2845,7 @@ public class AspectScreenSimple extends WEScreen {
             }
         }
 
-        // Check raid toggle clicks on Raid Loot page (page 3)
-        if (currentPage == 3) {
-            // Raid toggle buttons - must match rendering sizes!
-            int toggleWidth = 220;
-            int toggleHeight = 50;
-            int toggleSpacing = 20;
-            int toggleY = 120;
-
-            int totalToggleWidth = (toggleWidth * 4) + (toggleSpacing * 3);
-            int toggleStartX = (logicalW - totalToggleWidth) / 2;
-
-            for (int i = 0; i < 4; i++) {
-                int x = toggleStartX + (i * (toggleWidth + toggleSpacing));
-                if (button == 0 && logicalMouseX >= x && logicalMouseX <= x + toggleWidth &&
-                    logicalMouseY >= toggleY && logicalMouseY <= toggleY + toggleHeight) {
-                    raidToggles[i] = !raidToggles[i];
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    return true;
-                }
-            }
-
-            // Check "Show Rates" button click - must match rendering sizes!
-            int ratesButtonWidth = 450;
-            int ratesButtonHeight = 50;
-            int ratesButtonX = centerX - ratesButtonWidth / 2;
-            int ratesButtonY = 180;
-
-            if (button == 0 && logicalMouseX >= ratesButtonX && logicalMouseX <= ratesButtonX + ratesButtonWidth &&
-                logicalMouseY >= ratesButtonY && logicalMouseY <= ratesButtonY + ratesButtonHeight) {
-                showRates = !showRates;
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            }
-        }
-
-        // Check filter button clicks on Explore page (page 4)
-        if (currentPage == 4) {
-            int filterButtonWidth = 300;
-            int filterButtonHeight = 50;
-            int filterSpacing = 30;
-            int filterY = 125;
-            int totalFilterWidth = (filterButtonWidth * 2) + filterSpacing;
-            int filterStartX = (logicalW - totalFilterWidth) / 2;
-
-            for (int i = 0; i < 2; i++) {
-                int fx = filterStartX + (i * (filterButtonWidth + filterSpacing));
-                if (button == 0 && logicalMouseX >= fx && logicalMouseX <= fx + filterButtonWidth &&
-                    logicalMouseY >= filterY && logicalMouseY <= filterY + filterButtonHeight) {
-                    exploreSortMode = i;
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    return true;
-                }
-            }
-        }
-
-        // Check player entry clicks on Explore page (page 4)
-        if (currentPage == 4 && playerList != null && !playerList.isEmpty()) {
-            // Sort the list same as rendering
-            List<julianh06.wynnextras.features.profileviewer.data.PlayerListEntry> sortedList = new java.util.ArrayList<>(playerList);
-            if (exploreSortMode == 0) {
-                sortedList.sort((a, b) -> Integer.compare(b.getAspectCount(), a.getAspectCount()));
-            } else {
-                sortedList.sort((a, b) -> a.getPlayerName().compareToIgnoreCase(b.getPlayerName()));
-            }
-
-            int columnCount = 3;
-            int entryWidth = 280;
-            int entryHeight = 85;
-            int spacing = 30;
-            int startY = 190;
-            int totalWidth = (entryWidth * columnCount) + (spacing * (columnCount - 1));
-            int startX = (logicalW - totalWidth) / 2;
-
-            int perPage = 15;
-            int maxEntries = Math.min(sortedList.size(), perPage);
-
-            for (int i = 0; i < maxEntries; i++) {
-                julianh06.wynnextras.features.profileviewer.data.PlayerListEntry player = sortedList.get(i);
-
-                int row = i / columnCount;
-                int col = i % columnCount;
-                int x = startX + (col * (entryWidth + spacing));
-                int y = startY + (row * (entryHeight + spacing));
-
-                if (button == 0 && logicalMouseX >= x && logicalMouseX <= x + entryWidth &&
-                    logicalMouseY >= y && logicalMouseY <= y + entryHeight) {
-                    // Clicked on this player - go to My Aspects page and search for them
-                    currentPage = 1; // My Aspects page
-                    showOverview = true; // Show overview by default
-                    performPlayerSearch(player.getPlayerName());
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    return true;
-                }
-            }
-        }
-
-        // Check player entry clicks on Leaderboard page (page 5)
-        if (currentPage == 5 && leaderboardList != null && !leaderboardList.isEmpty()) {
-            int entryWidth = 800;
-            int entryHeight = 50;
-            int spacing = 8;
-            int startY = 180;
-            int startX = centerX - entryWidth / 2;
-
-            for (int i = 0; i < leaderboardList.size(); i++) {
-                julianh06.wynnextras.features.profileviewer.data.LeaderboardEntry entry = leaderboardList.get(i);
-                int y = startY + (i * (entryHeight + spacing));
-
-                if (button == 0 && logicalMouseX >= startX && logicalMouseX <= startX + entryWidth &&
-                    logicalMouseY >= y && logicalMouseY <= y + entryHeight) {
-                    // Clicked on this player - go to My Aspects page and search for them
-                    currentPage = 1; // My Aspects page
-                    showOverview = true; // Show overview by default
-                    performPlayerSearch(entry.getPlayerName());
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    return true;
-                }
-            }
-        }
+        // Click handling for pages 3, 4, 5 is now handled by their respective page classes above
 
         // Check click on error message scan links (FORBIDDEN and NOT_FOUND) - works on any page
         if (currentPage == 1) {
@@ -3026,7 +2938,8 @@ public class AspectScreenSimple extends WEScreen {
         return super.mouseClicked(click, doubleClick);
     }
 
-    private void joinRaidPartyFinder(String raidCode) {
+    @Override
+    public void joinRaidPartyFinder(String raidCode) {
         if (client == null || client.player == null) return;
 
         // Close this screen
@@ -3811,5 +3724,67 @@ public class AspectScreenSimple extends WEScreen {
     private void addToRecentSearches(String playerName) {
         // Use FavoriteAspectsData for persistence
         FavoriteAspectsData.INSTANCE.addRecentSearch(playerName);
+    }
+
+    // === AspectScreenHost Implementation ===
+
+    @Override
+    public int getHostLogicalWidth() {
+        return getLogicalWidth();
+    }
+
+    @Override
+    public int getHostLogicalHeight() {
+        return getLogicalHeight();
+    }
+
+    @Override
+    public double getScaleFactor() {
+        return scaleFactor;
+    }
+
+    @Override
+    public MinecraftClient getClient() {
+        return client;
+    }
+
+    @Override
+    public int getHostSafeColumnWidth(int numColumns, int spacing) {
+        return getSafeColumnWidth(numColumns, spacing);
+    }
+
+    @Override
+    public void setCurrentPage(int page) {
+        this.currentPage = page;
+    }
+
+    @Override
+    public int getCurrentPage() {
+        return currentPage;
+    }
+
+    @Override
+    public void setHoveredAspect(LootPoolData.AspectEntry aspect, int x, int y, int columnX) {
+        this.hoveredAspect = aspect;
+        this.hoveredAspectX = x;
+        this.hoveredAspectY = y;
+        this.hoveredAspectColumnX = columnX;
+    }
+
+    @Override
+    public void clearHoveredAspect() {
+        this.hoveredAspect = null;
+    }
+
+    @Override
+    public void searchPlayer(String playerName) {
+        // Switch to My Aspects page and search for player
+        currentPage = 1;
+        performPlayerSearch(playerName);
+    }
+
+    @Override
+    public List<ApiAspect> getAllApiAspects() {
+        return WynncraftApiHandler.fetchAllAspects();
     }
 }
