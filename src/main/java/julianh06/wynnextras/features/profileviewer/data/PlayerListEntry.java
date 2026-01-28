@@ -9,6 +9,7 @@ public class PlayerListEntry {
     private String modVersion;
     private long lastUpdated;
     private int aspectCount;
+    private int maxAspectCount; // Number of maxed aspects (if provided by API)
 
     public String getPlayerUuid() {
         return playerUuid;
@@ -28,5 +29,9 @@ public class PlayerListEntry {
 
     public int getAspectCount() {
         return aspectCount;
+    }
+
+    public int getMaxAspectCount() {
+        return maxAspectCount;
     }
 }

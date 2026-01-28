@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.aspects;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.wynntils.core.text.StyledText;
+import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.FontRenderer;
@@ -347,24 +348,9 @@ public class AspectScreenSimple extends WEScreen {
         int favToggleX = logicalW - toggleWidth - favToggleWidth - toggleSpacing - 60;
         boolean hoverFavToggle = logicalMouseX >= favToggleX && logicalMouseX <= favToggleX + favToggleWidth && logicalMouseY >= toggleY && logicalMouseY <= toggleY + toggleHeight;
 
-        if (showOnlyFavoritesInLootPools) {
-            drawRect(favToggleX, toggleY, favToggleWidth, toggleHeight, 0xAA4e392d);
-            drawRect(favToggleX, toggleY, favToggleWidth, 3, 0xFFFFAA00);
-            drawRect(favToggleX, toggleY + toggleHeight - 3, favToggleWidth, 3, 0xFFFFAA00);
-            drawRect(favToggleX, toggleY, 3, toggleHeight, 0xFFFFAA00);
-            drawRect(favToggleX + favToggleWidth - 3, toggleY, 3, toggleHeight, 0xFFFFAA00);
-        } else if (hoverFavToggle) {
-            drawRect(favToggleX, toggleY, favToggleWidth, toggleHeight, 0xAA333333);
-            drawRect(favToggleX, toggleY, favToggleWidth, 3, 0xFFAAAA00);
-            drawRect(favToggleX, toggleY + toggleHeight - 3, favToggleWidth, 3, 0xFFAAAA00);
-            drawRect(favToggleX, toggleY, 3, toggleHeight, 0xFFAAAA00);
-            drawRect(favToggleX + favToggleWidth - 3, toggleY, 3, toggleHeight, 0xFFAAAA00);
-        } else {
-            drawRect(favToggleX, toggleY, favToggleWidth, toggleHeight, 0xAA1a1a1a);
-            drawRect(favToggleX, toggleY, favToggleWidth, 3, 0xFF4e392d);
-            drawRect(favToggleX, toggleY + toggleHeight - 3, favToggleWidth, 3, 0xFF4e392d);
-            drawRect(favToggleX, toggleY, 3, toggleHeight, 0xFF4e392d);
-            drawRect(favToggleX + favToggleWidth - 3, toggleY, 3, toggleHeight, 0xFF4e392d);
+        // Draw textured button
+        if (ui != null) {
+            ui.drawButtonFade(favToggleX, toggleY, favToggleWidth, toggleHeight, 12, hoverFavToggle || showOnlyFavoritesInLootPools);
         }
 
         String favToggleText = showOnlyFavoritesInLootPools ? "§e§l⭐ Favorites Only" : "§7§l☆ Favorites Only";
@@ -374,28 +360,9 @@ public class AspectScreenSimple extends WEScreen {
         int toggleX = logicalW - toggleWidth - 60;
         boolean hoverToggle = logicalMouseX >= toggleX && logicalMouseX <= toggleX + toggleWidth && logicalMouseY >= toggleY && logicalMouseY <= toggleY + toggleHeight;
 
-        // Draw Wynncraft-style toggle box using UIUtils
-        if (hideMaxInLootPools) {
-            // Active: gold background
-            drawRect(toggleX, toggleY, toggleWidth, toggleHeight, 0xAA4e392d);
-            drawRect(toggleX, toggleY, toggleWidth, 3, 0xFFFFAA00); // Top
-            drawRect(toggleX, toggleY + toggleHeight - 3, toggleWidth, 3, 0xFFFFAA00); // Bottom
-            drawRect(toggleX, toggleY, 3, toggleHeight, 0xFFFFAA00); // Left
-            drawRect(toggleX + toggleWidth - 3, toggleY, 3, toggleHeight, 0xFFFFAA00); // Right
-        } else if (hoverToggle) {
-            // Hovered: lighter background
-            drawRect(toggleX, toggleY, toggleWidth, toggleHeight, 0xAA333333);
-            drawRect(toggleX, toggleY, toggleWidth, 3, 0xFFAAAA00);
-            drawRect(toggleX, toggleY + toggleHeight - 3, toggleWidth, 3, 0xFFAAAA00);
-            drawRect(toggleX, toggleY, 3, toggleHeight, 0xFFAAAA00);
-            drawRect(toggleX + toggleWidth - 3, toggleY, 3, toggleHeight, 0xFFAAAA00);
-        } else {
-            // Normal: dark background
-            drawRect(toggleX, toggleY, toggleWidth, toggleHeight, 0xAA1a1a1a);
-            drawRect(toggleX, toggleY, toggleWidth, 3, 0xFF4e392d);
-            drawRect(toggleX, toggleY + toggleHeight - 3, toggleWidth, 3, 0xFF4e392d);
-            drawRect(toggleX, toggleY, 3, toggleHeight, 0xFF4e392d);
-            drawRect(toggleX + toggleWidth - 3, toggleY, 3, toggleHeight, 0xFF4e392d);
+        // Draw textured button
+        if (ui != null) {
+            ui.drawButtonFade(toggleX, toggleY, toggleWidth, toggleHeight, 12, hoverToggle || hideMaxInLootPools);
         }
 
         String toggleText = hideMaxInLootPools ? "§6§lShow Max" : "§7§lHide Max";
@@ -585,8 +552,13 @@ public class AspectScreenSimple extends WEScreen {
         boolean allMaxed = !aspects.isEmpty() && aspects.stream().allMatch(a ->
             a.tierInfo != null && (a.tierInfo.isEmpty() || a.tierInfo.contains("[MAX]"))
         );
-        String scoreText = allMaxed ? "§a§lMAXED" : String.format("§7Score: §e%.2f", score);
-        drawCenteredText(context, scoreText, x + colWidth / 2, y + 100);
+        if (allMaxed && ui != null) {
+            // Rainbow text for MAXED
+            ui.drawCenteredText("MAXED", x + colWidth / 2, y + 100, CommonColors.RAINBOW, 3f);
+        } else {
+            String scoreText = String.format("§7Score: §e%.2f", score);
+            drawCenteredText(context, scoreText, x + colWidth / 2, y + 100);
+        }
 
         // Show data source indicator
         if (!aspects.isEmpty()) {
@@ -809,8 +781,12 @@ public class AspectScreenSimple extends WEScreen {
                 favoriteStar = "";
             }
 
-            // Draw text at y position
-            drawLeftText(context, color + displayText + favoriteStar, x + 55, y);
+            // Draw text at y position - rainbow for maxed aspects
+            if (isMaxed && ui != null) {
+                ui.drawText(displayText + favoriteStar, x + 55, y, CommonColors.RAINBOW, 3f);
+            } else {
+                drawLeftText(context, color + displayText + favoriteStar, x + 55, y);
+            }
 
             // Draw flame icon
             ApiAspect apiAspect = findApiAspectByName(aspect.name);
@@ -1825,25 +1801,9 @@ public class AspectScreenSimple extends WEScreen {
                 };
             }
 
-            // Draw Wynncraft-style box using scaled drawRect
-            if (selected) {
-                drawRect(x, y, buttonWidth, buttonHeight, 0xDD4e392d);
-                drawRect(x, y, buttonWidth, 4, 0xFFFFAA00); // top
-                drawRect(x, y + buttonHeight - 4, buttonWidth, 4, 0xFFFFAA00); // bottom
-                drawRect(x, y, 4, buttonHeight, 0xFFFFAA00); // left
-                drawRect(x + buttonWidth - 4, y, 4, buttonHeight, 0xFFFFAA00); // right
-            } else if (hovered) {
-                drawRect(x, y, buttonWidth, buttonHeight, 0xAA333333);
-                drawRect(x, y, buttonWidth, 2, 0xFFAAAA00);
-                drawRect(x, y + buttonHeight - 2, buttonWidth, 2, 0xFFAAAA00);
-                drawRect(x, y, 2, buttonHeight, 0xFFAAAA00);
-                drawRect(x + buttonWidth - 2, y, 2, buttonHeight, 0xFFAAAA00);
-            } else {
-                drawRect(x, y, buttonWidth, buttonHeight, 0xAA1a1a1a);
-                drawRect(x, y, buttonWidth, 2, 0xFF4e392d);
-                drawRect(x, y + buttonHeight - 2, buttonWidth, 2, 0xFF4e392d);
-                drawRect(x, y, 2, buttonHeight, 0xFF4e392d);
-                drawRect(x + buttonWidth - 2, y, 2, buttonHeight, 0xFF4e392d);
+            // Draw textured button
+            if (ui != null) {
+                ui.drawButtonFade(x, y, buttonWidth, buttonHeight, 12, hovered || selected);
             }
 
             // Draw text - drawCenteredText uses VerticalAlignment.MIDDLE so Y should be center of button
@@ -1870,25 +1830,9 @@ public class AspectScreenSimple extends WEScreen {
             boolean selected = maxFilter.equals(filters[i]);
             boolean hovered = logicalMouseX >= x && logicalMouseX <= x + buttonWidth && logicalMouseY >= y && logicalMouseY <= y + buttonHeight;
 
-            // Draw Wynncraft-style box using scaled drawRect
-            if (selected) {
-                drawRect(x, y, buttonWidth, buttonHeight, 0xDD4e392d);
-                drawRect(x, y, buttonWidth, 4, 0xFFFFAA00);
-                drawRect(x, y + buttonHeight - 4, buttonWidth, 4, 0xFFFFAA00);
-                drawRect(x, y, 4, buttonHeight, 0xFFFFAA00);
-                drawRect(x + buttonWidth - 4, y, 4, buttonHeight, 0xFFFFAA00);
-            } else if (hovered) {
-                drawRect(x, y, buttonWidth, buttonHeight, 0xAA333333);
-                drawRect(x, y, buttonWidth, 2, 0xFFAAAA00);
-                drawRect(x, y + buttonHeight - 2, buttonWidth, 2, 0xFFAAAA00);
-                drawRect(x, y, 2, buttonHeight, 0xFFAAAA00);
-                drawRect(x + buttonWidth - 2, y, 2, buttonHeight, 0xFFAAAA00);
-            } else {
-                drawRect(x, y, buttonWidth, buttonHeight, 0xAA1a1a1a);
-                drawRect(x, y, buttonWidth, 2, 0xFF4e392d);
-                drawRect(x, y + buttonHeight - 2, buttonWidth, 2, 0xFF4e392d);
-                drawRect(x, y, 2, buttonHeight, 0xFF4e392d);
-                drawRect(x + buttonWidth - 2, y, 2, buttonHeight, 0xFF4e392d);
+            // Draw textured button
+            if (ui != null) {
+                ui.drawButtonFade(x, y, buttonWidth, buttonHeight, 12, hovered || selected);
             }
 
             // Draw text - drawCenteredText uses VerticalAlignment.MIDDLE so Y should be center of button
@@ -1906,19 +1850,9 @@ public class AspectScreenSimple extends WEScreen {
         boolean hovered = logicalMouseX >= buttonX && logicalMouseX <= buttonX + buttonWidth &&
                          logicalMouseY >= buttonY && logicalMouseY <= buttonY + buttonHeight;
 
-        // Draw styled button
-        if (hovered) {
-            drawRect(buttonX, buttonY, buttonWidth, buttonHeight, 0xAA333333);
-            drawRect(buttonX, buttonY, buttonWidth, 2, 0xFFAAAA00);
-            drawRect(buttonX, buttonY + buttonHeight - 2, buttonWidth, 2, 0xFFAAAA00);
-            drawRect(buttonX, buttonY, 2, buttonHeight, 0xFFAAAA00);
-            drawRect(buttonX + buttonWidth - 2, buttonY, 2, buttonHeight, 0xFFAAAA00);
-        } else {
-            drawRect(buttonX, buttonY, buttonWidth, buttonHeight, 0xAA1a1a1a);
-            drawRect(buttonX, buttonY, buttonWidth, 2, 0xFF4e392d);
-            drawRect(buttonX, buttonY + buttonHeight - 2, buttonWidth, 2, 0xFF4e392d);
-            drawRect(buttonX, buttonY, 2, buttonHeight, 0xFF4e392d);
-            drawRect(buttonX + buttonWidth - 2, buttonY, 2, buttonHeight, 0xFF4e392d);
+        // Draw textured button
+        if (ui != null) {
+            ui.drawButtonFade(buttonX, buttonY, buttonWidth, buttonHeight, 12, hovered);
         }
 
         // Draw button text
@@ -2409,8 +2343,12 @@ public class AspectScreenSimple extends WEScreen {
                 favoriteStar = "";
             }
 
-            // Draw text at y position
-            drawLeftText(context, color + displayName + favoriteStar, x + 45, y);
+            // Draw text at y position - rainbow for maxed aspects
+            if (isMaxed && ui != null) {
+                ui.drawText(displayName + favoriteStar, x + 45, y, CommonColors.RAINBOW, 3f);
+            } else {
+                drawLeftText(context, color + displayName + favoriteStar, x + 45, y);
+            }
 
             // Draw flame icon
             ItemStack flameItem = createAspectFlameIcon(aspect, isMaxed);
@@ -2553,9 +2491,9 @@ public class AspectScreenSimple extends WEScreen {
 
         // Quick page buttons at the bottom
         int buttonY = navY + 45;
-        int buttonWidth = 165;
-        int buttonHeight = 40;
-        int buttonSpacing = 12;
+        int buttonWidth = 210;
+        int buttonHeight = 50;
+        int buttonSpacing = 10;
         String[] pageNames = {"Loot Pools", "Aspects", "Gambits", "Raid Loot", "Explore", "Leaderboard"};
         int totalButtonsWidth = (buttonWidth * 6) + (buttonSpacing * 5);
         int buttonStartX = (logicalW - totalButtonsWidth) / 2;
@@ -2566,20 +2504,14 @@ public class AspectScreenSimple extends WEScreen {
             boolean hovering = logicalMouseX >= bx && logicalMouseX <= bx + buttonWidth &&
                               logicalMouseY >= buttonY && logicalMouseY <= buttonY + buttonHeight;
 
-            // Background
-            int bgColor = isCurrentPage ? 0xAA4e392d : (hovering ? 0xAA333333 : 0xAA1a1a1a);
-            drawRect(bx, buttonY, buttonWidth, buttonHeight, bgColor);
-
-            // Border
-            int borderColor = isCurrentPage ? 0xFFFFAA00 : (hovering ? 0xFFAAAA00 : 0xFF4e392d);
-            drawRect(bx, buttonY, buttonWidth, 2, borderColor);
-            drawRect(bx, buttonY + buttonHeight - 2, buttonWidth, 2, borderColor);
-            drawRect(bx, buttonY, 2, buttonHeight, borderColor);
-            drawRect(bx + buttonWidth - 2, buttonY, 2, buttonHeight, borderColor);
+            // Draw textured button
+            if (ui != null) {
+                ui.drawButtonFade(bx, buttonY, buttonWidth, buttonHeight, 12, hovering || isCurrentPage);
+            }
 
             // Text
             String text = isCurrentPage ? "§6§l" + pageNames[i] : (hovering ? "§e" + pageNames[i] : "§7" + pageNames[i]);
-            drawCenteredText(context, text, bx + buttonWidth / 2, buttonY + (buttonHeight - 10) / 2);
+            drawCenteredText(context, text, bx + buttonWidth / 2, buttonY + buttonHeight / 2);
         }
     }
 
@@ -3450,17 +3382,13 @@ public class AspectScreenSimple extends WEScreen {
             boolean hovering = logicalMouseX >= fx && logicalMouseX <= fx + filterButtonWidth &&
                               logicalMouseY >= filterY && logicalMouseY <= filterY + filterButtonHeight;
 
-            int bgColor = active ? 0xAA4e392d : (hovering ? 0xAA333333 : 0xAA1a1a1a);
-            drawRect(fx, filterY, filterButtonWidth, filterButtonHeight, bgColor);
-
-            int borderColor = active ? 0xFFFFAA00 : (hovering ? 0xFFAAAA00 : 0xFF4e392d);
-            drawRect(fx, filterY, filterButtonWidth, 3, borderColor);
-            drawRect(fx, filterY + filterButtonHeight - 3, filterButtonWidth, 3, borderColor);
-            drawRect(fx, filterY, 3, filterButtonHeight, borderColor);
-            drawRect(fx + filterButtonWidth - 3, filterY, 3, filterButtonHeight, borderColor);
+            // Draw textured button
+            if (ui != null) {
+                ui.drawButtonFade(fx, filterY, filterButtonWidth, filterButtonHeight, 12, hovering || active);
+            }
 
             String text = active ? "§6§l" + filterNames[i] : "§7" + filterNames[i];
-            drawCenteredText(context, text, fx + filterButtonWidth / 2, filterY + (filterButtonHeight - 10) / 2);
+            drawCenteredText(context, text, fx + filterButtonWidth / 2, filterY + filterButtonHeight / 2);
         }
 
         // Sort the player list based on mode
@@ -3512,8 +3440,13 @@ public class AspectScreenSimple extends WEScreen {
             // Player name (centered, larger)
             drawCenteredText(context, "§6§l" + player.getPlayerName(), x + entryWidth / 2, y + 25);
 
-            // Aspect count
-            drawCenteredText(context, "§7" + player.getAspectCount() + " aspects", x + entryWidth / 2, y + 60);
+            // Aspect count - show "Total | Max" format if max count is available
+            int maxCount = player.getMaxAspectCount();
+            if (maxCount > 0) {
+                drawCenteredText(context, "§e" + player.getAspectCount() + " §7Total §8| §a" + maxCount + " §7Max", x + entryWidth / 2, y + 60);
+            } else {
+                drawCenteredText(context, "§e" + player.getAspectCount() + " §7aspects", x + entryWidth / 2, y + 60);
+            }
         }
 
         // Instructions above navigation
@@ -3639,20 +3572,14 @@ public class AspectScreenSimple extends WEScreen {
             boolean hovering = logicalMouseX >= x && logicalMouseX <= x + toggleWidth &&
                               logicalMouseY >= toggleY && logicalMouseY <= toggleY + toggleHeight;
 
-            // Background
-            int bgColor = active ? 0xAA2a2a2a : 0xAA1a1a1a;
-            drawRect(x, toggleY, toggleWidth, toggleHeight, bgColor);
-
-            // Border
-            int borderColor = active ? 0xFFFFAA00 : (hovering ? 0xFF666666 : 0xFF4e392d);
-            drawRect(x, toggleY, toggleWidth, 3, borderColor);
-            drawRect(x, toggleY + toggleHeight - 3, toggleWidth, 3, borderColor);
-            drawRect(x, toggleY, 3, toggleHeight, borderColor);
-            drawRect(x + toggleWidth - 3, toggleY, 3, toggleHeight, borderColor);
+            // Draw textured button
+            if (ui != null) {
+                ui.drawButtonFade(x, toggleY, toggleWidth, toggleHeight, 12, hovering || active);
+            }
 
             // Text - centered in button
             String text = active ? raidColors[i] + "§l" + raidNames[i] : "§7" + raidNames[i];
-            drawCenteredText(context, text, x + toggleWidth / 2, toggleY + (toggleHeight - 10) / 2);
+            drawCenteredText(context, text, x + toggleWidth / 2, toggleY + toggleHeight / 2);
         }
 
         // Show Rates button
@@ -3663,15 +3590,13 @@ public class AspectScreenSimple extends WEScreen {
         boolean hoveringRates = logicalMouseX >= ratesButtonX && logicalMouseX <= ratesButtonX + ratesButtonWidth &&
                                logicalMouseY >= ratesButtonY && logicalMouseY <= ratesButtonY + ratesButtonHeight;
 
-        drawRect(ratesButtonX, ratesButtonY, ratesButtonWidth, ratesButtonHeight, 0xAA1a1a1a);
-        int ratesBorder = hoveringRates ? 0xFFFFAA00 : 0xFF4e392d;
-        drawRect(ratesButtonX, ratesButtonY, ratesButtonWidth, 3, ratesBorder);
-        drawRect(ratesButtonX, ratesButtonY + ratesButtonHeight - 3, ratesButtonWidth, 3, ratesBorder);
-        drawRect(ratesButtonX, ratesButtonY, 3, ratesButtonHeight, ratesBorder);
-        drawRect(ratesButtonX + ratesButtonWidth - 3, ratesButtonY, 3, ratesButtonHeight, ratesBorder);
+        // Draw textured button
+        if (ui != null) {
+            ui.drawButtonFade(ratesButtonX, ratesButtonY, ratesButtonWidth, ratesButtonHeight, 12, hoveringRates);
+        }
 
         String ratesText = showRates ? "§a§lShowing: Average/Run" : "§e§lShowing: Totals";
-        drawCenteredText(context, ratesText, ratesButtonX + ratesButtonWidth / 2, ratesButtonY + (ratesButtonHeight - 10) / 2);
+        drawCenteredText(context, ratesText, ratesButtonX + ratesButtonWidth / 2, ratesButtonY + ratesButtonHeight / 2);
 
         // Get loot tracker data
         RaidLootData lootData = RaidLootConfig.INSTANCE.data;
