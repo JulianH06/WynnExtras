@@ -370,6 +370,8 @@ public class BankOverlay2 extends WEHandledScreen {
             scissory2 = yStart + 100 * (yFitAmount - 1);
 
             context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
+            ui.updateContext(context, ui.getScaleFactor(), 0, 0);
+
             for(PageWidget page : pages) {
                 float invX = xStart + (visuali % xFitAmount) * (162 + 4);
                 float invY = yStart + Math.floorDiv(visuali, xFitAmount) * (90 + 4 + 10) - actualOffset;
@@ -1204,6 +1206,16 @@ public class BankOverlay2 extends WEHandledScreen {
                 return;
             }
 
+//            RenderUtils.drawTexturedRect(
+//                    ctx,
+//                    WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankTextureDark : bankTexture,
+//                    CustomColor.NONE,
+//                    ui.sx(x), ui.sy(y),
+//                    ui.sw(width), ui.sh(height),
+//                    0, 0,
+//                    ui.sw(width), ui.sh(height),
+//                    ui.sw(width), ui.sh(height)
+//            );
             ui.drawImage(WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankTextureDark : bankTexture, x, y, width, height);
 
             if(items.isEmpty()) return;
@@ -1541,6 +1553,7 @@ public class BankOverlay2 extends WEHandledScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             ctx.disableScissor();
             ctx.enableScissor(scissorx1, scissory1 - 12, scissorx2, scissory2);
+            ui.updateContext(ctx, ui.getScaleFactor(), 0, 0);
 
             drawDynamicNameSign(ctx, textInputWidget.getInput(), x, y + 12);
 

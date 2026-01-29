@@ -16,9 +16,7 @@ import java.awt.*;
 public class WaypointRenderer {
     @SubscribeEvent
     public void onRenderWorld(RenderWorldEvent event) {
-        if (WorldRenderUtils.INSTANCE_WAYPOINTS.buffer == null) {
-            WorldRenderUtils.INSTANCE_WAYPOINTS.buffer = new BufferBuilder(WorldRenderUtils.allocator, WorldRenderUtils.FILLED_BOX.getVertexFormatMode(), WorldRenderUtils.FILLED_BOX.getVertexFormat());
-        }
+        WorldRenderUtils.INSTANCE_WAYPOINTS.buffer = new BufferBuilder(WorldRenderUtils.allocator, WorldRenderUtils.FILLED_BOX.getVertexFormatMode(), WorldRenderUtils.FILLED_BOX.getVertexFormat());
 
         //Extraction phase
         for(WaypointPackage pkg : WaypointData.INSTANCE.packages) {
