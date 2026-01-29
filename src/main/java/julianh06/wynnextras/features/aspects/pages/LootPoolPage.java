@@ -46,6 +46,11 @@ public class LootPoolPage extends PageWidget {
 
     private static List<Text> hoveredTooltip = new ArrayList<>();
 
+    private String importFeedback = null;
+    private long importFeedbackTime = 0;
+
+    private ImportFromWynntilsButton importFromWynntilsButton;
+
     private static String[] raidNames = {
             "Nest of the Grootslangs",
             "Orphion's Nexus of Light",
@@ -59,6 +64,8 @@ public class LootPoolPage extends PageWidget {
         for(Raid raid : Raid.values()) {
             lootPoolWidgets.add(new LootPoolWidget(raid));
         }
+
+        importFromWynntilsButton = new ImportFromWynntilsButton();
     }
 
     @Override
@@ -137,6 +144,14 @@ public class LootPoolPage extends PageWidget {
             lootPoolWidget.setBounds(widgetX, widgetY, widgetWidth, widgetHeight);
             lootPoolWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
             widgetX += widgetWidth + spacing;
+        }
+
+        importFromWynntilsButton.setBounds();
+
+        if (importFeedback != null && System.currentTimeMillis() - importFeedbackTime < 5000) {
+            ui.drawCenteredText(importFeedback, 240, 74);
+        } else {
+            importFeedback = null;
         }
     }
 
@@ -707,7 +722,6 @@ public class LootPoolPage extends PageWidget {
     }
 
     private static class ImportFromWynntilsButton extends Widget {
-
         public ImportFromWynntilsButton() {
             super(0, 0, 0, 0);
         }
@@ -715,6 +729,19 @@ public class LootPoolPage extends PageWidget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
 
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            int imported = FavoriteAspectsData.INSTANCE.importFromWynntils();
+            if (imported > 0) {
+                importFeedback = "§aImported " + imported + " favorites!";
+            } else {
+                importFeedback = "§7No new favorites to import";
+            }
+            importFeedbackTime = System.currentTimeMillis();
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
         }
     }
 }
