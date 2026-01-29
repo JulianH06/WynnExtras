@@ -206,31 +206,31 @@ public class WynncraftApiHandler {
                 CompletableFuture<List<ApiAspect>> future = WynncraftApiHandler.fetchAspectList(className);
                 if (future != null) {
                     future.thenAccept(result -> {
-                                if(result == null) return;
-                                if(result.isEmpty()) return;
+                        if(result == null) return;
+                        if(result.isEmpty()) return;
 
-                                synchronized (INSTANCE.aspectLock) {
-                                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                        synchronized (INSTANCE.aspectLock) {
+                            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                        }
+                        // Only add aspects that aren't already in the list (prevent duplicates)
+                        // aspectList is already synchronized, but we need to check-then-add atomically
+                        synchronized (aspectList) {
+                            for (ApiAspect aspect : result) {
+                                boolean alreadyExists = aspectList.stream()
+                                    .anyMatch(existing -> existing.getName().equals(aspect.getName()));
+                                if (!alreadyExists) {
+                                    aspectList.add(aspect);
                                 }
-                                // Only add aspects that aren't already in the list (prevent duplicates)
-                                // aspectList is already synchronized, but we need to check-then-add atomically
-                                synchronized (aspectList) {
-                                    for (ApiAspect aspect : result) {
-                                        boolean alreadyExists = aspectList.stream()
-                                            .anyMatch(existing -> existing.getName().equals(aspect.getName()));
-                                        if (!alreadyExists) {
-                                            aspectList.add(aspect);
-                                        }
-                                    }
-                                }
-                            })
-                            .exceptionally(ex -> {
-                                System.err.println("Unexpected error fetching aspects: " + ex.getMessage());
-                                synchronized (INSTANCE.aspectLock) {
-                                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
-                                }
-                                return null;
-                            });
+                            }
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Unexpected error fetching aspects: " + ex.getMessage());
+                        synchronized (INSTANCE.aspectLock) {
+                            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                        }
+                        return null;
+                    });
                 }
                 i++;
             }

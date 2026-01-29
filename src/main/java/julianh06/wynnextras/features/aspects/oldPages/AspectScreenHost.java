@@ -1,4 +1,4 @@
-package julianh06.wynnextras.features.aspects.pages;
+package julianh06.wynnextras.features.aspects.oldPages;
 
 import julianh06.wynnextras.features.aspects.LootPoolData;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;

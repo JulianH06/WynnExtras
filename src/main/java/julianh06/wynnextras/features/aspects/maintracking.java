@@ -10,6 +10,7 @@ import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.UI.WEScreen;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
@@ -18,22 +19,26 @@ import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
-import net.minecraft.text.Text;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @WEModule
 public class maintracking {
+    private static Command newAspectScreen = new Command(
+            "newAspectScreen",
+            "",
+            context -> {
+                WEScreen.open(AspectScreen::new);
+                return 1;
+            }, null, null
+    );
 
     // Subcommand: /we aspects scan
     private static SubCommand scanSubCmd = new SubCommand(
             "scan",
             "Manually scan your aspects from the ability tree",
             (ctx) -> {
-                aspect.openMenu(MinecraftClient.getInstance(), MinecraftClient.getInstance().player);
+                AspectScanning.openMenu(MinecraftClient.getInstance(), MinecraftClient.getInstance().player);
                 return 1;
             },
             null,
@@ -241,7 +246,7 @@ public class maintracking {
             "ScanAspects",
             "Command to manually scan your Aspects (legacy, use /we aspects scan)",
             (ctx)->{
-                aspect.openMenu(MinecraftClient.getInstance(),MinecraftClient.getInstance().player);
+                AspectScanning.openMenu(MinecraftClient.getInstance(),MinecraftClient.getInstance().player);
                 return 0;
             },
             null,
@@ -296,7 +301,7 @@ public class maintracking {
                 aspectsInChest = new ItemStack[5];
                 gambitDetected = false;
                 lastPreviewChestTitle = "";
-                aspect.resetRewardAspects();
+                AspectScanning.resetRewardAspects();
                 // DON'T reset needToClickAbilityTree - it needs to persist across screen changes
                 return;
             }
@@ -344,7 +349,7 @@ public class maintracking {
             if(inTreeMenu && AspectScanreq){
                 needToClickAbilityTree = false; // Reset flag since we're now in the tree menu
                 TreeLoader.clickOnNameInInventory("Aspects", screen, MinecraftClient.getInstance());
-                aspect.setSearchedPages(0);
+                AspectScanning.setSearchedPages(0);
                 GuiSettleTicks = 0; // Reset settle ticks for fresh start
                 return;
             }
@@ -352,7 +357,7 @@ public class maintracking {
                 // Add delay when first entering aspect menu to ensure everything loads
                 if(GuiSettleTicks > 5){
                     GuiSettleTicks = 0;
-                    aspect.AspectsInMenu();
+                    AspectScanning.AspectsInMenu();
                 } else {
                     GuiSettleTicks++;
                 }
@@ -360,11 +365,11 @@ public class maintracking {
             }
             if(inAspectMenu && nextPage){
                 // Use longer delay for first 3 pages to ensure all aspects are loaded
-                int requiredTicks = (aspect.getSearchedPages() <= 3) ? 6 : 4;
+                int requiredTicks = (AspectScanning.getSearchedPages() <= 3) ? 6 : 4;
                 if(GuiSettleTicks > requiredTicks){
                     nextPage=false;
                     GuiSettleTicks=0;
-                    aspect.AspectsInMenu();
+                    AspectScanning.AspectsInMenu();
                     return;
                 }
                 else{
@@ -375,7 +380,7 @@ public class maintracking {
 
             if(inPartyFinder && !gambitDetected){
                 gambitDetected = true;
-                aspect.detectGambit(screen);
+                AspectScanning.detectGambit(screen);
                 return;
             }
 
@@ -385,7 +390,7 @@ public class maintracking {
                 if(!currentTitle.equals(lastPreviewChestTitle)){
                     System.out.println("[WynnExtras] Preview chest detected, title: " + currentTitle);
                     lastPreviewChestTitle = currentTitle;
-                    aspect.scanPreviewChest(screen, currentTitle);
+                    AspectScanning.scanPreviewChest(screen, currentTitle);
                 }
                 return;
             }
@@ -393,7 +398,7 @@ public class maintracking {
             // Reward chest: scan aspects from slots 11-15 and upload
             if(inRaidChest && !scanDone){
                 try {
-                    aspect.AspectsInRaidChest();
+                    AspectScanning.AspectsInRaidChest();
                 } catch (Exception e) {
                     System.err.println("[WynnExtras] Error scanning raid chest: " + e.getMessage());
                     e.printStackTrace();
@@ -405,7 +410,7 @@ public class maintracking {
                 if(GuiSettleTicks>7){
                     NextPageRaid=false;
                     GuiSettleTicks=0;
-                    aspect.AspectsInRaidChest();
+                    AspectScanning.AspectsInRaidChest();
                     return;
                 } else{
                     GuiSettleTicks++;

@@ -1,6 +1,5 @@
 package julianh06.wynnextras.features.aspects;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
@@ -10,29 +9,25 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.features.aspects.oldPages.*;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.features.profileviewer.data.Aspect;
 import julianh06.wynnextras.features.profileviewer.data.User;
-import julianh06.wynnextras.features.raid.RaidData;
 import julianh06.wynnextras.features.raid.RaidListData;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import julianh06.wynnextras.utils.UI.WEScreen;
-import julianh06.wynnextras.utils.UI.Widget;
-import julianh06.wynnextras.features.aspects.pages.*;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
@@ -42,15 +37,11 @@ import net.minecraft.util.Identifier;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
 
@@ -61,7 +52,6 @@ import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
  * Page 2: My Aspects (player's own aspects from API)
  */
 public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
-
     private int currentPage = 0; // 0 = Loot Pools, 1 = Gambits, 2 = My Aspects, 3 = Raid Loot, 4 = Explore, 5 = Leaderboard
     private static final int MAX_PAGE = 5; // 6 pages total
 
@@ -153,6 +143,9 @@ public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
     private RaidLootPage raidLootPage;
     private ExplorePage explorePage;
     private LeaderboardPage leaderboardPage;
+
+    private static volatile boolean aspectsRequested = false;
+    public enum Page {LootPools, Aspects, Gambits, RaidLoot, Explore, Leaderboard}
 
     @Override
     protected void init() {
@@ -254,41 +247,50 @@ public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
     protected void drawContent(DrawContext context, int mouseX, int mouseY, float delta) {
         // WEScreen handles background
 
-        // Draw "WYNNEXTRAS" in bold dark green at the very top center
         int centerX = getLogicalWidth() / 2;
-        drawCenteredText(context, "§2§lWYNNEXTRAS", centerX, 20);
+        FontRenderer.getInstance().renderText(
+                context,
+                StyledText.fromComponent(WynnExtras.addWynnExtrasPrefix("")),
+                ui.sx(centerX + 7),
+                ui.sy(10),
+                CustomColor.fromHexString("FFFFFF"),
+                HorizontalAlignment.CENTER,
+                VerticalAlignment.TOP,
+                TextShadow.NORMAL,
+                (float)(3f / scaleFactor)
+        );
 
         // Convert mouse coords to logical
         int logicalMouseX = (int)(mouseX * scaleFactor);
         int logicalMouseY = (int)(mouseY * scaleFactor);
 
-        // Draw "Import Wynntils Favorites" button on Loot Pools and My Aspects pages (top left)
-        if (currentPage == 0 || currentPage == 1) {
-            drawImportWynntilsButton(context, logicalMouseX, logicalMouseY);
-        }
+//        // Draw "Import Wynntils Favorites" button on Loot Pools and My Aspects pages (top left)
+//        if (currentPage == 0 || currentPage == 1) {
+//            drawImportWynntilsButton(context, logicalMouseX, logicalMouseY);
+//        }
 
-        if (currentPage == 0) {
-            renderLootPoolsPage(context, mouseX, mouseY);
-        } else if (currentPage == 1) {
-            renderMyAspectsPage(context, mouseX, mouseY);
-        } else if (currentPage == 2) {
-            // Use extracted GambitsPage
-            gambitsPage.setUi(ui);
-            gambitsPage.setPlayerData(myAspectsData);
-            gambitsPage.render(context, mouseX, mouseY, delta);
-        } else if (currentPage == 3) {
-            // Use extracted RaidLootPage
-            raidLootPage.setUi(ui);
-            raidLootPage.render(context, mouseX, mouseY, delta);
-        } else if (currentPage == 4) {
-            // Use extracted ExplorePage
-            explorePage.setUi(ui);
-            explorePage.render(context, mouseX, mouseY, delta);
-        } else if (currentPage == 5) {
-            // Use extracted LeaderboardPage
-            leaderboardPage.setUi(ui);
-            leaderboardPage.render(context, mouseX, mouseY, delta);
-        }
+//        if (currentPage == 0) {
+//            renderLootPoolsPage(context, mouseX, mouseY);
+//        } else if (currentPage == 1) {
+//            renderMyAspectsPage(context, mouseX, mouseY);
+//        } else if (currentPage == 2) {
+//            // Use extracted GambitsPage
+//            gambitsPage.setUi(ui);
+//            gambitsPage.setPlayerData(myAspectsData);
+//            gambitsPage.render(context, mouseX, mouseY, delta);
+//        } else if (currentPage == 3) {
+//            // Use extracted RaidLootPage
+//            raidLootPage.setUi(ui);
+//            raidLootPage.render(context, mouseX, mouseY, delta);
+//        } else if (currentPage == 4) {
+//            // Use extracted ExplorePage
+//            explorePage.setUi(ui);
+//            explorePage.render(context, mouseX, mouseY, delta);
+//        } else if (currentPage == 5) {
+//            // Use extracted LeaderboardPage
+//            leaderboardPage.setUi(ui);
+//            leaderboardPage.render(context, mouseX, mouseY, delta);
+//        }
 
         // Page indicator and arrows (on top)
         renderNavigation(context, mouseX, mouseY);
@@ -315,11 +317,8 @@ public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
                 WynncraftApiHandler.fetchCrowdsourcedLootPool(raidType).thenAccept(result -> {
                     if (result != null && !result.isEmpty()) {
                         crowdsourcedLootPools.put(raidType, result);
-                        System.out.println("[WynnExtras] Fetched " + result.size() + " crowdsourced aspects for " + raidType);
                         // Save to local data for offline access
                         julianh06.wynnextras.features.aspects.LootPoolData.INSTANCE.saveLootPoolFull(raidType, result);
-                    } else {
-                        System.out.println("[WynnExtras] No crowdsourced loot pool for " + raidType);
                     }
                 });
             }
@@ -339,7 +338,6 @@ public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
                             personalAspectProgress.put(aspect.getName(),
                                 new com.mojang.datafixers.util.Pair<>(aspect.getAmount(), aspect.getRarity()));
                         }
-                        System.out.println("[WynnExtras] Fetched personal progress for " + personalAspectProgress.size() + " aspects");
                     }
                 }
             });
@@ -890,8 +888,9 @@ public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
 
         // Try to get description from API if saved description is empty
         String description = hoveredAspect.description;
-        if (description == null || description.isEmpty()) {
+        if (!aspectsRequested) {
             // Fetch from API
+            aspectsRequested = true;
             try {
                 List<ApiAspect> allAspects = WynncraftApiHandler.fetchAllAspects();
                 if (allAspects != null && !allAspects.isEmpty()) {
@@ -1115,11 +1114,8 @@ public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
             WynncraftApiHandler.fetchCrowdsourcedGambits().thenAccept(result -> {
                 crowdsourcedGambits = result;
                 if (result != null && !result.isEmpty()) {
-                    System.out.println("[WynnExtras] Fetched " + result.size() + " crowdsourced gambits from API");
                     // Save to local data for offline access
                     julianh06.wynnextras.features.aspects.GambitData.INSTANCE.saveGambits(result);
-                } else {
-                    System.out.println("[WynnExtras] No crowdsourced gambits available from API");
                 }
             });
         }
@@ -1385,14 +1381,10 @@ public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
     private double calculateRaidScore(List<LootPoolData.AspectEntry> aspects) {
         double score = 0.0;
 
-        System.out.println("[WynnExtras DEBUG] calculateRaidScore called with " + aspects.size() + " aspects");
-
         for (LootPoolData.AspectEntry aspect : aspects) {
             String tierInfo = aspect.tierInfo;
-            System.out.println("[WynnExtras DEBUG] Aspect: " + aspect.name + " | tierInfo: " + tierInfo);
 
             if (tierInfo == null || tierInfo.isEmpty() || tierInfo.contains("[MAX]")) {
-                System.out.println("[WynnExtras DEBUG] Skipping (maxed or no data)");
                 continue; // Already maxed or no data, no score contribution
             }
 
@@ -1405,14 +1397,12 @@ public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
             java.util.regex.Pattern progressPattern = java.util.regex.Pattern.compile("\\[(\\d+)/(\\d+)\\]");
             java.util.regex.Matcher progressMatcher = progressPattern.matcher(tierInfo);
             if (!progressMatcher.find()) {
-                System.out.println("[WynnExtras DEBUG] Failed to parse progress pattern");
                 continue; // Can't parse progress, skip this aspect
             }
 
             int current = Integer.parseInt(progressMatcher.group(1));
             int max = Integer.parseInt(progressMatcher.group(2));
             remaining = max - current;
-            System.out.println("[WynnExtras DEBUG] Progress: " + current + "/" + max + " | Remaining: " + remaining);
 
             // Extract tiers (match I, II, III, IV properly)
             java.util.regex.Pattern tierPattern = java.util.regex.Pattern.compile("Tier\\s+(IV|III|II|I)");
@@ -1426,35 +1416,28 @@ public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
                     targetTierStr = currentTierStr;
                 }
             } else {
-                System.out.println("[WynnExtras DEBUG] Failed to parse tier pattern");
                 continue; // Can't parse tiers, skip this aspect
             }
-
-            System.out.println("[WynnExtras DEBUG] Current tier: " + currentTierStr + " | Target tier: " + targetTierStr);
 
             int currentTier = romanToInt(currentTierStr);
             int targetTier = romanToInt(targetTierStr);
 
             if (currentTier == 0 || targetTier == 0) {
-                System.out.println("[WynnExtras DEBUG] Invalid tier numbers");
                 continue; // Invalid tier, skip
             }
 
             // Apply tier-based weights
             double weight = getTierWeight(aspect.rarity, currentTier, targetTier);
             double contribution = remaining * weight;
-            System.out.println("[WynnExtras DEBUG] Weight: " + weight + " | Contribution: " + contribution);
 
             // Favorite aspects count 3x more
             if (FavoriteAspectsData.INSTANCE.isFavorite(aspect.name)) {
                 contribution *= 3.0;
-                System.out.println("[WynnExtras DEBUG] Favorite! Contribution after 3x: " + contribution);
             }
 
             score += contribution;
         }
 
-        System.out.println("[WynnExtras DEBUG] Final score: " + score);
         return score;
     }
 

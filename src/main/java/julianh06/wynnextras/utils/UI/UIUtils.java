@@ -353,12 +353,12 @@ public final class UIUtils {
         } else {
             drawImage(buttontl, x, y, scale, scale, alpha);
             drawImage(buttontr, x + width - scale, y, scale, scale, alpha);
-            drawImage(buttonbl, x, y + height - scale, scale, scale, alpha);
-            drawImage(buttonbr, x + width - scale, y + height - scale, scale, scale, alpha);
+            drawImage(buttonbl, x, y + height - scale - 1, scale, scale * 1.25f, alpha);
+            drawImage(buttonbr, x + width - scale, y + height - scale - 1, scale, scale * 1.25f, alpha);
 
             if (width > scale * 2) {
                 drawImage(buttontop, x + scale - 2, y, width - scale * 2 + 4, scale, alpha);
-                drawImage(buttonbot, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale, alpha);
+                drawImage(buttonbot, x + scale - 2, y + height - scale - 1, width - scale * 2 + 4, scale * 1.25f, alpha);
             }
             if (height > scale * 2) {
                 drawImage(buttonleft, x, y + scale - 2, scale, height - scale * 2 + 4, alpha);

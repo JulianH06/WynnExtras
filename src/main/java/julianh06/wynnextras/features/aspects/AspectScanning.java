@@ -1,7 +1,5 @@
 package julianh06.wynnextras.features.aspects;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
@@ -13,7 +11,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
@@ -27,8 +24,8 @@ import java.util.HashMap;
 import java.util.List;
 
 
-public class aspect {
-    //TODO: aus tree stuff zeug klauen, auf aspects page gehen, dann ausgeben aspect x:100
+public class AspectScanning {
+    //TODO: aus tree stuff zeug klauen, auf aspects page gehen, dann ausgeben AspectScanning x:100
     static int SearchedPages = 0;
     public static final Map<String, Pair<String, String>> allAspects = new HashMap<>();
 
@@ -36,7 +33,7 @@ public class aspect {
     private static final Map<String, Long> lastUploadTime = new HashMap<>();
     private static final long UPLOAD_COOLDOWN_MS = 60000; // 60 seconds
 
-    // Reward chest aspect collection
+    // Reward chest AspectScanning collection
     private static final List<String> collectedRewardAspects = new ArrayList<>();
 
     // Reward chest coordinates for raid detection
@@ -271,7 +268,7 @@ public class aspect {
                     break;
                 }
             }
-            // Stop at the first non-aspect, but keep any already found
+            // Stop at the first non-AspectScanning, but keep any already found
             if (name == null) break;
             foundNames.add(name);
         }
@@ -282,7 +279,7 @@ public class aspect {
         // Print found aspects to chat
         if (MinecraftClient.getInstance().player != null && !foundNames.isEmpty()) {
             for (String aspectName : foundNames) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Found aspect: §e" + aspectName));
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Found AspectScanning: §e" + aspectName));
             }
         }
 
@@ -309,7 +306,7 @@ public class aspect {
         String currentRaid = detectRaidFromPosition();
 
         if (currentRaid.equals("UNKNOWN")) {
-            System.err.println("[WynnExtras] Cannot determine raid type for aspect upload");
+            System.err.println("[WynnExtras] Cannot determine raid type for AspectScanning upload");
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cCannot detect raid type - too far from reward chest"));
             collectedRewardAspects.clear();
             return;
@@ -549,7 +546,7 @@ public class aspect {
     /**
      * Scans the raid preview chest for aspects and detects which raid is selected
      * Raid is detected from the screen title itself (last character changes per raid)
-     * Also extracts user's aspect tier and progress for each aspect
+     * Also extracts user's AspectScanning tier and progress for each AspectScanning
      * Saves loot pool data locally for the GUI
      */
     public static void scanPreviewChest(HandledScreen<?> screen, String screenTitle) {
@@ -591,7 +588,7 @@ public class aspect {
                 for (Text tooltip : tooltips) {
                     String line = tooltip.getString().replaceAll("§.", "").trim();
 
-                    // Find aspect name
+                    // Find AspectScanning name
                     if (aspectName == null && (line.contains("Aspect") || line.contains("Embodiment"))) {
                         aspectName = line;
                         foundName = true;

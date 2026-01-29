@@ -1,4 +1,4 @@
-package julianh06.wynnextras.features.aspects.pages;
+package julianh06.wynnextras.features.aspects.oldPages;
 
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.features.aspects.GambitData;
