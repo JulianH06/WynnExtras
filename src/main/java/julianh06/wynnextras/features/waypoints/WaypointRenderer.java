@@ -17,6 +17,7 @@ public class WaypointRenderer {
     @SubscribeEvent
     public void onRenderWorld(RenderWorldEvent event) {
         WorldRenderUtils.INSTANCE_WAYPOINTS.buffer = new BufferBuilder(WorldRenderUtils.allocator, WorldRenderUtils.FILLED_BOX.getVertexFormatMode(), WorldRenderUtils.FILLED_BOX.getVertexFormat());
+        boolean renderedAny = false;
 
         //Extraction phase
         for(WaypointPackage pkg : WaypointData.INSTANCE.packages) {
@@ -39,6 +40,7 @@ public class WaypointRenderer {
                         alpha = waypoint.getCategory().alpha;
                     }
                     WorldRenderUtils.INSTANCE_WAYPOINTS.drawFilledBoundingBox(event, new Box(waypoint.x, waypoint.y, waypoint.z, waypoint.x + 1, waypoint.y + 1, waypoint.z + 1), color, alpha);
+                    renderedAny = true;
                 }
                 if(!waypoint.showName) continue;
                 WorldRenderUtils.drawText(event, namePos, Text.of(waypoint.name), 0.75f, !waypoint.seeThrough);
@@ -46,6 +48,6 @@ public class WaypointRenderer {
         }
 
         //Render phase
-        WorldRenderUtils.INSTANCE_WAYPOINTS.drawFilledBoxes(MinecraftClient.getInstance(), WorldRenderUtils.FILLED_BOX);
+        if(renderedAny) WorldRenderUtils.INSTANCE_WAYPOINTS.drawFilledBoxes(MinecraftClient.getInstance(), WorldRenderUtils.FILLED_BOX);
     }
 }
