@@ -7,6 +7,7 @@ import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.aspects.pages.LootPoolPage;
 import julianh06.wynnextras.features.aspects.pages.PageWidget;
@@ -52,6 +53,8 @@ public class AspectScreen extends WEScreen {
     protected void init() {
         super.init();
 
+        registeredScroll = false;
+
 //        // Initialize page instances
 //        if (gambitsPage == null) {
 //            gambitsPage = new GambitsPage(this);
@@ -72,6 +75,12 @@ public class AspectScreen extends WEScreen {
         if(currentWidget.mouseClicked(click.x(), click.y(), click.button())) return true;
 
         return super.mouseClicked(click, doubleClick);
+    }
+
+    @Override
+    public boolean mouseReleased(Click click) {
+        if(currentWidget != null) currentWidget.mouseReleased(click.x(), click.y(), click.button());
+        return super.mouseReleased(click);
     }
 
     @Override
@@ -164,7 +173,7 @@ public class AspectScreen extends WEScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 12, hovered);
+            ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
             String name = page.name();
             if(page == Page.LootPools) name = "Loot Pools";
             if(page == Page.RaidLoot) name = "Raid Loot";

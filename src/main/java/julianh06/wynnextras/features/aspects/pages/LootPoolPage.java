@@ -9,14 +9,15 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.FavoriteAspectsData;
 import julianh06.wynnextras.features.aspects.LootPoolData;
-import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.text.OrderedText;
+import net.minecraft.item.tooltip.TooltipType;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -27,6 +28,8 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static julianh06.wynnextras.features.aspects.AspectUtils.*;
 
@@ -123,8 +126,12 @@ public class LootPoolPage extends PageWidget {
         int spacing = 40;
         int widgetX = spacing;
         int widgetY = 175;
-        int widgetWidth = (int) (((parent.getScreenWidth() - spacing) * ui.getScaleFactorF() - spacing * 2) / 4f);
-        int widgetHeight = 1200 - widgetY;
+        int widgets = 4;
+        int totalSpacing = spacing * (widgets + 1);
+        float scaledWidth = width * ui.getScaleFactorF();
+        int widgetWidth = (int) ((scaledWidth - totalSpacing) / widgets);
+
+        int widgetHeight = (int) (height * ui.getScaleFactorF() * 0.9f - widgetY);
 
         for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
             lootPoolWidget.setBounds(widgetX, widgetY, widgetWidth, widgetHeight);
@@ -136,7 +143,7 @@ public class LootPoolPage extends PageWidget {
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(hoveredTooltip.isEmpty()) return;
-        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), mouseX, mouseY);
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), mouseX - 5, mouseY + 20);
     }
 
     @Override
@@ -149,7 +156,18 @@ public class LootPoolPage extends PageWidget {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        return onClick(button);
+        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+            if(lootPoolWidget.mouseClicked(mx, my, button)) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+            lootPoolWidget.mouseReleased(mx, my, button);
+        }
+        return false;
     }
 
     @Override
@@ -167,47 +185,110 @@ public class LootPoolPage extends PageWidget {
         static Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tcc.png");
         static Identifier TNATexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tna.png");
 
+        Identifier ltop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/ltop.png");
+        Identifier rtop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/rtop.png");
+        Identifier ttop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/ttop.png");
+        Identifier btop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/btop.png");
+        Identifier tltop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/tltop.png");
+        Identifier trtop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/trtop.png");
+        Identifier bltop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/bltop.png");
+        Identifier brtop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/brtop.png");
+
+        Identifier l = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/l.png");
+        Identifier r = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/r.png");
+        Identifier t = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/t.png");
+        Identifier b = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/b.png");
+        Identifier tl = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/tl.png");
+        Identifier tr = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/tr.png");
+        Identifier bl = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/bl.png");
+        Identifier br = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/br.png");
+
+        Identifier ltopd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/ltop.png");
+        Identifier rtopd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/rtop.png");
+        Identifier ttopd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/ttop.png");
+        Identifier btopd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/btop.png");
+        Identifier tltopd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/tltop.png");
+        Identifier trtopd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/trtop.png");
+        Identifier bltopd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/bltop.png");
+        Identifier brtopd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/brtop.png");
+
+        Identifier ld = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/l.png");
+        Identifier rd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/r.png");
+        Identifier td = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/t.png");
+        Identifier bd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/b.png");
+        Identifier tld = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/tl.png");
+        Identifier trd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/tr.png");
+        Identifier bld = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/bl.png");
+        Identifier brd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/br.png");
+
         final Raid raid;
         PersonalScoreWidget scoreWidget;
-
+        ScrollBarWidget scrollBarWidget;
         List<AspectWidget> aspectWidgets = new ArrayList<>();
 
         float targetOffset = 0;
         float actualOffset = 0;
         float maxOffset = 999;
+        int textureWidth = 150;
 
         public LootPoolWidget(Raid raid) {
             super(0, 0, 0, 0);
             this.raid = raid;
             scoreWidget = new PersonalScoreWidget(raid);
+            scrollBarWidget = new ScrollBarWidget(this);
         }
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 12, false);
-            int textureWidth = 150;
+            //ui.drawButton(x, y, width, height, 12, false, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            int topHeight = height - scrollBarWidget.getHeight() + 14;
+
+            if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
+                ui.drawNineSlice((int) (x),
+                        (int) (y), width,
+                        (int) (topHeight), 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
+
+                ui.drawNineSlice((int) (x),
+                        (int) (y + topHeight), width,
+                        (int) (height - topHeight), 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
+            } else {
+                ui.drawNineSlice((int) (x),
+                        (int) (y), width,
+                        (int) (topHeight), 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
+
+                ui.drawNineSlice((int) (x),
+                        (int) (y + topHeight), width,
+                        (int) (height - topHeight), 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
+            }
 
             ui.drawImage(getTextureForRaid(raid), x + (width - textureWidth) / 2f, y - textureWidth / 4f, textureWidth, textureWidth);
-            ui.drawLine(x + 2, y + textureWidth + 40, x + width - 2, y + textureWidth + 40, 3, CustomColor.fromHexString("a68a73"));
 
             // Calculate and show score
             DecimalFormat df = new DecimalFormat("#.00");
 
             List<LootPoolData.AspectEntry> lootPool = getLootPoolForRaid(raid.name());
 
+            boolean allLoaded = true;
+            for(LootPoolData.AspectEntry entry : lootPool) {
+                if(entry.tierInfo.isEmpty()) {
+                    allLoaded = false;
+                    break;
+                }
+            }
+
             List<LootPoolData.AspectEntry> mythicAspects = lootPool.stream().filter(a -> a.rarity.equalsIgnoreCase("mythic")).toList();
             List<LootPoolData.AspectEntry> fabledAspects = lootPool.stream().filter(a -> a.rarity.equalsIgnoreCase("fabled")).toList();
             List<LootPoolData.AspectEntry> legendaryAspects = lootPool.stream().filter(a -> a.rarity.equalsIgnoreCase("legendary")).toList();
 
-            if(aspectWidgets.isEmpty()) {
+            if(aspectWidgets.isEmpty() && allLoaded) {
                 for (LootPoolData.AspectEntry entry : mythicAspects) {
-                    aspectWidgets.add(new AspectWidget(entry));
+                    aspectWidgets.add(new AspectWidget(entry, this));
                 }
                 for (LootPoolData.AspectEntry entry : fabledAspects) {
-                    aspectWidgets.add(new AspectWidget(entry));
+                    aspectWidgets.add(new AspectWidget(entry, this));
                 }
                 for (LootPoolData.AspectEntry entry : legendaryAspects) {
-                    aspectWidgets.add(new AspectWidget(entry));
+                    aspectWidgets.add(new AspectWidget(entry, this));
                 }
             }
 
@@ -223,14 +304,14 @@ public class LootPoolPage extends PageWidget {
 
             scoreWidget.scoreString = scoreString;
             int scoreWidth = MinecraftClient.getInstance().textRenderer.getWidth(scoreString);
-            scoreWidget.setBounds((int) (x + (width - scoreWidth * 3) / 2f), y + textureWidth, (int) (scoreWidth * ui.getScaleFactorF()), 30);
+            scoreWidget.setBounds((int) (x + (width - scoreWidth * 3) / 2f), y + textureWidth, scoreWidth * 3, 30);
             scoreWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
 
             ctx.enableScissor(
                     (int) (x / ui.getScaleFactor()),
                     (int) ((y + 195) / ui.getScaleFactor()),
                     (int) ((x + width - 7) / ui.getScaleFactor()),
-                    (int) ((y + height - 7) / ui.getScaleFactor()));
+                    (int) ((y + height - 20) / ui.getScaleFactor()));
 
             float snapValue = 0.5f;
             float speed = 0.3f;
@@ -248,15 +329,32 @@ public class LootPoolPage extends PageWidget {
                 aspectWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
                 aspectY += aspectHeight + spacing;
                 i++;
-                if(i == 3 || i == 3 + fabledAspects.size()) {
+                if(i == mythicAspects.size() || i == mythicAspects.size() + fabledAspects.size()) {
                     aspectY += spacing * 4;
-                    ui.drawLine(x + 15, aspectY - spacing * 2, x + width - 15, aspectY - spacing * 2, 3, CustomColor.fromHexString("997e69"));
+                    ui.drawLine(x + 20, aspectY - spacing * 2, x + width - 20, aspectY - spacing * 2, 3, WynnExtrasConfig.INSTANCE.darkmodeToggle ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
                 }
             }
 
-            maxOffset = textureWidth + 20;
+            maxOffset = (aspectWidgets.size() * (aspectHeight)) / 3f - 60;
 
             ctx.disableScissor();
+            scrollBarWidget.setBounds(x + width, y + textureWidth + 40, 25, height - textureWidth - 40);
+            scrollBarWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+        }
+
+        @Override
+        public boolean mouseClicked(double mx, double my, int button) {
+            if(scrollBarWidget.isHovered()) {
+                scrollBarWidget.onClick(button);
+                return true;
+            }
+            return super.mouseClicked(mx, my, button);
+        }
+
+        @Override
+        public boolean mouseReleased(double mx, double my, int button) {
+            scrollBarWidget.scrollBarButtonWidget.isHold = false;
+            return super.mouseReleased(mx, my, button);
         }
 
         @Override
@@ -392,6 +490,91 @@ public class LootPoolPage extends PageWidget {
             return LootPoolData.INSTANCE.getLootPool(raidCode);
         }
 
+
+        private class ScrollBarWidget extends Widget {
+            ScrollBarButtonWidget scrollBarButtonWidget;
+            int currentMouseY = 0;
+            LootPoolWidget parent;
+
+            public ScrollBarWidget(LootPoolWidget parent) {
+                super(0, 0, 0, 0);
+                this.scrollBarButtonWidget = new ScrollBarButtonWidget();
+                this.parent = parent;
+                addChild(scrollBarButtonWidget);
+            }
+
+            private void setOffset(int mouseY, int maxOffset, int scrollAreaHeight) {
+                float relativeY = mouseY - y - scrollBarButtonWidget.getHeight() / 2f;
+                relativeY = Math.max(0, Math.min(relativeY, scrollAreaHeight));
+
+                float scrollPercent = relativeY / scrollAreaHeight;
+
+                parent.targetOffset = scrollPercent * maxOffset;
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                currentMouseY = mouseY;
+                ui.drawSliderBackground(x, y, width, height, 5, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+
+                int buttonHeight = 75;
+                int scrollAreaHeight = height - buttonHeight;
+
+                if (scrollBarButtonWidget.isHold) {
+                    setOffset((int) (mouseY * ui.getScaleFactor()), (int) maxOffset, scrollAreaHeight);
+                    parent.actualOffset = parent.targetOffset;
+                }
+
+                int yPos = maxOffset == 0 ? y : (int) (y + scrollAreaHeight * Math.min((parent.actualOffset / maxOffset), 1));
+                scrollBarButtonWidget.setBounds(x, yPos, width, buttonHeight);
+            }
+
+            @Override
+            protected boolean onClick(int button) {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                int buttonHeight = 30;
+                int scrollAreaHeight = height - buttonHeight;
+
+                if(scrollBarButtonWidget.isHovered()) scrollBarButtonWidget.isHold = true;
+                setOffset((int) ((currentMouseY) * ui.getScaleFactor() + buttonHeight / 2f), (int) maxOffset, scrollAreaHeight);
+
+                return false;
+            }
+
+            @Override
+            public boolean mouseReleased(double mx, double my, int button) {
+                scrollBarButtonWidget.mouseReleased(mx, my, button);
+                return true;
+            }
+
+            private static class ScrollBarButtonWidget extends Widget {
+                public boolean isHold;
+
+                public ScrollBarButtonWidget() {
+                    super(0, 0, 0, 0);
+                    isHold = false;
+                }
+
+                @Override
+                protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                    ui.drawButton(x, y, width, height, 5, hovered || isHold, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+                }
+
+                @Override
+                protected boolean onClick(int button) {
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    isHold = true;
+                    return true;
+                }
+
+                @Override
+                public boolean mouseReleased(double mx, double my, int button) {
+                    isHold = false;
+                    return true;
+                }
+            }
+        }
+
         private static class PersonalScoreWidget extends Widget {
             String scoreString = "";
             final Raid raid;
@@ -430,54 +613,108 @@ public class LootPoolPage extends PageWidget {
 
         private static class AspectWidget extends Widget {
             final LootPoolData.AspectEntry aspect;
+            final LootPoolWidget parent;
 
-            public AspectWidget(LootPoolData.AspectEntry aspect) {
+            public AspectWidget(LootPoolData.AspectEntry aspect, LootPoolWidget parent) {
                 super(0, 0, 0, 0);
                 this.aspect = aspect;
+                this.parent = parent;
             }
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 //ui.drawRect(x, y, width, height);
 
-                int maxChars = Math.max(10, (width - 190) / 12);
+                int maxChars = Math.max(10, (width - 220) / 12);
                 String displayName = aspect.name;
                 boolean isFavorite = FavoriteAspectsData.INSTANCE.isFavorite(aspect.name);
-                if (displayName.length() > maxChars) {
+                if (displayName.length() + ((isFavorite || hovered) ? 5 : 0) > maxChars) {
                     displayName = displayName.substring(0, maxChars - ((hovered || isFavorite) ? 5 : 3)) + "...";
                 }
 
                 boolean isMax = aspect.tierInfo.contains("MAX");
-
                 CustomColor textColor = CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
-                if(isMax) textColor = CommonColors.RAINBOW;
-                else {
-                    if(aspect.rarity.equalsIgnoreCase("mythic")) rarityColorCode = "§5";
-                    else if(aspect.rarity.equalsIgnoreCase("fabled")) rarityColorCode = "§c";
-                    else if(aspect.rarity.equalsIgnoreCase("legendary")) rarityColorCode = "§b";
+                if(isMax) {
+
+                    textColor = CommonColors.RAINBOW;
+                } else {
+                    rarityColorCode = getAspectColorCode(aspect);
                 }
-                ui.drawText(rarityColorCode + displayName + (isFavorite ? " §e⭐" : (hovered ? " §7☆" : "")), x + 70, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
+
+                ui.drawText(rarityColorCode + displayName + (isFavorite ? " §e⭐" : (hovered ? " §7☆" : "")), x + 90, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
 
 
                 ApiAspect apiAspect = findApiAspectByName(aspect.name);
                 ItemStack flameItem = createAspectFlameIcon(apiAspect, isMax);
                 if (!flameItem.isEmpty() && ui != null) {
-                    int screenX = (int) ui.sx(x + 20);
+                    int screenX = (int) ui.sx(x + 40);
                     int screenY = (int) ui.sy(y + 13); // Move flame up
-                    float flameScale = 0.7f;
+                    float flameScale = 2.1f;
                     ctx.getMatrices().pushMatrix();
-                    ctx.getMatrices().scale(flameScale, flameScale);
-                    ctx.drawItem(flameItem, (int)(screenX / flameScale), (int)(screenY / flameScale));
+                    ctx.getMatrices().scale(flameScale / ui.getScaleFactorF(), flameScale / ui.getScaleFactorF());
+                    ctx.drawItem(flameItem, (int)(screenX / (flameScale / ui.getScaleFactorF())), (int)(screenY / (flameScale / ui.getScaleFactorF())));
                     ctx.getMatrices().popMatrix();
+                }
+
+                if(hovered && parent.isHovered()) {
+                    List<Text> tooltip = new ArrayList<>();
+                    if(apiAspect == null) return;
+                    int tier = 0;
+                    if(isMax) {
+                        if(aspect.rarity.equalsIgnoreCase("Legendary")) tier = 4;
+                        else tier = 3;
+                    }
+
+                    Pattern pattern = Pattern.compile("Tier ([IVXLCDM]+)");
+                    Matcher matcher = pattern.matcher(aspect.tierInfo);
+
+                    if (matcher.find()) {
+                        String roman = matcher.group(1);
+                        tier = romanToInt(roman);
+                    }
+
+                    ItemStack aspectItemStack = toItemStack(apiAspect, isMax, tier);
+                   // tooltip.add();
+//                    tooltip.add(Text.literal("§7" + raidNames[raid.ordinal()]));
+//                    tooltip.add(Text.literal(""));
+//                    tooltip.add(Text.literal(scoreString));
+//                    tooltip.add(Text.literal("§8(Favorites count 3x)"));
+//                    tooltip.add(Text.literal(""));
+//                    tooltip.add(Text.literal("§aClick to join party finder"));
+                    tooltip = aspectItemStack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
+
+                    int longestTextWidth = 0;
+                    for(Text text : tooltip) {
+                        if(MinecraftClient.getInstance().textRenderer.getWidth(text) > longestTextWidth) longestTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(text);
+                    }
+
+                    String name = tooltip.getFirst().getString();
+
+                    tooltip.set(0, Text.of(name + " §7" + aspect.tierInfo));
+
+                    hoveredTooltip = tooltip;
                 }
             }
 
             @Override
             protected boolean onClick(int button) {
+                McUtils.playSoundUI(SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK);
                 FavoriteAspectsData.INSTANCE.toggleFavorite(aspect.name);
                 return true;
             }
+        }
+    }
+
+    private static class ImportFromWynntilsButton extends Widget {
+
+        public ImportFromWynntilsButton() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+
         }
     }
 }

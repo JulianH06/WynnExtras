@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
+import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
@@ -8,11 +9,13 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.CustomModelDataComponent;
+import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
@@ -145,6 +148,66 @@ public class AspectUtils {
         });
     }
 
+    public static ItemStack toItemStack(ApiAspect aspect, boolean max, int tier) {
+        ApiAspect.Icon icon = aspect.getIcon();
+        if (icon == null) return ItemStack.EMPTY;
+
+        if (icon.getValueString() != null) {
+            Identifier id = Identifier.of(icon.getValueString());
+            Item item = Registries.ITEM.get(id);
+            return new ItemStack(item);
+        }
+
+        if (icon.getValueObject() != null) {
+            ApiAspect.IconValue iv = icon.getValueObject();
+            Identifier id = Identifier.of(iv.getId());
+            Item item = Registries.ITEM.get(id);
+            ItemStack stack = new ItemStack(item);
+
+            if (iv.getCustomModelData() != null) {
+                try {
+                    int cmd = iv.getCustomModelData().getRangeDispatch().getFirst() + (max ? 1 : 0);
+                    stack.set(DataComponentTypes.CUSTOM_MODEL_DATA, new CustomModelDataComponent(List.of((float) cmd), List.of(), List.of(), List.of()));
+                } catch (NumberFormatException ignored) {}
+            }
+
+            if(aspect.getName() != null) {
+                try {
+                    StyledText name = StyledText.fromString(aspect.getName()).withoutFormatting();
+                    String color = "";
+                    if(aspect.getRarity().equals("mythic")) {
+                        color = "§5";
+                    }
+                    if(aspect.getRarity().equals("fabled")) {
+                        color = "§c";
+                    }
+                    if(aspect.getRarity().equals("legendary")) {
+                        color = "§b";
+                    }
+                    stack.set(DataComponentTypes.CUSTOM_NAME, Text.of(color + name.getString()));
+                } catch (NumberFormatException ignored) {}
+            }
+
+            if(aspect.getTiers() != null) {
+                if(aspect.getTiers().get(String.valueOf(tier)) != null) {
+                    List<String> lore = aspect.getTiers().get(String.valueOf(tier)).getDescription();
+                    stack.set(DataComponentTypes.LORE, new LoreComponent(WynncraftApiHandler.parseStyledHtml(lore)));
+                }
+            }
+
+            return stack;
+        }
+
+        return ItemStack.EMPTY;
+    }
+
+    public static String getAspectColorCode(LootPoolData.AspectEntry aspect) {
+        if(aspect.rarity.equalsIgnoreCase("mythic")) return "§5";
+        else if(aspect.rarity.equalsIgnoreCase("fabled")) return "§c";
+        else if(aspect.rarity.equalsIgnoreCase("legendary")) return "§b";
+        return "";
+    }
+
     public static int romanToInt(String roman) {
         return switch (roman.toUpperCase()) {
             case "I" -> 1;
@@ -180,17 +243,15 @@ public class AspectUtils {
         int tier2Total = tier1Total + tier2[rarityIndex];
         int tier3Total = tier2Total + tier3[rarityIndex];
 
-        if (amount < tier1Total) {
-            return "Tier I [" + amount + "/" + tier1[rarityIndex] + "]";
-        } else if (amount < tier2Total) {
+        if (amount < tier2Total) {
             int progress = amount - tier1Total;
-            return "Tier II [" + progress + "/" + tier2[rarityIndex] + "]";
+            return "Tier I [" + progress + "/" + tier2[rarityIndex] + "]";
         } else if (amount < tier3Total) {
             int progress = amount - tier2Total;
-            return "Tier III [" + progress + "/" + tier3[rarityIndex] + "]";
+            return "Tier II [" + progress + "/" + tier3[rarityIndex] + "]";
         } else {
             int progress = amount - tier3Total;
-            return "Tier IV [" + progress + "/" + tier4[rarityIndex] + "]";
+            return "Tier III [" + progress + "/" + tier4[rarityIndex] + "]";
         }
     }
 

@@ -513,17 +513,15 @@ public class AspectScreenSimple extends WEScreen implements AspectScreenHost {
         int tier2Total = tier1Total + tier2[rarityIndex];
         int tier3Total = tier2Total + tier3[rarityIndex];
 
-        if (amount < tier1Total) {
-            return "Tier I [" + amount + "/" + tier1[rarityIndex] + "]";
-        } else if (amount < tier2Total) {
+        if (amount < tier2Total) {
             int progress = amount - tier1Total;
-            return "Tier II [" + progress + "/" + tier2[rarityIndex] + "]";
+            return "Tier I [" + progress + "/" + tier2[rarityIndex] + "]";
         } else if (amount < tier3Total) {
             int progress = amount - tier2Total;
-            return "Tier III [" + progress + "/" + tier3[rarityIndex] + "]";
+            return "Tier II [" + progress + "/" + tier3[rarityIndex] + "]";
         } else {
             int progress = amount - tier3Total;
-            return "Tier IV [" + progress + "/" + tier4[rarityIndex] + "]";
+            return "Tier III [" + progress + "/" + tier4[rarityIndex] + "]";
         }
     }
 

@@ -414,17 +414,17 @@ public final class UIUtils {
             );
         }
 
-        drawImage(tl, x, y, scale, scale);
-        drawImage(tr, x + width - scale, y, scale, scale);
-        drawImage(bl, x, y + height - scale, scale, scale);
-        drawImage(br, x + width - scale, y + height - scale, scale, scale);
+        if(tl != null) drawImage(tl, x, y, scale, scale);
+        if(tr != null) drawImage(tr, x + width - scale, y, scale, scale);
+        if(bl != null) drawImage(bl, x, y + height - scale, scale, scale);
+        if(br != null) drawImage(br, x + width - scale, y + height - scale, scale, scale);
         if (width > scale * 2) {
-            drawImage(t, x + scale - 2, y, width - scale * 2 + 4, scale);
-            drawImage(b, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
+            if(t != null) drawImage(t, x + scale - 2, y, width - scale * 2 + 4, scale);
+            if(b != null) drawImage(b, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
         }
         if (height > scale * 2) {
-            drawImage(l, x, y + scale - 2, scale, height - scale * 2 + 4);
-            drawImage(r, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
+            if(l != null) drawImage(l, x, y + scale - 2, scale, height - scale * 2 + 4);
+            if(r != null) drawImage(r, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
         }
     }
 }
