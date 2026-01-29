@@ -20,9 +20,9 @@
     "RaidLootOverlayScreenMixin",
     "WorldRendererAccessor",
     "Accessor.BannerBlockEntityRendererAccessor",
+    "Accessor.GuildMapScreenAccessor",
     "Accessor.HandledScreenAccessor",
     "Accessor.KeybindingAccessor",
-    "BankOverlay.DrawContextMixin",
     "BankOverlay.HandledScreenMixin",
     "Invoker.HandledScreenInvoker",
     "Invoker.wmd$ItemOverlayFeatureInvoker"
