@@ -9,8 +9,7 @@ import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.features.aspects.pages.LootPoolPage;
-import julianh06.wynnextras.features.aspects.pages.PageWidget;
+import julianh06.wynnextras.features.aspects.pages.*;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
@@ -29,9 +28,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AspectScreen extends WEScreen {
-    public enum Page {LootPools, Aspects, Gambits, RaidLoot, Explore, Leaderboard}
+    public enum Page {LootPools, Aspects, Gambits, RaidLoot, Leaderboard}
 
     static LootPoolPage lootPoolPage;
+    static AspectsPage aspectsPage;
+    static GambitsPage gambitsPage;
+    static RaidLootPage raidLootPage;
+    //static ExplorePage explorePage;
+    static LeadboardPage leadboardPage;
 
     private static Page currentPage = Page.LootPools;
     private static PageWidget currentWidget;
@@ -146,11 +150,11 @@ public class AspectScreen extends WEScreen {
     private PageWidget getTabWidget(Page page) {
         return switch (page) {
             case LootPools -> lootPoolPage == null ? lootPoolPage = new LootPoolPage(this) : lootPoolPage;
-            case Aspects -> null;
-            case Gambits -> null;
-            case RaidLoot -> null;
-            case Explore -> null;
-            case Leaderboard -> null;
+            case Aspects -> aspectsPage == null ? aspectsPage = new AspectsPage(this) : aspectsPage;
+            case Gambits -> gambitsPage == null ? gambitsPage = new GambitsPage(this) : gambitsPage;
+            case RaidLoot -> raidLootPage == null ? raidLootPage = new RaidLootPage(this) : raidLootPage;
+            //case Explore -> explorePage == null ? explorePage = new ExplorePage(this) : explorePage;
+            case Leaderboard -> leadboardPage == null ? leadboardPage = new LeadboardPage(this) : leadboardPage;
             case null, default -> null;
         };
     }

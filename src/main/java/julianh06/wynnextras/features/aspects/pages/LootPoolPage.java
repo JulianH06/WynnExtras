@@ -42,14 +42,19 @@ public class LootPoolPage extends PageWidget {
 
     private enum Raid { NOTG, NOL, TCC, TNA }
 
-    List<LootPoolWidget> lootPoolWidgets = new ArrayList<>();
+    static List<LootPoolWidget> lootPoolWidgets = new ArrayList<>();
 
     private static List<Text> hoveredTooltip = new ArrayList<>();
 
-    private String importFeedback = null;
-    private long importFeedbackTime = 0;
+    private static String importFeedback = null;
+    private static long importFeedbackTime = 0;
 
     private ImportFromWynntilsButton importFromWynntilsButton;
+    private HideMaxButton hideMaxButton;
+    private OnlyFavoritesButton onlyFavoritesButton;
+
+    private static boolean hideMax = false;
+    private static boolean onlyFavorites = false;
 
     private static String[] raidNames = {
             "Nest of the Grootslangs",
@@ -66,6 +71,8 @@ public class LootPoolPage extends PageWidget {
         }
 
         importFromWynntilsButton = new ImportFromWynntilsButton();
+        hideMaxButton = new HideMaxButton();
+        onlyFavoritesButton = new OnlyFavoritesButton();
     }
 
     @Override
@@ -146,7 +153,14 @@ public class LootPoolPage extends PageWidget {
             widgetX += widgetWidth + spacing;
         }
 
-        importFromWynntilsButton.setBounds();
+        importFromWynntilsButton.setBounds(0, 0, 500, 60);
+        importFromWynntilsButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
+
+        hideMaxButton.setBounds((int) (width * ui.getScaleFactorF()) - 300, 0, 300, 60);
+        hideMaxButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
+
+        onlyFavoritesButton.setBounds((int) (width * ui.getScaleFactorF()) - 720, 0, 400, 60);
+        onlyFavoritesButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
 
         if (importFeedback != null && System.currentTimeMillis() - importFeedbackTime < 5000) {
             ui.drawCenteredText(importFeedback, 240, 74);
@@ -174,6 +188,22 @@ public class LootPoolPage extends PageWidget {
         for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
             if(lootPoolWidget.mouseClicked(mx, my, button)) return true;
         }
+
+        if(importFromWynntilsButton.isHovered()) {
+            importFromWynntilsButton.onClick(button);
+            return true;
+        }
+
+        if(hideMaxButton.isHovered()) {
+            hideMaxButton.onClick(button);
+            return true;
+        }
+
+        if(onlyFavoritesButton.isHovered()) {
+            onlyFavoritesButton.onClick(button);
+            return true;
+        }
+
         return false;
     }
 
@@ -255,7 +285,6 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            //ui.drawButton(x, y, width, height, 12, false, WynnExtrasConfig.INSTANCE.darkmodeToggle);
             int topHeight = height - scrollBarWidget.getHeight() + 14;
 
             if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
@@ -295,14 +324,21 @@ public class LootPoolPage extends PageWidget {
             List<LootPoolData.AspectEntry> fabledAspects = lootPool.stream().filter(a -> a.rarity.equalsIgnoreCase("fabled")).toList();
             List<LootPoolData.AspectEntry> legendaryAspects = lootPool.stream().filter(a -> a.rarity.equalsIgnoreCase("legendary")).toList();
 
+            //aspectWidgets.clear();
             if(aspectWidgets.isEmpty() && allLoaded) {
                 for (LootPoolData.AspectEntry entry : mythicAspects) {
+                    if(hideMax && entry.tierInfo.contains("MAX")) continue;
+                    if(onlyFavorites && !FavoriteAspectsData.INSTANCE.isFavorite(entry.name)) continue;
                     aspectWidgets.add(new AspectWidget(entry, this));
                 }
                 for (LootPoolData.AspectEntry entry : fabledAspects) {
+                    if(hideMax && entry.tierInfo.contains("MAX")) continue;
+                    if(onlyFavorites && !FavoriteAspectsData.INSTANCE.isFavorite(entry.name)) continue;
                     aspectWidgets.add(new AspectWidget(entry, this));
                 }
                 for (LootPoolData.AspectEntry entry : legendaryAspects) {
+                    if(hideMax && entry.tierInfo.contains("MAX")) continue;
+                    if(onlyFavorites && !FavoriteAspectsData.INSTANCE.isFavorite(entry.name)) continue;
                     aspectWidgets.add(new AspectWidget(entry, this));
                 }
             }
@@ -338,15 +374,31 @@ public class LootPoolPage extends PageWidget {
             int aspectHeight = 50;
             int spacing = 5;
 
-            int i = 0;
-            for(AspectWidget aspectWidget : aspectWidgets) {
+            for (int i = 0; i < aspectWidgets.size(); i++) {
+                AspectWidget aspectWidget = aspectWidgets.get(i);
+
                 aspectWidget.setBounds(x, aspectY, width, aspectHeight);
                 aspectWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+
                 aspectY += aspectHeight + spacing;
-                i++;
-                if(i == mythicAspects.size() || i == mythicAspects.size() + fabledAspects.size()) {
+
+                boolean isLastOfRarity =
+                        i + 1 < aspectWidgets.size() &&
+                                !aspectWidgets.get(i + 1).aspect.rarity
+                                        .equalsIgnoreCase(aspectWidget.aspect.rarity);
+
+                if (isLastOfRarity) {
                     aspectY += spacing * 4;
-                    ui.drawLine(x + 20, aspectY - spacing * 2, x + width - 20, aspectY - spacing * 2, 3, WynnExtrasConfig.INSTANCE.darkmodeToggle ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                    ui.drawLine(
+                            x + 20,
+                            aspectY - spacing * 2,
+                            x + width - 20,
+                            aspectY - spacing * 2,
+                            3,
+                            WynnExtrasConfig.INSTANCE.darkmodeToggle
+                                    ? CustomColor.fromHexString("1b1b1c")
+                                    : CustomColor.fromHexString("5d4736")
+                    );
                 }
             }
 
@@ -657,7 +709,7 @@ public class LootPoolPage extends PageWidget {
                     rarityColorCode = getAspectColorCode(aspect);
                 }
 
-                ui.drawText(rarityColorCode + displayName + (isFavorite ? " §e⭐" : (hovered ? " §7☆" : "")), x + 90, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
+                ui.drawText(rarityColorCode + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 90, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
 
 
                 ApiAspect apiAspect = findApiAspectByName(aspect.name);
@@ -690,13 +742,6 @@ public class LootPoolPage extends PageWidget {
                     }
 
                     ItemStack aspectItemStack = toItemStack(apiAspect, isMax, tier);
-                   // tooltip.add();
-//                    tooltip.add(Text.literal("§7" + raidNames[raid.ordinal()]));
-//                    tooltip.add(Text.literal(""));
-//                    tooltip.add(Text.literal(scoreString));
-//                    tooltip.add(Text.literal("§8(Favorites count 3x)"));
-//                    tooltip.add(Text.literal(""));
-//                    tooltip.add(Text.literal("§aClick to join party finder"));
                     tooltip = aspectItemStack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
 
                     int longestTextWidth = 0;
@@ -714,6 +759,7 @@ public class LootPoolPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
+                if(!parent.isHovered()) return false;
                 McUtils.playSoundUI(SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK);
                 FavoriteAspectsData.INSTANCE.toggleFavorite(aspect.name);
                 return true;
@@ -728,7 +774,8 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawCenteredText("Import favorites from Wynntils", x + width / 2f, y + height / 2f);
         }
 
         @Override
@@ -740,6 +787,52 @@ public class LootPoolPage extends PageWidget {
                 importFeedback = "§7No new favorites to import";
             }
             importFeedbackTime = System.currentTimeMillis();
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
+        }
+    }
+
+    private static class HideMaxButton extends Widget {
+        public HideMaxButton() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawCenteredText("Hide max aspects", x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            hideMax = !hideMax;
+            for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+                lootPoolWidget.aspectWidgets.clear();
+            }
+
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
+        }
+    }
+
+    private static class OnlyFavoritesButton extends Widget {
+        public OnlyFavoritesButton() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawCenteredText("Only favorite aspects", x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            onlyFavorites = !onlyFavorites;
+            for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+                lootPoolWidget.aspectWidgets.clear();
+            }
+
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }

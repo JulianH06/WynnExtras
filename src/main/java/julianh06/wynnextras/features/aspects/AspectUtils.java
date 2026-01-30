@@ -259,38 +259,26 @@ public class AspectUtils {
         String key = rarity.toLowerCase() + "_" + currentTier + "_" + targetTier;
 
         return switch (key) {
-            // Known weights from data
-            case "mythic_2_3" -> 13.55;
-            case "fabled_1_2" -> 10.4;
-            case "fabled_2_3" -> 0.65;
+            // Tier progressions
+            case "mythic_1_2" -> 13.55;
+            case "mythic_2_3" -> 10.00;
+            case "fabled_1_2" -> 0.65;
+            case "fabled_2_3" -> 0.5;
+            case "legendary_1_2" -> 13.0;
+            case "legendary_2_3" -> 1.5;
             case "legendary_3_4" -> 0.905;
 
-            // Tier progressions (estimated based on rarity pattern)
-            case "mythic_1_2" -> 20.0;
-            case "mythic_3_4" -> 10.0;
-            case "fabled_3_4" -> 0.5;
-            case "legendary_1_2" -> 15.0;
-            case "legendary_2_3" -> 1.5;
-
             // Same-tier progression (finishing current tier)
-            case "mythic_1_1" -> 20.0;
-            case "mythic_2_2" -> 13.55;
-            case "mythic_3_3" -> 10.0;
-            case "mythic_4_4" -> 5.0;
-            case "fabled_1_1" -> 10.4;
-            case "fabled_2_2" -> 5.0;
-            case "fabled_3_3" -> 0.65;
-            case "fabled_4_4" -> 0.5;
-            case "legendary_1_1" -> 15.0;
+            case "mythic_1_1" -> 13.55;
+            case "mythic_2_2" -> 10.0;
+            case "fabled_1_1" -> 6.05;
+            case "fabled_2_2" -> 0.50;
+            case "legendary_1_1" -> 13.0;
             case "legendary_2_2" -> 5.0;
             case "legendary_3_3" -> 1.5;
             case "legendary_4_4" -> 0.905;
 
-            // Rare weights
-            case "rare_1_1", "rare_2_2", "rare_3_3", "rare_4_4" -> 1.0;
-            case "rare_1_2", "rare_2_3", "rare_3_4" -> 1.0;
-
-            default -> 1.0; // Default weight
+            default -> 1.0;
         };
     }
 }
