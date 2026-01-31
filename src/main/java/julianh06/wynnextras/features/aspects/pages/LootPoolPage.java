@@ -56,6 +56,9 @@ public class LootPoolPage extends PageWidget {
     private static boolean hideMax = false;
     private static boolean onlyFavorites = false;
 
+    private enum corwdSourceStatus { Loading, Found, Null }
+    private static List<corwdSourceStatus> hasCrowdSourcedData = new ArrayList<>(List.of(corwdSourceStatus.Loading, corwdSourceStatus.Loading, corwdSourceStatus.Loading, corwdSourceStatus.Loading));
+
     private static String[] raidNames = {
             "Nest of the Grootslangs",
             "Orphion's Nexus of Light",
@@ -81,14 +84,21 @@ public class LootPoolPage extends PageWidget {
         if (!fetchedCrowdsourcedLootPools) {
             fetchedCrowdsourcedLootPools = true;
             String[] raids = {"NOTG", "NOL", "TCC", "TNA"};
+            int i = 0;
             for (String raidType : raids) {
+                int finalI = i;
                 WynncraftApiHandler.fetchCrowdsourcedLootPool(raidType).thenAccept(result -> {
+                    if(result == null) {
+                        hasCrowdSourcedData.set(finalI, corwdSourceStatus.Null);
+                    }
                     if (result != null && !result.isEmpty()) {
+                        hasCrowdSourcedData.set(finalI, corwdSourceStatus.Found);
                         crowdsourcedLootPools.put(raidType, result);
                         // Save to local data for offline access
                         julianh06.wynnextras.features.aspects.LootPoolData.INSTANCE.saveLootPoolFull(raidType, result);
                     }
                 });
+                i++;
             }
         }
 
@@ -312,6 +322,10 @@ public class LootPoolPage extends PageWidget {
 
             List<LootPoolData.AspectEntry> lootPool = getLootPoolForRaid(raid.name());
 
+            if(!lootPool.isEmpty() && hasCrowdSourcedData.get(raid.ordinal()) == corwdSourceStatus.Null) {
+                hasCrowdSourcedData.set(raid.ordinal(), corwdSourceStatus.Found);
+            }
+
             boolean allLoaded = true;
             for(LootPoolData.AspectEntry entry : lootPool) {
                 if(entry.tierInfo.isEmpty()) {
@@ -355,9 +369,17 @@ public class LootPoolPage extends PageWidget {
 
             scoreWidget.scoreString = scoreString;
             int scoreWidth = MinecraftClient.getInstance().textRenderer.getWidth(scoreString);
-            scoreWidget.setBounds((int) (x + (width - scoreWidth * 3) / 2f), y + textureWidth, scoreWidth * 3, 30);
-            scoreWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
-
+            if(hasCrowdSourcedData.get(raid.ordinal()) != corwdSourceStatus.Found) {
+                scoreWidget.setBounds(0, 0, 0, 0);
+                if(hasCrowdSourcedData.get(raid.ordinal()) == corwdSourceStatus.Loading) {
+                    ui.drawCenteredText("Loading lootpool data...", x + width / 2f, y + textureWidth + 14, CustomColor.fromHexString("FF0000"));
+                } else {
+                    ui.drawCenteredText("There is data for this raid yet!", x + width / 2f, y + textureWidth + 14, CustomColor.fromHexString("FF0000"));
+                }
+            } else {
+                scoreWidget.setBounds((int) (x + (width - scoreWidth * 3) / 2f), y + textureWidth, scoreWidth * 3, 30);
+                scoreWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+            }
             ctx.enableScissor(
                     (int) (x / ui.getScaleFactor()),
                     (int) ((y + 195) / ui.getScaleFactor()),

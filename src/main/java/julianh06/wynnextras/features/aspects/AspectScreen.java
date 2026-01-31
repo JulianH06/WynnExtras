@@ -21,6 +21,8 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.input.CharInput;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 
@@ -85,6 +87,19 @@ public class AspectScreen extends WEScreen {
     public boolean mouseReleased(Click click) {
         if(currentWidget != null) currentWidget.mouseReleased(click.x(), click.y(), click.button());
         return super.mouseReleased(click);
+    }
+
+    @Override
+    public boolean keyPressed(KeyInput input) {
+        if(currentWidget != null) currentWidget.keyPressed(input.key(), input.scancode(), input.modifiers());
+        return super.keyPressed(input);
+    }
+
+    @Override
+    public boolean charTyped(CharInput input) {
+
+        if(currentWidget != null) currentWidget.charTyped((char) input.codepoint(), input.modifiers());
+        return super.charTyped(input);
     }
 
     @Override

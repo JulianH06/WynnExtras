@@ -327,7 +327,6 @@ public class WynncraftApiHandler {
                         User user = parsePlayerAspectData(response.body());
                         return new FetchResult(FetchStatus.OK, user);
                     });
-
         } catch (Exception e) {
             e.printStackTrace();
             return CompletableFuture.completedFuture(new FetchResult(FetchStatus.UNKNOWN_ERROR, null));
