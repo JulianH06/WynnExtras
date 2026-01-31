@@ -57,7 +57,6 @@ public class RaidLootTrackerOverlay {
     public static final String LINE_ASPECTS_MYTHIC = "aspects_mythic";
     public static final String LINE_ASPECTS_FABLED = "aspects_fabled";
     public static final String LINE_ASPECTS_LEGENDARY = "aspects_legendary";
-    public static final String LINE_ASPECTS_RARE = "aspects_rare";
     public static final String LINE_COMPLETIONS = "completions";
 
     // Track line positions for click detection
@@ -178,18 +177,18 @@ public class RaidLootTrackerOverlay {
         data.initSession();
 
         // DEBUG: Print data values once per second
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player != null && mc.player.age % 20 == 0) {
-            System.out.println("[WynnExtras DEBUG] Overlay data: " +
-                    "EB=" + data.emeraldBlocks + ", " +
-                    "LE=" + data.liquidEmeralds + ", " +
-                    "T1=" + data.amplifierTier1 + ", " +
-                    "Bags=" + data.totalBags + ", " +
-                    "Tomes=" + data.totalTomes + ", " +
-                    "Charms=" + data.totalCharms);
-            System.out.println("[WynnExtras DEBUG] Per-raid data size: " +
-                    (data.perRaidData != null ? data.perRaidData.size() : "null"));
-        }
+        //MinecraftClient mc = MinecraftClient.getInstance();
+//        if (mc.player != null && mc.player.age % 20 == 0) {
+//            System.out.println("[WynnExtras DEBUG] Overlay data: " +
+//                    "EB=" + data.emeraldBlocks + ", " +
+//                    "LE=" + data.liquidEmeralds + ", " +
+//                    "T1=" + data.amplifierTier1 + ", " +
+//                    "Bags=" + data.totalBags + ", " +
+//                    "Tomes=" + data.totalTomes + ", " +
+//                    "Charms=" + data.totalCharms);
+//            System.out.println("[WynnExtras DEBUG] Per-raid data size: " +
+//                    (data.perRaidData != null ? data.perRaidData.size() : "null"));
+//        }
 
         boolean showSession = config.raidLootTrackerShowSession;
         boolean compact = config.raidLootTrackerCompact;
@@ -330,7 +329,6 @@ public class RaidLootTrackerOverlay {
             y = drawLine(context, LINE_ASPECTS_MYTHIC, "  Mythic", String.valueOf(displayData.mythicAspects), ASPECT_COLOR, y, inInventory);
             y = drawLine(context, LINE_ASPECTS_FABLED, "  Fabled", String.valueOf(displayData.fabledAspects), ASPECT_COLOR, y, inInventory);
             y = drawLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), ASPECT_COLOR, y, inInventory);
-            y = drawLine(context, LINE_ASPECTS_RARE, "  Rare", String.valueOf(displayData.rareAspects), ASPECT_COLOR, y, inInventory);
 
             y += 2;
             drawLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);

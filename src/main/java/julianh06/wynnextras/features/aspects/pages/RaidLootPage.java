@@ -69,10 +69,8 @@ public class RaidLootPage extends PageWidget {
         int logicalW = (int) (width * ui.getScaleFactorF());
         int centerX = logicalW / 2;
 
-        // Title
         ui.drawCenteredText("§6§lRAID LOOT TRACKER", centerX, 60);
 
-        // Raid toggles
         int totalToggleWidth = (TOGGLE_WIDTH * 4) + (TOGGLE_SPACING * 3);
         int toggleStartX = (logicalW - totalToggleWidth) / 2;
 
@@ -82,8 +80,6 @@ public class RaidLootPage extends PageWidget {
             toggleStartX += TOGGLE_WIDTH + TOGGLE_SPACING;
         }
 
-
-        // Show Rates button
         int ratesButtonWidth = 450;
         int ratesButtonHeight = 50;
         int ratesButtonX = centerX - ratesButtonWidth / 2;
@@ -102,14 +98,7 @@ public class RaidLootPage extends PageWidget {
             bagsPerRunWidget.draw(context, mouseX, mouseY, tickDelta, ui);
         }
 
-        // Get and display loot data
         renderLootStats(context, centerX, logicalW);
-
-        // Draw tooltips for amplifiers and bags when in rate mode
-//        if (showRates && currentStats != null && currentTotalRuns > 0) {
-//            renderHoverTooltips(context, mouseX, mouseY, centerX);
-//        }
-
 
         amplifiersPerRunTooltip = List.of(
                 Text.of("§e§lAmplifiers/Run Breakdown:"),

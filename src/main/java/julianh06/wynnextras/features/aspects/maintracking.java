@@ -8,6 +8,7 @@ import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
+import julianh06.wynnextras.features.aspects.pages.AspectsPage;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
@@ -24,15 +25,6 @@ import java.util.List;
 
 @WEModule
 public class maintracking {
-    private static Command newAspectScreen = new Command(
-            "newAspectScreen",
-            "",
-            context -> {
-                WEScreen.open(AspectScreen::new);
-                return 1;
-            }, null, null
-    );
-
     // Subcommand: /we aspects scan
     private static SubCommand scanSubCmd = new SubCommand(
             "scan",
@@ -45,64 +37,14 @@ public class maintracking {
             null
     );
 
-    // Subcommand: /we aspects debug
-    private static SubCommand debugSubCmd = new SubCommand(
-            "debug",
-            "Toggle screen title debugging (for finding menu identifiers)",
-            (ctx) -> {
-                ScreenTitleDebugger.toggleDebug();
-                return 1;
-            },
-            null,
-            null
-    );
-
-    // Subcommand: /we aspects raiddebug
-    private static SubCommand raidDebugSubCmd = new SubCommand(
-            "raiddebug",
-            "Toggle raid slot debugging (shows which slots are clicked)",
-            (ctx) -> {
-                AspectScreenSimple.toggleDebug();
-                return 1;
-            },
-            null,
-            null
-    );
-
     // Subcommand: /we aspects lootpool
     private static SubCommand lootpoolSubCmd = new SubCommand(
             "lootpool",
             "Open the loot pool page",
             (ctx) -> {
                 MinecraftUtils.mc().send(() -> {
-                    AspectScreenSimple.openLootPool();
-                });
-                return 1;
-            },
-            null,
-            null
-    );
-
-    // Subcommand: /we aspects my (or misc as alias)
-    private static SubCommand mySubCmd = new SubCommand(
-            "my",
-            "Open your aspects page",
-            (ctx) -> {
-                MinecraftUtils.mc().send(() -> {
-                    AspectScreenSimple.openMyAspects();
-                });
-                return 1;
-            },
-            null,
-            null
-    );
-
-    private static SubCommand miscSubCmd = new SubCommand(
-            "misc",
-            "Open the gambits page",
-            (ctx) -> {
-                MinecraftUtils.mc().send(() -> {
-                    AspectScreenSimple.openGambits();
+                    WEScreen.open(AspectScreen::new);
+                    AspectScreen.currentPage = AspectScreen.Page.LootPools;
                 });
                 return 1;
             },
@@ -116,7 +58,8 @@ public class maintracking {
             "Open the gambits page",
             (ctx) -> {
                 MinecraftUtils.mc().send(() -> {
-                    AspectScreenSimple.openGambits();
+                    WEScreen.open(AspectScreen::new);
+                    AspectScreen.currentPage = AspectScreen.Page.LootPools;
                 });
                 return 1;
             },
@@ -130,21 +73,8 @@ public class maintracking {
             "Open the raid loot tracker page",
             (ctx) -> {
                 MinecraftUtils.mc().send(() -> {
-                    AspectScreenSimple.openRaidLoot();
-                });
-                return 1;
-            },
-            null,
-            null
-    );
-
-    // Subcommand: /we aspects explore
-    private static SubCommand exploreSubCmd = new SubCommand(
-            "explore",
-            "Browse other players' aspects",
-            (ctx) -> {
-                MinecraftUtils.mc().send(() -> {
-                    AspectScreenSimple.openExplore();
+                    WEScreen.open(AspectScreen::new);
+                    AspectScreen.currentPage = AspectScreen.Page.RaidLoot;
                 });
                 return 1;
             },
@@ -158,22 +88,8 @@ public class maintracking {
             "View the aspect leaderboard",
             (ctx) -> {
                 MinecraftUtils.mc().send(() -> {
-                    AspectScreenSimple.openLeaderboard();
-                });
-                return 1;
-            },
-            null,
-            null
-    );
-
-    // Subcommand: /we aspects wipe
-    private static SubCommand wipeSubCmd = new SubCommand(
-            "wipe",
-            "Wipe your aspect data from the database (DEBUG)",
-            (ctx) -> {
-                MinecraftUtils.mc().send(() -> {
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eWiping your aspect data..."));
-                    WynncraftApiHandler.wipePlayerAspects();
+                    WEScreen.open(AspectScreen::new);
+                    AspectScreen.currentPage = AspectScreen.Page.Leaderboard;
                 });
                 return 1;
             },
@@ -188,12 +104,13 @@ public class maintracking {
             (ctx) -> {
                 String playerName = StringArgumentType.getString(ctx, "player");
                 MinecraftUtils.mc().send(() -> {
-                    AspectScreenSimple.openPlayer(playerName);
+                    WEScreen.open(AspectScreen::new);
+                    AspectScreen.currentPage = AspectScreen.Page.Aspects;
+                    AspectsPage.performPlayerSearch(playerName);
                 });
                 return 1;
             },
-            List.of(scanSubCmd, debugSubCmd, raidDebugSubCmd, lootpoolSubCmd, mySubCmd, miscSubCmd,
-                    gambitSubCmd, raidlootSubCmd, exploreSubCmd, leaderboardSubCmd, wipeSubCmd),
+            List.of(scanSubCmd, lootpoolSubCmd, gambitSubCmd, raidlootSubCmd, leaderboardSubCmd),
             List.of(ClientCommandManager.argument("player", StringArgumentType.word()))
     );
 
@@ -204,12 +121,12 @@ public class maintracking {
             (ctx) -> {
                 // Default: open aspects screen (My Aspects page)
                 MinecraftUtils.mc().send(() -> {
-                    AspectScreenSimple.openMyAspects();
+                    WEScreen.open(AspectScreen::new);
+                    AspectScreen.currentPage = AspectScreen.Page.Aspects;
                 });
                 return 1;
             },
-            List.of(scanSubCmd, debugSubCmd, raidDebugSubCmd, lootpoolSubCmd, mySubCmd, miscSubCmd,
-                    gambitSubCmd, raidlootSubCmd, exploreSubCmd, leaderboardSubCmd, wipeSubCmd),
+            List.of(scanSubCmd, lootpoolSubCmd, gambitSubCmd, raidlootSubCmd, leaderboardSubCmd),
             null
     );
 
@@ -219,7 +136,8 @@ public class maintracking {
             "View today's gambits and countdown",
             (ctx) -> {
                 MinecraftUtils.mc().send(() -> {
-                    AspectScreenSimple.openGambits();
+                    WEScreen.open(AspectScreen::new);
+                    AspectScreen.currentPage = AspectScreen.Page.Gambits;
                 });
                 return 1;
             },
@@ -233,21 +151,10 @@ public class maintracking {
             "View raid loot pools",
             (ctx) -> {
                 MinecraftUtils.mc().send(() -> {
-                    AspectScreenSimple.openLootPool();
+                    WEScreen.open(AspectScreen::new);
+                    AspectScreen.currentPage = AspectScreen.Page.LootPools;
                 });
                 return 1;
-            },
-            null,
-            null
-    );
-
-    // Legacy command for backwards compatibility
-    private static Command Scanaspects = new Command(
-            "ScanAspects",
-            "Command to manually scan your Aspects (legacy, use /we aspects scan)",
-            (ctx)->{
-                AspectScanning.openMenu(MinecraftClient.getInstance(),MinecraftClient.getInstance().player);
-                return 0;
             },
             null,
             null

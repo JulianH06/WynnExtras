@@ -238,12 +238,6 @@ public class RaidLootTracker {
                             data.sessionData.legendaryAspects += count;
                             sessionRaidData.legendaryAspects += count;
                         }
-                        case "rare" -> {
-                            data.rareAspects += count;
-                            raidData.rareAspects += count;
-                            data.sessionData.rareAspects += count;
-                            sessionRaidData.rareAspects += count;
-                        }
                     }
                 }
             }
@@ -338,8 +332,7 @@ public class RaidLootTracker {
                         "§5Aspects: §e" + d.totalAspects +
                                 " §7(§5" + d.mythicAspects +
                                 " §c" + d.fabledAspects +
-                                " §6" + d.legendaryAspects +
-                                " §b" + d.rareAspects + "§7)"
+                                " §6" + d.legendaryAspects + "§7)"
                 ),
                 false
         );

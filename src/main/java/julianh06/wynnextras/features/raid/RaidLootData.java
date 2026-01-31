@@ -33,7 +33,6 @@ public class RaidLootData {
     public int mythicAspects = 0;
     public int fabledAspects = 0;
     public int legendaryAspects = 0;
-    public int rareAspects = 0;
 
     /* =========================
        Emerald Normalisierung
@@ -130,7 +129,6 @@ public class RaidLootData {
         mythicAspects = 0;
         fabledAspects = 0;
         legendaryAspects = 0;
-        rareAspects = 0;
         perRaidData = new HashMap<>();
         resetSession();
     }
@@ -158,7 +156,6 @@ public class RaidLootData {
         public int mythicAspects = 0;
         public int fabledAspects = 0;
         public int legendaryAspects = 0;
-        public int rareAspects = 0;
         public int completionCount = 0;
 
         public long getTotalLiquidEmeralds() {

@@ -9,7 +9,6 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.aspects.FavoriteAspectsData;
-import julianh06.wynnextras.features.aspects.LootPoolData;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.features.profileviewer.data.Aspect;
@@ -24,18 +23,15 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static julianh06.wynnextras.features.aspects.AspectUtils.*;
 import static julianh06.wynnextras.features.aspects.AspectUtils.createAspectFlameIcon;
 import static julianh06.wynnextras.features.aspects.AspectUtils.findApiAspectByName;
-import static julianh06.wynnextras.features.aspects.AspectUtils.getAspectColorCode;
-import static julianh06.wynnextras.features.aspects.AspectUtils.joinRaidPartyFinder;
 import static julianh06.wynnextras.features.aspects.AspectUtils.romanToInt;
 import static julianh06.wynnextras.features.aspects.AspectUtils.toItemStack;
 
@@ -62,16 +58,13 @@ public class AspectsPage extends PageWidget {
     private User myAspectsData = null;
     private WynncraftApiHandler.FetchStatus myAspectsFetchStatus = null;
     private boolean fetchedMyAspects = false;
-    private int myAspectsFetchGeneration = 0; // Track which fetch is current
+    private int myAspectsFetchGeneration = 0;
 
-    private static String classFilter = "Warrior"; // Default to Warrior, no "All" mode
-    private String maxFilter = "All"; // All, Max Only, Not Max, Favorites
-    private boolean showOverview = true; // Toggle between class view and overview - default to overview
+    private static String classFilter = "Warrior";
 
     private static String searchInput = "";
     private static boolean searchInputFocused = false;
     private static int searchCursorPos = 0;
-    // Recent searches are stored in FavoriteAspectsData for persistence
     private static final int MAX_RECENT_SEARCHES = 5;
 
     private enum Tab { Overview, Warrior, Shaman, Mage, Archer, Assassin }
@@ -83,15 +76,7 @@ public class AspectsPage extends PageWidget {
     private static boolean progressBarShowMax = true;
 
     ResetToOwnAspectsWidget resetToOwnAspectsWidget;
-
-    private static String[] raidNames = {
-            "Nest of the Grootslangs",
-            "Orphion's Nexus of Light",
-            "The Canyon Colossus",
-            "The Nameless Anomaly"
-    };
-
-    private enum Raid { NOTG, NOL, TCC, TNA }
+    private static List<Text> hoveredTooltip = new ArrayList<>();
 
     private static LootPoolWidget mythicAndFabledWidget;
     private static LootPoolWidget legendaryWidget;
@@ -111,6 +96,7 @@ public class AspectsPage extends PageWidget {
 
     @Override
     public void drawContent(DrawContext context, int mouseX, int mouseY, float tickDelta) {
+        hoveredTooltip.clear();
         int logicalW = (int) (width * ui.getScaleFactorF());
         int logicalH = (int) (height * ui.getScaleFactorF());
         int centerX = logicalW / 2;
@@ -139,7 +125,7 @@ public class AspectsPage extends PageWidget {
             if (!fetchedMyAspects && MinecraftClient.getInstance().player != null) {
                 fetchedMyAspects = true;
                 String playerUuid = MinecraftClient.getInstance().player.getUuidAsString();
-                final int fetchGen = ++myAspectsFetchGeneration; // Track this request
+                final int fetchGen = ++myAspectsFetchGeneration;
 
                 WynncraftApiHandler.fetchPlayerAspectData(playerUuid, playerUuid)
                         .thenAccept(result -> {
@@ -185,13 +171,6 @@ public class AspectsPage extends PageWidget {
             case FORBIDDEN:
                 String forbiddenText = searchedPlayer.isEmpty() ? "§cYou need to upload your aspects first" : "§c" + searchedPlayer + " hasn't uploaded their aspects";
                 ui.drawCenteredText(forbiddenText, centerX, logicalH / 2f - 30);
-
-                if (searchedPlayer.isEmpty()) {
-                    // Check if hovering for underline effect
-//                    boolean hoverForbidden = my >= logicalH / 2 + 10 && my <= logicalH / 2 + 50 &&
-//                            mx >= centerX - 400 && mx <= centerX + 400;
-//                    drawCenteredText(context, hoverForbidden ? "§e§nClick here to scan your aspects" : "§7Click here to scan your aspects", centerX, logicalH / 2 + 30);
-                }
                 return;
             case UNAUTHORIZED:
                 ui.drawCenteredText("§cYour API key is not connected to your account", centerX, logicalH / 2 - 30);
@@ -199,10 +178,6 @@ public class AspectsPage extends PageWidget {
                 return;
             case NOT_FOUND:
                 ui.drawCenteredText("§cNo aspect data found for your account", centerX, logicalH / 2 - 30);
-                // Check if hovering for underline effect
-//                boolean hoverNotFound = my >= logicalH / 2 + 10 && my <= logicalH / 2 + 50 &&
-//                        mx >= centerX - 400 && mx <= centerX + 400;
-//                drawCenteredText(context, hoverNotFound ? "§e§nClick here to scan your aspects" : "§7Click here to scan your aspects", centerX, logicalH / 2 + 30);
                 return;
             case SERVER_UNREACHABLE:
                 ui.drawCenteredText("§cServer unreachable. Try again later.", centerX, logicalH / 2);
@@ -221,9 +196,6 @@ public class AspectsPage extends PageWidget {
             return;
         }
 
-        // allAspects was already fetched at the start of this method
-
-        // Show statistics - filtered by current class selection
         int totalForClass = (int) allAspects.stream()
                 .filter(a -> classFilter.equals("All") || a.getRequiredClass().equalsIgnoreCase(classFilter))
                 .count();
@@ -238,11 +210,9 @@ public class AspectsPage extends PageWidget {
                     .orElse(null);
 
             if (apiAspect != null) {
-                // Check if matches current class filter
                 if (classFilter.equals("All") || apiAspect.getRequiredClass().equalsIgnoreCase(classFilter)) {
                     unlockedForClass++;
 
-                    // Check if maxed
                     int maxAmount = switch (apiAspect.getRarity().toLowerCase()) {
                         case "mythic" -> 15;
                         case "fabled" -> 75;
@@ -257,37 +227,8 @@ public class AspectsPage extends PageWidget {
             }
         }
 
-        // Dynamic title based on whose aspects we're viewing
         String title = searchedPlayer.isEmpty() ? "§6§lYOUR ASPECTS" : "§6§l" + searchedPlayer.toUpperCase() + "'S ASPECTS";
         ui.drawCenteredText(title, centerX, 60);
-
-        // "Back to My Aspects" button if viewing another player (top right as styled button)
-        if (!searchedPlayer.isEmpty()) {
-            int buttonWidth = 260;
-            int buttonHeight = 44;
-            int buttonX = logicalW - buttonWidth - 40;
-            int buttonY = 46;
-
-            // Draw styled button
-            //if (hoverBack) {
-//                ui.drawRect(buttonX, buttonY, buttonWidth, buttonHeight, CustomColor.fromInt(0xAA333333));
-//                ui.drawRect(buttonX, buttonY, buttonWidth, 2, CustomColor.fromInt(0xFFAAAA00));
-//                ui.drawRect(buttonX, buttonY + buttonHeight - 2, buttonWidth, 2, CustomColor.fromInt(0xFFAAAA00));
-//                ui.drawRect(buttonX, buttonY, 2, buttonHeight, CustomColor.fromInt(0xFFAAAA00));
-//                ui.drawRect(buttonX + buttonWidth - 2, buttonY, 2, buttonHeight, CustomColor.fromInt(0xFFAAAA00));
-//            } else {
-//                ui.drawRect(buttonX, buttonY, buttonWidth, buttonHeight, CustomColor.fromInt(0xAA1a1a1a));
-//                ui.drawRect(buttonX, buttonY, buttonWidth, 2, CustomColor.fromInt(0xFF4e392d));
-//                ui.drawRect(buttonX, buttonY + buttonHeight - 2, buttonWidth, 2, CustomColor.fromInt(0xFF4e392d));
-//                ui.drawRect(buttonX, buttonY, 2, buttonHeight, CustomColor.fromInt(0xFF4e392d));
-//                ui.drawRect(buttonX + buttonWidth - 2, buttonY, 2, buttonHeight, CustomColor.fromInt(0xFF4e392d));
-//            }
-            //String backText = hoverBack ? "§e§l< My Aspects" : "§7< My Aspects";
-            //ui.drawCenteredText(backText, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
-        }
-
-        // Draw class selector buttons at top (with Overview button) - moved down to give title space
-        //drawClassSelectorButtons(context, mx, my, centerX, 100);
 
         if (currentTab == Tab.Overview) {
             drawOverview(context, allAspects, activeAspectsData.getAspects(), centerX, 240);
@@ -325,14 +266,11 @@ public class AspectsPage extends PageWidget {
                 // Draw cursor if focused - put at end of text
                 if (searchInputFocused) {
                     // drawLeftText uses scale 3f, so multiply text width by 3 to get logical units
-                    int textWidthPixels = MinecraftClient.getInstance().textRenderer.getWidth(displayText);
+                    int textWidthPixels = MinecraftClient.getInstance().textRenderer.getWidth(displayText.substring(0, searchCursorPos));
                     int cursorOffset = textWidthPixels * 3; // Scale 3f used in drawLeftText
                     ui.drawRect(searchBoxX + 8 + cursorOffset, searchBoxY + 4, 2, searchBoxHeight - 8, CustomColor.fromInt(0xFFFFFFFF));
                 }
             }
-
-            // Show overview with progress bars - below search box with more space
-            //drawOverview(context, allAspects, activeAspectsData.getAspects(), centerX, 240);
 
             // Show recent searches dropdown when focused and search is empty (RENDER LAST so it's on top)
             if (searchInputFocused && searchInput.isEmpty() && !FavoriteAspectsData.INSTANCE.getRecentSearches().isEmpty()) {
@@ -373,11 +311,6 @@ public class AspectsPage extends PageWidget {
             progressBarShowMaxWidget.setBounds(toggleX, toggleY, toggleWidth, toggleHeight);
             progressBarShowMaxWidget.draw(context, mouseX, mouseY, tickDelta, ui);
 
-
-            // Draw class-specific progress bars
-//            int progressY = ui.drawProgressBar(context, allAspects, activeAspectsData.getAspects(), centerX, 290);
-//            int barWidth = Math.min(800, logicalW - 600);
-
             int aspectY = drawClassProgressBars(context, allAspects, activeAspectsData.getAspects(), centerX, 200);
 
             mythicAndFabledWidget.setBounds(centerX - 660, aspectY, 625, logicalH - aspectY - 120);
@@ -405,20 +338,6 @@ public class AspectsPage extends PageWidget {
             ui.drawCenteredText("§bLegendary", centerX + 25 + 625 / 2f, aspectY + 40);
         }
 
-        // Render tooltip if hovering
-//        if (hoveredMyAspect != null && hoveredMyAspectProgress != null) {
-//            renderMyAspectTooltip(context, mouseX, mouseY);
-//        }
-
-        // Instructions above navigation - make it clickable (in logical coords)
-//        int scanTextY = logicalH - 165;
-//        boolean hoverScan = my >= scanTextY - 20 && my <= scanTextY + 40 &&
-//                mx >= centerX - 400 && mx <= centerX + 400;
-//
-//        ui.drawCenteredText(hoverScan ? "§e§nClick here to scan your aspects" : "§7Click here to scan your aspects", centerX, scanTextY);
-
-
-
         int buttonWidth = 170;
         int buttonHeight = 50;
         int spacing = 16;
@@ -429,7 +348,12 @@ public class AspectsPage extends PageWidget {
             tabSwitchButton.draw(context, mouseX, mouseY, tickDelta, ui);
             x += buttonWidth + spacing;
         }
+    }
 
+    @Override
+    protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if(hoveredTooltip.isEmpty()) return;
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), mouseX - 5, mouseY + 20);
     }
 
     @Override
@@ -457,18 +381,17 @@ public class AspectsPage extends PageWidget {
                     searchInput = searchInput.substring(0, searchCursorPos) + searchInput.substring(searchCursorPos + 1);
                 }
                 return true;
-            } else if (keyCode == 263) { // Left arrow
+            } else if (keyCode == 263) {
                 if (searchCursorPos > 0) {
                     searchCursorPos--;
                 }
                 return true;
-            } else if (keyCode == 262) { // Right arrow
+            } else if (keyCode == 262) {
                 if (searchCursorPos < searchInput.length()) {
                     searchCursorPos++;
                 }
                 return true;
-            } else if (keyCode == 257 || keyCode == 335) { // Enter or numpad enter
-                // Trigger search
+            } else if (keyCode == 257 || keyCode == 335) {
                 if (!searchInput.isEmpty()) {
                     performPlayerSearch(searchInput);
                     searchInputFocused = false;
@@ -476,7 +399,7 @@ public class AspectsPage extends PageWidget {
                 return true;
             } else if (keyCode == 256) { // Escape
                 searchInputFocused = false;
-                return false; // Let it close the screen
+                return false;
             }
             return true;
         }
@@ -494,28 +417,10 @@ public class AspectsPage extends PageWidget {
     private int drawClassProgressBars(DrawContext context, List<ApiAspect> allAspects, List<Aspect> playerAspects, int centerX, int startY) {
         int logicalW = (int) (width * ui.getScaleFactorF());
         int barWidth = Math.min(600, logicalW - 600);
-        int barX = centerX - barWidth / 2; // shift right for label space
+        int barX = centerX - barWidth / 2;
 
         String className = classFilter;
-        String classColor = switch (className) {
-            case "Warrior" -> "§c";
-            case "Shaman" -> "§b";
-            case "Mage" -> "§e";
-            case "Archer" -> "§d";
-            case "Assassin" -> "§5";
-            default -> "§7";
-        };
 
-        int fillColor = switch (className) {
-            case "Warrior" -> 0xFFCC6666;
-            case "Shaman" -> 0xFF6699CC;
-            case "Mage" -> 0xFFCCCC66;
-            case "Archer" -> 0xFFCC66CC;
-            case "Assassin" -> 0xFF9966CC;
-            default -> 0xFF666666;
-        };
-
-        // Calculate totals for this class based on mode
         int allTotal = (int) allAspects.stream().filter(a -> a.getRequiredClass().equalsIgnoreCase(className)).count();
         int allCount = progressBarShowMax
                 ? countMaxedForClassAndRarity(allAspects, playerAspects, className, null)
@@ -538,37 +443,29 @@ public class AspectsPage extends PageWidget {
 
         int y = startY;
 
-        // All aspects bar
-        //drawProgressBarWithLabel(context, barX, y, barWidth, 20, allCount, allTotal, classColor + "All " + className, fillColor);
         boolean allMax = allCount == allTotal;
         ui.drawText("§6§lAll " + className, barX - 350, y + 20);
         ui.drawText("§7" + allCount + "§8/§7" + allTotal, barX + barWidth + 20, y + 20);
         ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) allCount / allTotal, WynnExtrasConfig.INSTANCE.darkmodeToggle ? border_dark : border, WynnExtrasConfig.INSTANCE.darkmodeToggle ? barBackground_dark : barBackground, allMax ? progress_white : progress_green, context, allMax);
-        y += 70; // Increased spacing
+        y += 70;
 
-        // Mythic bar
-        //drawProgressBarWithLabel(context, barX, y, barWidth, 18, mythicCount, mythicTotal, "§5Mythic " + className, 0xFF9966CC);
         boolean mythicMax = mythicCount == mythicTotal;
         ui.drawText("§5Mythic " + className, barX - 350, y + 20);
         ui.drawText("§7" + mythicCount + "§8/§7" + mythicTotal, barX + barWidth + 20, y + 20);
         ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) mythicCount / mythicTotal, WynnExtrasConfig.INSTANCE.darkmodeToggle ? border_dark : border, WynnExtrasConfig.INSTANCE.darkmodeToggle ? barBackground_dark : barBackground, mythicMax ? progress_white : progress_green, context, mythicMax);
-        y += 70; // Increased spacing
+        y += 70;
 
-        // Fabled bar
-        //drawProgressBarWithLabel(context, barX, y, barWidth, 18, fabledCount, fabledTotal, "§cFabled " + className, 0xFFCC6666);
         boolean fabledMax = fabledCount == fabledTotal;
         ui.drawText("§cFabled " + className, barX - 350, y + 20);
         ui.drawText("§7" + fabledCount + "§8/§7" + fabledTotal, barX + barWidth + 20, y + 20);
         ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) fabledCount / fabledTotal, WynnExtrasConfig.INSTANCE.darkmodeToggle ? border_dark : border, WynnExtrasConfig.INSTANCE.darkmodeToggle ? barBackground_dark : barBackground, fabledMax ? progress_white : progress_green, context, fabledMax);
-        y += 70; // Increased spacing
+        y += 70;
 
-        // Legendary bar
-        //drawProgressBarWithLabel(context, barX, y, barWidth, 18, legendaryCount, legendaryTotal, "§bLegendary " + className, 0xFF6699CC);
         boolean legendaryMax = legendaryCount == legendaryTotal;
         ui.drawText("§bLegendary " + className, barX - 350, y + 20);
         ui.drawText("§7" + legendaryCount + "§8/§7" + legendaryTotal, barX + barWidth + 20, y + 20);
         ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) legendaryCount / legendaryTotal, WynnExtrasConfig.INSTANCE.darkmodeToggle ? border_dark : border, WynnExtrasConfig.INSTANCE.darkmodeToggle ? barBackground_dark : barBackground, legendaryMax ? progress_white : progress_green, context, legendaryMax);
-        y += 70; // Increased spacing
+        y += 70;
 
         return y;
     }
@@ -578,16 +475,10 @@ public class AspectsPage extends PageWidget {
 
         ui.drawCenteredText("§6§lOVERVIEW", centerX, startY);
 
-        // Mode toggle button (Max vs Unlocked) - right side
-
-        //String modeText = progressBarShowMax ? "§a§lMax" : "§e§lUnlocked";
-        //ui.drawCenteredText(modeText, toggleX + toggleWidth / 2, toggleY + toggleHeight / 2);
-
         int barStartY = startY + 30;
-        int barWidth = Math.min(800, logicalW - 600); // use logical width, give more space for labels
+        int barWidth = Math.min(800, logicalW - 600);
         int barX = centerX - barWidth / 2;
 
-        // Calculate totals based on mode
         int totalAspects = allAspects.size();
         int totalCount = progressBarShowMax ? countMaxedAspects(allAspects, playerAspects) : playerAspects.size();
 
@@ -602,36 +493,30 @@ public class AspectsPage extends PageWidget {
 
         String suffix = progressBarShowMax ? " Max" : " unlocked";
 
-        // Total progress bar
         ui.drawText("§6§lTotal" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + totalCount + "§8/§7" + totalAspects, barX + barWidth + 20, barStartY + 20);
         boolean totalMax = totalCount == totalAspects;
         ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) totalCount / totalAspects, WynnExtrasConfig.INSTANCE.darkmodeToggle ? border_dark : border, WynnExtrasConfig.INSTANCE.darkmodeToggle ? barBackground_dark : barBackground, totalMax ? progress_white : progress_green, context, totalMax);
         barStartY += 70;
 
-        // Rarity progress bars (muted colors) - increased spacing
-        //drawProgressBarWithLabel(context, barX, barStartY, barWidth, 24, mythicCount, mythicTotal, "§5Mythic" + suffix, 0xFF9966CC);
         ui.drawText("§5Mythic" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + mythicCount + "§8/§7" + mythicTotal, barX + barWidth + 20, barStartY + 20);
         boolean mythicMax = mythicCount == mythicTotal;
         ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) mythicCount / mythicTotal, WynnExtrasConfig.INSTANCE.darkmodeToggle ? border_dark : border, WynnExtrasConfig.INSTANCE.darkmodeToggle ? barBackground_dark : barBackground, mythicMax ? progress_white : progress_mythic, context, mythicMax);
         barStartY += 70;
 
-        //drawProgressBarWithLabel(context, barX, barStartY, barWidth, 24, fabledCount, fabledTotal, "§cFabled" + suffix, 0xFFCC6666);
         ui.drawText("§cFabled" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + fabledCount + "§8/§7" + fabledTotal, barX + barWidth + 20, barStartY + 20);
         boolean fabledMax = fabledCount == fabledTotal;
         ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) fabledCount / fabledTotal, WynnExtrasConfig.INSTANCE.darkmodeToggle ? border_dark : border, WynnExtrasConfig.INSTANCE.darkmodeToggle ? barBackground_dark : barBackground, fabledMax ? progress_white : progress_fabled, context, fabledMax);
         barStartY += 70;
 
-        //drawProgressBarWithLabel(context, barX, barStartY, barWidth, 24, legendaryCount, legendaryTotal, "§bLegendary" + suffix, 0xFF6699CC);
         ui.drawText("§bLegendary" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + legendaryCount + "§8/§7" + legendaryTotal, barX + barWidth + 20, barStartY + 20);
         boolean legendaryMax = legendaryCount == legendaryTotal;
         ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) legendaryCount / legendaryTotal, WynnExtrasConfig.INSTANCE.darkmodeToggle ? border_dark : border, WynnExtrasConfig.INSTANCE.darkmodeToggle ? barBackground_dark : barBackground, legendaryMax ? progress_white : progress_legendary, context, legendaryMax);
         barStartY += 90;
 
-        // Per-class progress bars
         ui.drawCenteredText("§e§lPER CLASS", centerX, barStartY);
         barStartY += 20;
 
@@ -639,7 +524,6 @@ public class AspectsPage extends PageWidget {
         for (String className : classes) {
             int classTotal = (int) allAspects.stream().filter(a -> a.getRequiredClass().equalsIgnoreCase(className)).count();
 
-            // Use toggle to show either maxed or unlocked count
             int classCount = progressBarShowMax
                     ? countMaxedForClassAndRarity(allAspects, playerAspects, className, null)
                     : countUnlockedForClassAndRarity(allAspects, playerAspects, className, null);
@@ -666,7 +550,7 @@ public class AspectsPage extends PageWidget {
             ui.drawText("§7" + classCount + "§8/§7" + classTotal, barX + barWidth + 20, barStartY + 20);
             boolean classMax = fabledCount == fabledTotal;
             ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) classCount / classTotal, WynnExtrasConfig.INSTANCE.darkmodeToggle ? border_dark : border, WynnExtrasConfig.INSTANCE.darkmodeToggle ? barBackground_dark : barBackground, classMax ? progress_white : progressTexture, context, classMax);
-            barStartY += 70; // Increased spacing
+            barStartY += 70;
         }
     }
 
@@ -687,7 +571,7 @@ public class AspectsPage extends PageWidget {
             int searchBoxWidth = 500;
             int searchBoxHeight = 40;
             int searchBoxX = centerX - searchBoxWidth / 2;
-            int searchBoxY = 160; // Matches renderMyAspectsPage
+            int searchBoxY = 160;
 
             float logicalMX = (float) (mx * ui.getScaleFactorF());
             float logicalMY = (float) (my * ui.getScaleFactorF());
@@ -745,7 +629,7 @@ public class AspectsPage extends PageWidget {
         return false;
     }
 
-    private void performPlayerSearch(String playerName) {
+    public static void performPlayerSearch(String playerName) {
         searchedPlayer = playerName;
         searchedPlayerData = null;
         searchedPlayerStatus = null; // null = loading
@@ -789,8 +673,10 @@ public class AspectsPage extends PageWidget {
         });
     }
 
-    private void addToRecentSearches(String playerName) {
-        // Use FavoriteAspectsData for persistence
+    private static void addToRecentSearches(String playerName) {
+        for(String name : FavoriteAspectsData.INSTANCE.getRecentSearches()) {
+            if(name.equalsIgnoreCase(playerName)) return;
+        }
         FavoriteAspectsData.INSTANCE.addRecentSearch(playerName);
     }
 
@@ -954,11 +840,6 @@ public class AspectsPage extends PageWidget {
     }
 
     private static class LootPoolWidget extends Widget {
-        static Identifier NOTGTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/notg.png");
-        static Identifier NOLTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/nol.png");
-        static Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tcc.png");
-        static Identifier TNATexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tna.png");
-
         Identifier ltop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/ltop.png");
         Identifier rtop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/rtop.png");
         Identifier ttop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/ttop.png");
@@ -995,7 +876,6 @@ public class AspectsPage extends PageWidget {
         Identifier bld = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/bl.png");
         Identifier brd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/br.png");
 
-        LootPoolWidget.PersonalScoreWidget scoreWidget;
         LootPoolWidget.ScrollBarWidget scrollBarWidget;
         List<LootPoolWidget.AspectWidget> aspectWidgets = new ArrayList<>();
         public List<Aspect> aspectEntries = new ArrayList<>();
@@ -1003,7 +883,6 @@ public class AspectsPage extends PageWidget {
         float targetOffset = 0;
         float actualOffset = 0;
         float maxOffset = 999;
-        int textureWidth = 150;
 
         public LootPoolWidget() {
             super(0, 0, 0, 0);
@@ -1015,26 +894,16 @@ public class AspectsPage extends PageWidget {
             int topHeight = 80;
 
             if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
-                ui.drawNineSlice((int) (x),
-                        (int) (y), width,
-                        (int) (topHeight), 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
+                ui.drawNineSlice(x, y, width, topHeight, 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
 
-                ui.drawNineSlice((int) (x),
-                        (int) (y + topHeight), width,
-                        (int) (height - topHeight), 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
+                ui.drawNineSlice(x,y + topHeight, width, height - topHeight, 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
             } else {
-                ui.drawNineSlice((int) (x),
-                        (int) (y), width,
-                        (int) (topHeight), 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
+                ui.drawNineSlice(x,
+                        y, width,
+                        topHeight, 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
 
-                ui.drawNineSlice((int) (x),
-                        (int) (y + topHeight), width,
-                        (int) (height - topHeight), 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
+                ui.drawNineSlice(x,y + topHeight, width, height - topHeight, 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
             }
-
-
-            // Calculate and show score
-            DecimalFormat df = new DecimalFormat("#.00");
 
             List<Aspect> mythicAspects = aspectEntries.stream().filter(a -> a.getRarity().equalsIgnoreCase("mythic")).toList();
             List<Aspect> fabledAspects = aspectEntries.stream().filter(a -> a.getRarity().equalsIgnoreCase("fabled")).toList();
@@ -1070,11 +939,16 @@ public class AspectsPage extends PageWidget {
             if(Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffset = targetOffset;
             else actualOffset += diff * speed * tickDelta;
 
-            int aspectY = y + 90 - (int) actualOffset;
+            int aspectY = y + 80 - (int) actualOffset;
             int aspectHeight = 50;
             int spacing = 5;
 
+            float contentHeight = 0;
+
             for (int i = 0; i < aspectWidgets.size(); i++) {
+                contentHeight += aspectHeight;
+                contentHeight += spacing;
+
                 LootPoolWidget.AspectWidget aspectWidget = aspectWidgets.get(i);
 
                 aspectWidget.setBounds(x, aspectY, width, aspectHeight);
@@ -1088,6 +962,7 @@ public class AspectsPage extends PageWidget {
                                         .equalsIgnoreCase(aspectWidget.aspect.getRarity());
 
                 if (isLastOfRarity) {
+                    contentHeight += spacing * 4;
                     aspectY += spacing * 4;
                     ui.drawLine(
                             x + 20,
@@ -1102,11 +977,23 @@ public class AspectsPage extends PageWidget {
                 }
             }
 
-            maxOffset = (aspectWidgets.size() * (aspectHeight)) / 3f - 60;
+            int listTop = y + 70;
+            int listBottom = y + height - 40;
+            float visibleHeight = listBottom - listTop;
+
+            maxOffset = Math.max(contentHeight - visibleHeight, 0);
+
+            if(targetOffset > maxOffset) {
+                targetOffset = maxOffset;
+            }
 
             ctx.disableScissor();
-            scrollBarWidget.setBounds(x + width, y + 100, 25, height - 100);
-            scrollBarWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+            if(maxOffset == 0) {
+                scrollBarWidget.setBounds(0, 0, 0, 0);
+            } else {
+                scrollBarWidget.setBounds(x + width, y + 100, 25, height - 100);
+                scrollBarWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+            }
         }
 
         @Override
@@ -1131,11 +1018,6 @@ public class AspectsPage extends PageWidget {
                     aspectWidget.onClick(button);
                     return true;
                 }
-            }
-
-            if(scoreWidget.isHovered()) {
-                scoreWidget.onClick(button);
-                return true;
             }
 
             return false;
@@ -1236,42 +1118,6 @@ public class AspectsPage extends PageWidget {
             }
         }
 
-        private static class PersonalScoreWidget extends Widget {
-            String scoreString = "";
-            final Raid raid;
-
-            public PersonalScoreWidget(Raid raid) {
-                super(0, 0, 0, 0);
-                this.raid = raid;
-            }
-
-            @Override
-            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                if(scoreString.isEmpty()) return;
-
-                if(scoreString.equals("MAXED")) ui.drawText(scoreString, x, y, CommonColors.RAINBOW);
-                else ui.drawText((hovered ? "§n" : "") + scoreString, x, y, CustomColor.fromHexString("c0c0c0"));
-
-                if(hovered) {
-                    List<Text> tooltip = new ArrayList<>();
-                    tooltip.add(Text.literal("§6§l" + raid.name()));
-                    tooltip.add(Text.literal("§7" + raidNames[raid.ordinal()]));
-                    tooltip.add(Text.literal(""));
-                    tooltip.add(Text.literal(scoreString));
-                    tooltip.add(Text.literal("§8(Favorites count 3x)"));
-                    tooltip.add(Text.literal(""));
-                    tooltip.add(Text.literal("§aClick to join party finder"));
-                    //hoveredTooltip = tooltip;
-                }
-            }
-
-            @Override
-            protected boolean onClick(int button) {
-                joinRaidPartyFinder(raid.name());
-                return true;
-            }
-        }
-
         private static class AspectWidget extends Widget {
             final Aspect aspect;
             final LootPoolWidget parent;
@@ -1293,7 +1139,9 @@ public class AspectsPage extends PageWidget {
                     displayName = displayName.substring(0, maxChars - ((hovered || isFavorite) ? 5 : 3)) + "...";
                 }
 
-                boolean isMax = AspectUtils.convertAmountToTierInfo(aspect.getAmount(), aspect.getRarity()).contains("MAX");
+                String tierInfo = AspectUtils.convertAmountToTierInfo(aspect.getAmount(), aspect.getRarity());
+
+                boolean isMax = tierInfo.contains("MAX");
                 CustomColor textColor = CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
                 if(isMax) {
@@ -1320,37 +1168,37 @@ public class AspectsPage extends PageWidget {
                     ctx.getMatrices().popMatrix();
                 }
 
-//                if(hovered && parent.isHovered()) {
-//                    List<Text> tooltip = new ArrayList<>();
-//                    if(apiAspect == null) return;
-//                    int tier = 0;
-//                    if(isMax) {
-//                        if(aspect.rarity.equalsIgnoreCase("Legendary")) tier = 4;
-//                        else tier = 3;
-//                    }
-//
-//                    Pattern pattern = Pattern.compile("Tier ([IVXLCDM]+)");
-//                    Matcher matcher = pattern.matcher(aspect.tierInfo);
-//
-//                    if (matcher.find()) {
-//                        String roman = matcher.group(1);
-//                        tier = romanToInt(roman);
-//                    }
-//
-//                    ItemStack aspectItemStack = toItemStack(apiAspect, isMax, tier);
-//                    tooltip = aspectItemStack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
-//
-//                    int longestTextWidth = 0;
-//                    for(Text text : tooltip) {
-//                        if(MinecraftClient.getInstance().textRenderer.getWidth(text) > longestTextWidth) longestTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(text);
-//                    }
-//
-//                    String name = tooltip.getFirst().getString();
-//
-//                    tooltip.set(0, Text.of(name + " §7" + aspect.tierInfo));
-//
-//                    //hoveredTooltip = tooltip;
-//                }
+                if(hovered && parent.isHovered()) {
+                    List<Text> tooltip = new ArrayList<>();
+                    if(apiAspect == null) return;
+                    int tier = 0;
+                    if(isMax) {
+                        if(aspect.getRarity().equalsIgnoreCase("legendary")) tier = 4;
+                        else tier = 3;
+                    }
+
+                    Pattern pattern = Pattern.compile("Tier ([IVXLCDM]+)");
+                    Matcher matcher = pattern.matcher(tierInfo);
+
+                    if (matcher.find()) {
+                        String roman = matcher.group(1);
+                        tier = romanToInt(roman);
+                    }
+
+                    ItemStack aspectItemStack = toItemStack(apiAspect, isMax, tier);
+                    tooltip = aspectItemStack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
+
+                    int longestTextWidth = 0;
+                    for(Text text : tooltip) {
+                        if(MinecraftClient.getInstance().textRenderer.getWidth(text) > longestTextWidth) longestTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(text);
+                    }
+
+                    String name = tooltip.getFirst().getString();
+
+                    tooltip.set(0, Text.of(name + " §7" + tierInfo));
+
+                    hoveredTooltip = tooltip;
+                }
             }
 
             @Override

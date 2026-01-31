@@ -396,7 +396,11 @@ public class LootPoolPage extends PageWidget {
             int aspectHeight = 50;
             int spacing = 5;
 
+            float contentHeight = 0;
+
             for (int i = 0; i < aspectWidgets.size(); i++) {
+                contentHeight += aspectHeight + spacing;
+
                 AspectWidget aspectWidget = aspectWidgets.get(i);
 
                 aspectWidget.setBounds(x, aspectY, width, aspectHeight);
@@ -410,6 +414,7 @@ public class LootPoolPage extends PageWidget {
                                         .equalsIgnoreCase(aspectWidget.aspect.rarity);
 
                 if (isLastOfRarity) {
+                    contentHeight += spacing * 4;
                     aspectY += spacing * 4;
                     ui.drawLine(
                             x + 20,
@@ -424,9 +429,18 @@ public class LootPoolPage extends PageWidget {
                 }
             }
 
-            maxOffset = (aspectWidgets.size() * (aspectHeight)) / 3f - 60;
+            int listTop = y + 195;
+            int listBottom = y + height - 40;
+            float visibleHeight = listBottom - listTop;
+
+            maxOffset = Math.max(contentHeight - visibleHeight, 0);
+
+            if(targetOffset > maxOffset) {
+                targetOffset = maxOffset;
+            }
 
             ctx.disableScissor();
+
             scrollBarWidget.setBounds(x + width, y + textureWidth + 40, 25, height - textureWidth - 40);
             scrollBarWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
         }
@@ -714,7 +728,7 @@ public class LootPoolPage extends PageWidget {
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 //ui.drawRect(x, y, width, height);
 
-                int maxChars = Math.max(10, (width - 220) / 12);
+                int maxChars = Math.max(10, (width - 205) / 12);
                 String displayName = aspect.name;
                 boolean isFavorite = FavoriteAspectsData.INSTANCE.isFavorite(aspect.name);
                 if (displayName.length() + ((isFavorite || hovered) ? 5 : 0) > maxChars) {
@@ -731,7 +745,7 @@ public class LootPoolPage extends PageWidget {
                     rarityColorCode = getAspectColorCode(aspect);
                 }
 
-                ui.drawText(rarityColorCode + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 90, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
+                ui.drawText(rarityColorCode + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 87, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
 
 
                 ApiAspect apiAspect = findApiAspectByName(aspect.name);

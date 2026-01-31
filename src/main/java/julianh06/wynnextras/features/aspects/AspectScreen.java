@@ -39,7 +39,7 @@ public class AspectScreen extends WEScreen {
     //static ExplorePage explorePage;
     static LeadboardPage leadboardPage;
 
-    private static Page currentPage = Page.LootPools;
+    public static Page currentPage = Page.LootPools;
     private static PageWidget currentWidget;
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 0; // in ms

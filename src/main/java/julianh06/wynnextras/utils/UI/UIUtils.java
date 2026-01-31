@@ -462,7 +462,7 @@ public final class UIUtils {
         hue += offset;
         hue %= 1.0f;
 
-        int rgb = Color.HSBtoRGB(hue, 1.0f, 1.0f);
+        int rgb = Color.HSBtoRGB(hue, 1.0f, 0.75f);
         return CustomColor.fromInt(rgb & 0xFFFFFF);
     }
 
