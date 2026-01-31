@@ -28,6 +28,12 @@ public class RaidLootData {
     // ===== Charms =====
     public int totalCharms = 0;
 
+    // ===== Aspects =====
+    public int totalAspects = 0;
+    public int mythicAspects = 0;
+    public int fabledAspects = 0;
+    public int legendaryAspects = 0;
+
     /* =========================
        Emerald Normalisierung
        ========================= */
@@ -119,6 +125,10 @@ public class RaidLootData {
         mythicTomes = 0;
         fabledTomes = 0;
         totalCharms = 0;
+        totalAspects = 0;
+        mythicAspects = 0;
+        fabledAspects = 0;
+        legendaryAspects = 0;
         perRaidData = new HashMap<>();
         resetSession();
     }
@@ -142,6 +152,10 @@ public class RaidLootData {
         public int mythicTomes = 0;
         public int fabledTomes = 0;
         public int totalCharms = 0;
+        public int totalAspects = 0;
+        public int mythicAspects = 0;
+        public int fabledAspects = 0;
+        public int legendaryAspects = 0;
         public int completionCount = 0;
 
         public long getTotalLiquidEmeralds() {

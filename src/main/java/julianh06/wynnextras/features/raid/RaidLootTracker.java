@@ -73,6 +73,21 @@ public class RaidLootTracker {
         ScreenHandler handler = McUtils.containerMenu();
         if (handler == null) return;
 
+        // DEBUG: Print all slots to chat
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player != null) {
+            mc.player.sendMessage(Text.literal("§6§l[DEBUG] Reward Chest Slots:"), false);
+            for (int i = 0; i < handler.slots.size(); i++) {
+                Slot slot = handler.getSlot(i);
+                if (slot != null && slot.hasStack()) {
+                    ItemStack stack = slot.getStack();
+                    String name = stack.getName().getString();
+                    int count = stack.getCount();
+                    mc.player.sendMessage(Text.literal("§7Slot " + i + ": §e" + name + " §7x" + count), false);
+                }
+            }
+        }
+
         RaidLootData data = RaidLootConfig.INSTANCE.data;
         data.initSession();
 
@@ -183,6 +198,51 @@ public class RaidLootTracker {
             }
         }
 
+        // ===== Aspects (slots 11-15) =====
+        for (int aspectSlot = 11; aspectSlot <= 15; aspectSlot++) {
+            Slot slot = handler.getSlot(aspectSlot);
+            if (slot == null) continue;
+
+            ItemStack stack = slot.getStack();
+            if (stack == null || stack.isEmpty()) continue;
+
+            String name = cleanName(stack.getName().getString());
+            int count = stack.getCount();
+
+            // Check if it's an aspect (contains "Aspect" or "Embodiment")
+            if (name.contains("Aspect") || name.contains("Embodiment")) {
+                data.totalAspects += count;
+                raidData.totalAspects += count;
+                data.sessionData.totalAspects += count;
+                sessionRaidData.totalAspects += count;
+
+                // Determine rarity from lore
+                String rarity = getAspectRarity(stack);
+                if (rarity != null) {
+                    switch (rarity.toLowerCase()) {
+                        case "mythic" -> {
+                            data.mythicAspects += count;
+                            raidData.mythicAspects += count;
+                            data.sessionData.mythicAspects += count;
+                            sessionRaidData.mythicAspects += count;
+                        }
+                        case "fabled" -> {
+                            data.fabledAspects += count;
+                            raidData.fabledAspects += count;
+                            data.sessionData.fabledAspects += count;
+                            sessionRaidData.fabledAspects += count;
+                        }
+                        case "legendary" -> {
+                            data.legendaryAspects += count;
+                            raidData.legendaryAspects += count;
+                            data.sessionData.legendaryAspects += count;
+                            sessionRaidData.legendaryAspects += count;
+                        }
+                    }
+                }
+            }
+        }
+
         RaidLootConfig.INSTANCE.save();
         sendChatDebug(data, currentRaid);
     }
@@ -266,6 +326,16 @@ public class RaidLootTracker {
                 ),
                 false
         );
+
+        mc.player.sendMessage(
+                Text.literal(
+                        "§5Aspects: §e" + d.totalAspects +
+                                " §7(§5" + d.mythicAspects +
+                                " §c" + d.fabledAspects +
+                                " §6" + d.legendaryAspects + "§7)"
+                ),
+                false
+        );
     }
 
     private static String cleanName(String name) {
@@ -287,5 +357,32 @@ public class RaidLootTracker {
             }
         } catch (Exception ignored) {}
         return false;
+    }
+
+    private static String getAspectRarity(ItemStack stack) {
+        try {
+            if (stack.getComponents() == null) return null;
+            LoreComponent loreComponent = stack.getComponents().get(DataComponentTypes.LORE);
+            if (loreComponent == null) return null;
+
+            List<Text> loreLines = loreComponent.lines();
+            for (Text line : loreLines) {
+                String lineStr = line.getString().toLowerCase();
+                // Check for rarity keywords in lore
+                if (lineStr.contains("mythic")) return "mythic";
+                if (lineStr.contains("fabled")) return "fabled";
+                if (lineStr.contains("legendary")) return "legendary";
+                if (lineStr.contains("rare")) return "rare";
+            }
+
+            // Fallback: check item name color codes
+            String rawName = stack.getName().getString();
+            if (rawName.contains("§5") || rawName.contains("§d")) return "mythic"; // Purple/magenta
+            if (rawName.contains("§c")) return "fabled"; // Red
+            if (rawName.contains("§6")) return "legendary"; // Gold
+            if (rawName.contains("§b")) return "rare"; // Cyan
+
+        } catch (Exception ignored) {}
+        return null;
     }
 }

@@ -30,6 +30,7 @@ public class RaidLootConfig {
             try (Writer writer = Files.newBufferedWriter(path)) {
                 gson.toJson(this, writer);
             }
+            System.out.println("[WynnExtras] Saved RaidLootTracker data to " + path);
         } catch (Exception e) {
             System.err.println("[WynnExtras] Couldn't save RaidLootTracker");
             e.printStackTrace();
@@ -45,12 +46,14 @@ public class RaidLootConfig {
         try (Reader reader = Files.newBufferedReader(path)) {
             RaidLootConfig loaded =
                     gson.fromJson(reader, RaidLootConfig.class);
-            if (loaded != null) {
-                INSTANCE = loaded;
+            if (loaded != null && loaded.data != null) {
+                // Copy the data into the existing instance instead of replacing INSTANCE
+                this.data = loaded.data;
                 // Ensure perRaidData is initialized for backward compatibility
-                if (INSTANCE.data.perRaidData == null) {
-                    INSTANCE.data.perRaidData = new HashMap<>();
+                if (this.data.perRaidData == null) {
+                    this.data.perRaidData = new HashMap<>();
                 }
+                System.out.println("[WynnExtras] Loaded RaidLootTracker data successfully");
             }
         } catch (Exception e) {
             System.err.println("[WynnExtras] Couldn't load RaidLootTracker");

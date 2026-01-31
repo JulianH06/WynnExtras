@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.profileviewer;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
@@ -34,8 +35,10 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -45,8 +48,14 @@ import java.util.stream.Collectors;
 public class WynncraftApiHandler {
     public static WynncraftApiHandler INSTANCE = new WynncraftApiHandler();
 
-    public List<ApiAspect> aspectList = new ArrayList<>();
+    // Reuse HttpClient instance instead of creating new ones
+    private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+
+    // Use synchronized list to prevent concurrent modification
+    public List<ApiAspect> aspectList = java.util.Collections.synchronizedList(new ArrayList<>());
     public boolean[] waitingForAspectResponse = new boolean[5];
+    // Lock object for synchronizing array access
+    private final Object aspectLock = new Object();
 
     private static Command apiKeyCmd = new Command(
             "apikey",
@@ -86,13 +95,12 @@ public class WynncraftApiHandler {
     public String API_KEY;
 
     public static CompletableFuture<String> fetchUUID(String playerName) {
-        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.mojang.com/users/profiles/minecraft/" + playerName))
                 .GET()
                 .build();
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(body -> {
                     try {
@@ -112,7 +120,6 @@ public class WynncraftApiHandler {
     }
 
     public static CompletableFuture<GuildData> fetchGuildData(String prefix) {
-        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request;
 
         if (INSTANCE.API_KEY == null) {
@@ -132,18 +139,17 @@ public class WynncraftApiHandler {
                     .build();
         }
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseGuildData);
     }
 
     public static CompletableFuture<List<ApiAspect>> fetchAspectList(String className) {
-        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request;
 
         if(INSTANCE.API_KEY == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set you api-key to upload your aspects. For more info run \"/WynnExtras apikey\""));
-            return null;
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set your api-key to upload your aspects. For more info run \"/WynnExtras apikey\""));
+            return CompletableFuture.completedFuture(null);
         } else {
             request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.wynncraft.com/v3/aspects/" + className))
@@ -152,7 +158,7 @@ public class WynncraftApiHandler {
                     .build();
         }
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAspectData);
     }
@@ -161,29 +167,73 @@ public class WynncraftApiHandler {
         List<String> classes = List.of("warrior", "shaman", "mage", "archer", "assassin");
         List<ApiAspect> aspectList = WynncraftApiHandler.INSTANCE.aspectList;
 
-        if(!aspectList.isEmpty()) return aspectList;
+        if(!aspectList.isEmpty()) {
+            return aspectList;
+        }
 
+        // Check API key before attempting fetch
+        if (INSTANCE.API_KEY == null) {
+            return aspectList; // Return empty list, message already shown by fetchAspectList
+        }
 
-        int i = 0;
-        for(String className : classes) {
-            if(WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i]) continue;
+        // Synchronize access to waitingForAspectResponse array
+        synchronized (INSTANCE.aspectLock) {
+            // Check if ALL classes are marked as waiting but list is still empty - means previous fetch failed
+            boolean allWaiting = true;
+            for (int j = 0; j < 5; j++) {
+                if (!WynncraftApiHandler.INSTANCE.waitingForAspectResponse[j]) {
+                    allWaiting = false;
+                    break;
+                }
+            }
+            if (allWaiting && aspectList.isEmpty()) {
+                // Reset all flags - previous fetch must have failed
+                for (int j = 0; j < 5; j++) {
+                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[j] = false;
+                }
+            }
 
-            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i] = true;
+            int i = 0;
+            for(String className : classes) {
+                if(WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i]) {
+                    i++;
+                    continue;
+                }
 
-            int finalI = i;
-            WynncraftApiHandler.fetchAspectList(className)
-                    .thenAccept(result -> {
+                WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i] = true;
+
+                int finalI = i;
+                CompletableFuture<List<ApiAspect>> future = WynncraftApiHandler.fetchAspectList(className);
+                if (future != null) {
+                    future.thenAccept(result -> {
                         if(result == null) return;
                         if(result.isEmpty()) return;
 
-                        WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
-                        aspectList.addAll(result);
+                        synchronized (INSTANCE.aspectLock) {
+                            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                        }
+                        // Only add aspects that aren't already in the list (prevent duplicates)
+                        // aspectList is already synchronized, but we need to check-then-add atomically
+                        synchronized (aspectList) {
+                            for (ApiAspect aspect : result) {
+                                boolean alreadyExists = aspectList.stream()
+                                    .anyMatch(existing -> existing.getName().equals(aspect.getName()));
+                                if (!alreadyExists) {
+                                    aspectList.add(aspect);
+                                }
+                            }
+                        }
                     })
                     .exceptionally(ex -> {
-                        System.err.println("Unexpected error: " + ex.getMessage());
+                        System.err.println("Unexpected error fetching aspects: " + ex.getMessage());
+                        synchronized (INSTANCE.aspectLock) {
+                            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                        }
                         return null;
                     });
-            i++;
+                }
+                i++;
+            }
         }
 
         return aspectList;
@@ -197,7 +247,6 @@ public class WynncraftApiHandler {
             }
 
             String formattedUUID = formatUUID(rawUUID);
-            HttpClient client = HttpClient.newHttpClient();
             HttpRequest request;
 
             if (INSTANCE.API_KEY == null) {
@@ -217,7 +266,7 @@ public class WynncraftApiHandler {
                         .build();
             }
 
-            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenApply(HttpResponse::body)
                     .thenApply(WynncraftApiHandler::parsePlayerData);
         });
@@ -229,10 +278,7 @@ public class WynncraftApiHandler {
             return CompletableFuture.completedFuture(null);
         }
 
-        if(INSTANCE.API_KEY == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set you api-key to upload your aspects. For more info run \"/we apikey\""));
-            return CompletableFuture.completedFuture(new FetchResult(FetchStatus.NOKEYSET, null));
-        }
+        // No API key required - viewing aspects is public!
 
         try {
             HttpClient client = HttpClient.newBuilder()
@@ -240,10 +286,7 @@ public class WynncraftApiHandler {
                     .build();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://wynnextras.com/user"))
-                    .header("playerUUID", playerUUID)
-                    .header("Wynncraft-Api-Key", INSTANCE.API_KEY)
-                    .header("RequestingUUID", requestingUUID)
+                    .uri(URI.create("http://wynnextras.com/aspects?playerUuid=" + playerUUID))
                     .timeout(Duration.ofSeconds(8))
                     .GET()
                     .build();
@@ -267,21 +310,23 @@ public class WynncraftApiHandler {
                         }
 
                         if (code == 400) {
+                            System.err.println("GET ERROR 400: " + response.body());
                             return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
                         }
 
                         if (code >= 500) {
+                            System.err.println("GET SERVER ERROR: " + code + " → " + response.body());
                             return new FetchResult(FetchStatus.SERVER_ERROR, null);
                         }
 
                         if (code != 200) {
+                            System.err.println("GET ERROR: " + code + " → " + response.body());
                             return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
                         }
 
                         User user = parsePlayerAspectData(response.body());
                         return new FetchResult(FetchStatus.OK, user);
                     });
-
         } catch (Exception e) {
             e.printStackTrace();
             return CompletableFuture.completedFuture(new FetchResult(FetchStatus.UNKNOWN_ERROR, null));
@@ -289,39 +334,98 @@ public class WynncraftApiHandler {
     }
 
     public static void processAspects(Map<String, Pair<String, String>> map) {
-        if(INSTANCE.API_KEY == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to set you api-key to upload your aspects. For more info run \"/WynnExtras apikey\""));
+        if (McUtils.player() == null) {
+            System.err.println("Cannot upload aspects - player not loaded");
             return;
         }
 
-        List<Aspect> aspects = new ArrayList<>();
-        for(String entry : map.keySet()) {
-            int amount = parseAspectAmount(map.get(entry));
-            Aspect aspect = new Aspect();
-            aspect.setAmount(amount);
-            aspect.setName(entry);
-            aspect.setRarity(map.get(entry).getRight());
-            aspects.add(aspect);
-        }
+        System.out.println("DEBUG: processAspects called with " + map.size() + " aspects");
 
-        User user = new User();
-        user.setUuid(McUtils.player().getUuidAsString());
-        user.setPlayerName(McUtils.playerName());
-        user.setAspects(aspects);
-        user.setModVersion(CurrentVersionData.INSTANCE.version);
-        user.setUpdatedAt(Time.now().timestamp());
+        // Authenticate with Mojang first
+        julianh06.wynnextras.utils.MojangAuth.getAuthData().thenAccept(authData -> {
+            if (authData == null) {
+                System.err.println("Failed to authenticate with Mojang for aspect upload");
+                // Don't show duplicate error - MojangAuth already showed the error
+                return;
+            }
 
-        postPlayerAspectData(user).thenAccept(result -> {
-            if (result.status() == FetchStatus.OK) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSuccessfully uploaded your aspects!"));
-            } else if (result.status == FetchStatus.NOKEYSET) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§You need to set your api-key to use this feature. Run \"/we apikey\" for more information."));
-            } else if (result.status == FetchStatus.FORBIDDEN) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4You need to upload your own aspects first to view other peoples aspects. Run \"/we apikey\" for more information."));
-            } else if (result.status == FetchStatus.UNAUTHORIZED) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4The api-key you have set is not connected to your minecraft account. Run \"/we apikey\" for more information."));
-            } else {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4Error: " + result.status()));
+            try {
+                // Build JSON payload
+                JsonObject payload = new JsonObject();
+                payload.addProperty("playerName", authData.username);
+                payload.addProperty("modVersion", CurrentVersionData.INSTANCE.version);
+
+                JsonArray aspectsArray = new JsonArray();
+                int processedCount = 0;
+                int skippedCount = 0;
+                for (String entry : map.keySet()) {
+                    try {
+                        Pair<String, String> aspectData = map.get(entry);
+                        if (aspectData == null) {
+                            System.err.println("DEBUG: Null aspect data for: " + entry);
+                            skippedCount++;
+                            continue;
+                        }
+
+                        int amount = parseAspectAmount(aspectData);
+                        JsonObject aspectJson = new JsonObject();
+                        aspectJson.addProperty("name", entry);
+                        aspectJson.addProperty("rarity", aspectData.getRight());
+                        aspectJson.addProperty("amount", amount);
+                        aspectsArray.add(aspectJson);
+                        processedCount++;
+                    } catch (Exception e) {
+                        System.err.println("DEBUG: Error processing aspect " + entry + ": " + e.getMessage());
+                        e.printStackTrace();
+                        skippedCount++;
+                    }
+                }
+                payload.add("aspects", aspectsArray);
+
+                System.out.println("DEBUG: Loop stats - Processed: " + processedCount + ", Skipped: " + skippedCount + ", Total map size: " + map.size());
+
+                System.out.println("DEBUG: Built payload with " + aspectsArray.size() + " aspects");
+                String payloadString = payload.toString();
+                System.out.println("DEBUG: Payload size: " + payloadString.length() + " characters");
+                System.out.println("DEBUG: First 500 chars of payload: " + payloadString.substring(0, Math.min(500, payloadString.length())));
+
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(5))
+                        .build();
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("http://wynnextras.com/aspects"))
+                        .header("Content-Type", "application/json")
+                        .header("Username", authData.username)
+                        .header("Server-ID", authData.serverId)
+                        .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                        .timeout(Duration.ofSeconds(8))
+                        .build();
+
+                client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                        .thenAccept(response -> {
+                            int code = response.statusCode();
+                            if (code == 200) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSuccessfully uploaded your aspects!"));
+                            } else if (code == 401) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                                System.err.println("Personal aspects upload auth error: " + response.body());
+                            } else if (code >= 500) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cServer error - try again later"));
+                                System.err.println("Personal aspects upload error: " + code + " → " + response.body());
+                            } else {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed (error " + code + ")"));
+                                System.err.println("Personal aspects upload error: " + code + " → " + response.body());
+                            }
+                        })
+                        .exceptionally(ex -> {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed - check your connection"));
+                            System.err.println("Failed to upload personal aspects: " + ex.getMessage());
+                            return null;
+                        });
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
     }
@@ -340,7 +444,7 @@ public class WynncraftApiHandler {
                     .build();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://wynnextras.com/user"))
+                    .uri(URI.create("http://wynnextras.com/aspects"))
                     .header("Content-Type", "application/json")
                     .header("Wynncraft-Api-Key", INSTANCE.API_KEY)
                     .POST(HttpRequest.BodyPublishers.ofString(json))
@@ -366,6 +470,8 @@ public class WynncraftApiHandler {
                         }
 
                         if (code >= 500) {
+                            System.err.println("SERVER ERROR: " + code + " → " + response.body());
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cServer error (" + code + "): " + response.body()));
                             return new FetchResult(FetchStatus.SERVER_ERROR, null);
                         }
 
@@ -429,11 +535,516 @@ public class WynncraftApiHandler {
         return sum;
     }
 
+    /**
+     * Upload rewarded aspects from raid chest to API
+     * @param raidType NOTG, NOL, TCC, TNA
+     * @param aspectNames List of aspect names received from reward chest
+     */
+    public static void uploadRewardedAspects(String raidType, List<String> aspectNames) {
+        if (McUtils.player() == null) {
+            System.err.println("Cannot upload rewarded aspects - player not loaded");
+            return;
+        }
 
+        // Validate raid type
+        if (!raidType.equals("NOTG") && !raidType.equals("NOL") &&
+            !raidType.equals("TCC") && !raidType.equals("TNA")) {
+            System.err.println("Unknown raid type: " + raidType);
+            return;
+        }
+
+        if (aspectNames == null || aspectNames.isEmpty()) {
+            System.out.println("No aspects to upload");
+            return;
+        }
+
+        // Authenticate with Mojang first
+        julianh06.wynnextras.utils.MojangAuth.getAuthData().thenAccept(authData -> {
+            if (authData == null) {
+                System.err.println("Failed to authenticate with Mojang");
+                return;
+            }
+
+            try {
+                // Build JSON payload
+                JsonObject payload = new JsonObject();
+                payload.addProperty("raidType", raidType);
+
+                JsonArray aspectsArray = new JsonArray();
+                for (String aspectName : aspectNames) {
+                    aspectsArray.add(aspectName);
+                }
+                payload.add("aspects", aspectsArray);
+
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(5))
+                        .build();
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("http://wynnextras.com/raid/rewarded-aspects"))
+                        .header("Content-Type", "application/json")
+                        .header("Username", authData.username)
+                        .header("Server-ID", authData.serverId)
+                        .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                        .timeout(Duration.ofSeconds(8))
+                        .build();
+
+                client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                        .thenAccept(response -> {
+                            int code = response.statusCode();
+                            if (code == 200) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aUploaded " + aspectNames.size() + " aspect(s) from §e" + raidType));
+                                System.out.println("[WynnExtras] Successfully uploaded rewarded aspects for " + raidType);
+                            } else if (code == 401) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                            } else {
+                                System.err.println("Error uploading rewarded aspects: " + code);
+                            }
+                        })
+                        .exceptionally(ex -> {
+                            System.err.println("Failed to upload rewarded aspects: " + ex.getMessage());
+                            return null;
+                        });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.err.println("Error preparing rewarded aspects upload");
+            }
+        });
+    }
+
+    /**
+     * Wipe all aspect data for the current player from the database (DEBUG)
+     * Works by uploading an empty aspects list, which overwrites existing data
+     */
+    public static void wipePlayerAspects() {
+        if (McUtils.player() == null) {
+            System.err.println("Cannot wipe aspects - player not loaded");
+            return;
+        }
+
+        System.out.println("[WynnExtras] wipePlayerAspects() called - uploading empty aspects list");
+
+        // Just upload an empty map - this will overwrite all existing aspects with nothing
+        processAspects(new java.util.HashMap<>());
+        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eWiping aspects by uploading empty data..."));
+    }
+
+    /**
+     * Upload loot pool to crowdsourcing API (without personal progress)
+     * NO API KEY REQUIRED - uses player UUID from authenticated Minecraft session
+     * @param raidType NOTG, NOL, TCC, TNA
+     * @param aspects List of aspects with name, rarity (no amount/tier)
+     */
+    public static void uploadLootPool(String raidType, List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry> aspects) {
+        if (McUtils.player() == null) {
+            System.err.println("Cannot upload loot pool - player not loaded");
+            return;
+        }
+
+        // Validate raid type (short codes only)
+        if (!raidType.equals("NOTG") && !raidType.equals("NOL") &&
+            !raidType.equals("TCC") && !raidType.equals("TNA")) {
+            System.err.println("Unknown raid type: " + raidType);
+            return;
+        }
+
+        // Authenticate with Mojang first
+        julianh06.wynnextras.utils.MojangAuth.getAuthData().thenAccept(authData -> {
+            if (authData == null) {
+                System.err.println("Failed to authenticate with Mojang");
+                return;
+            }
+
+            try {
+                // Build JSON payload matching backend spec (send short codes)
+                JsonObject payload = new JsonObject();
+                payload.addProperty("raidType", raidType);
+
+                JsonArray aspectsArray = new JsonArray();
+                for (julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry aspect : aspects) {
+                    JsonObject aspectJson = new JsonObject();
+                    aspectJson.addProperty("name", aspect.name);
+                    aspectJson.addProperty("rarity", aspect.rarity);
+                    // Don't include requiredClass - backend doesn't expect it
+                    aspectsArray.add(aspectJson);
+                }
+
+                payload.add("aspects", aspectsArray);
+
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(5))
+                        .build();
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("http://wynnextras.com/raid/loot-pool"))
+                        .header("Content-Type", "application/json")
+                        .header("Username", authData.username)
+                        .header("Server-ID", authData.serverId)
+                        .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                        .timeout(Duration.ofSeconds(8))
+                        .build();
+
+                client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                        .thenAccept(response -> {
+                            int code = response.statusCode();
+                            if (code == 200) {
+                                JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
+                                String status = result.get("status").getAsString();
+
+                                if (status.equals("approved")) {
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aLoot pool for §e" + raidType + " §aapproved!"));
+                                } else {
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Loot pool submitted. Waiting for more confirmations."));
+                                }
+                            } else if (code == 401) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                            } else {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading loot pool: " + code));
+                            }
+                        })
+                        .exceptionally(ex -> {
+                            System.err.println("Failed to upload loot pool: " + ex.getMessage());
+                            return null;
+                        });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError preparing loot pool upload"));
+            }
+        });
+    }
+
+    /**
+     * Upload gambits to crowdsourcing API
+     * Uses Mojang sessionserver authentication - secure and automatic
+     * @param gambits List of gambits with name and description
+     */
+    public static void uploadGambits(List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry> gambits) {
+        if (McUtils.player() == null) {
+            System.err.println("Cannot upload gambits - player not loaded");
+            return;
+        }
+
+        // Authenticate with Mojang first
+        julianh06.wynnextras.utils.MojangAuth.getAuthData().thenAccept(authData -> {
+            if (authData == null) {
+                System.err.println("Failed to authenticate with Mojang");
+                return;
+            }
+
+            try {
+                // Build JSON payload
+                JsonObject payload = new JsonObject();
+                JsonArray gambitsArray = new JsonArray();
+
+                for (julianh06.wynnextras.features.aspects.GambitData.GambitEntry gambit : gambits) {
+                    JsonObject gambitJson = new JsonObject();
+                    gambitJson.addProperty("name", gambit.name);
+                    gambitJson.addProperty("description", gambit.description);
+                    gambitsArray.add(gambitJson);
+                }
+
+                payload.add("gambits", gambitsArray);
+
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(5))
+                        .build();
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("http://wynnextras.com/gambit"))
+                        .header("Content-Type", "application/json")
+                        .header("Username", authData.username)
+                        .header("Server-ID", authData.serverId)
+                        .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                        .timeout(Duration.ofSeconds(8))
+                        .build();
+
+                client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                        .thenAccept(response -> {
+                            int code = response.statusCode();
+                            if (code == 200) {
+                                JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
+                                String status = result.get("status").getAsString();
+
+                                if (status.equals("approved")) {
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aGambits approved for today!"));
+                                } else {
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Gambits submitted. Waiting for confirmation."));
+                                }
+                            } else if (code == 401) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                            } else {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading gambits: " + code));
+                            }
+                        })
+                        .exceptionally(ex -> {
+                            System.err.println("Failed to upload gambits: " + ex.getMessage());
+                            return null;
+                        });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError preparing gambits upload"));
+            }
+        });
+    }
+
+    /**
+     * Extract required class from tier info string
+     * Format: "Class Req: Warrior" or similar
+     */
+    private static String extractRequiredClass(String tierInfo) {
+        if (tierInfo == null) return null;
+
+        String[] lines = tierInfo.split("\n");
+        for (String line : lines) {
+            if (line.contains("Class Req:")) {
+                return line.replace("Class Req:", "").trim();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Fetch list of all players who have uploaded aspects
+     * @return CompletableFuture with list of player entries sorted by most recent
+     */
+    public static CompletableFuture<List<PlayerListEntry>> fetchPlayerList() {
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(3))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://wynnextras.com/aspects/list"))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+
+            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(response -> {
+                        if (response.statusCode() != 200) {
+                            System.out.println("Failed to fetch player list: " + response.statusCode());
+                            return new ArrayList<PlayerListEntry>();
+                        }
+
+                        try {
+                            JsonArray json = JsonParser.parseString(response.body()).getAsJsonArray();
+                            List<PlayerListEntry> result = new ArrayList<>();
+
+                            for (int i = 0; i < json.size(); i++) {
+                                JsonObject entry = json.get(i).getAsJsonObject();
+                                PlayerListEntry player = gson.fromJson(entry, PlayerListEntry.class);
+                                result.add(player);
+                            }
+
+                            // Deduplicate by playerUuid (keep first occurrence, which is most recent)
+                            Set<String> seen = new HashSet<>();
+                            result = result.stream()
+                                    .filter(p -> seen.add(p.getPlayerUuid()))
+                                    .collect(Collectors.toList());
+
+                            System.out.println("Fetched " + result.size() + " players from list");
+                            return result;
+                        } catch (Exception e) {
+                            System.err.println("Error parsing player list: " + e.getMessage());
+                            return new ArrayList<PlayerListEntry>();
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Failed to fetch player list: " + ex.getMessage());
+                        return new ArrayList<PlayerListEntry>();
+                    });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(new ArrayList<PlayerListEntry>());
+        }
+    }
+
+    /**
+     * Fetch leaderboard of players with most maxed aspects
+     * @param limit Number of entries (default 15, max 100)
+     * @return CompletableFuture with list of leaderboard entries
+     */
+    public static CompletableFuture<List<LeaderboardEntry>> fetchLeaderboard(int limit) {
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(3))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://wynnextras.com/aspects/leaderboard?limit=" + limit))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+
+            System.out.println("[WynnExtras] Fetching leaderboard from: http://wynnextras.com/aspects/leaderboard?limit=" + limit);
+
+            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(response -> {
+                        System.out.println("[WynnExtras] Leaderboard response code: " + response.statusCode());
+                        System.out.println("[WynnExtras] Leaderboard response body: " + response.body().substring(0, Math.min(500, response.body().length())));
+
+                        if (response.statusCode() != 200) {
+                            System.out.println("Failed to fetch leaderboard: " + response.statusCode());
+                            return new ArrayList<LeaderboardEntry>();
+                        }
+
+                        try {
+                            JsonArray json = JsonParser.parseString(response.body()).getAsJsonArray();
+                            List<LeaderboardEntry> result = new ArrayList<>();
+
+                            for (int i = 0; i < json.size(); i++) {
+                                JsonObject entry = json.get(i).getAsJsonObject();
+                                LeaderboardEntry player = gson.fromJson(entry, LeaderboardEntry.class);
+                                result.add(player);
+                                System.out.println("[WynnExtras] Parsed leaderboard entry: " + player.getPlayerName() + " - " + player.getMaxAspectCount() + " maxed");
+                            }
+
+                            System.out.println("[WynnExtras] Fetched " + result.size() + " leaderboard entries");
+                            return result;
+                        } catch (Exception e) {
+                            System.err.println("Error parsing leaderboard: " + e.getMessage());
+                            e.printStackTrace();
+                            return new ArrayList<LeaderboardEntry>();
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Failed to fetch leaderboard: " + ex.getMessage());
+                        ex.printStackTrace();
+                        return new ArrayList<LeaderboardEntry>();
+                    });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(new ArrayList<LeaderboardEntry>());
+        }
+    }
+
+    /**
+     * Fetch crowdsourced loot pool from API
+     * @param raidType NOTG, NOL, TCC, TNA
+     * @return CompletableFuture with list of aspects or null if not available
+     */
+    public static CompletableFuture<List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry>> fetchCrowdsourcedLootPool(String raidType) {
+        try {
+            // Validate raid type (short codes only)
+            if (!raidType.equals("NOTG") && !raidType.equals("NOL") &&
+                !raidType.equals("TCC") && !raidType.equals("TNA")) {
+                System.err.println("Unknown raid type: " + raidType);
+                return CompletableFuture.completedFuture(null);
+            }
+
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(3))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://wynnextras.com/raid/loot-pool?raidType=" + raidType))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+
+            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(response -> {
+                        if (response.statusCode() != 200) {
+                            System.out.println("No crowdsourced loot pool for " + raidType + ": " + response.statusCode());
+                            return null;
+                        }
+
+                        try {
+                            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                            JsonArray aspects = json.getAsJsonArray("aspects");
+
+                            List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry> result = new ArrayList<>();
+                            for (int i = 0; i < aspects.size(); i++) {
+                                JsonObject aspect = aspects.get(i).getAsJsonObject();
+                                String name = aspect.get("name").getAsString();
+                                String rarity = aspect.get("rarity").getAsString();
+                                String requiredClass = aspect.has("requiredClass") && !aspect.get("requiredClass").isJsonNull()
+                                        ? aspect.get("requiredClass").getAsString() : null;
+
+                                result.add(new julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry(
+                                        name, rarity, "", ""
+                                ));
+                            }
+
+                            System.out.println("Fetched " + result.size() + " aspects from crowdsourced pool for " + raidType);
+                            return result;
+                        } catch (Exception e) {
+                            System.err.println("Error parsing crowdsourced loot pool: " + e.getMessage());
+                            return null;
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Failed to fetch crowdsourced loot pool: " + ex.getMessage());
+                        return null;
+                    });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    /**
+     * Fetch crowdsourced gambits from API
+     * @return CompletableFuture with list of gambits or null if not available
+     */
+    public static CompletableFuture<List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry>> fetchCrowdsourcedGambits() {
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(3))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://wynnextras.com/gambit"))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+
+            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(response -> {
+                        if (response.statusCode() != 200) {
+                            System.out.println("No crowdsourced gambits: " + response.statusCode());
+                            return null;
+                        }
+
+                        try {
+                            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                            JsonArray gambits = json.getAsJsonArray("gambits");
+
+                            List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry> result = new ArrayList<>();
+                            for (int i = 0; i < gambits.size(); i++) {
+                                JsonObject gambit = gambits.get(i).getAsJsonObject();
+                                String name = gambit.get("name").getAsString();
+                                String description = gambit.get("description").getAsString();
+
+                                result.add(new julianh06.wynnextras.features.aspects.GambitData.GambitEntry(name, description));
+                            }
+
+                            System.out.println("Fetched " + result.size() + " gambits from crowdsourced data");
+                            return result;
+                        } catch (Exception e) {
+                            System.err.println("Error parsing crowdsourced gambits: " + e.getMessage());
+                            return null;
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Failed to fetch crowdsourced gambits: " + ex.getMessage());
+                        return null;
+                    });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(null);
+        }
+    }
 
 
     public static CompletableFuture<AbilityMapData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {
-        HttpClient client = HttpClient.newHttpClient();
         HttpRequest request;
 
         if (INSTANCE.API_KEY == null) {
@@ -453,35 +1064,29 @@ public class WynncraftApiHandler {
                     .build();
         }
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAbilityMapData);
     }
 
     public static CompletableFuture<AbilityMapData> fetchClassAbilityMap(String className) {
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request;
-
-        request = HttpRequest.newBuilder()
+        HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.wynncraft.com/v3/ability/map/" + className))
                 .GET()
                 .build();
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAbilityMapData);
     }
 
     public static CompletableFuture<AbilityTreeData> fetchClassAbilityTree(String className) {
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request;
-
-        request = HttpRequest.newBuilder()
+        HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.wynncraft.com/v3/ability/tree/" + className))
                 .GET()
                 .build();
 
-        return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAbilityTreeData);
     }
@@ -507,8 +1112,6 @@ public class WynncraftApiHandler {
     }
 
     private static List<ApiAspect> parseAspectData(String json) {
-        System.out.println(json);
-
         Gson gson = new GsonBuilder()
                 .registerTypeAdapter(ApiAspect.Icon.class, new ApiAspect.IconDeserializer())
                 .create();
@@ -547,6 +1150,11 @@ public class WynncraftApiHandler {
 
 
     public static void load() {
+        if (McUtils.player() == null) {
+            System.err.println("[WynnExtras] Cannot load API key - player not loaded");
+            return;
+        }
+
         Path CONFIG_PATH = FabricLoader.getInstance()
                 .getConfigDir()
                 .resolve("wynnextras/" + McUtils.player().getUuid().toString() + "/apikeyDoNotShare.json");
@@ -566,6 +1174,11 @@ public class WynncraftApiHandler {
     }
 
     public static void save() {
+        if (McUtils.player() == null) {
+            System.err.println("[WynnExtras] Cannot save API key - player not loaded");
+            return;
+        }
+
         Path CONFIG_PATH = FabricLoader.getInstance()
                 .getConfigDir()
                 .resolve("wynnextras/" + McUtils.player().getUuid().toString() + "/apikeyDoNotShare.json");

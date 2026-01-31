@@ -30,13 +30,21 @@ public class RaidList {
     @SubscribeEvent
     void onRaidEnded(RaidEndedEvent event) {
         List<String> members = new ArrayList<>(RaidListScreen.currentPlayers);
+
+        // Calculate raid end time - use current time as the most accurate
+        long raidEndTime = System.currentTimeMillis();
+
+        // Debug logging
+        System.out.println("[WynnExtras] Raid ended - type: " + event.getRaid().toString());
+        System.out.println("[WynnExtras] Raid end time: " + raidEndTime);
+        System.out.println("[WynnExtras] Raid start time from event: " + event.getRaid().getRaidStartTime());
+        System.out.println("[WynnExtras] Time in raid (ms): " + event.getRaid().getTimeInRaid());
+
         if(event instanceof RaidEndedEvent.Completed) {
-            Long raidEndTime = event.getRaid().getRaidStartTime() + event.getRaid().getTimeInRaid();
             INSTANCE.raids.add(new RaidData(event.getRaid(), members, raidEndTime, true));
             RaidListData.save();
         }
         if(event instanceof RaidEndedEvent.Failed) {
-            Long raidEndTime = event.getRaid().getRaidStartTime() + event.getRaid().getTimeInRaid();
             INSTANCE.raids.add(new RaidData(event.getRaid(), members, raidEndTime, false));
             RaidListData.save();
         }
