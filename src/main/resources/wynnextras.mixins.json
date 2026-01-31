@@ -20,6 +20,7 @@
     "RaidLootOverlayScreenMixin",
     "WorldRendererAccessor",
     "Accessor.BannerBlockEntityRendererAccessor",
+    "Accessor.GuildMapScreenAccessor",
     "Accessor.HandledScreenAccessor",
     "Accessor.KeybindingAccessor",
     "BankOverlay.HandledScreenMixin",
