@@ -27,6 +27,8 @@ public class IdentifierOverlay extends WEHandledScreen {
         if(!(Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer)) return;
         if(MinecraftClient.getInstance().currentScreen == null) return;
 
+        RenderUtils.drawRect(ctx, CustomColor.fromInt(-804253680), 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
+
         if(sourceOfThruthOpenerWidget == null) {
             sourceOfThruthOpenerWidget = new SourceOfThruthOpenerWidget(0, 0, 0, 0);
             rootWidgets.add(sourceOfThruthOpenerWidget);

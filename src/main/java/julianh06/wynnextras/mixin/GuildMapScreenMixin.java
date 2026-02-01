@@ -11,7 +11,7 @@ import com.wynntils.screens.maps.AbstractMapScreen;
 import com.wynntils.screens.maps.GuildMapScreen;
 import com.wynntils.services.map.pois.Poi;
 import com.wynntils.services.map.pois.TerritoryPoi;
-import com.wynntils.services.map.type.TerritoryFilterType;
+import com.wynntils.services.map.type.TerritoryDefenseFilterType;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;
@@ -23,7 +23,6 @@ import com.wynntils.utils.type.BoundingBox;
 import com.wynntils.utils.type.CappedValue;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.duckInterfaces.TerritoryInfoMixinDuck;
-import julianh06.wynnextras.mixin.Accessor.GuildMapScreenAccessor;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Formatting;
@@ -40,10 +39,12 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.wynntils.services.map.type.TerritoryFilterType.HIGHER;
-
 @Mixin(value = GuildMapScreen.class)
 public class GuildMapScreenMixin extends AbstractMapScreen {
+    @Shadow(remap = false) private boolean territoryDefenseFilterEnabled;
+    @Shadow(remap = false) private boolean hybridMode;
+    @Shadow(remap = false) private GuildResourceValues territoryDefenseFilterLevel;
+    @Shadow(remap = false) private TerritoryDefenseFilterType territoryDefenseFilterType;
 
 
     @Unique
@@ -76,16 +77,16 @@ public class GuildMapScreenMixin extends AbstractMapScreen {
     private void renderPois(DrawContext context, int mouseX, int mouseY, CallbackInfo ci) {
         if(!WynnExtrasConfig.INSTANCE.territoryEstimateToggle) return;
 
-        List<TerritoryPoi> advancementPois = ((GuildMapScreenAccessor) this).isTerritoryDefenseFilterEnabled()
-                ? getFilteredTerritoryPoisFromAdvancement(
-                ((GuildMapScreenAccessor) this).getTerritoryDefenseFilterLevel().getLevel(), ((GuildMapScreenAccessor) this).getTerritoryDefenseFilterType())
+        List<TerritoryPoi> advancementPois = territoryDefenseFilterEnabled
+                ? Models.Territory.getFilteredTerritoryPoisFromAdvancement(
+                territoryDefenseFilterLevel.getLevel(), territoryDefenseFilterType)
                 : Models.Territory.getTerritoryPoisFromAdvancement();
 
         fixTradeRoutes(advancementPois);
 
         List<Poi> renderedPois = new ArrayList<>();
 
-        if (((GuildMapScreenAccessor) this).isHybridMode()) {
+        if (hybridMode) {
             // We base hybrid mode on the advancement pois, it should be more consistent
 
             for (TerritoryPoi poi : advancementPois) {
@@ -326,24 +327,5 @@ public class GuildMapScreenMixin extends AbstractMapScreen {
                         TextShadow.OUTLINE);
 
         ci.cancel();
-    }
-
-    @Unique
-    public List<TerritoryPoi> getFilteredTerritoryPoisFromAdvancement(
-            int filterLevel, TerritoryFilterType filterType) {
-        return switch (filterType) {
-            case HIGHER ->
-                    Models.Territory.getTerritoryPoisFromAdvancement().stream()
-                            .filter(poi -> poi.getTerritoryInfo().getDefences().getLevel() >= filterLevel)
-                            .collect(Collectors.toList());
-            case LOWER ->
-                    Models.Territory.getTerritoryPoisFromAdvancement().stream()
-                            .filter(poi -> poi.getTerritoryInfo().getDefences().getLevel() <= filterLevel)
-                            .collect(Collectors.toList());
-            case DEFAULT ->
-                    Models.Territory.getTerritoryPoisFromAdvancement().stream()
-                            .filter(poi -> poi.getTerritoryInfo().getDefences().getLevel() == filterLevel)
-                            .collect(Collectors.toList());
-        };
     }
 }

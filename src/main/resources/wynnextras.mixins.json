@@ -10,7 +10,10 @@
     "requireAnnotations": true
   },
   "client": [
+    "ChatBadgeMixin",
     "ChatClickMixin",
+    "ItemHighlightFeatureMixin",
+    "WeightScaleBackgroundMixin",
     "GameRendererMixin",
     "GuildMapScreenMixin",
     "InventoryScreenMixin",
@@ -20,9 +23,9 @@
     "RaidLootOverlayScreenMixin",
     "WorldRendererAccessor",
     "Accessor.BannerBlockEntityRendererAccessor",
-    "Accessor.GuildMapScreenAccessor",
     "Accessor.HandledScreenAccessor",
     "Accessor.KeybindingAccessor",
+    "BankOverlay.DrawContextMixin",
     "BankOverlay.HandledScreenMixin",
     "Invoker.HandledScreenInvoker",
     "Invoker.wmd$ItemOverlayFeatureInvoker"
@@ -44,6 +47,7 @@
     "TooltipUtilsMixin",
     "Accessor.BannerBlockEntityAccessor",
     "Accessor.ChatHudAccessor",
+    "Accessor.MinecraftClientAccessor",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
     "Accessor.SlotAccessor",
     "Accessor.TooltipFittingFeatureAccessor",

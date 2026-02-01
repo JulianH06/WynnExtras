@@ -50,7 +50,7 @@ public class MojangAuth {
                 }
 
                 // Get session via accessor
-                var session = mc.getSession();
+                var session = ((julianh06.wynnextras.mixin.Accessor.MinecraftClientAccessor) mc).getSession();
                 if (session == null) {
                     WynnExtras.LOGGER.error("Session is null");
                     return null;

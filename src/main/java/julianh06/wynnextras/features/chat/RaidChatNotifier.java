@@ -221,13 +221,16 @@ public class RaidChatNotifier {
                 String progress = detector.extractProgress(msg);
                 String finalMsg = detector.getFormattedMessage(progress, timestamp);
 
-                MinecraftClient.getInstance().execute(() -> {
-                    if (!finalMsg.isEmpty()) {
-                        McUtils.sendMessageToClient(
-                                WynnExtras.addWynnExtrasPrefix(Text.of(finalMsg))
-                        );
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(20);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
                     }
-                });
+                    if (!finalMsg.isEmpty()) {
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(StyledText.fromString(finalMsg).getComponent()));
+                    }
+                }).start();
 
                 return;
             }

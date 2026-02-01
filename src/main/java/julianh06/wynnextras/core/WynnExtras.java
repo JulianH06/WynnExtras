@@ -4,13 +4,19 @@ import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
+import julianh06.wynnextras.features.achievements.AchievementManager;
+import julianh06.wynnextras.features.achievements.AchievementScreen;
+import julianh06.wynnextras.features.achievements.AchievementStorage;
 import julianh06.wynnextras.features.aspects.maintracking;
+import julianh06.wynnextras.features.lootruns.LootrunTracker;
+import julianh06.wynnextras.features.showcase.FeatureShowcaseScreen;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
 import julianh06.wynnextras.features.guildviewer.BannerGuiRenderer;
@@ -59,6 +65,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 
 // TODO: Use WELogger instead of normal logger
@@ -89,6 +96,46 @@ public class WynnExtras implements ClientModInitializer {
 				Screen configScreen = WynnExtrasConfig.createConfigScreen(null);
 				MinecraftUtils.mc().send(() -> {
 					MinecraftUtils.mc().setScreen(configScreen);
+				});
+				return 1;
+			},
+			null,
+			null
+	);
+
+	private static SubCommand achievementsSyncSubCmd = new SubCommand(
+			"sync",
+			"Sync achievements from Wynncraft API",
+			context -> {
+				MinecraftUtils.mc().send(() -> {
+					McUtils.sendMessageToClient(addWynnExtrasPrefix("Syncing achievements from Wynncraft API..."));
+					AchievementManager.INSTANCE.syncFromWynncraftAPI();
+				});
+				return 1;
+			},
+			null,
+			null
+	);
+
+	private static Command achievementsCmd = new Command(
+			"achievements",
+			"View and manage achievements",
+			context -> {
+				MinecraftUtils.mc().send(() -> {
+					AchievementScreen.open();
+				});
+				return 1;
+			},
+			List.of(achievementsSyncSubCmd),
+			null
+	);
+
+	private static Command featuresCmd = new Command(
+			"features",
+			"",
+			context -> {
+				MinecraftUtils.mc().send(() -> {
+					FeatureShowcaseScreen.open();
 				});
 				return 1;
 			},
@@ -171,6 +218,9 @@ public class WynnExtras implements ClientModInitializer {
 		RaidListData.load();
 		WaypointData.load();
 		RaidChatNotifier.INSTANCE.load();
+		AchievementStorage.load();
+		AchievementManager.INSTANCE.initialize();
+		LootrunTracker.register();
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			AccountBankData.INSTANCE.load();

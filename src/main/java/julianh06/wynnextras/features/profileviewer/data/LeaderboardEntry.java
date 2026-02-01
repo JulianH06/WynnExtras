@@ -5,8 +5,8 @@ package julianh06.wynnextras.features.profileviewer.data;
  */
 public class LeaderboardEntry {
     private String playerUuid;
-    public String playerName;
-    public int maxAspectCount;
+    private String playerName;
+    private int maxAspectCount;
 
     public String getPlayerUuid() {
         return playerUuid;

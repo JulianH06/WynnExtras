@@ -85,6 +85,8 @@ public class WynnExtrasConfig {
     public int bankOverlayMaxColumns = 3;
     public boolean showWeight = true;
     public boolean showScales = true;
+    public boolean scaleBackgroundEnabled = true;
+    public int scaleBackgroundAlpha = 180;
     public boolean craftingHelperOverlay = true;
     public boolean wynnventoryOverlay = true;
 
@@ -111,6 +113,22 @@ public class WynnExtrasConfig {
 
     // ==================== CHAT CLICK ====================
     public boolean chatClickOpensPV = true;
+
+    // ==================== ACHIEVEMENTS ====================
+    public boolean achievementsEnabled = true;
+    public boolean achievementToastsEnabled = true;
+
+    // ==================== LOOTRUNS ====================
+    public boolean lootrunHudEnabled = true;
+    public int lootrunHudX = 5;
+    public int lootrunHudY = 100;
+    public boolean lootrunHudBackground = true;
+    public boolean lootrunSoundAlerts = true;
+
+    // ==================== BADGES ====================
+    public boolean badgesEnabled = true;
+    public boolean badgesInChat = true;
+    public boolean badgesOverhead = true;
 
     // ==================== MISC ====================
     public boolean pvDarkmodeToggle = false;

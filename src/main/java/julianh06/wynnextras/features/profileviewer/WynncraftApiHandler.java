@@ -14,6 +14,7 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.features.achievements.AchievementManager;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -206,31 +207,31 @@ public class WynncraftApiHandler {
                 CompletableFuture<List<ApiAspect>> future = WynncraftApiHandler.fetchAspectList(className);
                 if (future != null) {
                     future.thenAccept(result -> {
-                        if(result == null) return;
-                        if(result.isEmpty()) return;
+                                if(result == null) return;
+                                if(result.isEmpty()) return;
 
-                        synchronized (INSTANCE.aspectLock) {
-                            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
-                        }
-                        // Only add aspects that aren't already in the list (prevent duplicates)
-                        // aspectList is already synchronized, but we need to check-then-add atomically
-                        synchronized (aspectList) {
-                            for (ApiAspect aspect : result) {
-                                boolean alreadyExists = aspectList.stream()
-                                    .anyMatch(existing -> existing.getName().equals(aspect.getName()));
-                                if (!alreadyExists) {
-                                    aspectList.add(aspect);
+                                synchronized (INSTANCE.aspectLock) {
+                                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
                                 }
-                            }
-                        }
-                    })
-                    .exceptionally(ex -> {
-                        System.err.println("Unexpected error fetching aspects: " + ex.getMessage());
-                        synchronized (INSTANCE.aspectLock) {
-                            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
-                        }
-                        return null;
-                    });
+                                // Only add aspects that aren't already in the list (prevent duplicates)
+                                // aspectList is already synchronized, but we need to check-then-add atomically
+                                synchronized (aspectList) {
+                                    for (ApiAspect aspect : result) {
+                                        boolean alreadyExists = aspectList.stream()
+                                            .anyMatch(existing -> existing.getName().equals(aspect.getName()));
+                                        if (!alreadyExists) {
+                                            aspectList.add(aspect);
+                                        }
+                                    }
+                                }
+                            })
+                            .exceptionally(ex -> {
+                                System.err.println("Unexpected error fetching aspects: " + ex.getMessage());
+                                synchronized (INSTANCE.aspectLock) {
+                                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                                }
+                                return null;
+                            });
                 }
                 i++;
             }
@@ -327,6 +328,7 @@ public class WynncraftApiHandler {
                         User user = parsePlayerAspectData(response.body());
                         return new FetchResult(FetchStatus.OK, user);
                     });
+
         } catch (Exception e) {
             e.printStackTrace();
             return CompletableFuture.completedFuture(new FetchResult(FetchStatus.UNKNOWN_ERROR, null));
@@ -358,6 +360,12 @@ public class WynncraftApiHandler {
                 JsonArray aspectsArray = new JsonArray();
                 int processedCount = 0;
                 int skippedCount = 0;
+
+                // Count maxed aspects by rarity for achievements
+                int maxedLegendary = 0;
+                int maxedFabled = 0;
+                int maxedMythic = 0;
+
                 for (String entry : map.keySet()) {
                     try {
                         Pair<String, String> aspectData = map.get(entry);
@@ -374,6 +382,20 @@ public class WynncraftApiHandler {
                         aspectJson.addProperty("amount", amount);
                         aspectsArray.add(aspectJson);
                         processedCount++;
+
+                        // Count maxed aspects by rarity
+                        String tierText = aspectData.getLeft();
+                        if (tierText != null && tierText.contains("[MAX]")) {
+                            String rarity = aspectData.getRight();
+                            if (rarity != null && !rarity.isEmpty()) {
+                                System.out.println("[WynnExtras] Maxed aspect detected: " + entry + " (" + rarity + ")");
+                                switch (rarity.toLowerCase()) {
+                                    case "legendary" -> maxedLegendary++;
+                                    case "fabled" -> maxedFabled++;
+                                    case "mythic" -> maxedMythic++;
+                                }
+                            }
+                        }
                     } catch (Exception e) {
                         System.err.println("DEBUG: Error processing aspect " + entry + ": " + e.getMessage());
                         e.printStackTrace();
@@ -381,6 +403,10 @@ public class WynncraftApiHandler {
                     }
                 }
                 payload.add("aspects", aspectsArray);
+
+                // Update achievement counts with totals
+                System.out.println("[WynnExtras] Total maxed aspects - Legendary: " + maxedLegendary + ", Fabled: " + maxedFabled + ", Mythic: " + maxedMythic);
+                AchievementManager.INSTANCE.setMaxedAspectCounts(maxedLegendary, maxedFabled, maxedMythic);
 
                 System.out.println("DEBUG: Loop stats - Processed: " + processedCount + ", Skipped: " + skippedCount + ", Total map size: " + map.size());
 
@@ -666,7 +692,9 @@ public class WynncraftApiHandler {
                     JsonObject aspectJson = new JsonObject();
                     aspectJson.addProperty("name", aspect.name);
                     aspectJson.addProperty("rarity", aspect.rarity);
-                    // Don't include requiredClass - backend doesn't expect it
+                    if (aspect.requiredClass != null) {
+                        aspectJson.addProperty("requiredClass", aspect.requiredClass);
+                    }
                     aspectsArray.add(aspectJson);
                 }
 
@@ -1043,6 +1071,173 @@ public class WynncraftApiHandler {
         }
     }
 
+    /**
+     * Upload lootrun loot pool to crowdsourcing API
+     * NO API KEY REQUIRED - uses player UUID from authenticated Minecraft session
+     * @param camp SE, SI, MH, C, COTL
+     * @param items List of items with name, rarity, type (normal, shiny, tome)
+     */
+    public static void uploadLootrunLootPool(String camp, List<julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem> items) {
+        if (McUtils.player() == null) {
+            System.err.println("Cannot upload lootrun loot pool - player not loaded");
+            return;
+        }
+
+        // Validate camp code
+        boolean validCamp = false;
+        for (String c : julianh06.wynnextras.features.aspects.LootrunLootPoolData.CAMP_CODES) {
+            if (c.equals(camp)) {
+                validCamp = true;
+                break;
+            }
+        }
+        if (!validCamp) {
+            System.err.println("Unknown camp type: " + camp);
+            return;
+        }
+
+        // Authenticate with Mojang first
+        julianh06.wynnextras.utils.MojangAuth.getAuthData().thenAccept(authData -> {
+            if (authData == null) {
+                System.err.println("Failed to authenticate with Mojang");
+                return;
+            }
+
+            try {
+                // Build JSON payload matching backend spec
+                JsonObject payload = new JsonObject();
+                payload.addProperty("lootrunType", camp);
+
+                JsonArray itemsArray = new JsonArray();
+                for (julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem item : items) {
+                    JsonObject itemJson = new JsonObject();
+                    itemJson.addProperty("name", item.name);
+                    itemJson.addProperty("rarity", item.rarity);
+                    itemJson.addProperty("type", item.type);
+                    // Include shiny stat if present
+                    if (item.shinyStat != null && !item.shinyStat.isEmpty()) {
+                        itemJson.addProperty("shinyStat", item.shinyStat);
+                    }
+                    itemsArray.add(itemJson);
+                }
+
+                payload.add("items", itemsArray);
+
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(5))
+                        .build();
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("http://wynnextras.com/lootrun/loot-pool"))
+                        .header("Content-Type", "application/json")
+                        .header("Username", authData.username)
+                        .header("Server-ID", authData.serverId)
+                        .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                        .timeout(Duration.ofSeconds(8))
+                        .build();
+
+                client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                        .thenAccept(response -> {
+                            int code = response.statusCode();
+                            if (code == 200) {
+                                JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
+                                String status = result.get("status").getAsString();
+
+                                String campName = julianh06.wynnextras.features.aspects.LootrunLootPoolData.CAMP_NAMES.get(camp);
+                                if (status.equals("approved")) {
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aLootrun pool for §e" + campName + " §aapproved!"));
+                                } else {
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Lootrun pool submitted. Waiting for more confirmations."));
+                                }
+                            } else if (code == 401) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                            } else {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading lootrun pool: " + code));
+                            }
+                        })
+                        .exceptionally(ex -> {
+                            System.err.println("Failed to upload lootrun loot pool: " + ex.getMessage());
+                            return null;
+                        });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError preparing lootrun pool upload"));
+            }
+        });
+    }
+
+    /**
+     * Fetch crowdsourced lootrun loot pool from API
+     * @param camp SE, SI, MH, C, COTL
+     * @return CompletableFuture with list of items or null if not available
+     */
+    public static CompletableFuture<List<julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem>> fetchCrowdsourcedLootrunLootPool(String camp) {
+        try {
+            // Validate camp code
+            boolean validCamp = false;
+            for (String c : julianh06.wynnextras.features.aspects.LootrunLootPoolData.CAMP_CODES) {
+                if (c.equals(camp)) {
+                    validCamp = true;
+                    break;
+                }
+            }
+            if (!validCamp) {
+                System.err.println("Unknown camp type: " + camp);
+                return CompletableFuture.completedFuture(null);
+            }
+
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(3))
+                    .build();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://wynnextras.com/lootrun/loot-pool?lootrunType=" + camp))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+
+            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(response -> {
+                        if (response.statusCode() != 200) {
+                            System.out.println("No crowdsourced lootrun pool for " + camp + ": " + response.statusCode());
+                            return null;
+                        }
+
+                        try {
+                            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                            JsonArray items = json.getAsJsonArray("items");
+
+                            List<julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem> result = new ArrayList<>();
+                            for (int i = 0; i < items.size(); i++) {
+                                JsonObject item = items.get(i).getAsJsonObject();
+                                String name = item.get("name").getAsString();
+                                String rarity = item.get("rarity").getAsString();
+                                String type = item.has("type") && !item.get("type").isJsonNull()
+                                        ? item.get("type").getAsString() : "normal";
+
+                                result.add(new julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem(
+                                        name, rarity, type
+                                ));
+                            }
+
+                            System.out.println("Fetched " + result.size() + " items from crowdsourced lootrun pool for " + camp);
+                            return result;
+                        } catch (Exception e) {
+                            System.err.println("Error parsing crowdsourced lootrun pool: " + e.getMessage());
+                            return null;
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Failed to fetch crowdsourced lootrun pool: " + ex.getMessage());
+                        return null;
+                    });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return CompletableFuture.completedFuture(null);
+        }
+    }
 
     public static CompletableFuture<AbilityMapData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {
         HttpRequest request;
