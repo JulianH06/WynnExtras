@@ -1,9 +1,6 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
-import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.SaveButtonWidget;
@@ -14,16 +11,12 @@ import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
 import julianh06.wynnextras.features.profileviewer.data.SkillPoints;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.UI.AbilityTreeWidget;
-import julianh06.wynnextras.utils.UI.Widget;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.*;
 
 import static julianh06.wynnextras.features.profileviewer.PVScreen.*;
-import static julianh06.wynnextras.features.profileviewer.WynncraftApiHandler.parseStyledHtml;
 
 public class TreeTabWidget extends PVScreen.TabWidget {
     static Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/treetabbackground.png");

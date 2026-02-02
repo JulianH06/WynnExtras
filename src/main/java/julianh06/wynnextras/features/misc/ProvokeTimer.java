@@ -16,8 +16,6 @@ import net.minecraft.util.Formatting;
 import net.neoforged.bus.api.SubscribeEvent;
 
 public class ProvokeTimer {
-    private static WynnExtrasConfig config;
-
     private static int storedTicks = -1;
     private static int clientTicks = 0;
     private static int timeToRender = 0;
@@ -28,12 +26,11 @@ public class ProvokeTimer {
     private static int lastSeconds = -1;
 
     public static void init() {
-        config = WynnExtrasConfig.INSTANCE;
         ClientTickEvents.END_CLIENT_TICK.register(ProvokeTimer::provokeTimer);
     }
 
     public static void provokeTimer(MinecraftClient client) {
-        if (client.world == null || client.player == null || !config.provokeTimerToggle) return;
+        if (client.world == null || client.player == null || !WynnExtrasConfig.INSTANCE.provokeTimerToggle) return;
         clientTicks++;
 
         boolean provokeActive = Models.StatusEffect.getStatusEffects().stream()
@@ -60,7 +57,7 @@ public class ProvokeTimer {
 
                 if (calculatedSeconds > 0 && calculatedSeconds != lastSeconds) {
 
-                    ChatUtils.displayTitle("PROVOKE TIME REMAINING: " + calculatedSeconds, "" ,20, 0, 0, config.provokeTimerColor.getFormatting());
+                    ChatUtils.displayTitle("PROVOKE TIME REMAINING: " + calculatedSeconds, "" ,20, 0, 0, WynnExtrasConfig.INSTANCE.provokeTimerColor.getFormatting());
 //                    McUtils.sendMessageToClient(
 //                            Text.literal("Provoke active for: " + calculatedSeconds + " seconds")
 //                    );

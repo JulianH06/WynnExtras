@@ -43,7 +43,7 @@ public class ChatClickMixin {
         ClickEvent clickEvent = style.getClickEvent();
         if (clickEvent != null && clickEvent.getValue() != null) {
             String value = clickEvent.getValue();
-            if(!value.contains("join")) {
+            if(!value.contains("join") && value.contains("msg")) {
                 WynnExtras.LOGGER.info("ChatClick - Click value: [" + value + "]");
 
                 if (clickEvent.getAction() == ClickEvent.Action.SUGGEST_COMMAND ||
@@ -91,7 +91,7 @@ public class ChatClickMixin {
         if (username == null && guildTag == null && style.getInsertion() != null) {
             String insertion = style.getInsertion();
 
-            if (insertion.matches("^[A-Za-z0-9_]{3,16}$") && !insertion.matches("^[A-Za-z0-9_]{3,16}'$")) {
+            if (insertion.matches("^[A-Za-z0-9_]{3,16}:$") && !insertion.matches("^[A-Za-z0-9_]{3,16}'$")) {
                 username = insertion;
             }
         }
