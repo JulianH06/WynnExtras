@@ -1,16 +1,19 @@
 package julianh06.wynnextras.utils;
 
+import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
+import com.wynntils.features.tooltips.ItemStatInfoFeature;
+import com.wynntils.handlers.tooltip.type.TooltipIdentificationDecorator;
 import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.gear.type.GearRequirements;
 import com.wynntils.models.ingredients.type.IngredientInfo;
 import com.wynntils.models.stats.type.StatPossibleValues;
+import com.wynntils.utils.mc.KeyboardUtils;
 import com.wynntils.utils.type.Pair;
 import com.wynntils.utils.type.RangedValue;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class CraftingUtils {
@@ -18,6 +21,16 @@ public class CraftingUtils {
     private static Map<String, IngredientInfo> allIngredients;
 
     public static IngredientInfo getIng(String name) {
+        initIngs();
+        return allIngredients.get(name);
+    }
+
+    public static Map<String, IngredientInfo> getAllIngs() {
+        initIngs();
+        return allIngredients;
+    }
+
+    private static void initIngs() {
         if (allIngredients == null) {
             try {
                 allIngredients = Models.Ingredient.getAllIngredientInfos()
@@ -27,11 +40,8 @@ public class CraftingUtils {
                         ));
             } catch (Exception e) {
                 System.err.println("Failed to load ingredient list from wynntills");
-                return null;
             }
         }
-
-        return allIngredients.get(name);
     }
 
     public static StatPossibleValues applyMultiplier(StatPossibleValues value, Double multiplier) {
@@ -74,8 +84,14 @@ public class CraftingUtils {
         values.add(toAdd);
     }
 
-    private static RangedValue addRanges(RangedValue a, RangedValue b) {
+    public static RangedValue addRanges(RangedValue a, RangedValue b) {
         return new RangedValue(a.low() + b.low(), a.high() + b.high());
+    }
+
+    public static Double getRangeCenter(RangedValue range) {
+        double distance = range.high() - range.low();
+        double half = distance / 2;
+        return range.low() + half;
     }
 
     public static GearRequirements addGearRequirements(GearRequirements value, List<Pair<Skill, Integer>> toAdd, double multiplier) {
@@ -85,9 +101,9 @@ public class CraftingUtils {
         if (value == null) {
             return new GearRequirements(
                     0,
-                    null,
+                    Optional.empty(),
                     toAddScaled,
-                    null
+                    Optional.empty()
             );
         }
 
@@ -119,5 +135,47 @@ public class CraftingUtils {
                 newReqs,
                 value.quest()
         );
+    }
+
+    public static <T> void generateCombinations(
+            List<T> ings,
+            boolean duplicates,
+            boolean permute,
+            int startIdx,
+            int slots,
+            List<T> current,
+            Set<List<T>> result,
+            Set<Integer> usedIndices,
+            Function<List<T>, String> toKey,
+            Set<String> seen
+    ) {
+        String key = toKey.apply(current);
+        if (!seen.add(key)) return;
+
+        if (current.size() == slots) {
+            result.add(new ArrayList<>(current));
+            return;
+        }
+
+        int start = permute ? 0 : startIdx;
+        for (int i = start; i < ings.size(); i++) {
+            if (!duplicates && usedIndices.contains(i)) {
+                continue;
+            }
+
+            current.add(ings.get(i));
+            usedIndices.add(i);
+            int newStart = permute ? 0 : duplicates ? i : i + 1;
+            generateCombinations(ings, duplicates, permute, newStart, slots, current, result, usedIndices, toKey, seen);
+            current.removeLast();
+            usedIndices.remove(i);
+        }
+    }
+
+    // everything has private access its annoying so im just checking keyboard
+    public static TooltipIdentificationDecorator getDecorator() {
+        ItemStatInfoFeature feature = Managers.Feature.getFeatureInstance(ItemStatInfoFeature.class);
+        // ctr is roll chances and ctr+shift is internal roll neither of which we want on crafted
+        return feature.identificationDecorations.get() && !KeyboardUtils.isControlDown() ? feature.getIdentificationDecorator() : null;
     }
 }

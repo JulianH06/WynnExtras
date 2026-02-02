@@ -11,6 +11,7 @@ import julianh06.wynnextras.features.crafting.data.Constants;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
 import julianh06.wynnextras.utils.CraftingUtils;
 import julianh06.wynnextras.utils.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.joml.Vector2d;
 import org.joml.Vector2i;
 import org.joml.Vector4i;
@@ -20,17 +21,44 @@ import java.util.*;
 import static julianh06.wynnextras.utils.CraftingUtils.*;
 
 public class Recipe {
-    private final IngredientInfo[] ingredients;
-    private final int sMaterialTier;
-    private final int lMaterialTier;
-    private final Vector2i level;
+    private IngredientInfo[] ingredients;
+    private int sMaterialTier;
+    private int lMaterialTier;
+    private Vector2i level;
     private final CraftableType station;
-    private final Double[] multipliers;
-    private boolean isValid;
-    private final Vector2i durability;
-    private final Vector2i consuDuration;
-    private final Vector2i cookingDuration;
-    private final Vector2i health;
+    private Double[] multipliers;
+    private Vector2i durability;
+    private Vector2i consuDuration;
+    private Vector2i cookingDuration;
+    private Vector2i health;
+
+    public Recipe(Recipe other) {
+        this.ingredients = other.ingredients != null ? Arrays.copyOf(other.ingredients, other.ingredients.length) : null;
+        this.sMaterialTier = other.sMaterialTier;
+        this.lMaterialTier = other.lMaterialTier;
+        this.level = other.level != null ? new Vector2i(other.level) : null;
+        this.station = other.station;
+        this.multipliers = other.multipliers != null ? Arrays.copyOf(other.multipliers, other.multipliers.length) : null;
+        this.durability = other.durability != null ? new Vector2i(other.durability) : null;
+        this.consuDuration = other.consuDuration != null ? new Vector2i(other.consuDuration) : null;
+        this.cookingDuration = other.cookingDuration != null ? new Vector2i(other.cookingDuration) : null;
+        this.health = other.health != null ? new Vector2i(other.health) : null;
+    }
+
+    public Recipe(CraftableType station) {
+        this.station = station;
+        this.ingredients = new IngredientInfo[0];
+        this.sMaterialTier = 1;
+        this.lMaterialTier = 1;
+
+        multipliers = new Double[]{1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+
+        this.level = null;
+        this.durability = null;
+        this.consuDuration = null;
+        this.cookingDuration = null;
+        this.health = null;
+    }
 
     public Recipe(String[] ingredients, int sMaterialTier, int lMaterialTier, Vector2i level, CraftableType type) {
         this(
@@ -48,11 +76,9 @@ public class Recipe {
         this.sMaterialTier = sMaterialTier;
         this.lMaterialTier = lMaterialTier;
         this.level = new Vector2i(level.x(), Math.max(level.y(), 105)); // TODO fruma
-        this.multipliers = updateMultipliers();
-        this.isValid = checkValidity();
+        updateMultipliers();
         Constants.RecipeRange ranges = Constants.getByLevel(this.level);
         if (ranges == null) {
-            isValid = false;
             durability = null;
             consuDuration = null;
             cookingDuration = null;
@@ -63,6 +89,45 @@ public class Recipe {
         consuDuration = ranges.consuDuration();
         cookingDuration = ranges.cookingDuration();
         health = ranges.health();
+    }
+
+    public void setIngredients(IngredientInfo[] ingredients) {
+        this.ingredients = ingredients;
+    }
+
+    public void setFromTriple(Triple<Constants.RecipeRange, Integer, Integer> data) {
+        setlMaterialTier(data.getMiddle());
+        setsMaterialTier(data.getRight());
+        setConstants(data.getLeft());
+    }
+
+    public void setsMaterialTier(int sMaterialTier) {
+        this.sMaterialTier = sMaterialTier;
+    }
+
+    public void setlMaterialTier(int lMaterialTier) {
+        this.lMaterialTier = lMaterialTier;
+    }
+
+    public void setLevel(Vector2i level) {
+        this.level = level;
+        Constants.RecipeRange ranges = Constants.getByLevel(this.level);
+        if (ranges == null) {
+            System.err.println("cannot set recipe to level " + this.level + " no constant found");
+            return;
+        }
+        this.durability = ranges.durability();
+        this.consuDuration = ranges.consuDuration();
+        this.cookingDuration = ranges.cookingDuration();
+        this.health = ranges.health();
+    }
+
+    public void setConstants(Constants.RecipeRange data) {
+        this.level = data.level();
+        this.durability = data.durability();
+        this.consuDuration = data.consuDuration();
+        this.cookingDuration = data.cookingDuration();
+        this.health = data.health();
     }
 
     public IngredientInfo[] getIngredients() {
@@ -86,10 +151,6 @@ public class Recipe {
         if (level.y <= 29) return 1;
         else if (level.y <= 69) return 2;
         else return 3; // TODO fruma
-    }
-
-    public boolean isValid() {
-        return isValid;
     }
 
     public Vector2i getDurability(int durabilityModifier) {
@@ -133,54 +194,67 @@ public class Recipe {
         // TODO apply powders in ing slots
     }
 
+    private static final Map<Pair<Integer, CraftableType>, Double> allMaterialMultipliers = new HashMap<>();
+
+    static {
+        allMaterialMultipliers.put(new Pair<>(11, CraftableType.NECKLACE), 1.0);
+        allMaterialMultipliers.put(new Pair<>(11, CraftableType.SCROLL), 1.0);
+        allMaterialMultipliers.put(new Pair<>(11, CraftableType.RING), 1.0);
+        allMaterialMultipliers.put(new Pair<>(11, null), 1.0);
+
+        allMaterialMultipliers.put(new Pair<>(12, CraftableType.NECKLACE), 1.0625);
+        allMaterialMultipliers.put(new Pair<>(12, CraftableType.SCROLL), 1.125);
+        allMaterialMultipliers.put(new Pair<>(12, CraftableType.RING), 1.125);
+        allMaterialMultipliers.put(new Pair<>(12, null), 13.0 / 12.0);
+
+        allMaterialMultipliers.put(new Pair<>(13, CraftableType.NECKLACE), 1.1);
+        allMaterialMultipliers.put(new Pair<>(13, CraftableType.SCROLL), 1.2);
+        allMaterialMultipliers.put(new Pair<>(13, CraftableType.RING), 1.2);
+        allMaterialMultipliers.put(new Pair<>(13, null), 17.0 / 15.0);
+
+        allMaterialMultipliers.put(new Pair<>(21, CraftableType.NECKLACE), 1.1875);
+        allMaterialMultipliers.put(new Pair<>(21, CraftableType.SCROLL), 1.125);
+        allMaterialMultipliers.put(new Pair<>(21, CraftableType.RING), 1.125);
+        allMaterialMultipliers.put(new Pair<>(21, null), 5.0 / 3.0);
+
+        allMaterialMultipliers.put(new Pair<>(22, CraftableType.NECKLACE), 1.25);
+        allMaterialMultipliers.put(new Pair<>(22, CraftableType.SCROLL), 1.25);
+        allMaterialMultipliers.put(new Pair<>(22, CraftableType.RING), 1.25);
+        allMaterialMultipliers.put(new Pair<>(22, null), 1.25);
+
+        allMaterialMultipliers.put(new Pair<>(23, CraftableType.NECKLACE), 1.2875);
+        allMaterialMultipliers.put(new Pair<>(23, CraftableType.SCROLL), 1.325);
+        allMaterialMultipliers.put(new Pair<>(23, CraftableType.RING), 1.325);
+        allMaterialMultipliers.put(new Pair<>(23, null), 1.3);
+
+        allMaterialMultipliers.put(new Pair<>(31, CraftableType.NECKLACE), 1.3);
+        allMaterialMultipliers.put(new Pair<>(31, CraftableType.SCROLL), 1.2);
+        allMaterialMultipliers.put(new Pair<>(31, CraftableType.RING), 1.2);
+        allMaterialMultipliers.put(new Pair<>(31, null), 19.0 / 15.0);
+
+        allMaterialMultipliers.put(new Pair<>(32, CraftableType.NECKLACE), 1.3625);
+        allMaterialMultipliers.put(new Pair<>(32, CraftableType.SCROLL), 1.325);
+        allMaterialMultipliers.put(new Pair<>(32, CraftableType.RING), 1.325);
+        allMaterialMultipliers.put(new Pair<>(32, null), 1.35);
+
+        allMaterialMultipliers.put(new Pair<>(33, CraftableType.NECKLACE), 1.4);
+        allMaterialMultipliers.put(new Pair<>(33, CraftableType.SCROLL), 1.4);
+        allMaterialMultipliers.put(new Pair<>(33, CraftableType.RING), 1.4);
+        allMaterialMultipliers.put(new Pair<>(33, null), 1.4);
+    }
+
     public double getMaterialMultiplier() {
-        // each digit can be read as the tier of the respective material
-        return switch (lMaterialTier * 10 + sMaterialTier) {
-            case 11 -> 1;
-            case 12 -> switch (getType()) {
-                case NECKLACE -> 1.0625;
-                case SCROLL, RING -> 1.125;
-                default -> 13.0 / 12.0;
-            };
-            case 13 -> switch (getType()) {
-                case NECKLACE -> 1.1;
-                case SCROLL, RING -> 1.2;
-                default -> 17.0 / 15.0;
-            };
-            case 21 -> switch (getType()) {
-                case NECKLACE -> 1.1875;
-                case SCROLL, RING -> 1.125;
-                default -> 5.0 / 3.0;
-            };
-            case 22 -> 1.25;
-            case 23 -> switch (getType()) {
-                case NECKLACE -> 1.2875;
-                case SCROLL, RING -> 1.325;
-                default -> 1.3;
-            };
-            case 31 -> switch (getType()) {
-                case NECKLACE -> 1.3;
-                case SCROLL, RING -> 1.2;
-                default -> 19.0 / 15.0;
-            };
-            case 32 -> switch (getType()) {
-                case NECKLACE -> 1.3625;
-                case SCROLL, RING -> 1.325;
-                default -> 1.35;
-            };
-            case 33 -> 1.4;
-            default -> {
-                System.out.println("invalid Material tier");
-                yield 0;
-            }
-        };
+        Set<CraftableType> specialTypes = Set.of(CraftableType.NECKLACE, CraftableType.SCROLL, CraftableType.RING);
+        CraftableType localType = specialTypes.contains(getType()) ? getType() : null;
+        int value = lMaterialTier * 10 + sMaterialTier;
+        return allMaterialMultipliers.get(new Pair<>(value, localType));
     }
 
     public Double[] getMultipliers() {
         return multipliers;
     }
 
-    public Double[] updateMultipliers() {
+    public void updateMultipliers() {
         Double[] multipliers = new Double[6];
         Arrays.fill(multipliers, 1.0);
 
@@ -193,10 +267,24 @@ public class Recipe {
             }
         }
 
-        return multipliers;
+        for (int i = 0; i < multipliers.length; i++) {
+            multipliers[i] = Math.round(multipliers[i] * 100.0) / 100.0;
+        }
+
+        this.multipliers = multipliers;
     }
 
     private boolean checkValidity() {
+        if (sMaterialTier < 1 || sMaterialTier > 3 || lMaterialTier < 1 || lMaterialTier > 3) {
+            System.out.println("Invalid material tier");
+            return false;
+        }
+
+        if (durability == null && cookingDuration == null && consuDuration == null) {
+            System.out.println("Invalid dura");
+            return false;
+        }
+
         if (ingredients.length != 6) {
             System.err.println("cannot create recipe without 6 ingredients");
             return false;
@@ -223,7 +311,7 @@ public class Recipe {
     }
 
     public CraftingResult craft() {
-        if (!this.isValid()) return null;
+        if (!checkValidity()) return null;
 
         // consumables have low duration and heal you when crafted with no ings i dont have the heal numbers
         if (Arrays.stream(ingredients).allMatch(Objects::isNull) && getType().isConsumable()) return null;
@@ -248,7 +336,7 @@ public class Recipe {
             double multiplier = metaMultipliers[i];
             if (ing.variableStats() != null) {
                 for (com.wynntils.utils.type.Pair<StatType, RangedValue> entry : ing.variableStats()) {
-                    StatPossibleValues idData = new StatPossibleValues(entry.key(), entry.value(), entry.value().high(), true);
+                    StatPossibleValues idData = new StatPossibleValues(entry.key(), entry.value(), 0, true);
                     StatPossibleValues scaled = applyMultiplier(idData, multiplier);
                     addIds(possibleValues, scaled);
                 }
@@ -263,15 +351,16 @@ public class Recipe {
 
         if (requirements != null) {
             requirements = new GearRequirements(this.getLevel().y, requirements.classType(), requirements.skills(), requirements.quest());
-        } else requirements = new GearRequirements(this.getLevel().y, null, new ArrayList<>(), null);
+        } else requirements = new GearRequirements(this.getLevel().y, Optional.empty(), new ArrayList<>(), Optional.empty());
 
         Vector2i durability = this.getDurability(durabilityModifier);
         Vector2i health = this.getHealth();
         Vector2i duration = getDuration(durationModifier);
 
         return new CraftingResult(
+                new Recipe(this),
                 this.getType(),
-                possibleValues,
+                possibleValues.stream().filter(value -> value.range().low() != 0 || value.range().high() != 0).toList(),
                 requirements,
                 health == null ? null : RangedValue.of(health.x, health.y),
                 durability == null ? null : RangedValue.of(durability.x, durability.y),

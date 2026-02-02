@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.crafting.data;
 
 
+import com.wynntils.models.gear.type.GearType;
 import com.wynntils.models.profession.type.ProfessionType;
 
 public enum CraftableType {
@@ -34,6 +35,14 @@ public enum CraftableType {
     CraftableType(ProfessionType station, String craftingName) {
         this.station = station;
         this.craftingName = craftingName;
+    }
+
+    public static CraftableType fromGearType(GearType type) {
+        try {
+            return valueOf(type.name());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     public static CraftableType fromCraftingName(String typeStr) {

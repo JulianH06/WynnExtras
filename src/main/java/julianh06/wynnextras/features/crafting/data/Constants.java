@@ -3,7 +3,9 @@ package julianh06.wynnextras.features.crafting.data;
 import julianh06.wynnextras.utils.Pair;
 import org.joml.Vector2i;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Constants {
@@ -249,11 +251,12 @@ public class Constants {
         DAMAGES.put(new Pair<>(CraftableType.WAND, new Vector2i(103, 105)), new Pair<>(new Vector2i(118, 145), new Vector2i(119, 146)));
     }
 
-    public static RecipeRange getByLevel(int level) {
+    public static List<RecipeRange> getByLevel(int level) {
+        List<RecipeRange> result = new ArrayList<>();
         for (RecipeRange range : RANGES) {
-            if (range.containsLevel(level)) return range;
+            if (range.containsLevel(level)) result.add(range);
         }
-        return null;
+        return result;
     }
 
     public static RecipeRange getByLevel(Vector2i level) {
