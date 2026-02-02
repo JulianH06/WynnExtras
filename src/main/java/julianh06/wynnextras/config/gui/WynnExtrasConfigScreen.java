@@ -165,7 +165,7 @@ public class WynnExtrasConfigScreen extends Screen {
             .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
                     () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
-                .add(toggle("", "Use dynamic material textures",
+                .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
                     () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v));
 
         // ===== CHAT =====
