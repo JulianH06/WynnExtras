@@ -7,8 +7,8 @@ import com.wynntils.models.stats.type.DamageType;
 import com.wynntils.models.stats.type.StatPossibleValues;
 import com.wynntils.models.stats.type.StatType;
 import com.wynntils.utils.type.RangedValue;
-import julianh06.wynnextras.features.crafting.data.Constants;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
+import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
 import julianh06.wynnextras.utils.CraftingUtils;
 import julianh06.wynnextras.utils.Pair;
 import org.apache.commons.lang3.tuple.Triple;
@@ -25,28 +25,24 @@ public class Recipe {
     private int sMaterialTier;
     private int lMaterialTier;
     private Vector2i level;
-    private final CraftableType station;
+    private final CraftableType type;
     private Double[] multipliers;
-    private Vector2i durability;
-    private Vector2i consuDuration;
-    private Vector2i cookingDuration;
-    private Vector2i health;
+    private Vector2i dura;
+    private Vector2i healthOrDmg;
 
     public Recipe(Recipe other) {
         this.ingredients = other.ingredients != null ? Arrays.copyOf(other.ingredients, other.ingredients.length) : null;
         this.sMaterialTier = other.sMaterialTier;
         this.lMaterialTier = other.lMaterialTier;
         this.level = other.level != null ? new Vector2i(other.level) : null;
-        this.station = other.station;
+        this.type = other.type;
         this.multipliers = other.multipliers != null ? Arrays.copyOf(other.multipliers, other.multipliers.length) : null;
-        this.durability = other.durability != null ? new Vector2i(other.durability) : null;
-        this.consuDuration = other.consuDuration != null ? new Vector2i(other.consuDuration) : null;
-        this.cookingDuration = other.cookingDuration != null ? new Vector2i(other.cookingDuration) : null;
-        this.health = other.health != null ? new Vector2i(other.health) : null;
+        this.dura = other.dura != null ? new Vector2i(other.dura) : null;
+        this.healthOrDmg = other.healthOrDmg != null ? new Vector2i(other.healthOrDmg) : null;
     }
 
-    public Recipe(CraftableType station) {
-        this.station = station;
+    public Recipe(CraftableType type) {
+        this.type = type;
         this.ingredients = new IngredientInfo[0];
         this.sMaterialTier = 1;
         this.lMaterialTier = 1;
@@ -54,10 +50,8 @@ public class Recipe {
         multipliers = new Double[]{1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
 
         this.level = null;
-        this.durability = null;
-        this.consuDuration = null;
-        this.cookingDuration = null;
-        this.health = null;
+        this.dura = null;
+        this.healthOrDmg = null;
     }
 
     public Recipe(String[] ingredients, int sMaterialTier, int lMaterialTier, Vector2i level, CraftableType type) {
@@ -71,31 +65,31 @@ public class Recipe {
     }
 
     public Recipe(IngredientInfo[] ingredients, int sMaterialTier, int lMaterialTier, Vector2i level, CraftableType type) {
-        this.station = type;
+        this.type = type;
         this.ingredients = ingredients;
         this.sMaterialTier = sMaterialTier;
         this.lMaterialTier = lMaterialTier;
-        this.level = new Vector2i(level.x(), Math.max(level.y(), 105)); // TODO fruma
+        this.level = level;
         updateMultipliers();
-        Constants.RecipeRange ranges = Constants.getByLevel(this.level);
+        RecipeLoader.RecipeData ranges = RecipeLoader.getRecipe(type, level);
         if (ranges == null) {
-            durability = null;
-            consuDuration = null;
-            cookingDuration = null;
-            health = null;
+            dura = null;
+            healthOrDmg = null;
             return;
         }
-        durability = ranges.durability();
-        consuDuration = ranges.consuDuration();
-        cookingDuration = ranges.cookingDuration();
-        health = ranges.health();
+        if (type.hasDurability()) {
+            dura = ranges.durability();
+        } else if (type.isConsumable()) {
+            dura = ranges.duration();
+        }
+        healthOrDmg = ranges.healthOrDamage();
     }
 
     public void setIngredients(IngredientInfo[] ingredients) {
         this.ingredients = ingredients;
     }
 
-    public void setFromTriple(Triple<Constants.RecipeRange, Integer, Integer> data) {
+    public void setFromTriple(Triple<RecipeLoader.RecipeData, Integer, Integer> data) {
         setlMaterialTier(data.getMiddle());
         setsMaterialTier(data.getRight());
         setConstants(data.getLeft());
@@ -111,23 +105,20 @@ public class Recipe {
 
     public void setLevel(Vector2i level) {
         this.level = level;
-        Constants.RecipeRange ranges = Constants.getByLevel(this.level);
+        RecipeLoader.RecipeData ranges = RecipeLoader.getRecipe(type, level);
         if (ranges == null) {
-            System.err.println("cannot set recipe to level " + this.level + " no constant found");
+            System.err.println("cannot set recipe to lvl " + this.level + " no constant found");
             return;
         }
-        this.durability = ranges.durability();
-        this.consuDuration = ranges.consuDuration();
-        this.cookingDuration = ranges.cookingDuration();
-        this.health = ranges.health();
+        this.dura = ranges.durability();
+        this.healthOrDmg = ranges.healthOrDamage();
     }
 
-    public void setConstants(Constants.RecipeRange data) {
-        this.level = data.level();
-        this.durability = data.durability();
-        this.consuDuration = data.consuDuration();
-        this.cookingDuration = data.cookingDuration();
-        this.health = data.health();
+    public void setConstants(RecipeLoader.RecipeData data) {
+        this.level = data.lvl();
+
+        this.dura = data.durability();
+        this.healthOrDmg = data.healthOrDamage();
     }
 
     public IngredientInfo[] getIngredients() {
@@ -139,7 +130,7 @@ public class Recipe {
     }
 
     public CraftableType getType() {
-        return station;
+        return type;
     }
 
     public int getBasePowderSlots() {
@@ -154,28 +145,24 @@ public class Recipe {
     }
 
     public Vector2i getDurability(int durabilityModifier) {
-        if (durability == null || !getType().hasDurability()) return null;
+        if (dura == null || !getType().hasDurability()) return null;
 
-        Vector2d durabilityBase = new Vector2d(this.durability);
+        Vector2d durabilityBase = new Vector2d(this.dura);
         durabilityBase = durabilityBase.mul(getMaterialMultiplier());
         Vector2d finalDura = durabilityBase.add(durabilityModifier, durabilityModifier);
         return new Vector2i((int) finalDura.x, (int) finalDura.y);
     }
 
     public Vector2i getDuration(int modifier) {
-        Vector2d base;
-        if (getType() == CraftableType.FOOD) base = new Vector2d(cookingDuration);
-        else if (getType() == CraftableType.POTION || getType() == CraftableType.SCROLL)
-            base = new Vector2d(consuDuration);
-        else return null;
+        Vector2d base = new Vector2d(this.dura);
+        if (!getType().isConsumable()) return null;
         Vector2d finalDuration = base.add(modifier, modifier);
         return new Vector2i((int) finalDuration.x, (int) finalDuration.y);
     }
 
     public Vector2i getHealth() {
-        if (this.health == null || !getType().isArmour()) return null;
-        // in-game is three quarters of the wiki idk if it was nerfed or what but i dont wanna change every entry in constants
-        Vector2d health = new Vector2d(this.health).mul(3.0 / 4.0);
+        if (this.healthOrDmg == null || !getType().isArmour()) return null;
+        Vector2d health = new Vector2d(this.healthOrDmg);
         Vector2d finalHealth = health.mul(getMaterialMultiplier()).round();
         return new Vector2i((int) finalHealth.x, (int) finalHealth.y);
     }
@@ -183,14 +170,9 @@ public class Recipe {
     public Map<DamageType, Vector4i> getDamage() {
         if (!getType().isWeapon()) return null;
         HashMap<DamageType, Vector4i> result = new HashMap<>();
-        Pair<Vector2i, Vector2i> damage = Constants.getDamage(getType(), level);
-        Vector4i finalDmg = new Vector4i();
-        finalDmg.x = (int) Math.round(damage.getFirst().x * getMaterialMultiplier());
-        finalDmg.y = (int) Math.round(damage.getFirst().y * getMaterialMultiplier());
-        finalDmg.z = (int) Math.round(damage.getSecond().x * getMaterialMultiplier());
-        finalDmg.w = (int) Math.round(damage.getSecond().y * getMaterialMultiplier());
-        result.put(DamageType.NEUTRAL, finalDmg);
         return result;
+
+        // TODO how is dmg calculated
         // TODO apply powders in ing slots
     }
 
@@ -280,7 +262,7 @@ public class Recipe {
             return false;
         }
 
-        if (durability == null && cookingDuration == null && consuDuration == null) {
+        if (dura == null) {
             System.out.println("Invalid dura");
             return false;
         }
@@ -301,9 +283,9 @@ public class Recipe {
 
             int levelReq = ing.level();
             if (levelReq > getLevel().y) {
-                System.out.println("cannot use ingredient " + ing.name() + " for level range "
+                System.out.println("cannot use ingredient " + ing.name() + " for lvl range "
                         + getLevel().x + "-" + getLevel().y
-                        + " requires level " + levelReq);
+                        + " requires lvl " + levelReq);
                 return false;
             }
         }

@@ -14,6 +14,7 @@ import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
+import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.TradeMarketOverlay;
@@ -188,6 +189,7 @@ public class WynnExtras implements ClientModInitializer {
 
 		//WynnExtrasSounds.register();
 		ModSounds.registerSounds();
+        RecipeLoader.loadRecipes();
 	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)

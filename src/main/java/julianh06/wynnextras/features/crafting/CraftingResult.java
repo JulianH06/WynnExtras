@@ -81,7 +81,6 @@ public record CraftingResult(
     public void addReqs(List<Text> tooltip) {
         addBaseFormat(tooltip, "Combat Level Min", new RangedValue(requirements.level() - 2, requirements.level()));
         for (Pair<Skill, Integer> req : requirements.skills()) {
-            if (req.b() <= 0) continue;
             String name = req.a().name().charAt(0) + req.a().name().substring(1).toLowerCase();
             addBaseFormat(tooltip, name + " Min", req.b());
         }
