@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.crafting.data;
 
 
+import com.wynntils.models.character.type.ClassType;
 import com.wynntils.models.gear.type.GearType;
 import com.wynntils.models.profession.type.ProfessionType;
 
@@ -10,11 +11,11 @@ public enum CraftableType {
     LEGGINGS(ProfessionType.TAILORING, "Pants"),
     BOOTS(ProfessionType.TAILORING),
 
-    SPEAR(ProfessionType.WEAPONSMITHING),
-    DAGGER(ProfessionType.WEAPONSMITHING),
-    BOW(ProfessionType.WOODWORKING),
-    WAND(ProfessionType.WOODWORKING),
-    RELIK(ProfessionType.WOODWORKING),
+    SPEAR(ProfessionType.WEAPONSMITHING, ClassType.WARRIOR),
+    DAGGER(ProfessionType.WEAPONSMITHING, ClassType.ASSASSIN),
+    BOW(ProfessionType.WOODWORKING, ClassType.ARCHER),
+    WAND(ProfessionType.WOODWORKING, ClassType.MAGE),
+    RELIK(ProfessionType.WOODWORKING, ClassType.SHAMAN),
 
     RING(ProfessionType.JEWELING),
     BRACELET(ProfessionType.JEWELING),
@@ -25,16 +26,21 @@ public enum CraftableType {
     FOOD(ProfessionType.COOKING);
 
     private final ProfessionType station;
-    private final String craftingName;
+    private String craftingName = this.name();
+    private ClassType classType = ClassType.NONE;
 
     CraftableType(ProfessionType station) {
         this.station = station;
-        this.craftingName = this.name();
     }
 
     CraftableType(ProfessionType station, String craftingName) {
         this.station = station;
         this.craftingName = craftingName;
+    }
+
+    CraftableType(ProfessionType station, ClassType classType) {
+        this.station = station;
+        this.classType = classType;
     }
 
     public static CraftableType fromGearType(GearType type) {
@@ -80,6 +86,10 @@ public enum CraftableType {
 
     public boolean canHaveHealth() {
         return isArmour() || isConsumable();
+    }
+
+    public ClassType getClassType() {
+        return classType;
     }
 
     public String getDisplayName() {

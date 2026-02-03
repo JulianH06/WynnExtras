@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.crafting;
 
+import com.wynntils.models.character.type.ClassType;
 import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.gear.type.GearAttackSpeed;
 import com.wynntils.models.gear.type.GearRequirements;
@@ -59,6 +60,7 @@ public class Recipe {
         this.multipliers = other.multipliers != null ? Arrays.copyOf(other.multipliers, other.multipliers.length) : null;
         this.dura = other.dura != null ? new Vector2i(other.dura) : null;
         this.healthOrDmg = other.healthOrDmg != null ? new Vector2i(other.healthOrDmg) : null;
+        this.attackSpeed = other.attackSpeed;
     }
 
     public Recipe(CraftableType type) {
@@ -281,7 +283,7 @@ public class Recipe {
                         new Recipe(this),
                         this.getType(),
                         new ArrayList<>(),
-                        new GearRequirements(this.level.y, Optional.empty(), new ArrayList<>(), Optional.empty()),
+                        new GearRequirements(this.level.y, Optional.of(ClassType.NONE), new ArrayList<>(), Optional.empty()),
                         health == null ? null : RangedValue.of(health.x, health.y),
                         null,
                         null,
@@ -332,9 +334,9 @@ public class Recipe {
             List<Pair<Skill, Integer>> skillReqs = requirements.stream()
                     .map(pair -> new Pair<>(pair.a(), (int) Math.copySign(Math.round(Math.abs(pair.b())), pair.b())))
                     .toList();
-            gearReqs = new GearRequirements(this.getLevel().y, Optional.empty(), skillReqs, Optional.empty()); // TODO class type
+            gearReqs = new GearRequirements(this.getLevel().y, Optional.of(getType().getClassType()), skillReqs, Optional.empty());
         } else
-            gearReqs = new GearRequirements(this.getLevel().y, Optional.empty(), new ArrayList<>(), Optional.empty());
+            gearReqs = new GearRequirements(this.getLevel().y, Optional.of(getType().getClassType()), new ArrayList<>(), Optional.empty());
 
         Vector2i durability = this.getDurability(durabilityModifier);
         Vector2i duration = getDuration(durationModifier);

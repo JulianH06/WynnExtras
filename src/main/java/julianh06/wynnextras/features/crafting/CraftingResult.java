@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.crafting;
 
+import com.wynntils.models.character.type.ClassType;
 import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.gear.type.GearRequirements;
 import com.wynntils.models.items.items.game.CraftedGearItem;
@@ -36,7 +37,7 @@ public record CraftingResult(
         addBlank(tooltip);
 
         if (health != null && type.canHaveHealth()) {
-            addBaseFormat(tooltip, "Health", health);
+            tooltip.add(Text.literal("Health: " + health.low() + "-" + health.high()).formatted(Formatting.RED));
             addBlank(tooltip);
         }
 
@@ -79,6 +80,13 @@ public record CraftingResult(
     }
 
     public void addReqs(List<Text> tooltip) {
+        if (requirements.classType().isPresent() && requirements.classType().get() != ClassType.NONE) {
+            MutableText suffix = Text.literal(
+                    requirements.classType().get().getActualName(false) + "/" +
+                            requirements.classType().get().getActualName(true)
+            );
+            tooltip.add(Text.literal("Class Req: ").append(suffix));
+        }
         addBaseFormat(tooltip, "Combat Level Min", new RangedValue(requirements.level() - 2, requirements.level()));
         for (Pair<Skill, Integer> req : requirements.skills()) {
             String name = req.a().name().charAt(0) + req.a().name().substring(1).toLowerCase();
