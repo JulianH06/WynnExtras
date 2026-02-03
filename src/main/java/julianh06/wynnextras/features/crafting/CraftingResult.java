@@ -36,7 +36,7 @@ public record CraftingResult(
         tooltip.add(Text.literal("Crafting " + type.getDisplayName()).formatted(Formatting.DARK_AQUA));
         addBlank(tooltip);
 
-        if (type.isArmour()) {
+        if (health != null && !type.isWeapon()) {
             addBaseFormat(tooltip, "Health", health);
             addBlank(tooltip);
         }

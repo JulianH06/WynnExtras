@@ -79,12 +79,7 @@ public class CraftingResultPreviewer {
             int mat2Tier = parseMaterialTier(mat2);
             int mat2Count = stacks.get(9).getCount();
 
-            int sMatTier = mat1Tier;
-            int lMatTier = mat2Tier;
-            if (mat1Count > mat2Count) {
-                sMatTier = mat2Tier;
-                lMatTier = mat1Tier;
-            }
+            Recipe.Materials mats = new Recipe.Materials(mat1Tier, mat1Count, mat2Tier, mat2Count);
 
             String ing1 = getIngName(stacks, 2);
             String ing2 = getIngName(stacks, 3);
@@ -97,8 +92,7 @@ public class CraftingResultPreviewer {
 
             Recipe recipe = new Recipe(
                     ingredients,
-                    sMatTier,
-                    lMatTier,
+                    mats,
                     lvl,
                     type
             );

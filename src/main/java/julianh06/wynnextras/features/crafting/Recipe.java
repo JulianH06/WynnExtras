@@ -1,17 +1,17 @@
 package julianh06.wynnextras.features.crafting;
 
+import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.gear.type.GearRequirements;
 import com.wynntils.models.ingredients.type.IngredientInfo;
 import com.wynntils.models.ingredients.type.IngredientPosition;
 import com.wynntils.models.stats.type.DamageType;
 import com.wynntils.models.stats.type.StatPossibleValues;
 import com.wynntils.models.stats.type.StatType;
+import com.wynntils.utils.type.Pair;
 import com.wynntils.utils.type.RangedValue;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
 import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
 import julianh06.wynnextras.utils.CraftingUtils;
-import julianh06.wynnextras.utils.Pair;
-import org.apache.commons.lang3.tuple.Triple;
 import org.joml.Vector2d;
 import org.joml.Vector2i;
 import org.joml.Vector4i;
@@ -22,18 +22,36 @@ import static julianh06.wynnextras.utils.CraftingUtils.*;
 
 public class Recipe {
     private IngredientInfo[] ingredients;
-    private int sMaterialTier;
-    private int lMaterialTier;
+    private Materials materials;
     private Vector2i level;
     private final CraftableType type;
     private Double[] multipliers;
     private Vector2i dura;
     private Vector2i healthOrDmg;
 
+    private static final Double[] tierToMult = {0.0, 1.0, 1.25, 1.4};
+
+    public static class Materials {
+        int mat1Tier;
+        int mat1Count;
+        int mat2Tier;
+        int mat2Count;
+
+        public Materials(int mat1Tier, int mat1Count, int mat2Tier, int mat2Count) {
+            this.mat1Tier = mat1Tier;
+            this.mat1Count = mat1Count;
+            this.mat2Tier = mat2Tier;
+            this.mat2Count = mat2Count;
+        }
+
+        public double getMultiplier() {
+            return (tierToMult[mat1Tier] * mat1Count + tierToMult[mat2Tier] * mat2Count) / (mat1Count + mat2Count);
+        }
+    }
+
     public Recipe(Recipe other) {
         this.ingredients = other.ingredients != null ? Arrays.copyOf(other.ingredients, other.ingredients.length) : null;
-        this.sMaterialTier = other.sMaterialTier;
-        this.lMaterialTier = other.lMaterialTier;
+        this.materials = other.materials;
         this.level = other.level != null ? new Vector2i(other.level) : null;
         this.type = other.type;
         this.multipliers = other.multipliers != null ? Arrays.copyOf(other.multipliers, other.multipliers.length) : null;
@@ -44,8 +62,6 @@ public class Recipe {
     public Recipe(CraftableType type) {
         this.type = type;
         this.ingredients = new IngredientInfo[0];
-        this.sMaterialTier = 1;
-        this.lMaterialTier = 1;
 
         multipliers = new Double[]{1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
 
@@ -54,21 +70,19 @@ public class Recipe {
         this.healthOrDmg = null;
     }
 
-    public Recipe(String[] ingredients, int sMaterialTier, int lMaterialTier, Vector2i level, CraftableType type) {
+    public Recipe(String[] ingredients, Materials materials, Vector2i level, CraftableType type) {
         this(
                 Arrays.stream(ingredients).map(CraftingUtils::getIng).toArray(IngredientInfo[]::new),
-                sMaterialTier,
-                lMaterialTier,
+                materials,
                 level,
                 type
         );
     }
 
-    public Recipe(IngredientInfo[] ingredients, int sMaterialTier, int lMaterialTier, Vector2i level, CraftableType type) {
+    public Recipe(IngredientInfo[] ingredients, Materials materials, Vector2i level, CraftableType type) {
         this.type = type;
         this.ingredients = ingredients;
-        this.sMaterialTier = sMaterialTier;
-        this.lMaterialTier = lMaterialTier;
+        this.materials = materials;
         this.level = level;
         updateMultipliers();
         RecipeLoader.RecipeData ranges = RecipeLoader.getRecipe(type, level);
@@ -87,20 +101,6 @@ public class Recipe {
 
     public void setIngredients(IngredientInfo[] ingredients) {
         this.ingredients = ingredients;
-    }
-
-    public void setFromTriple(Triple<RecipeLoader.RecipeData, Integer, Integer> data) {
-        setlMaterialTier(data.getMiddle());
-        setsMaterialTier(data.getRight());
-        setConstants(data.getLeft());
-    }
-
-    public void setsMaterialTier(int sMaterialTier) {
-        this.sMaterialTier = sMaterialTier;
-    }
-
-    public void setlMaterialTier(int lMaterialTier) {
-        this.lMaterialTier = lMaterialTier;
     }
 
     public void setLevel(Vector2i level) {
@@ -148,9 +148,9 @@ public class Recipe {
         if (dura == null || !getType().hasDurability()) return null;
 
         Vector2d durabilityBase = new Vector2d(this.dura);
-        durabilityBase = durabilityBase.mul(getMaterialMultiplier());
+        durabilityBase = durabilityBase.mul(materials.getMultiplier());
         Vector2d finalDura = durabilityBase.add(durabilityModifier, durabilityModifier);
-        return new Vector2i((int) finalDura.x, (int) finalDura.y);
+        return new Vector2i((int) Math.round(finalDura.x), (int) Math.round(finalDura.y));
     }
 
     public Vector2i getDuration(int modifier) {
@@ -161,75 +161,24 @@ public class Recipe {
     }
 
     public Vector2i getHealth() {
-        if (this.healthOrDmg == null || !getType().isArmour()) return null;
+        if (this.healthOrDmg == null) return null;
         Vector2d health = new Vector2d(this.healthOrDmg);
-        Vector2d finalHealth = health.mul(getMaterialMultiplier()).round();
-        return new Vector2i((int) finalHealth.x, (int) finalHealth.y);
+        Vector2d finalHealth = health.mul(materials.getMultiplier());
+        return new Vector2i((int) Math.floor(finalHealth.x), (int) Math.floor(finalHealth.y));
     }
 
     public Map<DamageType, Vector4i> getDamage() {
         if (!getType().isWeapon()) return null;
         HashMap<DamageType, Vector4i> result = new HashMap<>();
+
+        double multiplier = materials.getMultiplier();
+        int nDamBaseLow = (int) Math.floor(healthOrDmg.x * multiplier);
+        int nDamBaseHigh = (int) Math.floor(healthOrDmg.x * multiplier);
+
         return result;
 
         // TODO how is dmg calculated
         // TODO apply powders in ing slots
-    }
-
-    private static final Map<Pair<Integer, CraftableType>, Double> allMaterialMultipliers = new HashMap<>();
-
-    static {
-        allMaterialMultipliers.put(new Pair<>(11, CraftableType.NECKLACE), 1.0);
-        allMaterialMultipliers.put(new Pair<>(11, CraftableType.SCROLL), 1.0);
-        allMaterialMultipliers.put(new Pair<>(11, CraftableType.RING), 1.0);
-        allMaterialMultipliers.put(new Pair<>(11, null), 1.0);
-
-        allMaterialMultipliers.put(new Pair<>(12, CraftableType.NECKLACE), 1.0625);
-        allMaterialMultipliers.put(new Pair<>(12, CraftableType.SCROLL), 1.125);
-        allMaterialMultipliers.put(new Pair<>(12, CraftableType.RING), 1.125);
-        allMaterialMultipliers.put(new Pair<>(12, null), 13.0 / 12.0);
-
-        allMaterialMultipliers.put(new Pair<>(13, CraftableType.NECKLACE), 1.1);
-        allMaterialMultipliers.put(new Pair<>(13, CraftableType.SCROLL), 1.2);
-        allMaterialMultipliers.put(new Pair<>(13, CraftableType.RING), 1.2);
-        allMaterialMultipliers.put(new Pair<>(13, null), 17.0 / 15.0);
-
-        allMaterialMultipliers.put(new Pair<>(21, CraftableType.NECKLACE), 1.1875);
-        allMaterialMultipliers.put(new Pair<>(21, CraftableType.SCROLL), 1.125);
-        allMaterialMultipliers.put(new Pair<>(21, CraftableType.RING), 1.125);
-        allMaterialMultipliers.put(new Pair<>(21, null), 5.0 / 3.0);
-
-        allMaterialMultipliers.put(new Pair<>(22, CraftableType.NECKLACE), 1.25);
-        allMaterialMultipliers.put(new Pair<>(22, CraftableType.SCROLL), 1.25);
-        allMaterialMultipliers.put(new Pair<>(22, CraftableType.RING), 1.25);
-        allMaterialMultipliers.put(new Pair<>(22, null), 1.25);
-
-        allMaterialMultipliers.put(new Pair<>(23, CraftableType.NECKLACE), 1.2875);
-        allMaterialMultipliers.put(new Pair<>(23, CraftableType.SCROLL), 1.325);
-        allMaterialMultipliers.put(new Pair<>(23, CraftableType.RING), 1.325);
-        allMaterialMultipliers.put(new Pair<>(23, null), 1.3);
-
-        allMaterialMultipliers.put(new Pair<>(31, CraftableType.NECKLACE), 1.3);
-        allMaterialMultipliers.put(new Pair<>(31, CraftableType.SCROLL), 1.2);
-        allMaterialMultipliers.put(new Pair<>(31, CraftableType.RING), 1.2);
-        allMaterialMultipliers.put(new Pair<>(31, null), 19.0 / 15.0);
-
-        allMaterialMultipliers.put(new Pair<>(32, CraftableType.NECKLACE), 1.3625);
-        allMaterialMultipliers.put(new Pair<>(32, CraftableType.SCROLL), 1.325);
-        allMaterialMultipliers.put(new Pair<>(32, CraftableType.RING), 1.325);
-        allMaterialMultipliers.put(new Pair<>(32, null), 1.35);
-
-        allMaterialMultipliers.put(new Pair<>(33, CraftableType.NECKLACE), 1.4);
-        allMaterialMultipliers.put(new Pair<>(33, CraftableType.SCROLL), 1.4);
-        allMaterialMultipliers.put(new Pair<>(33, CraftableType.RING), 1.4);
-        allMaterialMultipliers.put(new Pair<>(33, null), 1.4);
-    }
-
-    public double getMaterialMultiplier() {
-        Set<CraftableType> specialTypes = Set.of(CraftableType.NECKLACE, CraftableType.SCROLL, CraftableType.RING);
-        CraftableType localType = specialTypes.contains(getType()) ? getType() : null;
-        int value = lMaterialTier * 10 + sMaterialTier;
-        return allMaterialMultipliers.get(new Pair<>(value, localType));
     }
 
     public Double[] getMultipliers() {
@@ -257,7 +206,7 @@ public class Recipe {
     }
 
     private boolean checkValidity() {
-        if (sMaterialTier < 1 || sMaterialTier > 3 || lMaterialTier < 1 || lMaterialTier > 3) {
+        if (this.materials == null) {
             System.out.println("Invalid material tier");
             return false;
         }
@@ -295,7 +244,35 @@ public class Recipe {
     public CraftingResult craft() {
         if (!checkValidity()) return null;
 
+        Vector2i health = this.getHealth();
+
         // consumables have low duration and heal you when crafted with no ings i dont have the heal numbers
+        if (getType().isConsumable()) {
+            boolean basic = true;
+            for (IngredientInfo ing : ingredients) {
+                if (ing != null && ing.variableStats() != null && !ing.variableStats().isEmpty()) {
+                    basic = false;
+                    break;
+                }
+            }
+            if (basic) {
+                RecipeLoader.RecipeData data = RecipeLoader.getRecipe(getType(), getLevel());
+                if (data == null) return null;
+                return new CraftingResult(
+                        new Recipe(this),
+                        this.getType(),
+                        new ArrayList<>(),
+                        new GearRequirements(this.level.y, Optional.empty(), new ArrayList<>(), Optional.empty()),
+                        health == null ? null : RangedValue.of(health.x, health.y),
+                        null,
+                        null,
+                        getBaseCharges(),
+                        RangedValue.of(data.basicDuration().x, data.basicDuration().y),
+                        getDamage()
+                );
+            }
+        }
+        if (getType().isConsumable()) health = null;
         if (Arrays.stream(ingredients).allMatch(Objects::isNull) && getType().isConsumable()) return null;
 
         int powderSlots = getBasePowderSlots();
@@ -304,7 +281,7 @@ public class Recipe {
         int durationModifier = 0;
         int durabilityModifier = 0;
 
-        GearRequirements requirements = null;
+        List<Pair<Skill, Double>> requirements = null;
         List<StatPossibleValues> possibleValues = new ArrayList<>();
 
         Double[] metaMultipliers = this.getMultipliers();
@@ -330,20 +307,24 @@ public class Recipe {
             durationModifier += ing.duration();
 
         }
+        GearRequirements gearReqs;
 
         if (requirements != null) {
-            requirements = new GearRequirements(this.getLevel().y, requirements.classType(), requirements.skills(), requirements.quest());
-        } else requirements = new GearRequirements(this.getLevel().y, Optional.empty(), new ArrayList<>(), Optional.empty());
+            List<Pair<Skill, Integer>> skillReqs = requirements.stream()
+                    .map(pair -> new Pair<>(pair.a(), (int) Math.copySign(Math.round(Math.abs(pair.b())), pair.b())))
+                    .toList();
+            gearReqs = new GearRequirements(this.getLevel().y, Optional.empty(), skillReqs, Optional.empty()); // TODO class type
+        } else
+            gearReqs = new GearRequirements(this.getLevel().y, Optional.empty(), new ArrayList<>(), Optional.empty());
 
         Vector2i durability = this.getDurability(durabilityModifier);
-        Vector2i health = this.getHealth();
         Vector2i duration = getDuration(durationModifier);
 
         return new CraftingResult(
                 new Recipe(this),
                 this.getType(),
                 possibleValues.stream().filter(value -> value.range().low() != 0 || value.range().high() != 0).toList(),
-                requirements,
+                gearReqs,
                 health == null ? null : RangedValue.of(health.x, health.y),
                 durability == null ? null : RangedValue.of(durability.x, durability.y),
                 powderSlots,
