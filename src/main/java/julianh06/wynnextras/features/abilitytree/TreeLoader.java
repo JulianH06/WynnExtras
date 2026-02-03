@@ -349,21 +349,9 @@ public class TreeLoader {
 
 
             if (failCycles.get() >= MAX_FAIL_CYCLES) {
-                String failedAbility = "unknown";
-                if (abilitiesToClick2 != null && !abilitiesToClick2.isEmpty()) {
-                    AbilityMapData.Node failedNode = abilitiesToClick2.getFirst();
-                    if (failedNode != null) {
-                        AbilityTreeData.Ability failedAbilityData = getAbilityFromNode(failedNode, classTree);
-                        if (failedAbilityData != null) {
-                            failedAbility = extractAbilityNameFromHtml(failedAbilityData.name);
-                            if (failedAbility == null) failedAbility = failedAbilityData.name;
-                        }
-                    }
-                }
-                System.err.println("[TreeLoader] Tree loading failed after " + MAX_FAIL_CYCLES + " cycles. Last attempted ability: " + failedAbility);
                 resetAll();
                 if(McUtils.mc().currentScreen != null) McUtils.mc().currentScreen.close();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Tree loading failed! Couldn't unlock: " + failedAbility + ". Check if prerequisites are met.")));
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Something went wrong! Try again")));
                 abilitiesToClick2 = null;
                 abilityClickTicks[0] = 0;
                 failCycles.set(0);
@@ -413,25 +401,10 @@ public class TreeLoader {
             }
 
             AbilityMapData.Node abilityNode = abilitiesToClick2.getFirst();
-            if (abilityNode == null) {
-                System.err.println("[TreeLoader] Skipping null ability node");
-                abilitiesToClick2.removeFirst();
-                return;
-            }
             AbilityTreeData.Ability abilityFromNode = getAbilityFromNode(abilityNode, classTree);
-            if (abilityFromNode == null) {
-                System.err.println("[TreeLoader] Could not find ability for node, skipping");
-                abilitiesToClick2.removeFirst();
-                failCycles.incrementAndGet();
-                return;
-            }
+            if (abilityFromNode == null) return; //{ abilitiesToClick2.removeFirst(); return; }
             String abilityName = extractAbilityNameFromHtml(abilityFromNode.name);
-            if (abilityName == null) {
-                System.err.println("[TreeLoader] Could not extract ability name from: " + abilityFromNode.name);
-                abilitiesToClick2.removeFirst();
-                failCycles.incrementAndGet();
-                return;
-            }
+            if (abilityName == null) return; //{ abilitiesToClick2.removeFirst(); return; }
 
             int pageOffset = abilityNode.meta.page - currentPage[0];
             if (pageOffset != 0 && !pendingPageSwitch.get()) {
@@ -537,23 +510,9 @@ public class TreeLoader {
 
 
     public static AbilityMapData.Node getNodeFromAbility(AbilityTreeData.Ability ability, AbilityMapData treeData) {
-        if(ability == null) {
-            System.err.println("[TreeLoader] getNodeFromAbility: ability is null");
-            return null;
-        }
-        if(treeData == null || treeData.pages == null) {
-            System.err.println("[TreeLoader] getNodeFromAbility: treeData or treeData.pages is null");
-            return null;
-        }
         int page = ability.page;
-        List<AbilityMapData.Node> pageNodes = treeData.pages.get(page);
-        if(pageNodes == null) {
-            System.err.println("[TreeLoader] getNodeFromAbility: No nodes found for page " + page);
-            return null;
-        }
 
-        for(AbilityMapData.Node node : pageNodes) {
-            if(node == null || node.coordinates == null || ability.coordinates == null) continue;
+        for(AbilityMapData.Node node : treeData.pages.get(page)) {
             if(ability.coordinates.x != node.coordinates.x) {
                 continue;
             }
@@ -563,31 +522,14 @@ public class TreeLoader {
             return node;
         }
 
-        System.err.println("[TreeLoader] getNodeFromAbility: No node found for ability '" + ability.name + "' at coordinates (" + ability.coordinates.x + ", " + ability.coordinates.y + ")");
         return null;
     }
 
 
     public static AbilityTreeData.Ability getAbilityFromNode(AbilityMapData.Node node, AbilityTreeData treeData) {
-        if(treeData == null) {
-            System.err.println("[TreeLoader] getAbilityFromNode: treeData is null");
-            return null;
-        }
-        if(node == null || node.meta == null) {
-            System.err.println("[TreeLoader] getAbilityFromNode: node or node.meta is null");
-            return null;
-        }
-        if(treeData.pages == null) {
-            System.err.println("[TreeLoader] getAbilityFromNode: treeData.pages is null");
-            return null;
-        }
+        if(treeData == null) return null;
         Map<String, AbilityTreeData.Ability> page = treeData.pages.get(node.meta.page);
-        if(page == null) {
-            System.err.println("[TreeLoader] getAbilityFromNode: No page found for page number " + node.meta.page);
-            return null;
-        }
         for(AbilityTreeData.Ability ability : page.values()) {
-            if(ability == null || ability.coordinates == null || node.coordinates == null) continue;
             if(ability.coordinates.x != node.coordinates.x) {
                 continue;
             }
@@ -597,7 +539,6 @@ public class TreeLoader {
             return ability;
         }
 
-        System.err.println("[TreeLoader] getAbilityFromNode: No ability found at coordinates (" + node.coordinates.x + ", " + node.coordinates.y + ") on page " + node.meta.page);
         return null;
     }
 

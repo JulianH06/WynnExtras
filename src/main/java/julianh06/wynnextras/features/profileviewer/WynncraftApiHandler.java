@@ -1,6 +1,5 @@
 package julianh06.wynnextras.features.profileviewer;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -9,12 +8,10 @@ import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
-import julianh06.wynnextras.features.achievements.AchievementManager;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -218,7 +215,7 @@ public class WynncraftApiHandler {
                                 synchronized (aspectList) {
                                     for (ApiAspect aspect : result) {
                                         boolean alreadyExists = aspectList.stream()
-                                            .anyMatch(existing -> existing.getName().equals(aspect.getName()));
+                                                .anyMatch(existing -> existing.getName().equals(aspect.getName()));
                                         if (!alreadyExists) {
                                             aspectList.add(aspect);
                                         }
@@ -328,7 +325,6 @@ public class WynncraftApiHandler {
                         User user = parsePlayerAspectData(response.body());
                         return new FetchResult(FetchStatus.OK, user);
                     });
-
         } catch (Exception e) {
             e.printStackTrace();
             return CompletableFuture.completedFuture(new FetchResult(FetchStatus.UNKNOWN_ERROR, null));
@@ -360,12 +356,6 @@ public class WynncraftApiHandler {
                 JsonArray aspectsArray = new JsonArray();
                 int processedCount = 0;
                 int skippedCount = 0;
-
-                // Count maxed aspects by rarity for achievements
-                int maxedLegendary = 0;
-                int maxedFabled = 0;
-                int maxedMythic = 0;
-
                 for (String entry : map.keySet()) {
                     try {
                         Pair<String, String> aspectData = map.get(entry);
@@ -382,20 +372,6 @@ public class WynncraftApiHandler {
                         aspectJson.addProperty("amount", amount);
                         aspectsArray.add(aspectJson);
                         processedCount++;
-
-                        // Count maxed aspects by rarity
-                        String tierText = aspectData.getLeft();
-                        if (tierText != null && tierText.contains("[MAX]")) {
-                            String rarity = aspectData.getRight();
-                            if (rarity != null && !rarity.isEmpty()) {
-                                System.out.println("[WynnExtras] Maxed aspect detected: " + entry + " (" + rarity + ")");
-                                switch (rarity.toLowerCase()) {
-                                    case "legendary" -> maxedLegendary++;
-                                    case "fabled" -> maxedFabled++;
-                                    case "mythic" -> maxedMythic++;
-                                }
-                            }
-                        }
                     } catch (Exception e) {
                         System.err.println("DEBUG: Error processing aspect " + entry + ": " + e.getMessage());
                         e.printStackTrace();
@@ -403,10 +379,6 @@ public class WynncraftApiHandler {
                     }
                 }
                 payload.add("aspects", aspectsArray);
-
-                // Update achievement counts with totals
-                System.out.println("[WynnExtras] Total maxed aspects - Legendary: " + maxedLegendary + ", Fabled: " + maxedFabled + ", Mythic: " + maxedMythic);
-                AchievementManager.INSTANCE.setMaxedAspectCounts(maxedLegendary, maxedFabled, maxedMythic);
 
                 System.out.println("DEBUG: Loop stats - Processed: " + processedCount + ", Skipped: " + skippedCount + ", Total map size: " + map.size());
 
@@ -692,9 +664,6 @@ public class WynncraftApiHandler {
                     JsonObject aspectJson = new JsonObject();
                     aspectJson.addProperty("name", aspect.name);
                     aspectJson.addProperty("rarity", aspect.rarity);
-                    if (aspect.requiredClass != null) {
-                        aspectJson.addProperty("requiredClass", aspect.requiredClass);
-                    }
                     aspectsArray.add(aspectJson);
                 }
 

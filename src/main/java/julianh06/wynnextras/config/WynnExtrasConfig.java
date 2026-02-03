@@ -114,10 +114,6 @@ public class WynnExtrasConfig {
     // ==================== CHAT CLICK ====================
     public boolean chatClickOpensPV = true;
 
-    // ==================== ACHIEVEMENTS ====================
-    public boolean achievementsEnabled = true;
-    public boolean achievementToastsEnabled = true;
-
     // ==================== LOOTRUNS ====================
     public boolean lootrunHudEnabled = true;
     public int lootrunHudX = 5;

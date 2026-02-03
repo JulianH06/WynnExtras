@@ -8,7 +8,6 @@ import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.event.TickEvent;
-import julianh06.wynnextras.features.achievements.AchievementManager;
 import julianh06.wynnextras.features.aspects.LootrunLootPoolData;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.ItemStack;
@@ -70,9 +69,6 @@ public class LootrunTracker {
         // Record pull
         LootrunStatistics.INSTANCE.recordPull();
 
-        // Achievement integration
-        AchievementManager.INSTANCE.onLootrunChestOpened();
-
         // Play sound if enabled
         if (WynnExtrasConfig.INSTANCE.lootrunSoundAlerts) {
             // Sound will be played when finding mythics
@@ -113,7 +109,6 @@ public class LootrunTracker {
             switch (tier) {
                 case MYTHIC:
                     LootrunStatistics.INSTANCE.recordMythic();
-                    AchievementManager.INSTANCE.onLootrunMythicFound();
                     playMythicSound();
                     break;
                 case FABLED:

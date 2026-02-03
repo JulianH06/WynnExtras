@@ -536,45 +536,16 @@ public class TreeScreen extends WEScreen {
                         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("This tree doesn't exist.")));
                         return;
                     }
-                    if (tree.playerMap == null || tree.playerTree == null) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("This tree has corrupted data. Try saving it again.")));
-                        return;
-                    }
                     McUtils.mc().setScreen(null);
                     TreeLoader.resetAll();
                     TreeLoader.wasStarted = true;
                     TreeLoader.resetTree = true;
                     List<AbilityTreeData.Ability> abilities = TreeLoader.calculateNodeOrder(tree.playerTree.archetypes, TreeLoader.convertNodeMapToList(tree.playerMap), new ArrayList<>(), tree.playerTree);
 
-                    if (abilities == null || abilities.isEmpty()) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Failed to calculate ability order. The tree may be corrupted.")));
-                        TreeLoader.resetAll();
-                        return;
-                    }
-
                     List<AbilityMapData.Node> nodes = new ArrayList<>();
-                    int skippedNodes = 0;
                     for(AbilityTreeData.Ability ability : abilities) {
-                        AbilityMapData.Node node = TreeLoader.getNodeFromAbility(ability, tree.playerMap);
-                        if (node != null) {
-                            nodes.add(node);
-                        } else {
-                            skippedNodes++;
-                            System.err.println("[TreeLoader] Skipped null node for ability: " + (ability != null ? ability.name : "null"));
-                        }
+                        nodes.add(TreeLoader.getNodeFromAbility(ability, tree.playerMap));
                     }
-
-                    if (nodes.isEmpty()) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Failed to load tree: no valid abilities found.")));
-                        TreeLoader.resetAll();
-                        return;
-                    }
-
-                    if (skippedNodes > 0) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Warning: " + skippedNodes + " abilities couldn't be mapped. Tree may be incomplete.")));
-                    }
-
-                    System.out.println("[TreeLoader] Starting tree load with " + nodes.size() + " abilities");
                     TreeLoader.abilitiesToClick2 = nodes;
                     TreeLoader.loadSkillpoints = withSkillpoints;
                     int[] points = new int[5];

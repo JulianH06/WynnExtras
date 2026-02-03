@@ -36,62 +36,62 @@ public class RaidChatNotifier {
     public static long disableChiropUntil = 0;
 
     private static final List<RaidMessageDetector> detectors = Arrays.asList(
-        new SlimeGatheringDetector(),
-        new BindingSealDetector(),
-        new LightGatheringDetector(),
-        new WatchPhaseDetector(),
-        new ShadowlingDetector(),
+            new SlimeGatheringDetector(),
+            new BindingSealDetector(),
+            new LightGatheringDetector(),
+            new WatchPhaseDetector(),
+            new ShadowlingDetector(),
 
-        new SingleOccurrenceDetector(
-            "is preparing to descend! [1/2]",
-            "§bDescend 1/2 §c",
-                "descend1"
-        ),
-        new SingleOccurrenceDetector(
-            "is preparing to descend! [2/2]",
-            "§bDescend 2/2 §c",
-                "descend2"
-        ),
-        new SingleOccurrenceDetector(
-            "Upper Level must kill the Slime Chomper",
-            "§bSlime Chomper Spawned §c",
-                "slimemini"
-        ),
-        new SingleOccurrenceDetector(
-            "players on the Upper Level must kill the Carnivorous",
-            "§bCarnivore spawned §c",
-                "carnimini"
-        ),
-        new SingleOccurrenceDetector(
-            "players on the Upper Level must kill the Invasive",
-            "§bTarantula spawned §c",
-                "taramini"
-        ),
-        new SingleOccurrenceDetector(
-            "players on the Upper Level must kill the Unfurling",
-            "§bHorsefly spawned §c",
-                "horseflymini"
-        ),
-        new SingleOccurrenceDetector(
-            "The Void Holes have begun to destabi",
-            "§b[4/5] Void Matters §c",
-                "voidgathered"
-        ),
+            new SingleOccurrenceDetector(
+                    "is preparing to descend! [1/2]",
+                    "§bDescend 1/2 §c",
+                    "descend1"
+            ),
+            new SingleOccurrenceDetector(
+                    "is preparing to descend! [2/2]",
+                    "§bDescend 2/2 §c",
+                    "descend2"
+            ),
+            new SingleOccurrenceDetector(
+                    "Upper Level must kill the Slime Chomper",
+                    "§bSlime Chomper Spawned §c",
+                    "slimemini"
+            ),
+            new SingleOccurrenceDetector(
+                    "players on the Upper Level must kill the Carnivorous",
+                    "§bCarnivore spawned §c",
+                    "carnimini"
+            ),
+            new SingleOccurrenceDetector(
+                    "players on the Upper Level must kill the Invasive",
+                    "§bTarantula spawned §c",
+                    "taramini"
+            ),
+            new SingleOccurrenceDetector(
+                    "players on the Upper Level must kill the Unfurling",
+                    "§bHorsefly spawned §c",
+                    "horseflymini"
+            ),
+            new SingleOccurrenceDetector(
+                    "The Void Holes have begun to destabi",
+                    "§b[4/5] Void Matters §c",
+                    "voidgathered"
+            ),
 //        new SingleOccurrenceDetector(
 //                "All the Void Rifts have been destroyed! A path",
 //                "§bBerry Room Done §c",
 //                "berryroom"
 //        ),
-        new SingleOccurrenceDetector(
-                "A Void Pedestal has been activated! [1/2]",
-                "§bVoid Pedestal Activated [1/2] §c",
-                "voidpedestal1"
-        ),
-        new SingleOccurrenceDetector(
-                "A Void Pedestal has been activated! [2/2]",
-                "§bVoid Pedestal Activated [2/2] §c",
-                "voidpedestal2"
-        ),
+            new SingleOccurrenceDetector(
+                    "A Void Pedestal has been activated! [1/2]",
+                    "§bVoid Pedestal Activated [1/2] §c",
+                    "voidpedestal1"
+            ),
+            new SingleOccurrenceDetector(
+                    "A Void Pedestal has been activated! [2/2]",
+                    "§bVoid Pedestal Activated [2/2] §c",
+                    "voidpedestal2"
+            ),
 //        new SingleOccurrenceDetector(
 //                "You have unblocked the voidhole out!",
 //                "§bVoid Room done §c",
@@ -102,92 +102,92 @@ public class RaidChatNotifier {
 //                "§bVoidgather Room done §c",
 //                "voidgatherroompb"
 //        ),
-        new SingleOccurrenceDetector(
-                "The lower door has been unlocked",
-                "§bLower door unlocked §c",
-                "lowerdoorunlock"
-        ),
-        new SingleOccurrenceDetector(
-                "The Upper door has been unlocked",
-                "§bUpper door unlocked §c",
-                "upperdoorunlock"
-        ),
-        new SingleOccurrenceDetector(
-                "has picked up the Wings!",
-                "§bWings picked up §c",
-                "wings"
-        ),
+            new SingleOccurrenceDetector(
+                    "The lower door has been unlocked",
+                    "§bLower door unlocked §c",
+                    "lowerdoorunlock"
+            ),
+            new SingleOccurrenceDetector(
+                    "The Upper door has been unlocked",
+                    "§bUpper door unlocked §c",
+                    "upperdoorunlock"
+            ),
+            new SingleOccurrenceDetector(
+                    "has picked up the Wings!",
+                    "§bWings picked up §c",
+                    "wings"
+            ),
 
-        new MultiOccurrenceDetector(
-            "A new platform has appeared on the Lower Area!",
-            "§bLower Mini spawned §c",
-                "lowermini"
-        ),
-        new MultiOccurrenceDetector(
-                "A Bulb Keeper has spawned!",
-                "§bBulb Keeper spawned §c",
-                "bulbspawned"
-        ),
-        new MultiOccurrenceDetector(
-                "A Red Bulb has been captured!",
-                "§bBulb captured §c",
-                "bulbcaptured"
-        ),
-        new MultiOccurrenceDetector(
-                "[+1 Void Matter]",
-                "§b[+1 Void Matter] §c",
-                "voidmattergathered"
-        ),
-        new MultiOccurrenceDetector(
-            "3/3 Clouds Purified",
-            "§bPurified 3/3 clouds §c",
-                "clouds"
-        ),
-        new MultiOccurrenceDetector(
-            "The Team has reached the Checkpoint!",
-            "§bReached Checkpoint §c",
-                "mazecheckpoint"
-        ),
-        new MultiOccurrenceDetector(
-            "100% Rock Destroyed",
-            "§bRock destroyed §c",
-                "rockdestroyed"
-        ),
-        new MultiOccurrenceDetector(
-            "[+1 Slimey Goo]",
-            "§fGot 1 Slimey Goo §c",
-                "slimegathered"
-        ),
-        new MultiOccurrenceDetector(
-            "[+2 Slimey Goo]",
-            "§fGot 2 Slimey Goo §c",
-                "2slimesgathered"
-        ),
-        new MultiOccurrenceDetector(
-            "+1 [Isoptera Heart]",
-            "§fGot heart §c",
-                "heart"
-        ),
-        new MultiOccurrenceDetector(
-            "has entered the tree",
-            "§bEntered the Tree §c",
-                "treeenter"
-        ),
-        new MultiOccurrenceDetector(
-                "A player must stand on the platform at",
-                "§bPlatform spawned §c",
-                "platformspawnedtcc"
-        ),
-        new MultiOccurrenceDetector(
-                "A miniboss has spawned! It has sped",
-                "§bMiniboss spawned §c",
-                "minibossspawnedtcc"
-        ),
-        new MultiOccurrenceDetector(
-                "The golem has been defeated, and the",
-                "§bGolem defeated §c",
-                "golemdefeated"
-        )
+            new MultiOccurrenceDetector(
+                    "A new platform has appeared on the Lower Area!",
+                    "§bLower Mini spawned §c",
+                    "lowermini"
+            ),
+            new MultiOccurrenceDetector(
+                    "A Bulb Keeper has spawned!",
+                    "§bBulb Keeper spawned §c",
+                    "bulbspawned"
+            ),
+            new MultiOccurrenceDetector(
+                    "A Red Bulb has been captured!",
+                    "§bBulb captured §c",
+                    "bulbcaptured"
+            ),
+            new MultiOccurrenceDetector(
+                    "[+1 Void Matter]",
+                    "§b[+1 Void Matter] §c",
+                    "voidmattergathered"
+            ),
+            new MultiOccurrenceDetector(
+                    "3/3 Clouds Purified",
+                    "§bPurified 3/3 clouds §c",
+                    "clouds"
+            ),
+            new MultiOccurrenceDetector(
+                    "The Team has reached the Checkpoint!",
+                    "§bReached Checkpoint §c",
+                    "mazecheckpoint"
+            ),
+            new MultiOccurrenceDetector(
+                    "100% Rock Destroyed",
+                    "§bRock destroyed §c",
+                    "rockdestroyed"
+            ),
+            new MultiOccurrenceDetector(
+                    "[+1 Slimey Goo]",
+                    "§fGot 1 Slimey Goo §c",
+                    "slimegathered"
+            ),
+            new MultiOccurrenceDetector(
+                    "[+2 Slimey Goo]",
+                    "§fGot 2 Slimey Goo §c",
+                    "2slimesgathered"
+            ),
+            new MultiOccurrenceDetector(
+                    "+1 [Isoptera Heart]",
+                    "§fGot heart §c",
+                    "heart"
+            ),
+            new MultiOccurrenceDetector(
+                    "has entered the tree",
+                    "§bEntered the Tree §c",
+                    "treeenter"
+            ),
+            new MultiOccurrenceDetector(
+                    "A player must stand on the platform at",
+                    "§bPlatform spawned §c",
+                    "platformspawnedtcc"
+            ),
+            new MultiOccurrenceDetector(
+                    "A miniboss has spawned! It has sped",
+                    "§bMiniboss spawned §c",
+                    "minibossspawnedtcc"
+            ),
+            new MultiOccurrenceDetector(
+                    "The golem has been defeated, and the",
+                    "§bGolem defeated §c",
+                    "golemdefeated"
+            )
     );
 
     private static void savePB(String key, long time) {
@@ -221,16 +221,13 @@ public class RaidChatNotifier {
                 String progress = detector.extractProgress(msg);
                 String finalMsg = detector.getFormattedMessage(progress, timestamp);
 
-                new Thread(() -> {
-                    try {
-                        Thread.sleep(20);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
+                MinecraftClient.getInstance().execute(() -> {
                     if (!finalMsg.isEmpty()) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(StyledText.fromString(finalMsg).getComponent()));
+                        McUtils.sendMessageToClient(
+                                WynnExtras.addWynnExtrasPrefix(Text.of(finalMsg))
+                        );
                     }
-                }).start();
+                });
 
                 return;
             }
@@ -266,43 +263,43 @@ public class RaidChatNotifier {
     }
 
 
-         public static final List<Pattern> BLOCKED_PATTERNS = Arrays.asList(
-        Pattern.compile("is preparing to descend! \\[1/2", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("is preparing to descend! \\[2/2", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("upper level must kill the slime chomper", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("players on the upper level must kill the carnivorous", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("players on the upper level must kill the invasive", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("players on the upper level must kill the unfurling", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("the void holes have begun to destabi", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("a new platform has appeared on the lower area!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("3/3 clouds purified", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("the team has reached the checkpoint!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("100% rock destroyed", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("1 slimey goo", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("2 slimey goo", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("1 \\[isoptera heart", Pattern.CASE_INSENSITIVE),
-        //Pattern.compile("All the Void Rifts have been destroyed! A path", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The void holes inside the tree are open!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The Altar has opened to the void, you may leave through it.", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("A Red Bulb has been captured!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("A Bulb Keeper has spawned!", Pattern.CASE_INSENSITIVE),
-        //Pattern.compile("The Giant Void Hole has opened! Use it to escape!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("A Void Pedestal has been activated! \\[1/2]", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("A Void Pedestal has been activated! \\[2/2]", Pattern.CASE_INSENSITIVE),
-        //Pattern.compile("You have unblocked the voidhole out!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("\\[1 Void Matter]", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("has entered the tree", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("goo to the tower! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("binding seal! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("light crystals to the tower! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("has been killed! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("the obelisks have appeared; they must be", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The lower door has been unlocked.", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The Upper door has been unlocked!", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("A player must stand on the platform", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("A miniboss has spawned! It has sped", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("The golem has been defeated, and", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE)
+    public static final List<Pattern> BLOCKED_PATTERNS = Arrays.asList(
+            Pattern.compile("is preparing to descend! \\[1/2", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("is preparing to descend! \\[2/2", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("upper level must kill the slime chomper", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("players on the upper level must kill the carnivorous", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("players on the upper level must kill the invasive", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("players on the upper level must kill the unfurling", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("the void holes have begun to destabi", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("a new platform has appeared on the lower area!", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("3/3 clouds purified", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("the team has reached the checkpoint!", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("100% rock destroyed", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("1 slimey goo", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("2 slimey goo", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("1 \\[isoptera heart", Pattern.CASE_INSENSITIVE),
+            //Pattern.compile("All the Void Rifts have been destroyed! A path", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("The void holes inside the tree are open!", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("The Altar has opened to the void, you may leave through it.", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("A Red Bulb has been captured!", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("A Bulb Keeper has spawned!", Pattern.CASE_INSENSITIVE),
+            //Pattern.compile("The Giant Void Hole has opened! Use it to escape!", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("A Void Pedestal has been activated! \\[1/2]", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("A Void Pedestal has been activated! \\[2/2]", Pattern.CASE_INSENSITIVE),
+            //Pattern.compile("You have unblocked the voidhole out!", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("\\[1 Void Matter]", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("has entered the tree", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("goo to the tower! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("binding seal! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("light crystals to the tower! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("has been killed! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("the obelisks have appeared; they must be", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("The lower door has been unlocked.", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("The Upper door has been unlocked!", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("A player must stand on the platform", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("A miniboss has spawned! It has sped", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("The golem has been defeated, and", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE)
     );
 
 
@@ -762,7 +759,7 @@ public class RaidChatNotifier {
         }
 
         McUtils.sendMessageToClient(
-            WynnExtras.addWynnExtrasPrefix(Text.of(msg))
+                WynnExtras.addWynnExtrasPrefix(Text.of(msg))
         );
     }
 

@@ -412,8 +412,6 @@ public class BankOverlay2 extends WEHandledScreen {
                         results = CrossClassBankSearch.searchAllCharacters(searchInput);
                     }
 
-                    System.out.println("[WynnExtras] Cross-class search found " + results.size() + " results");
-
                     for (CrossClassBankSearch.SearchResult result : results) {
                         CrossClassPageWidget ccPage = new CrossClassPageWidget(
                                 result.characterId,
@@ -1651,6 +1649,7 @@ public class BankOverlay2 extends WEHandledScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             ctx.disableScissor();
             ctx.enableScissor(scissorx1, scissory1 - 12, scissorx2, scissory2);
+            ui.updateContext(ctx, ui.getScaleFactor(), 0, 0);
 
             drawDynamicNameSign(ctx, textInputWidget.getInput(), x, y + 12);
 

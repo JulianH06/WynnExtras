@@ -12,6 +12,7 @@ import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.Texture;
+import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
@@ -405,58 +406,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
         ui.drawCenteredText(String.format("%.2f%%", progress * 100), x + width / 2f, y + height / 2f + 2, CustomColor.fromHexString("FFFFFF"), textScale);
     }
 
-    private static ItemStack toItemStack(ApiAspect aspect, boolean max, int tier) {
-        ApiAspect.Icon icon = aspect.getIcon();
-        if (icon == null) return ItemStack.EMPTY;
-
-        if (icon.getValueString() != null) {
-            Identifier id = Identifier.of(icon.getValueString());
-            Item item = Registries.ITEM.get(id);
-            return new ItemStack(item);
-        }
-
-        if (icon.getValueObject() != null) {
-            ApiAspect.IconValue iv = icon.getValueObject();
-            Identifier id = Identifier.of(iv.getId());
-            Item item = Registries.ITEM.get(id);
-            ItemStack stack = new ItemStack(item);
-
-            if (iv.getCustomModelData() != null) {
-                try {
-                    int cmd = iv.getCustomModelData().getRangeDispatch().getFirst() + (max ? 1 : 0);
-                    stack.set(DataComponentTypes.CUSTOM_MODEL_DATA, new CustomModelDataComponent(List.of((float) cmd), List.of(), List.of(), List.of()));
-                } catch (NumberFormatException ignored) {}
-            }
-
-            if(aspect.getName() != null) {
-                try {
-                    StyledText name = StyledText.fromString(aspect.getName()).withoutFormatting();
-                    String color = "";
-                    if(aspect.getRarity().equals("mythic")) {
-                        color = "§5";
-                    }
-                    if(aspect.getRarity().equals("fabled")) {
-                        color = "§c";
-                    }
-                    if(aspect.getRarity().equals("legendary")) {
-                        color = "§b";
-                    }
-                    stack.set(DataComponentTypes.CUSTOM_NAME, Text.of(color + name.getString()));
-                } catch (NumberFormatException ignored) {}
-            }
-
-            if(aspect.getTiers() != null) {
-                if(aspect.getTiers().get(String.valueOf(tier)) != null) {
-                    List<String> lore = aspect.getTiers().get(String.valueOf(tier)).getDescription();
-                    stack.set(DataComponentTypes.LORE, new LoreComponent(WynncraftApiHandler.parseStyledHtml(lore)));
-                }
-            }
-
-            return stack;
-        }
-
-        return ItemStack.EMPTY;
-    }
 
     public static boolean isMaxed(Aspect aspect) {
         switch (aspect.getRarity()) {
@@ -624,7 +573,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                         Texture.HIGHLIGHT.height());
             }
             if(playerAspect == null) return;
-            ItemStack stack = toItemStack(aspect, isMaxed(playerAspect), tierInt);
+            ItemStack stack = AspectUtils.toItemStack(aspect, isMaxed(playerAspect), tierInt);
 
             ctx.getMatrices().pushMatrix();
             ctx.getMatrices().scale(5 / ui.getScaleFactorF(), 5 / ui.getScaleFactorF());

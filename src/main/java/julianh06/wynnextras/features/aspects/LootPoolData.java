@@ -47,14 +47,12 @@ public class LootPoolData {
         public String rarity; // MYTHIC, FABLED, LEGENDARY
         public String tierInfo; // "Tier II [8/10]" or "[MAX]"
         public String description; // What the aspect does (if available)
-        public String requiredClass; // warrior, mage, archer, assassin, shaman, or null for any class
 
         public AspectEntry(String name, String rarity) {
             this.name = name;
             this.rarity = rarity;
             this.tierInfo = "";
             this.description = "";
-            this.requiredClass = null;
         }
 
         public AspectEntry(String name, String rarity, String tierInfo, String description) {
@@ -62,15 +60,6 @@ public class LootPoolData {
             this.rarity = rarity;
             this.tierInfo = tierInfo != null ? tierInfo : "";
             this.description = description != null ? description : "";
-            this.requiredClass = null;
-        }
-
-        public AspectEntry(String name, String rarity, String tierInfo, String description, String requiredClass) {
-            this.name = name;
-            this.rarity = rarity;
-            this.tierInfo = tierInfo != null ? tierInfo : "";
-            this.description = description != null ? description : "";
-            this.requiredClass = requiredClass;
         }
     }
 

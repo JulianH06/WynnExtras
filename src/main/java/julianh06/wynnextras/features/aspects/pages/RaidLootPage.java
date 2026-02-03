@@ -1,17 +1,37 @@
 package julianh06.wynnextras.features.aspects.pages;
 
+import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.features.aspects.AspectScreen;
+import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
+import julianh06.wynnextras.utils.UI.Widget;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.item.MaceItem;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.Text;
 
-/**
- * Raid Loot page showing tracked loot statistics
- */
-public class RaidLootPage extends AspectPage {
-    private boolean[] raidToggles = {true, true, true, true}; // NOTG, NOL, TCC, TNA
-    private boolean showRates = false;
+import java.util.ArrayList;
+import java.util.List;
+
+public class RaidLootPage extends PageWidget {
+    private enum Raid { NOTG, NOL, TCC, TNA }
+
+    private List<RaidToggleWidget> raidToggleWidgets = new ArrayList<>();
+    private ShowTotalWidget showTotalWidget;
+
+    private AmplifiersPerRunWidget amplifiersPerRunWidget;
+    private BagsPerRunWidget bagsPerRunWidget;
+
+    private static List<Text> amplifiersPerRunTooltip;
+    private static List<Text> bagsPerRunTooltip;
+    private static List<Text> hoveredTooltip = new ArrayList<>();
+
+    private static boolean showRates = false;
 
     private static final int TOGGLE_WIDTH = 220;
     private static final int TOGGLE_HEIGHT = 50;
@@ -19,123 +39,85 @@ public class RaidLootPage extends AspectPage {
     private static final int TOGGLE_Y = 120;
 
     private static final String[] RAID_NAMES = {"NOTG", "NOL", "TCC", "TNA"};
-    private static final String[] RAID_COLORS = {"§5", "§b", "§c", "§e"};
+    private static final String[] RAID_COLORS = {"§2", "§e", "§3", "§5"};
     private static final String[] RAID_CODES = {"NOTG", "NOL", "TCC", "TNA"};
 
     // For hover tooltips
     private int amplifiersLineY = 0;
+    private String amplifiersText = "";
     private int bagsLineY = 0;
-    private int lineHeight = 35;
+    private String bagsText = "";
     private RaidLootData.RaidSpecificLoot currentStats = null;
     private int currentTotalRuns = 0;
 
-    public RaidLootPage(AspectScreenHost host) {
-        super(host);
+    public RaidLootPage(AspectScreen parent) {
+        super(parent);
+
+        for(Raid raid : Raid.values()) {
+            raidToggleWidgets.add(new RaidToggleWidget(raid));
+        }
+
+        showTotalWidget = new ShowTotalWidget();
+        amplifiersPerRunWidget = new AmplifiersPerRunWidget();
+        bagsPerRunWidget = new BagsPerRunWidget();
     }
 
     @Override
-    public String getTitle() {
-        return "Raid Loot";
-    }
+    public void drawContent(DrawContext context, int mouseX, int mouseY, float tickDelta) {
+        hoveredTooltip.clear();
 
-    @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-        int logicalW = getLogicalWidth();
+        int logicalW = (int) (width * ui.getScaleFactorF());
         int centerX = logicalW / 2;
-        int logicalMouseX = toLogicalX(mouseX);
-        int logicalMouseY = toLogicalY(mouseY);
 
-        // Title
-        drawCenteredText(context, "§6§lRAID LOOT TRACKER", centerX, 60);
+        ui.drawCenteredText("§6§lRAID LOOT TRACKER", centerX, 60);
 
-        // Raid toggles
         int totalToggleWidth = (TOGGLE_WIDTH * 4) + (TOGGLE_SPACING * 3);
         int toggleStartX = (logicalW - totalToggleWidth) / 2;
 
-        for (int i = 0; i < 4; i++) {
-            int x = toggleStartX + (i * (TOGGLE_WIDTH + TOGGLE_SPACING));
-            boolean active = raidToggles[i];
-            boolean hovering = logicalMouseX >= x && logicalMouseX <= x + TOGGLE_WIDTH &&
-                              logicalMouseY >= TOGGLE_Y && logicalMouseY <= TOGGLE_Y + TOGGLE_HEIGHT;
-
-            if (ui != null) {
-                ui.drawButtonFade(x, TOGGLE_Y, TOGGLE_WIDTH, TOGGLE_HEIGHT, 12, hovering || active);
-            }
-
-            String text = active ? RAID_COLORS[i] + "§l" + RAID_NAMES[i] : "§7" + RAID_NAMES[i];
-            drawCenteredText(context, text, x + TOGGLE_WIDTH / 2, TOGGLE_Y + TOGGLE_HEIGHT / 2);
+        for(RaidToggleWidget raidToggleWidget : raidToggleWidgets) {
+            raidToggleWidget.setBounds(toggleStartX, TOGGLE_Y, TOGGLE_WIDTH, TOGGLE_HEIGHT);
+            raidToggleWidget.draw(context, mouseX, mouseY, tickDelta, ui);
+            toggleStartX += TOGGLE_WIDTH + TOGGLE_SPACING;
         }
 
-        // Show Rates button
         int ratesButtonWidth = 450;
         int ratesButtonHeight = 50;
         int ratesButtonX = centerX - ratesButtonWidth / 2;
         int ratesButtonY = 180;
-        boolean hoveringRates = logicalMouseX >= ratesButtonX && logicalMouseX <= ratesButtonX + ratesButtonWidth &&
-                               logicalMouseY >= ratesButtonY && logicalMouseY <= ratesButtonY + ratesButtonHeight;
 
-        if (ui != null) {
-            ui.drawButtonFade(ratesButtonX, ratesButtonY, ratesButtonWidth, ratesButtonHeight, 12, hoveringRates);
+        showTotalWidget.setBounds(ratesButtonX, ratesButtonY, ratesButtonWidth, ratesButtonHeight);
+        showTotalWidget.draw(context, mouseX, mouseY, tickDelta, ui);
+
+        if(showRates) {
+            int amplifierWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(amplifiersText) * ui.getScaleFactorF());
+            amplifiersPerRunWidget.setBounds((int) (centerX - amplifierWidth / 2f), amplifiersLineY - 20, amplifierWidth, 40);
+            amplifiersPerRunWidget.draw(context, mouseX, mouseY, tickDelta, ui);
+
+            int bagWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(bagsText) * ui.getScaleFactorF());
+            bagsPerRunWidget.setBounds((int) (centerX - bagWidth / 2f), bagsLineY - 20, bagWidth, 40);
+            bagsPerRunWidget.draw(context, mouseX, mouseY, tickDelta, ui);
         }
 
-        String ratesText = showRates ? "§a§lShowing: Average/Run" : "§e§lShowing: Totals";
-        drawCenteredText(context, ratesText, ratesButtonX + ratesButtonWidth / 2, ratesButtonY + ratesButtonHeight / 2);
-
-        // Get and display loot data
         renderLootStats(context, centerX, logicalW);
 
-        // Draw tooltips for amplifiers and bags when in rate mode
-        if (showRates && currentStats != null && currentTotalRuns > 0) {
-            renderHoverTooltips(context, logicalMouseX, logicalMouseY, centerX);
-        }
+        amplifiersPerRunTooltip = List.of(
+                Text.of("§e§lAmplifiers/Run Breakdown:"),
+                Text.of("§6Tier III: §f" + String.format("%.3f", (double) currentStats.amplifierTier3 / currentTotalRuns) + "/run"),
+                Text.of("§eTier II: §f" + String.format("%.3f", (double) currentStats.amplifierTier2 / currentTotalRuns) + "/run"),
+                Text.of("§fTier I: §f" + String.format("%.3f", (double) currentStats.amplifierTier1 / currentTotalRuns) + "/run")
+        );
+
+        bagsPerRunTooltip = List.of(
+                Text.of("§b§lBags/Run Breakdown:"),
+                Text.of("§6Stuffed: §f" + String.format("%.3f", (double) currentStats.stuffedBags / currentTotalRuns) + "/run"),
+                Text.of("§ePacked: §f" + String.format("%.3f", (double) currentStats.packedBags / currentTotalRuns) + "/run"),
+                Text.of("§aVaried: §f" + String.format("%.3f", (double) currentStats.variedBags / currentTotalRuns) + "/run")
+        );
     }
 
-    private void renderHoverTooltips(DrawContext context, int logicalMouseX, int logicalMouseY, int centerX) {
-        int tooltipWidth = 420;
-        int tooltipHeight = 140;
-        int lineHitHeight = lineHeight + 8;
-        int padding = 15;
-        int textLineHeight = 30;
-
-        // Check amplifiers line hover
-        if (logicalMouseY >= amplifiersLineY - 15 && logicalMouseY <= amplifiersLineY + lineHitHeight - 15 &&
-            logicalMouseX >= centerX - 300 && logicalMouseX <= centerX + 300) {
-            // Draw amplifier breakdown tooltip
-            int tooltipX = logicalMouseX + 20;
-            int tooltipY = logicalMouseY + 20;
-
-            // Background and border (draw border on top of background)
-            drawRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, 0xEE000000);
-            drawRect(tooltipX, tooltipY, tooltipWidth, 3, 0xFF4e392d);  // top
-            drawRect(tooltipX, tooltipY + tooltipHeight - 3, tooltipWidth, 3, 0xFF4e392d);  // bottom
-            drawRect(tooltipX, tooltipY, 3, tooltipHeight, 0xFF4e392d);  // left
-            drawRect(tooltipX + tooltipWidth - 3, tooltipY, 3, tooltipHeight, 0xFF4e392d);  // right
-
-            drawLeftText(context, "§e§lAmplifiers/Run Breakdown:", tooltipX + padding, tooltipY + padding);
-            drawLeftText(context, "§6Tier III: §f" + String.format("%.3f", (double) currentStats.amplifierTier3 / currentTotalRuns) + "/run", tooltipX + padding, tooltipY + padding + textLineHeight);
-            drawLeftText(context, "§eTier II: §f" + String.format("%.3f", (double) currentStats.amplifierTier2 / currentTotalRuns) + "/run", tooltipX + padding, tooltipY + padding + textLineHeight * 2);
-            drawLeftText(context, "§fTier I: §f" + String.format("%.3f", (double) currentStats.amplifierTier1 / currentTotalRuns) + "/run", tooltipX + padding, tooltipY + padding + textLineHeight * 3);
-        }
-
-        // Check bags line hover
-        if (logicalMouseY >= bagsLineY - 15 && logicalMouseY <= bagsLineY + lineHitHeight - 15 &&
-            logicalMouseX >= centerX - 300 && logicalMouseX <= centerX + 300) {
-            // Draw bags breakdown tooltip
-            int tooltipX = logicalMouseX + 20;
-            int tooltipY = logicalMouseY + 20;
-
-            // Background and border (draw border on top of background)
-            drawRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, 0xEE000000);
-            drawRect(tooltipX, tooltipY, tooltipWidth, 3, 0xFF4e392d);  // top
-            drawRect(tooltipX, tooltipY + tooltipHeight - 3, tooltipWidth, 3, 0xFF4e392d);  // bottom
-            drawRect(tooltipX, tooltipY, 3, tooltipHeight, 0xFF4e392d);  // left
-            drawRect(tooltipX + tooltipWidth - 3, tooltipY, 3, tooltipHeight, 0xFF4e392d);  // right
-
-            drawLeftText(context, "§b§lBags/Run Breakdown:", tooltipX + padding, tooltipY + padding);
-            drawLeftText(context, "§6Stuffed: §f" + String.format("%.3f", (double) currentStats.stuffedBags / currentTotalRuns) + "/run", tooltipX + padding, tooltipY + padding + textLineHeight);
-            drawLeftText(context, "§ePacked: §f" + String.format("%.3f", (double) currentStats.packedBags / currentTotalRuns) + "/run", tooltipX + padding, tooltipY + padding + textLineHeight * 2);
-            drawLeftText(context, "§aVaried: §f" + String.format("%.3f", (double) currentStats.variedBags / currentTotalRuns) + "/run", tooltipX + padding, tooltipY + padding + textLineHeight * 3);
-        }
+    @Override
+    public void drawForeground(DrawContext context, int mouseX, int mouseY, float tickDelta) {
+        context.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, mouseX, mouseY);
     }
 
     private void renderLootStats(DrawContext context, int centerX, int logicalW) {
@@ -145,7 +127,7 @@ public class RaidLootPage extends AspectPage {
         RaidLootData.RaidSpecificLoot combinedStats = new RaidLootData.RaidSpecificLoot();
 
         for (int i = 0; i < 4; i++) {
-            if (raidToggles[i]) {
+            if (raidToggleWidgets.get(i).toggled) {
                 RaidLootData.RaidSpecificLoot raidStats = lootData.perRaidData.get(RAID_CODES[i]);
                 if (raidStats != null) {
                     combinedStats.emeraldBlocks += raidStats.emeraldBlocks;
@@ -174,7 +156,7 @@ public class RaidLootPage extends AspectPage {
         int startY = 260;
         int lineHeight = 35;
 
-        drawCenteredText(context, "§6§lSTATISTICS", centerX, startY);
+        ui.drawCenteredText("§6§lSTATISTICS", centerX, startY);
         startY += 50;
 
         // Calculate emeralds
@@ -197,16 +179,16 @@ public class RaidLootPage extends AspectPage {
 
         // Per-raid breakdown
         startY = showRates ? 580 : 560;
-        if (raidToggles[0] || raidToggles[1] || raidToggles[2] || raidToggles[3]) {
-            drawCenteredText(context, "§e§lPER-RAID BREAKDOWN", centerX, startY);
+        if (raidToggleWidgets.get(0).toggled || raidToggleWidgets.get(1).toggled || raidToggleWidgets.get(2).toggled || raidToggleWidgets.get(3).toggled) {
+            ui.drawCenteredText("§e§lPER-RAID BREAKDOWN", centerX, startY);
             startY += 40;
 
             for (int i = 0; i < 4; i++) {
-                if (!raidToggles[i]) continue;
+                if (!raidToggleWidgets.get(i).toggled) continue;
 
                 RaidLootData.RaidSpecificLoot raidStats = lootData.perRaidData.get(RAID_CODES[i]);
                 if (raidStats == null) {
-                    drawCenteredText(context, RAID_COLORS[i] + "§l" + RAID_NAMES[i] + ": §7No data", centerX, startY);
+                    ui.drawCenteredText(RAID_COLORS[i] + "§l" + RAID_NAMES[i] + ": §7No data", centerX, startY);
                     startY += 30;
                     continue;
                 }
@@ -223,7 +205,7 @@ public class RaidLootPage extends AspectPage {
                     long totalLeValue = (raidStacks * 64) + raidLe;
                     double avgLe = (double) totalLeValue / runs;
                     String emeraldText = avgLe >= 64 ? String.format("%.2fstx/run", avgLe / 64) : String.format("%.1fle/run", avgLe);
-                    drawCenteredText(context, RAID_COLORS[i] + "§l" + RAID_NAMES[i] + ": §f" + runs + " runs §8| §a" + emeraldText, centerX, startY);
+                    ui.drawCenteredText(RAID_COLORS[i] + "§l" + RAID_NAMES[i] + ": §f" + runs + " runs §8| §a" + emeraldText, centerX, startY);
                 } else {
                     String emeraldText;
                     if (raidStacks > 0 && raidLe > 0) {
@@ -235,7 +217,7 @@ public class RaidLootPage extends AspectPage {
                     } else {
                         emeraldText = raidEb + "eb";
                     }
-                    drawCenteredText(context, RAID_COLORS[i] + "§l" + RAID_NAMES[i] + ": §f" + runs + " runs §8| §a" + emeraldText + " total", centerX, startY);
+                    ui.drawCenteredText(RAID_COLORS[i] + "§l" + RAID_NAMES[i] + ": §f" + runs + " runs §8| §a" + emeraldText + " total", centerX, startY);
                 }
                 startY += 30;
             }
@@ -243,97 +225,126 @@ public class RaidLootPage extends AspectPage {
     }
 
     private void renderRateStats(DrawContext context, int centerX, int startY, int lineHeight,
-                                  RaidLootData.RaidSpecificLoot stats, int totalRuns, long stacks, long le) {
-        drawCenteredText(context, "§6§lTotal Runs: §f" + totalRuns, centerX, startY);
+                                 RaidLootData.RaidSpecificLoot stats, int totalRuns, long stacks, long le) {
+        ui.drawCenteredText("§6§lTotal Runs: §f" + totalRuns, centerX, startY);
         startY += lineHeight;
 
         long totalLeValue = (stacks * 64) + le;
         double avgLe = (double) totalLeValue / totalRuns;
         String emeraldAvgText = avgLe >= 64 ? String.format("%.2fstx", avgLe / 64) : String.format("%.1fle", avgLe);
-        drawCenteredText(context, "§a§lEmeralds/Run: §f" + emeraldAvgText, centerX, startY);
+        ui.drawCenteredText("§a§lEmeralds/Run: §f" + emeraldAvgText, centerX, startY);
         startY += lineHeight;
 
         // Track amplifiers line Y for tooltip
         amplifiersLineY = startY;
-        drawCenteredText(context, "§e§lAmplifiers/Run: §f" + String.format("%.2f", (double)stats.getTotalAmplifiers() / totalRuns) + " §7(hover for breakdown)", centerX, startY);
+        amplifiersText = "§e§lAmplifiers/Run: §f" + String.format("%.2f", (double)stats.getTotalAmplifiers() / totalRuns) + " §7(hover for breakdown)";
+        ui.drawCenteredText(amplifiersText, centerX, startY);
         startY += lineHeight + 8;
 
         // Track bags line Y for tooltip
         bagsLineY = startY;
-        drawCenteredText(context, "§b§lBags/Run: §f" + String.format("%.2f", (double)stats.totalBags / totalRuns) + " §7(hover for breakdown)", centerX, startY);
+        bagsText = "§b§lBags/Run: §f" + String.format("%.2f", (double)stats.totalBags / totalRuns) + " §7(hover for breakdown)";
+        ui.drawCenteredText(bagsText, centerX, startY);
         startY += lineHeight + 8;
 
-        drawCenteredText(context, "§d§lTomes/Run: §f" + String.format("%.2f", (double)stats.totalTomes / totalRuns) + " §7(§5" + String.format("%.2f", (double)stats.mythicTomes / totalRuns) + " §7mythic§7)", centerX, startY);
+        ui.drawCenteredText("§d§lTomes/Run: §f" + String.format("%.2f", (double)stats.totalTomes / totalRuns) + " §7(§5" + String.format("%.2f", (double)stats.mythicTomes / totalRuns) + " §7mythic§7)", centerX, startY);
         startY += lineHeight + 8;
 
-        drawCenteredText(context, "§5§lAspects/Run: §f" + String.format("%.2f", (double)stats.totalAspects / totalRuns) + " §7(§5" + String.format("%.2f", (double)stats.mythicAspects / totalRuns) + " §7mythic§7)", centerX, startY);
+        ui.drawCenteredText("§5§lAspects/Run: §f" + String.format("%.2f", (double)stats.totalAspects / totalRuns) + " §7(§5" + String.format("%.2f", (double)stats.mythicAspects / totalRuns) + " §7mythic§7)", centerX, startY);
     }
 
     private void renderTotalStats(DrawContext context, int centerX, int startY, int lineHeight,
-                                   RaidLootData.RaidSpecificLoot stats, int totalRuns, long stacks, long le, long eb) {
-        drawCenteredText(context, "§6§lTotal Runs: §f" + totalRuns, centerX, startY);
+                                  RaidLootData.RaidSpecificLoot stats, int totalRuns, long stacks, long le, long eb) {
+        ui.drawCenteredText("§6§lTotal Runs: §f" + totalRuns, centerX, startY);
         startY += lineHeight;
 
         StringBuilder emeraldText = new StringBuilder();
         if (stacks > 0) {
             emeraldText.append(stacks).append("stx");
-            if (le > 0) emeraldText.append(" + ").append(le).append("le");
+            if (le > 0) emeraldText.append(" ").append(le).append("le");
         } else if (le > 0) {
             emeraldText.append(le).append("le");
         } else {
             emeraldText.append(eb).append("eb");
         }
-        drawCenteredText(context, "§a§lEmeralds: §f" + emeraldText.toString(), centerX, startY);
+        ui.drawCenteredText("§a§lEmeralds: §f" + emeraldText.toString(), centerX, startY);
         startY += lineHeight;
 
-        drawCenteredText(context, "§e§lAmplifiers: §f" + stats.getTotalAmplifiers() + " §7(I: " + stats.amplifierTier1 + " | II: " + stats.amplifierTier2 + " | III: " + stats.amplifierTier3 + ")", centerX, startY);
+        ui.drawCenteredText("§e§lAmplifiers: §f" + stats.getTotalAmplifiers() + " §7(I: " + stats.amplifierTier1 + " | II: " + stats.amplifierTier2 + " | III: " + stats.amplifierTier3 + ")", centerX, startY);
         startY += lineHeight + 8;
 
-        drawCenteredText(context, "§b§lBags: §f" + stats.totalBags + " §7(Stuffed: " + stats.stuffedBags + " | Packed: " + stats.packedBags + " | Varied: " + stats.variedBags + ")", centerX, startY);
+        ui.drawCenteredText("§b§lBags: §f" + stats.totalBags + " §7(Stuffed: " + stats.stuffedBags + " | Packed: " + stats.packedBags + " | Varied: " + stats.variedBags + ")", centerX, startY);
         startY += lineHeight + 8;
 
-        drawCenteredText(context, "§d§lTomes: §f" + stats.totalTomes + " §7(§5" + stats.mythicTomes + " §7mythic, §c" + stats.fabledTomes + " §7fabled§7)", centerX, startY);
+        ui.drawCenteredText("§d§lTomes: §f" + stats.totalTomes + " §7(§5" + stats.mythicTomes + " §7mythic, §c" + stats.fabledTomes + " §7fabled§7)", centerX, startY);
         startY += lineHeight + 8;
 
-        drawCenteredText(context, "§5§lAspects: §f" + stats.totalAspects + " §7(§5" + stats.mythicAspects + " §7mythic, §c" + stats.fabledAspects + " §7fabled, §b" + stats.legendaryAspects + " §7legendary§7)", centerX, startY);
+        ui.drawCenteredText("§5§lAspects: §f" + stats.totalAspects + " §7(§5" + stats.mythicAspects + " §7mythic, §c" + stats.fabledAspects + " §7fabled, §b" + stats.legendaryAspects + " §7legendary§7)", centerX, startY);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0) return false;
-
-        int logicalW = getLogicalWidth();
-        int centerX = logicalW / 2;
-        int logicalMouseX = toLogicalX(mouseX);
-        int logicalMouseY = toLogicalY(mouseY);
-
-        // Check raid toggle clicks
-        int totalToggleWidth = (TOGGLE_WIDTH * 4) + (TOGGLE_SPACING * 3);
-        int toggleStartX = (logicalW - totalToggleWidth) / 2;
-
-        for (int i = 0; i < 4; i++) {
-            int x = toggleStartX + (i * (TOGGLE_WIDTH + TOGGLE_SPACING));
-            if (logicalMouseX >= x && logicalMouseX <= x + TOGGLE_WIDTH &&
-                logicalMouseY >= TOGGLE_Y && logicalMouseY <= TOGGLE_Y + TOGGLE_HEIGHT) {
-                raidToggles[i] = !raidToggles[i];
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            }
+        for(RaidToggleWidget raidToggleWidget : raidToggleWidgets) {
+            if(raidToggleWidget.mouseClicked(mouseX, mouseY, button)) return true;
         }
 
-        // Check show rates button
-        int ratesButtonWidth = 450;
-        int ratesButtonHeight = 50;
-        int ratesButtonX = centerX - ratesButtonWidth / 2;
-        int ratesButtonY = 180;
-
-        if (logicalMouseX >= ratesButtonX && logicalMouseX <= ratesButtonX + ratesButtonWidth &&
-            logicalMouseY >= ratesButtonY && logicalMouseY <= ratesButtonY + ratesButtonHeight) {
-            showRates = !showRates;
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-            return true;
-        }
+        if(showTotalWidget.mouseClicked(mouseX, mouseY, button)) return true;
 
         return false;
+    }
+
+    private static class RaidToggleWidget extends Widget {
+        final Raid raid;
+        private boolean toggled = true;
+
+        public RaidToggleWidget(Raid raid) {
+            this.raid = raid;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+
+            String textColor = "";
+            if(!toggled) textColor = "§7";
+            else textColor = RAID_COLORS[raid.ordinal()];
+
+            ui.drawCenteredText(textColor + raid.name(), x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            toggled = !toggled;
+            return true;
+        }
+    }
+
+    private static class ShowTotalWidget extends Widget {
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+
+            ui.drawCenteredText(showRates ? "§a§lShowing: Average/Run" : "§e§lShowing: Totals", x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            showRates = !showRates;
+            return true;
+        }
+    }
+
+    private static class AmplifiersPerRunWidget extends Widget {
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if(hovered) hoveredTooltip = new ArrayList<>(amplifiersPerRunTooltip);
+        }
+    }
+
+    private static class BagsPerRunWidget extends Widget {
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if(hovered) hoveredTooltip = new ArrayList<>(bagsPerRunTooltip);
+        }
     }
 }

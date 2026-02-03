@@ -23,9 +23,8 @@ public abstract class Widget {
 
     protected UIUtils ui;
 
-    public Widget(int x, int y, int width, int height) {
-        setBounds(x, y, width, height);
-    }
+    public Widget(int x, int y, int width, int height) { setBounds(x, y, width, height); }
+    public Widget() { setBounds(0, 0, 0, 0); }
 
     // ---- Bounds / Layout ----
     public final void setBounds(int x, int y, int width, int height) {

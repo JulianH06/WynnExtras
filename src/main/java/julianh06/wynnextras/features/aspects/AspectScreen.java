@@ -1,145 +1,209 @@
 package julianh06.wynnextras.features.aspects;
 
+import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.render.FontRenderer;
+import com.wynntils.utils.render.type.HorizontalAlignment;
+import com.wynntils.utils.render.type.TextShadow;
+import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.features.aspects.pages.*;
+import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
+import julianh06.wynnextras.features.inventory.BankOverlay;
+import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.features.profileviewer.tabs.*;
 import julianh06.wynnextras.utils.UI.WEScreen;
+import julianh06.wynnextras.utils.UI.Widget;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.input.CharInput;
+import net.minecraft.client.input.KeyInput;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * In-game GUI screen for viewing aspect loot pools
- * Shows 4 raids side-by-side with their current loot pools
- */
 public class AspectScreen extends WEScreen {
+    public enum Page {LootPools, Aspects, Gambits, RaidLoot, Leaderboard}
 
-    private static final int COLUMN_WIDTH = 280;
-    private static final int COLUMN_SPACING = 40;
-    private static final int HEADER_HEIGHT = 55;
-    private static final int ASPECT_LINE_HEIGHT = 22;
+    static LootPoolPage lootPoolPage;
+    static AspectsPage aspectsPage;
+    static GambitsPage gambitsPage;
+    static RaidLootPage raidLootPage;
+    //static ExplorePage explorePage;
+    static LeadboardPage leadboardPage;
 
-    public AspectScreen() {
+    public static Page currentPage = Page.LootPools;
+    private static PageWidget currentWidget;
+    private static long lastScrollTime = 0;
+    private static final long scrollCooldown = 0; // in ms
+
+    private List<PageSwitchButton> pageSwitchButtons = new ArrayList<>();
+    private boolean registeredScroll = false;
+
+    protected AspectScreen() {
         super(Text.of("WynnExtras Aspects"));
+
+        for(Page page : Page.values()) {
+            pageSwitchButtons.add(new PageSwitchButton(page));
+        }
     }
 
     @Override
     protected void init() {
         super.init();
+
+        registeredScroll = false;
+
+//        // Initialize page instances
+//        if (gambitsPage == null) {
+//            gambitsPage = new GambitsPage(this);
+//            raidLootPage = new RaidLootPage(this);
+//            explorePage = new ExplorePage(this);
+//            leaderboardPage = new LeaderboardPage(this);
+//        }
+    }
+
+    @Override
+    public boolean mouseClicked(Click click, boolean doubleClick) {
+        for(PageSwitchButton button : pageSwitchButtons) {
+            if(button.mouseClicked(click.x(), click.y(), click.button())) return true;
+        }
+
+        if(currentWidget == null) return true;
+
+        if(currentWidget.mouseClicked(click.x(), click.y(), click.button())) return true;
+
+        return super.mouseClicked(click, doubleClick);
+    }
+
+    @Override
+    public boolean mouseReleased(Click click) {
+        if(currentWidget != null) currentWidget.mouseReleased(click.x(), click.y(), click.button());
+        return super.mouseReleased(click);
+    }
+
+    @Override
+    public boolean keyPressed(KeyInput input) {
+        if(currentWidget != null) currentWidget.keyPressed(input.key(), input.scancode(), input.modifiers());
+        return super.keyPressed(input);
+    }
+
+    @Override
+    public boolean charTyped(CharInput input) {
+
+        if(currentWidget != null) currentWidget.charTyped((char) input.codepoint(), input.modifiers());
+        return super.charTyped(input);
     }
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         int centerX = getLogicalWidth() / 2;
-        int startY = 120;
+        FontRenderer.getInstance().renderText(
+                ctx,
+                StyledText.fromComponent(WynnExtras.addWynnExtrasPrefix("")),
+                ui.sx(centerX + 7),
+                ui.sy(10),
+                CustomColor.fromHexString("FFFFFF"),
+                HorizontalAlignment.CENTER,
+                VerticalAlignment.TOP,
+                TextShadow.NORMAL,
+                (float)(3f / scaleFactor)
+        );
 
-        // Title
-        ui.drawCenteredText("ASPECT LOOT POOLS", centerX, 50, CustomColor.fromHexString("FFD700"), 10f);
-        ui.drawCenteredText("Weekly reset: Friday 19:00 CET", centerX, 80, CustomColor.fromHexString("AAAAAA"), 4f);
 
-        // Calculate starting X for 4 columns centered
-        int totalWidth = (COLUMN_WIDTH * 4) + (COLUMN_SPACING * 3);
-        int startX = (getLogicalWidth() - totalWidth) / 2;
+        int buttonAmount = pageSwitchButtons.size();
+        int buttonWidth = 230;
+        int buttonHeight = 50;
+        int spacing = 20;
+        int totalButtonWidth = (buttonWidth + spacing) * buttonAmount;
 
-        // Draw each raid column
-        int col1X = startX;
-        int col2X = startX + (COLUMN_WIDTH + COLUMN_SPACING);
-        int col3X = startX + (COLUMN_WIDTH + COLUMN_SPACING) * 2;
-        int col4X = startX + (COLUMN_WIDTH + COLUMN_SPACING) * 3;
+        int x = (int) (((width * ui.getScaleFactorF()) - totalButtonWidth + spacing) / 2f);
+        int y = (int) (height * ui.getScaleFactorF() - buttonHeight - spacing);
 
-        drawRaidColumn(ctx, col1X, startY, "NOTG", "Nest of the Grootslangs");
-        drawRaidColumn(ctx, col2X, startY, "NOL", "Orphion's Nexus of Light");
-        drawRaidColumn(ctx, col3X, startY, "TCC", "The Canyon Colossus");
-        drawRaidColumn(ctx, col4X, startY, "TNA", "The Nameless Anomaly");
-
-        // Instructions at bottom
-        drawInstructions(ctx, centerX, getLogicalHeight() - 60);
-    }
-
-    private void drawRaidColumn(DrawContext ctx, int x, int y, String raidCode, String raidName) {
-        LootPoolData data = LootPoolData.INSTANCE;
-        List<LootPoolData.AspectEntry> aspects = data.getLootPool(raidCode);
-
-        int panelHeight = getLogicalHeight() - y - 100;
-
-        // Background panel
-        ui.drawRect(x, y, COLUMN_WIDTH, panelHeight, CustomColor.fromHexString("1A1A1A"));
-        ui.drawRectBorders(x, y, COLUMN_WIDTH, panelHeight, CustomColor.fromHexString("4e392d"));
-
-        // Raid header
-        ui.drawCenteredText(raidCode, x + COLUMN_WIDTH / 2, y + 12, CustomColor.fromHexString("FFD700"), 7f);
-        ui.drawCenteredText(raidName, x + COLUMN_WIDTH / 2, y + 32, CustomColor.fromHexString("AAAAAA"), 3.5f);
-
-        // Separator line (aligned with panel edges)
-        ui.drawRect(x + 2, y + HEADER_HEIGHT, COLUMN_WIDTH - 4, 2, CustomColor.fromHexString("4e392d"));
-
-        int aspectY = y + HEADER_HEIGHT + 12;
-
-        if (aspects.isEmpty()) {
-            // No data yet
-            ui.drawCenteredText("No data", x + COLUMN_WIDTH / 2, aspectY + 40, CustomColor.fromHexString("666666"), 5f);
-            ui.drawCenteredText("Open the", x + COLUMN_WIDTH / 2, aspectY + 65, CustomColor.fromHexString("666666"), 3.5f);
-            ui.drawCenteredText("preview chest", x + COLUMN_WIDTH / 2, aspectY + 82, CustomColor.fromHexString("666666"), 3.5f);
-            ui.drawCenteredText("to scan aspects", x + COLUMN_WIDTH / 2, aspectY + 99, CustomColor.fromHexString("666666"), 3.5f);
-        } else {
-            // Draw aspects grouped by rarity
-            aspectY = drawAspectsByRarity(ctx, x, aspectY, aspects, "Mythic", "★");
-            aspectY = drawAspectsByRarity(ctx, x, aspectY, aspects, "Fabled", "◇");
-            aspectY = drawAspectsByRarity(ctx, x, aspectY, aspects, "Legendary", "◆");
-        }
-    }
-
-    private int drawAspectsByRarity(DrawContext ctx, int x, int y, List<LootPoolData.AspectEntry> aspects, String rarity, String symbol) {
-        // Filter aspects by rarity
-        List<LootPoolData.AspectEntry> filtered = aspects.stream()
-            .filter(a -> a.rarity.equalsIgnoreCase(rarity))
-            .toList();
-
-        if (filtered.isEmpty()) {
-            return y;
+        for(PageSwitchButton button : pageSwitchButtons) {
+            button.setBounds(x, y, buttonWidth, buttonHeight);
+            button.draw(ctx, mouseX, mouseY, tickDelta, ui);
+            x += buttonWidth + spacing;
         }
 
-        // Get color for rarity
-        CustomColor color = getRarityColor(rarity);
+        currentWidget = getTabWidget(currentPage);
 
-        // Draw each aspect
-        for (LootPoolData.AspectEntry aspect : filtered) {
-            String displayName = aspect.name;
+        if(currentWidget == null) return;
 
-            // Shorten long names to fit column
-            if (displayName.length() > 32) {
-                displayName = displayName.substring(0, 29) + "...";
+        currentWidget.setBounds(0, 0, screenWidth, screenHeight);
+        currentWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+
+        if(MinecraftClient.getInstance().currentScreen == null || registeredScroll) return;
+        ScreenMouseEvents.afterMouseScroll(MinecraftClient.getInstance().currentScreen).register((
+                screen,
+                mX,
+                mY,
+                horizontalAmount,
+                verticalAmount,
+                consumed
+        ) -> {
+            long now = System.currentTimeMillis();
+            if (now - lastScrollTime < scrollCooldown) {
+                return true;
             }
+            lastScrollTime = now;
 
-            ui.drawText(symbol + " " + displayName, x + 10, y, color, 4f);
-            y += ASPECT_LINE_HEIGHT;
-        }
+            if(currentWidget == null) return false;
 
-        // Add spacing after each rarity group
-        y += 8;
-
-        return y;
+            return currentWidget.mouseScrolled(mX, mY, verticalAmount);
+        });
+        registeredScroll = true;
     }
 
-    private CustomColor getRarityColor(String rarity) {
-        return switch (rarity.toLowerCase()) {
-            case "mythic" -> CustomColor.fromHexString("AA00AA"); // Dark purple
-            case "fabled" -> CustomColor.fromHexString("FF5555"); // Red
-            case "legendary" -> CustomColor.fromHexString("55FFFF"); // Light blue
-            default -> CustomColor.fromHexString("FFFFFF"); // White
+    private PageWidget getTabWidget(Page page) {
+        return switch (page) {
+            case LootPools -> lootPoolPage == null ? lootPoolPage = new LootPoolPage(this) : lootPoolPage;
+            case Aspects -> aspectsPage == null ? aspectsPage = new AspectsPage(this) : aspectsPage;
+            case Gambits -> gambitsPage == null ? gambitsPage = new GambitsPage(this) : gambitsPage;
+            case RaidLoot -> raidLootPage == null ? raidLootPage = new RaidLootPage(this) : raidLootPage;
+            //case Explore -> explorePage == null ? explorePage = new ExplorePage(this) : explorePage;
+            case Leaderboard -> leadboardPage == null ? leadboardPage = new LeadboardPage(this) : leadboardPage;
+            case null, default -> null;
         };
     }
 
-    private void drawInstructions(DrawContext ctx, int centerX, int y) {
-        ui.drawCenteredText("Open raid preview chests to automatically scan and save loot pools", centerX, y, CustomColor.fromHexString("AAAAAA"), 3.5f);
-        ui.drawCenteredText("Switch raids inside the chest to scan all 4 pools", centerX, y + 18, CustomColor.fromHexString("AAAAAA"), 3.5f);
+    public int getScreenHeight() {
+        return screenHeight;
     }
 
-    @Override
-    public void updateValues() {
-        // No dynamic sizing needed for now
+    public int getScreenWidth() {
+        return screenWidth;
     }
 
-    public static void open() {
-        WEScreen.open(AspectScreen::new);
+    private static class PageSwitchButton extends Widget {
+        final Page page;
+
+        public PageSwitchButton(Page page) {
+            super(0, 0, 0, 0);
+            this.page = page;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            String name = page.name();
+            if(page == Page.LootPools) name = "Loot Pools";
+            if(page == Page.RaidLoot) name = "Raid Loot";
+            ui.drawCenteredText(name, x + width / 2f, y + height / 2f, currentPage == page ? CustomColor.fromHexString("FFFF00") : CustomColor.fromHexString("FFFFFF"));
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            currentPage = page;
+            return true;
+        }
     }
 }

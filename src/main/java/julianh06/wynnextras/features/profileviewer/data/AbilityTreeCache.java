@@ -10,64 +10,32 @@ public class AbilityTreeCache {
     private static final Map<String, AbilityTreeData> classTrees = new HashMap<>();
     private static final Map<String /* character uuid*/, AbilityMapData> playerTrees = new HashMap<>();
     private static final Set<String> loading = new HashSet<>();
-    private static final Map<String, Long> failedLoads = new HashMap<>(); // Track failed loads with timestamp
-    private static final long RETRY_DELAY_MS = 5000; // 5 seconds before retry
 
     public static boolean isLoading(String className) {
         return loading.contains(className);
     }
 
     public static void loadClassTree(String className) {
-        // Check if already loaded
-        if (classMaps.containsKey(className) && classTrees.containsKey(className)) return;
-        if (loading.contains(className) || loading.contains(className + "tree")) return;
+        if (classMaps.containsKey(className) || loading.contains(className)) return;
 
-        // Check if we recently failed - allow retry after delay
-        Long failedTime = failedLoads.get(className);
-        if (failedTime != null && System.currentTimeMillis() - failedTime < RETRY_DELAY_MS) {
-            return; // Still in cooldown
-        }
-        failedLoads.remove(className);
-
-        if (!classMaps.containsKey(className)) {
-            loading.add(className);
-            WynncraftApiHandler.fetchClassAbilityMap(className).thenAccept(tree -> {
-                if (tree != null && tree.pages != null && !tree.pages.isEmpty()) {
-                    classMaps.put(className, tree);
-                    System.out.println("[AbilityTreeCache] Loaded class map for " + className + " with " + tree.pages.size() + " pages");
-                } else {
-                    System.err.println("[AbilityTreeCache] Loaded empty/null class map for " + className);
-                    failedLoads.put(className, System.currentTimeMillis());
-                }
-                loading.remove(className);
-            }).exceptionally(ex -> {
-                System.err.println("[AbilityTreeCache] Failed to load ability map for " + className + ": " + ex.getMessage());
-                ex.printStackTrace();
-                loading.remove(className);
-                failedLoads.put(className, System.currentTimeMillis());
-                return null;
-            });
-        }
-
-        if (!classTrees.containsKey(className)) {
-            loading.add(className + "tree");
-            WynncraftApiHandler.fetchClassAbilityTree(className).thenAccept(tree -> {
-                if (tree != null && tree.pages != null && !tree.pages.isEmpty()) {
-                    classTrees.put(className, tree);
-                    System.out.println("[AbilityTreeCache] Loaded class tree for " + className + " with " + tree.pages.size() + " pages");
-                } else {
-                    System.err.println("[AbilityTreeCache] Loaded empty/null class tree for " + className);
-                    failedLoads.put(className + "tree", System.currentTimeMillis());
-                }
-                loading.remove(className + "tree");
-            }).exceptionally(ex -> {
-                System.err.println("[AbilityTreeCache] Failed to load ability tree for " + className + ": " + ex.getMessage());
-                ex.printStackTrace();
-                loading.remove(className + "tree");
-                failedLoads.put(className + "tree", System.currentTimeMillis());
-                return null;
-            });
-        }
+        loading.add(className);
+        WynncraftApiHandler.fetchClassAbilityMap(className).thenAccept(tree -> {
+            classMaps.put(className, tree);
+            loading.remove(className);
+        }).exceptionally(ex -> {
+            System.err.println("Failed to load ability tree for " + className + ": " + ex.getMessage());
+            loading.remove(className);
+            return null;
+        });
+        loading.add(className + "tree");
+        WynncraftApiHandler.fetchClassAbilityTree(className).thenAccept(tree -> {
+            classTrees.put(className, tree);
+            loading.remove(className + "tree");
+        }).exceptionally(ex -> {
+            System.err.println("Failed to load ability tree for " + className + ": " + ex.getMessage());
+            loading.remove(className + "tree");
+            return null;
+        });
     }
 
     public static void loadCharacterTree(String characterUUID) {
@@ -108,8 +76,6 @@ public class AbilityTreeCache {
         classMaps.clear();
         classTrees.clear();
         playerTrees.clear();
-        failedLoads.clear();
-        loading.clear();
     }
 }
 

@@ -52,7 +52,7 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	modImplementation "maven.modrinth:wynntils:${project.wynntils_version}-fabric"
+	modImplementation "maven.modrinth:wynntils:v${project.wynntils_version}-fabric"
 	modRuntimeOnly "me.djtheredstoner:DevAuth-fabric:1.2.1"
 	modCompileOnly "maven.modrinth:wynnmod:1.15.1"
 	//modRuntimeOnly "maven.modrinth:wynnmod:1.15.1"
