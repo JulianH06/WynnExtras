@@ -13,7 +13,6 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.NotNull;
-import org.joml.Vector2i;
 import org.joml.Vector4i;
 
 import java.util.*;
@@ -36,7 +35,7 @@ public record CraftingResult(
         tooltip.add(Text.literal("Crafting " + type.getDisplayName()).formatted(Formatting.DARK_AQUA));
         addBlank(tooltip);
 
-        if (health != null && !type.isWeapon()) {
+        if (health != null && type.canHaveHealth()) {
             addBaseFormat(tooltip, "Health", health);
             addBlank(tooltip);
         }
@@ -46,10 +45,8 @@ public record CraftingResult(
         }
 
         addReqs(tooltip);
-        addBlank(tooltip);
 
         addIds(tooltip);
-        addBlank(tooltip);
 
         if (type.isArmour()) {
             addBaseFormat(tooltip, "Powder Slots", powderSlots);
@@ -76,6 +73,9 @@ public record CraftingResult(
                     .append(String.valueOf(entry.getValue().w));
             tooltip.add(append);
         }
+        if (!damage.isEmpty()) {
+            addBlank(tooltip);
+        }
     }
 
     public void addReqs(List<Text> tooltip) {
@@ -84,6 +84,7 @@ public record CraftingResult(
             String name = req.a().name().charAt(0) + req.a().name().substring(1).toLowerCase();
             addBaseFormat(tooltip, name + " Min", req.b());
         }
+        addBlank(tooltip);
     }
 
     private void addIds(List<Text> tooltip) {
@@ -104,6 +105,9 @@ public record CraftingResult(
                     .append(applyElementFormatting(id.statType().getDisplayName()))
                     .append(unit).append(": ")
                     .append(highText));
+        }
+        if (!possibleValues.isEmpty()) {
+            addBlank(tooltip);
         }
     }
 
@@ -199,6 +203,21 @@ public record CraftingResult(
         List<Pair<DamageType, RangedValue>> damages = targetItem.getDamages(); // TODO
 
         return true;
+    }
+
+    public String getAllInfoString() {
+        return "Recipe{" +
+                "recipe=" + recipe +
+                ", type=" + type +
+                ", possibleValues=" + possibleValues +
+                ", requirements=" + requirements +
+                ", health=" + health +
+                ", durability=" + durability +
+                ", powderSlots=" + powderSlots +
+                ", charges=" + charges +
+                ", duration=" + duration +
+                ", damage=" + damage +
+                '}';
     }
 
     @Override

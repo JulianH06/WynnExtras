@@ -78,6 +78,10 @@ public enum CraftableType {
         return !isConsumable();
     }
 
+    public boolean canHaveHealth() {
+        return isArmour() || isConsumable();
+    }
+
     public String getDisplayName() {
         return this.name().charAt(0) + this.name().substring(1).toLowerCase();
     }

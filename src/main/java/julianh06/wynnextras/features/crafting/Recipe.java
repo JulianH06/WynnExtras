@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.crafting;
 
 import com.wynntils.models.elements.type.Skill;
+import com.wynntils.models.gear.type.GearAttackSpeed;
 import com.wynntils.models.gear.type.GearRequirements;
 import com.wynntils.models.ingredients.type.IngredientInfo;
 import com.wynntils.models.ingredients.type.IngredientPosition;
@@ -28,6 +29,7 @@ public class Recipe {
     private Double[] multipliers;
     private Vector2i dura;
     private Vector2i healthOrDmg;
+    private GearAttackSpeed attackSpeed = GearAttackSpeed.NORMAL;
 
     private static final Double[] tierToMult = {0.0, 1.0, 1.25, 1.4};
 
@@ -103,6 +105,11 @@ public class Recipe {
         this.ingredients = ingredients;
     }
 
+    public void setAttackSpeed(GearAttackSpeed attackSpeed) {
+        if (attackSpeed.ordinal() < 2 || attackSpeed.ordinal() > 4) return;
+        this.attackSpeed = attackSpeed;
+    }
+
     public void setLevel(Vector2i level) {
         this.level = level;
         RecipeLoader.RecipeData ranges = RecipeLoader.getRecipe(type, level);
@@ -116,7 +123,6 @@ public class Recipe {
 
     public void setConstants(RecipeLoader.RecipeData data) {
         this.level = data.lvl();
-
         this.dura = data.durability();
         this.healthOrDmg = data.healthOrDamage();
     }
@@ -171,14 +177,27 @@ public class Recipe {
         if (!getType().isWeapon()) return null;
         HashMap<DamageType, Vector4i> result = new HashMap<>();
 
+        double ratio = 2.05;
+        switch (attackSpeed) {
+            case SLOW -> ratio /= 1.5;
+            case NORMAL -> ratio = 1;
+            case FAST -> ratio /= 2.5;
+        }
         double multiplier = materials.getMultiplier();
         int nDamBaseLow = (int) Math.floor(healthOrDmg.x * multiplier);
-        int nDamBaseHigh = (int) Math.floor(healthOrDmg.x * multiplier);
+        int nDamBaseHigh = (int) Math.floor(healthOrDmg.y * multiplier);
+        nDamBaseLow = (int) Math.floor(nDamBaseLow * ratio);
+        nDamBaseHigh = (int) Math.floor(nDamBaseHigh * ratio);
+
+        // apply powders here wynntills doesnt count them as being ingredients so i cant be bothered to do it rn
+
+        int low1 = (int) Math.floor(nDamBaseLow * 0.9);
+        int low2 = (int) Math.floor(nDamBaseLow * 1.1);
+        int high1 = (int) Math.floor(nDamBaseHigh * 0.9);
+        int high2 = (int) Math.floor(nDamBaseHigh * 1.1);
+        result.put(DamageType.NEUTRAL, new Vector4i(low1, low2, high1, high2));
 
         return result;
-
-        // TODO how is dmg calculated
-        // TODO apply powders in ing slots
     }
 
     public Double[] getMultipliers() {
