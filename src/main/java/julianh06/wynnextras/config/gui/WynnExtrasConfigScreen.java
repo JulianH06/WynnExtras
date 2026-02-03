@@ -165,10 +165,12 @@ public class WynnExtrasConfigScreen extends Screen {
             .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
                     () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
+                .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
+                    () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
                 .add(toggle("Crafting preview", "Crafting preview toggle",
-                    () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v));
+                () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v));
 
-        // ===== CHAT =====
+                // ===== CHAT =====
         category("Chat", 0xFFc80069)
             .add(stringList("Blocked Words", "Hide messages with these",
                     () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
