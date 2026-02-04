@@ -14,6 +14,11 @@ import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
+import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
+import julianh06.wynnextras.utils.ItemUtils;
+import net.minecraft.screen.slot.Slot;
+import net.minecraft.item.ItemStack;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -103,7 +108,7 @@ public class CommandLoader implements WELoader {
                 })
             );
 
-            // Raid Loot Tracker reset commands
+            // Raid Loot Tracker reset commands and debug commands - combined under single /we
             dispatcher.register(
                 ClientCommandManager.literal("we")
                     .then(ClientCommandManager.literal("raidloot")
@@ -159,6 +164,14 @@ public class CommandLoader implements WELoader {
                                     McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset TNA raid loot data!"));
                                     return 1;
                                 }))
+                        )
+                    )
+                    .then(ClientCommandManager.literal("debug")
+                        .then(ClientCommandManager.literal("slot")
+                            .executes(ctx -> {
+                                TradeMarketComparisonPanel.toggleSlotDebug();
+                                return 1;
+                            })
                         )
                     )
             );

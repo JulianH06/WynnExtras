@@ -1,7 +1,6 @@
 package julianh06.wynnextras.utils.UI;
 
 import com.wynntils.core.text.StyledText;
-import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;

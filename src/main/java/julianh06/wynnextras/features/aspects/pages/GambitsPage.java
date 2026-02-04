@@ -53,7 +53,7 @@ public class GambitsPage extends PageWidget{
     Identifier trd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/tr.png");
     Identifier bld = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/bl.png");
     Identifier brd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/br.png");
-    
+
     private boolean fetchedCrowdsourcedGambits = false;
     private List<GambitData.GambitEntry> crowdsourcedGambits = null;
 

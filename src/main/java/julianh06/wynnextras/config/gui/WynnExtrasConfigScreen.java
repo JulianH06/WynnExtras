@@ -168,8 +168,12 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Stat Scales", "Show weights for each stat",
                     () -> config.showScales, v -> config.showScales = v))
             .sub("Trade Market")
-                .add(toggle("Show Background", "Show dark background",
-                    () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
+                .add(toggle("Scale background", "Use mythic scale as item background",
+                    () -> config.scaleBackgroundEnabled, v -> config.scaleBackgroundEnabled = v))
+                .add(toggle("Hide scale background button", "Hides the quick toggle for the scale background setting",
+                        () -> config.hideScaleBackgroundButton, v -> config.hideScaleBackgroundButton = v))
+                .add(toggle("Hide comparing info text", "Shows a text that informs you that you can compare items with F1",
+                        () -> config.hideTMInfoText, v -> config.hideTMInfoText = v))
             .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
                     () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v));

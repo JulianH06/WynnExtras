@@ -44,7 +44,7 @@ public class AspectScanning {
             "TNA",  new double[]{24489, 8, -23878}
     );
 
-    public static void openMenu(MinecraftClient client, PlayerEntity player){
+    public static void openMenu(MinecraftClient client, PlayerEntity player) {
         int currentSlot = player.getInventory().getSelectedSlot();
         player.getInventory().setSelectedSlot(7);
 
@@ -57,6 +57,7 @@ public class AspectScanning {
         maintracking.setNeedToClickAbilityTree(true);
         maintracking.setAspectScanreq(true);
     }
+
     public static Map<String, Pair<String, String>> AspectsInMenu() {
         Screen currScreen = MinecraftClient.getInstance().currentScreen;
         HandledScreen<?> screen = (currScreen instanceof HandledScreen) ? (HandledScreen<?>) currScreen : null;

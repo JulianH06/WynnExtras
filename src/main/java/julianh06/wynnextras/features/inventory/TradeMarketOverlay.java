@@ -216,21 +216,6 @@ public class TradeMarketOverlay {
     }
 
     private static void renderOverlay(DrawContext context, MinecraftClient mc, TradeValues values) {
-
-        // Draw background
-        if (WynnExtrasConfig.INSTANCE.tradeMarketOverlayBackground) {
-            // Content: title (LINE_HEIGHT+2) + 3 data lines (LINE_HEIGHT each)
-            int contentHeight = (LINE_HEIGHT + 2) + (LINE_HEIGHT * 3);
-            int padX = 4;
-            int padY = 3;
-            int bgX = xPos - padX;
-            int bgY = yPos - padY;
-            int bgWidth = WIDTH + padX * 2;
-            int bgHeight = contentHeight + padY * 2;
-            int bgColor = 0xCC1a1a1a;
-            drawBackground(context, bgX, bgY, bgX + bgWidth, bgY + bgHeight, bgColor);
-        }
-
         int y = yPos;
 
         // Brand pill + Title

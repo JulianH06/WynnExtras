@@ -25,6 +25,8 @@ public abstract class BankData {
     public int lastPage = 1;
     public HashMap<Integer, List<ItemStack>> BankPages = new HashMap<>();
     public HashMap<Integer, String> BankPageNames = new HashMap<>();
+    public String characterNickname = null; // For character banks - stores the character's class name (e.g., "Dark Wizard")
+    public int characterLevel = 0; // For character banks - stores the character's combat level
 
     public abstract Path getConfigPath();
 
@@ -58,6 +60,8 @@ public abstract class BankData {
                     this.BankPages = loaded.BankPages;
                     this.lastPage = loaded.lastPage;
                     this.BankPageNames = loaded.BankPageNames;
+                    this.characterNickname = loaded.characterNickname;
+                    this.characterLevel = loaded.characterLevel;
                 }
             } catch (IOException e) {
                 System.err.println("[WynnExtras] Couldn't read bank data:");
@@ -67,6 +71,8 @@ public abstract class BankData {
             this.BankPages = new HashMap<>();
             this.lastPage = 1;
             this.BankPageNames = new HashMap<>();
+            this.characterNickname = null;
+            this.characterLevel = 0;
         }
     }
 

@@ -11,6 +11,7 @@ import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.aspects.maintracking;
+import julianh06.wynnextras.features.lootruns.LootrunTracker;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
 import julianh06.wynnextras.features.guildviewer.BannerGuiRenderer;
@@ -96,6 +97,7 @@ public class WynnExtras implements ClientModInitializer {
 			null
 	);
 
+
 	public static final String MOD_ID = "wynnextras";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -171,6 +173,7 @@ public class WynnExtras implements ClientModInitializer {
 		RaidListData.load();
 		WaypointData.load();
 		RaidChatNotifier.INSTANCE.load();
+		LootrunTracker.register();
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			AccountBankData.INSTANCE.load();

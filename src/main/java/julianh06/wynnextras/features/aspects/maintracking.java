@@ -160,6 +160,19 @@ public class maintracking {
             null
     );
 
+    private static Command lootrunlootpoolCmd = new Command(
+            "lootruns",
+            "View lootrun loot pools",
+            (ctx) -> {
+                MinecraftUtils.mc().send(() -> {
+                    WEScreen.open(LootrunScreen::new);
+                });
+                return 1;
+            },
+            null,
+            null
+    );
+
     //TODO: interfaces tracken und dann zeug aufrufen
     static boolean inTreeMenu = false;
     static boolean AspectScanreq = false;
@@ -227,9 +240,9 @@ public class maintracking {
 
             // Preview chests have different titles for each raid
             inPreviewChest = InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00B") || // NOTG
-                             InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00C") || // NOL
-                             InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00D") || // TCC
-                             InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00E");   // TNA
+                    InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00C") || // NOL
+                    InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00D") || // TCC
+                    InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00E");   // TNA
 
             // Character menu: wait 5 ticks then click slot 9 (Ability Tree) to open the tree menu
             if(inCharacterMenu && needToClickAbilityTree){

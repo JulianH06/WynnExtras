@@ -58,7 +58,7 @@ public class MojangAuth {
 
                 // Create session service (Yggdrasil auth service)
                 YggdrasilAuthenticationService authService = new YggdrasilAuthenticationService(
-                    Proxy.NO_PROXY
+                        Proxy.NO_PROXY
                 );
                 MinecraftSessionService sessionService = authService.createMinecraftSessionService();
 
@@ -84,7 +84,7 @@ public class MojangAuth {
                 } catch (AuthenticationException e) {
                     WynnExtras.LOGGER.error("Failed to join server via Mojang sessionserver", e);
                     McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                        Text.literal("§cFailed to authenticate with Mojang. Please restart your game.")
+                            Text.literal("§cFailed to authenticate with Mojang. Please restart your game.")
                     ));
                     return null;
                 }

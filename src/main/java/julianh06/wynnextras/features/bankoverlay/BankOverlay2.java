@@ -40,11 +40,13 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.features.inventory.data.CrossClassBankSearch;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
 import julianh06.wynnextras.mixin.ItemFavoriteFeatureAccessor;
 import julianh06.wynnextras.mixin.ItemGuessFeatureAccessor;
 import julianh06.wynnextras.utils.Pair;
+import julianh06.wynnextras.utils.SearchQueryParser;
 import julianh06.wynnextras.utils.UI.*;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.fabricmc.loader.api.FabricLoader;
@@ -138,6 +140,14 @@ public class BankOverlay2 extends WEHandledScreen {
     private static ToggleOverlayWidget toggleOverlayWidget = null;
     static ScrollBarWidget scrollBarWidget = null;
 
+    // Cross-class search
+    private static List<CrossClassPageWidget> crossClassPages = new ArrayList<>();
+    private static String lastCrossClassSearchQuery = "";
+    private static boolean crossClassSearchActive = false;
+    // Character ID to highlight in /class menu (set when clicking cross-class page)
+    public static String targetCharacterIdForClassMenu = null;
+    public static String targetCharacterNameForClassMenu = null;
+
     static int shownPages;
 
     private static boolean isMouseInOverlay = false;
@@ -154,6 +164,9 @@ public class BankOverlay2 extends WEHandledScreen {
         actualOffset = 0;
         targetOffset = 0;
         pages.clear();
+        crossClassPages.clear();
+        lastCrossClassSearchQuery = "";
+        crossClassSearchActive = false;
         signMids.clear();
         inventoryWidget = null;
         switchButtonWidget = null;
@@ -370,7 +383,56 @@ public class BankOverlay2 extends WEHandledScreen {
             scissory2 = yStart + 100 * (yFitAmount - 1);
 
             context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
-            ui.updateContext(context, ui.getScaleFactor(), 0, 0);
+
+            // Check for cross-class search (@)
+            String rawSearchInput = searchbar2.getInput();
+            boolean isCrossClassSearch = rawSearchInput != null && rawSearchInput.contains("@");
+            String searchInput = rawSearchInput;
+
+            // Strip @ from search query for actual matching
+            if (isCrossClassSearch && searchInput != null) {
+                searchInput = searchInput.replace("@", "").trim();
+            }
+
+            // Trigger cross-class search if needed (@ present, with or without search text)
+            if (isCrossClassSearch) {
+                if (!rawSearchInput.equals(lastCrossClassSearchQuery)) {
+                    lastCrossClassSearchQuery = rawSearchInput;
+                    crossClassSearchActive = true;
+
+                    // Perform cross-class search
+                    crossClassPages.clear();
+
+                    // If no search text after @, get ALL pages from all other characters
+                    // If search text exists, only get matching pages
+                    List<CrossClassBankSearch.SearchResult> results;
+                    if (searchInput == null || searchInput.isEmpty()) {
+                        results = CrossClassBankSearch.getAllCharacterPages();
+                    } else {
+                        results = CrossClassBankSearch.searchAllCharacters(searchInput);
+                    }
+
+                    for (CrossClassBankSearch.SearchResult result : results) {
+                        CrossClassPageWidget ccPage = new CrossClassPageWidget(
+                                result.characterId,
+                                result.characterNickname,
+                                result.characterLevel,
+                                result.pageNumber,
+                                result.pageItems,
+                                yStart,
+                                (int) (yStart + (yFitAmount) * (90 + 4 + 10) * Math.max(2, ui.getScaleFactor()))
+                        );
+                        crossClassPages.add(ccPage);
+                    }
+                }
+            } else {
+                // Clear cross-class results if @ is not in search
+                if (crossClassSearchActive) {
+                    crossClassPages.clear();
+                    lastCrossClassSearchQuery = "";
+                    crossClassSearchActive = false;
+                }
+            }
 
             for(PageWidget page : pages) {
                 float invX = xStart + (visuali % xFitAmount) * (162 + 4);
@@ -379,7 +441,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 page.setItems(buildInventoryForIndex(i, false));
                 page.updateValues();
 
-                String searchInput = searchbar2.getInput();
                 if(searchInput != null && !searchInput.isEmpty()) {
                     // Check if this page was already evaluated for the current search term
                     boolean alreadyMatched = searchInput.equals(page.lastInput);
@@ -387,12 +448,22 @@ public class BankOverlay2 extends WEHandledScreen {
 
                     // Only search if we don't already know the result
                     if (!alreadyMatched) {
-                        String searchLower = searchInput.toLowerCase();
+                        // Use advanced search parser
+                        SearchQueryParser.ParsedQuery query = SearchQueryParser.parse(searchInput);
+
                         for(ItemStack stack : page.getItems()) {
                             if(stack == null) continue;
-                            if(stack.getCustomName() == null) continue;
+                            if(stack.isEmpty()) continue;
 
-                            if (stack.getCustomName().getString().toLowerCase().contains(searchLower)) {
+                            // Get WynnItem annotation if available
+                            WynnItem wynnItem = null;
+                            Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(stack);
+                            if (optWynnItem.isPresent()) {
+                                wynnItem = optWynnItem.get();
+                            }
+
+                            // Use advanced search matching
+                            if (SearchQueryParser.matches(stack, wynnItem, query)) {
                                 containsSearch = true;
                                 page.lastInput = searchInput;
                                 break;
@@ -419,6 +490,22 @@ public class BankOverlay2 extends WEHandledScreen {
                 if(invY > yStart - 100 && invY < yStart + 103 * (yFitAmount - 1)) page.draw(context, mouseX, mouseY, delta, ui);
                 i++;
                 visuali++;
+            }
+
+            // Render cross-class pages after regular pages
+            if (crossClassSearchActive && !crossClassPages.isEmpty()) {
+                for (CrossClassPageWidget ccPage : crossClassPages) {
+                    float invX = xStart + (visuali % xFitAmount) * (162 + 4);
+                    float invY = yStart + Math.floorDiv(visuali, xFitAmount) * (90 + 4 + 10) - actualOffset;
+                    ccPage.setBounds((int) (invX * ui.getScaleFactor()), (int) (invY * ui.getScaleFactor()), (int) (164 * ui.getScaleFactor()), (int) (92 * ui.getScaleFactor()));
+                    ccPage.updateValues();
+
+                    if (invY > yStart - 100 && invY < yStart + 103 * (yFitAmount - 1)) {
+                        ccPage.draw(context, mouseX, mouseY, delta, ui);
+                    }
+                    visuali++;
+                    pageAmount++;
+                }
             }
 
             context.disableScissor();
@@ -517,6 +604,12 @@ public class BankOverlay2 extends WEHandledScreen {
 
         for(PageWidget page : pages) {
             page.mouseClicked(x, y, button);
+        }
+        // Handle clicks on cross-class search results
+        for(CrossClassPageWidget ccPage : crossClassPages) {
+            if (ccPage.mouseClicked(x, y, button)) {
+                return true;
+            }
         }
         if(inventoryWidget != null) inventoryWidget.mouseClicked(x, y, button);
         if(switchButtonWidget != null) switchButtonWidget.mouseClicked(x, y, button);
@@ -767,20 +860,33 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static void renderSearchOverlay(DrawContext context, ItemStack stack, int x, int y) {
-        String input = searchbar2.getInput().toLowerCase();
-        if(stack == null) {
-            if(!input.isEmpty()) {
-                RenderUtils.drawRect(context, CustomColor.fromHSV(0, 0, 0, 0.75f), x - 1, y - 1, 18, 18);
-            }
+        String rawInput = searchbar2.getInput();
+        if (rawInput == null || rawInput.isEmpty()) return;
+
+        // Strip @ for cross-class search indicator
+        String input = rawInput.replace("@", "").trim();
+        if (input.isEmpty()) return; // Just @ with no search term - show all
+
+        if (stack == null || stack.isEmpty() || stack.getItem().equals(Items.AIR)) {
+            RenderUtils.drawRect(context, CustomColor.fromHSV(0, 0, 0, 0.75f), x - 1, y - 1, 18, 18);
             return;
         }
-        if (stack.getCustomName() != null && !input.isEmpty()) {
-            if (stack.getCustomName().getString().toLowerCase().contains(input)) {
-                RenderUtils.drawRectBorders(context, CustomColor.fromHexString("008000"), x, y, x + 16, y + 16, 1);
-            } else {
-                RenderUtils.drawRect(context, CustomColor.fromHSV(0, 0, 0, 0.75f), x - 1, y - 1, 18, 18);
-            }
-        } else if (!input.isEmpty() && stack.getItem().equals(Items.AIR)) {
+
+        // Use advanced search parser for matching
+        SearchQueryParser.ParsedQuery query = SearchQueryParser.parse(input);
+
+        // Get WynnItem if available
+        WynnItem wynnItem = null;
+        Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(stack);
+        if (optWynnItem.isPresent()) {
+            wynnItem = optWynnItem.get();
+        }
+
+        if (SearchQueryParser.matches(stack, wynnItem, query)) {
+            // Item matches - draw green border
+            RenderUtils.drawRectBorders(context, CustomColor.fromHexString("00FF00"), x, y, x + 16, y + 16, 1);
+        } else {
+            // Item doesn't match - dim it
             RenderUtils.drawRect(context, CustomColor.fromHSV(0, 0, 0, 0.75f), x - 1, y - 1, 18, 18);
         }
     }
@@ -1206,16 +1312,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 return;
             }
 
-//            RenderUtils.drawTexturedRect(
-//                    ctx,
-//                    WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankTextureDark : bankTexture,
-//                    CustomColor.NONE,
-//                    ui.sx(x), ui.sy(y),
-//                    ui.sw(width), ui.sh(height),
-//                    0, 0,
-//                    ui.sw(width), ui.sh(height),
-//                    ui.sw(width), ui.sh(height)
-//            );
             ui.drawImage(WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankTextureDark : bankTexture, x, y, width, height);
 
             if(items.isEmpty()) return;
@@ -1761,6 +1857,145 @@ public class BankOverlay2 extends WEHandledScreen {
                 isHold = false;
                 return true;
             }
+        }
+    }
+
+    /**
+     * Widget for displaying cross-class search results from other characters
+     */
+    public static class CrossClassPageWidget extends Widget {
+        Identifier bankTexture = Identifier.of("wynnextras", "textures/gui/bankoverlay/bank.png");
+        Identifier bankTextureDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/bank_dark.png");
+
+        private final String characterId;
+        private final String characterNickname;
+        private final int characterLevel;
+        private final int pageNumber;
+        private final List<ItemStack> items;
+        private final List<SlotWidget> slots = new ArrayList<>();
+        private int topBorder;
+        private int botBorder;
+
+        public CrossClassPageWidget(String characterId, String characterNickname, int characterLevel, int pageNumber, List<ItemStack> items, int topBorder, int botBorder) {
+            super(0, 0, 0, 0);
+            this.characterId = characterId;
+            this.characterNickname = characterNickname;
+            this.characterLevel = characterLevel;
+            this.pageNumber = pageNumber;
+            this.items = items != null ? items : new ArrayList<>();
+            this.topBorder = topBorder;
+            this.botBorder = botBorder;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if (ui == null) return;
+            if (y > botBorder || y + height < topBorder) return;
+
+            // Draw bank texture background
+            ui.drawImage(WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankTextureDark : bankTexture, x, y, width, height);
+
+            // Draw character label above the page (e.g., "@Dark Wizard Lv.106 Page 1")
+            String name = (characterNickname != null && !characterNickname.isEmpty())
+                    ? characterNickname
+                    : (characterId.length() > 8 ? characterId.substring(0, 8) + "..." : characterId);
+            String levelStr = characterLevel > 0 ? " Lv." + characterLevel : "";
+            ui.drawText("§e@" + name + levelStr + " §7Page " + pageNumber, x + 2, y - 9, CustomColor.fromHexString("FFFF00"), 0.9f);
+
+            if (items.isEmpty()) return;
+
+            // Create slots if needed
+            if (slots.isEmpty()) {
+                int i = 0;
+                for (ItemStack itemStack : items) {
+                    CrossClassSlotWidget slot = new CrossClassSlotWidget(itemStack == null ? null : itemStack.copy(), i);
+                    slots.add(slot);
+                    addChild(slot);
+                    i++;
+                }
+            }
+
+            // Update slot items and positions
+            updateValues();
+        }
+
+        @Override
+        protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if (ui == null) return;
+            if (y > botBorder || y + height < topBorder) return;
+
+            // Dim overlay to indicate this is from another character
+            ui.drawRect(x, y, width, height, CustomColor.fromHSV(40, 0.4f, 0.8f, 0.2f));
+
+            // Orange/yellow border to indicate cross-class result
+            ui.drawRectBorders(x, y + 0.5f, x + 164, y + 92, CustomColor.fromHexString("FFAA00"));
+
+            // "Click to /class" hint at bottom of page
+            ui.drawText("§7Click to /class", x + 2, y + height - 10, CustomColor.fromHexString("AAAAAA"), 0.7f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if (button == 0) { // Left click
+                // Store target character for highlighting in /class menu
+                targetCharacterIdForClassMenu = characterId;
+                String name = (characterNickname != null && !characterNickname.isEmpty())
+                        ? characterNickname
+                        : characterId;
+                String levelStr = characterLevel > 0 ? " Lv." + characterLevel : "";
+                targetCharacterNameForClassMenu = name + levelStr;
+
+                // Send /class command
+                Handlers.Command.queueCommand("class");
+
+                // Play click sound
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        protected void updateValues() {
+            if (ui == null) return;
+            if (slots.isEmpty()) return;
+
+            int i = 0;
+            for (SlotWidget slot : slots) {
+                slot.setBounds(
+                        (int) (x + 18 * (i % 9) * ui.getScaleFactor() + 1),
+                        (int) (y + 18 * (i / 9) * ui.getScaleFactor() + 1),
+                        (int) (18 * ui.getScaleFactor()),
+                        (int) (18 * ui.getScaleFactor())
+                );
+                if (i < items.size()) {
+                    slot.setStack(items.get(i));
+                }
+                i++;
+            }
+        }
+
+        public String getCharacterId() {
+            return characterId;
+        }
+
+        public int getPageNumber() {
+            return pageNumber;
+        }
+    }
+
+    /**
+     * Slot widget for cross-class results (view-only, no interaction)
+     */
+    public static class CrossClassSlotWidget extends SlotWidget {
+        public CrossClassSlotWidget(ItemStack stack, int slotIndex) {
+            super(stack, slotIndex, false, -1);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            // No click interaction for cross-class slots
+            return false;
         }
     }
 }
