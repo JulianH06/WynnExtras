@@ -10,11 +10,6 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.aspects.pages.*;
-import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
-import julianh06.wynnextras.features.inventory.BankOverlay;
-import julianh06.wynnextras.features.inventory.BankOverlayType;
-import julianh06.wynnextras.features.profileviewer.PVScreen;
-import julianh06.wynnextras.features.profileviewer.tabs.*;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
@@ -30,9 +25,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AspectScreen extends WEScreen {
-    public enum Page {LootPools, LootRuns, Aspects, Gambits, RaidLoot, Leaderboard}
+    public enum Page {LootPools, Lootruns, Aspects, Gambits, RaidLoot, Leaderboard}
 
     static LootPoolPage lootPoolPage;
+    static LootrunLootPoolPage lootrunLootPoolPage;
     static AspectsPage aspectsPage;
     static GambitsPage gambitsPage;
     static RaidLootPage raidLootPage;
@@ -165,6 +161,7 @@ public class AspectScreen extends WEScreen {
     private PageWidget getTabWidget(Page page) {
         return switch (page) {
             case LootPools -> lootPoolPage == null ? lootPoolPage = new LootPoolPage(this) : lootPoolPage;
+            case Lootruns -> lootrunLootPoolPage == null ? lootrunLootPoolPage = new LootrunLootPoolPage(this) : lootrunLootPoolPage;
             case Aspects -> aspectsPage == null ? aspectsPage = new AspectsPage(this) : aspectsPage;
             case Gambits -> gambitsPage == null ? gambitsPage = new GambitsPage(this) : gambitsPage;
             case RaidLoot -> raidLootPage == null ? raidLootPage = new RaidLootPage(this) : raidLootPage;
@@ -195,7 +192,7 @@ public class AspectScreen extends WEScreen {
             ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
             String name = page.name();
             if(page == Page.LootPools) name = "Loot Pools";
-            if(page == Page.LootRuns) name = "Lootruns";
+            if(page == Page.Lootruns) name = "Lootruns";
             if(page == Page.RaidLoot) name = "Raid Loot";
             ui.drawCenteredText(name, x + width / 2f, y + height / 2f, currentPage == page ? CustomColor.fromHexString("FFFF00") : CustomColor.fromHexString("FFFFFF"));
         }

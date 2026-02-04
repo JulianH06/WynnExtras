@@ -52,6 +52,7 @@ public class LootPoolPage extends PageWidget {
     private ImportFromWynntilsButton importFromWynntilsButton;
     private HideMaxButton hideMaxButton;
     private OnlyFavoritesButton onlyFavoritesButton;
+    private RefreshButton refreshButton;
 
     private static boolean hideMax = false;
     private static boolean onlyFavorites = false;
@@ -76,6 +77,7 @@ public class LootPoolPage extends PageWidget {
         importFromWynntilsButton = new ImportFromWynntilsButton();
         hideMaxButton = new HideMaxButton();
         onlyFavoritesButton = new OnlyFavoritesButton();
+        refreshButton = new RefreshButton();
     }
 
     @Override
@@ -166,6 +168,9 @@ public class LootPoolPage extends PageWidget {
         importFromWynntilsButton.setBounds(0, 0, 500, 60);
         importFromWynntilsButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
 
+        refreshButton.setBounds(520, 0, 350, 60);
+        refreshButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
+
         hideMaxButton.setBounds((int) (width * ui.getScaleFactorF()) - 300, 0, 300, 60);
         hideMaxButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
 
@@ -211,6 +216,11 @@ public class LootPoolPage extends PageWidget {
 
         if(onlyFavoritesButton.isHovered()) {
             onlyFavoritesButton.onClick(button);
+            return true;
+        }
+
+        if(refreshButton.isHovered()) {
+            refreshButton.onClick(button);
             return true;
         }
 
@@ -865,6 +875,30 @@ public class LootPoolPage extends PageWidget {
         @Override
         protected boolean onClick(int button) {
             onlyFavorites = !onlyFavorites;
+            for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+                lootPoolWidget.aspectWidgets.clear();
+            }
+
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
+        }
+    }
+
+    private static class RefreshButton extends Widget {
+        public RefreshButton() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawCenteredText("Reload your aspects", x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            personalAspectProgress.clear();
+            fetchedPersonalProgress = false;
             for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
                 lootPoolWidget.aspectWidgets.clear();
             }
