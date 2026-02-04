@@ -10,7 +10,6 @@
     "requireAnnotations": true
   },
   "client": [
-    "ChatBadgeMixin",
     "ChatClickMixin",
     "ItemHighlightFeatureMixin",
     "WeightScaleBackgroundMixin",

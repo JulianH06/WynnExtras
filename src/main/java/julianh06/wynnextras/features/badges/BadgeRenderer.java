@@ -43,12 +43,16 @@ public class BadgeRenderer {
             String uuid = player.getUuid().toString();
             if (!BadgeService.isWynnExtrasUser(uuid)) continue;
 
+            float tickDelta = MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(false);
+
             // Get player position for badge rendering
             WEVec playerPos = new WEVec(
-                player.getX(),
-                player.getY() + BADGE_HEIGHT_OFFSET,
-                player.getZ()
+                    player.getLerpedPos(tickDelta).x,
+                    player.getLerpedPos(tickDelta).y + (player.isSneaking() ? 1.72 : 2.15),
+                    player.getLerpedPos(tickDelta).z
             );
+
+            //System.out.println("reder at " + player.getLerpedPos(tickDelta).x + " " + player.getLerpedPos(tickDelta).y + " " + player.getLerpedPos(tickDelta).z);
 
             // Render the star badge
             WorldRenderUtils.drawText(event, playerPos, BADGE_TEXT, BADGE_SCALE, true);

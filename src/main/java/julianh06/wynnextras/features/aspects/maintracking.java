@@ -160,6 +160,19 @@ public class maintracking {
             null
     );
 
+    private static Command lootrunlootpoolCmd = new Command(
+            "lootruns",
+            "View lootrun loot pools",
+            (ctx) -> {
+                MinecraftUtils.mc().send(() -> {
+                    WEScreen.open(LootrunScreen::new);
+                });
+                return 1;
+            },
+            null,
+            null
+    );
+
     //TODO: interfaces tracken und dann zeug aufrufen
     static boolean inTreeMenu = false;
     static boolean AspectScanreq = false;

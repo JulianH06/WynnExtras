@@ -6,6 +6,7 @@ import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.GearItem;
 import com.wynntils.utils.mc.TooltipUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -13,6 +14,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -101,6 +103,9 @@ public class TradeMarketComparisonPanel {
     // Toggle Scale BG button
     private static final int TOGGLE_BUTTON_WIDTH = 70;
     private static final int TOGGLE_BUTTON_HEIGHT = 14;
+
+    private static final int INFO_BUTTON_WIDTH = 150;
+    private static final int INFO_BUTTON_HEIGHT = 25;
 
     // Trade Market screen titles (various screens)
     private static final List<String> TRADE_MARKET_TITLES = List.of(
@@ -215,7 +220,7 @@ public class TradeMarketComparisonPanel {
 
         // Build the tooltip
         int panelNum = panelIndex + 1;
-        List<Text> tooltip = buildTooltip(stack, "§e§lItem " + panelNum + ":");
+        List<Text> tooltip = buildTooltip(stack, panelNum + ":");
 
         // Calculate initial position based on panel number
         int panelWidth = ComparisonPanel.calculateWidth(tooltip);
@@ -274,6 +279,8 @@ public class TradeMarketComparisonPanel {
         // Filter out unwanted lines
         List<Text> filteredTooltip = new ArrayList<>();
         for (Text line : wynntilsTooltip) {
+            if(line.equals(Text.empty()) || line.getString().equals(" ")) continue;
+            System.out.println(line);
             String str = line.getString().toLowerCase();
             // Skip attack speed
             if (str.contains("attack speed")) continue;
@@ -296,22 +303,16 @@ public class TradeMarketComparisonPanel {
                 str.contains("intelligence min") || str.contains("defence min") || str.contains("agility min")) continue;
             // Skip skill point additions (+ Strength, + Dexterity, etc.)
             if ((str.contains("strength") || str.contains("dexterity") || str.contains("intelligence") ||
-                str.contains("defence") || str.contains("agility")) &&
-                (str.contains("+") || str.contains("point"))) continue;
+                str.contains("defence") || str.contains("agility") || str.contains("health")) && !str.contains("[")) continue;
             filteredTooltip.add(line);
+            if(line.toString().toLowerCase().contains("item")) break;
         }
 
-        // Get item name for header
-        String itemName = stack.getName().getString()
-                .replaceAll("§[0-9a-fk-or]", "")  // Remove formatting codes
-                .replace("À", "")
-                .replace("⬡ Shiny ", "")
-                .strip();
-
         // Build tooltip with header including item name
-        tooltip.add(Text.literal(headerPrefix + " " + itemName));
-        tooltip.add(Text.literal(""));
+        tooltip.add(WynnExtras.addWynnExtrasPrefix("§6Item Comparison " + headerPrefix));
+        tooltip.add(Text.of(" "));
         tooltip.addAll(filteredTooltip);
+        tooltip.add(filteredTooltip.size() + 1, Text.of(" "));
 
         return tooltip;
     }
@@ -359,7 +360,7 @@ public class TradeMarketComparisonPanel {
         TextRenderer textRenderer = mc.textRenderer;
 
         // Always render the toggle button in trade market
-        renderToggleButton(context, textRenderer);
+        if(!WynnExtrasConfig.INSTANCE.hideScaleBackgroundButton) renderToggleButton(context, textRenderer);
 
         // Only render comparison panels if we have any
         if (hasAnyComparison()) {
@@ -371,6 +372,8 @@ public class TradeMarketComparisonPanel {
                 renderTooltipAt(context, textRenderer, panel.tooltip, panel.x, panel.y, panel.width, panel.height, panel.borderColor);
                 renderCloseButton(context, textRenderer, panel.x + panel.width - CLOSE_BUTTON_SIZE + 2, panel.y - 4);
             }
+        } else if(!WynnExtrasConfig.INSTANCE.hideTMInfoText) {
+            renderInfoButton(context, textRenderer);
         }
     }
 
@@ -443,8 +446,8 @@ public class TradeMarketComparisonPanel {
         MinecraftClient mc = MinecraftClient.getInstance();
         int screenWidth = mc.getWindow() != null ? mc.getWindow().getScaledWidth() : 400;
 
-        int buttonX = (screenWidth - STOP_BUTTON_WIDTH) / 2;
-        int buttonY = 5;
+        int buttonX = 0;
+        int buttonY = 0;
 
         // Button background (dark red)
         context.fill(buttonX, buttonY, buttonX + STOP_BUTTON_WIDTH, buttonY + STOP_BUTTON_HEIGHT, 0xFFAA0000);
@@ -465,12 +468,9 @@ public class TradeMarketComparisonPanel {
     private static void renderToggleButton(DrawContext context, TextRenderer textRenderer) {
         MinecraftClient mc = MinecraftClient.getInstance();
         int screenWidth = mc.getWindow() != null ? mc.getWindow().getScaledWidth() : 400;
-        int screenHeight = mc.getWindow() != null ? mc.getWindow().getScaledHeight() : 300;
 
-        // Position below the inventory (center-bottom area)
-        // Trade market GUI is typically centered, inventory is at bottom
-        int buttonX = (screenWidth - TOGGLE_BUTTON_WIDTH) / 2;
-        int buttonY = screenHeight - 60;  // 60 pixels from bottom
+        int buttonX = screenWidth - TOGGLE_BUTTON_WIDTH;
+        int buttonY = 0;
 
         boolean enabled = WynnExtrasConfig.INSTANCE.scaleBackgroundEnabled;
 
@@ -491,6 +491,35 @@ public class TradeMarketComparisonPanel {
         int textX = buttonX + (TOGGLE_BUTTON_WIDTH - textWidth) / 2;
         int textY = buttonY + (TOGGLE_BUTTON_HEIGHT - 8) / 2;
         context.drawText(textRenderer, Text.literal(text), textX, textY, 0xFFFFFFFF, true);
+    }
+
+    private static void renderInfoButton(DrawContext context, TextRenderer textRenderer) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        int screenWidth = mc.getWindow() != null ? mc.getWindow().getScaledWidth() : 400;
+
+        int buttonX = 0;
+        int buttonY = 0;
+
+        boolean enabled = WynnExtrasConfig.INSTANCE.scaleBackgroundEnabled;
+
+        // Button background (green if enabled, gray if disabled)
+        int bgColor = 0xFF505050;
+        int borderColor = 0xFF404040;
+
+        context.fill(buttonX, buttonY, buttonX + INFO_BUTTON_WIDTH, buttonY + INFO_BUTTON_HEIGHT, bgColor);
+        // Border
+        context.fill(buttonX, buttonY, buttonX + INFO_BUTTON_WIDTH, buttonY + 1, borderColor);
+        context.fill(buttonX, buttonY + INFO_BUTTON_HEIGHT - 1, buttonX + INFO_BUTTON_WIDTH, buttonY + INFO_BUTTON_HEIGHT, borderColor);
+        context.fill(buttonX, buttonY, buttonX + 1, buttonY + INFO_BUTTON_HEIGHT, borderColor);
+        context.fill(buttonX + INFO_BUTTON_WIDTH - 1, buttonY, buttonX + INFO_BUTTON_WIDTH, buttonY + INFO_BUTTON_HEIGHT, borderColor);
+
+        String text = "Press F1 to compare items.";
+        int textWidth = textRenderer.getWidth(text);
+        int textX = buttonX + (INFO_BUTTON_WIDTH - textWidth) / 2;
+        int textY = buttonY + 4;
+        context.drawText(textRenderer, Text.literal(text), textX, textY, 0xFFFFFFFF, true);
+        context.drawText(textRenderer, Text.literal("(Click to disable this text)"), textX, textY + 10, 0xFFa0a0a0, true);
+
     }
 
     /**
@@ -518,23 +547,33 @@ public class TradeMarketComparisonPanel {
             return false;
         }
 
-        // Always check Toggle button (bottom center)
-        int screenHeight = mc.getWindow() != null ? mc.getWindow().getScaledHeight() : 300;
-        int toggleButtonX = (screenWidth - TOGGLE_BUTTON_WIDTH) / 2;
-        int toggleButtonY = screenHeight - 60;
-        if (mouseX >= toggleButtonX && mouseX <= toggleButtonX + TOGGLE_BUTTON_WIDTH &&
-                mouseY >= toggleButtonY && mouseY <= toggleButtonY + TOGGLE_BUTTON_HEIGHT) {
-            WynnExtrasConfig.INSTANCE.scaleBackgroundEnabled = !WynnExtrasConfig.INSTANCE.scaleBackgroundEnabled;
-            WynnExtrasConfig.save();
-            return true;
+        if(!WynnExtrasConfig.INSTANCE.hideScaleBackgroundButton) {
+            int toggleButtonX = screenWidth - TOGGLE_BUTTON_WIDTH;
+            int toggleButtonY = 0;
+            if (mouseX >= toggleButtonX && mouseX <= toggleButtonX + TOGGLE_BUTTON_WIDTH &&
+                    mouseY >= toggleButtonY && mouseY <= toggleButtonY + TOGGLE_BUTTON_HEIGHT) {
+                WynnExtrasConfig.INSTANCE.scaleBackgroundEnabled = !WynnExtrasConfig.INSTANCE.scaleBackgroundEnabled;
+                WynnExtrasConfig.save();
+                return true;
+            }
         }
 
         // Rest only applies if we have panels
-        if (!hasAnyComparison()) return false;
+        if (!hasAnyComparison() && !WynnExtrasConfig.INSTANCE.hideTMInfoText) {
+            int infoButtonX = 0;
+            int infoButtonY = 0;
+            if (mouseX >= infoButtonX && mouseX <= infoButtonX + INFO_BUTTON_WIDTH &&
+                    mouseY >= infoButtonY && mouseY <= infoButtonY + INFO_BUTTON_HEIGHT) {
+                WynnExtrasConfig.INSTANCE.hideTMInfoText = true;
+                WynnExtrasConfig.save();
+                return true;
+            }
+            return false;
+        }
 
         // Check Stop Comparing button
-        int stopButtonX = (screenWidth - STOP_BUTTON_WIDTH) / 2;
-        int stopButtonY = 5;
+        int stopButtonX = 0;
+        int stopButtonY = 0;
         if (mouseX >= stopButtonX && mouseX <= stopButtonX + STOP_BUTTON_WIDTH &&
                 mouseY >= stopButtonY && mouseY <= stopButtonY + STOP_BUTTON_HEIGHT) {
             clearAllPanels();

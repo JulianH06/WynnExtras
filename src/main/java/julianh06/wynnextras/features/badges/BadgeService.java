@@ -32,7 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @WEModule
 public class BadgeService {
-    private static final String API_URL = "http://wynnextras.com/badges/heartbeat";
+    private static final String HEARTBEAT_URL = "http://wynnextras.com/wynnextras-users/heartbeat";
+    private static final String ACTIVE_URL = "http://wynnextras.com/wynnextras-users/active";
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final Gson GSON = new GsonBuilder().create();
 
@@ -42,7 +43,7 @@ public class BadgeService {
 
     // Hardcoded test users (for testing badge rendering before server is live)
     private static final Set<String> HARDCODED_USERS = Set.of(
-            "f508152f6d1b4dd0b418e03a6f2b7a7d" // JulianH06
+            //"f508152f6d1b4dd0b418e03a6f2b7a7d" // JulianH06
     );
 
     private static int tickCounter = 0;
@@ -107,9 +108,30 @@ public class BadgeService {
             }
 
             sendHeartbeat(authData.username, authData.serverId);
+            getActiveUsers();
         }).exceptionally(e -> {
             System.err.println("[WynnExtras] Error getting auth data: " + e.getMessage());
             return null;
+        });
+    }
+
+    private static void getActiveUsers() {
+        CompletableFuture.runAsync(() -> {
+            try {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(ACTIVE_URL))
+                        .build();
+
+                HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() == 200) {
+                    parseResponse(response.body());
+                } else {
+                    System.err.println("[WynnExtras] Badge fetching failed: " + response.statusCode());
+                }
+            } catch (Exception e) {
+                System.err.println("[WynnExtras] Badge fetching error: " + e.getMessage());
+            }
         });
     }
 
@@ -121,7 +143,7 @@ public class BadgeService {
                 body.addProperty("modVersion", CurrentVersionData.INSTANCE.version);
 
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(API_URL))
+                        .uri(URI.create(HEARTBEAT_URL))
                         .header("Content-Type", "application/json")
                         .header("Username", username)
                         .header("Server-ID", serverId)
@@ -130,9 +152,7 @@ public class BadgeService {
 
                 HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
-                if (response.statusCode() == 200) {
-                    parseResponse(response.body());
-                } else {
+                if (response.statusCode() != 200) {
                     System.err.println("[WynnExtras] Badge heartbeat failed: " + response.statusCode());
                 }
             } catch (Exception e) {

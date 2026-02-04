@@ -97,14 +97,18 @@ public abstract class HandledScreenMixin {
             craftingHelperOverlay.render(context, mouseX, mouseY, delta);
         }
 
+
+        // Character selection highlighting (when clicking cross-class bank page)
+        renderCharacterSelectionHighlight(context, (HandledScreen<?>) (Object) this);
+    }
+
+    @Inject(method = "render", at = @At("TAIL"), cancellable = true)
+    private void renderForeground(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         // Trade Market Overlay (Your Trades value display)
         TradeMarketOverlay.renderOnScreen(context);
 
         // Trade Market Comparison Panel
         TradeMarketComparisonPanel.render(context);
-
-        // Character selection highlighting (when clicking cross-class bank page)
-        renderCharacterSelectionHighlight(context, (HandledScreen<?>) (Object) this);
     }
 
     @Unique

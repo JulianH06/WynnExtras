@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AspectScreen extends WEScreen {
-    public enum Page {LootPools, Aspects, Gambits, RaidLoot, Leaderboard}
+    public enum Page {LootPools, LootRuns, Aspects, Gambits, RaidLoot, Leaderboard}
 
     static LootPoolPage lootPoolPage;
     static AspectsPage aspectsPage;
@@ -195,6 +195,7 @@ public class AspectScreen extends WEScreen {
             ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
             String name = page.name();
             if(page == Page.LootPools) name = "Loot Pools";
+            if(page == Page.LootRuns) name = "Lootruns";
             if(page == Page.RaidLoot) name = "Raid Loot";
             ui.drawCenteredText(name, x + width / 2f, y + height / 2f, currentPage == page ? CustomColor.fromHexString("FFFF00") : CustomColor.fromHexString("FFFFFF"));
         }

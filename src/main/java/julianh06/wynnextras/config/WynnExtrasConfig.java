@@ -86,7 +86,8 @@ public class WynnExtrasConfig {
     public boolean showWeight = true;
     public boolean showScales = true;
     public boolean scaleBackgroundEnabled = true;
-    public int scaleBackgroundAlpha = 180;
+    public boolean hideTMInfoText = false;
+    public boolean hideScaleBackgroundButton = false;
     public boolean craftingHelperOverlay = true;
     public boolean wynnventoryOverlay = true;
 
