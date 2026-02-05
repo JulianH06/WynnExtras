@@ -303,7 +303,7 @@ public class RaidLootPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
 
             String textColor = "";
             if(!toggled) textColor = "§7";
@@ -322,7 +322,7 @@ public class RaidLootPage extends PageWidget {
     private static class ShowTotalWidget extends Widget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
 
             ui.drawCenteredText(showRates ? "§a§lShowing: Average/Run" : "§e§lShowing: Totals", x + width / 2f, y + height / 2f);
         }

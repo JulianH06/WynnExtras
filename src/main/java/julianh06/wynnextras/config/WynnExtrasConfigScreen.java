@@ -1,7 +1,6 @@
-package julianh06.wynnextras.config.gui;
+package julianh06.wynnextras.config;
 
 import com.wynntils.utils.mc.McUtils;
-import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -225,15 +224,15 @@ public class WynnExtrasConfigScreen extends Screen {
         // ===== Player Hider =====
         category("Player Hider", 0xFF673190)
             .add(toggle("Enable Player Hider", "Enable the Player Hider",
-                    () -> config.playerHiderToggle, v -> config.playerHiderToggle = v))
+                () -> config.playerHiderToggle, v -> config.playerHiderToggle = v))
             .add(slider("Hide Distance", "Max distance to hide",
-                    1, 20, () -> config.maxHideDistance, v -> config.maxHideDistance = v))
+            1, 20, () -> config.maxHideDistance, v -> config.maxHideDistance = v))
             .add(toggle("Hide All Players", "Hide all players in range",
-                    () -> config.hideAllPlayers, v -> config.hideAllPlayers = v))
+                () -> config.hideAllPlayers, v -> config.hideAllPlayers = v))
             .add(toggle("Hide All Players while in Wars", "Hide all players during wars",
-                    () -> config.hideAllPlayersInWar, v -> config.hideAllPlayersInWar = v))
+                () -> config.hideAllPlayersInWar, v -> config.hideAllPlayersInWar = v))
             .add(stringList("Hidden Players", "Always hide these players",
-                    () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"));
+                () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"));
 
 
         // ===== MISC =====
@@ -249,7 +248,32 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
                         () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
                 .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
-                        () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v));
+                        () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
+                .sub("Dark Mode Toggles")
+                .add(toggle("Bank Overlay", "Dark mode for the Bank Overlay",
+                        () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
+                .add(toggle("Profile Viewer", "Dark mode for the Profile viewer",
+                        () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
+                .add(toggle("Lootpool & Aspect pages", "Dark mode for the Lootpool & Aspect pages",
+                        () -> config.lootPoolPagesDarkMode, v -> config.lootPoolPagesDarkMode = v))
+                .add(toggle("Crafting helper", "Dark mode for the Crafting helper",
+                        () -> config.craftingHelperDarkMode, v -> config.craftingHelperDarkMode = v))
+                .add(toggle("Main menu", "Dark mode for the WynnExtras main menu (/we)",
+                        () -> config.mainMenuDarkMode, v -> config.mainMenuDarkMode = v))
+                .add(button("Enable for all", "Enable the Dark mode for all options above",
+                        v -> {
+                            config.darkmodeToggle = true;
+                            config.pvDarkmodeToggle = true;
+                            config.lootPoolPagesDarkMode = true;
+                            config.craftingHelperDarkMode = true;
+                            config.mainMenuDarkMode = true; }, "Enable"))
+                .add(button("Disable for all", "Disable the Dark mode for all options above",
+                        v -> {
+                            config.darkmodeToggle = false;
+                            config.pvDarkmodeToggle = false;
+                            config.lootPoolPagesDarkMode = false;
+                            config.craftingHelperDarkMode = false;
+                            config.mainMenuDarkMode = false; }, "Disable"));
     }
 
     // ==================== BUILDER HELPERS ====================

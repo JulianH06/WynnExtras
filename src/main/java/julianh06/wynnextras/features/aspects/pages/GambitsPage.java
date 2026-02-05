@@ -153,7 +153,7 @@ public class GambitsPage extends PageWidget{
     private void drawGambitPanel(int x, int y, int panelWidth, int panelHeight, GambitData.GambitEntry gambit) {
         int topHeight = 60;
 
-        if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
+        if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
             ui.drawNineSlice(x, y, panelWidth,
                     topHeight, 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
 

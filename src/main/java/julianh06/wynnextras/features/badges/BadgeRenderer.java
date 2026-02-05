@@ -18,15 +18,12 @@ import net.neoforged.bus.api.SubscribeEvent;
  */
 @WEModule
 public class BadgeRenderer {
-
     private static final Text BADGE_TEXT = Text.literal("\u2605").formatted(Formatting.DARK_GREEN);
     private static final float BADGE_SCALE = 0.5f;
-    private static final float BADGE_HEIGHT_OFFSET = 2.5f; // Above player's head
 
     @SubscribeEvent
     public void onRenderWorld(RenderWorldEvent event) {
         if (!WynnExtrasConfig.INSTANCE.badgesEnabled) return;
-        if (!WynnExtrasConfig.INSTANCE.badgesOverhead) return;
         if (!Models.WorldState.onWorld()) return;
 
         MinecraftClient mc = MinecraftClient.getInstance();

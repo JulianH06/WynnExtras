@@ -2,8 +2,10 @@ package julianh06.wynnextras.core;
 
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.abilitytree.TreeScreen;
+import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.utils.LinkUtils;
 import julianh06.wynnextras.utils.MinecraftUtils;
@@ -38,6 +40,8 @@ public class MainScreen extends WEScreen {
     ModrinthButton modrinthButton = new ModrinthButton();
     DiscordButton discordButton = new DiscordButton();
     GitHubButton gitHubButton = new GitHubButton();
+    YoutubeButton youtubeButton = new YoutubeButton();
+    CloseButton closeButton = new CloseButton();
 
     @Override
     protected void init() {
@@ -50,6 +54,8 @@ public class MainScreen extends WEScreen {
         addRootWidget(modrinthButton);
         addRootWidget(discordButton);
         addRootWidget(gitHubButton);
+        addRootWidget(youtubeButton);
+        addRootWidget(closeButton);
 
         IntStream.range(0, listLength).forEach(i -> {
             SimpleListElement e = new SimpleListElement(i, ui, this);
@@ -65,9 +71,11 @@ public class MainScreen extends WEScreen {
     @Override
     public void updateValues() {
         logo.setBounds(getLogicalWidth() / 2 - 400, 0, 800, 250);
-        modrinthButton.setBounds(getLogicalWidth() / 2 - 200, getLogicalHeight() - 110, 100, 100);
-        discordButton.setBounds(getLogicalWidth() / 2 - 50, getLogicalHeight() - 110, 100, 100);
-        gitHubButton.setBounds(getLogicalWidth() / 2 + 100, getLogicalHeight() - 110, 100, 100);
+        modrinthButton.setBounds(getLogicalWidth() / 2 - 350, getLogicalHeight() - 110, 100, 100);
+        discordButton.setBounds(getLogicalWidth() / 2 - 225, getLogicalHeight() - 110, 100, 100);
+        gitHubButton.setBounds(getLogicalWidth() / 2 + 125, getLogicalHeight() - 110, 100, 100);
+        youtubeButton.setBounds(getLogicalWidth() / 2 + 250, getLogicalHeight() - 110, 100, 100);
+        closeButton.setBounds(getLogicalWidth() / 2 - 100, getLogicalHeight() - 110, 200, 100);
         this.listX = (float) getLogicalWidth() / 2 - 350;
         this.listY = 250f;
         this.listWidth = 700f;
@@ -88,12 +96,16 @@ public class MainScreen extends WEScreen {
                 });
             }
             case 1 -> {
-                WEScreen.open(TreeScreen::new);
+                WEScreen.open(AspectScreen::new);
+                AspectScreen.currentPage = AspectScreen.Page.LootPools;
             }
             case 2 -> {
                 PV.open(McUtils.playerName());
             }
             case 3 -> {
+                WEScreen.open(TreeScreen::new);
+            }
+            case 4 -> {
                 MinecraftUtils.mc().setScreen(null);
                 MinecraftClient client = MinecraftClient.getInstance();
                 if (client.player != null) {
@@ -101,16 +113,13 @@ public class MainScreen extends WEScreen {
                     //the waypoint gui has not been migrated to the new WEScreen system yet
                 }
             }
-            case 4 -> {
+            case 5 -> {
                 MinecraftUtils.mc().setScreen(null);
                 MinecraftClient client = MinecraftClient.getInstance();
                 if (client.player != null) {
                     client.player.networkHandler.sendChatCommand("we raidlist");
                     //the raidlist has not been migrated to the new WEScreen system yet
                 }
-            }
-            case 5 -> {
-                MinecraftUtils.mc().setScreen(null);
             }
             default -> {
                 System.out.println("Not implemented yet :steamhappy:");
@@ -121,16 +130,15 @@ public class MainScreen extends WEScreen {
     public static String textForIndex(int i) {
         return switch (i) {
             case 0 -> "Config";
-            case 1 -> "Ability Tree Loader";
+            case 1 -> "Loot Pools";
             case 2 -> "Profile Viewer";
-            case 3 -> "Waypoints";
-            case 4 -> "Raid List";
-            case 5 -> "Close";
+            case 3 -> "Ability Tree Loader";
+            case 4 -> "Waypoints";
+            case 5 -> "Raid List";
             default -> "null";
         };
     }
 
-    // Helper overrides: forward keyboard to focused element if present
     @Override
     public boolean keyPressed(KeyInput input) {
         int keyCode = input.key();
@@ -171,7 +179,7 @@ public class MainScreen extends WEScreen {
         @Override
         protected void drawBackground(DrawContext context, int mouseX, int mouseY, float tickDelta) {
             if(id == listLength - 1) return;
-            ui.drawRect(x + 30, y + height, width - 60, 20, CustomColor.fromHexString("4e392d"));
+            ui.drawRect(x + 30, y + height, width - 60, 20, WynnExtrasConfig.INSTANCE.mainMenuDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("4e392d"));
         }
 
         @Override
@@ -179,7 +187,7 @@ public class MainScreen extends WEScreen {
             if(this.height <= 0) return;
             if (ui == null) return;
 
-            ui.drawButton(x, y, width, height, 12, hovered);
+            ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.mainMenuDarkMode);
 
             ui.drawCenteredText(textForIndex(id), x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 6f);
         }
@@ -217,8 +225,8 @@ public class MainScreen extends WEScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 12, hovered);
-            ui.drawImage(discordTexture, x, y, width, height);
+            ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.mainMenuDarkMode);
+            ui.drawImage(discordTexture, x, y, width, height, WynnExtrasConfig.INSTANCE.mainMenuDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.NONE);
         }
 
         @Override
@@ -243,8 +251,8 @@ public class MainScreen extends WEScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 12, hovered);
-            ui.drawImage(modrinthTexture, x, y, width, height);
+            ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.mainMenuDarkMode);
+            ui.drawImage(modrinthTexture, x, y, width, height, WynnExtrasConfig.INSTANCE.mainMenuDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.NONE);
         }
 
         @Override
@@ -269,14 +277,55 @@ public class MainScreen extends WEScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 12, hovered);
-            ui.drawImage(githubTexture, x, y, width, height);
+            ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.mainMenuDarkMode);
+            ui.drawImage(githubTexture, x, y, width, height, WynnExtrasConfig.INSTANCE.mainMenuDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.NONE);
         }
 
         @Override
         protected boolean onClick(int button) {
             if (!isEnabled()) return false;
             if (action != null) action.run();
+            return true;
+        }
+    }
+
+    public static class YoutubeButton extends Widget {
+        Identifier youtubeTexture = Identifier.of("wynnextras", "textures/general/logos/youtube.png");
+        private Runnable action;
+
+        public YoutubeButton() {
+            super(0, 0, 0, 0);
+            this.action = () -> {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                LinkUtils.openLink("https://www.youtube.com/@H06Julian");
+            };
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.mainMenuDarkMode);
+            ui.drawImage(youtubeTexture, x, y, width, height, WynnExtrasConfig.INSTANCE.mainMenuDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.NONE);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if (!isEnabled()) return false;
+            if (action != null) action.run();
+            return true;
+        }
+    }
+
+    public static class CloseButton extends Widget {
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.mainMenuDarkMode);
+            ui.drawCenteredText("Close", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 4f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.setScreen(null);
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }

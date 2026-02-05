@@ -41,11 +41,6 @@ public class BadgeService {
     private static long lastSyncTime = 0;
     private static final long SYNC_INTERVAL_MS = 600_000; // 10 minutes
 
-    // Hardcoded test users (for testing badge rendering before server is live)
-    private static final Set<String> HARDCODED_USERS = Set.of(
-            //"f508152f6d1b4dd0b418e03a6f2b7a7d" // JulianH06
-    );
-
     private static int tickCounter = 0;
     private static boolean initialSyncDone = false;
 
@@ -56,14 +51,7 @@ public class BadgeService {
         if (!WynnExtrasConfig.INSTANCE.badgesEnabled) return false;
         // Normalize UUID format (remove dashes if present)
         String normalizedUuid = uuid.replace("-", "").toLowerCase();
-        return wynnextrasUsers.contains(normalizedUuid) || HARDCODED_USERS.contains(normalizedUuid);
-    }
-
-    /**
-     * Get the count of active WynnExtras users
-     */
-    public static int getActiveUserCount() {
-        return wynnextrasUsers.size();
+        return wynnextrasUsers.contains(normalizedUuid);
     }
 
     @SubscribeEvent
@@ -79,7 +67,7 @@ public class BadgeService {
         if (!Models.WorldState.onWorld()) return;
 
         tickCounter++;
-        if (tickCounter % 200 != 0) return; // Check every 10 seconds
+        if (tickCounter % 400 != 0) return; // Check every 20 seconds
 
         // Initial sync
         if (!initialSyncDone) {

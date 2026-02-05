@@ -62,14 +62,24 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     private final static Map<ProfessionType, Map<RecipeState, Float>> lastOffset = new HashMap<>();
     private final static Map<ProfessionType, RecipeState> lastState = new HashMap<>();
 
-    Identifier l = Identifier.of("wynnextras", "textures/gui/craftinghelper/l.png");
-    Identifier r = Identifier.of("wynnextras", "textures/gui/craftinghelper/r.png");
-    Identifier t = Identifier.of("wynnextras", "textures/gui/craftinghelper/t.png");
-    Identifier b = Identifier.of("wynnextras", "textures/gui/craftinghelper/b.png");
-    Identifier tl = Identifier.of("wynnextras", "textures/gui/craftinghelper/tl.png");
-    Identifier tr = Identifier.of("wynnextras", "textures/gui/craftinghelper/tr.png");
-    Identifier bl = Identifier.of("wynnextras", "textures/gui/craftinghelper/bl.png");
-    Identifier br = Identifier.of("wynnextras", "textures/gui/craftinghelper/br.png");
+    Identifier l = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/l.png");
+    Identifier r = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/r.png");
+    Identifier t = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/t.png");
+    Identifier b = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/b.png");
+    Identifier tl = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/tl.png");
+    Identifier tr = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/tr.png");
+    Identifier bl = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/bl.png");
+    Identifier br = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/br.png");
+
+    Identifier ld = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/l.png");
+    Identifier rd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/r.png");
+    Identifier td = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/t.png");
+    Identifier bd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/b.png");
+    Identifier tld = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/tl.png");
+    Identifier trd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/tr.png");
+    Identifier bld = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/bl.png");
+    Identifier brd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/br.png");
+
 
     ProfBombWidget profSpeedBombWidget;
     ProfBombWidget profXpBombWidget;
@@ -188,9 +198,15 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             }
         }
 
-        ui.drawNineSlice((int) (xStart * ui.getScaleFactor() + 5),
-                (int) (yStart * ui.getScaleFactor()) - (big ? 66 : 0), widgetWidth,
-                (int) (widgetHeight * ui.getScaleFactor()) + (big ? 66 : 0), 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
+        if(WynnExtrasConfig.INSTANCE.craftingHelperDarkMode) {
+            ui.drawNineSlice((int) (xStart * ui.getScaleFactor() + 5),
+                    (int) (yStart * ui.getScaleFactor()) - (big ? 66 : 0), widgetWidth,
+                    (int) (widgetHeight * ui.getScaleFactor()) + (big ? 66 : 0), 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
+        } else {
+            ui.drawNineSlice((int) (xStart * ui.getScaleFactor() + 5),
+                    (int) (yStart * ui.getScaleFactor()) - (big ? 66 : 0), widgetWidth,
+                    (int) (widgetHeight * ui.getScaleFactor()) + (big ? 66 : 0), 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
+        }
 
         int step = 142;
         int recipeWidgetAmount = 12;
@@ -504,9 +520,9 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 //ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromHexString("FFFFFF"));
-                ui.drawButton(x, y, width, height, 19, hovered && helperWidget.hovered);
+                ui.drawButton(x, y, width, height, 19, hovered && helperWidget.hovered, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
                 drawRecipe(x, y, width, height, level, recipeData, hovered, ui);
-                ui.drawLine(x + width * 0.8f, y + 5, x + width * 0.8f, y + height - 9, ui.getScaleFactorF(), hovered ? CustomColor.fromHexString("c5b490") : CustomColor.fromHexString("a68a73"));
+                ui.drawLine(x + width * 0.8f, y + 5, x + width * 0.8f, y + height - 9, ui.getScaleFactorF(), WynnExtrasConfig.INSTANCE.craftingHelperDarkMode ? hovered ? CustomColor.fromHexString("6a6a71") : CustomColor.fromHexString("444448") : hovered ? CustomColor.fromHexString("c5b490") : CustomColor.fromHexString("a68a73"));
                 if(level < 100) {
                     ui.drawCenteredText(String.valueOf(Math.max(1, level)), x + width * 0.9f, y + height / 4f + 4);
                     ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
@@ -546,13 +562,6 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 statusMessage = "";
 
                 ProfessionType profession = container.getProfessionType();
-                try {
-                    int level = Models.Profession.getLevel(profession);
-
-                    if (level > 0 && level < this.level) {
-                        return false;
-                    }
-                } catch (Exception ignored) {}
 
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 
@@ -647,7 +656,8 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             if(state == null) return;
 
             ctx.disableScissor();
-            ui.drawButton(x, y - 6, width + 2, height + 10, 13, hovered || index == state.ordinal() - 1);
+            ui.drawButton(x, y - 6, width + 2, height + 10, 13, hovered, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
+            if(index == state.ordinal() - 1) ui.drawRectBorders(x + 2, y - 2, x + width, y + height - 2, CustomColor.fromHexString("FFFF00"));
             ui.drawCenteredText(text, x + width / 2f, y + height / 2f);
             int xStart = ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth();
             int yStart = ((HandledScreenAccessor) screen).getY() + 22;
@@ -728,7 +738,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-            ui.drawSliderBackground(x, y, width, height, 5, false);
+            ui.drawSliderBackground(x, y, width, height, 5, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
 
             int buttonHeight = 50;
             int scrollAreaHeight = height - buttonHeight;
@@ -773,7 +783,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 5, hovered || isHeld, false);
+                ui.drawButton(x, y, width, height, 5, hovered || isHeld, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
             }
 
             @Override

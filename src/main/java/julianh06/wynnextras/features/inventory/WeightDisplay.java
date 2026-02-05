@@ -35,10 +35,6 @@ import java.util.regex.Matcher;
 
 @WEModule
 public class WeightDisplay {
-//    private static final KeyBind cycleKeyBind = new KeyBind( //There were some issues with key conflicts
-//            "Mythic item weight display cycle", GLFW.GLFW_KEY_TAB, //ill leve this here if i ever find a solution
-//            true, null, (a) -> { tabPressed = true; }); //but until then ill use the arrow keys to go up/down
-
     public record WeightData(String weightName, Map<String, Float> identifications, Float score) {}
     public record ItemData(String name, List<WeightData> data, int index) {}
 
@@ -133,7 +129,6 @@ public class WeightDisplay {
                     try {
                         float percent = Float.parseFloat(raw.substring(bracketStart + 1, bracketEnd));
 
-                        // Extrahiere Stat-Namen und prüfe ob raw oder nicht
                         String statPart = raw.substring(0, bracketStart).strip();
                         boolean isRaw = !statPart.contains("%");
 //                        boolean isPerSecond
@@ -157,7 +152,7 @@ public class WeightDisplay {
                             } else if (isRaw && key.equals("healthRegen")) {
                                 key = key + "Raw"; //healthRegen is the only stat that has "Raw" at the end of the string instead of the start
                             } else if (isRaw && key.contains("AttackSpeed")) {
-                                key = "rawAttackSpeed"; //healthRegen is the only stat that has "Raw" at the end of the string instead of the start
+                                key = "rawAttackSpeed";
                             }
                             percentages.put(key, percent);
                         }

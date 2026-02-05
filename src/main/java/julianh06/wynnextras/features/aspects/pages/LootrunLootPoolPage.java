@@ -1,5 +1,7 @@
 package julianh06.wynnextras.features.aspects.pages;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
@@ -9,6 +11,7 @@ import julianh06.wynnextras.features.aspects.LootrunLootPoolData;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
@@ -18,12 +21,15 @@ import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static java.util.Map.entry;
 
 public class LootrunLootPoolPage extends PageWidget {
     private static Map<String, List<LootrunLootPoolData.LootrunItem>> crowdsourcedLootPools = new HashMap<>();
     private boolean fetchedCrowdsourcedLootPools = false;
 
-    private enum Camp { SI, SE, CORKUS, COTL, MH }
+    private enum Camp { SI, SE, CORK, COTL, MH }
 
     private static String[] campNames = {
             "Sky Islands",
@@ -32,11 +38,6 @@ public class LootrunLootPoolPage extends PageWidget {
             "Canyon of the Lost",
             "Molten Heights"
     };
-
-    private int[] campScrollOffsets = new int[5];
-    private static int[] campContentHeights = new int[5];
-    private int[] campColumnX = new int[5];
-    private int[] campColumnWidth = new int[5];
 
     static List<LootPoolWidget> lootPoolWidgets = new ArrayList<>();
 
@@ -54,15 +55,11 @@ public class LootrunLootPoolPage extends PageWidget {
 
     @Override
     protected void drawContent(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-        hoveredItem = null;
+        hoveredTooltip = new ArrayList<>();
 
         float scaleFactor = ui.getScaleFactorF();
         int logicalW = (int) (width * scaleFactor);
-        int logicalH = (int) (height * scaleFactor);
         int centerX = logicalW / 2;
-
-        int logicalMouseX = (int) (mouseX * scaleFactor);
-        int logicalMouseY = (int) (mouseY * scaleFactor);
 
         if (!fetchedCrowdsourcedLootPools) {
             fetchedCrowdsourcedLootPools = true;
@@ -101,7 +98,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
         ui.drawCenteredText(countdown, centerX, 100);
 
-        int spacing = 40;
+        int spacing = 20;
         int widgetX = spacing;
         int widgetY = 175;
         int widgets = lootPoolWidgets.size();
@@ -126,22 +123,25 @@ public class LootrunLootPoolPage extends PageWidget {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        float scaleFactor = ui.getScaleFactorF();
-        int logicalMouseX = (int) (mx * scaleFactor);
+        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+            if(lootPoolWidget.mouseScrolled(mx, my, delta)) return true;
+        }
+        return false;
+    }
 
-        for (int i = 0; i < 5; i++) {
-            if (campColumnX[i] > 0 && campColumnWidth[i] > 0) {
-                if (logicalMouseX >= campColumnX[i] && logicalMouseX <= campColumnX[i] + campColumnWidth[i]) {
-                    int scrollAmount = (int) (-delta * 40);
-                    campScrollOffsets[i] += scrollAmount;
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+            if(lootPoolWidget.mouseClicked(mx, my, button)) return true;
+        }
 
-                    if (campScrollOffsets[i] < 0) campScrollOffsets[i] = 0;
-                    int contentHeight = (int) (height * scaleFactor) - 150 - 150 - 110 - 12;
-                    int maxScroll = 10000; // Math.max(0, campContentHeights[i] - contentHeight);
-                    if (campScrollOffsets[i] > maxScroll) campScrollOffsets[i] = maxScroll;
-                    return true;
-                }
-            }
+        return false;
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+            lootPoolWidget.mouseReleased(mx, my, button);
         }
         return false;
     }
@@ -199,12 +199,12 @@ public class LootrunLootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            int topHeight = height - scrollBarWidget.getHeight() + 14;
+            int topHeight = 94;
 
-            if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
+            if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
                 ui.drawNineSlice((int) (x),
                         (int) (y), width,
-                        (int) (topHeight), 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
+                        (int) (topHeight + 1), 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
 
                 ui.drawNineSlice((int) (x),
                         (int) (y + topHeight), width,
@@ -212,7 +212,7 @@ public class LootrunLootPoolPage extends PageWidget {
             } else {
                 ui.drawNineSlice((int) (x),
                         (int) (y), width,
-                        (int) (topHeight), 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
+                        (int) (topHeight + 1), 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
 
                 ui.drawNineSlice((int) (x),
                         (int) (y + topHeight), width,
@@ -226,13 +226,13 @@ public class LootrunLootPoolPage extends PageWidget {
 
             ctx.enableScissor(
                     (int) (x / ui.getScaleFactor()),
-                    (int) ((y + 195) / ui.getScaleFactor()),
+                    (int) ((y + 85) / ui.getScaleFactor()),
                     (int) ((x + width - 7) / ui.getScaleFactor()),
                     (int) ((y + height - 20) / ui.getScaleFactor()));
 
-            int contentStartY = y + 110;
-            int contentHeight = height - 110 - 12;
-            float scrollOffset = actualOffset;
+            int contentStartY = y + 20;
+            int contentHeight = height - 40;
+            int totalContentHeight = 0;
 
             if (items.isEmpty()) {
                 ui.drawCenteredText("§7No data", x + width / 2f, contentStartY + 40, CustomColor.fromInt(0xFFFFFF), 3f);
@@ -240,7 +240,6 @@ public class LootrunLootPoolPage extends PageWidget {
                 ui.drawCenteredText("§7chest to scan", x + width / 2f, contentStartY + 110, CustomColor.fromInt(0xFFFFFF), 2.5f);
             } else {
                 int itemSpacing = 32;
-                int totalContentHeight = items.size() * itemSpacing + 20;
 
                 ctx.enableScissor(
                         (int) ui.sx(x + 6),
@@ -249,30 +248,40 @@ public class LootrunLootPoolPage extends PageWidget {
                         (int) ui.sy(contentStartY + contentHeight)
                 );
 
-                int textY = (int) (contentStartY + 10 - scrollOffset);
-                textY = drawShinyItems(ctx, x, textY, items, width, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                textY = drawMythicItems(ctx, x, textY, items, width, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                textY = drawTomeItems(ctx, x, textY, items, width, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                textY = drawItemsByRarity(ctx, x, textY, items, "Fabled", width, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                textY = drawItemsByRarity(ctx, x, textY, items, "Legendary", width, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                textY = drawItemsByRarity(ctx, x, textY, items, "Rare", width, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                textY = drawItemsByRarity(ctx, x, textY, items, "Set", width, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                textY = drawItemsByRarity(ctx, x, textY, items, "Unique", width, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
+                float snapValue = 0.5f;
+                float speed = 0.3f;
+                float diff = (targetOffset - actualOffset);
+                if(Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffset = targetOffset;
+                else actualOffset += diff * speed * tickDelta;
+
+                float contentTopPadding = 80f;
+                float contentStartTextY = contentStartY + contentTopPadding;
+
+                float textY = contentStartTextY - actualOffset;
+                float textX = x + 15;
+                textY = drawShinyItems(ctx, textX, textY, items, width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                textY = drawMythicItems(ctx, textX, textY, items, width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                textY = drawTomeItems(ctx, textX, textY, items, width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                textY = drawItemsByRarity(ctx, textX, textY, items, "Fabled", width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                textY = drawItemsByRarity(ctx, textX, textY, items, "Legendary", width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                textY = drawItemsByRarity(ctx, textX, textY, items, "Rare", width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                textY = drawItemsByRarity(ctx, textX, textY, items, "Set", width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                textY = drawItemsByRarity(ctx, textX, textY, items, "Unique", width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
+
+                float contentEndY = textY + actualOffset;
+                totalContentHeight = (int)(contentEndY - contentStartTextY);
 
                 ctx.disableScissor();
-
-                if (totalContentHeight > contentHeight) {
-                    int scrollBarHeight = Math.max(20, contentHeight * contentHeight / totalContentHeight);
-                    float scrollBarY = contentStartY + (scrollOffset * (contentHeight - scrollBarHeight) / maxOffset);
-                    ui.drawRect(x + width - 12, scrollBarY, 6, scrollBarHeight, CustomColor.fromInt(0xFFAAAAAA));
-                }
             }
 
-            int listTop = y + 195;
-            int listBottom = y + height - 40;
-            float visibleHeight = listBottom - listTop;
-
-            maxOffset = Math.max(contentHeight - visibleHeight, 0);
+            maxOffset = Math.max(totalContentHeight - contentHeight + 80, 0);
 
             if(targetOffset > maxOffset) {
                 targetOffset = maxOffset;
@@ -280,12 +289,12 @@ public class LootrunLootPoolPage extends PageWidget {
 
             ctx.disableScissor();
 
-            scrollBarWidget.setBounds(x + width, y + 80, 25, height - 80);
+            scrollBarWidget.setBounds(x + width - 20, y + 85, 15, height - 105);
             scrollBarWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
         }
 
-        private int drawShinyItems(DrawContext context, int x, int textY, List<LootrunLootPoolData.LootrunItem> items,
-                                   int colWidth, int mouseX, int mouseY, int contentStartY, int contentHeight, float scrollOffset) {
+        private float drawShinyItems(DrawContext context, float x, float textY, List<LootrunLootPoolData.LootrunItem> items,
+                                   float colWidth, float mouseX, float mouseY, float contentStartY, float contentHeight, float scrollOffset) {
             int itemSpacing = 32;
             List<LootrunLootPoolData.LootrunItem> shinyItems = items.stream()
                     .filter(i -> i.type.equals("shiny"))
@@ -296,11 +305,11 @@ public class LootrunLootPoolPage extends PageWidget {
             for (LootrunLootPoolData.LootrunItem item : shinyItems) {
                 textY = drawItem(context, x, textY, item, colWidth, mouseX, mouseY, contentStartY, contentHeight, scrollOffset, itemSpacing);
             }
-            return textY + 10;
+            return textY + 20;
         }
 
-        private int drawMythicItems(DrawContext context, int x, int textY, List<LootrunLootPoolData.LootrunItem> items,
-                                    int colWidth, int mouseX, int mouseY, int contentStartY, int contentHeight, float scrollOffset) {
+        private float drawMythicItems(DrawContext context, float x, float textY, List<LootrunLootPoolData.LootrunItem> items,
+                                      float colWidth, float mouseX, float mouseY, float contentStartY, float contentHeight, float scrollOffset) {
             int itemSpacing = 32;
             List<LootrunLootPoolData.LootrunItem> mythicItems = items.stream()
                     .filter(i -> i.rarity.equals("Mythic") && !i.type.equals("shiny"))
@@ -311,11 +320,11 @@ public class LootrunLootPoolPage extends PageWidget {
             for (LootrunLootPoolData.LootrunItem item : mythicItems) {
                 textY = drawItem(context, x, textY, item, colWidth, mouseX, mouseY, contentStartY, contentHeight, scrollOffset, itemSpacing);
             }
-            return textY + 10;
+            return textY + 20;
         }
 
-        private int drawTomeItems(DrawContext context, int x, int textY, List<LootrunLootPoolData.LootrunItem> items,
-                                  int colWidth, int mouseX, int mouseY, int contentStartY, int contentHeight, float scrollOffset) {
+        private float drawTomeItems(DrawContext context, float x, float textY, List<LootrunLootPoolData.LootrunItem> items,
+                                    float colWidth, float mouseX, float mouseY, float contentStartY, float contentHeight, float scrollOffset) {
             int itemSpacing = 32;
             List<LootrunLootPoolData.LootrunItem> tomeItems = items.stream()
                     .filter(i -> i.type.equals("tome"))
@@ -326,11 +335,11 @@ public class LootrunLootPoolPage extends PageWidget {
             for (LootrunLootPoolData.LootrunItem item : tomeItems) {
                 textY = drawItem(context, x, textY, item, colWidth, mouseX, mouseY, contentStartY, contentHeight, scrollOffset, itemSpacing);
             }
-            return textY + 10;
+            return textY + 20;
         }
 
-        private int drawItemsByRarity(DrawContext context, int x, int textY, List<LootrunLootPoolData.LootrunItem> items,
-                                      String rarity, int colWidth, int mouseX, int mouseY, int contentStartY, int contentHeight, float scrollOffset) {
+        private float drawItemsByRarity(DrawContext context, float x, float textY, List<LootrunLootPoolData.LootrunItem> items,
+                                      String rarity, float colWidth, float mouseX, float mouseY, float contentStartY, float contentHeight, float scrollOffset) {
             int itemSpacing = 32;
             List<LootrunLootPoolData.LootrunItem> filteredItems = items.stream()
                     .filter(i -> i.rarity.equals(rarity) && !i.type.equals("shiny") && !i.type.equals("tome"))
@@ -339,42 +348,104 @@ public class LootrunLootPoolPage extends PageWidget {
             if (filteredItems.isEmpty()) return textY;
 
             for (LootrunLootPoolData.LootrunItem item : filteredItems) {
-                if(item.name.contains("Emerald")) continue;
                 textY = drawItem(context, x, textY, item, colWidth, mouseX, mouseY, contentStartY, contentHeight, scrollOffset, itemSpacing);
             }
-            return textY + 10;
+            return textY + 20;
         }
 
-        private int drawItem(DrawContext context, int x, int textY, LootrunLootPoolData.LootrunItem item,
-                             int colWidth, int mouseX, int mouseY, int contentStartY, int contentHeight, float scrollOffset, int itemSpacing) {
+        private float drawItem(DrawContext context, float x, float textY, LootrunLootPoolData.LootrunItem item,
+                               float colWidth, float mouseX, float mouseY, float contentStartY, float contentHeight, float scrollOffset, float itemSpacing) {
             if (textY + itemSpacing >= contentStartY && textY <= contentStartY + contentHeight) {
-                boolean hovering = mouseX >= x + 12 && mouseX <= x + colWidth - 12 &&
-                        mouseY >= textY && mouseY <= textY + itemSpacing - 5;
+                boolean hovering = mouseX * ui.getScaleFactorF() >= x + 12 && mouseX * ui.getScaleFactorF() <= x + width - 12 &&
+                        mouseY * ui.getScaleFactorF() >= textY && mouseY * ui.getScaleFactorF() <= textY + itemSpacing - 5;
 
                 String rarityColor = item.type.equals("tome") ? "§d" : getRarityColor(item.rarity);
-                String displayName = truncate(item.name, 40);
+                String displayName = truncate(item.name, width / 2 - 30).replace("Unidentified ", "");
 
                 if (item.type.equals("shiny")) {
-                    ui.drawText("✦ ", x + 20, textY, CommonColors.RAINBOW, 2.2f);
-                    ui.drawText(rarityColor + displayName, x + 38, textY, CustomColor.fromInt(0xFFFFFF), 2.2f);
+                    ui.drawText(displayName.replace("⬡ ", ""), x + 20, textY, CommonColors.RAINBOW, 3f);
                 } else {
-                    ui.drawText(rarityColor + displayName, x + 20, textY, CustomColor.fromInt(0xFFFFFF), 2.2f);
+                    ui.drawText(rarityColor + displayName, x + 20, textY, CustomColor.fromInt(0xFFFFFF), 2.8f);
                 }
-                if (item.type.equals("shiny") && item.shinyStat != null && !item.shinyStat.isEmpty()) {
-                    ui.drawText("§7[§a" + item.shinyStat + "§7]", x + 25, textY + 18, CustomColor.fromInt(0xFFFFFF), 1.8f);
+                boolean isShiny = item.type.equals("shiny") && item.shinyStat != null && !item.shinyStat.isEmpty();
+                if (isShiny) {
+                    ui.drawText(item.shinyStat.replace(": §f0", ""), x + 20, textY + 35, CustomColor.fromInt(0xFFFFFF), 2.2f);
                 }
 
-                if (hovering) {
-                    hoveredItem = item;
+                if (hovering && WynncraftApiHandler.cachedItemDatabase != null && mouseY * ui.getScaleFactorF() > y + 80) {
+                    JsonObject jsonItem = WynncraftApiHandler.cachedItemDatabase.get(item.name.replace("Unidentified ", "").replace("⬡ ", "").replace("Shiny ", ""));
+                    List<Text> tooltip = new ArrayList<>();
+                    tooltip.add(Text.of(rarityColor + item.name.replace("Unidentified ", "")));
+                    if(jsonItem != null && item.name.contains("Tome")) tooltip.addAll(buildTooltipFromApi(jsonItem));
+                    hoveredTooltip = tooltip;
                 }
             }
-            int extraSpacing = (item.type.equals("shiny") && item.shinyStat != null && !item.shinyStat.isEmpty()) ? 18 : 0;
+            int extraSpacing = (item.type.equals("shiny") && item.shinyStat != null && !item.shinyStat.isEmpty()) ? 35 : 0;
             return textY + itemSpacing + extraSpacing;
         }
 
+        private static List<Text> buildTooltipFromApi(JsonObject item) {
+            List<Text> tooltip = new ArrayList<>();
+
+            JsonObject ids = item.getAsJsonObject("identifications");
+            if (ids == null) return tooltip;
+
+            for (Map.Entry<String, JsonElement> entry : ids.entrySet()) {
+                tooltip.add(Text.literal("§7" + formatLine(entry.getKey())));
+            }
+
+            return tooltip;
+        }
+
+        private static String formatLine(String key) {
+            Map<String, String> special = Map.of(
+                    "healthRegenRaw", "Health Regen",
+                    "healthRegen", "Health Regen",
+                    "manaRegen", "Mana Regen",
+                    "manaSteal", "Mana Steal",
+                    "lifeSteal", "Life Steal",
+                    "rawAttackSpeed", "Attack Speed",
+                    "raw1stSpellCost", "1st Spell Cost",
+                    "raw2ndSpellCost", "2nd Spell Cost",
+                    "raw3rdSpellCost", "3rd Spell Cost",
+                    "raw4thSpellCost", "4th Spell Cost"
+            );
+
+            String name;
+            boolean isPercent = true;
+
+            if (special.containsKey(key)) {
+                name = special.get(key);
+                isPercent = !key.startsWith("raw") || key.contains("Regen");
+            } else {
+                name = key.replaceAll("([a-z])([A-Z])", "$1 $2");
+
+                if (name.startsWith("raw ")) {
+                    name = name.substring(4);
+                    isPercent = false;
+                }
+
+                name = String.valueOf(name.charAt(0)).toUpperCase() + name.substring(1);
+
+                if (key.contains("AttackSpeed")) isPercent = false;
+                if (key.contains("Cost")) isPercent = false;
+                if (key.contains("Steal")) isPercent = false;
+                if (key.contains("poison")) isPercent = false;
+                if (key.contains("jump")) isPercent = false;
+            }
+
+            String percent = isPercent ? " %" : "";
+
+            return name + percent;
+        }
+
         private String truncate(String text, int maxLen) {
-            if (text.length() <= maxLen) return text;
-            return text.substring(0, maxLen - 3) + "...";
+            TextRenderer tr = MinecraftClient.getInstance().textRenderer;
+
+            if (tr.getWidth(text) > maxLen) {
+                text = tr.trimToWidth(text, maxLen - tr.getWidth("...")) + "...";
+            }
+            return text;
         }
 
         private String capitalize(String text) {
@@ -386,7 +457,7 @@ public class LootrunLootPoolPage extends PageWidget {
             if (crowdsourcedLootPools.containsKey(campCode) && crowdsourcedLootPools.get(campCode) != null) {
                 List<LootrunLootPoolData.LootrunItem> items = crowdsourcedLootPools.get(campCode);
                 if (!items.isEmpty()) {
-                    return items;
+                    return items.stream().filter(x -> !x.name.contains("Emerald")).toList();
                 }
             }
             return LootrunLootPoolData.INSTANCE.getLootPool(campCode);
@@ -453,18 +524,25 @@ public class LootrunLootPoolPage extends PageWidget {
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 currentMouseY = mouseY;
-                ui.drawSliderBackground(x, y, width, height, 5, WynnExtrasConfig.INSTANCE.darkmodeToggle);
 
-                int buttonHeight = 75;
-                int scrollAreaHeight = height - buttonHeight;
+                int scrollAreaHeight = height;
+
+                int buttonHeight;
+                if (maxOffset == 0) {
+                    buttonHeight = scrollAreaHeight;
+                } else {
+                    float ratio = scrollAreaHeight / (float) (scrollAreaHeight + maxOffset);
+                    buttonHeight = Math.max(20, (int) (scrollAreaHeight * ratio));
+                }
 
                 if (scrollBarButtonWidget.isHold) {
-                    setOffset((int) (mouseY * ui.getScaleFactor()), (int) maxOffset, scrollAreaHeight);
+                    setOffset((int) (mouseY * ui.getScaleFactor()), (int) maxOffset, scrollAreaHeight - buttonHeight);
                     parent.actualOffset = parent.targetOffset;
                 }
 
-                int yPos = maxOffset == 0 ? y : (int) (y + scrollAreaHeight * Math.min((parent.actualOffset / maxOffset), 1));
-                scrollBarButtonWidget.setBounds(x, yPos, width, buttonHeight);
+                int yPos = maxOffset == 0 ? y : y + (int) ((scrollAreaHeight - buttonHeight) * (parent.actualOffset / (float) maxOffset));
+
+                scrollBarButtonWidget.setBounds((int) (x + width / 2f - 2), yPos, 8, buttonHeight);
             }
 
             @Override
@@ -495,7 +573,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
                 @Override
                 protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                    ui.drawButton(x, y, width, height, 5, hovered || isHold, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+                    ui.drawRect(x, y, width, height, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromInt(0xFF707070) : CustomColor.fromInt(0xFF674439));
                 }
 
                 @Override

@@ -32,11 +32,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,6 +50,8 @@ public class WynncraftApiHandler {
     public boolean[] waitingForAspectResponse = new boolean[5];
     // Lock object for synchronizing array access
     private final Object aspectLock = new Object();
+
+    public static Map<String, JsonObject> cachedItemDatabase;
 
     private static Command apiKeyCmd = new Command(
             "apikey",
@@ -1184,9 +1182,12 @@ public class WynncraftApiHandler {
                                 String rarity = item.get("rarity").getAsString();
                                 String type = item.has("type") && !item.get("type").isJsonNull()
                                         ? item.get("type").getAsString() : "normal";
+                                String shinyStat = item.has("shinyStat") && !item.get("shinyStat").isJsonNull()
+                                        ? item.get("shinyStat").getAsString()
+                                        : null;
 
                                 result.add(new julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem(
-                                        name, rarity, type
+                                        name, rarity, type, "", shinyStat
                                 ));
                             }
 
@@ -1206,6 +1207,23 @@ public class WynncraftApiHandler {
             e.printStackTrace();
             return CompletableFuture.completedFuture(null);
         }
+    }
+
+    public static CompletableFuture<Map<String, JsonObject>> fetchItemDatabase() {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.wynncraft.com/v3/item/database?fullResult"))
+                .GET()
+                .build();
+
+        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(HttpResponse::body)
+                .thenApply(WynncraftApiHandler::parseItemDatabase);
+    }
+
+    private static Map<String, JsonObject> parseItemDatabase(String json) {
+        Gson gson = new Gson();
+        Type mapType = new TypeToken<Map<String, JsonObject>>() {}.getType();
+        return gson.fromJson(json, mapType);
     }
 
     public static CompletableFuture<AbilityMapData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {

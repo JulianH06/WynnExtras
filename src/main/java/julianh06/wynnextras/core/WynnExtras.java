@@ -173,6 +173,8 @@ public class WynnExtras implements ClientModInitializer {
 		WaypointData.load();
 		RaidChatNotifier.INSTANCE.load();
 
+		WynncraftApiHandler.fetchItemDatabase().thenAccept(result -> WynncraftApiHandler.cachedItemDatabase = result);
+
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			AccountBankData.INSTANCE.load();
 			CharacterBankData.INSTANCE.load();

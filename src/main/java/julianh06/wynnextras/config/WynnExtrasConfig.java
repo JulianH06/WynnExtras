@@ -2,8 +2,6 @@ package julianh06.wynnextras.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import julianh06.wynnextras.config.gui.WynnExtrasConfigScreen;
-import julianh06.wynnextras.sound.ModSounds;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.util.Formatting;
@@ -80,7 +78,6 @@ public class WynnExtrasConfig {
     public int wynntilsItemRarityBackgroundAlpha = 150;
     public boolean smoothScrollToggle = true;
     public boolean bankQuickToggle = true;
-    public boolean darkmodeToggle = false;
     public int bankOverlayMaxRows = 3;
     public int bankOverlayMaxColumns = 3;
     public boolean showWeight = true;
@@ -115,20 +112,11 @@ public class WynnExtrasConfig {
     // ==================== CHAT CLICK ====================
     public boolean chatClickOpensPV = true;
 
-    // ==================== LOOTRUNS ====================
-    public boolean lootrunHudEnabled = true;
-    public int lootrunHudX = 5;
-    public int lootrunHudY = 100;
-    public boolean lootrunHudBackground = true;
-    public boolean lootrunSoundAlerts = true;
 
     // ==================== BADGES ====================
-    public boolean badgesEnabled = true;
-    public boolean badgesInChat = true;
-    public boolean badgesOverhead = true;
+    public boolean badgesEnabled = false;
 
     // ==================== MISC ====================
-    public boolean pvDarkmodeToggle = false;
     public boolean totemRangeVisualizerToggle = true;
     public float totemRange = 10f;
     public TextColor totemColor = TextColor.WHITE;
@@ -140,6 +128,13 @@ public class WynnExtrasConfig {
     public boolean removeFrontPersonView = false;
     public boolean sourceOfTruthToggle = false;
     public boolean territoryEstimateToggle = false;
+
+    //==================== Dark Modes ==========================
+    public boolean darkmodeToggle = false; //for bank overlay (dont wanna change the variable cause it would reset it to false for everyone)
+    public boolean pvDarkmodeToggle = false;
+    public boolean lootPoolPagesDarkMode = false;
+    public boolean craftingHelperDarkMode = false;
+    public boolean mainMenuDarkMode = false;
 
     // ==================== ENUMS ====================
     public enum TextColor {

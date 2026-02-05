@@ -13,6 +13,7 @@ import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -305,12 +306,12 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            int topHeight = height - scrollBarWidget.getHeight() + 14;
+            int topHeight = 202;
 
-            if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
+            if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
                 ui.drawNineSlice((int) (x),
                         (int) (y), width,
-                        (int) (topHeight), 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
+                        (int) (topHeight + 1), 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
 
                 ui.drawNineSlice((int) (x),
                         (int) (y + topHeight), width,
@@ -318,7 +319,7 @@ public class LootPoolPage extends PageWidget {
             } else {
                 ui.drawNineSlice((int) (x),
                         (int) (y), width,
-                        (int) (topHeight), 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
+                        (int) (topHeight + 1), 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
 
                 ui.drawNineSlice((int) (x),
                         (int) (y + topHeight), width,
@@ -432,7 +433,7 @@ public class LootPoolPage extends PageWidget {
                             x + width - 20,
                             aspectY - spacing * 2,
                             3,
-                            WynnExtrasConfig.INSTANCE.darkmodeToggle
+                            WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode
                                     ? CustomColor.fromHexString("1b1b1c")
                                     : CustomColor.fromHexString("5d4736")
                     );
@@ -451,7 +452,7 @@ public class LootPoolPage extends PageWidget {
 
             ctx.disableScissor();
 
-            scrollBarWidget.setBounds(x + width, y + textureWidth + 40, 25, height - textureWidth - 40);
+            scrollBarWidget.setBounds(x + width - 20, y + 195, 15, height - 215);
             scrollBarWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
         }
 
@@ -628,18 +629,25 @@ public class LootPoolPage extends PageWidget {
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 currentMouseY = mouseY;
-                ui.drawSliderBackground(x, y, width, height, 5, WynnExtrasConfig.INSTANCE.darkmodeToggle);
 
-                int buttonHeight = 75;
-                int scrollAreaHeight = height - buttonHeight;
+                int scrollAreaHeight = height;
+
+                int buttonHeight;
+                if (maxOffset == 0) {
+                    buttonHeight = scrollAreaHeight;
+                } else {
+                    float ratio = scrollAreaHeight / (float) (scrollAreaHeight + maxOffset);
+                    buttonHeight = Math.max(20, (int) (scrollAreaHeight * ratio));
+                }
 
                 if (scrollBarButtonWidget.isHold) {
-                    setOffset((int) (mouseY * ui.getScaleFactor()), (int) maxOffset, scrollAreaHeight);
+                    setOffset((int) (mouseY * ui.getScaleFactor()), (int) maxOffset, scrollAreaHeight - buttonHeight);
                     parent.actualOffset = parent.targetOffset;
                 }
 
-                int yPos = maxOffset == 0 ? y : (int) (y + scrollAreaHeight * Math.min((parent.actualOffset / maxOffset), 1));
-                scrollBarButtonWidget.setBounds(x, yPos, width, buttonHeight);
+                int yPos = maxOffset == 0 ? y : y + (int) ((scrollAreaHeight - buttonHeight) * (parent.actualOffset / (float) maxOffset));
+
+                scrollBarButtonWidget.setBounds((int) (x + width / 2f - 2), yPos, 8, buttonHeight);
             }
 
             @Override
@@ -670,7 +678,7 @@ public class LootPoolPage extends PageWidget {
 
                 @Override
                 protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                    ui.drawButton(x, y, width, height, 5, hovered || isHold, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+                    ui.drawRect(x, y, width, height, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromInt(0xFF707070) : CustomColor.fromInt(0xFF674439));
                 }
 
                 @Override
@@ -738,12 +746,18 @@ public class LootPoolPage extends PageWidget {
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 //ui.drawRect(x, y, width, height);
 
-                int maxChars = Math.max(10, (width - 205) / 12);
-                String displayName = aspect.name;
                 boolean isFavorite = FavoriteAspectsData.INSTANCE.isFavorite(aspect.name);
-                if (displayName.length() + ((isFavorite || hovered) ? 5 : 0) > maxChars) {
-                    displayName = displayName.substring(0, maxChars - ((hovered || isFavorite) ? 5 : 3)) + "...";
+                int extra = (hovered || isFavorite) ? 10 : 0;
+                int maxWidth = (int) ((width) / 3) - 40 - extra;
+                String displayName = aspect.name;
+                TextRenderer tr = MinecraftClient.getInstance().textRenderer;
+
+                int availableWidth = (int)(maxWidth) - extra;
+
+                if (tr.getWidth(displayName) > availableWidth) {
+                    displayName = tr.trimToWidth(displayName, availableWidth - tr.getWidth("...")) + "...";
                 }
+
 
                 boolean isMax = aspect.tierInfo.contains("MAX");
                 CustomColor textColor = CustomColor.fromHexString("FFFFFF");
@@ -770,7 +784,7 @@ public class LootPoolPage extends PageWidget {
                     ctx.getMatrices().popMatrix();
                 }
 
-                if(hovered && parent.isHovered()) {
+                if(hovered && parent.isHovered() && mouseY * ui.getScaleFactorF() > parent.y + 190) {
                     List<Text> tooltip = new ArrayList<>();
                     if(apiAspect == null) return;
                     int tier = 0;
@@ -820,7 +834,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
             ui.drawCenteredText("Import favorites from Wynntils", x + width / 2f, y + height / 2f);
         }
 
@@ -845,7 +859,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
             ui.drawCenteredText("Hide max aspects", x + width / 2f, y + height / 2f);
         }
 
@@ -868,7 +882,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
             ui.drawCenteredText("Only favorite aspects", x + width / 2f, y + height / 2f);
         }
 
@@ -891,7 +905,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
             ui.drawCenteredText("Reload your aspects", x + width / 2f, y + height / 2f);
         }
 

@@ -43,7 +43,7 @@ public class AspectScreen extends WEScreen {
     private List<PageSwitchButton> pageSwitchButtons = new ArrayList<>();
     private boolean registeredScroll = false;
 
-    protected AspectScreen() {
+    public AspectScreen() {
         super(Text.of("WynnExtras Aspects"));
 
         for(Page page : Page.values()) {
@@ -189,7 +189,7 @@ public class AspectScreen extends WEScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
             String name = page.name();
             if(page == Page.LootPools) name = "Loot Pools";
             if(page == Page.Lootruns) name = "Lootruns";

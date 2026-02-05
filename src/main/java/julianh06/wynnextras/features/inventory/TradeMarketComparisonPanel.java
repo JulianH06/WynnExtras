@@ -518,7 +518,7 @@ public class TradeMarketComparisonPanel {
         int textX = buttonX + (INFO_BUTTON_WIDTH - textWidth) / 2;
         int textY = buttonY + 4;
         context.drawText(textRenderer, Text.literal(text), textX, textY, 0xFFFFFFFF, true);
-        context.drawText(textRenderer, Text.literal("(Click to disable this text)"), textX, textY + 10, 0xFFa0a0a0, true);
+        context.drawCenteredTextWithShadow(textRenderer, Text.literal("(Click to hide this text)"), (int) (INFO_BUTTON_WIDTH / 2f), textY + 10, 0xFFa0a0a0);
 
     }
 

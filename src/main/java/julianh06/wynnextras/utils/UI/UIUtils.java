@@ -195,18 +195,30 @@ public final class UIUtils {
             float u, float v,
             float uWidth, float vHeight,
             int textureWidth, int textureHeight,
-            float alpha
+            float alpha, CustomColor color
     ) {
         RenderUtils.drawTexturedRect(
                 drawContext,
                 texture,
-                CustomColor.NONE.withAlpha(alpha),
+                color.withAlpha(alpha),
                 sx(x), sy(y),
                 sw(width), sh(height),
                 u, v,
                 uWidth, vHeight,
                 textureWidth, textureHeight
         );
+    }
+
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            int textureWidth, int textureHeight,
+            float alpha
+    ) {
+        drawImage(texture, x, y, width, height, u, v, uWidth, vHeight, textureWidth, textureHeight, alpha, CustomColor.NONE);
     }
 
     public void drawImage(
@@ -250,6 +262,24 @@ public final class UIUtils {
             float width, float height,
             float u, float v,
             float uWidth, float vHeight,
+            CustomColor color
+    ) {
+        drawImage(
+                texture,
+                x, y, width, height,
+                u, v,
+                uWidth, vHeight,
+                (int) width, (int) height,
+                1, color
+        );
+    }
+
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
             int textureWidth, int textureHeight
     ) {
         drawImage(
@@ -262,6 +292,16 @@ public final class UIUtils {
         );
     }
 
+    public void drawImage(Identifier texture, float x, float y, float width, float height, CustomColor color) {
+        drawImage(
+                texture,
+                x, y, width, height,
+                0, 0,
+                width, height,
+                (int) width, (int) height,
+                1, color
+        );
+    }
 
     public void drawImage(Identifier texture, float x, float y, float width, float height, float alpha) {
         drawImage(
