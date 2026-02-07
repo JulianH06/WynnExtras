@@ -237,19 +237,17 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // ===== MISC =====
         category("Misc", 0xFF0872bc)
-                .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
-                        () -> config.differentGUIScale, v -> config.differentGUIScale = v))
-                .add(slider("GUI Scale", "Custom GUI scale value",
-                        1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
-                .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
-                        () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
-                .add(toggle("PV Dark Mode", "Dark theme for profile viewer",
-                        () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
-                .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
-                        () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
-                .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
-                        () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
-                .sub("Dark Mode Toggles")
+            .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
+                () -> config.differentGUIScale, v -> config.differentGUIScale = v))
+            .add(slider("GUI Scale", "Custom GUI scale value",
+            1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
+            .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
+                () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
+            .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
+                () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
+            .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
+                () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
+            .sub("Dark Mode Toggles")
                 .add(toggle("Bank Overlay", "Dark mode for the Bank Overlay",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
                 .add(toggle("Profile Viewer", "Dark mode for the Profile viewer",
@@ -261,19 +259,19 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Main menu", "Dark mode for the WynnExtras main menu (/we)",
                         () -> config.mainMenuDarkMode, v -> config.mainMenuDarkMode = v))
                 .add(button("Enable for all", "Enable the Dark mode for all options above",
-                        v -> {
-                            config.darkmodeToggle = true;
-                            config.pvDarkmodeToggle = true;
-                            config.lootPoolPagesDarkMode = true;
-                            config.craftingHelperDarkMode = true;
-                            config.mainMenuDarkMode = true; }, "Enable"))
+                    v -> {
+                        config.darkmodeToggle = true;
+                        config.pvDarkmodeToggle = true;
+                        config.lootPoolPagesDarkMode = true;
+                        config.craftingHelperDarkMode = true;
+                        config.mainMenuDarkMode = true; }, "Enable"))
                 .add(button("Disable for all", "Disable the Dark mode for all options above",
-                        v -> {
-                            config.darkmodeToggle = false;
-                            config.pvDarkmodeToggle = false;
-                            config.lootPoolPagesDarkMode = false;
-                            config.craftingHelperDarkMode = false;
-                            config.mainMenuDarkMode = false; }, "Disable"));
+                    v -> {
+                        config.darkmodeToggle = false;
+                        config.pvDarkmodeToggle = false;
+                        config.lootPoolPagesDarkMode = false;
+                        config.craftingHelperDarkMode = false;
+                        config.mainMenuDarkMode = false; }, "Disable"));
     }
 
     // ==================== BUILDER HELPERS ====================

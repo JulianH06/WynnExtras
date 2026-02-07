@@ -4,6 +4,8 @@ import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.features.raid.RaidLootConfig;
+import julianh06.wynnextras.features.raid.RaidLootData;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -19,6 +21,7 @@ import net.minecraft.util.Pair;
 import java.time.DayOfWeek;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.HashMap;
 import java.util.List;
@@ -29,9 +32,11 @@ public class AspectScanning {
     static int SearchedPages = 0;
     public static final Map<String, Pair<String, String>> allAspects = new HashMap<>();
 
-    // Upload throttling for preview chests (once per minute per raid, unless it's reset time)
-    private static final Map<String, Long> lastUploadTime = new HashMap<>();
-    private static final long UPLOAD_COOLDOWN_MS = 60000; // 60 seconds
+    private static final Map<String, Long> lastPersonalUploadTime = new HashMap<>();
+    private static final long PERSONAL_UPLOAD_COOLDOWN_MS = 60_000;
+
+    private static final Map<String, ZonedDateTime> lastLootpoolUploadReset = new HashMap<>();
+    private static ZonedDateTime lastGambitUploadReset = null;
 
     // Reward chest AspectScanning collection
     private static final List<String> collectedRewardAspects = new ArrayList<>();
@@ -43,6 +48,8 @@ public class AspectScanning {
             "TCC",  new double[]{10817, 45, 3901},
             "TNA",  new double[]{24489, 8, -23878}
     );
+
+    public static Map<String, Pair<String, String>> aspectsToUpload = new HashMap<>();
 
     public static void openMenu(MinecraftClient client, PlayerEntity player) {
         int currentSlot = player.getInventory().getSelectedSlot();
@@ -139,7 +146,6 @@ public class AspectScanning {
 
                 List<Text> tooltips = slot.getStack().getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
                 String name = null;
-                String tierLine = null;
                 String rarity = "";
 
                 for (Text tooltip : tooltips) {
@@ -214,7 +220,10 @@ public class AspectScanning {
         HandledScreen<?> screen = (currScreen instanceof HandledScreen) ? (HandledScreen<?>) currScreen : null;
         if (screen == null) return;
 
-        int[] slotsToRead = {11,12,13,14,15};
+        if(!screen.getScreenHandler().getSlot(4).hasStack()) {
+            return;
+        }
+
         List<String> foundNames = new ArrayList<>();
 
         boolean samePage = true;
@@ -245,6 +254,19 @@ public class AspectScanning {
             }
         }
 
+        // 2. RETURN TO FIRST PAGE PHASE
+        if (maintracking.scanDone && !maintracking.returnedToFirstPage && !screen.getScreenHandler().slots.get(10).getStack().isEmpty()) {
+            if (maintracking.pagesToGoBack > 0) {
+                PrevPageRaid(screen);
+                McUtils.sendMessageToClient(Text.of("OLD PAGES TO GO BACK: " + maintracking.pagesToGoBack));
+                maintracking.pagesToGoBack--;
+                McUtils.sendMessageToClient(Text.of("NEW PAGES TO GO BACK: " + maintracking.pagesToGoBack));
+            }
+            return;
+        } else if (maintracking.pagesToGoBack <= 0) {
+            maintracking.returnedToFirstPage = true;
+        }
+
         if(samePage) {
             return;
         }
@@ -260,8 +282,37 @@ public class AspectScanning {
             // Stop if empty
             if (!slot.hasStack()) break;
 
+            String rarity = null;
+
             List<Text> tooltips = slot.getStack().getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
             String name = null;
+            if (slot.getStack().getCustomName() != null &&
+                    slot.getStack().getCustomName().getStyle() != null &&
+                    slot.getStack().getCustomName().getStyle().getColor() != null) {
+                String hexCode = slot.getStack().getCustomName().getStyle().getColor().getHexCode();
+                RaidLootData data = RaidLootConfig.INSTANCE.data;
+                String currentRaid = detectRaidFromPosition();
+                if (hexCode.equals("#AA00AA")) {
+                    rarity = "Mythic";
+                    data.mythicAspects ++;
+                    data.getOrCreateRaidData(currentRaid).mythicAspects ++;
+                    data.sessionData.mythicAspects++;
+                    data.getOrCreateSessionRaidData(currentRaid).mythicAspects++;
+                } else if (hexCode.equals("#FF5555")) {
+                    rarity = "Fabled";
+                    data.fabledAspects ++;
+                    data.getOrCreateRaidData(currentRaid).fabledAspects ++;
+                    data.sessionData.fabledAspects++;
+                    data.getOrCreateSessionRaidData(currentRaid).fabledAspects++;
+                } else if (hexCode.equals("#55FFFF")) {
+                    rarity = "Legendary";
+                    data.legendaryAspects ++;
+                    data.getOrCreateRaidData(currentRaid).legendaryAspects ++;
+                    data.sessionData.legendaryAspects++;
+                    data.getOrCreateSessionRaidData(currentRaid).legendaryAspects++;
+                }
+            }
+
             for (Text tooltip : tooltips) {
                 String s = tooltip.getString().replaceAll("§.", "").trim();
                 if (s.contains("Aspect") || s.contains("Embodiment")) {
@@ -269,58 +320,52 @@ public class AspectScanning {
                     break;
                 }
             }
-            // Stop at the first non-AspectScanning, but keep any already found
+
             if (name == null) break;
-            foundNames.add(name);
+
+            String bestTierLine = null;
+            for (Text tooltip : tooltips) {
+                String candidate = extractBestTierLine(tooltip).trim();
+                if (candidate.contains("Tier") &&
+                        (candidate.contains(">>>") || candidate.matches(".*\\[\\d+/\\d+\\].*") || candidate.contains("[MAX]"))) {
+                    if (bestTierLine == null || candidate.length() > bestTierLine.length()) {
+                        bestTierLine = candidate;
+                    }
+                }
+            }
+
+            if(bestTierLine == null) {
+                System.out.println("BEST TIER LINE IS NULL, CONTINUING");
+                continue;
+            }
+
+            aspectsToUpload.put(name, new Pair<>(bestTierLine, rarity));
         }
 
-        // Collect all aspects found this page
-        collectedRewardAspects.addAll(foundNames);
-
-        // Print found aspects to chat
         if (MinecraftClient.getInstance().player != null && !foundNames.isEmpty()) {
             for (String aspectName : foundNames) {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Found AspectScanning: §e" + aspectName));
             }
         }
 
-        // Check if there's a next page (slot 16)
-        if (!screen.getScreenHandler().slots.get(16).getStack().isEmpty()) {
-            System.out.println("[WynnExtras] Next page available, total collected so far: " + collectedRewardAspects.size());
-            NextPageRaid(screen);
-        } else {
-            // Last page - upload now
-            System.out.println("[WynnExtras] Last page reached, total aspects found: " + collectedRewardAspects.size());
-            maintracking.scanDone = true;
+        // 1. SCANNING PHASE
+        if (!maintracking.scanDone) {
+            if (!screen.getScreenHandler().slots.get(16).getStack().isEmpty()) {
+                NextPageRaid(screen);
+                McUtils.sendMessageToClient(Text.of("OLD PAGES TO GO BACK: " + maintracking.pagesToGoBack));
+                maintracking.pagesToGoBack++;
+                McUtils.sendMessageToClient(Text.of("NEW PAGES TO GO BACK: " + maintracking.pagesToGoBack));
+            } else {
+                McUtils.sendMessageToClient(Text.of("DONE SCANNING, STARTING GOING BACK PHASE"));
+                RaidLootConfig.INSTANCE.save();
+                maintracking.scanDone = true;
+                maintracking.returnedToFirstPage = false;
 
-            if (!collectedRewardAspects.isEmpty()) {
-                uploadCollectedAspects();
+                if (!aspectsToUpload.isEmpty()) {
+                    WynncraftApiHandler.processAspects(aspectsToUpload);
+                }
             }
         }
-    }
-
-    private static void uploadCollectedAspects() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null) return;
-
-        // Detect which raid based on player position
-        String currentRaid = detectRaidFromPosition();
-
-        if (currentRaid.equals("UNKNOWN")) {
-            System.err.println("[WynnExtras] Cannot determine raid type for AspectScanning upload");
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cCannot detect raid type - too far from reward chest"));
-            collectedRewardAspects.clear();
-            return;
-        }
-
-        System.out.println("[WynnExtras] Uploading " + collectedRewardAspects.size() + " aspects from " + currentRaid);
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Uploading §e" + collectedRewardAspects.size() + " §7aspect(s) from §6" + currentRaid + "§7..."));
-
-        // Upload to API
-        WynncraftApiHandler.uploadRewardedAspects(currentRaid, new ArrayList<>(collectedRewardAspects));
-
-        // Clear the collection for next raid
-        collectedRewardAspects.clear();
     }
 
     private static String detectRaidFromPosition() {
@@ -356,10 +401,6 @@ public class AspectScanning {
             collectedRewardAspects.clear();
         }
     }
-
-
-
-
 
     private static String extractBestTierLine(Text t) {
         String self = t.getString().replaceAll("§.", "").trim();
@@ -404,13 +445,12 @@ public class AspectScanning {
     private static void NextPageRaid(HandledScreen<?> screen) {
         System.out.println("[WynnExtras] Clicking next page in reward chest");
         TreeLoader.clickOnNameInInventory("Next Page",screen,MinecraftClient.getInstance());
-        maintracking.NextPageRaid = true;
         maintracking.GuiSettleTicks = 0;
     }
+
     public static void PrevPageRaid(HandledScreen<?> screen) {
         System.out.println("[WynnExtras] Clicking previous page in reward chest");
         TreeLoader.clickOnNameInInventory("Previous Page",screen,MinecraftClient.getInstance());
-        maintracking.PrevPageRaid = true;
         maintracking.GuiSettleTicks = 0;
     }
     public static void setSearchedPages(int searchedPages) {
@@ -421,51 +461,6 @@ public class AspectScanning {
     }
     public static void resetAllAspects() {
         allAspects.clear();
-    }
-
-    /**
-     * Check if it's currently loot pool reset time (Friday 19:00 CET, ±30 min window)
-     * During reset time, upload throttling is disabled
-     */
-    private static boolean isResetTime() {
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-
-        // Only on Friday
-        if (now.getDayOfWeek() != DayOfWeek.FRIDAY) {
-            return false;
-        }
-
-        // Check if within 30 minutes of 19:00 (18:30 - 19:30)
-        int hour = now.getHour();
-        int minute = now.getMinute();
-
-        if (hour == 19 && minute <= 30) {
-            return true; // 19:00 - 19:30
-        }
-        if (hour == 18 && minute >= 30) {
-            return true; // 18:30 - 19:00
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if enough time has passed since last upload for this raid
-     * Returns true if upload is allowed
-     */
-    private static boolean canUpload(String raidType) {
-        // Always allow during reset time
-        if (isResetTime()) {
-            return true;
-        }
-
-        Long lastUpload = lastUploadTime.get(raidType);
-        if (lastUpload == null) {
-            return true; // Never uploaded before
-        }
-
-        long timeSinceLastUpload = System.currentTimeMillis() - lastUpload;
-        return timeSinceLastUpload >= UPLOAD_COOLDOWN_MS;
     }
 
     /**
@@ -529,16 +524,16 @@ public class AspectScanning {
                 }
             }
 
-            // Save gambits to data storage
+            // Save gambits locally
             if (!gambitsForSave.isEmpty()) {
                 GambitData.INSTANCE.saveGambits(gambitsForSave);
             }
 
-            // Upload to crowdsourcing API (don't spam chat)
-            if (!gambitsForSave.isEmpty()) {
+            // Upload to crowdsourcing API
+            if (!gambitsForSave.isEmpty() && canUploadGambits()) {
                 WynncraftApiHandler.uploadGambits(gambitsForSave);
+                lastGambitUploadReset = getCurrentGambitReset();
             }
-
         } catch (Exception e) {
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError detecting gambit: " + e.getMessage()));
         }
@@ -580,7 +575,6 @@ public class AspectScanning {
                     MinecraftClient.getInstance().player, TooltipType.BASIC);
 
                 String aspectName = null;
-                String tierLine = null;
                 String rarity = "";
                 StringBuilder description = new StringBuilder();
                 boolean foundName = false;
@@ -654,31 +648,79 @@ public class AspectScanning {
                 LootPoolData.INSTANCE.saveLootPoolFull(selectedRaid, lootPoolDataFull);
             }
 
-            // Upload aspects (don't spam chat with list)
-            if (!foundAspects.isEmpty()) {
-                // Upload with throttling (once per minute per raid, unless reset time)
-                if (canUpload(selectedRaid)) {
-                    System.out.println("[WynnExtras] Found " + foundAspects.size() + " aspects, uploading...");
+            // Upload aspects
+            if (!foundAspects.isEmpty() && !selectedRaid.equals("Unknown")) {
 
-                    // Upload personal aspects WITH progress (requires API key)
+                if (canUploadPersonal(selectedRaid)) {
+                    System.out.println("[WynnExtras] Uploading personal aspect progress (" + foundAspects.size() + ")");
                     WynncraftApiHandler.processAspects(foundAspects);
+                    lastPersonalUploadTime.put(selectedRaid, System.currentTimeMillis());
+                } else {
+                    System.out.println("[WynnExtras] Personal progress upload skipped (cooldown)");
+                }
 
-                    // Also upload to crowdsourcing (loot pool WITHOUT personal progress, no API key)
+                if (!lootPoolDataFull.isEmpty() && canUploadLootpool(selectedRaid)) {
+                    System.out.println("[WynnExtras] Uploading loot pool for " + selectedRaid);
+
                     WynncraftApiHandler.uploadLootPool(selectedRaid, lootPoolDataFull);
 
-                    lastUploadTime.put(selectedRaid, System.currentTimeMillis());
+                    // Mark reset as uploaded
+                    lastLootpoolUploadReset.put(
+                        selectedRaid,
+                        getCurrentLootpoolReset()
+                    );
                 } else {
-                    long timeSinceLastUpload = System.currentTimeMillis() - lastUploadTime.get(selectedRaid);
-                    long secondsRemaining = (UPLOAD_COOLDOWN_MS - timeSinceLastUpload) / 1000;
-                    System.out.println("[WynnExtras] Upload throttled for " + selectedRaid + ", wait " + secondsRemaining + "s");
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Upload cooldown: wait " + secondsRemaining + "s"));
+                    System.out.println("[WynnExtras] Loot pool already uploaded for this reset (" + selectedRaid + ")");
                 }
             }
-
         } catch (Exception e) {
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError scanning preview chest: " + e.getMessage()));
             e.printStackTrace();
         }
+    }
+
+    private static ZonedDateTime getCurrentLootpoolReset() {
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
+
+        ZonedDateTime thisFriday =
+                now.with(TemporalAdjusters.previousOrSame(DayOfWeek.FRIDAY))
+                        .withHour(19).withMinute(0).withSecond(0).withNano(0);
+
+        if (now.isBefore(thisFriday)) {
+            thisFriday = thisFriday.minusWeeks(1);
+        }
+
+        return thisFriday;
+    }
+
+    private static ZonedDateTime getCurrentGambitReset() {
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
+
+        ZonedDateTime todayReset =
+                now.withHour(19).withMinute(0).withSecond(0).withNano(0);
+
+        if (now.isBefore(todayReset)) {
+            todayReset = todayReset.minusDays(1);
+        }
+
+        return todayReset;
+    }
+
+    private static boolean canUploadLootpool(String raid) {
+        ZonedDateTime currentReset = getCurrentLootpoolReset();
+        ZonedDateTime lastUploaded = lastLootpoolUploadReset.get(raid);
+
+        return lastUploaded == null || currentReset.isAfter(lastUploaded);
+    }
+
+    private static boolean canUploadGambits() {
+        ZonedDateTime currentReset = getCurrentGambitReset();
+        return lastGambitUploadReset == null || currentReset.isAfter(lastGambitUploadReset);
+    }
+
+    private static boolean canUploadPersonal(String raid) {
+        Long last = lastPersonalUploadTime.get(raid);
+        return last == null || System.currentTimeMillis() - last >= PERSONAL_UPLOAD_COOLDOWN_MS;
     }
 }
 

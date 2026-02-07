@@ -17,14 +17,15 @@ import net.minecraft.text.Text;
 import java.time.DayOfWeek;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class LootrunScanning {
-    private static final Map<String, Long> lastUploadTime = new HashMap<>();
-    private static final long UPLOAD_COOLDOWN_MS = 60000; // 60 seconds
+    private static final Map<String, ZonedDateTime> lastLootrunUploadReset = new HashMap<>();
+
     private static final Map<String, List<LootrunLootPoolData.LootrunItem>> pendingItems = new HashMap<>();
     private static final Map<String, Boolean> pendingUploadAllowed = new HashMap<>();
     private static boolean waitingForPageLoad = false;
@@ -90,7 +91,7 @@ public class LootrunScanning {
 
                 if (pendingUploadAllowed.getOrDefault(camp, false)) {
                     WynncraftApiHandler.uploadLootrunLootPool(camp, combined);
-                    lastUploadTime.put(camp, System.currentTimeMillis());
+                    lastLootrunUploadReset.put(camp, getCurrentLootrunReset());
                 }
 
                 pendingItems.remove(camp);
@@ -103,7 +104,7 @@ public class LootrunScanning {
 
             LootrunLootPoolData.INSTANCE.saveLootPool(camp, items);
 
-            if (canUpload(camp)) {
+            if (canUploadLootrun(camp)) {
                 if (hasNextPage(screen)) {
                     pendingItems.put(camp, new ArrayList<>(items));
                     pendingUploadAllowed.put(camp, true);
@@ -112,12 +113,8 @@ public class LootrunScanning {
                     waitingForPageLoad = true;
                 } else {
                     WynncraftApiHandler.uploadLootrunLootPool(camp, items);
-                    lastUploadTime.put(camp, System.currentTimeMillis());
+                    lastLootrunUploadReset.put(camp, getCurrentLootrunReset());
                 }
-            } else {
-                long timeSinceLastUpload = System.currentTimeMillis() - lastUploadTime.getOrDefault(camp, 0L);
-                long secondsRemaining = (UPLOAD_COOLDOWN_MS - timeSinceLastUpload) / 1000;
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Lootrun upload cooldown: wait " + secondsRemaining + "s"));
             }
         } catch (Exception e) {
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError scanning lootrun preview chest: " + e.getMessage()));
@@ -298,37 +295,25 @@ public class LootrunScanning {
         settleTicks = 0;
     }
 
-    private static boolean isResetTime() {
+    private static ZonedDateTime getCurrentLootrunReset() {
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
 
-        if (now.getDayOfWeek() != DayOfWeek.FRIDAY) {
-            return false;
+        ZonedDateTime thisFriday =
+                now.with(TemporalAdjusters.previousOrSame(DayOfWeek.FRIDAY))
+                        .withHour(20).withMinute(0).withSecond(0).withNano(0);
+
+        if (now.isBefore(thisFriday)) {
+            thisFriday = thisFriday.minusWeeks(1);
         }
 
-        int hour = now.getHour();
-        int minute = now.getMinute();
-
-        if (hour == 19 && minute <= 30) {
-            return true;
-        }
-        if (hour == 18 && minute >= 30) {
-            return true;
-        }
-
-        return false;
+        return thisFriday;
     }
 
-    private static boolean canUpload(String camp) {
-        if (isResetTime()) {
-            return true;
-        }
+    private static boolean canUploadLootrun(String camp) {
+        ZonedDateTime currentReset = getCurrentLootrunReset();
+        ZonedDateTime lastUploaded = lastLootrunUploadReset.get(camp);
 
-        Long lastUpload = lastUploadTime.get(camp);
-        if (lastUpload == null) {
-            return true;
-        }
-
-        long timeSinceLastUpload = System.currentTimeMillis() - lastUpload;
-        return timeSinceLastUpload >= 10;
+        return lastUploaded == null || currentReset.isAfter(lastUploaded);
     }
+
 }

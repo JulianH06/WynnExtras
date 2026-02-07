@@ -198,53 +198,8 @@ public class RaidLootTracker {
             }
         }
 
-        // ===== Aspects (slots 11-15) =====
-        for (int aspectSlot = 11; aspectSlot <= 15; aspectSlot++) {
-            Slot slot = handler.getSlot(aspectSlot);
-            if (slot == null) continue;
-
-            ItemStack stack = slot.getStack();
-            if (stack == null || stack.isEmpty()) continue;
-
-            String name = cleanName(stack.getName().getString());
-            int count = stack.getCount();
-
-            // Check if it's an aspect (contains "Aspect" or "Embodiment")
-            if (name.contains("Aspect") || name.contains("Embodiment")) {
-                data.totalAspects += count;
-                raidData.totalAspects += count;
-                data.sessionData.totalAspects += count;
-                sessionRaidData.totalAspects += count;
-
-                // Determine rarity from lore
-                String rarity = getAspectRarity(stack);
-                if (rarity != null) {
-                    switch (rarity.toLowerCase()) {
-                        case "mythic" -> {
-                            data.mythicAspects += count;
-                            raidData.mythicAspects += count;
-                            data.sessionData.mythicAspects += count;
-                            sessionRaidData.mythicAspects += count;
-                        }
-                        case "fabled" -> {
-                            data.fabledAspects += count;
-                            raidData.fabledAspects += count;
-                            data.sessionData.fabledAspects += count;
-                            sessionRaidData.fabledAspects += count;
-                        }
-                        case "legendary" -> {
-                            data.legendaryAspects += count;
-                            raidData.legendaryAspects += count;
-                            data.sessionData.legendaryAspects += count;
-                            sessionRaidData.legendaryAspects += count;
-                        }
-                    }
-                }
-            }
-        }
 
         RaidLootConfig.INSTANCE.save();
-        sendChatDebug(data, currentRaid);
     }
 
     private static String detectRaid() {
@@ -361,27 +316,10 @@ public class RaidLootTracker {
 
     private static String getAspectRarity(ItemStack stack) {
         try {
-            if (stack.getComponents() == null) return null;
-            LoreComponent loreComponent = stack.getComponents().get(DataComponentTypes.LORE);
-            if (loreComponent == null) return null;
-
-            List<Text> loreLines = loreComponent.lines();
-            for (Text line : loreLines) {
-                String lineStr = line.getString().toLowerCase();
-                // Check for rarity keywords in lore
-                if (lineStr.contains("mythic")) return "mythic";
-                if (lineStr.contains("fabled")) return "fabled";
-                if (lineStr.contains("legendary")) return "legendary";
-                if (lineStr.contains("rare")) return "rare";
-            }
-
-            // Fallback: check item name color codes
-            String rawName = stack.getName().getString();
-            if (rawName.contains("§5") || rawName.contains("§d")) return "mythic"; // Purple/magenta
-            if (rawName.contains("§c")) return "fabled"; // Red
-            if (rawName.contains("§6")) return "legendary"; // Gold
-            if (rawName.contains("§b")) return "rare"; // Cyan
-
+            String hexCode = stack.getCustomName().getStyle().getColor().getHexCode();
+            if(hexCode.equals("#AA00AA")) return "mythic";
+            else if(hexCode.equals("#FF5555")) return "fabled";
+            else if(hexCode.equals("#55FFFF")) return "legendary";
         } catch (Exception ignored) {}
         return null;
     }

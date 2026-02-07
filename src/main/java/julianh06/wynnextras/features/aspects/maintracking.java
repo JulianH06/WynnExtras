@@ -4,12 +4,10 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.aspects.pages.AspectsPage;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -182,14 +180,11 @@ public class maintracking {
     static boolean inRaidChest = false;
     static boolean inPartyFinder = false;
     static boolean inPreviewChest = false;
-    static boolean Raiddone = true;
-    static boolean PrevPageRaid = false;
     static int GuiSettleTicks = 0;
-    static int counter = 0;
-    static boolean NextPageRaid = false;
     public static ItemStack[] aspectsInChest = new ItemStack[5];
     public static Boolean scanDone = false;
-    public static Boolean goingBack = false;
+    public static boolean returnedToFirstPage = false;
+    public static int pagesToGoBack = 0;
     static boolean gambitDetected = false;
     static String lastPreviewChestTitle = "";
     static String lastLootrunPreviewTitle = "";
@@ -220,12 +215,13 @@ public class maintracking {
             HandledScreen<?> screen = null;
             if (currScreen == null) {
                 scanDone = false;
-                goingBack = false;
+                returnedToFirstPage = false;
                 nextPage = false;
                 aspectsInChest = new ItemStack[5];
                 gambitDetected = false;
                 lastPreviewChestTitle = "";
                 lastLootrunPreviewTitle = "";
+                pagesToGoBack = 0;
                 AspectScanning.resetRewardAspects();
                 // DON'T reset needToClickAbilityTree - it needs to persist across screen changes
                 return;
@@ -329,7 +325,7 @@ public class maintracking {
             }
 
             // Reward chest: scan aspects from slots 11-15 and upload
-            if(inRaidChest && !scanDone){
+            if(inRaidChest && !(scanDone && returnedToFirstPage)){
                 try {
                     AspectScanning.AspectsInRaidChest();
                 } catch (Exception e) {
@@ -338,37 +334,14 @@ public class maintracking {
                 }
                 return;
             }
-
-            if(inRaidChest && NextPageRaid){
-                if(GuiSettleTicks>7){
-                    NextPageRaid=false;
-                    GuiSettleTicks=0;
-                    AspectScanning.AspectsInRaidChest();
-                    return;
-                } else{
-                    GuiSettleTicks++;
-                    return;
-                }
-            }
         });
     }
-    public static boolean getinTreeMenu(){
-        return inTreeMenu;
-    }
+
     public static void setAspectScanreq(boolean value){
         AspectScanreq = value;
     }
     public static void setNextPage(boolean nextPage) {
         maintracking.nextPage = nextPage;
-    }
-    public static void setRaiddone(boolean value){
-        Raiddone = value;
-    }
-    public static void setNextPageRaid(boolean nextPage) {
-        maintracking.NextPageRaid = nextPage;
-    }
-    public static void setPrevPageRaid(boolean nextPage) {
-        maintracking.PrevPageRaid = nextPage;
     }
     public static void setNeedToClickAbilityTree(boolean value) {
         needToClickAbilityTree = value;
