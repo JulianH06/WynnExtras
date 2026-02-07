@@ -73,7 +73,6 @@ public class BadgeService {
 
         // Initial sync
         if (!initialSyncDone) {
-            McUtils.sendMessageToClient(Text.of("INITIAL HEARTBEAT SYNC"));
             initialSyncDone = true;
             syncWithServer();
             return;
@@ -87,7 +86,6 @@ public class BadgeService {
     }
 
     private static void syncWithServer() {
-        McUtils.sendMessageToClient(Text.of("SYNCING"));
 
         lastSyncTime = System.currentTimeMillis();
 
@@ -127,7 +125,6 @@ public class BadgeService {
     }
 
     private static void sendHeartbeat(String username, String serverId) {
-        McUtils.sendMessageToClient(Text.of("SENDING HEARTBEAT..."));
         CompletableFuture.runAsync(() -> {
             try {
                 // Build request body

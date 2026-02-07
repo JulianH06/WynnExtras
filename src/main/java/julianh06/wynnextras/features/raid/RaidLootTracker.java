@@ -73,21 +73,6 @@ public class RaidLootTracker {
         ScreenHandler handler = McUtils.containerMenu();
         if (handler == null) return;
 
-        // DEBUG: Print all slots to chat
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player != null) {
-            mc.player.sendMessage(Text.literal("§6§l[DEBUG] Reward Chest Slots:"), false);
-            for (int i = 0; i < handler.slots.size(); i++) {
-                Slot slot = handler.getSlot(i);
-                if (slot != null && slot.hasStack()) {
-                    ItemStack stack = slot.getStack();
-                    String name = stack.getName().getString();
-                    int count = stack.getCount();
-                    mc.player.sendMessage(Text.literal("§7Slot " + i + ": §e" + name + " §7x" + count), false);
-                }
-            }
-        }
-
         RaidLootData data = RaidLootConfig.INSTANCE.data;
         data.initSession();
 
@@ -107,7 +92,6 @@ public class RaidLootTracker {
             if (stack == null || stack.isEmpty()) continue;
 
             String name = cleanName(stack.getName().getString());
-            String rawName = stack.getName().getString();
             int count = stack.getCount();
 
             // ===== Emeralds =====

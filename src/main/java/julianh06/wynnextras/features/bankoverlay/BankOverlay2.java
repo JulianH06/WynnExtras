@@ -1,8 +1,5 @@
 package julianh06.wynnextras.features.bankoverlay;
 
-import com.wynnmod.feature.Feature;
-import com.wynnmod.feature.item.ItemOverlayFeature;
-import com.wynnmod.util.wynncraft.item.map.WynncraftItemDatabase;
 import com.wynntils.features.inventory.*;
 import com.wynntils.utils.wynn.WynnUtils;
 import com.wynntils.core.components.Handlers;
@@ -34,8 +31,6 @@ import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.CappedValue;
 import com.wynntils.utils.wynn.ContainerUtils;
-import com.wynnventory.util.ItemStackUtils;
-import com.wynnventory.util.PriceTooltipHelper;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.inventory.BankOverlay;
@@ -57,6 +52,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
+import net.minecraft.client.gui.tooltip.TooltipPositioner;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.player.PlayerEntity;
@@ -73,6 +69,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import org.joml.Vector2i;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
@@ -88,6 +85,7 @@ import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHover
 import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredWynnitem;
 
 public class BankOverlay2 extends WEHandledScreen {
+    private Object tooltipFactory;
     static ItemStack hoveredSlot = Items.AIR.getDefaultStack();
     int hoveredX = -1;
     int hoveredY = -1;
@@ -182,7 +180,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
         try {
             if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-                WynncraftItemDatabase.initialize();
+
+                com.wynnmod.util.wynncraft.item.map.WynncraftItemDatabase.initialize();
             }
         } catch (Exception ignored) {}
     }
@@ -958,11 +957,29 @@ public class BankOverlay2 extends WEHandledScreen {
         } catch (Exception ignored) {}
     }
 
-    private void renderPriceTooltip(DrawContext guiGraphics, int x, int y, ItemStack stack) {
-        List<Text> tooltips = ItemStackUtils.getTooltips(stack);
-        PriceTooltipHelper.renderPriceInfoTooltip(
-                guiGraphics, x, y, stack, tooltips, true
-        );
+    private void renderPriceTooltip(DrawContext context, int x, int y, ItemStack stack) {
+        try {
+            List<Text> vanillaLines = stack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
+            if (vanillaLines == null || vanillaLines.isEmpty()) return;
+
+            if (tooltipFactory == null) tooltipFactory = new com.wynnventory.core.tooltip.PriceTooltipFactory(new com.wynnventory.core.tooltip.PriceTooltipBuilder());
+            List<Text> priceLines = ((com.wynnventory.core.tooltip.PriceTooltipFactory) tooltipFactory).getPriceTooltip(stack);
+            if (priceLines.isEmpty()) return;
+
+            List<TooltipComponent> priceComponents = com.wynnventory.util.RenderUtils.toClientComponents(priceLines, Optional.empty());
+            List<TooltipComponent> vanillaComponents = com.wynnventory.util.RenderUtils.toClientComponents(vanillaLines, stack.getTooltipData());
+
+            Vector2i tooltipCoords = com.wynnventory.util.RenderUtils.calculateTooltipCoords(x, y, vanillaComponents, priceComponents);
+            TooltipPositioner fixed = new com.wynnventory.util.RenderUtils.FixedTooltipPositioner(tooltipCoords.x, tooltipCoords.y);
+
+            context.getMatrices().pushMatrix();
+
+            float scale = com.wynnventory.util.RenderUtils.getScaleFactor(priceComponents);
+            context.getMatrices().scale(scale, scale);
+
+            context.drawTooltipImmediately(MinecraftClient.getInstance().textRenderer, priceComponents, x, y, fixed, stack.get(DataComponentTypes.TOOLTIP_STYLE));
+            context.getMatrices().popMatrix();
+        } catch (Exception ignored) { }
     }
 
     private static void drawTooltip(TextRenderer textRenderer, List<TooltipComponent> components, int x, int y, DrawContext context) {
@@ -1554,7 +1571,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             try {
                 if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-                    ItemOverlayFeature itemOverlayFeature = Feature.getInstance(ItemOverlayFeature.class);
+                    com.wynnmod.feature.item.ItemOverlayFeature itemOverlayFeature = com.wynnmod.feature.Feature.getInstance(com.wynnmod.feature.item.ItemOverlayFeature.class);
                     ((wmd$ItemOverlayFeatureInvoker) itemOverlayFeature).callOnRenderItem(ctx, stack, x, y, false);
                 }
             } catch (Exception ignored) {}
