@@ -5,7 +5,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.aspects.GambitData;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -143,6 +143,19 @@ public class GambitsPage extends PageWidget{
                 drawGambitPanel(x, y, panelWidth, panelHeight, gambit);
             }
         }
+    }
+
+    public void pageOpened() {
+        if(crowdsourcedGambits != null) {
+            if (!crowdsourcedGambits.isEmpty()) return;
+        }
+
+        WynncraftApiHandler.fetchCrowdsourcedGambits().thenAccept(result -> {
+            crowdsourcedGambits = result;
+            if (result != null && !result.isEmpty()) {
+                GambitData.INSTANCE.saveGambits(result);
+            }
+        });
     }
 
     @Override

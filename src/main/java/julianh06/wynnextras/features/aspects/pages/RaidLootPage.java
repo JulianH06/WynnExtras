@@ -1,18 +1,12 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.aspects.AspectScreen;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.item.MaceItem;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 
 import java.util.ArrayList;

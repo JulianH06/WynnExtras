@@ -9,7 +9,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.FavoriteAspectsData;
 import julianh06.wynnextras.features.aspects.LootPoolData;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
@@ -243,6 +243,30 @@ public class LootPoolPage extends PageWidget {
         }
 
         return false;
+    }
+
+    public void pageOpened() {
+        String[] raids = {"NOTG", "NOL", "TCC", "TNA"};
+        int i = 0;
+        for (String raidType : raids) {
+            if(crowdsourcedLootPools.get(raidType) != null) {
+                if(!crowdsourcedLootPools.get(raidType).isEmpty()) continue;
+            }
+
+            int finalI = i;
+            WynncraftApiHandler.fetchCrowdsourcedLootPool(raidType).thenAccept(result -> {
+                if(result == null) {
+                    hasCrowdSourcedData.set(finalI, corwdSourceStatus.Null);
+                }
+                if (result != null && !result.isEmpty()) {
+                    hasCrowdSourcedData.set(finalI, corwdSourceStatus.Found);
+                    crowdsourcedLootPools.put(raidType, result);
+                    // Save to local data for offline access
+                    julianh06.wynnextras.features.aspects.LootPoolData.INSTANCE.saveLootPoolFull(raidType, result);
+                }
+            });
+            i++;
+        }
     }
 
     private static class LootPoolWidget extends Widget {

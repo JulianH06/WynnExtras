@@ -9,6 +9,7 @@ import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.profileviewer.data.PlayerData;
 import julianh06.wynnextras.features.profileviewer.tabs.AspectsTabWidget;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;

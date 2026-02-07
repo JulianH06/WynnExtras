@@ -112,6 +112,11 @@ public class WynnExtrasConfig {
     // ==================== CHAT CLICK ====================
     public boolean chatClickOpensPV = true;
 
+    // ==================== Crowd Sourcing ================
+    public boolean uploadOwnAspects = true;
+    public boolean crowdSourceRaidLootpools = true;
+    public boolean crowdSourceLootrunLootpools = true;
+    public boolean crowdSourceGambits = true;
 
     // ==================== BADGES ====================
     public boolean badgesEnabled = false;

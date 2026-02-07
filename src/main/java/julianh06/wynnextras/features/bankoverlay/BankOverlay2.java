@@ -383,6 +383,7 @@ public class BankOverlay2 extends WEHandledScreen {
             scissory2 = yStart + 100 * (yFitAmount - 1);
 
             context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
+            ui.updateContext(context, ui.getScaleFactor(), 0, 0);
 
             // Check for cross-class search (@)
             String rawSearchInput = searchbar2.getInput();
@@ -1592,6 +1593,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
             if(activeInv == inventoryIndex || isInventorySlot) {
                 if(index == 4 && isInventorySlot) return false; //Ingredient pouch, clicking it within the bank overlay crashes the game
+                if(index == 34 && isInventorySlot) return false; //Compass, clicking it within the bank overlay crashes the game
+                if(index == 35 && isInventorySlot) return false; //Content book, clicking it within the bank overlay crashes the game
 
                 SlotActionType action = determineActionType(button);
 

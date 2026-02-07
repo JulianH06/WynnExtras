@@ -203,9 +203,6 @@ public class maintracking {
         // Register the screen title debugger
         ScreenTitleDebugger.register();
 
-        // Initialize gambit reset notifications
-        GambitNotifier.init();
-
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player == null || client.world == null) {

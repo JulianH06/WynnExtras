@@ -9,7 +9,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.aspects.FavoriteAspectsData;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.features.profileviewer.data.Aspect;
 import julianh06.wynnextras.features.profileviewer.data.User;

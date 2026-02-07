@@ -18,7 +18,7 @@ import net.neoforged.bus.api.SubscribeEvent;
  */
 @WEModule
 public class BadgeRenderer {
-    private static final Text BADGE_TEXT = Text.literal("\u2605").formatted(Formatting.DARK_GREEN);
+    private static final Text BADGE_TEXT = Text.literal("\u2620").formatted(Formatting.GOLD);
     private static final float BADGE_SCALE = 0.5f;
 
     @SubscribeEvent
@@ -45,13 +45,16 @@ public class BadgeRenderer {
             // Get player position for badge rendering
             WEVec playerPos = new WEVec(
                     player.getLerpedPos(tickDelta).x,
-                    player.getLerpedPos(tickDelta).y + (player.isSneaking() ? 1.72 : 2.15),
+                    player.getLerpedPos(tickDelta).y + (player.isSneaking() ? 1.72 : 2.15) + 0.4,
                     player.getLerpedPos(tickDelta).z
             );
 
             //System.out.println("reder at " + player.getLerpedPos(tickDelta).x + " " + player.getLerpedPos(tickDelta).y + " " + player.getLerpedPos(tickDelta).z);
 
             // Render the star badge
+            //u2618
+            //u2620
+            //u2665
             WorldRenderUtils.drawText(event, playerPos, BADGE_TEXT, BADGE_SCALE, true);
         }
     }

@@ -247,6 +247,8 @@ public class WynnExtrasConfigScreen extends Screen {
                 () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
             .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
                 () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
+            .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
+                () -> config.badgesEnabled, v -> config.badgesEnabled = v))
             .sub("Dark Mode Toggles")
                 .add(toggle("Bank Overlay", "Dark mode for the Bank Overlay",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
@@ -271,7 +273,16 @@ public class WynnExtrasConfigScreen extends Screen {
                         config.pvDarkmodeToggle = false;
                         config.lootPoolPagesDarkMode = false;
                         config.craftingHelperDarkMode = false;
-                        config.mainMenuDarkMode = false; }, "Disable"));
+                        config.mainMenuDarkMode = false; }, "Disable"))
+            .sub("Crowd sourcing")
+                .add(toggle("Upload your own Aspects", "Upload your aspect data so you can see your personal lootpool scores",
+                        () -> config.uploadOwnAspects, v -> config.uploadOwnAspects = v))
+                .add(toggle("Lootrun lootpools", "Help gather the current lootrun lootpool so others can see it with /we lootruns",
+                        () -> config.crowdSourceLootrunLootpools, v -> config.crowdSourceLootrunLootpools = v))
+                .add(toggle("Raid lootpools", "Help gather the current raid lootpool so others can see it with /we lootpool",
+                        () -> config.crowdSourceRaidLootpools, v -> config.crowdSourceRaidLootpools = v))
+                .add(toggle("Gambits", "Help gather the current gambits so others can see them with /we gambits",
+                        () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v));
     }
 
     // ==================== BUILDER HELPERS ====================

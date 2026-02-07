@@ -11,6 +11,7 @@ import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
@@ -18,6 +19,7 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -26,14 +28,13 @@ import java.util.Optional;
  * Shows the full Wynntils tooltip with all formatting
  */
 public class TradeMarketComparisonPanel {
-
     private static final int MAX_PANELS = 3;
 
     // Border colors for each panel position
     // 1st = Red, 2nd = Dark Green, 3rd = Light Green/Lime
     private static final int[] PANEL_BORDER_COLORS = {
             0xFFFF0000,  // Red for 1st item
-            0xFF006600,  // Dark green for 2nd item
+            0xFFFFFF00,  // Dark green for 2nd item
             0xFF88FF00   // Light green/lime for 3rd item
     };
 
@@ -46,19 +47,35 @@ public class TradeMarketComparisonPanel {
         boolean dragging;
         int dragOffsetX, dragOffsetY;
         int borderColor;
+        int slotIndex;
         String itemId;  // For matching items in slots
 
-        ComparisonPanel(ItemStack item, List<Text> tooltip, int x, int y, int borderColor) {
+        ComparisonPanel(ItemStack item, List<Text> tooltip, int x, int y, int slotIndex) {
             this.item = item;
             this.tooltip = tooltip;
+            this.slotIndex = slotIndex;
+            this.borderColor = PANEL_BORDER_COLORS[slotIndex];
             this.x = x;
             this.y = y;
             this.width = calculateWidth(tooltip);
             this.height = tooltip.size() * 10 + 8;
             this.dragging = false;
-            this.borderColor = borderColor;
             this.itemId = getItemIdentifier(item);
         }
+
+        private static int findFreeSlot() {
+            boolean[] used = new boolean[MAX_PANELS];
+
+            for (ComparisonPanel panel : panels) {
+                used[panel.slotIndex] = true;
+            }
+
+            for (int i = 0; i < MAX_PANELS; i++) {
+                if (!used[i]) return i;
+            }
+            return -1;
+        }
+
 
         private static int calculateWidth(List<Text> tooltip) {
             MinecraftClient mc = MinecraftClient.getInstance();
@@ -208,37 +225,33 @@ public class TradeMarketComparisonPanel {
 
     private static void addPanel(ItemStack stack) {
         MinecraftClient mc = MinecraftClient.getInstance();
-        int screenWidth = mc.getWindow() != null ? mc.getWindow().getScaledWidth() : 800;
+        int screenWidth = mc.getWindow().getScaledWidth();
 
-        // Determine panel index and border color
-        int panelIndex = panels.size();
-        if (panelIndex >= MAX_PANELS) {
+        int slotIndex = ComparisonPanel.findFreeSlot();
+
+        if (slotIndex == -1) {
             panels.remove(0);
-            panelIndex = panels.size();  // Will be MAX_PANELS - 1 after removal
+            slotIndex = ComparisonPanel.findFreeSlot();
         }
-        int borderColor = PANEL_BORDER_COLORS[panelIndex % PANEL_BORDER_COLORS.length];
 
-        // Build the tooltip
-        int panelNum = panelIndex + 1;
+        if (slotIndex < 0 || slotIndex >= MAX_PANELS) return;
+
+        int panelNum = slotIndex + 1;
         List<Text> tooltip = buildTooltip(stack, panelNum + ":");
 
-        // Calculate initial position based on panel number
         int panelWidth = ComparisonPanel.calculateWidth(tooltip);
-        int x, y = 25; // Start below the Stop Comparing button
+        int x, y = 25;
 
-        if (panelIndex == 0) {
-            // First panel: all the way to the left
-            x = 5;
-        } else if (panelIndex == 1) {
-            // Second panel: all the way to the right
-            x = screenWidth - panelWidth - 5;
-        } else {
-            // Third panel: center
-            x = (screenWidth - panelWidth) / 2;
+        switch (slotIndex) {
+            case 0 -> x = 5;
+            case 1 -> x = screenWidth - panelWidth - 5;
+            case 2 -> x = (screenWidth - panelWidth) / 2;
+            default -> x = 5;
         }
 
-        panels.add(new ComparisonPanel(stack, tooltip, x, y, borderColor));
+        panels.add(new ComparisonPanel(stack, tooltip, x, y, slotIndex));
     }
+
 
     private static List<Text> buildTooltip(ItemStack stack, String headerPrefix) {
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -280,14 +293,11 @@ public class TradeMarketComparisonPanel {
         List<Text> filteredTooltip = new ArrayList<>();
         for (Text line : wynntilsTooltip) {
             if(line.equals(Text.empty()) || line.getString().equals(" ")) continue;
-            System.out.println(line);
             String str = line.getString().toLowerCase();
             // Skip attack speed
             if (str.contains("attack speed")) continue;
             // Skip powder specials header
             if (str.contains("powder special")) continue;
-            // Skip powder slots
-            if (str.contains("powder slot") || str.contains("[0/")) continue;
             // Skip powder special effects
             if (str.contains("duration") || str.contains("radius") || str.contains("chains") ||
                 str.contains("min. lost") || str.contains("rage") || str.contains("curse") ||
@@ -305,6 +315,7 @@ public class TradeMarketComparisonPanel {
             if ((str.contains("strength") || str.contains("dexterity") || str.contains("intelligence") ||
                 str.contains("defence") || str.contains("agility") || str.contains("health")) && !str.contains("[")) continue;
             filteredTooltip.add(line);
+            System.out.println(line);
             if(line.toString().toLowerCase().contains("item")) break;
         }
 
@@ -312,7 +323,6 @@ public class TradeMarketComparisonPanel {
         tooltip.add(WynnExtras.addWynnExtrasPrefix("§6Item Comparison " + headerPrefix));
         tooltip.add(Text.of(" "));
         tooltip.addAll(filteredTooltip);
-        tooltip.add(filteredTooltip.size() + 1, Text.of(" "));
 
         return tooltip;
     }
@@ -378,31 +388,31 @@ public class TradeMarketComparisonPanel {
     }
 
     /**
-     * Render panels on top layer - call this from a post-render hook
-     */
-    public static void renderOnTop(DrawContext context) {
-        render(context);
-    }
-
-    /**
      * Get the border color for an item if it's being compared, or 0 if not
      */
     public static int getComparisonBorderColor(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return 0;
         for (ComparisonPanel panel : panels) {
-            // Use Minecraft's built-in comparison which handles all edge cases
-            if (ItemStack.areItemsAndComponentsEqual(stack, panel.item)) {
+            if (isSameForComparison(stack, panel.item)) {
                 return panel.borderColor;
             }
         }
         return 0;
     }
 
-    /**
-     * Check if an item is being compared
-     */
-    public static boolean isItemBeingCompared(ItemStack stack) {
-        return getComparisonBorderColor(stack) != 0;
+    private static boolean isSameForComparison(ItemStack a, ItemStack b) {
+        if(a.isEmpty() || b.isEmpty()) return false;
+
+        if(!a.isOf(b.getItem())) {
+            return false;
+        }
+
+        if(a.getCustomName() == null || b.getCustomName() == null) return false;
+
+        if(!a.getCustomName().getString().contains(b.getCustomName().getString())) return false;
+
+        return Objects.equals(a.get(DataComponentTypes.LORE),
+                b.get(DataComponentTypes.LORE));
     }
 
     private static void renderTooltipAt(DrawContext context, TextRenderer textRenderer, List<Text> lines, int x, int y, int width, int height, int borderColor) {
@@ -629,15 +639,6 @@ public class TradeMarketComparisonPanel {
         for (ComparisonPanel panel : panels) {
             if (panel.dragging) return true;
         }
-        return false;
-    }
-
-    // Legacy methods for compatibility with HandledScreenMixin
-    public static boolean handleCtrlClick(Slot slot) {
-        return handleF1Press(slot);
-    }
-
-    public static boolean handleF1Toggle(Slot slot) {
         return false;
     }
 }

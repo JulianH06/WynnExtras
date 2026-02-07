@@ -11,7 +11,7 @@ import net.minecraft.util.Identifier;
 
 import java.util.*;
 
-import static julianh06.wynnextras.features.profileviewer.WynncraftApiHandler.parseStyledHtml;
+import static julianh06.wynnextras.utils.WynncraftApiHandler.parseStyledHtml;
 
 public class AbilityTreeWidget extends Widget {
     static Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/treetabbackground.png");

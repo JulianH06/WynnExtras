@@ -8,7 +8,7 @@ import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.LootrunLootPoolData;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -21,9 +21,6 @@ import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-
-import static java.util.Map.entry;
 
 public class LootrunLootPoolPage extends PageWidget {
     private static Map<String, List<LootrunLootPoolData.LootrunItem>> crowdsourcedLootPools = new HashMap<>();
@@ -144,6 +141,21 @@ public class LootrunLootPoolPage extends PageWidget {
             lootPoolWidget.mouseReleased(mx, my, button);
         }
         return false;
+    }
+
+    public void pageOpened() {
+        for (String camp : LootrunLootPoolData.CAMP_CODES) {
+            if(crowdsourcedLootPools.get(camp) != null) {
+                if (!crowdsourcedLootPools.get(camp).isEmpty()) continue;
+            }
+
+            WynncraftApiHandler.fetchCrowdsourcedLootrunLootPool(camp).thenAccept(result -> {
+                if (result != null && !result.isEmpty()) {
+                    crowdsourcedLootPools.put(camp, result);
+                    LootrunLootPoolData.INSTANCE.saveLootPool(camp, result);
+                }
+            });
+        }
     }
 
     private static class LootPoolWidget extends Widget {

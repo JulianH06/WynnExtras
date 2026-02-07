@@ -3,7 +3,7 @@ package julianh06.wynnextras.features.aspects.pages;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.features.aspects.AspectScreen;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.LeaderboardEntry;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.gui.DrawContext;

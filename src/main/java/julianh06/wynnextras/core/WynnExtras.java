@@ -26,7 +26,7 @@ import julianh06.wynnextras.features.misc.FastRequeue;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.profileviewer.PV;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidListData;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootTracker;

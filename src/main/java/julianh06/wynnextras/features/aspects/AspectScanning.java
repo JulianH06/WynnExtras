@@ -3,7 +3,7 @@ package julianh06.wynnextras.features.aspects;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
 import net.minecraft.client.MinecraftClient;
@@ -258,9 +258,7 @@ public class AspectScanning {
         if (maintracking.scanDone && !maintracking.returnedToFirstPage && !screen.getScreenHandler().slots.get(10).getStack().isEmpty()) {
             if (maintracking.pagesToGoBack > 0) {
                 PrevPageRaid(screen);
-                McUtils.sendMessageToClient(Text.of("OLD PAGES TO GO BACK: " + maintracking.pagesToGoBack));
                 maintracking.pagesToGoBack--;
-                McUtils.sendMessageToClient(Text.of("NEW PAGES TO GO BACK: " + maintracking.pagesToGoBack));
             }
             return;
         } else if (maintracking.pagesToGoBack <= 0) {
@@ -342,21 +340,12 @@ public class AspectScanning {
             aspectsToUpload.put(name, new Pair<>(bestTierLine, rarity));
         }
 
-        if (MinecraftClient.getInstance().player != null && !foundNames.isEmpty()) {
-            for (String aspectName : foundNames) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Found AspectScanning: §e" + aspectName));
-            }
-        }
-
         // 1. SCANNING PHASE
         if (!maintracking.scanDone) {
             if (!screen.getScreenHandler().slots.get(16).getStack().isEmpty()) {
                 NextPageRaid(screen);
-                McUtils.sendMessageToClient(Text.of("OLD PAGES TO GO BACK: " + maintracking.pagesToGoBack));
                 maintracking.pagesToGoBack++;
-                McUtils.sendMessageToClient(Text.of("NEW PAGES TO GO BACK: " + maintracking.pagesToGoBack));
             } else {
-                McUtils.sendMessageToClient(Text.of("DONE SCANNING, STARTING GOING BACK PHASE"));
                 RaidLootConfig.INSTANCE.save();
                 maintracking.scanDone = true;
                 maintracking.returnedToFirstPage = false;
@@ -429,12 +418,10 @@ public class AspectScanning {
             maintracking.setNextPage(true);
             // Show progress message matching UI page numbers (don't show for page 0 which is active aspects)
             if(SearchedPages > 0) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Scanning page " + (SearchedPages + 1) + "/7..."));
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Scanning page " + (SearchedPages) + "/6..."));
             }
         }
         else{
-            System.out.println(allAspects);
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aScanned " + allAspects.size() + " aspects! §7Uploading..."));
             // Create a copy of the map to avoid it being cleared before async upload completes
             Map<String, Pair<String, String>> aspectsCopy = new HashMap<>(allAspects);
             WynncraftApiHandler.processAspects(aspectsCopy);

@@ -2,8 +2,7 @@ package julianh06.wynnextras.features.aspects;
 
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;

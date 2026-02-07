@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.wynntils.core.components.Models;
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
@@ -12,6 +13,7 @@ import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.utils.MojangAuth;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.Text;
 import net.neoforged.bus.api.SubscribeEvent;
 
 import java.net.URI;
@@ -67,10 +69,11 @@ public class BadgeService {
         if (!Models.WorldState.onWorld()) return;
 
         tickCounter++;
-        if (tickCounter % 400 != 0) return; // Check every 20 seconds
+        if (tickCounter % 200 != 0) return; // Check every 10 seconds
 
         // Initial sync
         if (!initialSyncDone) {
+            McUtils.sendMessageToClient(Text.of("INITIAL HEARTBEAT SYNC"));
             initialSyncDone = true;
             syncWithServer();
             return;
@@ -84,7 +87,7 @@ public class BadgeService {
     }
 
     private static void syncWithServer() {
-        if (!WynnExtrasConfig.INSTANCE.badgesEnabled) return;
+        McUtils.sendMessageToClient(Text.of("SYNCING"));
 
         lastSyncTime = System.currentTimeMillis();
 
@@ -124,6 +127,7 @@ public class BadgeService {
     }
 
     private static void sendHeartbeat(String username, String serverId) {
+        McUtils.sendMessageToClient(Text.of("SENDING HEARTBEAT..."));
         CompletableFuture.runAsync(() -> {
             try {
                 // Build request body
