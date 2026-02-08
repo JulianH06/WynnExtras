@@ -54,7 +54,7 @@ public abstract class WeightScaleBackgroundMixin {
 
     // Inject at HEAD to render BEFORE the item (so it's behind)
     @Inject(method = "drawSlot", at = @At("HEAD"))
-    private void drawScaleBackground(DrawContext context, Slot slot, int x, int y, CallbackInfo ci) {
+    private void drawScaleBackground(DrawContext context, Slot slot, int mouseX, int mouseY, CallbackInfo ci) {
         if (!WynnExtrasConfig.INSTANCE.scaleBackgroundEnabled) return;
         if (!WynnExtrasConfig.INSTANCE.showScales) return;
         if (!Models.WorldState.onWorld()) return;

@@ -173,9 +173,19 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.hideScaleBackgroundButton, v -> config.hideScaleBackgroundButton = v))
                 .add(toggle("Hide comparing info text", "Shows a text that informs you that you can compare items with F1",
                         () -> config.hideTMInfoText, v -> config.hideTMInfoText = v))
+                .add(toggle("Trade market price summary", "Trade market overlay that shows you how much money you can claim",
+                        () -> config.tradeMarketOverlay, v -> config.tradeMarketOverlay = v))
+                .add(toggle("Price overlay background", "Show a dark background for the price overlay",
+                        () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
             .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
-                    () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v));
+                    () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
+                .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
+                        () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
+                .add(toggle("Crafting preview", "Crafting preview toggle",
+                        () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
+                .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
+                        () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v));
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)

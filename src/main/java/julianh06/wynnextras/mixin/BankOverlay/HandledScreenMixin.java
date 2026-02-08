@@ -12,7 +12,6 @@ import julianh06.wynnextras.event.InventoryKeyPressEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.*;
-import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -51,15 +50,6 @@ public abstract class HandledScreenMixin {
     @Unique private julianh06.wynnextras.features.bankoverlay.BankOverlay2 bankOverlay;
 
     @Unique private IdentifierOverlay identifierOverlay;
-
-    @Unique
-    private static boolean isControlDown() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.getWindow() == null) return false;
-        long handle = mc.getWindow().getHandle();
-        return GLFW.glfwGetKey(handle, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS ||
-               GLFW.glfwGetKey(handle, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
-    }
 
     @Unique private CraftingHelperOverlay craftingHelperOverlay;
 

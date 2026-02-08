@@ -178,12 +178,12 @@ public class BankOverlay2 extends WEHandledScreen {
         scissorx2 = 0;
         scissory2 = 0;
 
-        try {
-            if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-
-                com.wynnmod.util.wynncraft.item.map.WynncraftItemDatabase.initialize();
-            }
-        } catch (Exception ignored) {}
+//        try {
+//            if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
+//
+//                com.wynnmod.util.wynncraft.item.map.WynncraftItemDatabase.initialize();
+//            }
+//        } catch (Exception ignored) {}
     }
 
 
@@ -1569,12 +1569,12 @@ public class BankOverlay2 extends WEHandledScreen {
             renderItemOverlays(ctx, stack, x + 1, y + 1);
             renderSearchOverlay(ctx, stack, x + 1, y + 1);
 
-            try {
-                if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-                    com.wynnmod.feature.item.ItemOverlayFeature itemOverlayFeature = com.wynnmod.feature.Feature.getInstance(com.wynnmod.feature.item.ItemOverlayFeature.class);
-                    ((wmd$ItemOverlayFeatureInvoker) itemOverlayFeature).callOnRenderItem(ctx, stack, x, y, false);
-                }
-            } catch (Exception ignored) {}
+//            try {
+//                if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
+//                    com.wynnmod.feature.item.ItemOverlayFeature itemOverlayFeature = com.wynnmod.feature.Feature.getInstance(com.wynnmod.feature.item.ItemOverlayFeature.class);
+//                    ((wmd$ItemOverlayFeatureInvoker) itemOverlayFeature).callOnRenderItem(ctx, stack, x, y, false);
+//                }
+//            } catch (Exception ignored) {}
         }
 
         public void setStack(ItemStack stack) {

@@ -1,5 +1,6 @@
 package julianh06.wynnextras.mixin;
 
+import julianh06.wynnextras.features.crafting.CraftingResultPreviewer;
 import julianh06.wynnextras.features.inventory.TradeMarketOverlay;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.minecraft.client.MinecraftClient;
@@ -13,7 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Mouse.class)
 public class RaidLootOverlayClickMixin {
-
     @Inject(method = "onMouseButton", at = @At("HEAD"))
     private void onMouseClick(long window, MouseInput input, int action, CallbackInfo ci) {
         int mods = input.modifiers();
@@ -36,6 +36,7 @@ public class RaidLootOverlayClickMixin {
 
         RaidLootTrackerOverlay.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
         TradeMarketOverlay.handleClick(mouseX, mouseY, button, action);
+        CraftingResultPreviewer.handleClick(mouseX, mouseY, button, action);
     }
 
     @Inject(method = "onCursorPos", at = @At("HEAD"))
@@ -47,11 +48,10 @@ public class RaidLootOverlayClickMixin {
             y = y / scale;
         }
 
-        if (RaidLootTrackerOverlay.isDragging()) {
-            RaidLootTrackerOverlay.handleMouseMove(x, y);
-        }
-        if (TradeMarketOverlay.isDragging()) {
-            TradeMarketOverlay.handleMouseMove(x, y);
-        }
+        RaidLootTrackerOverlay.handleMouseMove(x, y);
+
+        TradeMarketOverlay.handleMouseMove(x, y);
+
+        CraftingResultPreviewer.handleMouseMove(x, y);
     }
 }

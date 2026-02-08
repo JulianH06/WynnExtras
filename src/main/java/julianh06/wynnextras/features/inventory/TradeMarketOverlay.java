@@ -28,7 +28,6 @@ import java.util.regex.Pattern;
  * Trade Market Overlay - Shows "Value if all sold" on Your Trades screen
  */
 public class TradeMarketOverlay {
-
     // Your Trades screen title (unicode escape sequence)
     private static final String YOUR_TRADES_TITLE = "\uDAFF\uDFE8\uE013";
 
@@ -65,10 +64,6 @@ public class TradeMarketOverlay {
     private static int dragOffsetY = 0;
     private static boolean configLoaded = false;
 
-    public static void register() {
-        HudRenderCallback.EVENT.register(TradeMarketOverlay::render);
-    }
-
     private static void loadConfig() {
         if (configLoaded) return;
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
@@ -84,18 +79,11 @@ public class TradeMarketOverlay {
         WynnExtrasConfig.save();
     }
 
-    private static void render(DrawContext context, RenderTickCounter tickCounter) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.world == null) return;
-
-        // Don't render via HUD callback when screen is open (renderOnScreen handles that)
-        if (mc.currentScreen != null) return;
-    }
-
     public static void renderOnScreen(DrawContext context) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.world == null) return;
         if (mc.currentScreen == null) return;
+        if (!WynnExtrasConfig.INSTANCE.tradeMarketOverlay) return;
 
         // Only show on Your Trades screen
         String screenTitle = mc.currentScreen.getTitle().getString();
@@ -218,6 +206,19 @@ public class TradeMarketOverlay {
     private static void renderOverlay(DrawContext context, MinecraftClient mc, TradeValues values) {
         int y = yPos;
 
+        int bgColor = 0xCC1A1A1A;
+
+        if(WynnExtrasConfig.INSTANCE.tradeMarketOverlayBackground) {
+            drawBackground(
+                    context,
+                    xPos - 4,
+                    yPos - 3,
+                    xPos + WIDTH + 4,
+                    yPos + HEIGHT + 5,
+                    bgColor
+            );
+        }
+
         // Brand pill + Title
         Text pillWithTitle = WynnExtras.addWynnExtrasPrefix(Text.literal("Trade Value").styled(s -> s.withColor(TITLE_COLOR.asInt())));
         FontRenderer.getInstance().renderText(
@@ -308,6 +309,7 @@ public class TradeMarketOverlay {
     public static boolean handleClick(double mouseX, double mouseY, int button, int action) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.currentScreen == null) return false;
+        if (!WynnExtrasConfig.INSTANCE.tradeMarketOverlay) return false;
 
         String screenTitle = mc.currentScreen.getTitle().getString();
         if (!screenTitle.equals(YOUR_TRADES_TITLE)) return false;
@@ -318,7 +320,7 @@ public class TradeMarketOverlay {
                 mouseY >= yPos && mouseY <= yPos + HEIGHT;
 
         // Release drag
-        if (action == 0 && button == 1 && isDragging) {
+        if (action == 0 && button == 0 && isDragging) {
             isDragging = false;
             saveConfig();
             return true;
@@ -326,8 +328,8 @@ public class TradeMarketOverlay {
 
         if (!inBounds) return false;
 
-        // Start drag with right click
-        if (action == 1 && button == 1) {
+        // Start drag
+        if (action == 1 && button == 0) {
             isDragging = true;
             dragOffsetX = (int) mouseX - xPos;
             dragOffsetY = (int) mouseY - yPos;
