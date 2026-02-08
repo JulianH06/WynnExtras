@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.bankoverlay;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.wynnmod.wynncraft.item.map.WynncraftItemDatabase;
+//import com.wynnmod.wynncraft.item.map.WynncraftItemDatabase;
 import com.wynntils.features.inventory.*;
 import com.wynntils.utils.render.buffered.BufferedRenderUtils;
 import com.wynntils.utils.wynn.WynnUtils;
@@ -168,11 +168,12 @@ public class BankOverlay2 extends WEHandledScreen {
         scissorx2 = 0;
         scissory2 = 0;
 
-        try {
-            if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-                WynncraftItemDatabase.initialize();
-            }
-        } catch (Exception ignored) {}
+        // Wynnmod integration disabled for now - requires wynnmod to be a compile dependency
+        // try {
+        //     if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
+        //         WynncraftItemDatabase.initialize();
+        //     }
+        // } catch (Exception ignored) {}
     }
 
 

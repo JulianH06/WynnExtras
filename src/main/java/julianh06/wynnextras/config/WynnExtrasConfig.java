@@ -80,13 +80,16 @@ public class WynnExtrasConfig {
     public int wynntilsItemRarityBackgroundAlpha = 150;
     public boolean smoothScrollToggle = true;
     public boolean bankQuickToggle = true;
-    public boolean darkmodeToggle = false;
     public int bankOverlayMaxRows = 3;
     public int bankOverlayMaxColumns = 3;
     public boolean showWeight = true;
     public boolean showScales = true;
+    public boolean scaleBackgroundEnabled = true;
+    public boolean hideTMInfoText = false;
+    public boolean hideScaleBackgroundButton = false;
     public boolean craftingHelperOverlay = true;
-    public Boolean craftingPreviewOverlay = true;
+    public boolean craftingPreviewOverlay = true;
+    public boolean craftingPreviewBackground = true;
     public int craftingPreviewOverlayX = 20;
     public int craftingPreviewOverlayY = 20;
     public boolean craftingDynamicTextures = true;
@@ -117,9 +120,22 @@ public class WynnExtrasConfig {
     // ==================== CHAT CLICK ====================
     public boolean chatClickOpensPV = true;
 
+    // ==================== Crowd Sourcing ================
+    public boolean uploadOwnAspects = true;
+    public boolean crowdSourceRaidLootpools = true;
+    public boolean crowdSourceLootrunLootpools = true;
+    public boolean crowdSourceGambits = true;
+
+    // ==================== BADGES ====================
+    public boolean badgesEnabled = false;
+
     // ==================== MISC ====================
-    public boolean pvDarkmodeToggle = false;
     public boolean totemRangeVisualizerToggle = true;
+    public boolean pvDarkmodeToggle = false;
+    public boolean darkmodeToggle = false;
+    public boolean lootPoolPagesDarkMode = false;
+    public boolean craftingHelperDarkMode = false;
+    public boolean mainMenuDarkMode = false;
     public float totemRange = 10f;
     public TextColor totemColor = TextColor.WHITE;
     public float eldritchCallRange = 15f;
