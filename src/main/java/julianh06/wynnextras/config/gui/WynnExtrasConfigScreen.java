@@ -160,7 +160,9 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Stat Scales", "Show weights for each stat",
                     () -> config.showScales, v -> config.showScales = v))
             .sub("Trade Market")
-                .add(toggle("Show Background", "Show dark background",
+                .add(toggle("Trade market price summary", "Trade market overlay that shows you how much money you can claim",
+                    () -> config.tradeMarketOverlay, v -> config.tradeMarketOverlay = v))
+                .add(toggle("Price overlay background", "Show a dark background for the price overlay",
                     () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
             .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",

@@ -3,12 +3,15 @@ package julianh06.wynnextras.features.crafting;
 import com.wynntils.core.WynntilsMod;
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
+import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.render.FontRenderer;
+import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.tooltip.TooltipType;
@@ -21,27 +24,79 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CraftingResultPreviewer {
+    private static int xPos = 20;
+    private static int yPos = 20;
+
+    private static int currentWidth = 0;
+    private static int currentHeight = 0;
+
+    private static boolean isDragging = false;
+    private static int dragOffsetX = 0;
+    private static int dragOffsetY = 0;
+
+    private static boolean configLoaded = false;
+
     private final static Pattern craftingPattern = Pattern.compile("§7 - §f(\\w+) §7\\[Lv\\. (\\d+)\\.0 to (\\d+)\\.0]");
 
     private static DefaultedList<ItemStack> stacks = DefaultedList.of();
     private static CraftingResult result = null;
 
-    public static void onRender(DrawContext context, HandledScreen<?> screen) {
+    private static void loadConfig() {
+        if (configLoaded) return;
+
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        xPos = config.craftingPreviewOverlayX;
+        yPos = config.craftingPreviewOverlayY;
+
+        configLoaded = true;
+    }
+
+    private static void saveConfig() {
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        config.craftingPreviewOverlayX = xPos;
+        config.craftingPreviewOverlayY = yPos;
+        WynnExtrasConfig.save();
+    }
+
+    public static void onRender(DrawContext context) {
         if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
 
+        loadConfig();
         if (result != null) {
-            MinecraftClient client = MinecraftClient.getInstance();
-            int screenWidth = client.getWindow().getScaledWidth();
-            int screenHeight = client.getWindow().getScaledHeight();
+            loadConfig();
 
-            TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
-            List<Text> tooltip = result.getTooltip();
-            int tooltipWidth = tooltip.stream().mapToInt(textRenderer::getWidth).max().orElse(0) + 16;
+            List<Text> lines = result.getTooltip();
 
-            int x = ((screenWidth - 176) / 2) - (tooltipWidth + 32);
-            int y = (screenHeight - 166) / 2;
+            int width = getOverlayWidth(lines);
+            int height = getOverlayHeight(lines);
 
-            context.drawTooltip(textRenderer, tooltip, x, y);
+            int bgColor = 0xCC1A1A1A;
+
+            context.getMatrices().push();
+            context.getMatrices().translate(0, 0, 500);
+
+            drawBackground(
+                    context,
+                    xPos - 4,
+                    yPos - 3,
+                    xPos + width + 4,
+                    yPos + height + 5,
+                    bgColor
+            );
+
+            Text pillWithTitle = WynnExtras.addWynnExtrasPrefix(Text.literal("Crafting preview").styled(s -> s.withColor(CustomColor.fromHexString("FFAA00").asInt())));
+            context.drawText(MinecraftClient.getInstance().textRenderer, pillWithTitle, xPos, yPos, 0xFFFFFF, true);
+
+            int y = yPos + 11;
+            for (Text line : lines) {
+                context.drawText(MinecraftClient.getInstance().textRenderer, line, xPos, y, 0xFFFFFFFF, true);
+                y += 11;
+            }
+
+            currentWidth = width;
+            currentHeight = height;
+
+            context.getMatrices().pop();
         }
 
         DefaultedList<ItemStack> stacks = McUtils.containerMenu().getStacks();
@@ -128,4 +183,86 @@ public class CraftingResultPreviewer {
             }
         };
     }
+
+    public static boolean handleClick(double mouseX, double mouseY, int button, int action) {
+        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer))
+            return false;
+
+        loadConfig();
+
+        if (currentWidth == 0 || currentHeight == 0)
+            return false;
+
+        boolean inBounds =
+                mouseX >= xPos && mouseX <= xPos + currentWidth &&
+                        mouseY >= yPos && mouseY <= yPos + currentHeight;
+
+        // Drag Release
+        if (action == 0 && button == 0 && isDragging) {
+            isDragging = false;
+            saveConfig();
+            return true;
+        }
+
+        if (!inBounds) return false;
+
+        // Drag Start (Right Click)
+        if (action == 1 && button == 0) {
+            isDragging = true;
+            dragOffsetX = (int) mouseX - xPos;
+            dragOffsetY = (int) mouseY - yPos;
+            return true;
+        }
+
+        return true;
+    }
+
+    public static void handleMouseMove(double mouseX, double mouseY) {
+        if (!isDragging) return;
+
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.getWindow() == null) return;
+
+        xPos = (int) mouseX - dragOffsetX;
+        yPos = (int) mouseY - dragOffsetY;
+
+        int screenW = mc.getWindow().getScaledWidth();
+        int screenH = mc.getWindow().getScaledHeight();
+
+        xPos = Math.max(0, Math.min(xPos, screenW - currentWidth));
+        yPos = Math.max(0, Math.min(yPos, screenH - currentHeight));
+    }
+
+    private static int getOverlayWidth(List<Text> lines) {
+        float max = 0;
+        for (Text t : lines) {
+            float w = FontRenderer.getInstance()
+                    .getFont()
+                    .getWidth(t.getString());
+            max = Math.max(max, w);
+        }
+
+        Text pillWithTitle = WynnExtras.addWynnExtrasPrefix(Text.literal("Crafting preview"));
+        max = Math.max(max, FontRenderer.getInstance().getFont().getWidth(pillWithTitle));
+
+        return (int) max + 10;
+    }
+
+    private static int getOverlayHeight(List<Text> lines) {
+        int lineHeight = 11;
+        return lines.size() * lineHeight + 8;
+    }
+
+    private static void drawBackground(DrawContext context, int x1, int y1, int x2, int y2, int color) {
+        int r = 3;
+        context.fill(x1 + r, y1, x2 - r, y2, color);
+        context.fill(x1, y1 + r, x1 + r, y2 - r, color);
+        context.fill(x2 - r, y1 + r, x2, y2 - r, color);
+
+        context.fill(x1 + 1, y1 + 1, x1 + r, y1 + r, color);
+        context.fill(x2 - r, y1 + 1, x2 - 1, y1 + r, color);
+        context.fill(x1 + 1, y2 - r, x1 + r, y2 - 1, color);
+        context.fill(x2 - r, y2 - r, x2 - 1, y2 - 1, color);
+    }
+
 }

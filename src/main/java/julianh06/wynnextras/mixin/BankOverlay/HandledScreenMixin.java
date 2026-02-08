@@ -70,10 +70,6 @@ public abstract class HandledScreenMixin {
 
             craftingHelperOverlay.render(context, mouseX, mouseY, delta);
         }
-
-        if (WynnExtrasConfig.INSTANCE.craftingPreviewOverlay) {
-            CraftingResultPreviewer.onRender(context, (HandledScreen<?>) (Object) this);
-        }
     }
 
 
