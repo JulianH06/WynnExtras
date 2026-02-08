@@ -9,6 +9,7 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.InventoryKeyPressEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
+import julianh06.wynnextras.features.crafting.CraftingResultPreviewer;
 import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
 import net.minecraft.client.MinecraftClient;

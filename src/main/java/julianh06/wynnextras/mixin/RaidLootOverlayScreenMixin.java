@@ -1,5 +1,6 @@
 package julianh06.wynnextras.mixin;
 
+import julianh06.wynnextras.features.crafting.CraftingResultPreviewer;
 import julianh06.wynnextras.features.inventory.TradeMarketOverlay;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.minecraft.client.gui.DrawContext;
@@ -16,5 +17,6 @@ public class RaidLootOverlayScreenMixin {
     private void renderOverlayOnScreen(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         RaidLootTrackerOverlay.renderOnScreen(context);
         TradeMarketOverlay.renderOnScreen(context);
+        CraftingResultPreviewer.onRender(context);
     }
 }

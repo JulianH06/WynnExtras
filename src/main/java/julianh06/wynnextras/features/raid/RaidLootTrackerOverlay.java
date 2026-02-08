@@ -472,7 +472,7 @@ public class RaidLootTrackerOverlay {
                 mouseY >= yPos - 2 && mouseY <= yPos + contentHeight + 4;
 
         if (action == 0) {
-            if (button == 1 && isDragging) {
+            if (button == 0 && isDragging) {
                 isDragging = false;
                 saveConfig();
                 return true;
@@ -489,7 +489,7 @@ public class RaidLootTrackerOverlay {
 
         if (action == 1) {
             // Left click handling
-            if (button == 0) {
+            if (button == 1) {
                 // Check if clicked on left arrow (previous filter)
                 if (isInBounds(mouseX, mouseY, leftArrowBounds)) {
                     selectedFilterIndex = (selectedFilterIndex - 1 + RAID_FILTERS.size()) % RAID_FILTERS.size();
@@ -548,7 +548,7 @@ public class RaidLootTrackerOverlay {
             }
 
             // Right click while in inventory/chat = start drag (only if not on filter/mode)
-            if (button == 1 && canInteract) {
+            if (button == 0 && canInteract) {
                 isDragging = true;
                 dragOffsetX = (int) mouseX - xPos;
                 dragOffsetY = (int) mouseY - yPos;
@@ -560,22 +560,22 @@ public class RaidLootTrackerOverlay {
     }
 
     public static void handleMouseMove(double mouseX, double mouseY) {
-        if (isDragging) {
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.currentScreen == null) {
-                isDragging = false;
-                return;
-            }
+        if (!isDragging) return;
 
-            xPos = (int) mouseX - dragOffsetX;
-            yPos = (int) mouseY - dragOffsetY;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.currentScreen == null) {
+            isDragging = false;
+            return;
+        }
 
-            if (mc.getWindow() != null) {
-                int screenWidth = mc.getWindow().getScaledWidth();
-                int screenHeight = mc.getWindow().getScaledHeight();
-                xPos = Math.max(0, Math.min(xPos, screenWidth - WIDTH));
-                yPos = Math.max(0, Math.min(yPos, screenHeight - 100));
-            }
+        xPos = (int) mouseX - dragOffsetX;
+        yPos = (int) mouseY - dragOffsetY;
+
+        if (mc.getWindow() != null) {
+            int screenWidth = mc.getWindow().getScaledWidth();
+            int screenHeight = mc.getWindow().getScaledHeight();
+            xPos = Math.max(0, Math.min(xPos, screenWidth - WIDTH));
+            yPos = Math.max(0, Math.min(yPos, screenHeight - 100));
         }
     }
 

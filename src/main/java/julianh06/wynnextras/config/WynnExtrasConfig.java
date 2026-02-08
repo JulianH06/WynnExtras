@@ -86,8 +86,15 @@ public class WynnExtrasConfig {
     public boolean showWeight = true;
     public boolean showScales = true;
     public boolean craftingHelperOverlay = true;
+    public Boolean craftingPreviewOverlay = true;
+    public int craftingPreviewOverlayX = 20;
+    public int craftingPreviewOverlayY = 20;
     public boolean craftingDynamicTextures = true;
     public boolean wynnventoryOverlay = true;
+    public boolean tradeMarketOverlay = true;
+    public int tradeMarketOverlayX = 10;
+    public int tradeMarketOverlayY = 10;
+    public boolean tradeMarketOverlayBackground = true;
 
     // ==================== RAID ====================
     public boolean toggleRaidTimestamps = true;
@@ -102,9 +109,6 @@ public class WynnExtrasConfig {
     public int raidLootTrackerY = 5;
     public List<String> raidLootTrackerHiddenLines = new ArrayList<>();
     public boolean raidLootTrackerBackground = true;
-    public int tradeMarketOverlayX = 10;
-    public int tradeMarketOverlayY = 10;
-    public boolean tradeMarketOverlayBackground = true;
     public boolean toggleFastRequeue = true;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
