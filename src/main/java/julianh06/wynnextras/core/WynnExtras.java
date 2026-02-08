@@ -148,7 +148,7 @@ public class WynnExtras implements ClientModInitializer {
 		CurrentVersionData.INSTANCE.version = FabricLoader.getInstance().getModContainer("wynnextras").map(mod -> mod.getMetadata().getVersion().getFriendlyString()).orElse("unknown");
 		CurrentVersionData.save();
 		//TODO: remove once test version is gone
-		latestVersion = "TEST";// CurrentVersionData.fetchLatestVersion();
+		latestVersion = CurrentVersionData.fetchLatestVersion();
 
 		SpecialGuiElementRegistry.register(context -> new BannerGuiRenderer(context.vertexConsumers(), MinecraftClient.getInstance().getAtlasManager()));
 
@@ -260,12 +260,6 @@ public class WynnExtras implements ClientModInitializer {
 	private static final Duration COOLDOWN = Duration.ofMinutes(15);
 
 	public static void tryNotifyVersionUpdate(String currentVersion, String latestVersion) {
-		McUtils.sendMessageToClient(
-				addWynnExtrasPrefix(Text.of("§aYou are using a test version for §b1.21.11§a! Some features might not work yet, please report any bugs you find on our discord. Run §b\"/we discord\" §ato join."))
-		);
-
-		if(true) return;
-
 		if (latestVersion == null || currentVersion.equals(latestVersion)) return;
 
 		Instant now = Instant.now();

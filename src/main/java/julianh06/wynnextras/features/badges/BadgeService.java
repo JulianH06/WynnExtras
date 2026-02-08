@@ -60,7 +60,10 @@ public class BadgeService {
     public void onWorldChange(WorldChangeEvent event) {
         // Sync on world change
         if (Models.WorldState.onWorld()) {
-            syncWithServer();
+            long now = System.currentTimeMillis();
+            if (now - lastSyncTime >= SYNC_INTERVAL_MS) {
+                syncWithServer();
+            }
         }
     }
 
