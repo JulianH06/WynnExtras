@@ -20,10 +20,6 @@ public class WaypointData {
 
     public WaypointPackage activePackage = null;
 
-//    public List<Waypoint> waypoints = new ArrayList<>();
-//
-//    public List<WaypointCategory> categories = new ArrayList<>();
-
     static GsonBuilder builder = new GsonBuilder()
             .registerTypeAdapter(StyledText.class, new StyledTextAdapter());
 
@@ -35,55 +31,8 @@ public class WaypointData {
     private static final Path PACKAGE_FOLDER = FabricLoader.getInstance()
             .getConfigDir().resolve("wynnextras/packages");
 
-//    private static void copyDefaultPackagesFromAssets() {
-//        String assetPath = "assets/wynnextras/default_packages/";
-//
-//        try {
-//            if (!Files.exists(PACKAGE_FOLDER)) {
-//                Files.createDirectories(PACKAGE_FOLDER);
-//            }
-//
-//            var resource = WaypointData.class.getClassLoader().getResource(assetPath);
-//            if (resource == null) {
-//                System.err.println("[WynnExtras] Default package folder not found in assets!");
-//                return;
-//            }
-//
-//            var uri = resource.toURI();
-//            Path assetDir;
-//
-//            if ("jar".equals(uri.getScheme())) {
-//                try (var fs = java.nio.file.FileSystems.newFileSystem(uri, java.util.Collections.emptyMap())) {
-//                    assetDir = fs.getPath(assetPath);
-//                    copyFilesFromDirectory(assetDir);
-//                }
-//            } else {
-//                assetDir = Path.of(uri);
-//                copyFilesFromDirectory(assetDir);
-//            }
-//
-//        } catch (Exception e) {
-//            System.err.println("[WynnExtras] Failed to copy default packages");
-//            e.printStackTrace();
-//        }
-//    }
-//
-//    private static void copyFilesFromDirectory(Path assetDir) throws IOException {
-//        try (DirectoryStream<Path> stream = Files.newDirectoryStream(assetDir, "*.json")) {
-//            for (Path file : stream) {
-//                Path target = PACKAGE_FOLDER.resolve(file.getFileName().toString());
-//                if (Files.exists(target)) continue; // nur kopieren, wenn nicht schon vorhanden
-//                try (var in = Files.newInputStream(file)) {
-//                    Files.copy(in, target);
-//                }
-//            }
-//        }
-//    }
-
-
     public static void load() {
         INSTANCE = new WaypointData();
-        //copyDefaultPackagesFromAssets();
         try {
             if (!Files.exists(PACKAGE_FOLDER)) {
                 Files.createDirectories(PACKAGE_FOLDER);
@@ -109,20 +58,6 @@ public class WaypointData {
             INSTANCE.activePackage = defaultPkg;
         }
     }
-
-//    public static void applyDisableDefaultWaypoints(boolean disable) {
-//        for (WaypointPackage pkg : INSTANCE.packages) {
-//            if (isDefaultPackage(pkg)) {
-//                pkg.enabled = !disable; // false, wenn disable = true
-//            }
-//        }
-//        save();
-//    }
-
-//    private static boolean isDefaultPackage(WaypointPackage pkg) {
-//        // Standardmäßig alles aus default_packages
-//        return pkg.name.startsWith("C-") || pkg.name.startsWith("Default");
-//    }
 
     public static void save() {
         try {
@@ -202,6 +137,4 @@ public class WaypointData {
             counter++;
         }
     }
-
-
 }

@@ -41,7 +41,7 @@ public class BadgeService {
 
     private static final Set<String> wynnextrasUsers = ConcurrentHashMap.newKeySet();
     private static long lastSyncTime = 0;
-    private static final long SYNC_INTERVAL_MS = 600_000; // 10 minutes
+    private static final long SYNC_INTERVAL_MS = 1_200_000; // 20 minutes
 
     private static int tickCounter = 0;
     private static boolean initialSyncDone = false;
@@ -89,7 +89,6 @@ public class BadgeService {
     }
 
     private static void syncWithServer() {
-
         lastSyncTime = System.currentTimeMillis();
 
         // Get authentication data

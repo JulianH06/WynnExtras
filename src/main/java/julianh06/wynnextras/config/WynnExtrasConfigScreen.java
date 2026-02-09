@@ -1668,7 +1668,7 @@ public class WynnExtrasConfigScreen extends Screen {
             int c = charInput.codepoint();
 
             if (c >= 32) {
-                setActiveInput(getActiveInput() + c);
+                setActiveInput(getActiveInput() + (char) c);
                 return true;
             }
 
