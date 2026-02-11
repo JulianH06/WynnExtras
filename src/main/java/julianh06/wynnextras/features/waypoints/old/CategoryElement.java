@@ -1,6 +1,5 @@
-package julianh06.wynnextras.features.waypoints;
+package julianh06.wynnextras.features.waypoints.old;
 
-import com.google.gson.Gson;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
@@ -12,20 +11,15 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.utils.overlays.EasyButton;
 import julianh06.wynnextras.utils.overlays.EasyColorPicker;
-import julianh06.wynnextras.utils.overlays.EasyDropdown;
 import julianh06.wynnextras.utils.overlays.EasySlider;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static julianh06.wynnextras.features.waypoints.WaypointScreen.mouseX;
-import static julianh06.wynnextras.features.waypoints.WaypointScreen.scaleFactor;
+import static julianh06.wynnextras.features.waypoints.old.WaypointScreen.mouseX;
+import static julianh06.wynnextras.features.waypoints.old.WaypointScreen.scaleFactor;
 
 public class CategoryElement {
     public WaypointCategory category;
@@ -72,13 +66,13 @@ public class CategoryElement {
         hideAllBlocksButton = new EasyButton(-1, -1, -1, -1) {
             @Override
             public void click() {
-                for(WaypointElement element : WaypointScreen.elements) {
-                    if(element.waypoint.categoryName == null) continue;
-                    if(element.waypoint.categoryName.isEmpty()) continue;
-                    if(element.waypoint.categoryName.equals(category.name)) {
-                        element.waypoint.show = false;
-                        }
-                }
+//                for(WaypointElement element : WaypointScreen.elements) {
+//                    if(element.waypoint.categoryName == null) continue;
+//                    if(element.waypoint.categoryName.isEmpty()) continue;
+//                    if(element.waypoint.categoryName.equals(category.name)) {
+//                        element.waypoint.show = false;
+//                        }
+//                }
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                         Text.of("Now hiding block highlights for all waypoints of category " + category.name)));
             }
@@ -87,13 +81,13 @@ public class CategoryElement {
         showAllBlocksButton = new EasyButton(-1, -1, -1, -1) {
             @Override
             public void click() {
-                for(WaypointElement element : WaypointScreen.elements) {
-                    if(element.waypoint.categoryName == null) continue;
-                    if(element.waypoint.categoryName.isEmpty()) continue;
-                    if(element.waypoint.categoryName.equals(category.name)) {
-                        element.waypoint.show = true;
-                        }
-                }
+//                for(WaypointElement element : WaypointScreen.elements) {
+//                    if(element.waypoint.categoryName == null) continue;
+//                    if(element.waypoint.categoryName.isEmpty()) continue;
+//                    if(element.waypoint.categoryName.equals(category.name)) {
+//                        element.waypoint.show = true;
+//                        }
+//                }
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                         Text.of("Now showing block highlights for all waypoints of category " + category.name)));
             }
@@ -102,13 +96,13 @@ public class CategoryElement {
         hideAllNamesButton = new EasyButton(-1, -1, -1, -1) {
             @Override
             public void click() {
-                for(WaypointElement element : WaypointScreen.elements) {
-                    if(element.waypoint.categoryName == null) continue;
-                    if(element.waypoint.categoryName.isEmpty()) continue;
-                    if(element.waypoint.categoryName.equals(category.name)) {
-                        element.waypoint.showName = false;
-                        }
-                }
+//                for(WaypointElement element : WaypointScreen.elements) {
+//                    if(element.waypoint.categoryName == null) continue;
+//                    if(element.waypoint.categoryName.isEmpty()) continue;
+//                    if(element.waypoint.categoryName.equals(category.name)) {
+//                        element.waypoint.showName = false;
+//                        }
+//                }
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                         Text.of("Now hiding names of all waypoints of category " + category.name)));
             }
@@ -117,13 +111,13 @@ public class CategoryElement {
         showAllNamesButton = new EasyButton(-1, -1, -1, -1) {
             @Override
             public void click() {
-                for(WaypointElement element : WaypointScreen.elements) {
-                    if(element.waypoint.categoryName == null) continue;
-                    if(element.waypoint.categoryName.isEmpty()) continue;
-                    if(element.waypoint.categoryName.equals(category.name)) {
-                        element.waypoint.showName = true;
-                        }
-                }
+//                for(WaypointElement element : WaypointScreen.elements) {
+//                    if(element.waypoint.categoryName == null) continue;
+//                    if(element.waypoint.categoryName.isEmpty()) continue;
+//                    if(element.waypoint.categoryName.equals(category.name)) {
+//                        element.waypoint.showName = true;
+//                        }
+//                }
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                         Text.of("Now showing names of all waypoints of category " + category.name)));
             }
@@ -132,13 +126,13 @@ public class CategoryElement {
         hideAllDistancesButton = new EasyButton(-1, -1, -1, -1) {
             @Override
             public void click() {
-                for(WaypointElement element : WaypointScreen.elements) {
-                    if(element.waypoint.categoryName == null) continue;
-                    if(element.waypoint.categoryName.isEmpty()) continue;
-                    if(element.waypoint.categoryName.equals(category.name)) {
-                        element.waypoint.showDistance = false;
-                    }
-                }
+//                for(WaypointElement element : WaypointScreen.elements) {
+//                    if(element.waypoint.categoryName == null) continue;
+//                    if(element.waypoint.categoryName.isEmpty()) continue;
+//                    if(element.waypoint.categoryName.equals(category.name)) {
+//                        element.waypoint.showDistance = false;
+//                    }
+//                }
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                         Text.of("Now hiding distances to all waypoints of category " + category.name)));
             }
@@ -147,13 +141,13 @@ public class CategoryElement {
         showAllDistancesButton = new EasyButton(-1, -1, -1, -1) {
             @Override
             public void click() {
-                for(WaypointElement element : WaypointScreen.elements) {
-                    if(element.waypoint.categoryName == null) continue;
-                    if(element.waypoint.categoryName.isEmpty()) continue;
-                    if(element.waypoint.categoryName.equals(category.name)) {
-                        element.waypoint.showDistance = true;
-                    }
-                }
+//                for(WaypointElement element : WaypointScreen.elements) {
+//                    if(element.waypoint.categoryName == null) continue;
+//                    if(element.waypoint.categoryName.isEmpty()) continue;
+//                    if(element.waypoint.categoryName.equals(category.name)) {
+//                        element.waypoint.showDistance = true;
+//                    }
+//                }
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                         Text.of("Now showing distances to all waypoints of category " + category.name)));
             }
@@ -162,13 +156,13 @@ public class CategoryElement {
         enableAllSeeTroughButton = new EasyButton(-1, -1, -1, -1) {
             @Override
             public void click() {
-                for(WaypointElement element : WaypointScreen.elements) {
-                    if(element.waypoint.categoryName == null) continue;
-                    if(element.waypoint.categoryName.isEmpty()) continue;
-                    if(element.waypoint.categoryName.equals(category.name)) {
-                        element.waypoint.seeThrough = true;
-                    }
-                }
+//                for(WaypointElement element : WaypointScreen.elements) {
+//                    if(element.waypoint.categoryName == null) continue;
+//                    if(element.waypoint.categoryName.isEmpty()) continue;
+//                    if(element.waypoint.categoryName.equals(category.name)) {
+//                        element.waypoint.seeThrough = true;
+//                    }
+//                }
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                         Text.of("All waypoints of category " + category.name + " are now see-through")));
             }
@@ -177,13 +171,13 @@ public class CategoryElement {
         disableAllSeeTroughButton = new EasyButton(-1, -1, -1, -1) {
             @Override
             public void click() {
-                for(WaypointElement element : WaypointScreen.elements) {
-                    if(element.waypoint.categoryName == null) continue;
-                    if(element.waypoint.categoryName.isEmpty()) continue;
-                    if(element.waypoint.categoryName.equals(category.name)) {
-                        element.waypoint.seeThrough = false;
-                    }
-                }
+//                for(WaypointElement element : WaypointScreen.elements) {
+//                    if(element.waypoint.categoryName == null) continue;
+//                    if(element.waypoint.categoryName.isEmpty()) continue;
+//                    if(element.waypoint.categoryName.equals(category.name)) {
+//                        element.waypoint.seeThrough = false;
+//                    }
+//                }
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                         Text.of("All waypoints of category " + category.name + " are now non see-through")));
             }

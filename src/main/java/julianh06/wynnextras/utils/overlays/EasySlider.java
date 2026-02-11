@@ -13,7 +13,7 @@ import net.minecraft.util.Identifier;
 
 import java.util.function.Consumer;
 
-import static julianh06.wynnextras.features.waypoints.WaypointScreen.*;
+import static julianh06.wynnextras.features.waypoints.old.WaypointScreen.*;
 
 public class EasySlider extends EasyElement {
     private final float min;

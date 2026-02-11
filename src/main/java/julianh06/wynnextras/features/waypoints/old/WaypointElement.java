@@ -1,4 +1,4 @@
-package julianh06.wynnextras.features.waypoints;
+package julianh06.wynnextras.features.waypoints.old;
 
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
@@ -13,7 +13,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
-import static julianh06.wynnextras.features.waypoints.WaypointScreen.scaleFactor;
+import static julianh06.wynnextras.features.waypoints.old.WaypointScreen.scaleFactor;
 
 public class WaypointElement {
     public Waypoint waypoint;

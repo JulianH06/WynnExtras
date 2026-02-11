@@ -1,11 +1,10 @@
-package julianh06.wynnextras.features.waypoints;
+package julianh06.wynnextras.features.waypoints.old;
 
 import com.wynntils.utils.colors.CustomColor;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import org.lwjgl.glfw.GLFW;
-import org.spongepowered.asm.mixin.Shadow;
 
 import java.util.concurrent.atomic.AtomicLong;
 

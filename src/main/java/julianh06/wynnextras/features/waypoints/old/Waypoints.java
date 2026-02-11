@@ -1,7 +1,6 @@
-package julianh06.wynnextras.features.waypoints;
+package julianh06.wynnextras.features.waypoints.old;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
@@ -10,22 +9,17 @@ import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.event.ClickEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
-import julianh06.wynnextras.features.inventory.BankOverlay;
-import julianh06.wynnextras.features.inventory.BankOverlayType;
-import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.utils.WEVec;
-import julianh06.wynnextras.utils.render.WorldRenderUtils;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.system.macosx.EnumerationMutationHandlerI;
 
 import java.util.List;
 
-import static julianh06.wynnextras.features.waypoints.WaypointScreen.scaleFactor;
+import static julianh06.wynnextras.features.waypoints.old.WaypointScreen.scaleFactor;
 
 @WEModule
 public class Waypoints {

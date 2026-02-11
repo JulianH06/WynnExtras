@@ -1,4 +1,4 @@
-package julianh06.wynnextras.features.waypoints;
+package julianh06.wynnextras.features.waypoints.old;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -19,7 +19,6 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.world.gen.noise.NoiseParametersKeys;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -109,11 +108,11 @@ public class WaypointScreen extends Screen {
                         if (!oldName.equals(newName)) {
                             element.category.name = newName;
 
-                            for (Waypoint waypoint : WaypointData.INSTANCE.activePackage.waypoints) {
-                                if (waypoint.categoryName != null && waypoint.categoryName.equals(oldName)) {
-                                    waypoint.categoryName = newName;
-                                }
-                            }
+//                            for (Waypoint waypoint : WaypointData.INSTANCE.activePackage.waypoints) {
+//                                if (waypoint.categoryName != null && waypoint.categoryName.equals(oldName)) {
+//                                    waypoint.categoryName = newName;
+//                                }
+//                            }
                         }
                     }
                 }
@@ -149,16 +148,16 @@ public class WaypointScreen extends Screen {
                         imported.name = "unnamed package";
                     }
 
-                    for (Waypoint waypoint : imported.waypoints) {
-                        if (waypoint.categoryName != null) {
-                            for (WaypointCategory cat : imported.categories) {
-                                if (cat.name.equals(waypoint.categoryName)) {
-                                    waypoint.setCategory(cat);
-                                    break;
-                                }
-                            }
-                        }
-                    }
+//                    for (Waypoint waypoint : imported.waypoints) {
+//                        if (waypoint.categoryName != null) {
+//                            for (WaypointCategory cat : imported.categories) {
+//                                if (cat.name.equals(waypoint.categoryName)) {
+//                                    waypoint.setCategory(cat);
+//                                    break;
+//                                }
+//                            }
+//                        }
+//                    }
 
                     boolean exists = WaypointData.INSTANCE.packages.stream()
                             .anyMatch(pkg -> pkg.name.equals(imported.name));
@@ -507,13 +506,13 @@ public class WaypointScreen extends Screen {
                 if (!oldName.equals(newName)) {
                     element.category.name = newName;
 
-                    if(WaypointData.INSTANCE.activePackage != null) {
-                        for (Waypoint waypoint : WaypointData.INSTANCE.activePackage.waypoints) {
-                            if (waypoint.categoryName != null && waypoint.categoryName.equals(oldName)) {
-                                waypoint.categoryName = newName;
-                            }
-                        }
-                    }
+//                    if(WaypointData.INSTANCE.activePackage != null) {
+//                        for (Waypoint waypoint : WaypointData.INSTANCE.activePackage.waypoints) {
+//                            if (waypoint.categoryName != null && waypoint.categoryName.equals(oldName)) {
+//                                waypoint.categoryName = newName;
+//                            }
+//                        }
+//                    }
                 }
             }
         }

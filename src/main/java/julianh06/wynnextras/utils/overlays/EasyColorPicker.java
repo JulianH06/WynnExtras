@@ -1,12 +1,11 @@
 package julianh06.wynnextras.utils.overlays;
 
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
 
-import static julianh06.wynnextras.features.waypoints.WaypointScreen.scaleFactor;
+import static julianh06.wynnextras.features.waypoints.old.WaypointScreen.scaleFactor;
 
 import java.awt.*;
 

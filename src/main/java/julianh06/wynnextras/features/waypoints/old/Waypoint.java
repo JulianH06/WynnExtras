@@ -1,6 +1,7 @@
-package julianh06.wynnextras.features.waypoints;
+package julianh06.wynnextras.features.waypoints.old;
 
 public class Waypoint {
+    public String id;
     public String name;
     public int x;
     public int y;
@@ -9,7 +10,11 @@ public class Waypoint {
     public boolean showName;
     public boolean showDistance;
     public boolean seeThrough;
+
+    public String categoryId;
     private transient WaypointCategory category;
+
+    //LEGACY
     public String categoryName;
 
     public Waypoint() {
@@ -22,6 +27,7 @@ public class Waypoint {
         this.showDistance = true;
         this.seeThrough = false;
         category = null;
+        categoryId = null;
         categoryName = "";
     }
 
@@ -38,12 +44,12 @@ public class Waypoint {
         categoryName = "";
     }
 
-    public WaypointCategory getCategory() {
-        return category;
-    }
+    public WaypointCategory getCategory() { return category; }
 
     public void setCategory(WaypointCategory category) {
         this.category = category;
-        this.categoryName = category != null ? category.name : null;
+        this.categoryId = category != null ? category.id : null;
     }
+
+    public String getLegacyCategoryName() { return categoryName; }
 }

@@ -1,28 +1,22 @@
-package julianh06.wynnextras.features.waypoints;
+package julianh06.wynnextras.features.waypoints.old;
 
 import com.google.gson.Gson;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
-import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.utils.overlays.EasyButton;
-import julianh06.wynnextras.utils.overlays.EasyColorPicker;
-import julianh06.wynnextras.utils.overlays.EasySlider;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 
-import static julianh06.wynnextras.features.waypoints.WaypointScreen.mouseX;
-import static julianh06.wynnextras.features.waypoints.WaypointScreen.scaleFactor;
+import static julianh06.wynnextras.features.waypoints.old.WaypointScreen.scaleFactor;
 
 public class PackageElement {
     public WaypointPackage waypointPackage;

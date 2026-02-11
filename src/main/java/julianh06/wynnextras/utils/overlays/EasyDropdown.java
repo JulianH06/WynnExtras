@@ -7,20 +7,16 @@ import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
-import julianh06.wynnextras.features.waypoints.WaypointCategory;
-import julianh06.wynnextras.features.waypoints.WaypointData;
-import julianh06.wynnextras.features.waypoints.WaypointScreen;
-import julianh06.wynnextras.features.waypoints.Waypoints;
-import net.minecraft.client.MinecraftClient;
+import julianh06.wynnextras.features.waypoints.old.WaypointCategory;
+import julianh06.wynnextras.features.waypoints.old.WaypointData;
+import julianh06.wynnextras.features.waypoints.old.WaypointScreen;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import static julianh06.wynnextras.features.waypoints.WaypointScreen.categoryDropdown;
-import static julianh06.wynnextras.features.waypoints.WaypointScreen.scaleFactor;
+import static julianh06.wynnextras.features.waypoints.old.WaypointScreen.scaleFactor;
 
 public class EasyDropdown extends EasyElement{
     public boolean isExpanded = false;

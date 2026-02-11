@@ -1,4 +1,4 @@
-package julianh06.wynnextras.features.waypoints;
+package julianh06.wynnextras.features.waypoints.old;
 
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.RenderWorldEvent;
