@@ -46,7 +46,6 @@
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
     "Accessor.SlotAccessor",
     "Accessor.TooltipFittingFeatureAccessor",
-    "RaidKindAccessor",
     "BankOverlay.ContainerScrollFeatureMixin",
     "BankOverlay.PersonalStorageUtilitiesFeatureMixin",
     "Invoker.InventoryEmeraldCountFeatureInvoker",

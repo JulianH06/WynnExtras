@@ -50,8 +50,8 @@ dependencies {
 	modRuntimeOnly "me.djtheredstoner:DevAuth-fabric:1.2.1"
 	//modCompileOnly files("libs/wynnmod-1.16.0-BETA-0.jar")
 	//modImplementation files("libs/wynnmod-1.16.0-BETA-0.jar")
-	modCompileOnly "maven.modrinth:wynnmod:1.15.2"
-	modRuntimeOnly "maven.modrinth:wynnmod:1.15.2"
+	modCompileOnly "maven.modrinth:wynnmod:1.16.0"
+	//modRuntimeOnly "maven.modrinth:wynnmod:1.16.0"
 	modCompileOnly "maven.modrinth:wynnventory:v1.3.7"
 	//modRuntimeOnly "maven.modrinth:wynnventory:v1.3.7"
 	modCompileOnly("com.terraformersmc:modmenu:${project.modmenu_version}")

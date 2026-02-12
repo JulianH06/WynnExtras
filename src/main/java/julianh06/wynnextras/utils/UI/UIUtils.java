@@ -1,5 +1,4 @@
 package julianh06.wynnextras.utils.UI;
-
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
@@ -10,9 +9,13 @@ import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.*;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.joml.Matrix4f;
 
 import java.awt.*;
 
@@ -108,22 +111,22 @@ public final class UIUtils {
     // --- Drawing helpers: Background / Text / Image ---
     public void drawBackground() {
         if (MinecraftClient.getInstance().currentScreen == null) return;
-        drawContext.fillGradient(
-                0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height,
-                0xC0101010,
-                0xD0101010
+        RenderUtils.drawRect(
+                drawContext.getMatrices(),
+                CustomColor.fromInt(-804253680),
+                0, 0, 0,
+                MinecraftClient.getInstance().currentScreen.width,
+                MinecraftClient.getInstance().currentScreen.height
         );
     }
 
     public void drawRect(float x, float y, float width, float height, CustomColor color) {
-        RenderSystem.disableDepthTest();
         RenderUtils.drawRect(
                 drawContext.getMatrices(),
                 color,
                 sx(x), sy(y), 0,
                 sw(width), sh(height)
         );
-        RenderSystem.enableDepthTest();
     }
 
     public void drawRect(float x, float y, float width, float heigt) {
@@ -131,30 +134,26 @@ public final class UIUtils {
     }
 
     public void drawRectBorders(float x, float y, float width, float height, CustomColor color) {
-        RenderSystem.disableDepthTest();
         RenderUtils.drawRectBorders(
                 drawContext.getMatrices(),
                 color,
-                sx(x), sy(y), 0,
-                sw(width), sh(height), 1
+                sx(x), sy(y),
+                sw(width), sh(height), 0, 1
         );
-        RenderSystem.enableDepthTest();
     }
 
     public void drawLine(float x1, float y1, float x2, float y2, float width, CustomColor color) {
-        RenderSystem.disableDepthTest();
         RenderUtils.drawLine(
                 drawContext.getMatrices(),
                 color,
                 sx(x1), sy(y1),
                 sx(x2), sy(y2),
-                0, sw(width)
+                0.0f,
+                sw(width)
         );
-        RenderSystem.enableDepthTest();
     }
 
     public void drawText(String text, float x, float y, CustomColor color, HorizontalAlignment hAlign, VerticalAlignment vAlign, TextShadow shadow, float textScale) {
-        RenderSystem.disableDepthTest();
         FontRenderer.getInstance().renderText(
                 drawContext.getMatrices(),
                 StyledText.fromComponent(Text.of(text)),
@@ -166,7 +165,6 @@ public final class UIUtils {
                 shadow,
                 (float)(textScale / scaleFactor)
         );
-        RenderSystem.enableDepthTest();
     }
 
     public void drawText(String text, float x, float y, CustomColor color, HorizontalAlignment hAlign, VerticalAlignment vAlign, float textScale) {
@@ -197,136 +195,58 @@ public final class UIUtils {
         drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f);
     }
 
-    public void drawImage(
-            Identifier texture,
-            float x, float y,
-            float width, float height,
-            float u, float v,
-            float uWidth, float vHeight,
-            int textureWidth, int textureHeight,
-            float alpha, CustomColor color
-    ) {
-        RenderSystem.disableDepthTest();
-        RenderUtils.drawTexturedRectWithColor(
+    public void drawImage(Identifier texture, float x, float y, float width, float height) {
+        RenderUtils.drawTexturedRect(
                 drawContext.getMatrices(),
                 texture,
-                color.withAlpha(alpha),
-                sx(x), sy(y), 0,
+                sx(x), sy(y),
                 sw(width), sh(height),
-                (int)u, (int)v,
-                (int)uWidth, (int)vHeight,
-                textureWidth, textureHeight
-        );
-        RenderSystem.enableDepthTest();
-    }
-
-    public void drawImage(
-            Identifier texture,
-            float x, float y,
-            float width, float height,
-            float u, float v,
-            float uWidth, float vHeight,
-            int textureWidth, int textureHeight,
-            float alpha
-    ) {
-        drawImage(texture, x, y, width, height, u, v, uWidth, vHeight, textureWidth, textureHeight, alpha, CustomColor.NONE);
-    }
-
-    public void drawImage(
-            Identifier texture,
-            float x, float y,
-            float width, float height,
-            float u, float v,
-            float uWidth, float vHeight
-    ) {
-        drawImage(
-                texture,
-                x, y, width, height,
-                u, v,
-                uWidth, vHeight,
-                (int) uWidth, (int) vHeight,
-                1.0f
-        );
-    }
-
-    public void drawImage(
-            Identifier texture,
-            float x, float y,
-            float width, float height,
-            float u, float v,
-            float uWidth, float vHeight,
-            float alpha
-    ) {
-        drawImage(
-                texture,
-                x, y, width, height,
-                u, v,
-                uWidth, vHeight,
-                (int) uWidth, (int) vHeight,
-                alpha
-        );
-    }
-
-    public void drawImage(
-            Identifier texture,
-            float x, float y,
-            float width, float height,
-            float u, float v,
-            float uWidth, float vHeight,
-            CustomColor color
-    ) {
-        drawImage(
-                texture,
-                x, y, width, height,
-                u, v,
-                uWidth, vHeight,
-                (int) width, (int) height,
-                1, color
-        );
-    }
-
-    public void drawImage(
-            Identifier texture,
-            float x, float y,
-            float width, float height,
-            float u, float v,
-            float uWidth, float vHeight,
-            int textureWidth, int textureHeight
-    ) {
-        drawImage(
-                texture,
-                x, y, width, height,
-                u, v,
-                uWidth, vHeight,
-                textureWidth, textureHeight,
-                1.0f
-        );
-    }
-
-    public void drawImage(Identifier texture, float x, float y, float width, float height, CustomColor color) {
-        drawImage(
-                texture,
-                x, y, width, height,
-                0, 0,
-                width, height,
-                (int) width, (int) height,
-                1, color
+                sw(width), sh(height)
         );
     }
 
     public void drawImage(Identifier texture, float x, float y, float width, float height, float alpha) {
-        drawImage(
+        drawTexturedRect(
+                drawContext.getMatrices(),
                 texture,
-                x, y, width, height,
-                0, 0,
-                width, height,
-                (int) width, (int) height,
+                sx(x), sy(y), 0.0F,
+                sw(width), sh(height), 0, 0,
+                sw(width), sh(height),
+                sw(width), sh(height),
                 alpha
         );
     }
 
-    public void drawImage(Identifier texture, float x, float y, float width, float height) {
-        drawImage(texture, x, y, width, height, 1.0f);
+    public static void drawTexturedRect(MatrixStack matrixStack, Identifier tex, float x, float y, float z, float width, float height, int uOffset, int vOffset, int u, int v, int textureWidth, int textureHeight, float alpha) {
+        float uScale = 1.0F / (float)textureWidth;
+        float vScale = 1.0F / (float)textureHeight;
+        Matrix4f matrix = matrixStack.peek().getPositionMatrix();
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
+        RenderSystem.setShaderTexture(0, tex);
+        BufferBuilder bufferBuilder = Tessellator.getInstance().begin(
+                VertexFormat.DrawMode.QUADS,
+                VertexFormats.POSITION_TEXTURE_COLOR
+        );
+
+        bufferBuilder.vertex(matrix, x, y + height, z)
+                .texture((float)uOffset * uScale, (float)(vOffset + v) * vScale)
+                .color(1f, 1f, 1f, alpha);
+
+        bufferBuilder.vertex(matrix, x + width, y + height, z)
+                .texture((float)(uOffset + u) * uScale, (float)(vOffset + v) * vScale)
+                .color(1f, 1f, 1f, alpha);
+
+        bufferBuilder.vertex(matrix, x + width, y, z)
+                .texture((float)(uOffset + u) * uScale, (float)vOffset * vScale)
+                .color(1f, 1f, 1f, alpha);
+
+        bufferBuilder.vertex(matrix, x, y, z)
+                .texture((float)uOffset * uScale, (float)vOffset * vScale)
+                .color(1f, 1f, 1f, alpha);
+
+        BufferRenderer.drawWithGlobalProgram(bufferBuilder.endNullable());
     }
 
     public void drawButton(float x, float y, float width, float height, int scale, boolean hovered) {
@@ -334,7 +254,6 @@ public final class UIUtils {
     }
 
     public void drawButton(float x, float y, float width, float height, int scale, boolean hovered, boolean darkMode) {
-        RenderSystem.disableDepthTest();
         if(width > scale * 2 || height > scale * 2) {
             RenderUtils.drawRect(
                     drawContext.getMatrices(),
@@ -348,14 +267,12 @@ public final class UIUtils {
         } else {
             drawButtonTextures(x, y, width, height, scale, hovered, buttontlH, buttontrH, buttonblH, buttonbrH, buttontopH, buttonbotH, buttonleftH, buttonrightH, buttontl, buttontr, buttonbl, buttonbr, buttontop, buttonbot, buttonleft, buttonright, 1);
         }
-        RenderSystem.enableDepthTest();
     }
 
     public void drawButtonFade(
             float x, float y, float width, float height,
             int scale, boolean hovered
     ) {
-        RenderSystem.disableDepthTest();
         float a = PVScreen.DarkModeToggleWidget.fade;
 
         if (width > scale * 2 || height > scale * 2) {
@@ -378,7 +295,6 @@ public final class UIUtils {
         }
 
         drawButtonTexturesFaded(x, y, width, height, scale, hovered, a);
-        RenderSystem.enableDepthTest();
     }
 
 
@@ -410,12 +326,12 @@ public final class UIUtils {
         } else {
             drawImage(buttontl, x, y, scale, scale, alpha);
             drawImage(buttontr, x + width - scale, y, scale, scale, alpha);
-            drawImage(buttonbl, x, y + height - scale - 1, scale, scale * 1.25f, alpha);
-            drawImage(buttonbr, x + width - scale, y + height - scale - 1, scale, scale * 1.25f, alpha);
+            drawImage(buttonbl, x, y + height - scale, scale, scale, alpha);
+            drawImage(buttonbr, x + width - scale, y + height - scale, scale, scale, alpha);
 
             if (width > scale * 2) {
                 drawImage(buttontop, x + scale - 2, y, width - scale * 2 + 4, scale, alpha);
-                drawImage(buttonbot, x + scale - 2, y + height - scale - 1, width - scale * 2 + 4, scale * 1.25f, alpha);
+                drawImage(buttonbot, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale, alpha);
             }
             if (height > scale * 2) {
                 drawImage(buttonleft, x, y + scale - 2, scale, height - scale * 2 + 4, alpha);
@@ -449,7 +365,6 @@ public final class UIUtils {
 
 
     public void drawSliderBackground(float x, float y, float width, float height, int scale, boolean darkMode) {
-        RenderSystem.disableDepthTest();
         if(width > scale * 2 || height > scale * 2) {
             RenderUtils.drawRect(
                     drawContext.getMatrices(),
@@ -460,11 +375,9 @@ public final class UIUtils {
         }
 
         drawButtonTextures(x, y, width, height, scale, darkMode, sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark, sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark, sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr, sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright, 1);
-        RenderSystem.enableDepthTest();
     }
 
     public void drawNineSlice(float x, float y, float width, float height, int scale, Identifier l, Identifier r, Identifier t, Identifier b, Identifier tl, Identifier tr, Identifier bl, Identifier br, CustomColor fillColor) {
-        RenderSystem.disableDepthTest();
         if(width > scale * 2 || height > scale * 2) {
             RenderUtils.drawRect(
                     drawContext.getMatrices(),
@@ -474,19 +387,18 @@ public final class UIUtils {
             );
         }
 
-        if(tl != null) drawImage(tl, x, y, scale, scale);
-        if(tr != null) drawImage(tr, x + width - scale, y, scale, scale);
-        if(bl != null) drawImage(bl, x, y + height - scale, scale, scale);
-        if(br != null) drawImage(br, x + width - scale, y + height - scale, scale, scale);
+        drawImage(tl, x, y, scale, scale);
+        drawImage(tr, x + width - scale, y, scale, scale);
+        drawImage(bl, x, y + height - scale, scale, scale);
+        drawImage(br, x + width - scale, y + height - scale, scale, scale);
         if (width > scale * 2) {
-            if(t != null) drawImage(t, x + scale - 2, y, width - scale * 2 + 4, scale);
-            if(b != null) drawImage(b, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
+            drawImage(t, x + scale - 2, y, width - scale * 2 + 4, scale);
+            drawImage(b, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
         }
         if (height > scale * 2) {
-            if(l != null) drawImage(l, x, y + scale - 2, scale, height - scale * 2 + 4);
-            if(r != null) drawImage(r, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
+            drawImage(l, x, y + scale - 2, scale, height - scale * 2 + 4);
+            drawImage(r, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
         }
-        RenderSystem.enableDepthTest();
     }
 
     public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier border, Identifier background, Identifier progressTexture, DrawContext context) {
@@ -494,7 +406,6 @@ public final class UIUtils {
     }
 
     public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier border, Identifier background, Identifier progressTexture, DrawContext context, boolean chroma) {
-        RenderSystem.disableDepthTest();
         drawImage(background, x, y, width, height);
 
         context.enableScissor((int) sx(x), (int) sy(y), (int) sx(x + width * (progress)), (int) sy(y + height));
@@ -514,7 +425,6 @@ public final class UIUtils {
 
         drawImage(border, x, y, width, height);
         drawCenteredText(String.format("%.2f%%", progress * 100), x + width / 2f, y + height / 2f + 2, CustomColor.fromHexString("FFFFFF"), textScale);
-        RenderSystem.enableDepthTest();
     }
 
     public static CustomColor getRainbowColor(float speed, float offset) {
@@ -525,5 +435,4 @@ public final class UIUtils {
         int rgb = Color.HSBtoRGB(hue, 1.0f, 0.75f);
         return CustomColor.fromInt(rgb & 0xFFFFFF);
     }
-
 }
