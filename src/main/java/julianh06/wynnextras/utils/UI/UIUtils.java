@@ -17,6 +17,8 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.joml.Matrix4f;
 
+import java.awt.*;
+
 public final class UIUtils {
     Identifier buttontl = Identifier.of("wynnextras", "textures/general/button/cornertl.png");
     Identifier buttontr = Identifier.of("wynnextras", "textures/general/button/cornertr.png");
@@ -398,6 +400,39 @@ public final class UIUtils {
             drawImage(r, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
         }
     }
+
+    public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier border, Identifier background, Identifier progressTexture, DrawContext context) {
+        drawProgressBar(x, y, width, height, textScale, progress, border, background, progressTexture, context, false);
+    }
+
+    public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier border, Identifier background, Identifier progressTexture, DrawContext context, boolean chroma) {
+        drawImage(background, x, y, width, height);
+
+        context.enableScissor((int) sx(x), (int) sy(y), (int) sx(x + width * (progress)), (int) sy(y + height));
+        if(chroma) {
+            RenderUtils.drawTexturedRectWithColor(
+                    drawContext.getMatrices(),
+                    progressTexture,
+                    getRainbowColor(7f, 0),
+                    sx(x), sy(y), 0,
+                    sw(width), sh(height),
+                    0, 0,
+                    sw(width), sh(height),
+                    sw(width), sh(height)
+            );
+        } else drawImage(progressTexture, x, y, width, height);
+        context.disableScissor();
+
+        drawImage(border, x, y, width, height);
+        drawCenteredText(String.format("%.2f%%", progress * 100), x + width / 2f, y + height / 2f + 2, CustomColor.fromHexString("FFFFFF"), textScale);
+    }
+
+    public static CustomColor getRainbowColor(float speed, float offset) {
+        float hue = (System.currentTimeMillis() % (int)(speed * 1000)) / (speed * 1000f);
+        hue += offset;
+        hue %= 1.0f;
+
+        int rgb = Color.HSBtoRGB(hue, 1.0f, 0.75f);
+        return CustomColor.fromInt(rgb & 0xFFFFFF);
+    }
 }
-
-

@@ -354,7 +354,6 @@ public class PVScreen extends WEScreen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         PVScreen.mouseX = mouseX;
         PVScreen.mouseY = mouseY;
-        super.applyBlur();
 
         this.drawContext = context;
         computeScaleAndOffsets();

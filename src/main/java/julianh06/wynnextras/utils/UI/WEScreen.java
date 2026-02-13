@@ -79,7 +79,6 @@ public abstract class WEScreen extends Screen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         //this.renderPanoramaBackground(context, delta);
         if(super.client == null) super.client = MinecraftClient.getInstance();
-        if(super.client != null) super.applyBlur();
 
         this.drawContext = context;
         computeScaleAndOffsets();

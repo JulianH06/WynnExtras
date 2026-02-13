@@ -107,8 +107,8 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         switch (fetchStatus) {
             case NOKEYSET -> {
-                ui.drawCenteredText("You need to set your api-key to use this feature.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
-                ui.drawCenteredText("Run \"/we apikey\" for more information.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);
+                ui.drawCenteredText("Authentication failed.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
+                ui.drawCenteredText("Please restart your game and try again.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);
                 return;
             }
             case FORBIDDEN -> {
@@ -117,8 +117,8 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                 return;
             }
             case UNAUTHORIZED -> {
-                ui.drawCenteredText("The api-key you have set is not connected to your minecraft account.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
-                ui.drawCenteredText("Run \"/we apikey\" for more information.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);
+                ui.drawCenteredText("Authentication failed.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
+                ui.drawCenteredText("Please restart your game and try again.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);
                 return;
             }
             case NOT_FOUND -> {

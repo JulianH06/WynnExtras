@@ -591,17 +591,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
                 if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
 
-                ProfessionType profession = container.getProfessionType();
 
-                try {
-                    int level = Models.Profession.getLevel(profession);
-
-                    if (level > 0 && level < this.level) {
-                        ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHSV(0, 0, 0, 0.5f) : CustomColor.fromHSV(0, 0, 0, 0.75f));
-                        ui.drawCenteredText("Requires " + profession.getDisplayName(), x + width / 2f, y + height / 2f - 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
-                        ui.drawCenteredText("level " + this.level + " to craft.", x + width / 2f, y + height / 2f + 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
-                    }
-                } catch (Exception ignored) {}
                 checkClick();
             }
 
@@ -612,15 +602,6 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return false;
 
                 statusMessage = "";
-
-                ProfessionType profession = container.getProfessionType();
-                try {
-                    int level = Models.Profession.getLevel(profession);
-
-                    if (level > 0 && level < this.level) {
-                        return false;
-                    }
-                } catch (Exception ignored) {}
 
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 

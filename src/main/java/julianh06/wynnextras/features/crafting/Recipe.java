@@ -48,7 +48,11 @@ public class Recipe {
         }
 
         public double getMultiplier() {
-            return (tierToMult[mat1Tier] * mat1Count + tierToMult[mat2Tier] * mat2Count) / (mat1Count + mat2Count);
+            try {
+                return (tierToMult[mat1Tier] * mat1Count + tierToMult[mat2Tier] * mat2Count) / (mat1Count + mat2Count);
+            } catch (Exception e) {
+                return 0;
+            }
         }
     }
 

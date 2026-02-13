@@ -23,6 +23,10 @@ public abstract class Widget {
 
     protected UIUtils ui;
 
+    public Widget() {
+        setBounds(0, 0, 0, 0);
+    }
+
     public Widget(int x, int y, int width, int height) {
         setBounds(x, y, width, height);
     }
