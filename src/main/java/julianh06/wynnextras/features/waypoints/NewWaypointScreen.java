@@ -1,15 +1,16 @@
 package julianh06.wynnextras.features.waypoints;
 
 import com.wynntils.utils.colors.CustomColor;
-import julianh06.wynnextras.config.WynnExtrasConfigScreen;
-import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
+import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.features.waypoints.old.Waypoint;
 import julianh06.wynnextras.features.waypoints.old.WaypointData;
 import julianh06.wynnextras.features.waypoints.old.WaypointPackage;
+import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.entity.SpawnReason;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 
 import java.util.ArrayList;
@@ -54,6 +55,7 @@ public class NewWaypointScreen extends WEScreen {
         sideBarWidget = new SideBarWidget();
         addRootWidget(sideBarWidget);
         mainWidget = new MainWidget();
+        MainWidget.activePackage = null;
         addRootWidget(mainWidget);
     }
 
@@ -136,7 +138,6 @@ public class NewWaypointScreen extends WEScreen {
             ui.drawRect(0, 0, width, height, CustomColor.fromInt(BG_MEDIUM));
             ui.drawRect(width - 5, 0, 5, height, CustomColor.fromInt(BORDER_DARK));
 
-            // Title
             ui.drawCenteredText("Packages", x + width / 2f, y + 70, CustomColor.fromInt(GOLD));
             ui.drawRect(50, 100, width - 100, 4, CustomColor.fromInt(GOLD_DARK));
 
@@ -146,16 +147,12 @@ public class NewWaypointScreen extends WEScreen {
             int packageWidth = width - 100;
             int spacing = 20;
 
-            // Default: keine Markierung
             packageOverMouseIndex = -1;
             packageUnderMouseIndex = -1;
 
-            // Skaliere Maus-Y einmal
             float mouseYScaled = mouseY * ui.getScaleFactorF();
 
-            // Wenn nicht gedroppt/gedragged, nichts berechnen
             if (draggedIndex > -1) {
-                // 1) Berechne Zentren aller Packages (nur Y)
                 List<Integer> centers = new ArrayList<>(packageWidgets.size());
                 int tempY = packageY;
                 for (int j = 0; j < packageWidgets.size(); j++) {
@@ -164,34 +161,28 @@ public class NewWaypointScreen extends WEScreen {
                     tempY += packageHeight + spacing;
                 }
 
-                // 2) Bestimme Einfügeindex: Anzahl der Zentren oberhalb der Maus
                 int insertionIndex = 0;
                 for (int c : centers) {
                     if (mouseYScaled > c) insertionIndex++;
                     else break;
                 }
 
-                // Clamp insertionIndex in [0, size]
                 if (insertionIndex < 0) insertionIndex = 0;
                 if (insertionIndex > packageWidgets.size()) insertionIndex = packageWidgets.size();
 
-                // 3) Berechne targetIndex relativ zur Liste, wenn das gezogene Element entfernt wird
                 int targetIndex;
                 if (insertionIndex > draggedIndex) {
-                    // Wenn die Lücke nach dem entfernten Element liegt, verschiebt sich der Index um -1
                     targetIndex = insertionIndex - 1;
                 } else {
                     targetIndex = insertionIndex;
                 }
 
-                // 4) Wenn das Package an derselben Stelle bliebe, setze Indizes auf -1 (kein Move)
                 if (targetIndex == draggedIndex) {
                     packageOverMouseIndex = -1;
                     packageUnderMouseIndex = -1;
                 } else {
-                    // Für visuelles Feedback behalten wir die Lücke als insertionIndex bei
-                    packageOverMouseIndex = insertionIndex - 1; // -1 wenn ganz oben
-                    packageUnderMouseIndex = insertionIndex;    // == size() wenn ganz unten
+                    packageOverMouseIndex = insertionIndex - 1;
+                    packageUnderMouseIndex = insertionIndex;
 
                     // Clamp (sicher)
                     if (packageOverMouseIndex < -1) packageOverMouseIndex = -1;
@@ -199,12 +190,10 @@ public class NewWaypointScreen extends WEScreen {
                     if (packageUnderMouseIndex > packageWidgets.size()) packageUnderMouseIndex = packageWidgets.size();
                 }
             } else {
-                // Nicht dragging: sicherstellen, dass Indizes -1 sind
                 packageOverMouseIndex = -1;
                 packageUnderMouseIndex = -1;
             }
 
-            // 5) Zeichne die Widgets (Bounds setzen wie gehabt)
             int drawY = packageY;
             for (PackageWidget packageWidget : packageWidgets) {
                 packageWidget.setBounds(packageX, drawY, packageWidth, packageHeight);
@@ -212,9 +201,7 @@ public class NewWaypointScreen extends WEScreen {
                 drawY += packageHeight + spacing;
             }
 
-            // 6) Optional: Zeichne eine Einfügelinie nur, wenn wir tatsächlich eine Lücke anzeigen wollen
             if (draggedIndex > -1 && packageOverMouseIndex != -1 && packageUnderMouseIndex != -1) {
-                // Berechne Y der Linie basierend auf insertionIndex (packageUnderMouseIndex)
                 int insertionIndexForLine = packageUnderMouseIndex;
                 int lineY;
                 if (insertionIndexForLine == 0) {
@@ -222,7 +209,6 @@ public class NewWaypointScreen extends WEScreen {
                 } else if (insertionIndexForLine >= packageWidgets.size()) {
                     lineY = packageY + insertionIndexForLine * (packageHeight + spacing) - spacing / 2;
                 } else {
-                    // Mittlerer Punkt zwischen den beiden Items
                     int cAbove = packageY + (insertionIndexForLine - 1) * (packageHeight + spacing) + packageHeight / 2;
                     int cBelow = packageY + insertionIndexForLine * (packageHeight + spacing) + packageHeight / 2;
                     lineY = cAbove + (cBelow - cAbove) / 2;
@@ -255,7 +241,7 @@ public class NewWaypointScreen extends WEScreen {
 
         @Override
         public boolean mouseReleased(double mx, double my, int button) {
-            for(PackageWidget packageWidget : packageWidgets) {
+            for (PackageWidget packageWidget : new ArrayList<>(packageWidgets)) {
                 packageWidget.mouseReleased(mx, my, button);
             }
             draggedIndex = -1;
@@ -278,6 +264,8 @@ public class NewWaypointScreen extends WEScreen {
             final SideBarWidget parent;
             boolean isDragging = false;
             public boolean clicked = false;
+            private float clickX = -1;
+            private float clickY = -1;
 
             public PackageWidget(WaypointPackage waypointPackage, int index, SideBarWidget parent) {
                 this.waypointPackage = waypointPackage;
@@ -288,23 +276,18 @@ public class NewWaypointScreen extends WEScreen {
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 CustomColor color = hovered ? CustomColor.fromHexString("a0a0a0") : CustomColor.fromHexString("808080");
-                if(index == packageOverMouseIndex) {
-                    color = CustomColor.fromHexString("FF0000");
-                }
-                if(index == packageUnderMouseIndex) {
-                    color = CustomColor.fromHexString("FFFF00");
-                }
-                ui.drawRect(x, y, width, height, color);
+                ui.drawButton(x, y, width, height, 13, hovered);
                 ui.drawCenteredText(waypointPackage.name, x + width / 2f, y + height / 2f);
 
                 if(isDragging) {
-                    ui.drawRect(mouseX * ui.getScaleFactorF(), mouseY * ui.getScaleFactorF(), width, height);
+                    ui.drawButton(mouseX * ui.getScaleFactorF(), mouseY * ui.getScaleFactorF(), width, height, 13, true);
                     ui.drawCenteredText(waypointPackage.name, mouseX * ui.getScaleFactorF() + width / 2f, mouseY * ui.getScaleFactorF() + height / 2f);
                 }
             }
 
             @Override
             public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+                if(Math.abs(mouseX - clickX) > 2 || Math.abs(mouseY - clickY) > 2)
                 isDragging = true;
                 draggedIndex = index;
                 return true;
@@ -313,18 +296,25 @@ public class NewWaypointScreen extends WEScreen {
             @Override
             public boolean mouseClicked(double mx, double my, int button) {
                 clicked = true;
+                clickX = (float) mx;
+                clickY = (float) my;
                 return true;
             }
 
             @Override
             public boolean mouseReleased(double mx, double my, int button) {
-                // only act if we were dragging
-                System.out.println(packageUnderMouseIndex);
+                if(clicked && !isDragging) {
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    if(MainWidget.activePackage == waypointPackage) {
+                        MainWidget.activePackage = null;
+                    } else MainWidget.activePackage = waypointPackage;
+                    MainWidget.waypointWidgets.clear();
+                }
+
                 if (isDragging && draggedIndex >= 0 && packageUnderMouseIndex >= 0) {
                     int insertionIndex = packageUnderMouseIndex;
                     if (insertionIndex > WaypointData.INSTANCE.packages.size()) insertionIndex = WaypointData.INSTANCE.packages.size();
 
-                    // Berechne targetIndex korrekt, weil sich Indizes nach remove() verschieben
                     int targetIndex;
                     if (insertionIndex > draggedIndex) {
                         targetIndex = insertionIndex - 1;
@@ -332,21 +322,17 @@ public class NewWaypointScreen extends WEScreen {
                         targetIndex = insertionIndex;
                     }
 
-                    // Nur verschieben, wenn sich die Position wirklich ändert
                     if (targetIndex != draggedIndex) {
                         WaypointPackage moved = WaypointData.INSTANCE.packages.remove(draggedIndex);
                         WaypointData.INSTANCE.packages.add(targetIndex, moved);
 
-                        // persist order
                         OrderManager.saveOrder(WaypointData.INSTANCE.packages);
                         WaypointData.save();
 
-                        // rebuild widgets
                         parent.rebuildPackageWidgetsFromData();
                     }
                 }
 
-                // reset drag state
                 clicked = false;
                 isDragging = false;
                 return false;
@@ -355,8 +341,36 @@ public class NewWaypointScreen extends WEScreen {
     }
 
     private static class MainWidget extends Widget {
+        private enum Tab { Waypoints, Categories, Settings }
+
+        public static WaypointPackage activePackage = null;
+
+        private static Tab activeTab = Tab.Waypoints;
+        private static List<TabWidget> tabWidgets = new ArrayList<>();
+        private static List<WaypointWidget> waypointWidgets = new ArrayList<>();
+
+        @Override
+        public void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
+            this.ui = ui;
+            if(!visible || this.ui == null) return;
+            // update hover state for this widget
+            hovered = contains(mouseX, mouseY);
+            updateValues();
+            drawBackground(ctx, mouseX, mouseY, tickDelta);
+            drawContent(ctx, mouseX, mouseY, tickDelta);
+            drawForeground(ctx, mouseX, mouseY, tickDelta);
+        }
+
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if(tabWidgets.isEmpty()) {
+                for(Tab tab : Tab.values()) {
+                    TabWidget tabWidget = new TabWidget(tab);
+                    tabWidgets.add(tabWidget);
+                    addChild(tabWidget);
+                }
+            }
+
             ui.drawRect(x + 30, y + 30, width - 60, 120, CustomColor.fromInt(PARCHMENT).withAlpha(1f));
             ui.drawRect(x + 30, y + 30, width - 60, 5, CustomColor.fromInt(GOLD_DARK).withAlpha(1f));
             ui.drawRect(x + 50, y + 145, width - 100, 5, CustomColor.fromInt(GOLD_DARK).withAlpha(1f));
@@ -366,6 +380,87 @@ public class NewWaypointScreen extends WEScreen {
 
             ui.drawCenteredText("WynnExtras", x + width / 2f, y + 70, CustomColor.fromInt(TEXT_LIGHT));
             ui.drawCenteredText("Waypoints", x + width / 2f, y + 110, CustomColor.fromInt(TEXT_DIM));
+
+            if(activePackage == null) {
+                for(WaypointWidget waypointWidget : waypointWidgets) {
+                    removeChild(waypointWidget);
+                }
+                waypointWidgets.clear();
+                return;
+            }
+
+            if(waypointWidgets.isEmpty()) {
+                for(Waypoint waypoint : activePackage.waypoints) {
+                    WaypointWidget waypointWidget = new WaypointWidget(waypoint);
+                    waypointWidgets.add(waypointWidget);
+                    addChild(waypointWidget);
+                }
+            }
+
+            boolean hasNoDescription = activePackage.description == null || activePackage.description.isEmpty();
+            int bgHeight = hasNoDescription ? 80 : 120;
+            ui.drawRect(x + 30, y + 150, width - 60, bgHeight, CustomColor.fromInt(PARCHMENT).withAlpha(1f));
+            ui.drawText(activePackage.name, x + 40, y + 190);
+            ui.drawText(activePackage.description, x + 40, y + 230, CustomColor.fromInt(TEXT_DIM));
+
+            int tabWidth = 250;
+            int spacing = 20;
+            float xStart = x + width / 2f - 1.5f * tabWidth - spacing;
+            for(TabWidget tabWidget : tabWidgets) {
+                tabWidget.setBounds((int) xStart, y + (hasNoDescription ? 250 : 290), tabWidth, 50);
+                tabWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+                xStart += tabWidth + spacing;
+            }
+
+            int waypointY = y + (hasNoDescription ? 320 : 360);
+
+            for(WaypointWidget waypointWidget : waypointWidgets) {
+                waypointWidget.setBounds(x + 30, waypointY, width - 60, 50);
+                waypointWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+                waypointY += 70;
+            }
+        }
+
+        private static class TabWidget extends Widget {
+            final Tab tab;
+
+            public TabWidget(Tab tab) {
+                this.tab = tab;
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                ui.drawButton(x, y, width, height, 13, hovered, false);
+
+                CustomColor color = CustomColor.fromHexString("FFFFFF");
+                if(tab == activeTab) color = CustomColor.fromHexString("FFFF00");
+
+                ui.drawCenteredText(tab.name(), x + width / 2f, y + height / 2f, color);
+            }
+
+            @Override
+            protected boolean onClick(int button) {
+                activeTab = tab;
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            }
+        }
+
+        private static class WaypointWidget extends Widget {
+            final Waypoint waypoint;
+
+            public WaypointWidget(Waypoint waypoint) {
+                this.waypoint = waypoint;
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                ui.drawButton(x, y, width, height, 13, hovered);
+
+                if(waypoint != null) {
+                    ui.drawCenteredText(waypoint.name + " x: " + waypoint.x + " y: " + waypoint.y + " z: " + waypoint.z, x + width / 2f, y + height / 2f);
+                }
+            }
         }
     }
 }

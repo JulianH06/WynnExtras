@@ -62,7 +62,7 @@ public abstract class Widget {
         children.add(child);
     }
 
-    public void addAllChildren(List<Widget> children) {
+    public void addAllChildren(List<? extends Widget> children) {
         if(children == null || children.isEmpty()) return;
         for(Widget child : children) {
             child.parent = this;
@@ -82,7 +82,7 @@ public abstract class Widget {
     }
 
     // ---- Drawing Lifecycle ----
-    public final void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
+    public void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
         this.ui = ui;
         if(!visible || this.ui == null) return;
         // update hover state for this widget

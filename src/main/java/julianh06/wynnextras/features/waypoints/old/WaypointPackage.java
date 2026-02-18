@@ -11,6 +11,7 @@ import java.util.List;
 public class WaypointPackage {
     public String id;
     public String name;
+    public String description;
     public boolean enabled;
     public int packageVersion = 1;
     public List<WaypointCategory> categories = new ArrayList<>();

@@ -147,6 +147,7 @@ public class WaypointData {
                 }
 
                 migrated.packageVersion = 1;
+                migrated.description = "";
 
                 migrated.saveToFile(file.getParent());
 
