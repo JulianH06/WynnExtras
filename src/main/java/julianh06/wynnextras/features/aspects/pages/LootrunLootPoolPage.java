@@ -370,7 +370,7 @@ public class LootrunLootPoolPage extends PageWidget {
                 String displayName = truncate(item.name, width / 2 - 30).replace("Unidentified ", "");
 
                 if (item.type.equals("shiny")) {
-                    ui.drawText(displayName.replace("⬡ ", ""), x + 20, textY, CommonColors.RAINBOW, 3f);
+                    ui.drawText(displayName.replace("⬡ ", ""), x + 20, textY, WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : CommonColors.RAINBOW, 3f);
                 } else {
                     ui.drawText(rarityColor + displayName, x + 20, textY, CustomColor.fromInt(0xFFFFFF), 2.8f);
                 }

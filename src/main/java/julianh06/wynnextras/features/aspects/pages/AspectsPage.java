@@ -443,25 +443,25 @@ public class AspectsPage extends PageWidget {
 
         int y = startY;
 
-        boolean allMax = allCount == allTotal;
+        boolean allMax = allCount == allTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawText("§6§lAll " + className, barX - 350, y + 20);
         ui.drawText("§7" + allCount + "§8/§7" + allTotal, barX + barWidth + 20, y + 20);
         ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) allCount / allTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, allMax ? progress_white : progress_green, context, allMax);
         y += 70;
 
-        boolean mythicMax = mythicCount == mythicTotal;
+        boolean mythicMax = mythicCount == mythicTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawText("§5Mythic " + className, barX - 350, y + 20);
         ui.drawText("§7" + mythicCount + "§8/§7" + mythicTotal, barX + barWidth + 20, y + 20);
         ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) mythicCount / mythicTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, mythicMax ? progress_white : progress_green, context, mythicMax);
         y += 70;
 
-        boolean fabledMax = fabledCount == fabledTotal;
+        boolean fabledMax = fabledCount == fabledTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawText("§cFabled " + className, barX - 350, y + 20);
         ui.drawText("§7" + fabledCount + "§8/§7" + fabledTotal, barX + barWidth + 20, y + 20);
         ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) fabledCount / fabledTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, fabledMax ? progress_white : progress_green, context, fabledMax);
         y += 70;
 
-        boolean legendaryMax = legendaryCount == legendaryTotal;
+        boolean legendaryMax = legendaryCount == legendaryTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawText("§bLegendary " + className, barX - 350, y + 20);
         ui.drawText("§7" + legendaryCount + "§8/§7" + legendaryTotal, barX + barWidth + 20, y + 20);
         ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) legendaryCount / legendaryTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, legendaryMax ? progress_white : progress_green, context, legendaryMax);
@@ -495,25 +495,25 @@ public class AspectsPage extends PageWidget {
 
         ui.drawText("§6§lTotal" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + totalCount + "§8/§7" + totalAspects, barX + barWidth + 20, barStartY + 20);
-        boolean totalMax = totalCount == totalAspects;
+        boolean totalMax = totalCount == totalAspects && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) totalCount / totalAspects, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, totalMax ? progress_white : progress_green, context, totalMax);
         barStartY += 70;
 
         ui.drawText("§5Mythic" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + mythicCount + "§8/§7" + mythicTotal, barX + barWidth + 20, barStartY + 20);
-        boolean mythicMax = mythicCount == mythicTotal;
+        boolean mythicMax = mythicCount == mythicTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) mythicCount / mythicTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, mythicMax ? progress_white : progress_mythic, context, mythicMax);
         barStartY += 70;
 
         ui.drawText("§cFabled" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + fabledCount + "§8/§7" + fabledTotal, barX + barWidth + 20, barStartY + 20);
-        boolean fabledMax = fabledCount == fabledTotal;
+        boolean fabledMax = fabledCount == fabledTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) fabledCount / fabledTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, fabledMax ? progress_white : progress_fabled, context, fabledMax);
         barStartY += 70;
 
         ui.drawText("§bLegendary" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + legendaryCount + "§8/§7" + legendaryTotal, barX + barWidth + 20, barStartY + 20);
-        boolean legendaryMax = legendaryCount == legendaryTotal;
+        boolean legendaryMax = legendaryCount == legendaryTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) legendaryCount / legendaryTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, legendaryMax ? progress_white : progress_legendary, context, legendaryMax);
         barStartY += 90;
 
@@ -548,7 +548,7 @@ public class AspectsPage extends PageWidget {
 
             ui.drawText(className + suffix, barX - 350, barStartY + 20, classColor);
             ui.drawText("§7" + classCount + "§8/§7" + classTotal, barX + barWidth + 20, barStartY + 20);
-            boolean classMax = fabledCount == fabledTotal;
+            boolean classMax = fabledCount == fabledTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
             ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) classCount / classTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, classMax ? progress_white : progressTexture, context, classMax);
             barStartY += 70;
         }
@@ -1144,8 +1144,7 @@ public class AspectsPage extends PageWidget {
                 boolean isMax = tierInfo.contains("MAX");
                 CustomColor textColor = CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
-                if(isMax) {
-
+                if(isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
                     textColor = CommonColors.RAINBOW;
                 } else {
                     if(aspect.getRarity().equalsIgnoreCase("mythic")) rarityColorCode = "§5";

@@ -4,6 +4,7 @@ import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.Searchbar;
@@ -53,7 +54,7 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
 
         String titleString;
         CustomColor textColor;
-        if(quests.size() == 262) {
+        if(quests.size() == 262 && !WynnExtrasConfig.INSTANCE.removeChroma) {
             textColor = CommonColors.RAINBOW;
         } else {
             textColor = CustomColor.fromHexString("FFFFFF");

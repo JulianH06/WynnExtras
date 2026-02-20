@@ -140,6 +140,7 @@ public class WynnExtrasConfig {
     public boolean removeFrontPersonView = false;
     public boolean sourceOfTruthToggle = false;
     public boolean territoryEstimateToggle = false;
+    public boolean removeChroma = false;
 
     //==================== Dark Modes ==========================
     public boolean darkmodeToggle = false; //for bank overlay (dont wanna change the variable cause it would reset it to false for everyone)

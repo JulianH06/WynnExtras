@@ -261,6 +261,8 @@ public class WynnExtrasConfigScreen extends Screen {
                 () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
             .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
                 () -> config.badgesEnabled, v -> config.badgesEnabled = v))
+            .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
+                    () -> config.removeChroma, v -> config.removeChroma = v))
             .sub("Dark Mode Toggles")
                 .add(toggle("Bank Overlay", "Dark mode for the Bank Overlay",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))

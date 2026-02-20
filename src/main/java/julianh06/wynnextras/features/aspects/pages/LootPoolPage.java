@@ -378,7 +378,7 @@ public class LootPoolPage extends PageWidget {
                 scoreString = "MAXED";
             }
 
-            ui.drawCenteredText(raidNames[raid.ordinal()], x + width / 2f, y + textureWidth - 20, max ? CommonColors.RAINBOW : CustomColor.fromHexString("FFFFFF"));
+            ui.drawCenteredText(raidNames[raid.ordinal()], x + width / 2f, y + textureWidth - 20, (max && !WynnExtrasConfig.INSTANCE.removeChroma) ? CommonColors.RAINBOW : CustomColor.fromHexString("FFFFFF"));
 
             scoreWidget.scoreString = scoreString;
             int scoreWidth = MinecraftClient.getInstance().textRenderer.getWidth(scoreString);
@@ -711,7 +711,7 @@ public class LootPoolPage extends PageWidget {
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 if(scoreString.isEmpty()) return;
 
-                if(scoreString.equals("MAXED")) ui.drawText(scoreString, x, y, CommonColors.RAINBOW);
+                if(scoreString.equals("MAXED") && !WynnExtrasConfig.INSTANCE.removeChroma) ui.drawText(scoreString, x, y, CommonColors.RAINBOW);
                 else ui.drawText((hovered ? "§n" : "") + scoreString, x, y, CustomColor.fromHexString("c0c0c0"));
 
                 if(hovered) {
@@ -764,8 +764,7 @@ public class LootPoolPage extends PageWidget {
                 boolean isMax = aspect.tierInfo.contains("MAX");
                 CustomColor textColor = CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
-                if(isMax) {
-
+                if(isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
                     textColor = CommonColors.RAINBOW;
                 } else {
                     rarityColorCode = getAspectColorCode(aspect);
