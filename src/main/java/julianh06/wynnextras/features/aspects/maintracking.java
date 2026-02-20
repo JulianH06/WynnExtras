@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
@@ -322,7 +323,7 @@ public class maintracking {
             }
 
             // Reward chest: scan aspects from slots 11-15 and upload
-            if(inRaidChest && !(scanDone && returnedToFirstPage)){
+            if(inRaidChest && !(scanDone && returnedToFirstPage) && WynnExtrasConfig.INSTANCE.automaticAspectScanning){
                 try {
                     AspectScanning.AspectsInRaidChest();
                 } catch (Exception e) {

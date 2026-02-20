@@ -80,7 +80,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
             if(PV.currentPlayerData.getUuid() == null) return;
 
-            WynncraftApiHandler.fetchPlayerAspectData(PV.currentPlayerData.getUuid().toString(), MinecraftClient.getInstance().player.getUuidAsString())
+            WynncraftApiHandler.fetchPlayerAspectData(PV.currentPlayerData.getUuid().toString())
                     .thenAccept(result -> {
                         if (result == null) return;
 

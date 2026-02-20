@@ -49,10 +49,6 @@ public class AspectScreen extends WEScreen {
         for(Page page : Page.values()) {
             pageSwitchButtons.add(new PageSwitchButton(page));
         }
-
-        if(lootPoolPage != null) lootPoolPage.pageOpened();
-        if(lootrunLootPoolPage != null) lootrunLootPoolPage.pageOpened();
-        if(gambitsPage != null) gambitsPage.pageOpened();
     }
 
     @Override

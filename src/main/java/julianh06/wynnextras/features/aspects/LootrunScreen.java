@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.aspects;
 
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.features.aspects.pages.LootrunLootPoolPage;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.client.gui.DrawContext;
@@ -57,15 +58,15 @@ public class LootrunScreen extends WEScreen {
         // Fetch crowdsourced loot pools from API on first load
         if (!fetchedCrowdsourcedLootPools) {
             fetchedCrowdsourcedLootPools = true;
-            for (String camp : LootrunLootPoolData.CAMP_CODES) {
-                WynncraftApiHandler.fetchCrowdsourcedLootrunLootPool(camp).thenAccept(result -> {
+            for (LootrunLootPoolPage.Camp camp : LootrunLootPoolPage.Camp.values()) {
+                WynncraftApiHandler.fetchCrowdsourcedLootrunLootPool(camp.name()).thenAccept(result -> {
                     if (result != null && !result.isEmpty()) {
-                        crowdsourcedLootPools.put(camp, result);
-                        System.out.println("[WynnExtras] Fetched " + result.size() + " crowdsourced lootrun items for " + camp);
+                        crowdsourcedLootPools.put(camp.name(), result);
+                        System.out.println("[WynnExtras] Fetched " + result.size() + " crowdsourced lootrun items for " + camp.name());
                         // Save to local data for offline access
-                        LootrunLootPoolData.INSTANCE.saveLootPool(camp, result);
+                        LootrunLootPoolData.INSTANCE.saveLootPool(camp.name(), result);
                     } else {
-                        System.out.println("[WynnExtras] No crowdsourced lootrun pool for " + camp);
+                        System.out.println("[WynnExtras] No crowdsourced lootrun pool for " + camp.name());
                     }
                 });
             }
@@ -93,7 +94,7 @@ public class LootrunScreen extends WEScreen {
 
         // Draw each camp column
         for (int i = 0; i < numCamps; i++) {
-            String campCode = LootrunLootPoolData.CAMP_CODES[i];
+            String campCode = LootrunLootPoolPage.Camp.values()[i].name();
             int x = startX + i * (colWidth + spacing);
 
             campColumnX[i] = x;

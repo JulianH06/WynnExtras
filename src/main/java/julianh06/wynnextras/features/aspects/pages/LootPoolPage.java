@@ -5,10 +5,10 @@ import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
+import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.features.aspects.AspectScreen;
-import julianh06.wynnextras.features.aspects.FavoriteAspectsData;
-import julianh06.wynnextras.features.aspects.LootPoolData;
+import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.features.aspects.*;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -26,19 +26,17 @@ import java.text.DecimalFormat;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static julianh06.wynnextras.features.aspects.AspectUtils.*;
 
 public class LootPoolPage extends PageWidget {
-    private static java.util.Map<String, List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry>> crowdsourcedLootPools = new java.util.HashMap<>();
-    private static boolean fetchedCrowdsourcedLootPools = false;
+    private final static java.util.Map<String, List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry>> crowdsourcedLootPools = new java.util.HashMap<>();
+    private final static Map<Raid, ZonedDateTime> lastCrowdsourceFetch = new HashMap<>();
 
-    private static java.util.Map<String, com.mojang.datafixers.util.Pair<Integer, String>> personalAspectProgress = new java.util.HashMap<>();
+    private final static java.util.Map<String, com.mojang.datafixers.util.Pair<Integer, String>> personalAspectProgress = new java.util.HashMap<>();
     private static boolean fetchedPersonalProgress = false;
 
     private enum Raid { NOTG, NOL, TCC, TNA }
@@ -50,18 +48,18 @@ public class LootPoolPage extends PageWidget {
     private static String importFeedback = null;
     private static long importFeedbackTime = 0;
 
-    private ImportFromWynntilsButton importFromWynntilsButton;
-    private HideMaxButton hideMaxButton;
-    private OnlyFavoritesButton onlyFavoritesButton;
-    private RefreshButton refreshButton;
+    private final ImportFromWynntilsButton importFromWynntilsButton;
+    private final HideMaxButton hideMaxButton;
+    private final OnlyFavoritesButton onlyFavoritesButton;
+    private final RefreshButton refreshButton;
 
     private static boolean hideMax = false;
     private static boolean onlyFavorites = false;
 
     private enum corwdSourceStatus { Loading, Found, Null }
-    private static List<corwdSourceStatus> hasCrowdSourcedData = new ArrayList<>(List.of(corwdSourceStatus.Loading, corwdSourceStatus.Loading, corwdSourceStatus.Loading, corwdSourceStatus.Loading));
+    private final static List<corwdSourceStatus> hasCrowdSourcedData = new ArrayList<>(List.of(corwdSourceStatus.Loading, corwdSourceStatus.Loading, corwdSourceStatus.Loading, corwdSourceStatus.Loading));
 
-    private static String[] raidNames = {
+    private final static String[] raidNames = {
             "Nest of the Grootslangs",
             "Orphion's Nexus of Light",
             "The Canyon Colossus",
@@ -84,31 +82,36 @@ public class LootPoolPage extends PageWidget {
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         hoveredTooltip.clear();
-        if (!fetchedCrowdsourcedLootPools) {
-            fetchedCrowdsourcedLootPools = true;
-            String[] raids = {"NOTG", "NOL", "TCC", "TNA"};
-            int i = 0;
-            for (String raidType : raids) {
-                int finalI = i;
-                WynncraftApiHandler.fetchCrowdsourcedLootPool(raidType).thenAccept(result -> {
-                    if(result == null) {
-                        hasCrowdSourcedData.set(finalI, corwdSourceStatus.Null);
-                    }
-                    if (result != null && !result.isEmpty()) {
-                        hasCrowdSourcedData.set(finalI, corwdSourceStatus.Found);
-                        crowdsourcedLootPools.put(raidType, result);
-                        // Save to local data for offline access
-                        julianh06.wynnextras.features.aspects.LootPoolData.INSTANCE.saveLootPoolFull(raidType, result);
-                    }
-                });
-                i++;
+
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
+        int i = 0;
+        for (Raid raidType : Raid.values()) {
+            if (!shouldFetchRaid(raidType)) {
+                continue;
             }
+
+            int finalI = i;
+            lastCrowdsourceFetch.put(raidType, AspectScanning.getCurrentLootpoolReset());
+
+            WynncraftApiHandler.fetchCrowdsourcedLootPool(raidType.name()).thenAccept(result -> {
+                if(result == null) {
+                    hasCrowdSourcedData.set(finalI, corwdSourceStatus.Null);
+                }
+                if (result != null && !result.isEmpty()) {
+                    hasCrowdSourcedData.set(finalI, corwdSourceStatus.Found);
+                    crowdsourcedLootPools.put(raidType.name(), result);
+
+                    // Save to local data for offline access
+                    julianh06.wynnextras.features.aspects.LootPoolData.INSTANCE.saveLootPoolFull(raidType.name(), result);
+                }
+            });
+            i++;
         }
 
         if (!fetchedPersonalProgress && McUtils.player() != null) {
             fetchedPersonalProgress = true;
             String playerUUID = McUtils.player().getUuidAsString();
-            WynncraftApiHandler.fetchPlayerAspectData(playerUUID, playerUUID).thenAccept(result -> {
+            WynncraftApiHandler.fetchPlayerAspectData(playerUUID).thenAccept(result -> {
                 if (result != null && result.status() == WynncraftApiHandler.FetchStatus.OK && result.user() != null) {
                     julianh06.wynnextras.features.profileviewer.data.User userData = result.user();
                     // Convert aspect data to progress map (name -> (amount, rarity))
@@ -127,7 +130,6 @@ public class LootPoolPage extends PageWidget {
 
         ui.drawCenteredText("§6§lWeekly Aspect Lootpools", centerX, 60);
 
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
         ZonedDateTime nextReset = now.with(java.time.DayOfWeek.FRIDAY).withHour(19).withMinute(0).withSecond(0).withNano(0);
         if (nextReset.isBefore(now) || nextReset.isEqual(now)) {
             nextReset = nextReset.plusWeeks(1);
@@ -169,14 +171,14 @@ public class LootPoolPage extends PageWidget {
         importFromWynntilsButton.setBounds(0, 0, 500, 60);
         importFromWynntilsButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
 
-        refreshButton.setBounds(520, 0, 350, 60);
+        refreshButton.setBounds(0, 65, 350, 60);
         refreshButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
 
-        hideMaxButton.setBounds((int) (width * ui.getScaleFactorF()) - 300, 0, 300, 60);
-        hideMaxButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
-
-        onlyFavoritesButton.setBounds((int) (width * ui.getScaleFactorF()) - 720, 0, 400, 60);
+        onlyFavoritesButton.setBounds((int) (width * ui.getScaleFactorF()) - 400, 0, 400, 60);
         onlyFavoritesButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
+
+        hideMaxButton.setBounds((int) (width * ui.getScaleFactorF()) - 300, 65, 300, 60);
+        hideMaxButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
 
         if (importFeedback != null && System.currentTimeMillis() - importFeedbackTime < 5000) {
             ui.drawCenteredText(importFeedback, 240, 74);
@@ -243,30 +245,6 @@ public class LootPoolPage extends PageWidget {
         }
 
         return false;
-    }
-
-    public void pageOpened() {
-        String[] raids = {"NOTG", "NOL", "TCC", "TNA"};
-        int i = 0;
-        for (String raidType : raids) {
-            if(crowdsourcedLootPools.get(raidType) != null) {
-                if(!crowdsourcedLootPools.get(raidType).isEmpty()) continue;
-            }
-
-            int finalI = i;
-            WynncraftApiHandler.fetchCrowdsourcedLootPool(raidType).thenAccept(result -> {
-                if(result == null) {
-                    hasCrowdSourcedData.set(finalI, corwdSourceStatus.Null);
-                }
-                if (result != null && !result.isEmpty()) {
-                    hasCrowdSourcedData.set(finalI, corwdSourceStatus.Found);
-                    crowdsourcedLootPools.put(raidType, result);
-                    // Save to local data for offline access
-                    julianh06.wynnextras.features.aspects.LootPoolData.INSTANCE.saveLootPoolFull(raidType, result);
-                }
-            });
-            i++;
-        }
     }
 
     private static class LootPoolWidget extends Widget {
@@ -944,5 +922,15 @@ public class LootPoolPage extends PageWidget {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
+    }
+
+    private static boolean shouldFetchRaid(Raid raid) {
+        ZonedDateTime currentReset = AspectScanning.getCurrentLootpoolReset();
+        ZonedDateTime lastFetch = lastCrowdsourceFetch.get(raid);
+
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
+        if (lastFetch != null && lastFetch.plusSeconds(30).isAfter(now)) return false;
+
+        return lastFetch == null || currentReset.isAfter(lastFetch);
     }
 }

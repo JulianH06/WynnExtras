@@ -295,7 +295,7 @@ public class LootrunScanning {
         settleTicks = 0;
     }
 
-    private static ZonedDateTime getCurrentLootrunReset() {
+    public static ZonedDateTime getCurrentLootrunReset() {
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
 
         ZonedDateTime thisFriday =
@@ -315,5 +315,4 @@ public class LootrunScanning {
 
         return lastUploaded == null || currentReset.isAfter(lastUploaded);
     }
-
 }

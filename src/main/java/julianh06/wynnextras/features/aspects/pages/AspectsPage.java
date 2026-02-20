@@ -127,7 +127,7 @@ public class AspectsPage extends PageWidget {
                 String playerUuid = MinecraftClient.getInstance().player.getUuidAsString();
                 final int fetchGen = ++myAspectsFetchGeneration;
 
-                WynncraftApiHandler.fetchPlayerAspectData(playerUuid, playerUuid)
+                WynncraftApiHandler.fetchPlayerAspectData(playerUuid)
                         .thenAccept(result -> {
                             // Only update if this is still the current request
                             if (fetchGen != myAspectsFetchGeneration) return;
@@ -650,7 +650,7 @@ public class AspectsPage extends PageWidget {
 
             // Format UUID and fetch aspect data
             String formattedUUID = WynncraftApiHandler.formatUUID(rawUUID);
-            return WynncraftApiHandler.fetchPlayerAspectData(formattedUUID, requestingUUID);
+            return WynncraftApiHandler.fetchPlayerAspectData(formattedUUID);
         }).thenAccept(result -> {
             // Only update if we're still searching for the same player
             if (!expectedPlayer.equals(searchedPlayer)) return;

@@ -2,9 +2,7 @@ package julianh06.wynnextras.features.aspects.pages;
 
 import com.wynntils.utils.colors.CustomColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.features.aspects.AspectScreen;
-import julianh06.wynnextras.features.aspects.AspectUtils;
-import julianh06.wynnextras.features.aspects.GambitData;
+import julianh06.wynnextras.features.aspects.*;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
@@ -15,7 +13,9 @@ import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class GambitsPage extends PageWidget{
     Identifier ltop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/ltop.png");
@@ -56,8 +56,9 @@ public class GambitsPage extends PageWidget{
 
     private boolean fetchedCrowdsourcedGambits = false;
     private List<GambitData.GambitEntry> crowdsourcedGambits = null;
+    private static ZonedDateTime lastCrowdsourceFetch = null;
 
-    private OpenPartyFinderWidget openPartyFinderWidget;
+    private final OpenPartyFinderWidget openPartyFinderWidget;
 
     public GambitsPage(AspectScreen parent) {
         super(parent);
@@ -91,8 +92,9 @@ public class GambitsPage extends PageWidget{
 
         ui.drawCenteredText(countdown, centerX, 100);
 
-        if (!fetchedCrowdsourcedGambits) {
-            fetchedCrowdsourcedGambits = true;
+        if (shouldFetchGambits()) {
+            lastCrowdsourceFetch = now;
+
             WynncraftApiHandler.fetchCrowdsourcedGambits().thenAccept(result -> {
                 crowdsourcedGambits = result;
                 if (result != null && !result.isEmpty()) {
@@ -143,19 +145,6 @@ public class GambitsPage extends PageWidget{
                 drawGambitPanel(x, y, panelWidth, panelHeight, gambit);
             }
         }
-    }
-
-    public void pageOpened() {
-        if(crowdsourcedGambits != null) {
-            if (!crowdsourcedGambits.isEmpty()) return;
-        }
-
-        WynncraftApiHandler.fetchCrowdsourcedGambits().thenAccept(result -> {
-            crowdsourcedGambits = result;
-            if (result != null && !result.isEmpty()) {
-                GambitData.INSTANCE.saveGambits(result);
-            }
-        });
     }
 
     @Override
@@ -257,5 +246,15 @@ public class GambitsPage extends PageWidget{
             AspectUtils.joinRaidPartyFinder("NOTG");
             return true;
         }
+    }
+
+    private static boolean shouldFetchGambits() {
+        ZonedDateTime currentReset = GambitData.getLastResetTime();
+        ZonedDateTime lastFetch = lastCrowdsourceFetch;
+
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
+        if (lastFetch != null && lastFetch.plusSeconds(30).isAfter(now)) return false;
+
+        return lastFetch == null || currentReset.isAfter(lastFetch);
     }
 }

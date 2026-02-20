@@ -72,6 +72,8 @@ import net.minecraft.util.math.MathHelper;
 import org.joml.Vector2i;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -85,7 +87,6 @@ import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHover
 import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredWynnitem;
 
 public class BankOverlay2 extends WEHandledScreen {
-    private Object tooltipFactory;
     static ItemStack hoveredSlot = Items.AIR.getDefaultStack();
     int hoveredX = -1;
     int hoveredY = -1;
@@ -178,12 +179,12 @@ public class BankOverlay2 extends WEHandledScreen {
         scissorx2 = 0;
         scissory2 = 0;
 
-//        try {
-//            if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-//
-//                com.wynnmod.util.wynncraft.item.map.WynncraftItemDatabase.initialize();
-//            }
-//        } catch (Exception ignored) {}
+        try {
+            if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
+                Class<?> clazz = Class.forName("com.wynnmod.wynncraft.item.map.WynncraftItemDatabase");
+                clazz.getMethod("initialize").invoke(null);
+            }
+        } catch (Exception ignored) {}
     }
 
 
@@ -946,40 +947,72 @@ public class BankOverlay2 extends WEHandledScreen {
 
         try {
             if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
+                initWynnventoryReflection();
+
+                if (!wynnventoryReady) return;
+
                 ItemStack stack = hoveredSlot;
 
-                // Screen independent actions
-                if (WynnExtrasConfig.INSTANCE.wynnventoryOverlay) {
-                    Models.Item.getWynnItem(stack)
-                            .ifPresent(wynnItem -> renderPriceTooltip(context, mouseX, mouseY, stack));
+                if (WynnExtrasConfig.INSTANCE.wynnventoryOverlay && stack != null) {
+                    renderPriceTooltipReflective(context, mouseX, mouseY, stack);
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Throwable ignored) {}
+
     }
 
-    private void renderPriceTooltip(DrawContext context, int x, int y, ItemStack stack) {
+    private void renderPriceTooltipReflective(DrawContext context, int x, int y, ItemStack stack) {
         try {
-            List<Text> vanillaLines = stack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
+            List<Text> vanillaLines = stack.getTooltip(
+                    Item.TooltipContext.DEFAULT,
+                    MinecraftClient.getInstance().player,
+                    TooltipType.BASIC
+            );
+
             if (vanillaLines == null || vanillaLines.isEmpty()) return;
 
-            if (tooltipFactory == null) tooltipFactory = new com.wynnventory.core.tooltip.PriceTooltipFactory(new com.wynnventory.core.tooltip.PriceTooltipBuilder());
-            List<Text> priceLines = ((com.wynnventory.core.tooltip.PriceTooltipFactory) tooltipFactory).getPriceTooltip(stack);
-            if (priceLines.isEmpty()) return;
+            if (tooltipFactory == null) {
+                Object builder = builderCtor.newInstance();
+                tooltipFactory = factoryCtor.newInstance(builder);
+            }
 
-            List<TooltipComponent> priceComponents = com.wynnventory.util.RenderUtils.toClientComponents(priceLines, Optional.empty());
-            List<TooltipComponent> vanillaComponents = com.wynnventory.util.RenderUtils.toClientComponents(vanillaLines, stack.getTooltipData());
+            List<Text> priceLines =
+                    (List<Text>) getPriceTooltipMethod.invoke(tooltipFactory, stack);
 
-            Vector2i tooltipCoords = com.wynnventory.util.RenderUtils.calculateTooltipCoords(x, y, vanillaComponents, priceComponents);
-            TooltipPositioner fixed = new com.wynnventory.util.RenderUtils.FixedTooltipPositioner(tooltipCoords.x, tooltipCoords.y);
+            if (priceLines == null || priceLines.isEmpty()) return;
+
+            List<?> priceComponents =
+                    (List<?>) toClientComponentsMethod.invoke(null, priceLines, Optional.empty());
+
+            List<?> vanillaComponents =
+                    (List<?>) toClientComponentsMethod.invoke(null, vanillaLines, stack.getTooltipData());
+
+            Object coords = calculateCoordsMethod.invoke(null, x, y, vanillaComponents, priceComponents);
+
+            int cx = (int) coords.getClass().getField("x").get(coords);
+            int cy = (int) coords.getClass().getField("y").get(coords);
+
+            Object positioner = fixedPositionerClass
+                    .getConstructor(int.class, int.class)
+                    .newInstance(cx, cy);
 
             context.getMatrices().pushMatrix();
 
-            float scale = com.wynnventory.util.RenderUtils.getScaleFactor(priceComponents);
+            float scale = (float) getScaleFactorMethod.invoke(null, priceComponents);
             context.getMatrices().scale(scale, scale);
 
-            context.drawTooltipImmediately(MinecraftClient.getInstance().textRenderer, priceComponents, x, y, fixed, stack.get(DataComponentTypes.TOOLTIP_STYLE));
+            context.drawTooltipImmediately(
+                    MinecraftClient.getInstance().textRenderer,
+                    (List<TooltipComponent>) priceComponents,
+                    x,
+                    y,
+                    (TooltipPositioner) positioner,
+                    stack.get(DataComponentTypes.TOOLTIP_STYLE)
+            );
+
             context.getMatrices().popMatrix();
-        } catch (Exception ignored) { }
+
+        } catch (Exception ignored) {}
     }
 
     private static void drawTooltip(TextRenderer textRenderer, List<TooltipComponent> components, int x, int y, DrawContext context) {
@@ -1569,12 +1602,15 @@ public class BankOverlay2 extends WEHandledScreen {
             renderItemOverlays(ctx, stack, x + 1, y + 1);
             renderSearchOverlay(ctx, stack, x + 1, y + 1);
 
-//            try {
-//                if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-//                    com.wynnmod.feature.item.ItemOverlayFeature itemOverlayFeature = com.wynnmod.feature.Feature.getInstance(com.wynnmod.feature.item.ItemOverlayFeature.class);
-//                    ((wmd$ItemOverlayFeatureInvoker) itemOverlayFeature).callOnRenderItem(ctx, stack, x, y, false);
-//                }
-//            } catch (Exception ignored) {}
+            try {
+                if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
+                    initWynnmodOverlay();
+
+                    if (wynnmodReady && itemOverlayInstance != null && stack != null) {
+                        onRenderItemMethod.invoke(itemOverlayInstance, ctx, stack, x, y, false);
+                    }
+                }
+            } catch (Throwable ignored) {}
         }
 
         public void setStack(ItemStack stack) {
@@ -2017,5 +2053,96 @@ public class BankOverlay2 extends WEHandledScreen {
             // No click interaction for cross-class slots
             return false;
         }
+    }
+
+    private Object tooltipFactory;
+
+    private Method getPriceTooltipMethod;
+    private Method toClientComponentsMethod;
+    private Method calculateCoordsMethod;
+    private Method getScaleFactorMethod;
+    private Method drawTooltipMethod;
+
+    private Constructor<?> factoryCtor;
+    private Constructor<?> builderCtor;
+    private Class<?> fixedPositionerClass;
+
+    private boolean wynnventoryReady = false;
+
+    private void initWynnventoryReflection() {
+        if (wynnventoryReady) return;
+
+        try {
+            Class<?> builderClass = Class.forName("com.wynnventory.core.tooltip.PriceTooltipBuilder");
+            Class<?> factoryClass = Class.forName("com.wynnventory.core.tooltip.PriceTooltipFactory");
+
+            builderCtor = builderClass.getConstructor();
+            factoryCtor = factoryClass.getConstructor(builderClass);
+
+            getPriceTooltipMethod = factoryClass.getMethod("getPriceTooltip", ItemStack.class);
+
+            Class<?> renderUtils = Class.forName("com.wynnventory.util.RenderUtils");
+
+            toClientComponentsMethod = renderUtils.getMethod(
+                    "toClientComponents",
+                    List.class,
+                    Optional.class
+            );
+
+            calculateCoordsMethod = renderUtils.getMethod(
+                    "calculateTooltipCoords",
+                    int.class,
+                    int.class,
+                    List.class,
+                    List.class
+            );
+
+            getScaleFactorMethod = renderUtils.getMethod(
+                    "getScaleFactor",
+                    List.class
+            );
+
+            fixedPositionerClass = Class.forName(
+                    "com.wynnventory.util.RenderUtils$FixedTooltipPositioner"
+            );
+
+            wynnventoryReady = true;
+
+        } catch (Throwable ignored) {}
+    }
+
+    private static boolean wynnmodReady = false;
+    private static Method onRenderItemMethod;
+    private static Object itemOverlayInstance;
+
+    private static void initWynnmodOverlay() {
+        if (wynnmodReady) return;
+
+        try {
+            Class<?> overlayClass =
+                    Class.forName("com.wynnmod.feature.item.ItemOverlayFeature");
+
+            Class<?> featureClass =
+                    Class.forName("com.wynnmod.feature.Feature");
+
+            Method getInstance =
+                    featureClass.getMethod("getInstance", Class.class);
+
+            itemOverlayInstance = getInstance.invoke(null, overlayClass);
+
+            onRenderItemMethod = overlayClass.getDeclaredMethod(
+                    "onRenderItem",
+                    DrawContext.class,
+                    ItemStack.class,
+                    int.class,
+                    int.class,
+                    boolean.class
+            );
+
+            onRenderItemMethod.setAccessible(true);
+
+            wynnmodReady = true;
+
+        } catch (Throwable ignored) {}
     }
 }

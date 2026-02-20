@@ -224,8 +224,6 @@ public class AspectScanning {
             return;
         }
 
-        List<String> foundNames = new ArrayList<>();
-
         boolean samePage = true;
         for(int i = 11; i < 16; i++) {
             int arrayIndex = i - 11; // Map slot 11-15 to array index 0-4
@@ -666,7 +664,7 @@ public class AspectScanning {
         }
     }
 
-    private static ZonedDateTime getCurrentLootpoolReset() {
+    public static ZonedDateTime getCurrentLootpoolReset() {
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
 
         ZonedDateTime thisFriday =
@@ -680,7 +678,7 @@ public class AspectScanning {
         return thisFriday;
     }
 
-    private static ZonedDateTime getCurrentGambitReset() {
+    public static ZonedDateTime getCurrentGambitReset() {
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
 
         ZonedDateTime todayReset =

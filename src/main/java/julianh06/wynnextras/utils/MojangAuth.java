@@ -1,13 +1,15 @@
 package julianh06.wynnextras.utils;
 
 import com.google.gson.JsonObject;
-import com.mojang.authlib.exceptions.AuthenticationException;
+import com.google.gson.JsonParser;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.core.WynnExtras;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 
+import javax.naming.AuthenticationException;
 import java.math.BigInteger;
 import java.net.Proxy;
 import java.net.URI;
@@ -15,31 +17,25 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.MessageDigest;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Handles Mojang sessionserver authentication for secure API calls
- * Implements the standard Minecraft server authentication flow
+ * Handles authentication against your backend using the player's
+ * Mojang session access token.
+ *
+ * This is ONLY used to obtain a session token.
+ * After login, all API calls use the session token.
  */
 public class MojangAuth {
+
     private static final HttpClient httpClient = HttpClient.newHttpClient();
-    private static final String MOJANG_JOIN_SERVER = "https://sessionserver.mojang.com/session/minecraft/join";
 
-    // Cache authentication to avoid rapid-fire Mojang API calls
-    // 5 minutes is safe - Mojang session tokens last for hours
-    private static AuthData cachedAuthData = null;
-    private static long cacheTimestamp = 0;
-    private static final long CACHE_DURATION_MS = 300000; // 5 minutes
-    private static final Object cacheLock = new Object();
-
-    // Track in-progress authentication to prevent multiple simultaneous auths
-    private static CompletableFuture<AuthData> pendingAuth = null;
+    private static String wynnextrasToken = null;
+    private static long expiryTime = 0;
 
     /**
-     * Authenticate with Mojang and get a server ID for API calls
-     * This performs the standard Minecraft server join flow
-     *
-     * @return CompletableFuture with serverId on success, or null on failure
+     * Authenticate with backend and obtain wynnextras token
      */
     public static CompletableFuture<String> authenticateForAPI() {
         return CompletableFuture.supplyAsync(() -> {
@@ -49,50 +45,87 @@ public class MojangAuth {
                     return null;
                 }
 
-                // Get session via accessor
                 var session = mc.getSession();
                 if (session == null) {
                     WynnExtras.LOGGER.error("Session is null");
                     return null;
                 }
 
-                // Create session service (Yggdrasil auth service)
-                YggdrasilAuthenticationService authService = new YggdrasilAuthenticationService(
-                        Proxy.NO_PROXY
-                );
-                MinecraftSessionService sessionService = authService.createMinecraftSessionService();
+                YggdrasilAuthenticationService authService =
+                        new YggdrasilAuthenticationService(Proxy.NO_PROXY);
+                MinecraftSessionService sessionService =
+                        authService.createMinecraftSessionService();
 
-                // Generate a random server ID (shared secret)
                 String serverId = generateServerId();
+                UUID playerUuid = mc.player.getUuid();
 
-                // Get player UUID
-                java.util.UUID playerUuid = mc.player.getUuid();
-
-                // Join server via Mojang (this validates our session)
-                // This call internally sends accessToken to Mojang with the serverId
                 try {
-                    // joinServer takes UUID, accessToken, and serverId
-                    sessionService.joinServer(playerUuid, session.getAccessToken(), serverId);
+                    // Authenticate with Mojang
+                    sessionService.joinServer(
+                            playerUuid,
+                            session.getAccessToken(),
+                            serverId
+                    );
 
-                    // Small delay to let Mojang propagate the session before we use it
-                    // Without this, the first request often fails because hasJoined check
-                    // happens before Mojang has fully processed the joinServer call
-                    Thread.sleep(200);
+                    // Give Mojang time to propagate session
+                    Thread.sleep(250);
 
-                    WynnExtras.LOGGER.info("Successfully authenticated with Mojang sessionserver");
+                    WynnExtras.LOGGER.info("Mojang authentication successful");
                     return serverId;
-                } catch (AuthenticationException e) {
-                    WynnExtras.LOGGER.error("Failed to join server via Mojang sessionserver", e);
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                            Text.literal("§cFailed to authenticate with Mojang. Please restart your game.")
-                    ));
+                } catch (Exception e) {
+                    WynnExtras.LOGGER.error("Mojang authentication failed", e);
+
+                    McUtils.sendMessageToClient(
+                            WynnExtras.addWynnExtrasPrefix(
+                                Text.literal("§cAuthentication failed. Please restart Minecraft.")
+                            )
+                    );
+
                     return null;
                 }
-
             } catch (Exception e) {
-                WynnExtras.LOGGER.error("Error during Mojang authentication", e);
+                WynnExtras.LOGGER.error("Authentication error", e);
                 return null;
             }
+        });
+    }
+
+    public static CompletableFuture<String> login() {
+        return authenticateForAPI().thenCompose(serverId -> {
+            if (serverId == null) return CompletableFuture.completedFuture(null);
+
+            String username = McUtils.playerName();
+            if (username == null) return CompletableFuture.completedFuture(null);
+
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    JsonObject body = new JsonObject();
+                    body.addProperty("username", username);
+                    body.addProperty("serverId", serverId);
+
+                    HttpRequest request = HttpRequest.newBuilder()
+                            .uri(URI.create("http://www.wynnextras.com/auth"))
+                            .header("Content-Type", "application/json")
+                            .header("Accept", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                            .build();
+
+                    HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+                    if (response.statusCode() != 200) return null;
+
+                    JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                    wynnextrasToken = json.get("token").getAsString();
+                    McUtils.sendMessageToClient(Text.of(wynnextrasToken));
+                    expiryTime = json.get("expiresIn").getAsLong();
+
+                    WynnExtras.LOGGER.info("Received WynnExtras token from backend");
+                    return wynnextrasToken;
+                } catch (Exception e) {
+                    WynnExtras.LOGGER.error("Backend authentication failed", e);
+                    return null;
+                }
+            });
         });
     }
 
@@ -121,86 +154,29 @@ public class MojangAuth {
     }
 
     /**
-     * Result of authentication containing username and serverId
+     * Get a valid WEToken
      */
-    public static class AuthData {
-        public final String username;
-        public final String serverId;
+    public static CompletableFuture<String> getWEToken() {
+        long now = System.currentTimeMillis();
 
-        public AuthData(String username, String serverId) {
-            this.username = username;
-            this.serverId = serverId;
+        McUtils.sendMessageToClient(Text.of("sending request with token: " + wynnextrasToken));
+        if (wynnextrasToken != null && now < expiryTime) {
+            return CompletableFuture.completedFuture(wynnextrasToken);
         }
+
+        WynnExtras.LOGGER.info("Session expired or missing, logging in");
+        return login();
     }
 
     /**
-     * Get authentication data for API calls
-     * Call this before making authenticated API requests
-     *
-     * Caches authentication for 5 minutes to prevent rapid-fire Mojang API calls.
-     * Also ensures only one authentication happens at a time - other callers wait
-     * for the in-progress auth to complete.
-     *
-     * @return CompletableFuture with AuthData, or null if authentication failed
+     * Force token refresh (used after 401)
      */
-    public static CompletableFuture<AuthData> getAuthData() {
-        synchronized (cacheLock) {
-            // Check if we have a valid cached auth
-            long now = System.currentTimeMillis();
-            if (cachedAuthData != null && (now - cacheTimestamp) < CACHE_DURATION_MS) {
-                WynnExtras.LOGGER.info("Reusing cached Mojang authentication (age: {}ms)", now - cacheTimestamp);
-                return CompletableFuture.completedFuture(cachedAuthData);
-            }
+    public static CompletableFuture<String> refreshSession() {
+        WynnExtras.LOGGER.info("Refreshing session token");
 
-            // Check if auth is already in progress - wait for it instead of starting another
-            if (pendingAuth != null) {
-                WynnExtras.LOGGER.info("Waiting for in-progress Mojang authentication");
-                return pendingAuth;
-            }
+        wynnextrasToken = null;
+        expiryTime = 0;
 
-            // Start new authentication and track it
-            WynnExtras.LOGGER.info("Starting fresh Mojang authentication");
-            pendingAuth = authenticateForAPI().thenApply(serverId -> {
-                if (serverId == null) {
-                    synchronized (cacheLock) {
-                        pendingAuth = null;
-                    }
-                    return null;
-                }
-
-                String username = McUtils.playerName();
-                if (username == null) {
-                    synchronized (cacheLock) {
-                        pendingAuth = null;
-                    }
-                    return null;
-                }
-
-                AuthData authData = new AuthData(username, serverId);
-
-                // Cache the result and clear pending flag
-                synchronized (cacheLock) {
-                    cachedAuthData = authData;
-                    cacheTimestamp = System.currentTimeMillis();
-                    pendingAuth = null;
-                }
-
-                return authData;
-            });
-
-            return pendingAuth;
-        }
-    }
-
-    /**
-     * Manually invalidate the authentication cache
-     * Useful if an API request fails with auth error
-     */
-    public static void invalidateCache() {
-        synchronized (cacheLock) {
-            cachedAuthData = null;
-            cacheTimestamp = 0;
-            WynnExtras.LOGGER.info("Mojang auth cache invalidated");
-        }
+        return login();
     }
 }

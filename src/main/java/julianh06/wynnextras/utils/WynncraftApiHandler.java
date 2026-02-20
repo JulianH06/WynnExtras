@@ -13,6 +13,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.features.aspects.pages.LootrunLootPoolPage;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -58,8 +59,7 @@ public class WynncraftApiHandler {
             "apikey",
             "",
             context -> {
-                String arg = StringArgumentType.getString(context, "key");
-                INSTANCE.API_KEY = arg;
+                INSTANCE.API_KEY = StringArgumentType.getString(context, "key");
                 save();
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully set your api key." +
                         " It has been saved in your config. Don't share it publicly.")));
@@ -194,34 +194,32 @@ public class WynncraftApiHandler {
 
                 int finalI = i;
                 CompletableFuture<List<ApiAspect>> future = WynncraftApiHandler.fetchAspectList(className);
-                if (future != null) {
-                    future.thenAccept(result -> {
-                                if(result == null) return;
-                                if(result.isEmpty()) return;
+                future.thenAccept(result -> {
+                        if (result == null) return;
+                        if (result.isEmpty()) return;
 
-                                synchronized (INSTANCE.aspectLock) {
-                                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                        synchronized (INSTANCE.aspectLock) {
+                            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                        }
+                        // Only add aspects that aren't already in the list (prevent duplicates)
+                        // aspectList is already synchronized, but we need to check-then-add atomically
+                        synchronized (aspectList) {
+                            for (ApiAspect aspect : result) {
+                                boolean alreadyExists = aspectList.stream()
+                                        .anyMatch(existing -> existing.getName().equals(aspect.getName()));
+                                if (!alreadyExists) {
+                                    aspectList.add(aspect);
                                 }
-                                // Only add aspects that aren't already in the list (prevent duplicates)
-                                // aspectList is already synchronized, but we need to check-then-add atomically
-                                synchronized (aspectList) {
-                                    for (ApiAspect aspect : result) {
-                                        boolean alreadyExists = aspectList.stream()
-                                                .anyMatch(existing -> existing.getName().equals(aspect.getName()));
-                                        if (!alreadyExists) {
-                                            aspectList.add(aspect);
-                                        }
-                                    }
-                                }
-                            })
-                            .exceptionally(ex -> {
-                                System.err.println("Unexpected error fetching aspects: " + ex.getMessage());
-                                synchronized (INSTANCE.aspectLock) {
-                                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
-                                }
-                                return null;
-                            });
-                }
+                            }
+                        }
+                })
+                .exceptionally(ex -> {
+                    System.err.println("Unexpected error fetching aspects: " + ex.getMessage());
+                    synchronized (INSTANCE.aspectLock) {
+                        WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
+                    }
+                    return null;
+                });
                 i++;
             }
         }
@@ -258,13 +256,11 @@ public class WynncraftApiHandler {
         });
     }
 
-    public static CompletableFuture<FetchResult> fetchPlayerAspectData(String playerUUID, String requestingUUID) {
+    public static CompletableFuture<FetchResult> fetchPlayerAspectData(String playerUUID) {
         if (playerUUID == null) {
             McUtils.sendMessageToClient(Text.of("§cUUID is null!"));
             return CompletableFuture.completedFuture(null);
         }
-
-        // No API key required - viewing aspects is public!
 
         try {
             HttpClient client = HttpClient.newBuilder()
@@ -330,8 +326,8 @@ public class WynncraftApiHandler {
         System.out.println("DEBUG: processAspects called with " + map.size() + " aspects");
 
         // Authenticate with Mojang first
-        julianh06.wynnextras.utils.MojangAuth.getAuthData().thenAccept(authData -> {
-            if (authData == null) {
+        MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
+            if (wynnextrasToken == null) {
                 System.err.println("Failed to authenticate with Mojang for aspect upload");
                 // Don't show duplicate error - MojangAuth already showed the error
                 return;
@@ -340,7 +336,6 @@ public class WynncraftApiHandler {
             try {
                 // Build JSON payload
                 JsonObject payload = new JsonObject();
-                payload.addProperty("playerName", authData.username);
                 payload.addProperty("modVersion", CurrentVersionData.INSTANCE.version);
 
                 JsonArray aspectsArray = new JsonArray();
@@ -377,20 +372,15 @@ public class WynncraftApiHandler {
                 System.out.println("DEBUG: Payload size: " + payloadString.length() + " characters");
                 System.out.println("DEBUG: First 500 chars of payload: " + payloadString.substring(0, Math.min(500, payloadString.length())));
 
-                HttpClient client = HttpClient.newBuilder()
-                        .connectTimeout(Duration.ofSeconds(5))
-                        .build();
-
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://wynnextras.com/aspects"))
+                        .uri(URI.create("http://www.wynnextras.com/aspects"))
                         .header("Content-Type", "application/json")
-                        .header("Username", authData.username)
-                        .header("Server-ID", authData.serverId)
+                        .header("Authorization", wynnextrasToken)
                         .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
                         .timeout(Duration.ofSeconds(8))
                         .build();
 
-                client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                ApiRequestHelper.sendWithAuthRetry(request, payload)
                         .thenAccept(response -> {
                             int code = response.statusCode();
                             if (code == 200) {
@@ -411,7 +401,6 @@ public class WynncraftApiHandler {
                             System.err.println("Failed to upload personal aspects: " + ex.getMessage());
                             return null;
                         });
-
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -484,8 +473,8 @@ public class WynncraftApiHandler {
         }
 
         // Authenticate with Mojang first
-        julianh06.wynnextras.utils.MojangAuth.getAuthData().thenAccept(authData -> {
-            if (authData == null) {
+        MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
+            if (wynnextrasToken == null) {
                 System.err.println("Failed to authenticate with Mojang");
                 return;
             }
@@ -505,20 +494,15 @@ public class WynncraftApiHandler {
 
                 payload.add("aspects", aspectsArray);
 
-                HttpClient client = HttpClient.newBuilder()
-                        .connectTimeout(Duration.ofSeconds(5))
-                        .build();
-
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create("http://wynnextras.com/raid/loot-pool"))
                         .header("Content-Type", "application/json")
-                        .header("Username", authData.username)
-                        .header("Server-ID", authData.serverId)
+                        .header("Authorization", wynnextrasToken)
                         .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
                         .timeout(Duration.ofSeconds(8))
                         .build();
 
-                client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                ApiRequestHelper.sendWithAuthRetry(request, payload)
                         .thenAccept(response -> {
                             int code = response.statusCode();
                             if (code == 401) {
@@ -553,8 +537,8 @@ public class WynncraftApiHandler {
         if(!WynnExtrasConfig.INSTANCE.crowdSourceGambits) return;
 
         // Authenticate with Mojang first
-        julianh06.wynnextras.utils.MojangAuth.getAuthData().thenAccept(authData -> {
-            if (authData == null) {
+        julianh06.wynnextras.utils.MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
+            if (wynnextrasToken == null) {
                 System.err.println("Failed to authenticate with Mojang");
                 return;
             }
@@ -573,20 +557,15 @@ public class WynncraftApiHandler {
 
                 payload.add("gambits", gambitsArray);
 
-                HttpClient client = HttpClient.newBuilder()
-                        .connectTimeout(Duration.ofSeconds(5))
-                        .build();
-
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://wynnextras.com/gambit"))
+                        .uri(URI.create("http://www.wynnextras.com/gambit"))
                         .header("Content-Type", "application/json")
-                        .header("Username", authData.username)
-                        .header("Server-ID", authData.serverId)
+                        .header("Authorization", wynnextrasToken)
                         .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
                         .timeout(Duration.ofSeconds(8))
                         .build();
 
-                client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                ApiRequestHelper.sendWithAuthRetry(request, payload)
                         .thenAccept(response -> {
                             int code = response.statusCode();
                             if(code == 401) {
@@ -619,7 +598,7 @@ public class WynncraftApiHandler {
                     .build();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://wynnextras.com/aspects/leaderboard?limit=" + limit))
+                    .uri(URI.create("http://www.wynnextras.com/aspects/leaderboard?limit=" + limit))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
@@ -803,8 +782,8 @@ public class WynncraftApiHandler {
 
         // Validate camp code
         boolean validCamp = false;
-        for (String c : julianh06.wynnextras.features.aspects.LootrunLootPoolData.CAMP_CODES) {
-            if (c.equals(camp)) {
+        for (LootrunLootPoolPage.Camp c : LootrunLootPoolPage.Camp.values()) {
+            if (c.name().equals(camp)) {
                 validCamp = true;
                 break;
             }
@@ -815,8 +794,8 @@ public class WynncraftApiHandler {
         }
 
         // Authenticate with Mojang first
-        julianh06.wynnextras.utils.MojangAuth.getAuthData().thenAccept(authData -> {
-            if (authData == null) {
+        julianh06.wynnextras.utils.MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
+            if (wynnextrasToken == null) {
                 System.err.println("Failed to authenticate with Mojang");
                 return;
             }
@@ -848,13 +827,12 @@ public class WynncraftApiHandler {
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create("http://wynnextras.com/lootrun/loot-pool"))
                         .header("Content-Type", "application/json")
-                        .header("Username", authData.username)
-                        .header("Server-ID", authData.serverId)
+                        .header("Authorization", wynnextrasToken)
                         .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
                         .timeout(Duration.ofSeconds(8))
                         .build();
 
-                client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                ApiRequestHelper.sendWithAuthRetry(request, payload)
                         .thenAccept(response -> {
                             int code = response.statusCode();
                             if (code == 200) {
@@ -894,8 +872,8 @@ public class WynncraftApiHandler {
         try {
             // Validate camp code
             boolean validCamp = false;
-            for (String c : julianh06.wynnextras.features.aspects.LootrunLootPoolData.CAMP_CODES) {
-                if (c.equals(camp)) {
+            for (LootrunLootPoolPage.Camp c : LootrunLootPoolPage.Camp.values()) {
+                if (c.name().equals(camp)) {
                     validCamp = true;
                     break;
                 }

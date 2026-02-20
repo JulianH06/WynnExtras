@@ -40,7 +40,6 @@
     "PressableWidgetMixin",
     "RaidKindAccessor",
     "ScreenHandlerMixin",
-    "StringListCellMixin",
     "TerritoryInfoMixin",
     "TooltipFittingFeatureMixin",
     "TooltipUtilsMixin",

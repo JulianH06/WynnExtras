@@ -102,22 +102,24 @@ public class WynnExtrasConfigScreen extends Screen {
             .add(toggle("Fast Requeue", "Auto /pf on chest close",
                 () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
             .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
-                    () -> config.chiropTimer, v -> config.chiropTimer = v))
+                () -> config.chiropTimer, v -> config.chiropTimer = v))
+            .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests",
+                () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
             .sub("Loot Tracker")
                 .add(toggle("Enable Tracker", "Track raid loot drops",
                     () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
                 .add(toggle("Render in HUD", "Render the Overlay in the HUD",
                     () -> config.raidLootTrackerRenderInHud, v -> config.raidLootTrackerRenderInHud = v))
                 .add(toggle("Render in Inventory", "Render the Overlay while in the inventory",
-                        () -> config.raidLootTrackerRenderInInventory, v -> config.raidLootTrackerRenderInInventory = v))
+                    () -> config.raidLootTrackerRenderInInventory, v -> config.raidLootTrackerRenderInInventory = v))
                 .add(toggle("Render in Chat", "Render the Overlay while the chat is open",
-                        () -> config.raidLootTrackerRenderInChat, v -> config.raidLootTrackerRenderInChat = v))
+                    () -> config.raidLootTrackerRenderInChat, v -> config.raidLootTrackerRenderInChat = v))
                 .add(toggle("Only Near Chest", "Show only near reward chest",
                     () -> config.raidLootTrackerOnlyNearChest, v -> config.raidLootTrackerOnlyNearChest = v))
                 .add(toggle("Compact Mode", "Use compact display",
                     () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v))
                 .add(toggle("Show Background", "Show dark background",
-                        () -> config.raidLootTrackerBackground, v -> config.raidLootTrackerBackground = v));
+                    () -> config.raidLootTrackerBackground, v -> config.raidLootTrackerBackground = v));
 
         // ===== COMBAT =====
         category("Combat", 0xFFfda216)
@@ -191,8 +193,8 @@ public class WynnExtrasConfigScreen extends Screen {
         category("Chat", 0xFFc80069)
             .add(stringList("Blocked Words", "Hide messages with these",
                     () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
-            .add(toggle("Quick PV/GV Access", "Click on a players name or guild to open the pv/gv!",
-                    () -> config.chatClickOpensPV, v -> config.chatClickOpensPV = v))
+            .add(toggle("Quick PV/GV Access", "Click on a players name or guild to open the pv/gv! (EXPERIMENTAL)",
+                    () -> config.chatClickPV, v -> config.chatClickPV = v))
             .sub("Notifications")
                 .add(stringListDual("Notifier Words", "Trigger word and display text",
                         () -> config.notifierWords, v -> config.notifierWords = v, "Words"))

@@ -51,7 +51,7 @@ public class GambitData {
     /**
      * Get the last reset time (most recent RESET_HOUR:RESET_MINUTE CET before now)
      */
-    private long getLastResetTime() {
+    public static ZonedDateTime getLastResetTime() {
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
         ZonedDateTime resetToday = now.withHour(RESET_HOUR).withMinute(RESET_MINUTE).withSecond(0).withNano(0);
 
@@ -60,7 +60,7 @@ public class GambitData {
             resetToday = resetToday.minusDays(1);
         }
 
-        return resetToday.toInstant().toEpochMilli();
+        return resetToday;
     }
 
     /**
@@ -69,7 +69,7 @@ public class GambitData {
     public boolean hasToday() {
         if (gambits.isEmpty()) return false;
 
-        long lastReset = getLastResetTime();
+        long lastReset = getLastResetTime().toInstant().toEpochMilli();
         return savedTimestamp >= lastReset;
     }
 
