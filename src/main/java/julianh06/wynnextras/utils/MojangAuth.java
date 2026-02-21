@@ -75,11 +75,7 @@ public class MojangAuth {
                 } catch (Exception e) {
                     WynnExtras.LOGGER.error("Mojang authentication failed", e);
 
-                    McUtils.sendMessageToClient(
-                            WynnExtras.addWynnExtrasPrefix(
-                                    Text.literal("§cAuthentication failed. Please restart Minecraft.")
-                            )
-                    );
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal("§cAuthentication failed. Please restart Minecraft.")));
 
                     return null;
                 }
@@ -116,7 +112,6 @@ public class MojangAuth {
 
                     JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
                     wynnextrasToken = json.get("token").getAsString();
-                    McUtils.sendMessageToClient(Text.of(wynnextrasToken));
                     expiryTime = json.get("expiresIn").getAsLong();
 
                     WynnExtras.LOGGER.info("Received WynnExtras token from backend");
@@ -159,7 +154,6 @@ public class MojangAuth {
     public static CompletableFuture<String> getWEToken() {
         long now = System.currentTimeMillis();
 
-        McUtils.sendMessageToClient(Text.of("sending request with token: " + wynnextrasToken));
         if (wynnextrasToken != null && now < expiryTime) {
             return CompletableFuture.completedFuture(wynnextrasToken);
         }
