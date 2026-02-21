@@ -17,7 +17,6 @@
     "PerspectiveMixin",
     "RaidLootOverlayClickMixin",
     "RaidLootOverlayScreenMixin",
-    "WeightScaleBackgroundMixin",
     "Accessor.BannerBlockEntityRendererAccessor",
     "Accessor.DrawContextAccessor",
     "Accessor.HandledScreenAccessor",
