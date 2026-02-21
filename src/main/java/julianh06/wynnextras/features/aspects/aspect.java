@@ -2,7 +2,7 @@ package julianh06.wynnextras.features.aspects;
 
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -13,19 +13,9 @@ import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.Hand;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonArray;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 import java.util.*;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.text.Text;
+
 import net.minecraft.util.Pair;
 
 

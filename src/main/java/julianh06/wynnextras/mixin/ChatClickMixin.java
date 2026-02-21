@@ -32,7 +32,7 @@ public class ChatClickMixin {
 
     @Inject(method = "handleTextClick", at = @At("HEAD"), cancellable = true)
     private void onHandleTextClick(Style style, CallbackInfoReturnable<Boolean> cir) {
-        if (!WynnExtrasConfig.INSTANCE.chatClickOpensPV) return;
+        if (!WynnExtrasConfig.INSTANCE.chatClickPV) return;
         if (!Models.WorldState.onWorld()) return;
         if (style == null) return;
 

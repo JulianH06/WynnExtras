@@ -24,8 +24,7 @@
     "BankOverlay.DrawContextMixin",
     "BankOverlay.HandledScreenMixin",
     "Invoker.BannerBlockEntityRendererInvoker",
-    "Invoker.HandledScreenInvoker",
-    "Invoker.wmd$ItemOverlayFeatureInvoker"
+    "Invoker.HandledScreenInvoker"
   ],
   "mixins": [
     "CharacterModelMixin",

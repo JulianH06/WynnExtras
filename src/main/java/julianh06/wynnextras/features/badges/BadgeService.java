@@ -11,6 +11,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.event.WorldChangeEvent;
+import julianh06.wynnextras.utils.ApiRequestHelper;
 import julianh06.wynnextras.utils.MojangAuth;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
@@ -34,8 +35,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @WEModule
 public class BadgeService {
-    private static final String HEARTBEAT_URL = "http://wynnextras.com/wynnextras-users/heartbeat";
-    private static final String ACTIVE_URL = "http://wynnextras.com/wynnextras-users/active";
+    private static final String HEARTBEAT_URL = "https://wynnextras.com/wynnextras-users/heartbeat";
+    private static final String ACTIVE_URL = "https://wynnextras.com/wynnextras-users/active";
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final Gson GSON = new GsonBuilder().create();
 
@@ -57,35 +58,16 @@ public class BadgeService {
     }
 
     @SubscribeEvent
-    public void onWorldChange(WorldChangeEvent event) {
-        // Sync on world change
-        if (Models.WorldState.onWorld()) {
-            long now = System.currentTimeMillis();
-            if (now - lastSyncTime >= SYNC_INTERVAL_MS) {
-                syncWithServer();
-            }
-        }
-    }
-
-    @SubscribeEvent
     public void onTick(TickEvent event) {
         if (!Models.WorldState.onWorld()) return;
+
+        if (initialSyncDone) return;
 
         tickCounter++;
         if (tickCounter % 200 != 0) return; // Check every 10 seconds
 
-        // Initial sync
-        if (!initialSyncDone) {
-            initialSyncDone = true;
-            syncWithServer();
-            return;
-        }
-
-        // Periodic sync
-        long now = System.currentTimeMillis();
-        if (now - lastSyncTime >= SYNC_INTERVAL_MS) {
-            syncWithServer();
-        }
+        initialSyncDone = true;
+        syncWithServer();
     }
 
     private static void syncWithServer() {
@@ -93,13 +75,13 @@ public class BadgeService {
         lastSyncTime = System.currentTimeMillis();
 
         // Get authentication data
-        MojangAuth.getAuthData().thenAccept(authData -> {
-            if (authData == null) {
+        MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
+            if (wynnextrasToken == null) {
                 System.err.println("[WynnExtras] Failed to get auth data for badge sync");
                 return;
             }
 
-            sendHeartbeat(authData.username, authData.serverId);
+            sendHeartbeat(wynnextrasToken);
             getActiveUsers();
         }).exceptionally(e -> {
             System.err.println("[WynnExtras] Error getting auth data: " + e.getMessage());
@@ -127,7 +109,7 @@ public class BadgeService {
         });
     }
 
-    private static void sendHeartbeat(String username, String serverId) {
+    private static void sendHeartbeat(String wynnextrasToken) {
         CompletableFuture.runAsync(() -> {
             try {
                 // Build request body
@@ -137,16 +119,15 @@ public class BadgeService {
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(HEARTBEAT_URL))
                         .header("Content-Type", "application/json")
-                        .header("Username", username)
-                        .header("Server-ID", serverId)
+                        .header("Authorization", wynnextrasToken)
                         .POST(HttpRequest.BodyPublishers.ofString(GSON.toJson(body)))
                         .build();
 
-                HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() != 200) {
-                    System.err.println("[WynnExtras] Badge heartbeat failed: " + response.statusCode());
-                }
+                ApiRequestHelper.sendWithAuthRetry(request, body).thenAccept(response -> {
+                    if (response.statusCode() != 200) {
+                        System.err.println("[WynnExtras] Badge heartbeat failed: " + response.statusCode());
+                    }
+                });
             } catch (Exception e) {
                 System.err.println("[WynnExtras] Badge heartbeat error: " + e.getMessage());
             }
@@ -174,12 +155,5 @@ public class BadgeService {
         } catch (Exception e) {
             System.err.println("[WynnExtras] Error parsing badge response: " + e.getMessage());
         }
-    }
-
-    /**
-     * Force a sync with the server (useful for testing)
-     */
-    public static void forceSync() {
-        syncWithServer();
     }
 }

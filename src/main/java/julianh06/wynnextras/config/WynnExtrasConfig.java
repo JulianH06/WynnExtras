@@ -2,8 +2,6 @@ package julianh06.wynnextras.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import julianh06.wynnextras.config.gui.WynnExtrasConfigScreen;
-import julianh06.wynnextras.sound.ModSounds;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.util.Formatting;
@@ -116,9 +114,10 @@ public class WynnExtrasConfig {
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
     public boolean chiropTimer = false;
+    public boolean automaticAspectScanning = true;
 
     // ==================== CHAT CLICK ====================
-    public boolean chatClickOpensPV = true;
+    public boolean chatClickPV = false;
 
     // ==================== Crowd Sourcing ================
     public boolean uploadOwnAspects = true;
@@ -146,6 +145,7 @@ public class WynnExtrasConfig {
     public boolean removeFrontPersonView = false;
     public boolean sourceOfTruthToggle = false;
     public boolean territoryEstimateToggle = false;
+    public boolean removeChroma = false;
 
     // ==================== ENUMS ====================
     public enum TextColor {

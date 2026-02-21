@@ -33,8 +33,6 @@ import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.CappedValue;
 import com.wynntils.utils.wynn.ContainerUtils;
-import com.wynnventory.util.ItemStackUtils;
-import com.wynnventory.util.PriceTooltipHelper;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.inventory.BankOverlay;
@@ -54,6 +52,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
+import net.minecraft.client.gui.tooltip.TooltipPositioner;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.component.DataComponentTypes;
@@ -73,6 +72,8 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -166,13 +167,6 @@ public class BankOverlay2 extends WEHandledScreen {
         scissory1 = 0;
         scissorx2 = 0;
         scissory2 = 0;
-
-        // Wynnmod integration disabled for now - requires wynnmod to be a compile dependency
-         try {
-             if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-                 com.wynnmod.wynncraft.item.map.WynncraftItemDatabase.initialize();
-             }
-         } catch (Exception ignored) {}
     }
 
 
@@ -853,25 +847,6 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         context.getMatrices().pop();
-
-        try {
-            if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
-                ItemStack stack = hoveredSlot;
-
-                // Screen independent actions
-                if (WynnExtrasConfig.INSTANCE.wynnventoryOverlay) {
-                    Models.Item.getWynnItem(stack)
-                            .ifPresent(wynnItem -> renderPriceTooltip(context, mouseX, mouseY, stack));
-                }
-            }
-        } catch (Exception ignored) {}
-    }
-
-    private void renderPriceTooltip(DrawContext guiGraphics, int x, int y, ItemStack stack) {
-        List<Text> tooltips = ItemStackUtils.getTooltips(stack);
-        PriceTooltipHelper.renderPriceInfoTooltip(
-                guiGraphics, x, y, stack, tooltips, true
-        );
     }
 
     private static void drawTooltip(TextRenderer textRenderer, List<TooltipComponent> components, int x, int y, DrawContext context) {
@@ -1473,13 +1448,6 @@ public class BankOverlay2 extends WEHandledScreen {
 
             renderItemOverlays(ctx, stack, x + 1, y + 1);
             renderSearchOverlay(ctx, stack, x + 1, y + 1);
-
-            try {
-                if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-                    com.wynnmod.feature.item.ItemOverlayFeature itemOverlayFeature = com.wynnmod.feature.Feature.getInstance(com.wynnmod.feature.item.ItemOverlayFeature.class);
-                    ((wmd$ItemOverlayFeatureInvoker) itemOverlayFeature).callOnRenderItem(ctx, stack, x, y, false);
-                }
-            } catch (Exception ignored) {}
         }
 
         public void setStack(ItemStack stack) {

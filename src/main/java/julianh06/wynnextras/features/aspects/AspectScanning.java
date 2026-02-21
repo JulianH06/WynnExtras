@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.aspects;
 
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
@@ -224,32 +225,32 @@ public class AspectScanning {
             return;
         }
 
-        List<String> foundNames = new ArrayList<>();
-
         boolean samePage = true;
-        for(int i = 11; i < 16; i++) {
-            int arrayIndex = i - 11; // Map slot 11-15 to array index 0-4
-            Slot slot = screen.getScreenHandler().slots.get(i);
-            ItemStack cachedStack = maintracking.aspectsInChest[arrayIndex];
+        if(!maintracking.scanDone) {
+            for (int i = 11; i < 16; i++) {
+                int arrayIndex = i - 11; // Map slot 11-15 to array index 0-4
+                Slot slot = screen.getScreenHandler().slots.get(i);
+                ItemStack cachedStack = maintracking.aspectsInChest[arrayIndex];
 
-            // If cached is null, definitely not same page
-            if (cachedStack == null) {
-                samePage = false;
-                break;
-            }
-
-            if (slot.getStack().isEmpty()) {
-                if (!cachedStack.isEmpty()) {
+                // If cached is null, definitely not same page
+                if (cachedStack == null) {
                     samePage = false;
                     break;
                 }
-            } else {
-                // Safe null check for customName comparison
-                Text currentName = slot.getStack().getCustomName();
-                Text cachedName = cachedStack.getCustomName();
-                if (currentName == null || cachedName == null || !currentName.equals(cachedName)) {
-                    samePage = false;
-                    break;
+
+                if (slot.getStack().isEmpty()) {
+                    if (!cachedStack.isEmpty()) {
+                        samePage = false;
+                        break;
+                    }
+                } else {
+                    // Safe null check for customName comparison
+                    Text currentName = slot.getStack().getCustomName();
+                    Text cachedName = cachedStack.getCustomName();
+                    if (currentName == null || cachedName == null || !currentName.equals(cachedName)) {
+                        samePage = false;
+                        break;
+                    }
                 }
             }
         }
@@ -261,8 +262,10 @@ public class AspectScanning {
                 maintracking.pagesToGoBack--;
             }
             return;
-        } else if (maintracking.pagesToGoBack <= 0) {
+        } else if (maintracking.scanDone && maintracking.pagesToGoBack <= 0) {
             maintracking.returnedToFirstPage = true;
+            maintracking.lastAspectRewardScan = Time.now().timestamp();
+            return;
         }
 
         if(samePage) {
@@ -332,10 +335,7 @@ public class AspectScanning {
                 }
             }
 
-            if(bestTierLine == null) {
-                System.out.println("BEST TIER LINE IS NULL, CONTINUING");
-                continue;
-            }
+            if(bestTierLine == null) continue;
 
             aspectsToUpload.put(name, new Pair<>(bestTierLine, rarity));
         }
@@ -666,7 +666,7 @@ public class AspectScanning {
         }
     }
 
-    private static ZonedDateTime getCurrentLootpoolReset() {
+    public static ZonedDateTime getCurrentLootpoolReset() {
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
 
         ZonedDateTime thisFriday =

@@ -8,14 +8,15 @@ import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.Texture;
+import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.features.profileviewer.data.Aspect;
 import julianh06.wynnextras.features.profileviewer.data.User;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.Widget;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.component.DataComponentTypes;
@@ -84,7 +85,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
             if(PV.currentPlayerData.getUuid() == null) return;
 
-            WynncraftApiHandler.fetchPlayerAspectData(PV.currentPlayerData.getUuid().toString(), MinecraftClient.getInstance().player.getUuidAsString())
+            WynncraftApiHandler.fetchPlayerAspectData(PV.currentPlayerData.getUuid().toString())
                     .thenAccept(result -> {
                         if (result == null) return;
 
@@ -106,16 +107,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
         }
 
         switch (fetchStatus) {
-            case NOKEYSET -> {
-                ui.drawCenteredText("Authentication failed.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
-                ui.drawCenteredText("Please restart your game and try again.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);
-                return;
-            }
-            case FORBIDDEN -> {
-                ui.drawCenteredText("You need to upload your own aspects first to view other peoples aspects.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
-                ui.drawCenteredText("Run \"/we ScanAspects\" to upload your Aspects.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);
-                return;
-            }
             case UNAUTHORIZED -> {
                 ui.drawCenteredText("Authentication failed.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
                 ui.drawCenteredText("Please restart your game and try again.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);
@@ -618,16 +609,39 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                         Texture.HIGHLIGHT.height()
                 );
             }
-            if(playerAspect == null) return;
-            ItemStack stack = toItemStack(aspect, isMaxed(playerAspect), tierInt);
+
+            ItemStack stack;
+
+            if(playerAspect == null) stack = AspectUtils.toItemStack(aspect, false, 1);
+            else {
+                stack = AspectUtils.toItemStack(aspect, isMaxed(playerAspect), tierInt);
+                try {
+                    stack.set(DataComponentTypes.CUSTOM_NAME, Text.of(stack.getCustomName().getString() + " [Tier " + tierInt + "]"));
+                } catch (Exception ignored) {}
+            }
 
             ctx.getMatrices().push();
             ctx.getMatrices().scale(5 / ui.getScaleFactorF(), 5 / ui.getScaleFactorF(), 1);
             ctx.drawItem(stack, x / 5 + 2, y / 5 + 2);
             ctx.getMatrices().pop();
 
-            ui.drawCenteredText((!progress.equals("MAX") ? String.valueOf(amount) : progress) + (!progress.equals("MAX") ? "/" + neededForNextLevel : ""), x + 50, y + 120);
-            ui.drawCenteredText(tier, x + 50, y - 25);
+            if(playerAspect == null) {
+                RenderUtils.drawTexturedRectWithColor(
+                        ctx.getMatrices(),
+                        Texture.HIGHLIGHT.resource(),
+                        CustomColor.fromHexString("000000"),
+                        x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), -1000, 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
+                        highlightTexture.get().ordinal() * 18 + 18, 0,
+                        18, 18,
+                        Texture.HIGHLIGHT.width(),
+                        Texture.HIGHLIGHT.height()
+                );
+                ui.drawCenteredText("Not", x + 50, y, CustomColor.fromHexString("808080"));
+                ui.drawCenteredText("Unlocked", x + 50, y + 100, CustomColor.fromHexString("808080"), 2.5f);
+            } else {
+                ui.drawCenteredText(tier, x + 50, y - 25);
+                ui.drawCenteredText((!progress.equals("MAX") ? String.valueOf(amount) : progress) + (!progress.equals("MAX") ? "/" + neededForNextLevel : ""), x + 50, y + 120);
+            }
 
             if(hovered) {
                 currentHovered = stack;

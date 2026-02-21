@@ -4,6 +4,7 @@ import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.Raids;
@@ -64,16 +65,16 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
         if(ranking != null) {
 
             NOTGRank = ranking.getOrDefault("grootslangCompletion", -1L);
-            if(NOTGRank <= 100 && NOTGRank > 0) notgColor = CommonColors.RAINBOW;
+            if(NOTGRank <= 100 && NOTGRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgColor = CommonColors.RAINBOW;
 
             NOLRank = ranking.getOrDefault("orphionCompletion", -1L);
-            if(NOLRank <= 100 && NOLRank > 0) nolColor = CommonColors.RAINBOW;
+            if(NOLRank <= 100 && NOLRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolColor = CommonColors.RAINBOW;
 
             TCCRank = ranking.getOrDefault("colossusCompletion", -1L);
-            if(TCCRank <= 100 && TCCRank > 0) tccColor = CommonColors.RAINBOW;
+            if(TCCRank <= 100 && TCCRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccColor = CommonColors.RAINBOW;
 
             TNARank = ranking.getOrDefault("namelessCompletion", -1L);
-            if(TNARank <= 100 && TNARank > 0) tnaColor = CommonColors.RAINBOW;
+            if(TNARank <= 100 && TNARank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaColor = CommonColors.RAINBOW;
 
             if(NOTGRank != -1) {
                 ui.drawText("Rank #" + formatter.format(NOTGRank), x + 345f, y + 255f, notgColor, 3.9f);

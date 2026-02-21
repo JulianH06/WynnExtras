@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.data;
 
 import julianh06.wynnextras.features.profileviewer.PV;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 
 import java.util.*;
 

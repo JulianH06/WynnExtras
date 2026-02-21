@@ -1,7 +1,6 @@
-package julianh06.wynnextras.config.gui;
+package julianh06.wynnextras.config;
 
 import com.wynntils.utils.mc.McUtils;
-import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -95,7 +94,9 @@ public class WynnExtrasConfigScreen extends Screen {
             .add(toggle("Fast Requeue", "Auto /pf on chest close",
                 () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
             .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
-                    () -> config.chiropTimer, v -> config.chiropTimer = v))
+                () -> config.chiropTimer, v -> config.chiropTimer = v))
+            .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests",
+                () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
             .sub("Loot Tracker")
                 .add(toggle("Enable Tracker", "Track raid loot drops",
                     () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
@@ -175,9 +176,9 @@ public class WynnExtrasConfigScreen extends Screen {
                 // ===== CHAT =====
         category("Chat", 0xFFc80069)
             .add(stringList("Blocked Words", "Hide messages with these",
-                    () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
-            .add(toggle("Quick PV/GV Access", "Click on a players name or guild to open the pv/gv!",
-                    () -> config.chatClickOpensPV, v -> config.chatClickOpensPV = v))
+                () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
+            .add(toggle("Quick PV/GV Access", "Click on a players name or guild to open the pv/gv! (EXPERIMENTAL)",
+                () -> config.chatClickPV, v -> config.chatClickPV = v))
             .sub("Notifications")
                 .add(stringListDual("Notifier Words", "Trigger word and display text",
                         () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
@@ -232,18 +233,54 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // ===== MISC =====
         category("Misc", 0xFF0872bc)
-                .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
-                        () -> config.differentGUIScale, v -> config.differentGUIScale = v))
-                .add(slider("GUI Scale", "Custom GUI scale value",
-                        1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
-                .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
-                        () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
-                .add(toggle("PV Dark Mode", "Dark theme for profile viewer",
-                        () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
-                .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
-                        () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
-                .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
-                        () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v));
+            .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
+                () -> config.differentGUIScale, v -> config.differentGUIScale = v))
+            .add(slider("GUI Scale", "Custom GUI scale value",
+                1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
+            .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
+                () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
+            .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
+                () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
+            .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
+                () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
+            .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
+                () -> config.badgesEnabled, v -> config.badgesEnabled = v))
+            .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
+                () -> config.removeChroma, v -> config.removeChroma = v))
+            .sub("Dark Mode Toggles")
+            .add(toggle("Bank Overlay", "Dark mode for the Bank Overlay",
+                    () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
+            .add(toggle("Profile Viewer", "Dark mode for the Profile viewer",
+                    () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
+            .add(toggle("Lootpool & Aspect pages", "Dark mode for the Lootpool & Aspect pages",
+                    () -> config.lootPoolPagesDarkMode, v -> config.lootPoolPagesDarkMode = v))
+            .add(toggle("Crafting helper", "Dark mode for the Crafting helper",
+                    () -> config.craftingHelperDarkMode, v -> config.craftingHelperDarkMode = v))
+            .add(toggle("Main menu", "Dark mode for the WynnExtras main menu (/we)",
+                    () -> config.mainMenuDarkMode, v -> config.mainMenuDarkMode = v))
+            .add(button("Enable for all", "Enable the Dark mode for all options above",
+                v -> {
+                    config.darkmodeToggle = true;
+                    config.pvDarkmodeToggle = true;
+                    config.lootPoolPagesDarkMode = true;
+                    config.craftingHelperDarkMode = true;
+                    config.mainMenuDarkMode = true; }, "Enable"))
+            .add(button("Disable for all", "Disable the Dark mode for all options above",
+                v -> {
+                    config.darkmodeToggle = false;
+                    config.pvDarkmodeToggle = false;
+                    config.lootPoolPagesDarkMode = false;
+                    config.craftingHelperDarkMode = false;
+                    config.mainMenuDarkMode = false; }, "Disable"))
+            .sub("Crowd sourcing")
+            .add(toggle("Upload your own Aspects", "Upload your aspect data so you can see your personal lootpool scores",
+                    () -> config.uploadOwnAspects, v -> config.uploadOwnAspects = v))
+            .add(toggle("Lootrun lootpools", "Help gather the current lootrun lootpool so others can see it with /we lootruns",
+                    () -> config.crowdSourceLootrunLootpools, v -> config.crowdSourceLootrunLootpools = v))
+            .add(toggle("Raid lootpools", "Help gather the current raid lootpool so others can see it with /we lootpool",
+                    () -> config.crowdSourceRaidLootpools, v -> config.crowdSourceRaidLootpools = v))
+            .add(toggle("Gambits", "Help gather the current gambits so others can see them with /we gambits",
+                    () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v));
     }
 
     // ==================== BUILDER HELPERS ====================

@@ -2,16 +2,15 @@ package julianh06.wynnextras.features.abilitytree;
 
 import com.google.gson.*;
 import com.wynntils.core.components.Models;
-import com.wynntils.mc.mixin.GuiGraphicsMixin;
 import com.wynntils.models.character.type.SavableSkillPointSet;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
-import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import julianh06.wynnextras.utils.UI.WEScreen;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;

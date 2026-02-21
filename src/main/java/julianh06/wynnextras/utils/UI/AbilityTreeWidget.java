@@ -11,7 +11,8 @@ import net.minecraft.util.Identifier;
 
 import java.util.*;
 
-import static julianh06.wynnextras.features.profileviewer.WynncraftApiHandler.parseStyledHtml;
+import static julianh06.wynnextras.utils.WynncraftApiHandler.parseStyledHtml;
+
 
 // Passe Imports/Packages an dein Projekt an.
 
@@ -266,8 +267,7 @@ public class AbilityTreeWidget extends Widget {
                 if (ability != null && ability.description != null && ability.name != null) {
                     List<String> description = new ArrayList<>(ability.description);
                     description.add(0, ability.name);
-                    ctx.drawTooltip(MinecraftClient.getInstance().textRenderer,
-                            parseStyledHtml(description), mouseX, mouseY);
+                    ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, parseStyledHtml(description), mouseX, mouseY);
                 }
             }
         }

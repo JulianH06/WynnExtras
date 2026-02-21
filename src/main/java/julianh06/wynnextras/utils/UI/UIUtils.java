@@ -86,7 +86,6 @@ public final class UIUtils {
         this.yStart = yStart;
     }
 
-    // --- Kontext aktualisieren (bei jedem Render) ---
     public void updateContext(DrawContext ctx, double scaleFactor, int xStart, int yStart) {
         this.drawContext = ctx;
         this.scaleFactor = scaleFactor;
@@ -94,7 +93,6 @@ public final class UIUtils {
         this.yStart = yStart;
     }
 
-    // --- Getter / Setter ---
     public double getScaleFactor() { return scaleFactor; }
     public float getScaleFactorF() { return (float) scaleFactor; }
     public void setScaleFactor(double scaleFactor) { this.scaleFactor = scaleFactor; }
@@ -102,13 +100,12 @@ public final class UIUtils {
     public int getYStart() { return yStart; }
     public void setOffset(int xStart, int yStart) { this.xStart = xStart; this.yStart = yStart; }
 
-    // --- Coordinate transforms (logical -> screen pixels) ---
+    //Coordinate transforms (logical -> screen pixels)
     public float sx(float logicalX) { return xStart + (float)(logicalX / scaleFactor); }
     public float sy(float logicalY) { return yStart + (float)(logicalY / scaleFactor); }
     public int sw(float logicalW) { return Math.max(0, (int)Math.round(logicalW / scaleFactor)); }
     public int sh(float logicalH) { return Math.max(0, (int)Math.round(logicalH / scaleFactor)); }
 
-    // --- Drawing helpers: Background / Text / Image ---
     public void drawBackground() {
         if (MinecraftClient.getInstance().currentScreen == null) return;
         RenderUtils.drawRect(
@@ -195,26 +192,134 @@ public final class UIUtils {
         drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f);
     }
 
-    public void drawImage(Identifier texture, float x, float y, float width, float height) {
-        RenderUtils.drawTexturedRect(
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            int textureWidth, int textureHeight,
+            float alpha, CustomColor color
+    ) {
+        RenderUtils.drawTexturedRectWithColor(
                 drawContext.getMatrices(),
                 texture,
-                sx(x), sy(y),
+                color.withAlpha(alpha),
+                sx(x), sy(y), 0f,
                 sw(width), sh(height),
-                sw(width), sh(height)
+                (int) u, (int) v,
+                (int) uWidth, (int) vHeight,
+                textureWidth, textureHeight
+        );
+    }
+
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            int textureWidth, int textureHeight,
+            float alpha
+    ) {
+        drawImage(texture, x, y, width, height, u, v, uWidth, vHeight, textureWidth, textureHeight, alpha, CustomColor.NONE);
+    }
+
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight
+    ) {
+        drawImage(
+                texture,
+                x, y, width, height,
+                u, v,
+                uWidth, vHeight,
+                (int) uWidth, (int) vHeight,
+                1.0f
+        );
+    }
+
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            float alpha
+    ) {
+        drawImage(
+                texture,
+                x, y, width, height,
+                u, v,
+                uWidth, vHeight,
+                (int) uWidth, (int) vHeight,
+                alpha
+        );
+    }
+
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            CustomColor color
+    ) {
+        drawImage(
+                texture,
+                x, y, width, height,
+                u, v,
+                uWidth, vHeight,
+                (int) width, (int) height,
+                1, color
+        );
+    }
+
+    public void drawImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            int textureWidth, int textureHeight
+    ) {
+        drawImage(
+                texture,
+                x, y, width, height,
+                u, v,
+                uWidth, vHeight,
+                textureWidth, textureHeight,
+                1.0f
+        );
+    }
+
+    public void drawImage(Identifier texture, float x, float y, float width, float height, CustomColor color) {
+        drawImage(
+                texture,
+                x, y, width, height,
+                0, 0,
+                width, height,
+                (int) width, (int) height,
+                1, color
         );
     }
 
     public void drawImage(Identifier texture, float x, float y, float width, float height, float alpha) {
-        drawTexturedRect(
-                drawContext.getMatrices(),
+        drawImage(
                 texture,
-                sx(x), sy(y), 0.0F,
-                sw(width), sh(height), 0, 0,
-                sw(width), sh(height),
-                sw(width), sh(height),
+                x, y, width, height,
+                0, 0,
+                width, height,
+                (int) width, (int) height,
                 alpha
         );
+    }
+
+    public void drawImage(Identifier texture, float x, float y, float width, float height) {
+        drawImage(texture, x, y, width, height, 1.0f);
     }
 
     public static void drawTexturedRect(MatrixStack matrixStack, Identifier tex, float x, float y, float z, float width, float height, int uOffset, int vOffset, int u, int v, int textureWidth, int textureHeight, float alpha) {
