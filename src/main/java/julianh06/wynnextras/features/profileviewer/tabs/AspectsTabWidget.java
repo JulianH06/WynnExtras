@@ -18,6 +18,7 @@ import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.tooltip.TooltipType;
@@ -566,7 +567,12 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             ItemStack stack;
 
             if(playerAspect == null) stack = AspectUtils.toItemStack(aspect, false, 0);
-            else stack = AspectUtils.toItemStack(aspect, isMaxed(playerAspect), tierInt);
+            else {
+                stack = AspectUtils.toItemStack(aspect, isMaxed(playerAspect), tierInt);
+                try {
+                    stack.set(DataComponentTypes.CUSTOM_NAME, Text.of(stack.getCustomName().getString() + " [Tier " + tierInt + "]"));
+                } catch (Exception ignored) {}
+            }
 
             ctx.getMatrices().pushMatrix();
             ctx.getMatrices().scale(5 / ui.getScaleFactorF(), 5 / ui.getScaleFactorF());
