@@ -75,11 +75,7 @@ public class MojangAuth {
                 } catch (Exception e) {
                     WynnExtras.LOGGER.error("Mojang authentication failed", e);
 
-                    McUtils.sendMessageToClient(
-                            WynnExtras.addWynnExtrasPrefix(
-                                Text.literal("§cAuthentication failed. Please restart Minecraft.")
-                            )
-                    );
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal("§cAuthentication failed. Please restart Minecraft.")));
 
                     return null;
                 }
