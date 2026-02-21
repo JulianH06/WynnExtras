@@ -5,10 +5,7 @@ import com.google.gson.JsonObject;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.features.aspects.AspectScanning;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.LootrunLootPoolData;
 import julianh06.wynnextras.features.aspects.LootrunScanning;
@@ -22,15 +19,16 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class LootrunLootPoolPage extends PageWidget {
     private static Map<String, List<LootrunLootPoolData.LootrunItem>> crowdsourcedLootPools = new HashMap<>();
     private final static Map<Camp, ZonedDateTime> lastCrowdsourceFetch = new HashMap<>();
+    private static final Map<Camp, Boolean> fetchRunning = new HashMap<>();
+    private final static Map<Camp, Boolean> hasOldLootpool = new HashMap<>();
 
     public enum Camp { SI, SE, CORK, COTL, MH }
 
@@ -70,14 +68,32 @@ public class LootrunLootPoolPage extends PageWidget {
                 continue;
             }
 
+            if (fetchRunning.getOrDefault(camp, false)) continue;
+
+            fetchRunning.put(camp, true);
+
+            System.out.println("starting fetch for " + camp);
             lastCrowdsourceFetch.put(camp, now);
-
             WynncraftApiHandler.fetchCrowdsourcedLootrunLootPool(camp.name()).thenAccept(result -> {
-                if (result != null && !result.isEmpty()) {
-                    crowdsourcedLootPools.put(camp.name(), result);
+                fetchRunning.put(camp, false);
 
-                    LootrunLootPoolData.INSTANCE.saveLootPool(camp.name(), result);
+                if (result == null || result.isEmpty()) return;
+
+                List<LootrunLootPoolData.LootrunItem> oldItems = crowdsourcedLootPools.get(camp.name());
+
+                lastCrowdsourceFetch.put(camp, now);
+                if (isSamePool(oldItems, result)) {
+                    System.out.println("still old pool, retry in 30s");
+                    hasOldLootpool.put(camp, true);
+                    return;
                 }
+
+                System.out.println("NEW POOL for " + camp);
+
+                crowdsourcedLootPools.put(camp.name(), result);
+                hasOldLootpool.put(camp, false);
+
+                LootrunLootPoolData.INSTANCE.saveLootPool(camp.name(), result);
             });
         }
 
@@ -120,6 +136,20 @@ public class LootrunLootPoolPage extends PageWidget {
             lootPoolWidget.draw(context, mouseX, mouseY, tickDelta, ui);
             widgetX += widgetWidth + spacing;
         }
+    }
+
+    private static boolean isSamePool(List<LootrunLootPoolData.LootrunItem> oldItems, List<LootrunLootPoolData.LootrunItem> newItems) {
+        if (oldItems == null || newItems == null) return false;
+        if (oldItems.size() != newItems.size()) return false;
+
+        Set<String> oldNames = oldItems.stream().map(i -> i.name).collect(Collectors.toSet());
+
+        for (LootrunLootPoolData.LootrunItem item : newItems) {
+            if (!oldNames.contains(item.name)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -602,9 +632,11 @@ public class LootrunLootPoolPage extends PageWidget {
     private static boolean shouldFetchLootPool(Camp camp) {
         ZonedDateTime currentReset = LootrunScanning.getCurrentLootrunReset();
         ZonedDateTime lastFetch = lastCrowdsourceFetch.get(camp);
-
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-        if (lastFetch != null && lastFetch.plusSeconds(30).isAfter(now)) return false;
+
+        if(hasOldLootpool.get(camp) != null && hasOldLootpool.get(camp)) return lastFetch.plusSeconds(30).isBefore(now);
+
+        if(lastFetch != null && lastFetch.plusSeconds(30).isAfter(now)) return false;
 
         return lastFetch == null || currentReset.isAfter(lastFetch);
     }

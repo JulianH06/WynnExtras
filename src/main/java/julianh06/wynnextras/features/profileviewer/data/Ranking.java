@@ -31,6 +31,17 @@ public class Ranking {
     private int armouringLevel;
     private int woodworkingLevel;
 
+    private int huntedContent;
+    private int craftsmanContent;
+    private int huicContent;
+    private int ironmanContent;
+    private int ultimateIronmanContent;
+    private int hardcoreLegacyLevel;
+    private int hardcoreContent;
+    private int huichContent;
+    private int hicContent;
+    private int hichContent;
+
     public int getOrphionSrPlayers() {
         return orphionSrPlayers;
     }
@@ -261,5 +272,85 @@ public class Ranking {
 
     public void setWoodworkingLevel(int woodworkingLevel) {
         this.woodworkingLevel = woodworkingLevel;
+    }
+
+    public int getHuntedContent() {
+        return huntedContent;
+    }
+
+    public void setHuntedContent(int huntedContent) {
+        this.huntedContent = huntedContent;
+    }
+
+    public int getCraftsmanContent() {
+        return craftsmanContent;
+    }
+
+    public void setCraftsmanContent(int craftsmanContent) {
+        this.craftsmanContent = craftsmanContent;
+    }
+
+    public int getHuicContent() {
+        return huicContent;
+    }
+
+    public void setHuicContent(int huicContent) {
+        this.huicContent = huicContent;
+    }
+
+    public int getIronmanContent() {
+        return ironmanContent;
+    }
+
+    public void setIronmanContent(int ironmanContent) {
+        this.ironmanContent = ironmanContent;
+    }
+
+    public int getUltimateIronmanContent() {
+        return ultimateIronmanContent;
+    }
+
+    public void setUltimateIronmanContent(int ultimateIronmanContent) {
+        this.ultimateIronmanContent = ultimateIronmanContent;
+    }
+
+    public int getHardcoreLegacyLevel() {
+        return hardcoreLegacyLevel;
+    }
+
+    public void setHardcoreLegacyLevel(int hardcoreLegacyLevel) {
+        this.hardcoreLegacyLevel = hardcoreLegacyLevel;
+    }
+
+    public int getHardcoreContent() {
+        return hardcoreContent;
+    }
+
+    public void setHardcoreContent(int hardcoreContent) {
+        this.hardcoreContent = hardcoreContent;
+    }
+
+    public int getHuichContent() {
+        return huichContent;
+    }
+
+    public void setHuichContent(int huichContent) {
+        this.huichContent = huichContent;
+    }
+
+    public int getHicContent() {
+        return hicContent;
+    }
+
+    public void setHicContent(int hicContent) {
+        this.hicContent = hicContent;
+    }
+
+    public int getHichContent() {
+        return hichContent;
+    }
+
+    public void setHichContent(int hichContent) {
+        this.hichContent = hichContent;
     }
 }

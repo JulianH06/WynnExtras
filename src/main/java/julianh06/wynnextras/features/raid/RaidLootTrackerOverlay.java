@@ -287,7 +287,7 @@ public class RaidLootTrackerOverlay {
             y = drawCompactLine(context, LINE_BAGS, "Bags", String.valueOf(displayData.totalBags), BAG_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_TOMES, "Tomes", String.valueOf(displayData.totalTomes), TOME_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_CHARMS, "Charms", String.valueOf(displayData.totalCharms), CHARM_COLOR, y, inInventory);
-            y = drawCompactLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.totalAspects), ASPECT_COLOR, y, inInventory);
+            y = drawCompactLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), ASPECT_COLOR, y, inInventory);
             drawCompactLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
         } else {
             // Full mode
@@ -311,7 +311,7 @@ public class RaidLootTrackerOverlay {
 
             y = drawLine(context, LINE_CHARMS, "Charms", String.valueOf(displayData.totalCharms), CHARM_COLOR, y, inInventory);
 
-            y = drawLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.totalAspects), ASPECT_COLOR, y, inInventory);
+            y = drawLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), ASPECT_COLOR, y, inInventory);
             y = drawLine(context, LINE_ASPECTS_MYTHIC, "  Mythic", String.valueOf(displayData.mythicAspects), ASPECT_COLOR, y, inInventory);
             y = drawLine(context, LINE_ASPECTS_FABLED, "  Fabled", String.valueOf(displayData.fabledAspects), ASPECT_COLOR, y, inInventory);
             y = drawLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), ASPECT_COLOR, y, inInventory);
@@ -336,7 +336,6 @@ public class RaidLootTrackerOverlay {
         agg.mythicTomes = data.mythicTomes;
         agg.fabledTomes = data.fabledTomes;
         agg.totalCharms = data.totalCharms;
-        agg.totalAspects = data.totalAspects;
         agg.mythicAspects = data.mythicAspects;
         agg.fabledAspects = data.fabledAspects;
         agg.legendaryAspects = data.legendaryAspects;
@@ -387,7 +386,7 @@ public class RaidLootTrackerOverlay {
         if (compact) {
             dataLines = 7; // Ems, Amps, Bags, Tomes, Charms, Aspects, Runs
         } else {
-            dataLines = 18; // Emeralds, Amplifiers(4), Bags(4), Tomes(3), Charms, Aspects(5), Runs
+            dataLines = 17; // Emeralds, Amplifiers(4), Bags(4), Tomes(3), Charms, Aspects(4), Runs
         }
 
         // Subtract hidden lines when not showing them (not in inventory)

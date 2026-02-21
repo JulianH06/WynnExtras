@@ -268,7 +268,7 @@ public class WynncraftApiHandler {
                     .build();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://wynnextras.com/aspects?playerUuid=" + playerUUID))
+                    .uri(URI.create("https://wynnextras.com/aspects?playerUuid=" + playerUUID))
                     .timeout(Duration.ofSeconds(8))
                     .GET()
                     .build();
@@ -373,7 +373,7 @@ public class WynncraftApiHandler {
                 System.out.println("DEBUG: First 500 chars of payload: " + payloadString.substring(0, Math.min(500, payloadString.length())));
 
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://www.wynnextras.com/aspects"))
+                        .uri(URI.create("https://wynnextras.com/aspects"))
                         .header("Content-Type", "application/json")
                         .header("Authorization", wynnextrasToken)
                         .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
@@ -495,7 +495,7 @@ public class WynncraftApiHandler {
                 payload.add("aspects", aspectsArray);
 
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://wynnextras.com/raid/loot-pool"))
+                        .uri(URI.create("https://wynnextras.com/raid/loot-pool"))
                         .header("Content-Type", "application/json")
                         .header("Authorization", wynnextrasToken)
                         .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
@@ -558,7 +558,7 @@ public class WynncraftApiHandler {
                 payload.add("gambits", gambitsArray);
 
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://www.wynnextras.com/gambit"))
+                        .uri(URI.create("https://wynnextras.com/gambit"))
                         .header("Content-Type", "application/json")
                         .header("Authorization", wynnextrasToken)
                         .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
@@ -598,7 +598,7 @@ public class WynncraftApiHandler {
                     .build();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://www.wynnextras.com/aspects/leaderboard?limit=" + limit))
+                    .uri(URI.create("https://wynnextras.com/aspects/leaderboard?limit=" + limit))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
@@ -665,7 +665,7 @@ public class WynncraftApiHandler {
                     .build();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://wynnextras.com/raid/loot-pool?raidType=" + raidType))
+                    .uri(URI.create("https://wynnextras.com/raid/loot-pool?raidType=" + raidType))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
@@ -723,7 +723,7 @@ public class WynncraftApiHandler {
                     .build();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://wynnextras.com/gambit"))
+                    .uri(URI.create("https://wynnextras.com/gambit"))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
@@ -820,12 +820,8 @@ public class WynncraftApiHandler {
 
                 payload.add("items", itemsArray);
 
-                HttpClient client = HttpClient.newBuilder()
-                        .connectTimeout(Duration.ofSeconds(5))
-                        .build();
-
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://wynnextras.com/lootrun/loot-pool"))
+                        .uri(URI.create("https://wynnextras.com/lootrun/loot-pool"))
                         .header("Content-Type", "application/json")
                         .header("Authorization", wynnextrasToken)
                         .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
@@ -888,7 +884,7 @@ public class WynncraftApiHandler {
                     .build();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://wynnextras.com/lootrun/loot-pool?lootrunType=" + camp))
+                    .uri(URI.create("https://wynnextras.com/lootrun/loot-pool?lootrunType=" + camp))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();

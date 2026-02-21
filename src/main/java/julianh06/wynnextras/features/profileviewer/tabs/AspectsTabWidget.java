@@ -490,7 +490,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                 progress = String.valueOf(playerAspect.getAmount());
 
                 if (aspect.getRarity().equals("mythic")) {
-                    color = CustomColor.fromHexString("AA00AA");
                     if (playerAspect.getAmount() >= 15) {
                         progress = "MAX";
                         tierInt = 3;
@@ -507,7 +506,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                     }
                 }
                 if (aspect.getRarity().equals("fabled")) {
-                    color = CustomColor.fromHexString("FF5555");
                     if (playerAspect.getAmount() >= 75) {
                         tierInt = 3;
                         progress = "MAX";
@@ -524,7 +522,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                     }
                 }
                 if (aspect.getRarity().equals("legendary")) {
-                    color = CustomColor.fromHexString("55FFFF");
                     if (playerAspect.getAmount() >= 150) {
                         tierInt = 4;
                         progress = "MAX";
@@ -546,26 +543,51 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                     }
                 }
             }
+            if (aspect.getRarity().equals("mythic")) {
+                color = CustomColor.fromHexString("AA00AA");
+            }
+            if (aspect.getRarity().equals("fabled")) {
+                color = CustomColor.fromHexString("FF5555");
+            }
+            if (aspect.getRarity().equals("legendary")) {
+                color = CustomColor.fromHexString("55FFFF");
+            }
+
             if (!Objects.equals(color, CustomColor.NONE)) {
                 RenderUtils.drawTexturedRect(
-                        ctx,
-                        Texture.HIGHLIGHT.identifier(),
-                        color, x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
-                        highlightTexture.get().ordinal() * 18,
-                        0.0F, 18.0F, 18.0F,
-                        Texture.HIGHLIGHT.width(),
-                        Texture.HIGHLIGHT.height());
+                    ctx,
+                    Texture.HIGHLIGHT.identifier(),
+                    color, x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
+                    highlightTexture.get().ordinal() * 18,
+                    0.0F, 18.0F, 18.0F,
+                    Texture.HIGHLIGHT.width(),
+                    Texture.HIGHLIGHT.height());
             }
-            if(playerAspect == null) return;
-            ItemStack stack = AspectUtils.toItemStack(aspect, isMaxed(playerAspect), tierInt);
+            ItemStack stack;
+
+            if(playerAspect == null) stack = AspectUtils.toItemStack(aspect, false, 0);
+            else stack = AspectUtils.toItemStack(aspect, isMaxed(playerAspect), tierInt);
 
             ctx.getMatrices().pushMatrix();
             ctx.getMatrices().scale(5 / ui.getScaleFactorF(), 5 / ui.getScaleFactorF());
             ctx.drawItem(stack, x / 5 + 2, y / 5 + 2);
             ctx.getMatrices().popMatrix();
 
-            ui.drawCenteredText((!progress.equals("MAX") ? String.valueOf(amount) : progress) + (!progress.equals("MAX") ? "/" + neededForNextLevel : ""), x + 50, y + 120);
-            ui.drawCenteredText(tier, x + 50, y - 25);
+            if(playerAspect == null) {
+                RenderUtils.drawTexturedRect(
+                    ctx,
+                    Texture.HIGHLIGHT.identifier(),
+                    CustomColor.fromHexString("000000"), x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
+                    highlightTexture.get().ordinal() * 18,
+                    0.0F, 18.0F, 18.0F,
+                    Texture.HIGHLIGHT.width(),
+                    Texture.HIGHLIGHT.height());
+                ui.drawCenteredText("Not", x + 50, y, CustomColor.fromHexString("808080"));
+                ui.drawCenteredText("Unlocked", x + 50, y + 100, CustomColor.fromHexString("808080"), 2.5f);
+            } else {
+                ui.drawCenteredText(tier, x + 50, y - 25);
+                ui.drawCenteredText((!progress.equals("MAX") ? String.valueOf(amount) : progress) + (!progress.equals("MAX") ? "/" + neededForNextLevel : ""), x + 50, y + 120);
+            }
 
             if(hovered) {
                 currentHovered = stack;

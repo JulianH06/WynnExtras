@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.aspects;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.type.Time;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -24,6 +25,8 @@ import java.util.List;
 
 @WEModule
 public class maintracking {
+    public static long lastAspectRewardScan = 0;
+
     // Subcommand: /we aspects scan
     private static SubCommand scanSubCmd = new SubCommand(
             "scan",
@@ -323,7 +326,7 @@ public class maintracking {
             }
 
             // Reward chest: scan aspects from slots 11-15 and upload
-            if(inRaidChest && !(scanDone && returnedToFirstPage) && WynnExtrasConfig.INSTANCE.automaticAspectScanning){
+            if(inRaidChest && !(scanDone && returnedToFirstPage) && WynnExtrasConfig.INSTANCE.automaticAspectScanning && Time.now().timestamp() > lastAspectRewardScan + 60_000){
                 try {
                     AspectScanning.AspectsInRaidChest();
                 } catch (Exception e) {

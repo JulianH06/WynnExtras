@@ -29,12 +29,15 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static julianh06.wynnextras.features.aspects.AspectUtils.*;
 
 public class LootPoolPage extends PageWidget {
     private final static java.util.Map<String, List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry>> crowdsourcedLootPools = new java.util.HashMap<>();
     private final static Map<Raid, ZonedDateTime> lastCrowdsourceFetch = new HashMap<>();
+    private static final Map<Raid, Boolean> fetchRunning = new HashMap<>();
+    private final static Map<Raid, Boolean> hasOldLootpool = new HashMap<>();
 
     private final static java.util.Map<String, com.mojang.datafixers.util.Pair<Integer, String>> personalAspectProgress = new java.util.HashMap<>();
     private static boolean fetchedPersonalProgress = false;
@@ -84,28 +87,37 @@ public class LootPoolPage extends PageWidget {
         hoveredTooltip.clear();
 
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-        int i = 0;
         for (Raid raidType : Raid.values()) {
             if (!shouldFetchRaid(raidType)) {
                 continue;
             }
 
-            int finalI = i;
-            lastCrowdsourceFetch.put(raidType, AspectScanning.getCurrentLootpoolReset());
+            if (fetchRunning.getOrDefault(raidType, false)) continue;
 
+            fetchRunning.put(raidType, true);
+
+            System.out.println("starting fetch for " + raidType);
+            lastCrowdsourceFetch.put(raidType, now);
             WynncraftApiHandler.fetchCrowdsourcedLootPool(raidType.name()).thenAccept(result -> {
-                if(result == null) {
-                    hasCrowdSourcedData.set(finalI, corwdSourceStatus.Null);
-                }
-                if (result != null && !result.isEmpty()) {
-                    hasCrowdSourcedData.set(finalI, corwdSourceStatus.Found);
-                    crowdsourcedLootPools.put(raidType.name(), result);
+                fetchRunning.put(raidType, false);
 
-                    // Save to local data for offline access
-                    julianh06.wynnextras.features.aspects.LootPoolData.INSTANCE.saveLootPoolFull(raidType.name(), result);
+                if (result == null || result.isEmpty()) return;
+
+                List<LootPoolData.AspectEntry> oldItems = crowdsourcedLootPools.get(raidType.name());
+
+                lastCrowdsourceFetch.put(raidType, now);
+                if (isSamePool(oldItems, result)) {
+                    System.out.println("still old pool, retry in 30s");
+                    hasOldLootpool.put(raidType, true);
+                    return;
                 }
+
+                System.out.println("NEW POOL for " + raidType);
+                crowdsourcedLootPools.put(raidType.name(), result);
+                hasOldLootpool.put(raidType, false);
+
+                julianh06.wynnextras.features.aspects.LootPoolData.INSTANCE.saveLootPoolFull(raidType.name(), result);
             });
-            i++;
         }
 
         if (!fetchedPersonalProgress && McUtils.player() != null) {
@@ -185,6 +197,20 @@ public class LootPoolPage extends PageWidget {
         } else {
             importFeedback = null;
         }
+    }
+
+    private static boolean isSamePool(List<LootPoolData.AspectEntry> oldItems, List<LootPoolData.AspectEntry> newItems) {
+        if (oldItems == null || newItems == null) return false;
+        if (oldItems.size() != newItems.size()) return false;
+
+        Set<String> oldNames = oldItems.stream().map(i -> i.name).collect(Collectors.toSet());
+
+        for (LootPoolData.AspectEntry item : newItems) {
+            if (!oldNames.contains(item.name)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -335,16 +361,8 @@ public class LootPoolPage extends PageWidget {
 
             List<LootPoolData.AspectEntry> lootPool = getLootPoolForRaid(raid.name());
 
-            if(!lootPool.isEmpty() && hasCrowdSourcedData.get(raid.ordinal()) == corwdSourceStatus.Null) {
+            if(!lootPool.isEmpty()) {
                 hasCrowdSourcedData.set(raid.ordinal(), corwdSourceStatus.Found);
-            }
-
-            boolean allLoaded = true;
-            for(LootPoolData.AspectEntry entry : lootPool) {
-                if(entry.tierInfo.isEmpty()) {
-                    allLoaded = false;
-                    break;
-                }
             }
 
             List<LootPoolData.AspectEntry> mythicAspects = lootPool.stream().filter(a -> a.rarity.equalsIgnoreCase("mythic")).toList();
@@ -352,7 +370,7 @@ public class LootPoolPage extends PageWidget {
             List<LootPoolData.AspectEntry> legendaryAspects = lootPool.stream().filter(a -> a.rarity.equalsIgnoreCase("legendary")).toList();
 
             //aspectWidgets.clear();
-            if(aspectWidgets.isEmpty() && allLoaded) {
+            if(aspectWidgets.isEmpty()) {
                 for (LootPoolData.AspectEntry entry : mythicAspects) {
                     if(hideMax && entry.tierInfo.contains("MAX")) continue;
                     if(onlyFavorites && !FavoriteAspectsData.INSTANCE.isFavorite(entry.name)) continue;
@@ -367,6 +385,15 @@ public class LootPoolPage extends PageWidget {
                     if(hideMax && entry.tierInfo.contains("MAX")) continue;
                     if(onlyFavorites && !FavoriteAspectsData.INSTANCE.isFavorite(entry.name)) continue;
                     aspectWidgets.add(new AspectWidget(entry, this));
+                }
+            }
+
+            for(LootPoolData.AspectEntry aspectEntry : lootPool) {
+                if(aspectEntry.tierInfo.isEmpty()) continue;
+
+                for(AspectWidget aspectWidget : aspectWidgets) {
+                    if(!aspectWidget.aspect.tierInfo.isEmpty()) continue;
+                    if(aspectWidget.aspect.name.equals(aspectEntry.name)) aspectWidget.aspect.tierInfo = aspectEntry.tierInfo;
                 }
             }
 
@@ -430,14 +457,14 @@ public class LootPoolPage extends PageWidget {
                     contentHeight += spacing * 4;
                     aspectY += spacing * 4;
                     ui.drawLine(
-                            x + 20,
-                            aspectY - spacing * 2,
-                            x + width - 20,
-                            aspectY - spacing * 2,
-                            3,
-                            WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode
-                                    ? CustomColor.fromHexString("1b1b1c")
-                                    : CustomColor.fromHexString("5d4736")
+                        x + 20,
+                        aspectY - spacing * 2,
+                        x + width - 20,
+                        aspectY - spacing * 2,
+                        3,
+                        WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode
+                            ? CustomColor.fromHexString("1b1b1c")
+                            : CustomColor.fromHexString("5d4736")
                     );
                 }
             }
@@ -596,7 +623,7 @@ public class LootPoolPage extends PageWidget {
                             withProgress.add(new LootPoolData.AspectEntry(aspect.name, rarity, tierInfo, aspect.description));
                         } else {
                             // No personal data, use crowdsourced as-is (will show without tier)
-                            withProgress.add(aspect);
+                            withProgress.add(new LootPoolData.AspectEntry(aspect.name, aspect.rarity, null, aspect.description));
                         }
                     }
                     return withProgress;
@@ -761,7 +788,7 @@ public class LootPoolPage extends PageWidget {
                 }
 
 
-                boolean isMax = aspect.tierInfo.contains("MAX");
+                boolean isMax = aspect.tierInfo != null && aspect.tierInfo.contains("MAX");
                 CustomColor textColor = CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
                 if(isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
@@ -795,11 +822,13 @@ public class LootPoolPage extends PageWidget {
                     }
 
                     Pattern pattern = Pattern.compile("Tier ([IVXLCDM]+)");
-                    Matcher matcher = pattern.matcher(aspect.tierInfo);
+                    if(aspect.tierInfo != null) {
+                        Matcher matcher = pattern.matcher(aspect.tierInfo);
 
-                    if (matcher.find()) {
-                        String roman = matcher.group(1);
-                        tier = romanToInt(roman);
+                        if (matcher.find()) {
+                            String roman = matcher.group(1);
+                            tier = romanToInt(roman);
+                        }
                     }
 
                     ItemStack aspectItemStack = toItemStack(apiAspect, isMax, tier);
@@ -812,7 +841,7 @@ public class LootPoolPage extends PageWidget {
 
                     String name = tooltip.getFirst().getString();
 
-                    tooltip.set(0, Text.of(name + " §7" + aspect.tierInfo));
+                    tooltip.set(0, Text.of(name + (aspect.tierInfo == null ? " " : " §7" + aspect.tierInfo)));
 
                     hoveredTooltip = tooltip;
                 }
@@ -926,8 +955,10 @@ public class LootPoolPage extends PageWidget {
     private static boolean shouldFetchRaid(Raid raid) {
         ZonedDateTime currentReset = AspectScanning.getCurrentLootpoolReset();
         ZonedDateTime lastFetch = lastCrowdsourceFetch.get(raid);
-
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
+
+        if(hasOldLootpool.get(raid) != null && hasOldLootpool.get(raid)) return lastFetch.plusSeconds(30).isBefore(now);
+
         if (lastFetch != null && lastFetch.plusSeconds(30).isAfter(now)) return false;
 
         return lastFetch == null || currentReset.isAfter(lastFetch);

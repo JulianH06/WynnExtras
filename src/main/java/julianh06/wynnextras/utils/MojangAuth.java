@@ -104,7 +104,7 @@ public class MojangAuth {
                     body.addProperty("serverId", serverId);
 
                     HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create("http://www.wynnextras.com/auth"))
+                            .uri(URI.create("https://www.wynnextras.com/auth"))
                             .header("Content-Type", "application/json")
                             .header("Accept", "application/json")
                             .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
@@ -116,7 +116,6 @@ public class MojangAuth {
 
                     JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
                     wynnextrasToken = json.get("token").getAsString();
-                    McUtils.sendMessageToClient(Text.of(wynnextrasToken));
                     expiryTime = json.get("expiresIn").getAsLong();
 
                     WynnExtras.LOGGER.info("Received WynnExtras token from backend");
@@ -159,7 +158,6 @@ public class MojangAuth {
     public static CompletableFuture<String> getWEToken() {
         long now = System.currentTimeMillis();
 
-        McUtils.sendMessageToClient(Text.of("sending request with token: " + wynnextrasToken));
         if (wynnextrasToken != null && now < expiryTime) {
             return CompletableFuture.completedFuture(wynnextrasToken);
         }

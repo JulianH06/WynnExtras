@@ -674,7 +674,7 @@ public class BankOverlay2 extends WEHandledScreen {
         return new Pair<>(xRemain, yRemain);
     }
 
-    private List<ItemStack> buildInventoryForIndex(int index, boolean isPlayerInv) throws IndexOutOfBoundsException {
+    private List<ItemStack> buildInventoryForIndex(int index, boolean isPlayerInv) {
         List<ItemStack> inv = new ArrayList<>();
 
         if(isPlayerInv) {
@@ -704,7 +704,8 @@ public class BankOverlay2 extends WEHandledScreen {
                     } catch (IndexOutOfBoundsException e) {
                         retryLoad();
                         activeInv = -1;
-                        throw e;
+                        close.apply(null);
+                        return new ArrayList<>();
                     }
                     if(rightArrow == null) return new ArrayList<>();
                     if(rightArrow.getItem() == Items.POTION) {
@@ -1475,8 +1476,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 } else {
                     confirmText = "§7Click to go to page " + currentData.lastPage;
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
         }
 
         @Override
@@ -1739,18 +1739,20 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if(hovered && McUtils.containerMenu().getSlot(46) != null && McUtils.containerMenu().getSlot(46).getStack() != null) {
-                ctx.drawTooltip(
-                    MinecraftClient.getInstance().textRenderer,
-                    McUtils.containerMenu().getSlot(46).getStack().getTooltip(
-                        Item.TooltipContext.DEFAULT,
-                        MinecraftClient.getInstance().player,
-                        TooltipType.BASIC
-                    ),
-                    mouseX,
-                    mouseY
-                );
-            }
+            try {
+                if(hovered && McUtils.containerMenu().getSlot(46) != null && McUtils.containerMenu().getSlot(46).getStack() != null) {
+                    ctx.drawTooltip(
+                        MinecraftClient.getInstance().textRenderer,
+                        McUtils.containerMenu().getSlot(46).getStack().getTooltip(
+                            Item.TooltipContext.DEFAULT,
+                            MinecraftClient.getInstance().player,
+                            TooltipType.BASIC
+                        ),
+                        mouseX,
+                        mouseY
+                    );
+                }
+            } catch (Exception ignored) {}
         }
 
         @Override

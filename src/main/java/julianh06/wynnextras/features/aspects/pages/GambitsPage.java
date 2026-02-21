@@ -12,10 +12,8 @@ import net.minecraft.util.Identifier;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class GambitsPage extends PageWidget{
     Identifier ltop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/ltop.png");
@@ -57,6 +55,8 @@ public class GambitsPage extends PageWidget{
     private boolean fetchedCrowdsourcedGambits = false;
     private List<GambitData.GambitEntry> crowdsourcedGambits = null;
     private static ZonedDateTime lastCrowdsourceFetch = null;
+    private static Boolean fetchRunning = false;
+    private static Boolean hasOldData = false;
 
     private final OpenPartyFinderWidget openPartyFinderWidget;
 
@@ -92,13 +92,24 @@ public class GambitsPage extends PageWidget{
 
         ui.drawCenteredText(countdown, centerX, 100);
 
-        if (shouldFetchGambits()) {
-            lastCrowdsourceFetch = now;
+        if (shouldFetchGambits() && !fetchRunning) {
+            fetchRunning = true;
 
+            lastCrowdsourceFetch = now;
             WynncraftApiHandler.fetchCrowdsourcedGambits().thenAccept(result -> {
-                crowdsourcedGambits = result;
+                fetchRunning = false;
                 if (result != null && !result.isEmpty()) {
-                    GambitData.INSTANCE.saveGambits(result);
+                    List<GambitData.GambitEntry> oldGambits = crowdsourcedGambits;
+
+                    lastCrowdsourceFetch = now;
+                    if(isSamePool(oldGambits, result)) {
+                        System.out.println("still old pool, retry in 30s");
+                        hasOldData = true;
+                    } else {
+                        hasOldData = false;
+                        crowdsourcedGambits = result;
+                        GambitData.INSTANCE.saveGambits(result);
+                    }
                 }
             });
         }
@@ -145,6 +156,20 @@ public class GambitsPage extends PageWidget{
                 drawGambitPanel(x, y, panelWidth, panelHeight, gambit);
             }
         }
+    }
+
+    private static boolean isSamePool(List<GambitData.GambitEntry> oldGambits, List<GambitData.GambitEntry> newGambits) {
+        if (oldGambits == null || newGambits == null) return false;
+        if (oldGambits.size() != newGambits.size()) return false;
+
+        Set<String> oldNames = oldGambits.stream().map(i -> i.name).collect(Collectors.toSet());
+
+        for (GambitData.GambitEntry gambitEntry : newGambits) {
+            if (!oldNames.contains(gambitEntry.name)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -251,8 +276,10 @@ public class GambitsPage extends PageWidget{
     private static boolean shouldFetchGambits() {
         ZonedDateTime currentReset = GambitData.getLastResetTime();
         ZonedDateTime lastFetch = lastCrowdsourceFetch;
-
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
+
+        if(hasOldData) return lastFetch.plusSeconds(30).isBefore(now);
+
         if (lastFetch != null && lastFetch.plusSeconds(30).isAfter(now)) return false;
 
         return lastFetch == null || currentReset.isAfter(lastFetch);
