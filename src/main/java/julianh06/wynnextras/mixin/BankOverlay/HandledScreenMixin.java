@@ -20,6 +20,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
+import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -38,11 +39,25 @@ import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 public abstract class HandledScreenMixin {
     @Shadow public abstract void close();
 
+    @Shadow public Slot focusedSlot;
+
+    @Shadow protected int x;
+    @Shadow protected int y;
+
     @Unique private BankOverlay2 bankOverlay;
 
     @Unique private IdentifierOverlay identifierOverlay;
 
     @Unique private CraftingHelperOverlay craftingHelperOverlay;
+
+    @Inject(method = "render", at = @At("TAIL"), cancellable = true)
+    private void renderForeground(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        // Trade Market Overlay (Your Trades value display)
+        TradeMarketOverlay.renderOnScreen(context);
+
+        // Trade Market Comparison Panel
+        TradeMarketComparisonPanel.render(context);
+    }
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
@@ -76,6 +91,18 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        // Trade Market Comparison Panel click handling
+        if (TradeMarketComparisonPanel.handleClick(mouseX, mouseY, button, 1)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
+        // Trade Market Overlay click handling
+        if (TradeMarketOverlay.handleClick(mouseX, mouseY, button, 1)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
         if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
             if (identifierOverlay != null && Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
                 identifierOverlay.mouseClicked(mouseX, mouseY, button);
@@ -97,7 +124,18 @@ public abstract class HandledScreenMixin {
         }
     }
 
+    @Inject(method = "mouseDragged", at = @At("HEAD"))
+    private void onMouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY, CallbackInfoReturnable<Boolean> cir) {
+        // Handle Trade Market Comparison Panel dragging
+        if (TradeMarketComparisonPanel.isDragging()) {
+            TradeMarketComparisonPanel.handleMouseMove(mouseX, mouseY);
+        }
 
+        // Handle Trade Market Overlay dragging
+        if (TradeMarketOverlay.isDragging()) {
+            TradeMarketOverlay.handleMouseMove(mouseX, mouseY);
+        }
+    }
 
 
     @Inject(method = "mouseReleased", at = @At("HEAD"), cancellable = true)
@@ -135,6 +173,11 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "close", at = @At("HEAD"))
     public void onClose(CallbackInfo ci) {
+        craftingHelperOverlay = null;
+
+        // Clear Trade Market Comparison on close
+        TradeMarketComparisonPanel.clearComparison();
+
         if(!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return;
         bankOverlay = null;
 
@@ -173,6 +216,34 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true)
     private void keyPressedPre(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
+        // F1 key in Trade Market for item comparison
+        if (keyCode == GLFW.GLFW_KEY_F1 && TradeMarketComparisonPanel.isInTradeMarket()) {
+            // If hovering a slot, add/toggle that item
+            if (focusedSlot != null) {
+                if (TradeMarketComparisonPanel.handleF1Press(focusedSlot)) {
+                    cir.setReturnValue(true);
+                    cir.cancel();
+                    return;
+                }
+            } else {
+                // No slot focused - clear all panels
+                if (TradeMarketComparisonPanel.handleF1NoSlot()) {
+                    cir.setReturnValue(true);
+                    cir.cancel();
+                    return;
+                }
+            }
+        }
+
+        // F2 key in Trade Market to toggle scale background
+        if (keyCode == GLFW.GLFW_KEY_F2 && TradeMarketComparisonPanel.isInTradeMarket()) {
+            if (TradeMarketComparisonPanel.handleF2Press()) {
+                cir.setReturnValue(true);
+                cir.cancel();
+                return;
+            }
+        }
+
         if(bankOverlay != null) {
             if (WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
                 InventoryKeyPressEvent event = new InventoryKeyPressEvent(keyCode, scanCode, modifiers, bankOverlay.touchHoveredSlot);
