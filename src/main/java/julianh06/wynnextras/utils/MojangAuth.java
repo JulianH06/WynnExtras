@@ -100,7 +100,7 @@ public class MojangAuth {
                     body.addProperty("serverId", serverId);
 
                     HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create("http://www.wynnextras.com/auth"))
+                            .uri(URI.create("https://wynnextras.com/auth"))
                             .header("Content-Type", "application/json")
                             .header("Accept", "application/json")
                             .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
