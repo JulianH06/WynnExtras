@@ -32,8 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @WEModule
 public class BadgeService {
-    private static final String HEARTBEAT_URL = "http://localhost:8080/wynnextras-users/heartbeat";
-    private static final String ACTIVE_URL = "http://localhost:8080/wynnextras-users/active";
+    private static final String HEARTBEAT_URL = "http://wynnextras.com/wynnextras-users/heartbeat";
+    private static final String ACTIVE_URL = "http://wynnextras.com/wynnextras-users/active";
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final Gson GSON = new GsonBuilder().create();
 
