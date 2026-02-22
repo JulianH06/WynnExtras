@@ -42,7 +42,7 @@ public abstract class ChatClickMixin {
     @Inject(method = "handleClickEvent", at = @At("HEAD"), cancellable = true)
     private void onHandleTextClick(Style style, boolean insert, CallbackInfoReturnable<Boolean> cir) {
         try {
-            if (!WynnExtrasConfig.INSTANCE.chatClickOpensPV) return;
+            if (!WynnExtrasConfig.INSTANCE.chatClickPV) return;
             if (!Models.WorldState.onWorld()) return;
 
             String username = null;

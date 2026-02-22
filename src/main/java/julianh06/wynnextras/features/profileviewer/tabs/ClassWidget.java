@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.profileviewer.tabs;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -92,7 +93,7 @@ public class ClassWidget extends Widget {
             int level = characterData.getLevel();
             int totalLevel = characterData.getTotalLevel();
             CustomColor levelColor;
-            if (characterData.getContentCompletion() == 1133) {
+            if (characterData.getContentCompletion() == 1133 && !WynnExtrasConfig.INSTANCE.removeChroma) {
                 levelColor = CommonColors.RAINBOW;
             } else {
                 levelColor = CustomColor.fromHexString("FFFFFF");

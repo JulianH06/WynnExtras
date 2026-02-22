@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.raid;
 
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 public class RaidLootTracker {
+    private static long lastParse = 0;
 
     private static final String REWARD_CHEST_TITLE = "\uDAFF\uDFEA\uE00E";
     private static final int CHEST_START = 27;
@@ -58,7 +60,7 @@ public class RaidLootTracker {
                 return;
             }
 
-            if (!loggedThisChest) {
+            if (!loggedThisChest && Time.now().timestamp() > lastParse + 60_000) {
                 parseChest();
                 loggedThisChest = true;
             }
@@ -182,8 +184,8 @@ public class RaidLootTracker {
             }
         }
 
-
         RaidLootConfig.INSTANCE.save();
+        lastParse = Time.now().timestamp();
     }
 
     private static String detectRaid() {
@@ -296,15 +298,5 @@ public class RaidLootTracker {
             }
         } catch (Exception ignored) {}
         return false;
-    }
-
-    private static String getAspectRarity(ItemStack stack) {
-        try {
-            String hexCode = stack.getCustomName().getStyle().getColor().getHexCode();
-            if(hexCode.equals("#AA00AA")) return "mythic";
-            else if(hexCode.equals("#FF5555")) return "fabled";
-            else if(hexCode.equals("#55FFFF")) return "legendary";
-        } catch (Exception ignored) {}
-        return null;
     }
 }

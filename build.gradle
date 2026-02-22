@@ -43,24 +43,17 @@ fabricApi {
 }
 
 dependencies {
-	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	implementation 'org.apache.httpcomponents:httpclient:4.5.14'
 
-	// Fabric API. This is technically optional, but you probably want it anyway.
+	modRuntimeOnly "me.djtheredstoner:DevAuth-fabric:1.2.1"
+
+	modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	modImplementation "maven.modrinth:wynntils:v${project.wynntils_version}-fabric"
-	modRuntimeOnly "me.djtheredstoner:DevAuth-fabric:1.2.1"
-	//modCompileOnly files("libs/wynnmod-1.16.0-BETA-0.jar")
-	//modImplementation files("libs/wynnmod-1.16.0-BETA-0.jar")
-	//modRuntimeOnly "maven.modrinth:wynnmod:1.15.1"
-	modCompileOnly files("libs/wynnventory-fabric-2.0.0-beta1.jar")
-	//modRuntimeOnly "maven.modrinth:wynnventory:v1.3.7"
-	modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
-	modImplementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	shadowImpl 'org.reflections:reflections:0.10.2'
 }

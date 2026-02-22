@@ -114,9 +114,10 @@ public class WynnExtrasConfig {
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
     public boolean chiropTimer = false;
+    public boolean automaticAspectScanning = true;
 
     // ==================== CHAT CLICK ====================
-    public boolean chatClickOpensPV = true;
+    public boolean chatClickPV = false;
 
     // ==================== Crowd Sourcing ================
     public boolean uploadOwnAspects = true;
@@ -139,6 +140,7 @@ public class WynnExtrasConfig {
     public boolean removeFrontPersonView = false;
     public boolean sourceOfTruthToggle = false;
     public boolean territoryEstimateToggle = false;
+    public boolean removeChroma = false;
 
     //==================== Dark Modes ==========================
     public boolean darkmodeToggle = false; //for bank overlay (dont wanna change the variable cause it would reset it to false for everyone)

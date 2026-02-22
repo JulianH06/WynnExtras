@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.aspects;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import julianh06.wynnextras.features.aspects.pages.LootrunLootPoolPage;
 
 import java.io.File;
 import java.io.FileReader;
@@ -28,14 +29,12 @@ public class LootrunLootPoolData {
     private static final int RESET_HOUR = 19;
     private static final int RESET_MINUTE = 0;
 
-    // Camp codes and full names - MUST be defined before INSTANCE
-    public static final String[] CAMP_CODES = {"SI", "SE", "CORK", "COTL", "MH"};
-    public static final Map<String, String> CAMP_NAMES = Map.of(
-        "SI", "Sky Islands",
-        "SE", "Silent Expanse",
-        "CORK", "Corkus",
-        "COTL", "Canyon of the Lost",
-        "MH", "Molten Heights"
+    public static final Map<LootrunLootPoolPage.Camp, String> CAMP_NAMES = Map.of(
+        LootrunLootPoolPage.Camp.SI, "Sky Islands",
+        LootrunLootPoolPage.Camp.SE, "Silent Expanse",
+        LootrunLootPoolPage.Camp.CORK, "Corkus",
+        LootrunLootPoolPage.Camp.COTL, "Canyon of the Lost",
+        LootrunLootPoolPage.Camp.MH, "Molten Heights"
     );
 
     // Singleton instance - MUST be after CAMP_CODES
@@ -88,8 +87,8 @@ public class LootrunLootPoolData {
 
     private LootrunLootPoolData() {
         // Initialize empty pools for all camps
-        for (String camp : CAMP_CODES) {
-            lootPools.put(camp, new ArrayList<>());
+        for (LootrunLootPoolPage.Camp camp : LootrunLootPoolPage.Camp.values()) {
+            lootPools.put(camp.name(), new ArrayList<>());
         }
     }
 
@@ -198,8 +197,8 @@ public class LootrunLootPoolData {
      */
     public void clear() {
         lootPools.clear();
-        for (String camp : CAMP_CODES) {
-            lootPools.put(camp, new ArrayList<>());
+        for (LootrunLootPoolPage.Camp camp : LootrunLootPoolPage.Camp.values()) {
+            lootPools.put(camp.name(), new ArrayList<>());
         }
         save();
     }
