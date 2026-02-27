@@ -119,21 +119,19 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Compact Mode", "Use compact display",
                     () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v))
                 .add(toggle("Show Background", "Show dark background",
-                    () -> config.raidLootTrackerBackground, v -> config.raidLootTrackerBackground = v));
+                    () -> config.raidLootTrackerBackground, v -> config.raidLootTrackerBackground = v))
+                .add(text("The Tracker is movable", "To change its position open your inventory and drag it where you want"))
+            .sub("TNA Tree Room Map")
+                .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
+                    () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))
+                .add(toggle("Show paths on Tree Map", "Show the optimal path to the soul while inside the tree",
+                    () -> config.showPathsOnTreeMap, v -> config.showPathsOnTreeMap = v))
+                .add(toggle("Show Map everywhere", "Enable this if you want to edit the position without going into TNA",
+                    () -> config.showTreeMapEverywhere, v -> config.showTreeMapEverywhere = v))
+                .add(text("The Map is movable", "To change its position open your inventory and drag it where you want"));
 
         // ===== COMBAT =====
         category("Combat", 0xFFfda216)
-            .sub("Shaman")
-                .add(toggle("Show Totem Range", "Display totem range circle",
-                        () -> config.totemRangeVisualizerToggle, v -> config.totemRangeVisualizerToggle = v))
-                .add(sliderF("Totem Radius", "Size of totem circle",
-                        1f, 30f, 0.5f, () -> config.totemRange, v -> config.totemRange = v))
-                .add(dropdown("Totem Color", "Circle color",
-                        WynnExtrasConfig.TextColor.class, () -> config.totemColor, v -> config.totemColor = v))
-                .add(sliderF("Eldritch Radius", "Eldritch call range",
-                        1f, 30f, 0.5f, () -> config.eldritchCallRange, v -> config.eldritchCallRange = v))
-                .add(dropdown("Eldritch Color", "Circle color",
-                        WynnExtrasConfig.TextColor.class, () -> config.eldritchCallColor, v -> config.eldritchCallColor = v))
             .sub("Provoke Timer [WIP]")
                 .add(toggle("Enable Provoke Timer", "Show provoke timer",
                         () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
@@ -148,21 +146,24 @@ public class WynnExtrasConfigScreen extends Screen {
                     () -> config.wynnventoryOverlay, v -> config.wynnventoryOverlay = v));
         }
 
-        invCategory.sub("Bank Overlay")
-            .add(toggle("Enable Bank Overlay", "Custom Bank Overlay",
-                    () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v))
-            .add(toggle("Smooth Scroll", "Smooth scrolling",
-                    () -> config.smoothScrollToggle, v -> config.smoothScrollToggle = v))
-            .add(toggle("Quick Toggle", "Show quick toggle button",
-                    () -> config.bankQuickToggle, v -> config.bankQuickToggle = v))
-            .add(toggle("Dark Mode", "Dark bank theme",
-                    () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
-            .add(slider("Rarity BG Alpha", "Item rarity background opacity",
-                    0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
-            .add(slider("Max Rows", "The maximum amount of rows (lower can reduce lag)",
-                    2, 3, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
-            .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
-                    2, 3, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
+        invCategory
+            .add(toggle("Disabled Armor Helper", "Show you your disabled armor in the compass menu to help assign skill points",
+                () -> config.disabledArmorHelper, v -> config.disabledArmorHelper = v))
+            .sub("Bank Overlay")
+                .add(toggle("Enable Bank Overlay", "Custom Bank Overlay",
+                        () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v))
+                .add(toggle("Smooth Scroll", "Smooth scrolling",
+                        () -> config.smoothScrollToggle, v -> config.smoothScrollToggle = v))
+                .add(toggle("Quick Toggle", "Show quick toggle button",
+                        () -> config.bankQuickToggle, v -> config.bankQuickToggle = v))
+                .add(toggle("Dark Mode", "Dark bank theme",
+                        () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
+                .add(slider("Rarity BG Alpha", "Item rarity background opacity",
+                        0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
+                .add(slider("Max Rows", "The maximum amount of rows (lower can reduce lag)",
+                        2, 3, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
+                .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
+                        2, 3, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
             .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
                     () -> config.showWeight, v -> config.showWeight = v))
@@ -175,10 +176,12 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.hideScaleBackgroundButton, v -> config.hideScaleBackgroundButton = v))
                 .add(toggle("Hide comparing info text", "Shows a text that informs you that you can compare items with F1",
                         () -> config.hideTMInfoText, v -> config.hideTMInfoText = v))
+                .add(text("The Comparison panels are movable", "To change their position just drag it where you want"))
                 .add(toggle("Trade market price summary", "Trade market overlay that shows you how much money you can claim",
                         () -> config.tradeMarketOverlay, v -> config.tradeMarketOverlay = v))
                 .add(toggle("Price overlay background", "Show a dark background for the price overlay",
                         () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
+                .add(text("The price summary is movable", "To change its position just drag it where you want"))
             .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
                     () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
@@ -187,7 +190,8 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Crafting preview", "Crafting preview toggle",
                         () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
-                        () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v));
+                        () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
+                .add(text("The preview is movable", "To change its position just drag it where you want"));
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)
@@ -336,6 +340,10 @@ public class WynnExtrasConfigScreen extends Screen {
             if (subHasMatches(sub)) return true;
         }
         return false;
+    }
+
+    private ConfigOption text(String name, String desc) {
+        return new TextOption(name, desc);
     }
 
     private ConfigOption toggle(String name, String desc, Supplier<Boolean> get, Consumer<Boolean> set) {
@@ -1041,6 +1049,22 @@ public class WynnExtrasConfigScreen extends Screen {
         boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) { return false; }
         boolean mouseReleased(double mx, double my, int btn) { return false; }
         boolean mouseDragged(double mx, double my, int x, int y, int w, int h) { return false; }
+    }
+
+    private static class TextOption extends ConfigOption {
+        TextOption(String name, String desc) {
+            super(name, desc);
+        }
+
+        @Override
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
+            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
+            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+        }
     }
 
     private static class BooleanOption extends ConfigOption {

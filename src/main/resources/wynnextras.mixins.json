@@ -61,11 +61,6 @@
     "Raid.RaidEndedEventFailedMixin",
     "Raid.RaidEndedEventMixin",
     "Raid.RaidModelMixin",
-    "Raid.RaidStartEventMixin",
-    "ShamanTotem.ShamanTotemCircleActivate",
-    "ShamanTotem.ShamanTotemCircleRemoved",
-    "ShamanTotem.ShamanTotemCircleSummoned",
-    "ShamanTotem.ShamanTotemCircleUpdated",
-    "ShamanTotem.ShamanTotemModelMixin"
+    "Raid.RaidStartEventMixin"
   ]
 }

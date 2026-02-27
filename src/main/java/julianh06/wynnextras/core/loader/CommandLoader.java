@@ -9,16 +9,12 @@ import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.command.ChatCommands;
+import julianh06.wynnextras.features.aspects.ScreenTitleDebugger;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
-import julianh06.wynnextras.features.raid.RaidLootData;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
-import julianh06.wynnextras.utils.ItemUtils;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.item.ItemStack;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -170,6 +166,12 @@ public class CommandLoader implements WELoader {
                         .then(ClientCommandManager.literal("slot")
                             .executes(ctx -> {
                                 TradeMarketComparisonPanel.toggleSlotDebug();
+                                return 1;
+                            })
+                        )
+                        .then(ClientCommandManager.literal("screen")
+                            .executes(ctx -> {
+                                ScreenTitleDebugger.toggleDebug();
                                 return 1;
                             })
                         )

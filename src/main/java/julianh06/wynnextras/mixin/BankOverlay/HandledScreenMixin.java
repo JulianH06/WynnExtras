@@ -12,6 +12,7 @@ import julianh06.wynnextras.event.InventoryKeyPressEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.*;
+import julianh06.wynnextras.features.misc.CompassMenuOverlay;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -53,6 +54,8 @@ public abstract class HandledScreenMixin {
 
     @Unique private CraftingHelperOverlay craftingHelperOverlay;
 
+    @Unique private CompassMenuOverlay compassMenuOverlay;
+
     @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
     private void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci){
         if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) {
@@ -85,6 +88,14 @@ public abstract class HandledScreenMixin {
             }
 
             craftingHelperOverlay.render(context, mouseX, mouseY, delta);
+        }
+
+        if(WynnExtrasConfig.INSTANCE.disabledArmorHelper) {
+            if(compassMenuOverlay == null) {
+                compassMenuOverlay = new CompassMenuOverlay();
+            }
+
+            compassMenuOverlay.render(context, mouseX, mouseY, delta);
         }
 
 

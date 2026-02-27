@@ -28,11 +28,8 @@ import julianh06.wynnextras.features.misc.FastRequeue;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.raid.*;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
-import julianh06.wynnextras.features.raid.RaidListData;
-import julianh06.wynnextras.features.raid.RaidLootConfig;
-import julianh06.wynnextras.features.raid.RaidLootTracker;
-import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.waypoints.WaypointData;
 import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
@@ -171,6 +168,7 @@ public class WynnExtras implements ClientModInitializer {
         RaidLootConfig.INSTANCE.load();
 		MaterialTextureResolver.register();
 		RecipeLoader.loadRecipes();
+		TreeRoomMinimap.register();
 
 		RaidListData.load();
 		WaypointData.load();

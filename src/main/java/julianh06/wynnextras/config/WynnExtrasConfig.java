@@ -91,6 +91,7 @@ public class WynnExtrasConfig {
     public int craftingPreviewOverlayX = 20;
     public int craftingPreviewOverlayY = 20;
     public boolean craftingDynamicTextures = true;
+    public boolean disabledArmorHelper = true;
     public boolean wynnventoryOverlay = true;
     public boolean tradeMarketOverlay = true;
     public int tradeMarketOverlayX = 10;
@@ -115,6 +116,9 @@ public class WynnExtrasConfig {
     public Map<String, Long> raidPBs = new HashMap<>();
     public boolean chiropTimer = false;
     public boolean automaticAspectScanning = true;
+    public boolean tnaTreeMap = true;
+    public boolean showPathsOnTreeMap = true;
+    public boolean showTreeMapEverywhere = false;
 
     // ==================== CHAT CLICK ====================
     public boolean chatClickPV = false;
@@ -129,11 +133,6 @@ public class WynnExtrasConfig {
     public boolean badgesEnabled = false;
 
     // ==================== MISC ====================
-    public boolean totemRangeVisualizerToggle = true;
-    public float totemRange = 10f;
-    public TextColor totemColor = TextColor.WHITE;
-    public float eldritchCallRange = 15f;
-    public TextColor eldritchCallColor = TextColor.WHITE;
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
     public int customGUIScale = 3;

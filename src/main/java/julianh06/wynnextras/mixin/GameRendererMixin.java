@@ -11,6 +11,5 @@ public class GameRendererMixin {
     @Inject(method = "close", at = @At("RETURN"))
     private void onGameRendererClose(CallbackInfo ci) {
         WorldRenderUtils.INSTANCE_WAYPOINTS.close();
-        WorldRenderUtils.INSTANCE_SHAMANTOTEM.close();
     }
 }
