@@ -9,6 +9,7 @@ import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.command.ChatCommands;
+import julianh06.wynnextras.event.CommandRegistrationEvent;
 import julianh06.wynnextras.features.aspects.ScreenTitleDebugger;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
@@ -31,6 +32,9 @@ public class CommandLoader implements WELoader {
 
     public CommandLoader() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+
+            new CommandRegistrationEvent().post();
+
             LiteralArgumentBuilder<FabricClientCommandSource> base = ClientCommandManager.literal("WynnExtras");
             LiteralArgumentBuilder<FabricClientCommandSource> baseLowerCase = ClientCommandManager.literal("wynnextras");
             LiteralArgumentBuilder<FabricClientCommandSource> alias = ClientCommandManager.literal("we");

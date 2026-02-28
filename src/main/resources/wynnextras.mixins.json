@@ -21,12 +21,14 @@
     "RaidLootOverlayScreenMixin",
     "WeightScaleBackgroundMixin",
     "WorldRendererAccessor",
+    "WorldRenderMixin",
     "Accessor.BannerBlockEntityRendererAccessor",
     "Accessor.GuildMapScreenAccessor",
     "Accessor.HandledScreenAccessor",
     "Accessor.KeybindingAccessor",
     "BankOverlay.DrawContextMixin",
     "BankOverlay.HandledScreenMixin",
+    "Invoker.GetTransformationInvoker",
     "Invoker.HandledScreenInvoker"
   ],
   "mixins": [
