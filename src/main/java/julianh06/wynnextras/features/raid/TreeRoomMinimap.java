@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.raid;
 
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.Texture;
@@ -14,6 +15,8 @@ import julianh06.wynnextras.utils.Pair;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.util.DefaultSkinHelper;
@@ -21,6 +24,8 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,6 +36,16 @@ public class TreeRoomMinimap {
     private static final Identifier background = Identifier.of("wynnextras", "textures/treeroomminimap/treeroomminimap.png");
     private static final Identifier heart = Identifier.of("wynnextras", "textures/treeroomminimap/heart.png");
     private static final int grooves = 3;
+
+    // Position - loaded from config
+    private static int xPos = 5;
+    private static int yPos = 5;
+    private static final int WIDTH = 126;
+
+    // Dragging state
+    private static boolean isDragging = false;
+    private static int dragOffsetX = 0;
+    private static int dragOffsetY = 0;
 
     private static final Map<String, Pair<Integer, Integer>> heartPositionMap = Map.of(
             "Gray", new Pair<>(12, 83),
@@ -67,8 +82,31 @@ public class TreeRoomMinimap {
     private static String playerGrotto = "";
     private static String heartGrotto = "";
 
+    private static boolean configLoaded = false;
+
+    private static void loadConfig() {
+        if (configLoaded) return;
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        xPos = config.treeMapX;
+        yPos = config.treeMapY;
+        configLoaded = true;
+    }
+
+    private static void saveConfig() {
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        config.treeMapX = xPos;
+        config.treeMapY = yPos;
+        WynnExtrasConfig.save();
+    }
+
     public static void register() {
-        HudRenderCallback.EVENT.register(TreeRoomMinimap::render);
+        HudRenderCallback.EVENT.register((context, renderTickCounter) -> {
+            boolean isInventory = MinecraftClient.getInstance().currentScreen instanceof InventoryScreen;
+            boolean isChat = MinecraftClient.getInstance().currentScreen instanceof ChatScreen;
+            if (isInventory || isChat) return;
+
+            TreeRoomMinimap.render(context, renderTickCounter);
+        });
     }
 
     private static void reset() {
@@ -78,7 +116,7 @@ public class TreeRoomMinimap {
         heartGrotto = "";
     }
 
-    private static void render(DrawContext context, RenderTickCounter renderTickCounter) {
+    public static void render(DrawContext context, RenderTickCounter renderTickCounter) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.world == null) {
             reset();
@@ -87,7 +125,7 @@ public class TreeRoomMinimap {
 
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
 
-        if(!config.tnaTreeMap) {
+        if(!config.tnaTreeMap || config.showTreeMapOnlyWhileInsideOfTree && !player.equals(MinecraftClient.getInstance().player.getName().getString())) {
             reset();
             return;
         }
@@ -101,8 +139,8 @@ public class TreeRoomMinimap {
         RenderUtils.drawTexturedRect(
                 context,
                 background,
-                4,
-                4,
+                4 + xPos,
+                4 + yPos,
                 DEFAULT_SIZE - 8,
                 DEFAULT_SIZE - 8,
                 0,
@@ -120,8 +158,8 @@ public class TreeRoomMinimap {
     }
 
     public static void renderOverlay(DrawContext context) {
-        float renderX = 0;
-        float renderY = 0;
+        float renderX = xPos;
+        float renderY = yPos;
 
         renderMapBorder(context, renderX, renderY, DEFAULT_SIZE, DEFAULT_SIZE);
         FontRenderer.getInstance().renderText(
@@ -156,7 +194,7 @@ public class TreeRoomMinimap {
 
         RenderUtils.drawTexturedRect(
             guiGraphics,
-                mapTexture,
+            mapTexture,
             renderX - groovesWidth,
             renderY - groovesHeight,
             width + 2 * groovesWidth,
@@ -177,8 +215,8 @@ public class TreeRoomMinimap {
         RenderUtils.drawTexturedRect(
                 context,
                 heart,
-                position.first(),
-                position.second(),
+                xPos + position.first(),
+                yPos + position.second(),
                 16,
                 16,
                 0,
@@ -197,7 +235,7 @@ public class TreeRoomMinimap {
         RenderUtils.drawTexturedRect(
                 context,
                 texture,
-                position.getFirst(), position.getSecond(),
+                xPos + position.getFirst(), yPos + position.getSecond(),
                 16, 16,
                 8, 8, 8, 8,
                 64, 64
@@ -304,8 +342,8 @@ public class TreeRoomMinimap {
         RenderUtils.drawTexturedRect(
             context,
             path,
-            4,
-            4,
+            xPos + 4,
+            yPos + 4,
             DEFAULT_SIZE - 8,
             DEFAULT_SIZE - 8,
             0,
@@ -314,6 +352,68 @@ public class TreeRoomMinimap {
             112,
             113,
             113);
+    }
+
+    private static boolean isInBounds(double mouseX, double mouseY, int[] bounds) {
+        return mouseX >= bounds[0] && mouseX <= bounds[2] && mouseY >= bounds[1] && mouseY <= bounds[3];
+    }
+
+    public static boolean handleClick(double mouseX, double mouseY, int button, int action, boolean ctrlHeld, boolean shiftHeld) {
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        if (!config.tnaTreeMap) return false;
+
+        loadConfig();
+        MinecraftClient mc = MinecraftClient.getInstance();
+
+        boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + WIDTH + 2 &&
+                mouseY >= yPos - 2 && mouseY <= yPos + WIDTH + 4;
+
+        if (action == 0) {
+            if (button == 0 && isDragging) {
+                isDragging = false;
+                saveConfig();
+                return true;
+            }
+            return false;
+        }
+
+        if (!inBounds) return false;
+
+        boolean inInventoryScreen = mc.currentScreen instanceof InventoryScreen;
+        boolean inChatScreen = mc.currentScreen instanceof ChatScreen;
+        boolean canInteract = inInventoryScreen || inChatScreen;
+
+        if (action == 1) {
+            // Right click while in inventory/chat = start drag (only if not on filter/mode)
+            if (button == 0 && canInteract) {
+                isDragging = true;
+                dragOffsetX = (int) mouseX - xPos;
+                dragOffsetY = (int) mouseY - yPos;
+                return true;
+            }
+        }
+
+        return inBounds;
+    }
+
+    public static void handleMouseMove(double mouseX, double mouseY) {
+        if (!isDragging) return;
+
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.currentScreen == null) {
+            isDragging = false;
+            return;
+        }
+
+        xPos = (int) mouseX - dragOffsetX;
+        yPos = (int) mouseY - dragOffsetY;
+
+        if (mc.getWindow() != null) {
+            int screenWidth = mc.getWindow().getScaledWidth();
+            int screenHeight = mc.getWindow().getScaledHeight();
+            xPos = Math.max(0, Math.min(xPos, screenWidth - WIDTH));
+            yPos = Math.max(0, Math.min(yPos, screenHeight - 100));
+        }
     }
 
     private static Identifier getSkinTexture(String name) {

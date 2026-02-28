@@ -117,8 +117,11 @@ public class WynnExtrasConfig {
     public boolean chiropTimer = false;
     public boolean automaticAspectScanning = true;
     public boolean tnaTreeMap = true;
+    public boolean showTreeMapOnlyWhileInsideOfTree = false;
     public boolean showPathsOnTreeMap = true;
     public boolean showTreeMapEverywhere = false;
+    public int treeMapX = 5;
+    public int treeMapY = 5;
 
     // ==================== CHAT CLICK ====================
     public boolean chatClickPV = false;

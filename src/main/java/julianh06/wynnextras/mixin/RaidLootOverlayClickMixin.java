@@ -1,8 +1,10 @@
 package julianh06.wynnextras.mixin;
 
+import com.sun.source.tree.Tree;
 import julianh06.wynnextras.features.crafting.CraftingResultPreviewer;
 import julianh06.wynnextras.features.inventory.TradeMarketOverlay;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
+import julianh06.wynnextras.features.raid.TreeRoomMinimap;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
 import net.minecraft.client.input.MouseInput;
@@ -37,6 +39,7 @@ public class RaidLootOverlayClickMixin {
         RaidLootTrackerOverlay.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
         TradeMarketOverlay.handleClick(mouseX, mouseY, button, action);
         CraftingResultPreviewer.handleClick(mouseX, mouseY, button, action);
+        TreeRoomMinimap.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
     }
 
     @Inject(method = "onCursorPos", at = @At("HEAD"))
@@ -53,5 +56,7 @@ public class RaidLootOverlayClickMixin {
         TradeMarketOverlay.handleMouseMove(x, y);
 
         CraftingResultPreviewer.handleMouseMove(x, y);
+
+        TreeRoomMinimap.handleMouseMove(x, y);
     }
 }

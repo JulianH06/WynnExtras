@@ -6,6 +6,7 @@ import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.event.api.RenderEvents;
 import julianh06.wynnextras.utils.ChatUtils;
@@ -64,7 +65,7 @@ public class ProvokeTimer {
                     lastSeconds = calculatedSeconds;
                 } else if (calculatedSeconds == 0 && !zeroMessageSent) {
                     McUtils.sendMessageToClient(
-                            Text.literal("Provoke effect ended.")
+                            WynnExtras.addWynnExtrasPrefix("Provoke effect ended.")
                     );
                     ChatUtils.displayTitle("PROVOKE ENDED", "" ,40, 0, 0);
                     zeroMessageSent = true;

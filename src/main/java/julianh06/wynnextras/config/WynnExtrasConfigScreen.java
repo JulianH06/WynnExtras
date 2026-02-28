@@ -124,6 +124,8 @@ public class WynnExtrasConfigScreen extends Screen {
             .sub("TNA Tree Room Map")
                 .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
                     () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))
+                .add(toggle("Show Tree Map only inside of tree", "Only show the Tree Map while you are the person inside of the tree",
+                    () -> config.showTreeMapOnlyWhileInsideOfTree, v -> config.showTreeMapOnlyWhileInsideOfTree = v))
                 .add(toggle("Show paths on Tree Map", "Show the optimal path to the soul while inside the tree",
                     () -> config.showPathsOnTreeMap, v -> config.showPathsOnTreeMap = v))
                 .add(toggle("Show Map everywhere", "Enable this if you want to edit the position without going into TNA",

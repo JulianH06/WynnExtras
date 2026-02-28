@@ -19,7 +19,6 @@ import net.minecraft.text.Text;
 import java.util.*;
 
 public class RaidLootTrackerOverlay {
-
     private static final List<String> RAID_FILTERS = Arrays.asList("All", "NOTG", "NOL", "TCC", "TNA");
     private static int selectedFilterIndex = 0;
 
