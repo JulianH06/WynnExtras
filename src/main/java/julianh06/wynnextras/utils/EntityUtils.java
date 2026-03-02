@@ -8,9 +8,9 @@ import org.joml.Vector3fc;
 
 public class EntityUtils {
 
-    public static boolean setScale(DisplayEntity e, Vector3fc scale) {
+    public static void setScale(DisplayEntity e, Vector3fc scale) {
         AffineTransformation current = ((GetTransformationInvoker) e).invokeGetTransformation(e.getDataTracker());
-        if (current == null) return false;
+        if (current == null) return;
 
         Vector3f newScale = new Vector3f();
         current.getScale().mul(scale, newScale);
@@ -20,6 +20,5 @@ public class EntityUtils {
                 newScale,
                 current.getRightRotation());
         e.setTransformation(affineTransformation);
-        return true;
     }
 }

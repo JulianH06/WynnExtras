@@ -38,7 +38,7 @@ public class SpellHiderCommands {
                         ChatUtils.sendMessage("invalid modifier");
                         return 0;
                     }
-                    if (nameSpace == null || nameSpace.isEmpty()) {
+                    if (nameSpace == null || nameSpace.isEmpty()) { // TODO force existing namespace
                         ChatUtils.sendMessage("invalid namespace");
                         return 0;
                     }

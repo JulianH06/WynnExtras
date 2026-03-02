@@ -1,30 +1,22 @@
 package julianh06.wynnextras.features.spellhider;
 
+import julianh06.wynnextras.config.SpellHiderConfig;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-public class SpellNamespace {
-    private static final Map<String, SpellNamespace> registry = new HashMap<>();
-
+public record SpellNamespace(SpellNamespace parent, String name) {
     public static SpellNamespace from(String FQName) {
-        SpellNamespace known = registry.get(FQName);
-        return known != null ? known : new SpellNamespace(FQName);
+        String[] split = FQName.split(":");
+        SpellNamespace prev = null;
+        for (int i = 0; i <= split.length - 1; i++) {
+            prev = new SpellNamespace(prev, split[i]);
+        }
+        return prev;
     }
 
-    private final SpellNamespace parent;
-    private final String name;
-    private final List<String> aliases;
-
-    private SpellNamespace(SpellNamespace parent, @NotNull String name) {
+    public SpellNamespace(SpellNamespace parent, @NotNull String name) {
         if (name.contains(":")) throw new IllegalArgumentException();
-        this.aliases = new ArrayList<>();
         this.parent = parent;
         this.name = name.toLowerCase();
-        registry.put(this.getFQName(), this);
     }
 
     public SpellNamespace(@NotNull String name) {
@@ -35,20 +27,46 @@ public class SpellNamespace {
         return new SpellNamespace(this, child);
     }
 
+    public SpellNamespace reskinned() {
+        return from("reskinned:" + getFQName());
+    }
+
+    public void addId(String id) {
+        SpellHiderConfig.INSTANCE.addSpellIdentifier(id, this);
+    }
+
+    public void addId(String id, String id2) {
+        addId(id);
+        addId(id2);
+    }
+
+    public void addId(String id, String id2, String id3) {
+        addId(id, id2);
+        addId(id3);
+    }
+
+    public void addId(String id, String id2, String id3, String id4) {
+        addId(id, id2, id3);
+        addId(id4);
+    }
+
+    public void addId(String id, String id2, String id3, String id4, String id5) {
+        addId(id, id2, id3, id4);
+        addId(id5);
+    }
+
+    public void addId(String id, String id2, String id3, String id4, String id5, String id6) {
+        addId(id, id2, id3, id4, id5);
+        addId(id6);
+    }
+
+    public void addId(String id, String id2, String id3, String id4, String id5, String id6, String id7) {
+        addId(id, id2, id3, id4, id5, id6);
+        addId(id7);
+    }
+
     public String getFQName() {
         return parent == null ? name : parent.getFQName() + ':' + name;
-    }
-
-    public void addModel(int model) {
-        SpellHider.addModel(model, this);
-    }
-
-    public void addModel(int min, int max) {
-        SpellHider.addModel(min, max, this);
-    }
-
-    public void addAlias(@NotNull String alias) {
-        this.aliases.add(alias.toLowerCase());
     }
 
     public boolean modify(SpellModifier type, Object value) {
@@ -57,15 +75,15 @@ public class SpellNamespace {
 
     public boolean isRelevant(String query) {
         String lQuery = query.toLowerCase();
-        if (getFQName().contains(lQuery)) return true;
-        for (String alias : aliases) {
-            if (alias.contains(lQuery)) return true;
-        }
-        return false;
+        return getFQName().contains(lQuery);
+    }
+
+    public boolean isEmpty() {
+        return getFQName().isEmpty();
     }
 
     @Override
-    public String toString() {
+    public @NotNull String toString() {
         return getFQName();
     }
 }
