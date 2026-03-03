@@ -1,28 +1,66 @@
 package julianh06.wynnextras.features.spellhider;
 
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.config.SpellHiderConfig;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.utils.ChatUtils;
-import net.minecraft.client.texture.Sprite;
+import julianh06.wynnextras.utils.WEVec;
+import julianh06.wynnextras.utils.render.WorldRenderUtils;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Pair;
+import net.minecraft.util.math.Vec3d;
+import net.neoforged.bus.api.SubscribeEvent;
 
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 @WEModule
 public class ModelDataLogger {
+
+    private static final Set<Pair<Text, WEVec>> toRender = new HashSet<>();
+    private static final Set<String> itemPaths = new HashSet<>();
+
+    @SubscribeEvent
+    public void onRender(RenderWorldEvent event) {
+        for (Pair<Text, WEVec> pair : toRender) {
+            WorldRenderUtils.drawText(event, pair.getRight(), pair.getLeft(), 1, false);
+        }
+        toRender.clear();
+    }
+
+    public static void addTextToRender(String string, Vec3d loc) {
+        if (currentState == State.MASS_ADDING) {
+            itemPaths.add(string);
+            toRender.add(new Pair<>(Text.literal(string), new WEVec(loc)));
+        }
+    }
+
+    public static void addAll(String FQName) {
+        if (FQName.isEmpty()) {
+            itemPaths.clear();
+            return;
+        }
+        SpellNamespace nameSpace = SpellNamespace.from(FQName);
+        for (String itemPath : itemPaths) {
+            SpellHiderConfig.INSTANCE.addSpellIdentifier(itemPath, nameSpace);
+        }
+        itemPaths.clear();
+    }
+
     public enum State {
         OFF,
         CONSOLE,
         CHAT,
+        MASS_ADDING,
+        GET_CURRENT,
         ON;
 
         public static State from(String state) {
@@ -41,7 +79,6 @@ public class ModelDataLogger {
         currentState = state;
     }
 
-    // TODO use when no args on cmd
     public static State getCurrentState() {
         return currentState;
     }
@@ -54,7 +91,7 @@ public class ModelDataLogger {
     }
 
     public static void handleUnknownModel(Float customModel, Set<Identifier> names) {
-        if (currentState == State.OFF) return;
+        if (currentState == State.OFF || currentState == State.MASS_ADDING) return;
 
         for (Identifier id : names) {
             pathToModels.computeIfAbsent(id.getPath(), k -> new ArrayList<>()).add(customModel);

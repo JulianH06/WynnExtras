@@ -6,6 +6,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.config.SpellHiderConfig;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.event.CommandRegistrationEvent;
@@ -23,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 public class SpellHiderCommands {
     @SubscribeEvent
     public void registerCommands(CommandRegistrationEvent empty) {
+        // TODO why does this suggest more than just the one arg
         RequiredArgumentBuilder<FabricClientCommandSource, String> nameSpaceArg =
                 ClientCommandManager.argument("namespace", StringArgumentType.string())
                         .suggests(SpellHiderCommands::nameSpaceSelector);
@@ -100,6 +102,18 @@ public class SpellHiderCommands {
                 List.of(nameSpaceArg)
         );
 
+        SubCommand massAddCmd = new SubCommand(
+                "massAdd",
+                "add all seen since the last addition to the given namespace",
+                context -> {
+                    String nameSpace = StringArgumentType.getString(context, "namespace");
+                    ModelDataLogger.addAll(nameSpace);
+                    return 1;
+                },
+                null,
+                List.of(nameSpaceArg)
+        );
+
         SubCommand modelDataLoggerCmd = new SubCommand(
                 "modelDataLogger",
                 "set the state of the model data logger",
@@ -108,6 +122,10 @@ public class SpellHiderCommands {
                     if (state == null) {
                         ChatUtils.sendMessage("invalid state");
                         return 0;
+                    }
+                    if (state == ModelDataLogger.State.GET_CURRENT) {
+                        ChatUtils.sendMessage("current state is " + ModelDataLogger.getCurrentState().name());
+                        return 1;
                     }
                     ModelDataLogger.setState(state);
                     ChatUtils.sendMessage("set state to " + state);
@@ -123,18 +141,43 @@ public class SpellHiderCommands {
                 )
         );
 
-        SubCommand mapModelToNamespaceCmd = new SubCommand(
-                "mapModelToNamespace",
+        SubCommand saveCmd = new SubCommand(
+                "save",
+                "save mappings",
+                context -> {
+                    SpellHiderConfig.save();
+                    return 1;
+                },
+                null,
+                null
+        );
+
+        SubCommand loadCmd = new SubCommand(
+                "load",
+                "load mappings",
+                context -> {
+                    SpellHiderConfig.load();
+                    return 1;
+                },
+                null,
+                null
+        );
+
+        SubCommand devCmd = new SubCommand(
+                "development",
                 "assigns a name to a custom model data float",
                 context -> {
                     return 0;
                 },
-                null,
                 List.of(
-
-                )
+                        progressQueueCmd,
+                        modelDataLoggerCmd,
+                        massAddCmd,
+                        saveCmd,
+                        loadCmd
+                ),
+                null
         );
-
 
         new Command(
                 "spellhider",
@@ -142,10 +185,8 @@ public class SpellHiderCommands {
                 context -> 0,
                 List.of(
                         modifyCmd,
-                        getModificationsCmd,
-                        modelDataLoggerCmd,
-                        progressQueueCmd,
-                        mapModelToNamespaceCmd
+                        devCmd,
+                        getModificationsCmd
                 ),
                 null
         );

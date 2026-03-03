@@ -30,30 +30,21 @@ public class ItemModelManagerMixin {
     public void updateModelsForNonLiving(ItemRenderState renderState, ItemStack stack, ItemDisplayContext displayContext, Entity entity, CallbackInfo ci) {
         if (!(entity instanceof DisplayEntity.ItemDisplayEntity)) return;
         if (stack.getItem() != Items.OAK_BOAT) return;
-        Float customModel = ItemUtils.getFirsCustomModelDataFloat(stack); // changes on texture pack updates
-        if (customModel == null) return;
-        SpellNamespace nameForModel = SpellHider.getNameForModel(customModel); // in memory cache
-        // null is if it hasn't even tried to check the hash,
-        // empty is if it has checked hash and didn't find any mapping.
-        if (nameForModel != null) {
-            if (nameForModel.isEmpty()) {
-                ModelDataLogger.handleUnknownModel(customModel, getFileNames(renderState));
-            }
-        } else checkMappingsAndCache(renderState, customModel);
-    }
 
-    @Unique
-    private static void checkMappingsAndCache(ItemRenderState renderState, Float customModel) {
-        Set<Identifier> names = getFileNames(renderState);
-        if (names == null || names.size() > 1) {
-            WynnExtras.LOGGER.warn("multiple paths for model {} {}", customModel, names);
-            return;
-        }
-        for (Identifier id : names) {
-            SpellNamespace nameFromHash = SpellHiderConfig.INSTANCE.getSpellMapping(id);
-            // if not found cache as empty string to indicate that we have checked the hash mappings
-            if (nameFromHash == null) nameFromHash = new SpellNamespace("");
-            SpellHider.addModel(customModel, nameFromHash);
+        Set<Identifier> fileNames = getFileNames(renderState);
+        if (fileNames == null || fileNames.size() > 1) throw new RuntimeException("more than 1 file name");
+        for (Identifier fileName : fileNames) {
+            Float modelData = ItemUtils.getFirsCustomModelDataFloat(stack);
+            SpellNamespace spellMapping = SpellHiderConfig.INSTANCE.getSpellMapping(fileName);
+            if (spellMapping == null || spellMapping.isEmpty()) {
+                ModelDataLogger.addTextToRender(fileName.getPath(), entity.getEntityPos());
+                ModelDataLogger.handleUnknownModel(modelData, fileNames);
+            } else {
+                if (modelData != null) {
+                    SpellHider.addModel(modelData, spellMapping);
+                }
+                ModelDataLogger.addTextToRender(spellMapping.getFQName(), entity.getEntityPos());
+            }
         }
     }
 

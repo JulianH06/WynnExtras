@@ -23,9 +23,8 @@ public class SpellHider {
     private static final Map<Integer, SpellNamespace> customModelNameMao = new HashMap<>();
     private static final Map<SpellNamespace, SpellModifiers> modifiersMap = new HashMap<>();
 
-    public static boolean debug = true;
-
     public static void addModel(float model, SpellNamespace nameSpace) {
+        if (customModelNameMao.containsKey((int) model)) return;
         customModelNameMao.put((int) model, nameSpace);
     }
 
