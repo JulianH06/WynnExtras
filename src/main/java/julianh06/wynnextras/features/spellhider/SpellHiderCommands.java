@@ -86,6 +86,20 @@ public class SpellHiderCommands {
                 null
         );
 
+        SubCommand progressQueueCmd = new SubCommand(
+                "progressQueue",
+                "add the opened file to the provides namespace and open the next file",
+                context -> {
+                    String nameSpace = StringArgumentType.getString(context, "namespace");
+                    String itemPath = ModelDataLogger.peekQueue();
+                    boolean success = ModelDataLogger.progressQueue(nameSpace);
+                    if (success) ChatUtils.sendMessage("Added " + itemPath + " to " + nameSpace);
+                    return 1;
+                },
+                null,
+                List.of(nameSpaceArg)
+        );
+
         SubCommand modelDataLoggerCmd = new SubCommand(
                 "modelDataLogger",
                 "set the state of the model data logger",
@@ -130,6 +144,7 @@ public class SpellHiderCommands {
                         modifyCmd,
                         getModificationsCmd,
                         modelDataLoggerCmd,
+                        progressQueueCmd,
                         mapModelToNamespaceCmd
                 ),
                 null

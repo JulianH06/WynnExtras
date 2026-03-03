@@ -37,8 +37,6 @@ public class ItemModelManagerMixin {
         // empty is if it has checked hash and didn't find any mapping.
         if (nameForModel != null) {
             if (nameForModel.isEmpty()) {
-                //TODO upon assigning something from the queue to a namespace both maps must be updated
-                //TODO pass whatever this needs to it (queue for manual testing)
                 ModelDataLogger.handleUnknownModel(customModel, getFileNames(renderState));
             }
         } else checkMappingsAndCache(renderState, customModel);
