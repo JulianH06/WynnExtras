@@ -5,7 +5,8 @@ import org.jetbrains.annotations.NotNull;
 
 public record SpellNamespace(SpellNamespace parent, String name) {
     public static SpellNamespace from(String FQName) {
-        String[] split = FQName.split(":");
+        String trimmed = FQName.trim().replaceAll("^:|:$", "");
+        String[] split = trimmed.split(":");
         SpellNamespace prev = null;
         for (int i = 0; i <= split.length - 1; i++) {
             prev = new SpellNamespace(prev, split[i]);
@@ -27,42 +28,8 @@ public record SpellNamespace(SpellNamespace parent, String name) {
         return new SpellNamespace(this, child);
     }
 
-    public SpellNamespace reskinned() {
-        return from("reskinned:" + getFQName());
-    }
-
     public void addId(String id) {
         SpellHiderConfig.INSTANCE.addSpellIdentifier(id, this);
-    }
-
-    public void addId(String id, String id2) {
-        addId(id);
-        addId(id2);
-    }
-
-    public void addId(String id, String id2, String id3) {
-        addId(id, id2);
-        addId(id3);
-    }
-
-    public void addId(String id, String id2, String id3, String id4) {
-        addId(id, id2, id3);
-        addId(id4);
-    }
-
-    public void addId(String id, String id2, String id3, String id4, String id5) {
-        addId(id, id2, id3, id4);
-        addId(id5);
-    }
-
-    public void addId(String id, String id2, String id3, String id4, String id5, String id6) {
-        addId(id, id2, id3, id4, id5);
-        addId(id6);
-    }
-
-    public void addId(String id, String id2, String id3, String id4, String id5, String id6, String id7) {
-        addId(id, id2, id3, id4, id5, id6);
-        addId(id7);
     }
 
     public String getFQName() {

@@ -10,7 +10,9 @@ import net.minecraft.util.Identifier;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @WEModule
@@ -26,7 +28,15 @@ public class SpellHiderConfig {
 
     public static SpellHiderConfig INSTANCE = new SpellHiderConfig();
 
-    private final Map<String, SpellNamespace> idMappings = new HashMap<>();
+    private final Map<String, SpellNamespace> idMappings;
+
+    public SpellHiderConfig() {
+        idMappings = new HashMap<>();
+    }
+
+    public SpellHiderConfig(Map<String, SpellNamespace> idMappings) {
+        this.idMappings = idMappings;
+    }
 
     public void addSpellIdentifier(String path, SpellNamespace namespace) {
         idMappings.put(path, namespace);
@@ -36,11 +46,81 @@ public class SpellHiderConfig {
         return idMappings.get(id.getPath());
     }
 
+    public static class SaveFormat {
+        private MappedNamespace spellMappings;
+
+        public SaveFormat(SpellHiderConfig config) {
+            spellMappings = new MappedNamespace("");
+            for (Map.Entry<String, SpellNamespace> entry : config.idMappings.entrySet()) {
+                String mapping = entry.getKey();
+                if (mapping.isEmpty()) continue;
+                SpellNamespace namespace = entry.getValue();
+                String[] namespaceParts = namespace.getFQName().split(":");
+                MappedNamespace tracker = spellMappings;
+                for (String part : namespaceParts) {
+                    tracker = tracker.putIfAbsent(part);
+                }
+                tracker.addMapping(mapping);
+            }
+        }
+
+        public SpellHiderConfig toConfig() {
+            Map<String, SpellNamespace> result  = new HashMap<>();
+            spellMappings.recurseAdd(result, "");
+            return new SpellHiderConfig(result);
+        }
+
+        public static class MappedNamespace {
+            public String self;
+            public List<String> mappings;
+            public List<MappedNamespace> children;
+
+            public void addMapping(String mapping) {
+                mappings.add(mapping);
+            }
+
+            public MappedNamespace(String self) {
+                this.self = self;
+                this.children = new ArrayList<>();
+                this.mappings = new ArrayList<>();
+            }
+
+            public boolean is(Object s) {
+                if (s instanceof MappedNamespace) {
+                    return this.self.equals(((MappedNamespace) s).self);
+                } else if (s instanceof String) {
+                    return this.self.equals(s);
+                }
+                return false;
+            }
+
+            private MappedNamespace putIfAbsent(String part) {
+                for(MappedNamespace mapping : children) {
+                    if (mapping.is(part)) return mapping;
+                }
+                MappedNamespace mapping = new MappedNamespace(part);
+                children.add(mapping);
+                return mapping;
+            }
+
+            public void recurseAdd(Map<String, SpellNamespace> result, String current) {
+                current = current.isEmpty() ? this.self : current + ":" + this.self;
+                for (String mapping : this.mappings) {
+                    result.put(mapping, SpellNamespace.from(current));
+                }
+                for (MappedNamespace child : this.children) {
+                    child.recurseAdd(result, current);
+                }
+            }
+        }
+    }
+
     public static void load() {
         try {
             if (Files.exists(MAPPINGS_PATH)) {
                 String json = Files.readString(MAPPINGS_PATH);
-                INSTANCE = GSON.fromJson(json, SpellHiderConfig.class);
+                SaveFormat saveFormat = GSON.fromJson(json, SaveFormat.class);
+                INSTANCE = saveFormat.toConfig();
                 if (INSTANCE == null) {
                     INSTANCE = new SpellHiderConfig();
                 }
@@ -54,7 +134,7 @@ public class SpellHiderConfig {
     public static void save() {
         try {
             Files.createDirectories(MAPPINGS_PATH.getParent());
-            Files.writeString(MAPPINGS_PATH, GSON.toJson(INSTANCE));
+            Files.writeString(MAPPINGS_PATH, GSON.toJson(new SaveFormat(INSTANCE)));
         } catch (IOException e) {
             System.err.println("[WynnExtras] Failed to save spell mappings: " + e.getMessage());
         }

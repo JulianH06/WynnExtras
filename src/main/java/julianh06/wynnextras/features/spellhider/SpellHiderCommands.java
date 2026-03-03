@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 public class SpellHiderCommands {
     @SubscribeEvent
     public void registerCommands(CommandRegistrationEvent empty) {
+        // TODO remove mappings
         // TODO why does this suggest more than just the one arg
         RequiredArgumentBuilder<FabricClientCommandSource, String> nameSpaceArg =
                 ClientCommandManager.argument("namespace", StringArgumentType.string())
