@@ -208,4 +208,12 @@ public abstract class Widget {
     public void setUi(UIUtils ui) {
         this.ui = ui;
     }
+
+    public UIUtils getUi() {
+        return ui;
+    }
+
+    public void setHovered(Boolean hovered) {
+        this.hovered = hovered;
+    }
 }

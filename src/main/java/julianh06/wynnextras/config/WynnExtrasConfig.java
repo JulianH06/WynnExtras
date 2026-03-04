@@ -63,7 +63,7 @@ public class WynnExtrasConfig {
         premades.put("+2 Slimey Goo|+2 Goos", twoGoo);
         premades.put("Another Soul must be given!|NEXT SOUL", soul);
         premades.put("+1 Void Matter|+1 Void Matter", voidMatter);
-        premades.put("The Void Holes have begun to desetabilize!|KILL THE VOID HOLES", fourOutOfFiveVoidMatter);
+        premades.put("The Void Holes have begun to destabilize!|KILL THE VOID HOLES", fourOutOfFiveVoidMatter);
         premades.put("+1 Light Crystal|+1 Crystal", oneLightCrystal);
         premades.put("+2 Light Crystal|+2 Crystals", twoLightCrystal);
         premades.put("The players on the|UPPER PLATFORM SPAWNED", notgUpperPlatform);
