@@ -32,12 +32,14 @@ public class ItemModelManagerMixin {
         if (stack.getItem() != Items.OAK_BOAT) return;
 
         Set<Identifier> fileNames = getFileNames(renderState);
-        if (fileNames == null || fileNames.size() > 1) throw new RuntimeException("more than 1 file name");
+        if (fileNames == null) {
+            return;
+        }
         for (Identifier fileName : fileNames) {
             Float modelData = ItemUtils.getFirsCustomModelDataFloat(stack);
             SpellNamespace spellMapping = SpellHiderConfig.INSTANCE.getSpellMapping(fileName);
             if (spellMapping == null || spellMapping.isEmpty()) {
-                ModelDataLogger.addTextToRender(fileName.getPath(), entity.getEntityPos());
+                ModelDataLogger.addTextToRender(SpellHider.hashMap.get(fileName.getPath()), entity.getEntityPos());
                 ModelDataLogger.handleUnknownModel(modelData, fileNames);
             } else {
                 if (modelData != null) {

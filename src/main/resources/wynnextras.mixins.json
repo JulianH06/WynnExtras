@@ -21,6 +21,7 @@
     "PerspectiveMixin",
     "RaidLootOverlayClickMixin",
     "RaidLootOverlayScreenMixin",
+    "SpriteContentsMixin",
     "WeightScaleBackgroundMixin",
     "WorldRendererAccessor",
     "Accessor.BannerBlockEntityRendererAccessor",

@@ -28,8 +28,8 @@ public record SpellNamespace(SpellNamespace parent, String name) {
         return new SpellNamespace(this, child);
     }
 
-    public void addId(String id) {
-        SpellHiderConfig.INSTANCE.addSpellIdentifier(id, this);
+    public void addId(Integer hash) {
+        SpellHiderConfig.INSTANCE.addSpellIdentifier(hash, this);
     }
 
     public String getFQName() {

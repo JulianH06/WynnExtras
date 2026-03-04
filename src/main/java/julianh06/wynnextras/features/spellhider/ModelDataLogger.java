@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class ModelDataLogger {
 
     private static final Set<Pair<Text, WEVec>> toRender = new HashSet<>();
-    private static final Set<String> itemPaths = new HashSet<>();
+    private static final Set<Integer> recentHashes = new HashSet<>();
 
     @SubscribeEvent
     public void onRender(RenderWorldEvent event) {
@@ -36,23 +36,29 @@ public class ModelDataLogger {
         toRender.clear();
     }
 
-    public static void addTextToRender(String string, Vec3d loc) {
+    public static void addTextToRender(String nameSpace, Vec3d loc) {
         if (currentState == State.MASS_ADDING) {
-            itemPaths.add(string);
-            toRender.add(new Pair<>(Text.literal(string), new WEVec(loc)));
+            toRender.add(new Pair<>(Text.literal(nameSpace), new WEVec(loc)));
+        }
+    }
+
+    public static void addTextToRender(Integer hash, Vec3d loc) {
+        if (currentState == State.MASS_ADDING) {
+            recentHashes.add(hash);
+            toRender.add(new Pair<>(Text.literal(String.valueOf(hash)), new WEVec(loc)));
         }
     }
 
     public static void addAll(String FQName) {
         if (FQName.isEmpty()) {
-            itemPaths.clear();
+            recentHashes.clear();
             return;
         }
         SpellNamespace nameSpace = SpellNamespace.from(FQName);
-        for (String itemPath : itemPaths) {
-            SpellHiderConfig.INSTANCE.addSpellIdentifier(itemPath, nameSpace);
+        for (Integer hash : recentHashes) {
+            SpellHiderConfig.INSTANCE.addSpellIdentifier(hash, nameSpace);
         }
-        itemPaths.clear();
+        recentHashes.clear();
     }
 
     public enum State {
@@ -124,7 +130,7 @@ public class ModelDataLogger {
             WynnExtras.LOGGER.warn("queue is empty");
             return false;
         }
-        nameSpace.addId(itemPath); // permanently store the mapping for filepath -> namespace
+        nameSpace.addId(SpellHider.hashMap.get(itemPath)); // permanently store the mapping for hash -> namespace
         List<Float> models = pathToModels.get(itemPath);
         for (Float model : models) {
             SpellHider.addModel(model, nameSpace); // add the model mapping to memory

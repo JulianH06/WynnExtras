@@ -6,6 +6,7 @@ import julianh06.wynnextras.event.SetEntityDataEvent;
 import julianh06.wynnextras.utils.EntityUtils;
 import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.texture.NativeImage;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.item.Items;
@@ -70,5 +71,28 @@ public class SpellHider {
                 EntityUtils.setScale(display, scale);
             }
         }
+    }
+
+    //TODO test memory consumption
+    public static Map<String, Integer> hashMap =  new HashMap<>();
+
+    public static int hashNativeImage(NativeImage image) {
+        if (image == null) return 0;
+
+        int result = 1;
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        // Include dimensions
+        result = 31 * result + width;
+        result = 31 * result + height;
+
+        // Hash ALL pixels
+        int[] pixels = image.copyPixelsArgb();
+        for (int pixel : pixels) {
+            result = 31 * result + pixel;
+        }
+
+        return result;
     }
 }

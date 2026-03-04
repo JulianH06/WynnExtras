@@ -25,59 +25,6 @@ public class SpellHiderCommands {
     @SubscribeEvent
     public void registerCommands(CommandRegistrationEvent empty) {
         // TODO remove mappings
-        // TODO why does this suggest more than just the one arg
-        RequiredArgumentBuilder<FabricClientCommandSource, String> nameSpaceArg =
-                ClientCommandManager.argument("namespace", StringArgumentType.string())
-                        .suggests(SpellHiderCommands::nameSpaceSelector);
-
-        SubCommand modifyCmd = new SubCommand(
-                "modify",
-                "modify a spells vfx",
-                context -> {
-                    String nameSpace = StringArgumentType.getString(context, "namespace");
-                    SpellModifier modifier = SpellModifier.from(StringArgumentType.getString(context, "modifier"));
-                    String value = StringArgumentType.getString(context, "value");
-                    if (modifier == null) {
-                        ChatUtils.sendMessage("invalid modifier");
-                        return 0;
-                    }
-                    if (nameSpace == null || nameSpace.isEmpty()) { // TODO force existing namespace
-                        ChatUtils.sendMessage("invalid namespace");
-                        return 0;
-                    }
-                    Object parsedValue = null;
-                    switch (modifier) {
-                        case SCALE -> parsedValue = modifier.parseValue(value, Vector3f.class);
-                        case VISIBLE -> parsedValue = modifier.parseValue(value, Boolean.class);
-                    }
-                    if (parsedValue == null) {
-                        ChatUtils.sendMessage("invalid value");
-                        return 0;
-                    }
-                    boolean modify = SpellNamespace.from(nameSpace).modify(modifier, parsedValue);
-                    if (modify) {
-                        ChatUtils.sendMessage("set " + nameSpace + "'s " + modifier.name() + " to " + value);
-                        return 1;
-                    } else {
-                        ChatUtils.sendMessage("Somehow parsed to wrong class (my fault not yours)");
-                        return 0;
-                    }
-                },
-                null,
-                List.of(
-                        nameSpaceArg,
-                        ClientCommandManager.argument("modifier", StringArgumentType.string())
-                                .suggests(SpellHiderCommands::skillModifierSelector),
-                        ClientCommandManager.argument("value", StringArgumentType.string())
-                                .suggests((CommandContext<FabricClientCommandSource> context, SuggestionsBuilder builder) -> {
-                                    SpellModifier modifier = SpellModifier.from(StringArgumentType.getString(context, "modifier"));
-                                    if (modifier != null) {
-                                        modifier.getSuggestions().forEach(builder::suggest);
-                                    }
-                                    return builder.buildFuture();
-                                })
-                )
-        );
 
         SubCommand getModificationsCmd = new SubCommand(
                 "getModifications",
@@ -100,7 +47,8 @@ public class SpellHiderCommands {
                     return 1;
                 },
                 null,
-                List.of(nameSpaceArg)
+                List.of(ClientCommandManager.argument("namespace", StringArgumentType.string())
+                        .suggests(SpellHiderCommands::nameSpaceSelector))
         );
 
         SubCommand massAddCmd = new SubCommand(
@@ -112,7 +60,8 @@ public class SpellHiderCommands {
                     return 1;
                 },
                 null,
-                List.of(nameSpaceArg)
+                List.of(ClientCommandManager.argument("namespace", StringArgumentType.string())
+                        .suggests(SpellHiderCommands::nameSpaceSelector))
         );
 
         SubCommand modelDataLoggerCmd = new SubCommand(
@@ -154,7 +103,7 @@ public class SpellHiderCommands {
         );
 
         SubCommand loadCmd = new SubCommand(
-                "load",
+                "reloadFromFile",
                 "load mappings",
                 context -> {
                     SpellHiderConfig.load();
@@ -162,6 +111,74 @@ public class SpellHiderCommands {
                 },
                 null,
                 null
+        );
+
+        SubCommand renameCmd = new SubCommand(
+                "renameNamespace",
+                "change the name of a namespace",
+                context -> {
+                    String oldName = StringArgumentType.getString(context, "oldName");
+                    String newName = StringArgumentType.getString(context, "newName");
+                    SpellHiderConfig.INSTANCE.changeNamespace(oldName, newName);
+                    return 1;
+                },
+                null,
+                List.of(
+                        ClientCommandManager.argument("oldName", StringArgumentType.string())
+                                .suggests(SpellHiderCommands::nameSpaceSelector),
+                        ClientCommandManager.argument("newName", StringArgumentType.string())
+                                .suggests(SpellHiderCommands::nameSpaceSelector)
+                )
+        );
+
+        SubCommand modifyCmd = new SubCommand(
+                "modify",
+                "modify a spells vfx",
+                context -> {
+                    String nameSpace = StringArgumentType.getString(context, "namespace");
+                    SpellModifier modifier = SpellModifier.from(StringArgumentType.getString(context, "modifier"));
+                    String value = StringArgumentType.getString(context, "value");
+                    if (modifier == null) {
+                        ChatUtils.sendMessage("invalid modifier");
+                        return 0;
+                    }
+                    if (nameSpace == null || nameSpace.isEmpty()) { // TODO force existing namespace
+                        ChatUtils.sendMessage("invalid namespace");
+                        return 0;
+                    }
+                    Object parsedValue = null;
+                    switch (modifier) {
+                        case SCALE -> parsedValue = modifier.parseValue(value, Vector3f.class);
+                        case VISIBLE -> parsedValue = modifier.parseValue(value, Boolean.class);
+                    }
+                    if (parsedValue == null) {
+                        ChatUtils.sendMessage("invalid value");
+                        return 0;
+                    }
+                    boolean modify = SpellNamespace.from(nameSpace).modify(modifier, parsedValue);
+                    if (modify) {
+                        ChatUtils.sendMessage("set " + nameSpace + "'s " + modifier.name() + " to " + value);
+                        return 1;
+                    } else {
+                        ChatUtils.sendMessage("Somehow parsed to wrong class (my fault not yours)");
+                        return 0;
+                    }
+                },
+                null,
+                List.of(
+                        ClientCommandManager.argument("namespace", StringArgumentType.string())
+                                .suggests(SpellHiderCommands::nameSpaceSelector),
+                        ClientCommandManager.argument("modifier", StringArgumentType.string())
+                                .suggests(SpellHiderCommands::skillModifierSelector),
+                        ClientCommandManager.argument("value", StringArgumentType.string())
+                                .suggests((CommandContext<FabricClientCommandSource> context, SuggestionsBuilder builder) -> {
+                                    SpellModifier modifier = SpellModifier.from(StringArgumentType.getString(context, "modifier"));
+                                    if (modifier != null) {
+                                        modifier.getSuggestions().forEach(builder::suggest);
+                                    }
+                                    return builder.buildFuture();
+                                })
+                )
         );
 
         SubCommand devCmd = new SubCommand(
@@ -174,6 +191,7 @@ public class SpellHiderCommands {
                         progressQueueCmd,
                         modelDataLoggerCmd,
                         massAddCmd,
+                        renameCmd,
                         saveCmd,
                         loadCmd
                 ),

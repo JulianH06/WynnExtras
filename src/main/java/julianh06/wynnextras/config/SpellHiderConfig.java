@@ -3,9 +3,12 @@ package julianh06.wynnextras.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.event.InitEvent;
+import julianh06.wynnextras.features.spellhider.SpellHider;
 import julianh06.wynnextras.features.spellhider.SpellNamespace;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Identifier;
+import net.neoforged.bus.api.SubscribeEvent;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,55 +31,73 @@ public class SpellHiderConfig {
 
     public static SpellHiderConfig INSTANCE = new SpellHiderConfig();
 
-    private final Map<String, SpellNamespace> idMappings;
+    private final Map<Integer, SpellNamespace> idMappings;
 
     public SpellHiderConfig() {
         idMappings = new HashMap<>();
     }
 
-    public SpellHiderConfig(Map<String, SpellNamespace> idMappings) {
+    public SpellHiderConfig(Map<Integer, SpellNamespace> idMappings) {
         this.idMappings = idMappings;
     }
 
-    public void addSpellIdentifier(String path, SpellNamespace namespace) {
-        idMappings.put(path, namespace);
+    public void addSpellIdentifier(Integer hash, SpellNamespace namespace) {
+        idMappings.put(hash, namespace);
     }
 
     public SpellNamespace getSpellMapping(Identifier id) {
-        return idMappings.get(id.getPath());
+        return idMappings.get(SpellHider.hashMap.get(id.getPath()));
     }
 
+    public void changeNamespace(String oldName, String newName) {
+        SpellNamespace oldNamespace = SpellNamespace.from(oldName);
+        SpellNamespace newNamespace = SpellNamespace.from(newName);
+
+        for (Map.Entry<Integer, SpellNamespace> entry : idMappings.entrySet()) {
+            if (oldNamespace.equals(entry.getValue())) {
+                idMappings.put(entry.getKey(), newNamespace);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void init(InitEvent empty) {
+        //TODO load();
+    }
+
+    // basically flips the map so each value stores a list of its keys
+    // stops it from storing so many duplicate names, and it's easier to read
     public static class SaveFormat {
-        private MappedNamespace spellMappings;
+        private final MappedNamespace spellMappings;
 
         public SaveFormat(SpellHiderConfig config) {
             spellMappings = new MappedNamespace("");
-            for (Map.Entry<String, SpellNamespace> entry : config.idMappings.entrySet()) {
-                String mapping = entry.getKey();
-                if (mapping.isEmpty()) continue;
+            for (Map.Entry<Integer, SpellNamespace> entry : config.idMappings.entrySet()) {
+                Integer hash = entry.getKey();
                 SpellNamespace namespace = entry.getValue();
+                if (namespace.isEmpty()) continue;
                 String[] namespaceParts = namespace.getFQName().split(":");
                 MappedNamespace tracker = spellMappings;
                 for (String part : namespaceParts) {
                     tracker = tracker.putIfAbsent(part);
                 }
-                tracker.addMapping(mapping);
+                tracker.addMapping(hash);
             }
         }
 
         public SpellHiderConfig toConfig() {
-            Map<String, SpellNamespace> result  = new HashMap<>();
+            Map<Integer, SpellNamespace> result = new HashMap<>();
             spellMappings.recurseAdd(result, "");
             return new SpellHiderConfig(result);
         }
 
         public static class MappedNamespace {
             public String self;
-            public List<String> mappings;
+            public List<Integer> mappings;
             public List<MappedNamespace> children;
 
-            public void addMapping(String mapping) {
-                mappings.add(mapping);
+            public void addMapping(Integer hash) {
+                mappings.add(hash);
             }
 
             public MappedNamespace(String self) {
@@ -95,7 +116,7 @@ public class SpellHiderConfig {
             }
 
             private MappedNamespace putIfAbsent(String part) {
-                for(MappedNamespace mapping : children) {
+                for (MappedNamespace mapping : children) {
                     if (mapping.is(part)) return mapping;
                 }
                 MappedNamespace mapping = new MappedNamespace(part);
@@ -103,10 +124,10 @@ public class SpellHiderConfig {
                 return mapping;
             }
 
-            public void recurseAdd(Map<String, SpellNamespace> result, String current) {
+            public void recurseAdd(Map<Integer, SpellNamespace> result, String current) {
                 current = current.isEmpty() ? this.self : current + ":" + this.self;
-                for (String mapping : this.mappings) {
-                    result.put(mapping, SpellNamespace.from(current));
+                for (Integer hash : this.mappings) {
+                    result.put(hash, SpellNamespace.from(current));
                 }
                 for (MappedNamespace child : this.children) {
                     child.recurseAdd(result, current);
