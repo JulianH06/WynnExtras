@@ -58,10 +58,18 @@ public class HudEditScreen extends Screen {
         }
         if (c.totemTimerEnabled && c.totemTimerWarningText) {
             int wx = c.totemWarningX;
-            // If auto-centered (-1), start at screen center estimate
             if (wx == -1) wx = 200;
             elements.add(new HudElement("warning", "RECAST TOTEM!",
                     wx, c.totemWarningY, c.totemWarningScale));
+        }
+        // Notification always available
+        {
+            int nx = c.notifierX;
+            if (nx == -1) nx = 200;
+            int ny = c.notifierY;
+            if (ny == -1) ny = 100;
+            elements.add(new HudElement("notifier", "NOTIFICATION",
+                    nx, ny, c.notifierScale));
         }
     }
 
@@ -73,9 +81,15 @@ public class HudEditScreen extends Screen {
         super.init();
         for (HudElement e : elements) {
             e.w = textRenderer.getWidth(e.preview) + 6;
-            // If warning was auto-centered, place it at actual center now that we know width
+            // If auto-centered (-1), place at actual center now that we know width
             if (e.id.equals("warning") && WynnExtrasConfig.INSTANCE.totemWarningX == -1) {
                 e.x = (width - e.sw()) / 2;
+            }
+            if (e.id.equals("notifier") && WynnExtrasConfig.INSTANCE.notifierX == -1) {
+                e.x = (width - e.sw()) / 2;
+            }
+            if (e.id.equals("notifier") && WynnExtrasConfig.INSTANCE.notifierY == -1) {
+                e.y = (int) (height * 0.3f);
             }
         }
     }
@@ -110,7 +124,9 @@ public class HudEditScreen extends Screen {
             ctx.fill(e.x - 2, e.y - 2, e.x - 1, e.y + sh + 2, border);
             ctx.fill(e.x + sw + 1, e.y - 2, e.x + sw + 2, e.y + sh + 2, border);
 
-            int textColor = e.id.equals("warning") ? 0xFFFF4444 : 0xFFFFFFFF;
+            int textColor = e.id.equals("warning") ? 0xFFFF4444
+                    : e.id.equals("notifier") ? (WynnExtrasConfig.INSTANCE.textColor.getRGB() | 0xFF000000)
+                    : 0xFFFFFFFF;
 
             ctx.getMatrices().pushMatrix();
             ctx.getMatrices().translate(e.x + 2, e.y + 3);
@@ -214,6 +230,9 @@ public class HudEditScreen extends Screen {
                 }
                 case "warning" -> {
                     c.totemWarningX = e.x; c.totemWarningY = e.y; c.totemWarningScale = e.scale;
+                }
+                case "notifier" -> {
+                    c.notifierX = e.x; c.notifierY = e.y; c.notifierScale = e.scale;
                 }
             }
         }

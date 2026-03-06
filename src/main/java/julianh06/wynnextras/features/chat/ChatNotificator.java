@@ -90,12 +90,13 @@ public class ChatNotificator {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
 
-        float scale = 3.0f;
+        WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
+        float scale = c.notifierScale;
         int textW = (int) (mc.textRenderer.getWidth(activeText) * scale);
         int screenW = mc.getWindow().getScaledWidth();
         int screenH = mc.getWindow().getScaledHeight();
-        int x = (screenW - textW) / 2;
-        int y = (int) (screenH * 0.3f);
+        int x = c.notifierX == -1 ? (screenW - textW) / 2 : c.notifierX;
+        int y = c.notifierY == -1 ? (int) (screenH * 0.3f) : c.notifierY;
 
         ctx.getMatrices().pushMatrix();
         ctx.getMatrices().translate(x, y);
