@@ -136,6 +136,31 @@ public class WynnExtrasConfig {
     public TextColor eldritchCallColor = TextColor.WHITE;
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
+
+    // ==================== TOTEM TIMER ====================
+    public boolean totemTimerEnabled = true;
+    public boolean totemTimerOwnOnly = false;
+    public boolean totemTimerWarningText = true;  // show "RECAST TOTEM!" on screen
+    public boolean totemTimerWarningSound = true;  // play pling sound
+    public int totemTimerWarningThreshold = 2; // 1-6 seconds, for both text + sound
+    public boolean totemTimerEstimate = false; // out-of-render countdown
+    public int totemTimerX = 5;
+    public int totemTimerY = 40;
+    public float totemTimerScale = 1.0f;
+    public int totemWarningX = -1;  // -1 = auto center
+    public int totemWarningY = 80;
+    public float totemWarningScale = 2.0f;
+
+    // ==================== BLOOD SORROW TIMER ====================
+    public boolean bloodSorrowTimerEnabled = true;
+    public int bloodSorrowTimerX = 5;
+    public int bloodSorrowTimerY = 60;
+    public float bloodSorrowTimerScale = 1.0f;
+
+    // ==================== PROVOKE TIMER HUD ====================
+    public int provokeTimerX = 5;
+    public int provokeTimerY = 20;
+    public float provokeTimerScale = 1.0f;
     public int customGUIScale = 3;
     public boolean removeFrontPersonView = false;
     public boolean sourceOfTruthToggle = false;

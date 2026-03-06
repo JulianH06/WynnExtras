@@ -1,32 +1,35 @@
 package julianh06.wynnextras.features.misc;
 
 import com.wynntils.core.components.Models;
-import com.wynntils.mc.event.LocalSoundEvent;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
-import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.event.RenderWorldEvent;
-import julianh06.wynnextras.event.api.RenderEvents;
-import julianh06.wynnextras.utils.ChatUtils;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.neoforged.bus.api.SubscribeEvent;
 
 public class ProvokeTimer {
     private static int storedTicks = -1;
     private static int clientTicks = 0;
     private static int timeToRender = 0;
     private static int calculatedSeconds = 0;
-    private static String shownText = null;
 
     private static boolean zeroMessageSent = false;
     private static int lastSeconds = -1;
 
+    public static boolean isActive() {
+        return storedTicks != -1 && calculatedSeconds > 0;
+    }
+
+    public static int getSeconds() {
+        return calculatedSeconds;
+    }
+
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(ProvokeTimer::provokeTimer);
+        HudRenderCallback.EVENT.register(ProvokeTimer::renderHud);
     }
 
     public static void provokeTimer(MinecraftClient client) {
@@ -56,20 +59,38 @@ public class ProvokeTimer {
                 calculatedSeconds = timeToRender / 20;
 
                 if (calculatedSeconds > 0 && calculatedSeconds != lastSeconds) {
-
-                    ChatUtils.displayTitle("PROVOKE TIME REMAINING: " + calculatedSeconds, "" ,20, 0, 0, WynnExtrasConfig.INSTANCE.provokeTimerColor.getFormatting());
-//                    McUtils.sendMessageToClient(
-//                            Text.literal("Provoke active for: " + calculatedSeconds + " seconds")
-//                    );
                     lastSeconds = calculatedSeconds;
                 } else if (calculatedSeconds == 0 && !zeroMessageSent) {
                     McUtils.sendMessageToClient(
                             Text.literal("Provoke effect ended.")
                     );
-                    ChatUtils.displayTitle("PROVOKE ENDED", "" ,40, 0, 0);
                     zeroMessageSent = true;
                 }
             }
         }
+    }
+
+    private static void renderHud(DrawContext ctx, RenderTickCounter tickCounter) {
+        if (!WynnExtrasConfig.INSTANCE.provokeTimerToggle) return;
+        if (!isActive()) return;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player == null) return;
+
+        int secs = calculatedSeconds;
+        int color;
+        if (secs >= 5) color = 0xFF44FF44;
+        else if (secs >= 3) color = 0xFFFFFF00;
+        else color = 0xFFFF4444;
+
+        String text = "Provoke: " + secs + "s";
+        float scale = WynnExtrasConfig.INSTANCE.provokeTimerScale;
+        int x = WynnExtrasConfig.INSTANCE.provokeTimerX;
+        int y = WynnExtrasConfig.INSTANCE.provokeTimerY;
+
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().translate(x, y);
+        ctx.getMatrices().scale(scale, scale);
+        ctx.drawText(mc.textRenderer, text, 0, 0, color, true);
+        ctx.getMatrices().popMatrix();
     }
 }

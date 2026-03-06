@@ -134,8 +134,22 @@ public class WynnExtrasConfigScreen extends Screen {
                         1f, 30f, 0.5f, () -> config.eldritchCallRange, v -> config.eldritchCallRange = v))
                 .add(dropdown("Eldritch Color", "Circle color",
                         WynnExtrasConfig.TextColor.class, () -> config.eldritchCallColor, v -> config.eldritchCallColor = v))
-            .sub("Provoke Timer [WIP]")
-                .add(toggle("Enable Provoke Timer", "Show provoke timer",
+                .add(toggle("Totem Timer", "Show totem countdown timer on HUD",
+                        () -> config.totemTimerEnabled, v -> config.totemTimerEnabled = v))
+                .add(toggle("Own Totems Only", "Only show your own totems",
+                        () -> config.totemTimerOwnOnly, v -> config.totemTimerOwnOnly = v))
+                .add(toggle("Warning Text", "Show RECAST TOTEM! on screen when low (movable in Edit Gui)",
+                        () -> config.totemTimerWarningText, v -> config.totemTimerWarningText = v))
+                .add(toggle("Warning Sound", "Play pling sound when totem is low",
+                        () -> config.totemTimerWarningSound, v -> config.totemTimerWarningSound = v))
+                .add(slider("Warning Threshold", "Seconds remaining to trigger warning",
+                        1, 6, () -> config.totemTimerWarningThreshold, v -> config.totemTimerWarningThreshold = v))
+                .add(toggle("Estimate Out-of-Range", "Continue countdown when totem leaves render distance",
+                        () -> config.totemTimerEstimate, v -> config.totemTimerEstimate = v))
+                .add(toggle("Blood Sorrow Timer", "Show Blood Sorrow cooldown on HUD",
+                        () -> config.bloodSorrowTimerEnabled, v -> config.bloodSorrowTimerEnabled = v))
+            .sub("Provoke Timer")
+                .add(toggle("Enable Provoke Timer", "Show provoke timer on HUD",
                         () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
                 .add(dropdown("Timer Color", "Timer text color",
                         WynnExtrasConfig.TextColor.class, () -> config.provokeTimerColor, v -> config.provokeTimerColor = v));
