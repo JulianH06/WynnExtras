@@ -24,6 +24,7 @@ import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.data.BookshelfData;
 import julianh06.wynnextras.features.inventory.data.CharacterBankData;
 import julianh06.wynnextras.features.inventory.data.MiscBucketData;
+import julianh06.wynnextras.features.chat.ChatNotificator;
 import julianh06.wynnextras.features.misc.BloodSorrowTimer;
 import julianh06.wynnextras.features.misc.FastRequeue;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
@@ -166,6 +167,7 @@ public class WynnExtras implements ClientModInitializer {
 		ProvokeTimer.init();
 		TotemTimer.register();
 		BloodSorrowTimer.register();
+		ChatNotificator.init();
 		Waypoints.register();
 		FastRequeue.registerFastRequeue();
 		TreeLoader.init();

@@ -6,7 +6,10 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.ChatEvent;
-import julianh06.wynnextras.utils.ChatUtils;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -18,6 +21,10 @@ import java.util.Map;
 
 @WEModule
 public class ChatNotificator {
+    private static String activeText = null;
+    private static long expireTimeMs = 0;
+    private static int activeColor = 0xFFFFFFFF;
+
     private static Command testCmd = new Command(
             "notifiertest",
             "",
@@ -28,6 +35,10 @@ public class ChatNotificator {
             null,
             null
     );
+
+    public static void init() {
+        HudRenderCallback.EVENT.register(ChatNotificator::renderHud);
+    }
 
     @SubscribeEvent
     void recieveMessageGame(ChatEvent event) {
@@ -63,7 +74,33 @@ public class ChatNotificator {
     }
 
     private static void displayAndPlaySound(String display) {
-        ChatUtils.displayTitle(display, "", WynnExtrasConfig.INSTANCE.textDurationInMs / 50, WynnExtrasConfig.INSTANCE.textColor.getFormatting());
+        activeText = display;
+        activeColor = WynnExtrasConfig.INSTANCE.textColor.getRGB() | 0xFF000000;
+        expireTimeMs = System.currentTimeMillis() + WynnExtrasConfig.INSTANCE.textDurationInMs;
         McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(WynnExtrasConfig.INSTANCE.notificationSound.getSoundId())), WynnExtrasConfig.INSTANCE.soundVolume / 100, WynnExtrasConfig.INSTANCE.soundPitch / 100);
+    }
+
+    private static void renderHud(DrawContext ctx, RenderTickCounter tickCounter) {
+        if (activeText == null) return;
+        long now = System.currentTimeMillis();
+        if (now >= expireTimeMs) {
+            activeText = null;
+            return;
+        }
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player == null) return;
+
+        float scale = 3.0f;
+        int textW = (int) (mc.textRenderer.getWidth(activeText) * scale);
+        int screenW = mc.getWindow().getScaledWidth();
+        int screenH = mc.getWindow().getScaledHeight();
+        int x = (screenW - textW) / 2;
+        int y = (int) (screenH * 0.3f);
+
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().translate(x, y);
+        ctx.getMatrices().scale(scale, scale);
+        ctx.drawText(mc.textRenderer, activeText, 0, 0, activeColor, true);
+        ctx.getMatrices().popMatrix();
     }
 }
