@@ -30,11 +30,15 @@ public class TooltipFittingFeatureMixin {
             return TooltipUtils.getClientTooltipComponent(components);
         }
 
+        if (WeightDisplay.currentHoveredStack == null) {
+            return TooltipUtils.getClientTooltipComponent(components);
+        }
+
         if (!ItemUtils.isTier(WeightDisplay.currentHoveredStack, GearTier.MYTHIC)) {
             return TooltipUtils.getClientTooltipComponent(components);
         }
+
         List<Text> modified = TooltipUtils.getWynnItemTooltip(WeightDisplay.currentHoveredStack, WeightDisplay.currentHoveredWynnitem);
         return TooltipUtils.getClientTooltipComponent(modified);
-
     }
 }
