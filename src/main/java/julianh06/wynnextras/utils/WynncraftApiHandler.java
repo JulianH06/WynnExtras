@@ -13,6 +13,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.features.aspects.LocalAspectStorage;
 import julianh06.wynnextras.features.aspects.pages.LootrunLootPoolPage;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.data.*;
@@ -321,9 +322,9 @@ public class WynncraftApiHandler {
             return;
         }
 
-        if(!WynnExtrasConfig.INSTANCE.uploadOwnAspects) return;
+        LocalAspectStorage.save(map);
 
-        System.out.println("DEBUG: processAspects called with " + map.size() + " aspects");
+        if(!WynnExtrasConfig.INSTANCE.uploadOwnAspects) return;
 
         // Authenticate with Mojang first
         MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
@@ -383,15 +384,13 @@ public class WynncraftApiHandler {
                 ApiRequestHelper.sendWithAuthRetry(request, payload)
                         .thenAccept(response -> {
                             int code = response.statusCode();
-                            if (code == 200) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSuccessfully uploaded your aspects!"));
-                            } else if (code == 401) {
+                            if (code == 401) {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
                                 System.err.println("Personal aspects upload auth error: " + response.body());
                             } else if (code >= 500) {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cServer error - try again later"));
                                 System.err.println("Personal aspects upload error: " + code + " → " + response.body());
-                            } else {
+                            } else if(code != 200) {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed (error " + code + ")"));
                                 System.err.println("Personal aspects upload error: " + code + " → " + response.body());
                             }
@@ -407,7 +406,7 @@ public class WynncraftApiHandler {
         });
     }
 
-    private static int parseAspectAmount(Pair<String, String> aspect) {
+    public static int parseAspectAmount(Pair<String, String> aspect) {
         String tierText = aspect.getLeft();
         String rarity = aspect.getRight();
 

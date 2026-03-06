@@ -12,6 +12,7 @@ import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.aspects.pages.AspectsPage;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
@@ -20,12 +21,17 @@ import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.util.Pair;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @WEModule
 public class maintracking {
     public static long lastAspectRewardScan = 0;
+    static boolean passiveScanActive = false;
+    static boolean wasInAspectMenu = false;
 
     // Subcommand: /we aspects scan
     private static SubCommand scanSubCmd = new SubCommand(
@@ -215,6 +221,15 @@ public class maintracking {
             Screen currScreen = client.currentScreen;
             HandledScreen<?> screen = null;
             if (currScreen == null) {
+                if (wasInAspectMenu && passiveScanActive && !AspectScanning.allAspects.isEmpty()) {
+                    Map<String, Pair<String, String>> copy = new HashMap<>(AspectScanning.allAspects);
+                    LocalAspectStorage.save(copy);
+                    WynncraftApiHandler.processAspects(copy);
+                    AspectScanning.resetAllAspects();
+                }
+                wasInAspectMenu = false;
+                passiveScanActive = false;
+
                 scanDone = false;
                 returnedToFirstPage = false;
                 nextPage = false;
@@ -276,6 +291,19 @@ public class maintracking {
                 AspectScanning.setSearchedPages(0);
                 GuiSettleTicks = 0; // Reset settle ticks for fresh start
                 return;
+            }
+            if (inAspectMenu && !wasInAspectMenu) {
+                wasInAspectMenu = true;
+                passiveScanActive = true;
+            }
+
+            if (inAspectMenu && passiveScanActive) {
+                if (GuiSettleTicks > 5) {
+                    GuiSettleTicks = 0;
+                    AspectScanning.scanCurrentPagePassive();
+                } else {
+                    GuiSettleTicks++;
+                }
             }
             if(inAspectMenu && AspectScanreq){
                 // Add delay when first entering aspect menu to ensure everything loads

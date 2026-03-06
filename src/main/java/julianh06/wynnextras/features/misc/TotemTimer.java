@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Map;
 
 public class TotemTimer {
+    private static int lastSelectedSlot = -1;
+    private static int skipEstimatesTicks = 0;
+    private static final int SKIP_TICKS_AFTER_SLOT_CHANGE = 10; // ~0.5s
 
     public record TotemInfo(String owner, String timeText, boolean estimated) {}
 
@@ -61,6 +64,24 @@ public class TotemTimer {
 
     public static void register() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if(client.player == null) return;
+
+
+            if(client.player.getInventory() != null) {
+                int currentSlot = client.player.getInventory().getSelectedSlot();
+                if (lastSelectedSlot != -1 && currentSlot != lastSelectedSlot) {
+                    estimatedTotems.clear();
+                    skipEstimatesTicks = SKIP_TICKS_AFTER_SLOT_CHANGE;
+                } else if (skipEstimatesTicks > 0) {
+                    estimatedTotems.clear();
+                    skipEstimatesTicks--;
+                }
+                lastSelectedSlot = currentSlot;
+
+            }
+
+            boolean skipEstimatesThisTick = skipEstimatesTicks > 0;
+
             totems.clear();
             warningActive = false;
             if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled) return;
@@ -126,7 +147,7 @@ public class TotemTimer {
                 foundKeys.add(key);
 
                 float secs = parseSeconds(timeText);
-                if (secs > 0) {
+                if (secs > 0 && !skipEstimatesThisTick) {
                     estimatedTotems.put(key, new float[]{ secs, tickCounter });
                 }
 
@@ -134,7 +155,7 @@ public class TotemTimer {
             }
 
             // Out-of-render estimation
-            if (c.totemTimerEstimate) {
+            if (c.totemTimerEstimate && !skipEstimatesThisTick) {
                 List<String> toRemove = new ArrayList<>();
                 for (Map.Entry<String, float[]> entry : estimatedTotems.entrySet()) {
                     String key = entry.getKey();
@@ -188,7 +209,6 @@ public class TotemTimer {
         if (mc.player == null) return;
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
 
-        // Render totem list
         if (!totems.isEmpty()) {
             float ts = c.totemTimerScale;
             int lineH = (int) (10 * ts);
@@ -200,30 +220,40 @@ public class TotemTimer {
                 if (timeDisplay.isEmpty()) timeDisplay = "?";
                 String line = t.owner() + "'s Totem: " + timeDisplay;
                 int color = t.estimated() ? 0xFFAAAAAA : timeColor(t.timeText());
+
+                int tw = mc.textRenderer.getWidth(line);
+                int th = mc.textRenderer.fontHeight;
+                int boxW = (int) ((tw + 6) * ts);
+                int boxH = (int) (14 * ts);
+
                 ctx.getMatrices().pushMatrix();
-                ctx.getMatrices().translate(baseX, baseY + i * lineH);
+                ctx.getMatrices().translate(baseX + boxW / 2f, baseY + i * lineH + boxH / 2f);
                 ctx.getMatrices().scale(ts, ts);
-                ctx.drawText(mc.textRenderer, line, 0, 0, color, true);
+                ctx.drawText(mc.textRenderer, line, -tw / 2, -th / 2, color, true);
                 ctx.getMatrices().popMatrix();
                 i++;
             }
         }
 
-        // Render warning text
         if (warningActive && c.totemTimerWarningText) {
             String alarmText = "RECAST TOTEM!";
             float as = c.totemWarningScale;
             int wx = c.totemWarningX;
-            // Auto-center horizontally if x == -1
-            if (wx == -1) {
-                int textW = (int) (mc.textRenderer.getWidth(alarmText) * as);
-                wx = (mc.getWindow().getScaledWidth() - textW) / 2;
-            }
             int wy = c.totemWarningY;
+
+            int tw = mc.textRenderer.getWidth(alarmText);
+            int th = mc.textRenderer.fontHeight;
+            int boxW = (int) ((tw + 6) * as);
+            int boxH = (int) (14 * as);
+
+            if (wx == -1) {
+                wx = (mc.getWindow().getScaledWidth() - boxW) / 2;
+            }
+
             ctx.getMatrices().pushMatrix();
-            ctx.getMatrices().translate(wx, wy);
+            ctx.getMatrices().translate(wx + boxW / 2f, wy + boxH / 2f);
             ctx.getMatrices().scale(as, as);
-            ctx.drawText(mc.textRenderer, alarmText, 0, 0, 0xFFFF4444, true);
+            ctx.drawText(mc.textRenderer, alarmText, -tw / 2, -th / 2, 0xFFFF4444, true);
             ctx.getMatrices().popMatrix();
         }
     }

@@ -3,12 +3,12 @@ package julianh06.wynnextras.features.misc;
 import com.wynntils.core.components.Models;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.WynnExtras;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.text.Text;
 
 public class ProvokeTimer {
     private static int storedTicks = -1;
@@ -62,7 +62,7 @@ public class ProvokeTimer {
                     lastSeconds = calculatedSeconds;
                 } else if (calculatedSeconds == 0 && !zeroMessageSent) {
                     McUtils.sendMessageToClient(
-                            Text.literal("Provoke effect ended.")
+                        WynnExtras.addWynnExtrasPrefix("§6Provoke effect ended.")
                     );
                     zeroMessageSent = true;
                 }
@@ -87,10 +87,16 @@ public class ProvokeTimer {
         int x = WynnExtrasConfig.INSTANCE.provokeTimerX;
         int y = WynnExtrasConfig.INSTANCE.provokeTimerY;
 
+        int textWidth = mc.textRenderer.getWidth(text);
+        int textHeight = mc.textRenderer.fontHeight;
+
+        int boxW = (int)((textWidth + 6) * scale);
+        int boxH = (int)(14 * scale);
+
         ctx.getMatrices().pushMatrix();
-        ctx.getMatrices().translate(x, y);
+        ctx.getMatrices().translate(x + boxW / 2f, y + boxH / 2f);
         ctx.getMatrices().scale(scale, scale);
-        ctx.drawText(mc.textRenderer, text, 0, 0, color, true);
+        ctx.drawText(mc.textRenderer, text, -textWidth / 2, -textHeight / 2, color, true);
         ctx.getMatrices().popMatrix();
     }
 }

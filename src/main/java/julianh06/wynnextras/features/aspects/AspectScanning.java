@@ -4,6 +4,7 @@ import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
+import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
@@ -76,6 +77,7 @@ public class AspectScanning {
             // On the first page (SearchedPages == 0), scan the 5 active aspects in center slots FIRST
             if (SearchedPages == 0) {
                 int[] centerSlots = {4, 11, 15, 18, 26};
+
                 for (int slotIdx : centerSlots) {
                     if (slotIdx >= screen.getScreenHandler().slots.size()) continue;
                     Slot slot = screen.getScreenHandler().slots.get(slotIdx);
@@ -118,6 +120,16 @@ public class AspectScanning {
                         bestTierLine = bestTierLine.replaceAll("(\\[MAX])\\1+", "$1");
                         result.put(name, new Pair<>(bestTierLine, rarity));
                     }
+                }
+
+                String classId = BankOverlay.currentCharacterID;
+                if (classId != null && !classId.isEmpty()) {
+                    Map<String, String> activeMap = new LinkedHashMap<>();
+                    for (Map.Entry<String, Pair<String, String>> entry : result.entrySet()) {
+                        activeMap.put(entry.getKey(), entry.getValue().getLeft());
+                    }
+
+                    LocalAspectStorage.saveActiveAspects(classId, activeMap);
                 }
 
                 // Add active aspects to global map immediately
@@ -213,6 +225,87 @@ public class AspectScanning {
                 McUtils.mc().currentScreen.close();
             }
             return result;
+        }
+    }
+
+    public static void scanCurrentPagePassive() {
+        Screen currScreen = MinecraftClient.getInstance().currentScreen;
+        HandledScreen<?> screen = (currScreen instanceof HandledScreen) ? (HandledScreen<?>) currScreen : null;
+        if (screen == null) return;
+
+        int[] centerSlots = {4, 11, 15, 18, 26};
+        Map<String, String> activeMap = new LinkedHashMap<>();
+        for (int slotIdx : centerSlots) {
+            if (slotIdx >= screen.getScreenHandler().slots.size()) continue;
+            Slot slot = screen.getScreenHandler().slots.get(slotIdx);
+            if (!slot.hasStack()) continue;
+
+            String name = null;
+            String bestTierLine = null;
+            List<Text> tooltips = slot.getStack().getTooltip(
+                    Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
+
+            for (Text tooltip : tooltips) {
+                String s = tooltip.getString().replaceAll("§.", "").trim();
+                if (name == null && (s.contains("Aspect") || s.contains("Embodiment"))) name = s;
+            }
+            for (Text tooltip : tooltips) {
+                String candidate = extractBestTierLine(tooltip).trim();
+                if (candidate.contains("Tier") &&
+                        (candidate.contains(">>>") || candidate.matches(".*\\[\\d+/\\d+\\].*") || candidate.contains("[MAX]"))) {
+                    if (bestTierLine == null || candidate.length() > bestTierLine.length()) bestTierLine = candidate;
+                }
+            }
+            if (name != null && bestTierLine != null) {
+                bestTierLine = bestTierLine.replaceAll("^[^A-Za-z0-9]*", "");
+                activeMap.put(name, bestTierLine);
+            }
+        }
+
+        if (!activeMap.isEmpty()) {
+            String classId = BankOverlay.currentCharacterID;
+            if (classId != null && !classId.isEmpty()) {
+                LocalAspectStorage.saveActiveAspects(classId, activeMap);
+            }
+        }
+
+        int[] slotsToRead = {36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53};
+        for (int i : slotsToRead) {
+            if (i >= screen.getScreenHandler().slots.size()) break;
+            Slot slot = screen.getScreenHandler().slots.get(i);
+            if (!slot.hasStack()) break;
+
+            String name = null;
+            String rarity = "";
+            String bestTierLine = null;
+            List<Text> tooltips = slot.getStack().getTooltip(
+                    Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
+
+            for (Text tooltip : tooltips) {
+                String s = tooltip.getString().replaceAll("§.", "").trim();
+                if (name == null && (s.contains("Aspect") || s.contains("Embodiment"))) {
+                    name = s;
+                    if (slot.getStack().getCustomName() != null &&
+                            slot.getStack().getCustomName().getStyle() != null &&
+                            slot.getStack().getCustomName().getStyle().getColor() != null) {
+                        String hex = slot.getStack().getCustomName().getStyle().getColor().getHexCode();
+                        if (hex.equals("#AA00AA")) rarity = "Mythic";
+                        else if (hex.equals("#FF5555")) rarity = "Fabled";
+                        else if (hex.equals("#55FFFF")) rarity = "Legendary";
+                    }
+                }
+            }
+            for (Text tooltip : tooltips) {
+                String candidate = extractBestTierLine(tooltip).trim();
+                if (candidate.contains("Tier") &&
+                        (candidate.contains(">>>") || candidate.matches(".*\\[\\d+/\\d+\\].*") || candidate.contains("[MAX]"))) {
+                    if (bestTierLine == null || candidate.length() > bestTierLine.length()) bestTierLine = candidate;
+                }
+            }
+            if (name != null && bestTierLine != null) {
+                bestTierLine = bestTierLine.replaceAll("^[^A-Za-z0-9]*", "");
+                allAspects.put(name, new Pair<>(bestTierLine, rarity));
+            }
         }
     }
 

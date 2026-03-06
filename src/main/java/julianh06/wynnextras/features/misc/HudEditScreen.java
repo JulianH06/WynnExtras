@@ -113,9 +113,11 @@ public class HudEditScreen extends Screen {
             int textColor = e.id.equals("warning") ? 0xFFFF4444 : 0xFFFFFFFF;
 
             ctx.getMatrices().pushMatrix();
-            ctx.getMatrices().translate(e.x + 2, e.y + 3);
+            ctx.getMatrices().translate(e.x + e.sw() / 2f, e.y + e.sh() / 2f);  // Mittelpunkt des Kästchens
             ctx.getMatrices().scale(e.scale, e.scale);
-            ctx.drawText(textRenderer, e.preview, 0, 0, textColor, true);
+            int tw = textRenderer.getWidth(e.preview);
+            int th = textRenderer.fontHeight;
+            ctx.drawText(textRenderer, e.preview, -tw / 2, -th / 2, textColor, true);
             ctx.getMatrices().popMatrix();
         }
 
