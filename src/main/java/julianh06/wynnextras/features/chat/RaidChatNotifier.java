@@ -366,6 +366,9 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
+            if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
+                return "§bCompleted Seal " + progress + " §c@ " + timestamp;
+            }
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
 
             String key = PB_PREFIX + "_" + progress;
@@ -406,6 +409,9 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
+            if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
+                return "§bAdded light " + progress + " §c@ " + timestamp;
+            }
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
             String key = PB_PREFIX + "_" + progress;
 
@@ -447,6 +453,9 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
+            if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
+                return "§bKilled Shadowling " + progress + " §c@ " + timestamp;
+            }
             long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
 
             if ("3/3".equals(progress) && Time.now().timestamp() >= disableChiropUntil && WynnExtrasConfig.INSTANCE.chiropTimer) {

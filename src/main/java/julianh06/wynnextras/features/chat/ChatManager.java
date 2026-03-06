@@ -5,6 +5,7 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.event.ChatEvent;
+import julianh06.wynnextras.event.DisconnectEvent;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.text.Text;
@@ -55,6 +56,12 @@ public class ChatManager implements WELoader {
         if (event.getKey() == GLFW.GLFW_KEY_ESCAPE && event.getAction() == GLFW.GLFW_PRESS) {
             awaitingRawInput = false;
         }
+    }
+
+    @SubscribeEvent
+    public void onDisconnect(DisconnectEvent event) {
+        currentChannel = ChatChannel.ALL;
+        awaitingRawInput = false;
     }
 
     public static String processMessageForSend(String message) {

@@ -12,9 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(SystemMessageEvent.ChatReceivedEvent.class)
 public class ChatPacketRecievedEventMixin {
-    @Inject(method = "<init>", at = @At("TAIL"), remap = false)
-    public void started (Text message, CallbackInfo ci) {
-        new ChatEvent(message).post();
-        //ChatNotificator.onPlayerChatReceived(message);
-    }
+    // ChatEvent is already posted via ClientReceiveMessageEvents.GAME in ClientEvents.java
+    // Removed duplicate posting that caused double notifications
 }

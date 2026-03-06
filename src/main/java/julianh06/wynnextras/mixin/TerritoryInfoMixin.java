@@ -19,7 +19,7 @@ import java.util.function.Function;
 
 @Mixin(value = TerritoryInfo.class, remap = false)
 public class TerritoryInfoMixin implements TerritoryInfoMixinDuck {
-    @Unique private static int ThisIsStupid = 60;
+    @Unique private static final int FALLBACK_RESOURCE_TIME = 30;
 
     @Shadow private String guildPrefix;
     @Shadow private GuildResourceValues defences;
@@ -37,11 +37,12 @@ public class TerritoryInfoMixin implements TerritoryInfoMixinDuck {
             // Yes I turn it into an array to lazy-dodge concurrent modifications
             for (TerritoryInfo territoryInfo : connections.toArray(new TerritoryInfo[0])) {
                 for (String route : territoryInfo.getTradingRoutes()) {
-                    TerritoryInfo routeInfo = Models.Territory.getTerritoryPoisFromAdvancement().stream()
+                    var routePoi = Models.Territory.getTerritoryPoisFromAdvancement().stream()
                             .filter(territoryPoi -> territoryPoi.getName().equals(route))
                             .findFirst()
-                            .orElseThrow()
-                            .getTerritoryInfo();
+                            .orElse(null);
+                    if (routePoi == null) continue;
+                    TerritoryInfo routeInfo = routePoi.getTerritoryInfo();
                     connections.add(routeInfo);
                     if (routeInfo.getGuildPrefix().equals(guildPrefix)) {
                         friendlyConnections.add(routeInfo);
@@ -212,10 +213,9 @@ public class TerritoryInfoMixin implements TerritoryInfoMixinDuck {
         int predictedResourceTime = Math.clamp(Math.round(currentEmeralds / (producedEmeralds / 60d) * 60), 0, 60);
         boolean usingFallbackTime = false;
         if (predictedResourceTime == 60) {
-            predictedResourceTime = ThisIsStupid;
+            predictedResourceTime = FALLBACK_RESOURCE_TIME;
             usingFallbackTime = true;
         }
-        ThisIsStupid = predictedResourceTime;
         // == Resolve connection boost == //
         double connectionBoost = 1 + 0.3 * getUniqueConnections(1);
         if (headquarters) connectionBoost *= (1.5 + 0.25 * getUniqueConnections(3));

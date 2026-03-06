@@ -39,6 +39,8 @@ public class WEEventBus extends EventBus {
             eventBus.post(event);
             return event instanceof ICancellableEvent cancellableEvent && cancellableEvent.isCanceled();
         } catch (Throwable t) {
+            System.err.println("[WynnExtras] Exception in event handler for " + event.getClass().getSimpleName());
+            t.printStackTrace();
             return false;
         }
     }

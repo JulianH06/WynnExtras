@@ -86,28 +86,34 @@ public class GV {
         WynncraftApiHandler.fetchGuildData(guild).thenAccept(guildData -> {
             currentGuildData = guildData;
 
-            BlockState state = Blocks.WHITE_BANNER.getDefaultState();
+            // Run on main thread to avoid thread-safety issues
+            MinecraftClient.getInstance().execute(() -> {
+                if (MinecraftClient.getInstance().player == null || MinecraftClient.getInstance().world == null) return;
+                if (currentGuildData == null || currentGuildData.banner == null) return;
 
-            GVScreen.bannerBlockEntity = new BannerBlockEntity(
-                    MinecraftClient.getInstance().player.getBlockPos().add(-1,0,0),
-                    state,
-                    GVScreen.dyeColorFromName(currentGuildData.banner.base)
-            );
+                BlockState state = Blocks.WHITE_BANNER.getDefaultState();
 
-            GVScreen.bannerBlockEntity.setWorld(MinecraftClient.getInstance().world);
+                GVScreen.bannerBlockEntity = new BannerBlockEntity(
+                        MinecraftClient.getInstance().player.getBlockPos().add(-1,0,0),
+                        state,
+                        GVScreen.dyeColorFromName(currentGuildData.banner.base)
+                );
 
-            BannerPatternsComponent.Builder builder = new BannerPatternsComponent.Builder();
+                GVScreen.bannerBlockEntity.setWorld(MinecraftClient.getInstance().world);
 
-            for (GuildData.BannerLayer layer : GV.currentGuildData.banner.layers) {
-                RegistryEntry<BannerPattern> entry =
-                        GVScreen.resolvePatternEntry(layer.pattern.toUpperCase());
-                if (entry != null) {
-                    builder.add(entry, GVScreen.dyeColorFromName(layer.colour));
+                BannerPatternsComponent.Builder builder = new BannerPatternsComponent.Builder();
+
+                for (GuildData.BannerLayer layer : GV.currentGuildData.banner.layers) {
+                    RegistryEntry<BannerPattern> entry =
+                            GVScreen.resolvePatternEntry(layer.pattern.toUpperCase());
+                    if (entry != null) {
+                        builder.add(entry, GVScreen.dyeColorFromName(layer.colour));
+                    }
                 }
-            }
 
-            ((BannerBlockEntityAccessor) GVScreen.bannerBlockEntity)
-                    .setPatterns(builder.build());
+                ((BannerBlockEntityAccessor) GVScreen.bannerBlockEntity)
+                        .setPatterns(builder.build());
+            });
         }).exceptionally(ex -> {
             System.err.println("Error while getting the data: " + ex.getMessage());
             return null;

@@ -66,9 +66,15 @@ public class CurrentVersionData {
                 JsonObject obj = el.getAsJsonObject();
                 String version = obj.get("version_number").getAsString();
                 String date = obj.get("date_published").getAsString();
-                String gameVersion = obj.get("game_versions").getAsString();
-
-                if(!gameVersion.equals(SharedConstants.getGameVersion().name())) continue;
+                JsonArray gameVersions = obj.get("game_versions").getAsJsonArray();
+                boolean matchesGame = false;
+                for (JsonElement gv : gameVersions) {
+                    if (gv.getAsString().equals(SharedConstants.getGameVersion().name())) {
+                        matchesGame = true;
+                        break;
+                    }
+                }
+                if (!matchesGame) continue;
 
                 if (date.compareTo(latestDate) > 0) {
                     latest = version;

@@ -49,7 +49,7 @@ public class ChatNotificator {
         if(message.getString().contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
 
         for(String notificator : WynnExtrasConfig.INSTANCE.notifierWords) {
-            if(!notificator.contains("|")) return;
+            if(!notificator.contains("|")) continue;
             String[] parts = notificator.split("\\|");
             if(message.getString().toLowerCase().contains(parts[0].toLowerCase())) {
                 displayAndPlaySound(parts[1]);

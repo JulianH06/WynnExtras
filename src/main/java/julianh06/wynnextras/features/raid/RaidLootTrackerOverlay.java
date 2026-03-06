@@ -546,20 +546,7 @@ public class RaidLootTrackerOverlay {
                 }
             }
 
-            // Right click on filter area = prev filter (check before drag)
-            if (button == 1 && (isInBounds(mouseX, mouseY, filterNameBounds) || isInBounds(mouseX, mouseY, leftArrowBounds))) {
-                selectedFilterIndex = (selectedFilterIndex - 1 + RAID_FILTERS.size()) % RAID_FILTERS.size();
-                return true;
-            }
-
-            // Right click on mode area = toggle mode (check before drag)
-            if (button == 1 && (isInBounds(mouseX, mouseY, modeNameBounds) || isInBounds(mouseX, mouseY, modeLeftArrowBounds))) {
-                config.raidLootTrackerShowSession = !config.raidLootTrackerShowSession;
-                WynnExtrasConfig.save();
-                return true;
-            }
-
-            // Right click while in inventory/chat = start drag (only if not on filter/mode)
+            // Left click = start drag (only if not on filter/mode)
             if (button == 0 && canInteract) {
                 isDragging = true;
                 dragOffsetX = (int) mouseX - xPos;

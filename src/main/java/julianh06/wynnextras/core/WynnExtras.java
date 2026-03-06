@@ -151,7 +151,9 @@ public class WynnExtras implements ClientModInitializer {
 		CurrentVersionData.INSTANCE.version = FabricLoader.getInstance().getModContainer("wynnextras").map(mod -> mod.getMetadata().getVersion().getFriendlyString()).orElse("unknown");
 		CurrentVersionData.save();
 		//TODO: remove once test version is gone
-		latestVersion = CurrentVersionData.fetchLatestVersion();
+		new Thread(() -> {
+			latestVersion = CurrentVersionData.fetchLatestVersion();
+		}, "WynnExtras-VersionCheck").start();
 
 		SpecialGuiElementRegistry.register(context -> new BannerGuiRenderer(context.vertexConsumers(), MinecraftClient.getInstance().getAtlasManager()));
 
