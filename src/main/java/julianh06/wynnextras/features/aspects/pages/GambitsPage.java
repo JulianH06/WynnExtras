@@ -1,12 +1,14 @@
 package julianh06.wynnextras.features.aspects.pages;
 
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.*;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 
 import java.time.Duration;
@@ -52,18 +54,21 @@ public class GambitsPage extends PageWidget{
     Identifier bld = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/bl.png");
     Identifier brd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/br.png");
 
-    private boolean fetchedCrowdsourcedGambits = false;
-    private List<GambitData.GambitEntry> crowdsourcedGambits = null;
+    private static boolean fetchedCrowdsourcedGambits = false;
+    private static List<GambitData.GambitEntry> crowdsourcedGambits = null;
     private static ZonedDateTime lastCrowdsourceFetch = null;
     private static Boolean fetchRunning = false;
     private static Boolean hasOldData = false;
 
     private final OpenPartyFinderWidget openPartyFinderWidget;
 
+    private final RefreshButton refreshButton;
+
     public GambitsPage(AspectScreen parent) {
         super(parent);
 
         openPartyFinderWidget = new OpenPartyFinderWidget();
+        refreshButton = new RefreshButton();
     }
 
     @Override
@@ -156,6 +161,9 @@ public class GambitsPage extends PageWidget{
                 drawGambitPanel(x, y, panelWidth, panelHeight, gambit);
             }
         }
+
+        refreshButton.setBounds(0, 0, 260, 60);
+        refreshButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
     }
 
     private static boolean isSamePool(List<GambitData.GambitEntry> oldGambits, List<GambitData.GambitEntry> newGambits) {
@@ -174,6 +182,11 @@ public class GambitsPage extends PageWidget{
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if(refreshButton.isHovered()) {
+            refreshButton.onClick(button);
+            return true;
+        }
+
         return openPartyFinderWidget.mouseClicked(mx, my, button);
     }
 
@@ -283,5 +296,29 @@ public class GambitsPage extends PageWidget{
         if (lastFetch != null && lastFetch.plusSeconds(30).isAfter(now)) return false;
 
         return lastFetch == null || currentReset.isAfter(lastFetch);
+    }
+
+    private static class RefreshButton extends Widget {
+        public RefreshButton() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawCenteredText("Reload gambits", x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            fetchedCrowdsourcedGambits = false;
+            crowdsourcedGambits = null;
+            lastCrowdsourceFetch = null;
+            fetchRunning = false;
+            hasOldData = false;
+
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
+        }
     }
 }

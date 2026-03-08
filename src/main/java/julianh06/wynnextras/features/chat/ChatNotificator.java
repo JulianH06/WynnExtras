@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.chat;
 
+import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -23,6 +24,7 @@ import java.util.Map;
 public class ChatNotificator {
     private static String activeText = null;
     private static long expireTimeMs = 0;
+    private static long startTimeMs = 0;
     private static int activeColor = 0xFFFFFFFF;
 
     private static Command testCmd = new Command(
@@ -76,6 +78,7 @@ public class ChatNotificator {
     private static void displayAndPlaySound(String display) {
         activeText = display;
         activeColor = WynnExtrasConfig.INSTANCE.textColor.getRGB() | 0xFF000000;
+        startTimeMs = System.currentTimeMillis();
         expireTimeMs = System.currentTimeMillis() + WynnExtrasConfig.INSTANCE.textDurationInMs;
         McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(WynnExtrasConfig.INSTANCE.notificationSound.getSoundId())), WynnExtrasConfig.INSTANCE.soundVolume / 100, WynnExtrasConfig.INSTANCE.soundPitch / 100);
     }
@@ -91,17 +94,48 @@ public class ChatNotificator {
         if (mc.player == null) return;
 
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
+        long fadeInMs = c.notifierFadeInMs;
+        long fadeOutMs = c.notifierFadeOutMs;
+        long elapsed = now - startTimeMs;
+        long remaining = expireTimeMs - now;
+
+        float alpha;
+        if (elapsed < fadeInMs) {
+            alpha = fadeInMs > 0 ? (float) elapsed / fadeInMs : 1f;
+        } else if (remaining < fadeOutMs) {
+            alpha = fadeOutMs > 0 ? (float) remaining / fadeOutMs : 1f;
+        } else {
+            alpha = 1.0f;
+        }
+        alpha = Math.max(0f, Math.min(1f, alpha));
+
         float scale = c.notifierScale;
-        int textW = (int) (mc.textRenderer.getWidth(activeText) * scale);
         int screenW = mc.getWindow().getScaledWidth();
         int screenH = mc.getWindow().getScaledHeight();
-        int x = c.notifierX == -1 ? (screenW - textW) / 2 : c.notifierX;
-        int y = c.notifierY == -1 ? (int) (screenH * 0.3f) : c.notifierY;
+
+        int cx = c.notifierX == -1 ? screenW / 2 : c.notifierX;
+        int cy = c.notifierY == -1 ? (int) (screenH * 0.3f) : c.notifierY;
+
+        int tw = mc.textRenderer.getWidth(activeText);
+        int th = mc.textRenderer.fontHeight;
+
+        WynnExtrasConfig.Align align = c.notifierAlignment;
+
+        int previewTw = mc.textRenderer.getWidth("NOTIFICATION");
+
+        int textOffsetX;
+        if (align == WynnExtrasConfig.Align.LEFT) {
+            textOffsetX = -previewTw / 2;
+        } else if (align == WynnExtrasConfig.Align.RIGHT) {
+            textOffsetX = previewTw / 2 - tw;
+        } else {
+            textOffsetX = -tw / 2;
+        }
 
         ctx.getMatrices().pushMatrix();
-        ctx.getMatrices().translate(x, y);
+        ctx.getMatrices().translate(cx, cy);
         ctx.getMatrices().scale(scale, scale);
-        ctx.drawText(mc.textRenderer, activeText, 0, 0, activeColor, true);
+        ctx.drawText(mc.textRenderer, String.valueOf(textOffsetX), textOffsetX, -th / 2, CustomColor.fromInt(activeColor).withAlpha(alpha).asInt(), true);
         ctx.getMatrices().popMatrix();
     }
 }

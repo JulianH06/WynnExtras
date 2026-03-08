@@ -551,6 +551,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
         shownPages = pageAmount;
 
+        drawEmeraldOverlay(context, xStart - 36, yStart - 14);
+
         renderHoveredSlotHighlight(context,  screen);
         renderHoveredTooltip(context, screen, mouseX, mouseY);
         renderHeldItemOverlay(context, mouseX, mouseY);
@@ -562,8 +564,6 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         quickActionWidget.draw(context, mouseX, mouseY, delta, ui);
-
-        drawEmeraldOverlay(context, xStart - 36, yStart - 14);
     }
 
     private void drawBackgroundRect(DrawContext context, float xRemain, float yRemain) {
@@ -909,6 +909,20 @@ public class BankOverlay2 extends WEHandledScreen {
     private void renderHoveredTooltip(DrawContext context, HandledScreen<?> screen, int mouseX, int mouseY) {
         if (hoveredSlot.getItem() == Items.AIR) return;
 
+        try {
+            if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
+                initWynnventoryReflection();
+
+                if (!wynnventoryReady) return;
+
+                ItemStack stack = hoveredSlot;
+
+                if (WynnExtrasConfig.INSTANCE.wynnventoryOverlay && stack != null) {
+                    renderPriceTooltipReflective(context, mouseX, mouseY, stack);
+                }
+            }
+        } catch (Throwable ignored) {}
+
         Optional<WynnItem> item = asWynnItem(hoveredSlot);
         List<Text> tooltip = item.map(i -> {
                     currentHoveredStack = hoveredSlot;
@@ -945,20 +959,6 @@ public class BankOverlay2 extends WEHandledScreen {
         } else {
             drawTooltip(screen.getTextRenderer(), components, (int)(mouseX / scale) + 12, y, context);
         }
-
-        try {
-            if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
-                initWynnventoryReflection();
-
-                if (!wynnventoryReady) return;
-
-                ItemStack stack = hoveredSlot;
-
-                if (WynnExtrasConfig.INSTANCE.wynnventoryOverlay && stack != null) {
-                    renderPriceTooltipReflective(context, mouseX, mouseY, stack);
-                }
-            }
-        } catch (Throwable ignored) {}
 
     }
 
@@ -1568,7 +1568,7 @@ public class BankOverlay2 extends WEHandledScreen {
             if (item.isPresent()) {
                 ItemAnnotation annotation = item.get();
                 if (annotation instanceof PotionItem potionItem) {
-                    stack.setCount(potionItem.getCount());
+                    stack.setCount(potionItem.getUses().current());
                 }
                 if (annotation instanceof MultiHealthPotionItem potionItem) {
                     int current = potionItem.getUses().current();
@@ -1597,7 +1597,10 @@ public class BankOverlay2 extends WEHandledScreen {
             renderHighlightOverlay(ctx, stack, x + 1, y + 1);
 
             ctx.drawItem(stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()));
-            ctx.drawStackOverlay(MinecraftClient.getInstance().textRenderer, stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()), renderOne ? "1" : stack.getCount() == 1 ? "" : String.valueOf(stack.getCount()));
+            try {
+                if(stack.getCustomName().getString().contains("Ingredient Pouch")) ctx.drawStackOverlay(MinecraftClient.getInstance().textRenderer, stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()), renderOne ? "1" : stack.getCount() == 1 ? "" : String.valueOf(stack.getCount()));
+                else if(stack.getCount() > 1) ui.drawText(String.valueOf(stack.getCount()), (int) (width + x / ui.getScaleFactor()), (int) (height - 8 + y / ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 1);
+            } catch (Exception ignored) {}
 
             renderItemOverlays(ctx, stack, x + 1, y + 1);
             renderSearchOverlay(ctx, stack, x + 1, y + 1);
@@ -2075,8 +2078,8 @@ public class BankOverlay2 extends WEHandledScreen {
         if (wynnventoryReady) return;
 
         try {
-            Class<?> builderClass = Class.forName("com.wynnventory.core.tooltip.PriceTooltipBuilder");
-            Class<?> factoryClass = Class.forName("com.wynnventory.core.tooltip.PriceTooltipFactory");
+            Class<?> builderClass = Class.forName("com.wynnventory.feature.tooltip.price.PriceTooltipBuilder");
+            Class<?> factoryClass = Class.forName("com.wynnventory.feature.tooltip.price.PriceTooltipFactory");
 
             builderCtor = builderClass.getConstructor();
             factoryCtor = factoryClass.getConstructor(builderClass);

@@ -283,17 +283,18 @@ public abstract class HandledScreenMixin {
         if (currentOverlayType != BankOverlayType.NONE) {
             heldItem = Items.AIR.getDefaultStack();
 
-            List<ItemStack> stacks = new ArrayList<>();
-            for (Slot slot : activeInvSlots) {
-                stacks.add(slot.getStack());
-            }
-            if(activeInv != -1) {
+            if (Pages != null && activeInv != -1) {
+                List<ItemStack> stacks = new ArrayList<>();
+                for (Slot slot : activeInvSlots) {
+                    stacks.add(slot.getStack());
+                }
                 Pages.BankPages.put(activeInv, stacks);
+                Pages.save();
             }
+
             activeInvSlots.clear();
-            activeInv = 1;
+            activeInv = -1;
             annotationCache.clear();
-            Pages.save();
         }
         currentOverlayType = BankOverlayType.NONE;
     }

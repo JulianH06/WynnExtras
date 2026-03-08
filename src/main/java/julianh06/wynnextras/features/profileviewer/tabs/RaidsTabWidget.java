@@ -7,11 +7,17 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.features.profileviewer.data.GuildRaids;
 import julianh06.wynnextras.features.profileviewer.data.Raids;
+import julianh06.wynnextras.utils.UI.Widget;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static julianh06.wynnextras.features.profileviewer.PVScreen.getClassName;
@@ -26,17 +32,44 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
     static Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tcc.png");
     static Identifier TNATexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tna.png");
 
-
     public RaidsTabWidget() {
         super(0, 0, 0, 0);
+
+        typeSwitcher = new TypeSwitcher();
+        addChild(typeSwitcher);
     }
+
+    private enum Status { ALL, GRAIDS, NONGRAIDS }
+
+    private static Status currentStatus = Status.ALL;
+
+    private TypeSwitcher typeSwitcher;
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(PV.currentPlayerData == null) return;
         DecimalFormat formatter = new DecimalFormat("#,###");
         if(PV.currentPlayerData.getGlobalData() == null) {
+            List<String> apiKeyInfo = new ArrayList<>();
+            if(MinecraftClient.getInstance().player != null && WynncraftApiHandler.INSTANCE.API_KEY == null || WynncraftApiHandler.INSTANCE.API_KEY.isEmpty()) {
+                if(PV.currentPlayer.equalsIgnoreCase(MinecraftClient.getInstance().player.getName().getString())) {
+                    apiKeyInfo.add("To get access to your private stats you need to set an api-key.");
+                    apiKeyInfo.add("You can find more info by using \"/we apikey\"");
+                } else {
+                    apiKeyInfo.add("You might be able to see them if you set an api-key.");
+                    apiKeyInfo.add("You can find more info by using \"/we apikey\"");
+                }
+            }
+
+
+            int apiKeyInfoY = y + 385;
+            for(String line : apiKeyInfo) {
+                ui.drawCenteredText(line, x + 900, apiKeyInfoY, CustomColor.fromHexString("FF0000"));
+                apiKeyInfoY += 30;
+            }
+
             ui.drawCenteredText("This player has their raid stats private.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
+            typeSwitcher.setBounds(-100, -100, 0, 0);
             return;
         }
 
@@ -90,7 +123,8 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
             }
         }
 
-        Raids raids;
+        Raids raids = null;
+        GuildRaids guildRaids = null;
         String characterNameString;
         if(selectedCharacter != null && selectedCharacter.getRaids() != null) {
             characterNameString = " on " + getClassName(selectedCharacter) + ": ";
@@ -98,6 +132,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
         } else {
             characterNameString = ": ";
             raids = PV.currentPlayerData.getGlobalData().getRaids();
+            guildRaids = PV.currentPlayerData.getGlobalData().getGuildRaids();
         }
 
         ui.drawText("Nest of the Grootslangs", x + 345f, y + 165f, notgColor, 3.9f);
@@ -105,19 +140,88 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
         ui.drawText("The Canyon Colossus", x + 1470f, y + 165f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
         ui.drawText("The Nameless Anomaly", x + 1470f, y + 495f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
 
-        if(raids != null) {
-            long NOTGComps = raids.getList().getOrDefault("Nest of the Grootslangs", 0);
-            long NOLComps = raids.getList().getOrDefault("Orphion's Nexus of Light", 0);
-            long TCCComps = raids.getList().getOrDefault("The Canyon Colossus", 0);
-            long TNAComps = raids.getList().getOrDefault("The Nameless Anomaly", 0);
-            long TotalComps = raids.getTotal();
 
-            ui.drawText(formatter.format(NOTGComps) + " Completions", x + 345f, y + 210f, notgColor, 3.9f);
-            ui.drawText(formatter.format(NOLComps) + " Completions", x + 345f, y + 540f, nolColor, 3.9f);
-            ui.drawText(formatter.format(TCCComps) + " Completions", x + 1470f, y + 210f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
-            ui.drawText(formatter.format(TNAComps) + " Completions", x + 1470f, y + 540f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+        if(currentStatus == null) return;
 
-            ui.drawCenteredText("Total Completions" + characterNameString + formatter.format(TotalComps), x + 900f, y + 48f, CustomColor.fromHexString("FFFFFF"), 3.9f);
+        switch (currentStatus) {
+            case ALL -> { if(raids != null) {
+                long NOTGComps = raids.getList().getOrDefault("Nest of the Grootslangs", 0);
+                long NOLComps = raids.getList().getOrDefault("Orphion's Nexus of Light", 0);
+                long TCCComps = raids.getList().getOrDefault("The Canyon Colossus", 0);
+                long TNAComps = raids.getList().getOrDefault("The Nameless Anomaly", 0);
+                long TotalComps = raids.getTotal();
+
+                ui.drawText(formatter.format(NOTGComps) + " Completions", x + 345f, y + 210f, notgColor, 3.9f);
+                ui.drawText(formatter.format(NOLComps) + " Completions", x + 345f, y + 540f, nolColor, 3.9f);
+                ui.drawText(formatter.format(TCCComps) + " Completions", x + 1470f, y + 210f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+                ui.drawText(formatter.format(TNAComps) + " Completions", x + 1470f, y + 540f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+
+                ui.drawCenteredText("Total Completions" + characterNameString + formatter.format(TotalComps), x + 900f, y + 48f, CustomColor.fromHexString("FFFFFF"), 3.9f);
+            }}
+            case GRAIDS -> { if(guildRaids != null) {
+                long NOTGComps = guildRaids.getList().getOrDefault("Nest of the Grootslangs", 0);
+                long NOLComps = guildRaids.getList().getOrDefault("Orphion's Nexus of Light", 0);
+                long TCCComps = guildRaids.getList().getOrDefault("The Canyon Colossus", 0);
+                long TNAComps = guildRaids.getList().getOrDefault("The Nameless Anomaly", 0);
+                long TotalComps = guildRaids.getTotal();
+
+                ui.drawText(formatter.format(NOTGComps) + " Completions", x + 345f, y + 210f, notgColor, 3.9f);
+                ui.drawText(formatter.format(NOLComps) + " Completions", x + 345f, y + 540f, nolColor, 3.9f);
+                ui.drawText(formatter.format(TCCComps) + " Completions", x + 1470f, y + 210f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+                ui.drawText(formatter.format(TNAComps) + " Completions", x + 1470f, y + 540f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+
+                ui.drawCenteredText("Total Guild Raid Completions" + characterNameString + formatter.format(TotalComps), x + 900f, y + 48f, CustomColor.fromHexString("FFFFFF"), 3.9f);
+            }}
+            case NONGRAIDS -> { if(guildRaids != null && raids != null) {
+                long NOTGComps = raids.getList().getOrDefault("Nest of the Grootslangs", 0);
+                long NOLComps = raids.getList().getOrDefault("Orphion's Nexus of Light", 0);
+                long TCCComps = raids.getList().getOrDefault("The Canyon Colossus", 0);
+                long TNAComps = raids.getList().getOrDefault("The Nameless Anomaly", 0);
+                long TotalComps = raids.getTotal();
+
+                long NOTGGraidComps = guildRaids.getList().getOrDefault("Nest of the Grootslangs", 0);
+                long NOLGraidComps = guildRaids.getList().getOrDefault("Orphion's Nexus of Light", 0);
+                long TCCGraidComps = guildRaids.getList().getOrDefault("The Canyon Colossus", 0);
+                long TNAGraidComps = guildRaids.getList().getOrDefault("The Nameless Anomaly", 0);
+                long TotalGraidComps = guildRaids.getTotal();
+
+                ui.drawText(formatter.format(NOTGComps - NOTGGraidComps) + " Completions", x + 345f, y + 210f, notgColor, 3.9f);
+                ui.drawText(formatter.format(NOLComps - NOLGraidComps) + " Completions", x + 345f, y + 540f, nolColor, 3.9f);
+                ui.drawText(formatter.format(TCCComps - TCCGraidComps) + " Completions", x + 1470f, y + 210f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+                ui.drawText(formatter.format(TNAComps - TNAGraidComps) + " Completions", x + 1470f, y + 540f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+
+                ui.drawCenteredText("Total Non Guild Raid Completions" + characterNameString + formatter.format(TotalComps - TotalGraidComps), x + 900f, y + 48f, CustomColor.fromHexString("FFFFFF"), 3.9f);
+            }}
+        }
+
+        int typeSwitcherWidth = switch (currentStatus) {
+            case ALL -> 100;
+            case GRAIDS -> 200;
+            case NONGRAIDS -> 270;
+        };
+
+        typeSwitcher.setBounds(x + width - typeSwitcherWidth - 30, y + 20, typeSwitcherWidth, 50);
+    }
+
+    public static class TypeSwitcher extends Widget {
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.pvDarkmodeToggle);
+
+            String text = "";
+            switch (currentStatus) {
+                case ALL -> text = "All";
+                case GRAIDS -> text = "Guild Raids";
+                case NONGRAIDS -> text = "Non Guild Raids";
+            }
+
+            ui.drawCenteredText(text, x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            currentStatus = Status.values()[(currentStatus.ordinal() + (button == 0 ? 1 : -1) + Status.values().length) % Status.values().length];
+            return true;
         }
     }
 }

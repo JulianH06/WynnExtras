@@ -5,10 +5,14 @@ import com.wynntils.utils.colors.CustomColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class RankingsTabWidget extends PVScreen.TabWidget {
@@ -45,6 +49,24 @@ public class RankingsTabWidget extends PVScreen.TabWidget {
         Map<String, Long> rankings = PV.currentPlayerData.getRanking();
         if(rankings.isEmpty()) {
             ui.drawCenteredText("This player has their rankings private.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
+
+            List<String> apiKeyInfo = new ArrayList<>();
+            if(MinecraftClient.getInstance().player != null && WynncraftApiHandler.INSTANCE.API_KEY == null || WynncraftApiHandler.INSTANCE.API_KEY.isEmpty()) {
+                if(PV.currentPlayer.equalsIgnoreCase(MinecraftClient.getInstance().player.getName().getString())) {
+                    apiKeyInfo.add("To get access to your private stats you need to set an api-key.");
+                    apiKeyInfo.add("You can find more info by using \"/we apikey\"");
+                } else {
+                    apiKeyInfo.add("You might be able to see them if you set an api-key.");
+                    apiKeyInfo.add("You can find more info by using \"/we apikey\"");
+                }
+            }
+
+
+            int apiKeyInfoY = y + 385;
+            for(String line : apiKeyInfo) {
+                ui.drawCenteredText(line, x + 900, apiKeyInfoY, CustomColor.fromHexString("FF0000"));
+                apiKeyInfoY += 30;
+            }
             return;
         }
 

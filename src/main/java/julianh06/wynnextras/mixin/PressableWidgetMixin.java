@@ -3,6 +3,8 @@ package julianh06.wynnextras.mixin;
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.features.inventory.BankOverlay;
+import julianh06.wynnextras.features.inventory.BankOverlayType;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.widget.PressableWidget;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,6 +18,7 @@ public class PressableWidgetMixin {
     void renderWidget(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         try {
             if((Models.Container.getCurrentContainer() instanceof CraftingStationContainer) && WynnExtrasConfig.INSTANCE.craftingHelperOverlay) ci.cancel();
+            if(BankOverlay.currentOverlayType != BankOverlayType.NONE && WynnExtrasConfig.INSTANCE.toggleBankOverlay) ci.cancel();
         } catch (Exception ignored) {}
     }
 }

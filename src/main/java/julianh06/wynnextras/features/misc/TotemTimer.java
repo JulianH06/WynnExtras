@@ -4,11 +4,16 @@ import com.wynntils.models.character.type.ClassType;
 import com.wynntils.core.components.Models;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.WynnExtras;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
+import net.minecraft.client.sound.SoundInstance;
+import net.minecraft.client.sound.SoundInstanceListener;
+import net.minecraft.client.sound.WeightedSoundSet;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.sound.SoundEvent;
@@ -16,10 +21,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Box;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class TotemTimer {
     private static int lastSelectedSlot = -1;
@@ -63,6 +65,15 @@ public class TotemTimer {
     }
 
     public static void register() {
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+            client.getSoundManager().registerListener(new SoundInstanceListener() {
+                @Override
+                public void onSoundPlayed(SoundInstance sound, WeightedSoundSet soundSet, float range) {
+                    onSound(sound.getId().getPath());
+                }
+            });
+        });
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if(client.player == null) return;
 
@@ -194,13 +205,24 @@ public class TotemTimer {
             // Play warning sound
             if (warningActive && c.totemTimerWarningSound) {
                 McUtils.playSoundAmbient(
-                        SoundEvent.of(Identifier.of("block.note_block.pling")),
-                        1.0f, 2.0f
+                    SoundEvent.of(Identifier.of("block.note_block.pling")),
+                    c.totemTimerWarningSoundVolume / 100, 2.0f
                 );
             }
         });
 
         HudRenderCallback.EVENT.register(TotemTimer::renderHud);
+    }
+
+    private static void onSound(String path) {
+        if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled || !WynnExtrasConfig.INSTANCE.totemTimerEstimate) return;
+        if (Models.Character.getClassType() != ClassType.SHAMAN) return;
+        if (!path.contains("underwater.enter")) return;
+
+        estimatedTotems.forEach((k, v) -> {
+            v[0] = 10;
+            v[1] = tickCounter;
+        });
     }
 
     private static void renderHud(DrawContext ctx, RenderTickCounter tickCounter) {
@@ -223,13 +245,24 @@ public class TotemTimer {
 
                 int tw = mc.textRenderer.getWidth(line);
                 int th = mc.textRenderer.fontHeight;
-                int boxW = (int) ((tw + 6) * ts);
-                int boxH = (int) (14 * ts);
+
+                WynnExtrasConfig.Align align = c.totemTimerAlignment;
+
+                int previewTw = mc.textRenderer.getWidth("PlayerName's Totem: 38s");
+
+                int textOffsetX;
+                if (align == WynnExtrasConfig.Align.LEFT) {
+                    textOffsetX = -previewTw / 2;
+                } else if (align == WynnExtrasConfig.Align.RIGHT) {
+                    textOffsetX = previewTw / 2 - tw;
+                } else {
+                    textOffsetX = -tw / 2;
+                }
 
                 ctx.getMatrices().pushMatrix();
-                ctx.getMatrices().translate(baseX + boxW / 2f, baseY + i * lineH + boxH / 2f);
+                ctx.getMatrices().translate(baseX, baseY + i * lineH);
                 ctx.getMatrices().scale(ts, ts);
-                ctx.drawText(mc.textRenderer, line, -tw / 2, -th / 2, color, true);
+                ctx.drawText(mc.textRenderer, line, textOffsetX, -th / 2, color, true);
                 ctx.getMatrices().popMatrix();
                 i++;
             }
@@ -243,17 +276,24 @@ public class TotemTimer {
 
             int tw = mc.textRenderer.getWidth(alarmText);
             int th = mc.textRenderer.fontHeight;
-            int boxW = (int) ((tw + 6) * as);
-            int boxH = (int) (14 * as);
 
-            if (wx == -1) {
-                wx = (mc.getWindow().getScaledWidth() - boxW) / 2;
+            WynnExtrasConfig.Align align = c.totemWarningAlignment;
+
+            int previewTw = mc.textRenderer.getWidth("RECAST TOTEM!");
+
+            int textOffsetX;
+            if (align == WynnExtrasConfig.Align.LEFT) {
+                textOffsetX = -previewTw / 2;
+            } else if (align == WynnExtrasConfig.Align.RIGHT) {
+                textOffsetX = previewTw / 2 - tw;
+            } else {
+                textOffsetX = -tw / 2;
             }
 
             ctx.getMatrices().pushMatrix();
-            ctx.getMatrices().translate(wx + boxW / 2f, wy + boxH / 2f);
+            ctx.getMatrices().translate(wx, wy);
             ctx.getMatrices().scale(as, as);
-            ctx.drawText(mc.textRenderer, alarmText, -tw / 2, -th / 2, 0xFFFF4444, true);
+            ctx.drawText(mc.textRenderer, alarmText, textOffsetX, -th / 2, 0xFFFF4444, true);
             ctx.getMatrices().popMatrix();
         }
     }

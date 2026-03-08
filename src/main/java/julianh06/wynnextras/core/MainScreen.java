@@ -103,7 +103,7 @@ public class MainScreen extends WEScreen {
                 PV.open(McUtils.playerName());
             }
             case 3 -> {
-                MinecraftUtils.mc().setScreen(new julianh06.wynnextras.features.misc.HudEditScreen());
+                MinecraftUtils.mc().setScreen(new julianh06.wynnextras.features.misc.HudEditScreen(parent));
             }
             case 4 -> {
                 MinecraftUtils.mc().setScreen(null);

@@ -55,6 +55,8 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.DefaultedList;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWKeyCallbackI;
 import org.slf4j.Logger;
@@ -101,7 +103,6 @@ public class WynnExtras implements ClientModInitializer {
 			null
 	);
 
-
 	public static final String MOD_ID = "wynnextras";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -117,8 +118,6 @@ public class WynnExtras implements ClientModInitializer {
 	private static final Text WYNNEXTRAS_FOREGROUND_PILL;
 
 	public static String latestVersion = null;
-
-
 
 	static {
 		BACKGROUND_STYLE = Style.EMPTY.withFont(new StyleSpriteSource.Font(PILL_FONT)).
@@ -195,6 +194,12 @@ public class WynnExtras implements ClientModInitializer {
 
 		//WynnExtrasSounds.register();
 		ModSounds.registerSounds();
+
+		if(FabricLoader.getInstance().isModLoaded("devauth")) {
+			try {
+				((org.apache.logging.log4j.core.Logger) LogManager.getLogger("wynntils")).setLevel(Level.ERROR);
+			} catch (Throwable ignored) {}
+		}
 	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)

@@ -8,6 +8,7 @@ public class Global {
     private int chestsFound;
     private Dungeons dungeons;
     private Raids raids;
+    private GuildRaids guildRaids;
     private int worldEvents;
     private int lootruns;
     private int caves;
@@ -68,6 +69,14 @@ public class Global {
 
     public void setRaids(Raids raids) {
         this.raids = raids;
+    }
+
+    public GuildRaids getGuildRaids() {
+        return guildRaids;
+    }
+
+    public void setGuildRaids(GuildRaids guildRaids) {
+        this.guildRaids = guildRaids;
     }
 
     public int getWorldEvents() {

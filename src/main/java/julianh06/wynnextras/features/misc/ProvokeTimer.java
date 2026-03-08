@@ -87,16 +87,26 @@ public class ProvokeTimer {
         int x = WynnExtrasConfig.INSTANCE.provokeTimerX;
         int y = WynnExtrasConfig.INSTANCE.provokeTimerY;
 
-        int textWidth = mc.textRenderer.getWidth(text);
-        int textHeight = mc.textRenderer.fontHeight;
+        int tw = mc.textRenderer.getWidth(text);
+        int th = mc.textRenderer.fontHeight;
 
-        int boxW = (int)((textWidth + 6) * scale);
-        int boxH = (int)(14 * scale);
+        WynnExtrasConfig.Align align = WynnExtrasConfig.INSTANCE.provokeTimerAlignment;
+
+        int previewTw = mc.textRenderer.getWidth("Provoke: 7s");
+
+        int textOffsetX;
+        if (align == WynnExtrasConfig.Align.LEFT) {
+            textOffsetX = -previewTw / 2;
+        } else if (align == WynnExtrasConfig.Align.RIGHT) {
+            textOffsetX = previewTw / 2 - tw;
+        } else {
+            textOffsetX = -tw / 2;
+        }
 
         ctx.getMatrices().pushMatrix();
-        ctx.getMatrices().translate(x + boxW / 2f, y + boxH / 2f);
+        ctx.getMatrices().translate(x, y);
         ctx.getMatrices().scale(scale, scale);
-        ctx.drawText(mc.textRenderer, text, -textWidth / 2, -textHeight / 2, color, true);
+        ctx.drawText(mc.textRenderer, text, textOffsetX, -th / 2, color, true);
         ctx.getMatrices().popMatrix();
     }
 }

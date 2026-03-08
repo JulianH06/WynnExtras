@@ -1,6 +1,7 @@
 package julianh06.wynnextras.config;
 
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.features.misc.HudEditScreen;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -16,6 +17,7 @@ import net.minecraft.util.math.MathHelper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -108,51 +110,89 @@ public class WynnExtrasConfigScreen extends Screen {
             .sub("Loot Tracker")
                 .add(toggle("Enable Tracker", "Track raid loot drops",
                     () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
-                .add(toggle("Render in HUD", "Render the Overlay in the HUD",
-                    () -> config.raidLootTrackerRenderInHud, v -> config.raidLootTrackerRenderInHud = v))
-                .add(toggle("Render in Inventory", "Render the Overlay while in the inventory",
-                    () -> config.raidLootTrackerRenderInInventory, v -> config.raidLootTrackerRenderInInventory = v))
-                .add(toggle("Render in Chat", "Render the Overlay while the chat is open",
-                    () -> config.raidLootTrackerRenderInChat, v -> config.raidLootTrackerRenderInChat = v))
-                .add(toggle("Only Near Chest", "Show only near reward chest",
-                    () -> config.raidLootTrackerOnlyNearChest, v -> config.raidLootTrackerOnlyNearChest = v))
-                .add(toggle("Compact Mode", "Use compact display",
-                    () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v))
-                .add(toggle("Show Background", "Show dark background",
-                    () -> config.raidLootTrackerBackground, v -> config.raidLootTrackerBackground = v));
+                .add(visibleWhen(toggle("Render in HUD", "Render the Overlay in the HUD",
+                    () -> config.raidLootTrackerRenderInHud, v -> config.raidLootTrackerRenderInHud = v),
+                    () -> config.toggleRaidLootTracker))
+                .add(visibleWhen(toggle("Render in Inventory", "Render the Overlay while in the inventory",
+                    () -> config.raidLootTrackerRenderInInventory, v -> config.raidLootTrackerRenderInInventory = v),
+                    () -> config.toggleRaidLootTracker))
+                .add(visibleWhen(toggle("Render in Chat", "Render the Overlay while the chat is open",
+                    () -> config.raidLootTrackerRenderInChat, v -> config.raidLootTrackerRenderInChat = v),
+                    () -> config.toggleRaidLootTracker))
+                .add(visibleWhen(toggle("Only Near Chest", "Show only near reward chest",
+                    () -> config.raidLootTrackerOnlyNearChest, v -> config.raidLootTrackerOnlyNearChest = v),
+                    () -> config.toggleRaidLootTracker))
+                .add(visibleWhen(toggle("Compact Mode", "Use compact display",
+                    () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v),
+                    () -> config.toggleRaidLootTracker))
+                .add(visibleWhen(toggle("Show Background", "Show dark background",
+                    () -> config.raidLootTrackerBackground, v -> config.raidLootTrackerBackground = v),
+                    () -> config.toggleRaidLootTracker));
+
 
         // ===== COMBAT =====
         category("Combat", 0xFFfda216)
-            .sub("Shaman")
-                .add(toggle("Show Totem Range", "Display totem range circle",
-                        () -> config.totemRangeVisualizerToggle, v -> config.totemRangeVisualizerToggle = v))
-                .add(sliderF("Totem Radius", "Size of totem circle",
-                        1f, 30f, 0.5f, () -> config.totemRange, v -> config.totemRange = v))
-                .add(dropdown("Totem Color", "Circle color",
-                        WynnExtrasConfig.TextColor.class, () -> config.totemColor, v -> config.totemColor = v))
-                .add(sliderF("Eldritch Radius", "Eldritch call range",
-                        1f, 30f, 0.5f, () -> config.eldritchCallRange, v -> config.eldritchCallRange = v))
-                .add(dropdown("Eldritch Color", "Circle color",
-                        WynnExtrasConfig.TextColor.class, () -> config.eldritchCallColor, v -> config.eldritchCallColor = v))
+            .sub("Shaman Totem Timer")
                 .add(toggle("Totem Timer", "Show totem countdown timer on HUD",
-                        () -> config.totemTimerEnabled, v -> config.totemTimerEnabled = v))
-                .add(toggle("Own Totems Only", "Only show your own totems",
-                        () -> config.totemTimerOwnOnly, v -> config.totemTimerOwnOnly = v))
-                .add(toggle("Warning Text", "Show RECAST TOTEM! on screen when low (movable in Edit Gui)",
-                        () -> config.totemTimerWarningText, v -> config.totemTimerWarningText = v))
-                .add(toggle("Warning Sound", "Play pling sound when totem is low",
-                        () -> config.totemTimerWarningSound, v -> config.totemTimerWarningSound = v))
-                .add(slider("Warning Threshold", "Seconds remaining to trigger warning",
-                        1, 6, () -> config.totemTimerWarningThreshold, v -> config.totemTimerWarningThreshold = v))
-                .add(toggle("Estimate Out-of-Range", "Continue countdown when totem leaves render distance",
-                        () -> config.totemTimerEstimate, v -> config.totemTimerEstimate = v))
+                    () -> config.totemTimerEnabled, v -> config.totemTimerEnabled = v))
+                .add(visibleWhen(dropdown("Text Color", "Color of the totem timer",
+                    WynnExtrasConfig.TextColor.class, () -> config.totemTimerColor, v -> config.totemTimerColor = v),
+                    () -> config.totemTimerEnabled))
+                .add(visibleWhen(toggle("Own Totems Only", "Only show timers for your own totems",
+                    () -> config.totemTimerOwnOnly, v -> config.totemTimerOwnOnly = v),
+                    () -> config.totemTimerEnabled))
+                .add(visibleWhen(toggle("Warning Text", "Show RECAST TOTEM! on screen when low (movable in Edit Gui)",
+                    () -> config.totemTimerWarningText, v -> config.totemTimerWarningText = v),
+                    () -> config.totemTimerEnabled))
+                .add(visibleWhen(dropdown("Warning Text Color", "Color of the totem timer warning text",
+                    WynnExtrasConfig.TextColor.class, () -> config.totemTimerWarningTextColor, v -> config.totemTimerWarningTextColor = v),
+                    () -> config.totemTimerEnabled && config.totemTimerWarningText))
+                .add(visibleWhen(toggle("Warning Sound", "Play pling sound when totem is low",
+                    () -> config.totemTimerWarningSound, v -> config.totemTimerWarningSound = v),
+                    () -> config.totemTimerEnabled))
+                .add(visibleWhen(slider("Warning Volume", "The volume of the totem warning",
+                    0, 200, () -> (int)(config.totemTimerWarningSoundVolume), v -> config.totemTimerWarningSoundVolume = v),
+                    () -> config.totemTimerEnabled && config.totemTimerWarningSound))
+                .add(visibleWhen(slider("Warning Threshold", "Seconds remaining to trigger warning",
+                    1, 6, () -> config.totemTimerWarningThreshold, v -> config.totemTimerWarningThreshold = v),
+                    () -> config.totemTimerEnabled && (config.totemTimerWarningSound || config.totemTimerWarningText)))
+                .add(visibleWhen(toggle("Estimate Out-of-Range", "Continue countdown when totem leaves render distance",
+                    () -> config.totemTimerEstimate, v -> config.totemTimerEstimate = v),
+                    () -> config.totemTimerEnabled))
+            .sub("Shaman Blood Sorrow Timer")
                 .add(toggle("Blood Sorrow Timer", "Show Blood Sorrow cooldown on HUD",
-                        () -> config.bloodSorrowTimerEnabled, v -> config.bloodSorrowTimerEnabled = v))
+                    () -> config.bloodSorrowTimerEnabled, v -> config.bloodSorrowTimerEnabled = v))
+                .add(visibleWhen(toggle("Auto detect blood sorrow time", "Checks for acolyte aspect and resonance to calculate the time",
+                    () -> config.autoDetectBloodSorrowTime, v -> config.autoDetectBloodSorrowTime = v),
+                    () -> config.bloodSorrowTimerEnabled))
+                .add(visibleWhen(toggle("Auto detect acolyte aspect", "Checks for the acolyte aspect tier to calculate the time",
+                    () -> config.autoDetectAcolyteAspectTier, v -> config.autoDetectAcolyteAspectTier = v),
+                    () -> !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
+                .add(visibleWhen(slider("Acolyte aspect tier", "Use this to manually set the tier of your acolyte aspect for the timer",
+                    0, 3, () -> config.acolyteAspect, v -> config.acolyteAspect = v),
+                    () -> !config.autoDetectAcolyteAspectTier && !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
+                .add(visibleWhen(toggle("Auto detect resonance", "Checks if you are holding a resonance to calculate the time",
+                    () -> config.autoDetectResonanceInHand, v -> config.autoDetectResonanceInHand = v),
+                    () -> !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
+                .add(visibleWhen(toggle("Resonance", "Manually set if you use a resonance or not",
+                    () -> config.resoInHand, v -> config.resoInHand = v),
+                    () -> !config.autoDetectResonanceInHand && !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
+            .sub("Shaman Totem Range")
+                .add(toggle("Show Totem Range", "Display totem range circle",
+                    () -> config.totemRangeVisualizerToggle, v -> config.totemRangeVisualizerToggle = v))
+                .add(sliderF("Totem Radius", "Size of totem circle",
+                    1f, 30f, 0.5f, () -> config.totemRange, v -> config.totemRange = v))
+                .add(dropdown("Totem Color", "Circle color",
+                    WynnExtrasConfig.TextColor.class, () -> config.totemColor, v -> config.totemColor = v))
+                .add(sliderF("Eldritch Radius", "Eldritch call range",
+                    1f, 30f, 0.5f, () -> config.eldritchCallRange, v -> config.eldritchCallRange = v))
+                .add(dropdown("Eldritch Color", "Circle color",
+                    WynnExtrasConfig.TextColor.class, () -> config.eldritchCallColor, v -> config.eldritchCallColor = v))
             .sub("Provoke Timer")
                 .add(toggle("Enable Provoke Timer", "Show provoke timer on HUD",
-                        () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
+                    () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
                 .add(dropdown("Timer Color", "Timer text color",
-                        WynnExtrasConfig.TextColor.class, () -> config.provokeTimerColor, v -> config.provokeTimerColor = v));
+                    WynnExtrasConfig.TextColor.class, () -> config.provokeTimerColor, v -> config.provokeTimerColor = v));
 
         // ===== INVENTORY =====
         Category invCategory = category("Inventory", 0xFFea1219);
@@ -214,6 +254,10 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
                 .add(sliderF("Duration (ms)", "How long notification shows",
                         500, 10000, 100, () -> (float) config.textDurationInMs, v -> config.textDurationInMs = v.intValue()))
+                .add(sliderF("Fade in duration (ms)", "How long should the text fade in",
+                        0, 5000, 50, () -> (float) config.notifierFadeInMs, v -> config.notifierFadeInMs = v.intValue()))
+                .add(sliderF("Fade out duration (ms)", "How long should the text fade out",
+                        0, 5000, 50, () -> (float) config.notifierFadeOutMs, v -> config.notifierFadeOutMs = v.intValue()))
                 .add(dropdown("Text Color", "Notification color",
                         WynnExtrasConfig.TextColor.class, () -> config.textColor, v -> config.textColor = v))
                 .add(dropdown("Sound", "Notification sound",
@@ -322,6 +366,7 @@ public class WynnExtrasConfigScreen extends Screen {
 
     // Check if option matches search query
     private boolean matchesSearch(ConfigOption opt) {
+        if (!opt.isVisible()) return false;
         if (searchQuery.isEmpty()) return true;
         String query = searchQuery.toLowerCase();
         return opt.name.toLowerCase().contains(query) || opt.desc.toLowerCase().contains(query);
@@ -380,6 +425,12 @@ public class WynnExtrasConfigScreen extends Screen {
         return new ButtonOption(name, desc, action, buttonText);
     }
 
+    private ConfigOption visibleWhen(ConfigOption option, BooleanSupplier condition) {
+        option.visibleWhen(condition);
+        return option;
+    }
+
+
     // ==================== SCREEN LIFECYCLE ====================
     @Override
     protected void init() {
@@ -397,6 +448,10 @@ public class WynnExtrasConfigScreen extends Screen {
     // ==================== RENDERING ====================
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        updateMaxScroll();
+
+        scrollOffset = Math.min(scrollOffset, maxScroll);
+
         // Normal render
         ctx.fill(0, 0, width, height, BG_DARK);
 
@@ -665,12 +720,15 @@ public class WynnExtrasConfigScreen extends Screen {
         int btnY = height - 35;
         int saveX = width - 115;
         int cancelX = width - 225;
+        int editX = width - 335;
 
         boolean saveHover = mouseX >= saveX && mouseX < saveX + 100 && mouseY >= btnY && mouseY < btnY + 24;
         boolean cancelHover = mouseX >= cancelX && mouseX < cancelX + 100 && mouseY >= btnY && mouseY < btnY + 24;
+        boolean editHover = mouseX >= editX && mouseX < editX + 100 && mouseY >= btnY && mouseY < btnY + 24;
 
         drawButton(ctx, saveX, btnY, 100, 24, "Save & Close", saveHover, TOGGLE_ON);
         drawButton(ctx, cancelX, btnY, 100, 24, "Cancel", cancelHover, ACCENT_RED);
+        drawButton(ctx, editX, btnY, 100, 24, "Edit positions", editHover, PARCHMENT_LIGHT);
     }
 
     private void drawButton(DrawContext ctx, int x, int y, int w, int h, String text, boolean hover, int accent) {
@@ -739,6 +797,14 @@ public class WynnExtrasConfigScreen extends Screen {
             if (mx >= width - 225 && mx < width - 125) {
                 WynnExtrasConfig.load();
                 client.setScreen(parent);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            }
+            //======== Edit Position =========
+            if (mx >= width - 335 && mx < width - 235) {
+                WynnExtrasConfig.save();
+                WynnExtrasConfig.load();
+                client.setScreen(new HudEditScreen(this));
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
@@ -1050,11 +1116,24 @@ public class WynnExtrasConfigScreen extends Screen {
     // ==================== CONFIG OPTIONS ====================
     private static abstract class ConfigOption {
         final String name, desc;
+        private BooleanSupplier visibilityCondition = () -> true;
+
         ConfigOption(String name, String desc) { this.name = name; this.desc = desc; }
+
         abstract void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor);
         boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) { return false; }
         boolean mouseReleased(double mx, double my, int btn) { return false; }
         boolean mouseDragged(double mx, double my, int x, int y, int w, int h) { return false; }
+
+        ConfigOption visibleWhen(BooleanSupplier condition) {
+            this.visibilityCondition = condition;
+            return this;
+        }
+
+        boolean isVisible() {
+            return visibilityCondition.getAsBoolean();
+        }
+
     }
 
     private static class BooleanOption extends ConfigOption {

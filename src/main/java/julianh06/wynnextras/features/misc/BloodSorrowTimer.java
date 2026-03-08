@@ -2,7 +2,10 @@ package julianh06.wynnextras.features.misc;
 
 import com.wynntils.models.character.type.ClassType;
 import com.wynntils.core.components.Models;
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.config.WynnExtrasConfigScreen;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.aspects.LocalAspectStorage;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -23,13 +26,20 @@ public class BloodSorrowTimer {
     private static long timerEndMs = 0;
 
     private static int getAcolyteBonus() {
+        if(!WynnExtrasConfig.INSTANCE.autoDetectBloodSorrowTime && !WynnExtrasConfig.INSTANCE.autoDetectAcolyteAspectTier) {
+            return switch (WynnExtrasConfig.INSTANCE.acolyteAspect) {
+                case 1, 2 -> 250;
+                case 3 -> 500;
+                default -> 0;
+            };
+        }
+
         String classId = BankOverlay.currentCharacterID;
         if (classId == null || classId.isEmpty()) return 0;
 
         Map<String, String> active = LocalAspectStorage.loadActiveAspects(classId);
 
         int result = 0;
-        System.out.println(active);
 
         for (Map.Entry<String, String> e : active.entrySet()) {
             if (!e.getKey().contains("Acolyte")) continue;
@@ -43,6 +53,10 @@ public class BloodSorrowTimer {
     }
 
     private static boolean hasResonance() {
+        if(!WynnExtrasConfig.INSTANCE.autoDetectBloodSorrowTime && !WynnExtrasConfig.INSTANCE.autoDetectResonanceInHand) {
+            return WynnExtrasConfig.INSTANCE.resoInHand;
+        }
+
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return false;
         ItemStack held = mc.player.getMainHandStack();
@@ -54,10 +68,11 @@ public class BloodSorrowTimer {
     private static void onSound(String path) {
         if (!WynnExtrasConfig.INSTANCE.bloodSorrowTimerEnabled) return;
         if (Models.Character.getClassType() != ClassType.SHAMAN) return;
+        if (path.contains("underwater.enter")) McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("CASTED ELDRITCH CALL"));
         if (!path.contains("wither_skeleton.hurt")) return;
         long now = System.currentTimeMillis();
         long duration = (hasResonance() ? 1250 : 5000) + getAcolyteBonus() * (hasResonance() ? 1L : 4L);
-        if (now - lastStartMs <= duration + 250) return;
+        if (now - lastStartMs <= duration + 100) return;
         lastStartMs = now;
         timerEndMs = now + duration;
     }
@@ -100,13 +115,24 @@ public class BloodSorrowTimer {
 
         int tw = mc.textRenderer.getWidth(text);
         int th = mc.textRenderer.fontHeight;
-        int boxW = (int) ((tw + 6) * bs);
-        int boxH = (int) (14 * bs);
+
+        WynnExtrasConfig.Align align = WynnExtrasConfig.INSTANCE.bloodSorrowAlignment;
+
+        int previewTw = mc.textRenderer.getWidth("Blood Sorrow: 1.7s");
+
+        int textOffsetX;
+        if (align == WynnExtrasConfig.Align.LEFT) {
+            textOffsetX = -previewTw / 2;
+        } else if (align == WynnExtrasConfig.Align.RIGHT) {
+            textOffsetX = previewTw / 2 - tw;
+        } else {
+            textOffsetX = -tw / 2;
+        }
 
         ctx.getMatrices().pushMatrix();
-        ctx.getMatrices().translate(x + boxW / 2f, y + boxH / 2f);
+        ctx.getMatrices().translate(x, y);
         ctx.getMatrices().scale(bs, bs);
-        ctx.drawText(mc.textRenderer, text, -tw / 2, -th / 2, color, true);
+        ctx.drawText(mc.textRenderer, text, textOffsetX, -th / 2, color, true);
         ctx.getMatrices().popMatrix();
     }
 }
