@@ -558,7 +558,7 @@ public class NewWaypointScreen extends WEScreen {
                     }
                 }
 
-                activeTabWidget.setVisible(true);
+                if(activeTabWidget != null) activeTabWidget.setVisible(true);
             }
         }
 
