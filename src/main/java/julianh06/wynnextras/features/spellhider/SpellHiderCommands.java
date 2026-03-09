@@ -24,8 +24,6 @@ import java.util.concurrent.CompletableFuture;
 public class SpellHiderCommands {
     @SubscribeEvent
     public void registerCommands(CommandRegistrationEvent empty) {
-        // TODO remove mappings
-
         SubCommand getModificationsCmd = new SubCommand(
                 "getModifications",
                 "display all modified spells",
@@ -44,8 +42,8 @@ public class SpellHiderCommands {
                 context -> {
                     String nameSpace = StringArgumentType.getString(context, "namespace");
                     String itemPath = ModelDataLogger.peekQueue();
-                    boolean success = ModelDataLogger.progressQueue(nameSpace);
-                    if (success) ChatUtils.sendMessage("Added " + itemPath + " to " + nameSpace);
+                    boolean b = ModelDataLogger.progressQueue(nameSpace);
+                    if (b) ChatUtils.sendMessage("Added " + itemPath + " to " + nameSpace);
                     return 1;
                 },
                 null,
@@ -175,18 +173,36 @@ public class SpellHiderCommands {
                 null
         );
 
+        SubCommand fineTuneCmd = new SubCommand(
+                "fineTune",
+                "adds everything in a namespace to the queue for potential remapping",
+                context -> {
+                    String FQName = StringArgumentType.getString(context, "namespace");
+                    Set<SpellData> current = SpellHider.getFromName(FQName);
+                    ModelDataLogger.addForFineTuning(current);
+                    ModelDataLogger.progressQueue("");
+                    ChatUtils.sendMessage("added " + current.size() + " items to queue");
+                    return 1;
+                },
+                null,
+                List.of(
+                        ClientCommandManager.argument("namespace", StringArgumentType.string())
+                                .suggests(SpellHiderCommands::nameSpaceSelector)
+                )
+        );
+
         SubCommand modifyCmd = new SubCommand(
                 "modify",
                 "modify a spells vfx",
                 context -> {
-                    String nameSpace = StringArgumentType.getString(context, "namespace");
+                    String FQName = StringArgumentType.getString(context, "namespace");
                     SpellModifier modifier = SpellModifier.from(StringArgumentType.getString(context, "modifier"));
                     String value = StringArgumentType.getString(context, "value");
                     if (modifier == null) {
                         ChatUtils.sendMessage("invalid modifier");
                         return 0;
                     }
-                    if (nameSpace == null || nameSpace.isEmpty()) { // TODO force existing namespace
+                    if (FQName == null || FQName.isEmpty() || !SpellHiderConfig.INSTANCE.namespaceExists(FQName)) {
                         ChatUtils.sendMessage("invalid namespace");
                         return 0;
                     }
@@ -199,9 +215,9 @@ public class SpellHiderCommands {
                         ChatUtils.sendMessage("invalid value");
                         return 0;
                     }
-                    boolean modify = SpellNamespace.from(nameSpace).modify(modifier, parsedValue);
+                    boolean modify = SpellNamespace.from(FQName).modify(modifier, parsedValue);
                     if (modify) {
-                        ChatUtils.sendMessage("set " + nameSpace + "'s " + modifier.name() + " to " + value);
+                        ChatUtils.sendMessage("set " + FQName + "'s " + modifier.name() + " to " + value);
                         return 1;
                     } else {
                         ChatUtils.sendMessage("Somehow parsed to wrong class (my fault not yours)");
@@ -236,6 +252,7 @@ public class SpellHiderCommands {
                         renameCmd,
                         recentAdditionsCmd,
                         displayModeCmd,
+                        fineTuneCmd,
                         saveCmd,
                         loadCmd
                 ),

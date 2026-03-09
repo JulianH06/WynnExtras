@@ -55,11 +55,10 @@ public class ModelDataLogger {
         }
     }
 
-    private static final ConcurrentLinkedQueue<String> unknownQueue = new ConcurrentLinkedQueue<>();
+    private static final ConcurrentLinkedQueue<String> unknownQueue = new ConcurrentLinkedQueue<>(); // file paths
     private static final Set<Pair<Text, WEVec>> toRender = new HashSet<>();
     private static final Set<Integer> recentHashes = new HashSet<>();
     private static State currentState = State.OFF;
-    private static boolean hasOpenedFiles = false;
     private static DisplayState displayState = DisplayState.OFF;
 
     @SubscribeEvent
@@ -140,33 +139,48 @@ public class ModelDataLogger {
         }
     }
 
+    public static void addForFineTuning(Set<SpellData> data) {
+        if (data == null) {
+            ChatUtils.sendMessage("please cast the relevant spell and rerun /fineTune");
+        } else if (data.isEmpty()) {
+            ChatUtils.sendMessage("nothing found to add");
+        } else {
+            unknownQueue.clear();
+            unknownQueue.addAll(data.stream().map(SpellData::getFilePath).collect(Collectors.toSet()));
+        }
+    }
+
     public static boolean progressQueue(String FQName) {
-        if (!hasOpenedFiles) {
-            if (!unknownQueue.isEmpty()) {
-                openFile(unknownQueue.peek());
-            }
+        if (FQName.equals("skip") || FQName.equals("next")) {
+            ChatUtils.sendMessage("not changing");
+            unknownQueue.poll();
+            openFile(unknownQueue.peek());
             return false;
         }
+
+        SpellNamespace newNamespace = SpellNamespace.from(FQName);
+        if (newNamespace == null || newNamespace.isEmpty()) {
+            openFile(unknownQueue.peek());
+            ChatUtils.sendMessage("no provided namespace found reopening");
+            return false;
+        }
+
         String itemPath = unknownQueue.poll();
         if (itemPath == null) {
-            WynnExtras.LOGGER.warn("queue is empty");
+            ChatUtils.sendMessage("queue is empty");
             return false;
         }
-        SpellNamespace newNamespace = SpellNamespace.from(FQName);
-        newNamespace.addId(SpellHider.getFromPath(itemPath).getHash()); // update the stored mapping of hash -> namespace
 
+        newNamespace.addId(SpellHider.getFromPath(itemPath).getHash()); // update the stored mapping of hash -> namespace
         SpellHider.editNameOfPath(itemPath, newNamespace); // update the in-memory model
 
-        if (unknownQueue.isEmpty()) {
-            WynnExtras.LOGGER.info("reached the end of the queue");
-            return true;
-        }
-        openFile(unknownQueue.peek());
+        if (unknownQueue.isEmpty()) ChatUtils.sendMessage("reached the end of the queue");
+        else openFile(unknownQueue.peek());
+
         return true;
     }
 
     public static void openFile(String itemName) {
-        hasOpenedFiles = true;
         Desktop desktop = Desktop.getDesktop();
         File betaFile = new File("extracted-packs/beta.wynncraft.com/assets/minecraft/textures/" + itemName + ".png");
         File mainFile = new File("extracted-packs/play.wynncraft.com/assets/minecraft/textures/" + itemName + ".png");

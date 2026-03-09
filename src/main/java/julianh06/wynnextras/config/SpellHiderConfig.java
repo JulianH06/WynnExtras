@@ -34,6 +34,10 @@ public class SpellHiderConfig {
         return INSTANCE.idMappings.values();
     }
 
+    public boolean namespaceExists(String FQName) {
+        return idMappings.values().stream().anyMatch((v) -> v.getFQName().equals(FQName));
+    }
+
     public SpellHiderConfig() {
         idMappings = new HashMap<>();
     }
