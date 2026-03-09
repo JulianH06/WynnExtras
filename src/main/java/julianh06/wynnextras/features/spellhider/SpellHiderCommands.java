@@ -1,7 +1,6 @@
 package julianh06.wynnextras.features.spellhider;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
@@ -18,6 +17,7 @@ import org.joml.Vector3f;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 @WEModule
@@ -30,7 +30,9 @@ public class SpellHiderCommands {
                 "getModifications",
                 "display all modified spells",
                 context -> {
-                    return 0;
+                    String s = SpellHider.getAllModifiersAsDisplay();
+                    ChatUtils.sendMessage(s);
+                    return 1;
                 },
                 null,
                 null
@@ -91,11 +93,38 @@ public class SpellHiderCommands {
                 )
         );
 
+        SubCommand displayModeCmd = new SubCommand(
+                "displayMode",
+                "set the state of the display",
+                context -> {
+                    ModelDataLogger.DisplayState state = ModelDataLogger.DisplayState.from(StringArgumentType.getString(context, "state"));
+                    if (state == null) {
+                        ChatUtils.sendMessage("invalid state");
+                        return 0;
+                    }
+                    if (state == ModelDataLogger.DisplayState.GET_CURRENT) {
+                        ChatUtils.sendMessage("current state is " + ModelDataLogger.getDisplayState().name());
+                        return 1;
+                    }
+                    ModelDataLogger.setDisplayState(state);
+                    ChatUtils.sendMessage("set state to " + state);
+                    return 1;
+                },
+                null,
+                List.of(
+                        ClientCommandManager.argument("state", StringArgumentType.string())
+                                .suggests((CommandContext<FabricClientCommandSource> context, SuggestionsBuilder builder) -> {
+                                    Arrays.stream(ModelDataLogger.DisplayState.values()).forEach(state -> builder.suggest(state.name()));
+                                    return builder.buildFuture();
+                                })
+                )
+        );
+
         SubCommand saveCmd = new SubCommand(
                 "save",
                 "save mappings",
                 context -> {
-                    SpellHiderConfig.save();
+                    SpellHiderConfig.saveToFile();
                     return 1;
                 },
                 null,
@@ -106,7 +135,7 @@ public class SpellHiderCommands {
                 "reloadFromFile",
                 "load mappings",
                 context -> {
-                    SpellHiderConfig.load();
+                    SpellHiderConfig.reloadFromFile();
                     return 1;
                 },
                 null,
@@ -129,6 +158,21 @@ public class SpellHiderCommands {
                         ClientCommandManager.argument("newName", StringArgumentType.string())
                                 .suggests(SpellHiderCommands::nameSpaceSelector)
                 )
+        );
+
+        SubCommand recentAdditionsCmd = new SubCommand(
+                "listNextBatch",
+                "list additions since lass mass add call",
+                context -> {
+                    Set<Integer> recentHashes = ModelDataLogger.getRecentHashes();
+                    for (Integer recentHash : recentHashes) {
+                        ChatUtils.sendMessage(String.valueOf(recentHash));
+                    }
+                    ChatUtils.sendMessage(recentHashes.size() + " new unknown hashes");
+                    return 1;
+                },
+                null,
+                null
         );
 
         SubCommand modifyCmd = new SubCommand(
@@ -184,14 +228,14 @@ public class SpellHiderCommands {
         SubCommand devCmd = new SubCommand(
                 "development",
                 "assigns a name to a custom model data float",
-                context -> {
-                    return 0;
-                },
+                context -> 0,
                 List.of(
                         progressQueueCmd,
                         modelDataLoggerCmd,
                         massAddCmd,
                         renameCmd,
+                        recentAdditionsCmd,
+                        displayModeCmd,
                         saveCmd,
                         loadCmd
                 ),
@@ -213,12 +257,11 @@ public class SpellHiderCommands {
 
     private static CompletableFuture<Suggestions> nameSpaceSelector(CommandContext<FabricClientCommandSource> context, SuggestionsBuilder builder) {
         String userInput = builder.getRemaining().toLowerCase().replace('"', ' ').trim();
-        SpellHider.getAllCurrentNamespaces().stream()
+        SpellHiderConfig.INSTANCE.getAllNamespaces().stream()
                 .filter(spellNameSpace -> spellNameSpace.isRelevant(userInput))
                 .forEach(nameSpace -> builder.suggest('"' + nameSpace.getFQName() + '"'));
         return builder.buildFuture();
     }
-
 
     private static CompletableFuture<Suggestions> skillModifierSelector(CommandContext<FabricClientCommandSource> context, SuggestionsBuilder builder) {
         for (SpellModifier spellModifier : SpellModifier.values()) {

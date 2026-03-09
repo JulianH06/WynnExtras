@@ -17,6 +17,10 @@ public class SpellModifiers {
         return true;
     }
 
+    public Map<SpellModifier, Object> getAll() {
+        return values;
+    }
+
     @SuppressWarnings("unchecked")
     public <T> T get(SpellModifier key) {
         return (T) values.get(key);

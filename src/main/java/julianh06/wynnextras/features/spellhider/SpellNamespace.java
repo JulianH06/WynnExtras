@@ -15,7 +15,7 @@ public record SpellNamespace(SpellNamespace parent, String name) {
     }
 
     public SpellNamespace(SpellNamespace parent, @NotNull String name) {
-        if (name.contains(":")) throw new IllegalArgumentException();
+        if (name.contains(":")) throw new IllegalArgumentException("please use SpellNamespace.from() when creating from an FQName");
         this.parent = parent;
         this.name = name.toLowerCase();
     }

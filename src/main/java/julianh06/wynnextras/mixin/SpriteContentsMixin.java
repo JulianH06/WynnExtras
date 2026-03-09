@@ -45,6 +45,6 @@ public class SpriteContentsMixin {
     @Unique private static void addHash(Identifier id, NativeImage image) {
         if (!id.getPath().startsWith("item/w")) return;
         int hash = SpellHider.hashNativeImage(image);
-        SpellHider.hashMap.put(id.getPath(), hash);
+        SpellHider.putHash(id.getPath(), hash);
     }
 }

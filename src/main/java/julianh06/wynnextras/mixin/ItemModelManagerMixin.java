@@ -37,14 +37,16 @@ public class ItemModelManagerMixin {
         }
         for (Identifier fileName : fileNames) {
             Float modelData = ItemUtils.getFirsCustomModelDataFloat(stack);
+            if (modelData != null) {
+                SpellHider.addModel(fileName.getPath(), modelData);
+            }
+
             SpellNamespace spellMapping = SpellHiderConfig.INSTANCE.getSpellMapping(fileName);
             if (spellMapping == null || spellMapping.isEmpty()) {
-                ModelDataLogger.addTextToRender(SpellHider.hashMap.get(fileName.getPath()), entity.getEntityPos());
+                ModelDataLogger.addTextToRender(SpellHider.getFromPath(fileName.getPath()).getHash(), entity.getEntityPos());
                 ModelDataLogger.handleUnknownModel(modelData, fileNames);
             } else {
-                if (modelData != null) {
-                    SpellHider.addModel(modelData, spellMapping);
-                }
+                SpellHider.addName(fileName.getPath(), spellMapping.getFQName());
                 ModelDataLogger.addTextToRender(spellMapping.getFQName(), entity.getEntityPos());
             }
         }

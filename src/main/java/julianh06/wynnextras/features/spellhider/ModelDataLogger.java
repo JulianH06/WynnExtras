@@ -16,17 +16,51 @@ import net.neoforged.bus.api.SubscribeEvent;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 @WEModule
 public class ModelDataLogger {
+    public enum State {
+        OFF,
+        CONSOLE,
+        CHAT,
+        MASS_ADDING,
+        GET_CURRENT;
 
+        public static State from(String state) {
+            try {
+                return valueOf(state.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+    }
+
+    public enum DisplayState {
+        OFF,
+        ONLY_UNKNOWN,
+        ONLY_KNOWN,
+        ALL,
+        GET_CURRENT;
+
+        public static DisplayState from(String state) {
+            try {
+                return valueOf(state.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+    }
+
+    private static final ConcurrentLinkedQueue<String> unknownQueue = new ConcurrentLinkedQueue<>();
     private static final Set<Pair<Text, WEVec>> toRender = new HashSet<>();
     private static final Set<Integer> recentHashes = new HashSet<>();
+    private static State currentState = State.OFF;
+    private static boolean hasOpenedFiles = false;
+    private static DisplayState displayState = DisplayState.OFF;
 
     @SubscribeEvent
     public void onRender(RenderWorldEvent event) {
@@ -36,14 +70,18 @@ public class ModelDataLogger {
         toRender.clear();
     }
 
+    public static Set<Integer> getRecentHashes() {
+        return recentHashes;
+    }
+
     public static void addTextToRender(String nameSpace, Vec3d loc) {
-        if (currentState == State.MASS_ADDING) {
+        if (displayState == DisplayState.ALL || displayState == DisplayState.ONLY_KNOWN) {
             toRender.add(new Pair<>(Text.literal(nameSpace), new WEVec(loc)));
         }
     }
 
     public static void addTextToRender(Integer hash, Vec3d loc) {
-        if (currentState == State.MASS_ADDING) {
+        if (displayState == DisplayState.ALL || displayState == DisplayState.ONLY_UNKNOWN) {
             recentHashes.add(hash);
             toRender.add(new Pair<>(Text.literal(String.valueOf(hash)), new WEVec(loc)));
         }
@@ -61,26 +99,6 @@ public class ModelDataLogger {
         recentHashes.clear();
     }
 
-    public enum State {
-        OFF,
-        CONSOLE,
-        CHAT,
-        MASS_ADDING,
-        GET_CURRENT,
-        ON;
-
-        public static State from(String state) {
-            try {
-                return valueOf(state.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                return null;
-            }
-        }
-    }
-
-    private static State currentState = State.OFF;
-    private static boolean hasOpenedFiles = false;
-
     public static void setState(State state) {
         currentState = state;
     }
@@ -88,8 +106,14 @@ public class ModelDataLogger {
     public static State getCurrentState() {
         return currentState;
     }
-    private static final Map<String, List<Float>> pathToModels = new ConcurrentHashMap<>();
-    private static final ConcurrentLinkedQueue<String> unknownQueue = new ConcurrentLinkedQueue<>();
+
+    public static DisplayState getDisplayState() {
+        return displayState;
+    }
+
+    public static void setDisplayState(DisplayState displayState) {
+        ModelDataLogger.displayState = displayState;
+    }
 
     public static String peekQueue() {
         if (unknownQueue.isEmpty()) return null;
@@ -100,7 +124,6 @@ public class ModelDataLogger {
         if (currentState == State.OFF || currentState == State.MASS_ADDING) return;
 
         for (Identifier id : names) {
-            pathToModels.computeIfAbsent(id.getPath(), k -> new ArrayList<>()).add(customModel);
             if (unknownQueue.contains(id.getPath())) continue;
             unknownQueue.add(id.getPath());
 
@@ -124,17 +147,16 @@ public class ModelDataLogger {
             }
             return false;
         }
-        SpellNamespace nameSpace = SpellNamespace.from(FQName);
         String itemPath = unknownQueue.poll();
         if (itemPath == null) {
             WynnExtras.LOGGER.warn("queue is empty");
             return false;
         }
-        nameSpace.addId(SpellHider.hashMap.get(itemPath)); // permanently store the mapping for hash -> namespace
-        List<Float> models = pathToModels.get(itemPath);
-        for (Float model : models) {
-            SpellHider.addModel(model, nameSpace); // add the model mapping to memory
-        }
+        SpellNamespace newNamespace = SpellNamespace.from(FQName);
+        newNamespace.addId(SpellHider.getFromPath(itemPath).getHash()); // update the stored mapping of hash -> namespace
+
+        SpellHider.editNameOfPath(itemPath, newNamespace); // update the in-memory model
+
         if (unknownQueue.isEmpty()) {
             WynnExtras.LOGGER.info("reached the end of the queue");
             return true;
@@ -162,7 +184,7 @@ public class ModelDataLogger {
                     WynnExtras.LOGGER.error("Error opening main file: {}", itemName, e);
                 }
             }
-        } else  {
+        } else {
             WynnExtras.LOGGER.error("Desktop OPEN is not supported: {}", itemName);
         }
     }

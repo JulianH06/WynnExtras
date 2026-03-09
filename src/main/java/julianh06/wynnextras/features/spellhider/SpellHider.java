@@ -1,47 +1,109 @@
 package julianh06.wynnextras.features.spellhider;
 
+import com.google.common.reflect.TypeToken;
 import com.wynntils.mc.extension.EntityExtension;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.SetEntityDataEvent;
 import julianh06.wynnextras.utils.EntityUtils;
 import julianh06.wynnextras.utils.ItemUtils;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.item.Items;
 import net.neoforged.bus.api.SubscribeEvent;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
 
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static julianh06.wynnextras.config.SpellHiderConfig.GSON;
+
 @WEModule
 public class SpellHider {
+    private static final Path MODIFIERS_PATH = FabricLoader.getInstance()
+            .getConfigDir()
+            .resolve("wynnextras")
+            .resolve("spell_modifiers.json");
 
-    private static final Map<Integer, SpellNamespace> customModelNameMao = new HashMap<>();
-    private static final Map<SpellNamespace, SpellModifiers> modifiersMap = new HashMap<>();
 
-    public static void addModel(float model, SpellNamespace nameSpace) {
-        if (customModelNameMao.containsKey((int) model)) return;
-        customModelNameMao.put((int) model, nameSpace);
+    // first path and hash are added when the game launches as textures are loaded
+    // then when the entity is first seen in-game its model is added based on the path
+    //      and its namespace is added from the hash
+    // that mean we have model -> namespace ability
+    private static final Map<Integer, SpellData> byHash = new HashMap<>();
+    private static final Map<String, SpellData> byPath = new HashMap<>();
+    private static final Map<Integer, SpellData> byModel = new HashMap<>();
+    private static final Map<String, Set<SpellData>> byName = new HashMap<>();
+    public static final Map<SpellNamespace, SpellModifiers> modifiersMap = new HashMap<>();
+
+    public static void putHash(String filePath, int hash) {
+        SpellData data = new SpellData(filePath, hash);
+        byHash.put(hash, data);
+        byPath.put(filePath, data);
     }
 
-    public static SpellNamespace getNameForModel(float model) {
-        return customModelNameMao.get((int) model);
+    public static SpellData getFromPath(String filePath) {
+        return byPath.get(filePath);
     }
 
-    public static SpellNamespace getNameSpace(DisplayEntity.ItemDisplayEntity display) {
-        Float model = ItemUtils.getFirsCustomModelDataFloat(display.getItemStack());
-        if (model == null) return null;
-        return SpellHider.getNameForModel(model);
+    public static SpellData getFromHash(int hash) {
+        return byHash.get(hash);
+    }
+
+    public static SpellData getFromModel(int model) {
+        return byModel.get(model);
+    }
+
+    public static Set<SpellData> getFromName(String name) {
+        return byName.get(name);
+    }
+
+    public static void addModel(String path, Float modelF) {
+        if (byModel.containsKey(modelF.intValue())) return;
+        SpellData existing = byPath.get(path);
+        if (existing != null) {
+            existing.setCustomModelData(modelF.intValue());
+            byModel.put(modelF.intValue(), existing);
+        } else WynnExtras.LOGGER.warn("No Path Found when adding a spell model number: {}", path);
+    }
+
+    public static void editNameOfPath(String path, SpellNamespace namespace) {
+        String newName = namespace.getFQName();
+        SpellData existing = byPath.get(path);
+        if (existing != null) {
+            String oldName = existing.getFQName();
+            byName.get(oldName).remove(existing);
+
+            existing.setFQName(newName);
+            byName.computeIfAbsent(newName, (k) -> new HashSet<>()).add(existing);
+        } else WynnExtras.LOGGER.warn("edited name of non-existing path: {}", path);
+    }
+
+    public static void addName(String path, String FQName) {
+        SpellData existing = byPath.get(path);
+        if (existing != null) {
+            existing.setFQName(FQName);
+            byName.computeIfAbsent(FQName, (k) -> new HashSet<>()).add(existing);
+        } else WynnExtras.LOGGER.warn("No Path Found when adding a spell name mapping: {}", path);
     }
 
     public static SpellModifiers getModifiers(DisplayEntity.ItemDisplayEntity display) {
         if (display.getItemStack().getItem() != Items.OAK_BOAT) return null;
-        SpellNamespace nameSpace = getNameSpace(display);
+        Float model = ItemUtils.getFirsCustomModelDataFloat(display.getItemStack());
+        if (model == null) return null;
+        SpellData data = SpellHider.byModel.get(model.intValue());
+        if (data == null) return null;
+        SpellNamespace nameSpace = data.getNamespace();
         if (nameSpace == null || nameSpace.isEmpty()) return null;
         return modifiersMap.get(nameSpace);
     }
@@ -51,8 +113,19 @@ public class SpellHider {
         return modifiers.set(type, value);
     }
 
-    public static Set<SpellNamespace> getAllCurrentNamespaces() {
-        return new HashSet<>(customModelNameMao.values());
+    public static String getAllModifiersAsDisplay() {
+        StringBuilder sb = new StringBuilder();
+        for (SpellNamespace namespace : modifiersMap.keySet()) {
+            sb.append(namespace.getFQName()).append("\n");
+            SpellModifiers modifiers = modifiersMap.get(namespace);
+            for (Map.Entry<SpellModifier, Object> entry : modifiers.getAll().entrySet()) {
+                SpellModifier modifier = entry.getKey();
+                Object value = entry.getValue();
+                sb.append("   ").append(modifier.name()).append(" -> ").append(value == null ? "null" : value.toString()).append("\n");
+            }
+        }
+        if (sb.isEmpty()) sb.append("no modifiers");
+        return sb.toString();
     }
 
     @SubscribeEvent
@@ -63,8 +136,8 @@ public class SpellHider {
             SpellModifiers modifiers = getModifiers(display);
             if (modifiers == null) return;
 
-
-            if (Boolean.FALSE.equals(modifiers.get(SpellModifier.VISIBLE))) ((EntityExtension) entity).setRendered(false);
+            if (Boolean.FALSE.equals(modifiers.get(SpellModifier.VISIBLE)))
+                ((EntityExtension) entity).setRendered(false);
 
             Vector3f scale = modifiers.get(SpellModifier.SCALE);
             if (scale != null) {
@@ -72,9 +145,6 @@ public class SpellHider {
             }
         }
     }
-
-    //TODO test memory consumption
-    public static Map<String, Integer> hashMap =  new HashMap<>();
 
     public static int hashNativeImage(NativeImage image) {
         if (image == null) return 0;
@@ -94,5 +164,28 @@ public class SpellHider {
         }
 
         return result;
+    }
+
+    public static void loadModifiers() {
+        try {
+            if (Files.exists(MODIFIERS_PATH)) {
+                String json = Files.readString(MODIFIERS_PATH);
+                Type mapType = new TypeToken<@NotNull Map<SpellNamespace, SpellModifiers>>() {
+                }.getType();
+                Map<SpellNamespace, SpellModifiers> modifiers = GSON.fromJson(json, mapType);
+                modifiersMap.putAll(modifiers);
+            }
+        } catch (IOException e) {
+            System.err.println("[WynnExtras] Failed to load spell modifiers: " + e.getMessage());
+        }
+    }
+
+    public static void saveModifiers() {
+        try {
+            Files.createDirectories(MODIFIERS_PATH.getParent());
+            Files.writeString(MODIFIERS_PATH, GSON.toJson(SpellHider.modifiersMap));
+        } catch (IOException e) {
+            System.err.println("[WynnExtras] Failed to save spell modifiers: " + e.getMessage());
+        }
     }
 }

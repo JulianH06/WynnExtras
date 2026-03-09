@@ -13,25 +13,26 @@ import net.neoforged.bus.api.SubscribeEvent;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @WEModule
 public class SpellHiderConfig {
     private static final Path MAPPINGS_PATH = FabricLoader.getInstance()
             .getConfigDir()
             .resolve("wynnextras")
-            .resolve("default_spell_mappings.json");
+            .resolve("default_spell_mappings.json"); //TODO remove default in name and move default to resources
 
-    private static final Gson GSON = new GsonBuilder()
+    public static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()
             .create();
 
     public static SpellHiderConfig INSTANCE = new SpellHiderConfig();
 
     private final Map<Integer, SpellNamespace> idMappings;
+
+    public Collection<SpellNamespace> getAllNamespaces() {
+        return INSTANCE.idMappings.values();
+    }
 
     public SpellHiderConfig() {
         idMappings = new HashMap<>();
@@ -46,7 +47,7 @@ public class SpellHiderConfig {
     }
 
     public SpellNamespace getSpellMapping(Identifier id) {
-        return idMappings.get(SpellHider.hashMap.get(id.getPath()));
+        return idMappings.get(SpellHider.getFromPath(id.getPath()).getHash());
     }
 
     public void changeNamespace(String oldName, String newName) {
@@ -136,7 +137,11 @@ public class SpellHiderConfig {
         }
     }
 
-    public static void load() {
+    public static void loadDefaults() {
+
+    }
+
+    public static void reloadFromFile() {
         try {
             if (Files.exists(MAPPINGS_PATH)) {
                 String json = Files.readString(MAPPINGS_PATH);
@@ -152,7 +157,7 @@ public class SpellHiderConfig {
         }
     }
 
-    public static void save() {
+    public static void saveToFile() {
         try {
             Files.createDirectories(MAPPINGS_PATH.getParent());
             Files.writeString(MAPPINGS_PATH, GSON.toJson(new SaveFormat(INSTANCE)));
