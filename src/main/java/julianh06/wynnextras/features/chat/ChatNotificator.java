@@ -31,7 +31,7 @@ public class ChatNotificator {
             "notifiertest",
             "",
             context -> {
-                displayAndPlaySound("test");
+                displayAndPlaySound("Test");
                 return 1;
             },
             null,
@@ -135,7 +135,7 @@ public class ChatNotificator {
         ctx.getMatrices().pushMatrix();
         ctx.getMatrices().translate(cx, cy);
         ctx.getMatrices().scale(scale, scale);
-        ctx.drawText(mc.textRenderer, String.valueOf(textOffsetX), textOffsetX, -th / 2, CustomColor.fromInt(activeColor).withAlpha(alpha).asInt(), true);
+        ctx.drawText(mc.textRenderer, activeText, textOffsetX, -th / 2, CustomColor.fromInt(activeColor).withAlpha(alpha).asInt(), true);
         ctx.getMatrices().popMatrix();
     }
 }

@@ -67,6 +67,7 @@ public class BankOverlay {
     public static int currentMaxPages;
 
     public static boolean shouldWait = false;
+    public static long shouldWaitSince = 0L;
 
     public static EnumMap<BankOverlayType, HashMap<Integer, EasyTextInput>> BankPageNameInputsByType = new EnumMap<>(BankOverlayType.class);
 

@@ -61,7 +61,6 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 }
             }
 
-
             int apiKeyInfoY = y + 385;
             for(String line : apiKeyInfo) {
                 ui.drawCenteredText(line, x + 900, apiKeyInfoY, CustomColor.fromHexString("FF0000"));
@@ -84,19 +83,32 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
         ui.drawImage(TNATexture, x + 1470, y + 420, 300, 300);
 
         Map<String, Long> ranking = null;
+
         if(selectedCharacter == null) {
             ranking = PV.currentPlayerData.getRanking();
         }
+
         long NOTGRank;
         long NOLRank;
         long TCCRank;
         long TNARank;
+
+        long NOTGSRRank;
+        long NOLSRRank;
+        long TCCSRRank;
+        long TNASRRank;
+
         CustomColor notgColor = CustomColor.fromHexString("FFFFFF");
         CustomColor nolColor = CustomColor.fromHexString("FFFFFF");
         CustomColor tccColor = CustomColor.fromHexString("FFFFFF");
         CustomColor tnaColor = CustomColor.fromHexString("FFFFFF");
-        if(ranking != null) {
 
+        CustomColor notgSRColor = CustomColor.fromHexString("FFFFFF");
+        CustomColor nolSRColor = CustomColor.fromHexString("FFFFFF");
+        CustomColor tccSRColor = CustomColor.fromHexString("FFFFFF");
+        CustomColor tnaSRColor = CustomColor.fromHexString("FFFFFF");
+
+        if(ranking != null && currentStatus == Status.ALL) {
             NOTGRank = ranking.getOrDefault("grootslangCompletion", -1L);
             if(NOTGRank <= 100 && NOTGRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgColor = CommonColors.RAINBOW;
 
@@ -109,21 +121,46 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
             TNARank = ranking.getOrDefault("namelessCompletion", -1L);
             if(TNARank <= 100 && TNARank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaColor = CommonColors.RAINBOW;
 
+            NOTGSRRank = ranking.getOrDefault("grootslangSrPlayers", -1L);
+            if(NOTGSRRank <= 100 && NOTGSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgSRColor = CommonColors.RAINBOW;
+
+            NOLSRRank = ranking.getOrDefault("orphionSrPlayers", -1L);
+            if(NOLSRRank <= 100 && NOLSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolSRColor = CommonColors.RAINBOW;
+
+            TCCSRRank = ranking.getOrDefault("colossusSrPlayers", -1L);
+            if(TCCSRRank <= 100 && TCCSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccSRColor = CommonColors.RAINBOW;
+
+            TNASRRank = ranking.getOrDefault("namelessSrPlayers", -1L);
+            if(TNASRRank <= 100 && TNASRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaSRColor = CommonColors.RAINBOW;
+
             if(NOTGRank != -1) {
-                ui.drawText("Rank #" + formatter.format(NOTGRank), x + 345f, y + 255f, notgColor, 3.9f);
+                ui.drawText("Completion Rank #" + formatter.format(NOTGRank), x + 345f, y + 255f, notgColor, 3.9f);
             }
             if(NOLRank != -1) {
-                ui.drawText("Rank #" + formatter.format(NOLRank), x + 345f, y + 585f, nolColor, 3.9f);
+                ui.drawText("Completion Rank #" + formatter.format(NOLRank), x + 345f, y + 585f, nolColor, 3.9f);
             }
             if(TCCRank != -1) {
-                ui.drawText("Rank #" + formatter.format(TCCRank), x + 1470f, y + 255f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+                ui.drawText("Completion Rank #" + formatter.format(TCCRank), x + 1470f, y + 255f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
             }
             if(TNARank != -1) {
-                ui.drawText("Rank #" + formatter.format(TNARank), x + 1470f, y + 585f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+                ui.drawText("Completion Rank #" + formatter.format(TNARank), x + 1470f, y + 585f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+            }
+
+            if(NOTGSRRank != -1) {
+                ui.drawText("SR Rank #" + formatter.format(NOTGSRRank), x + 345f, y + 305f, notgSRColor, 3.9f);
+            }
+            if(NOLSRRank != -1) {
+                ui.drawText("SR Rank #" + formatter.format(NOLSRRank), x + 345f, y + 635f, nolSRColor, 3.9f);
+            }
+            if(TCCSRRank != -1) {
+                ui.drawText("SR Rank #" + formatter.format(TCCSRRank), x + 1470f, y + 305f, tccSRColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
+            }
+            if(TNASRRank != -1) {
+                ui.drawText("SR Rank #" + formatter.format(TNASRRank), x + 1470f, y + 635f, tnaSRColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
             }
         }
 
-        Raids raids = null;
+        Raids raids;
         GuildRaids guildRaids = null;
         String characterNameString;
         if(selectedCharacter != null && selectedCharacter.getRaids() != null) {
@@ -140,6 +177,10 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
         ui.drawText("The Canyon Colossus", x + 1470f, y + 165f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
         ui.drawText("The Nameless Anomaly", x + 1470f, y + 495f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3.9f);
 
+        if(selectedCharacter != null) {
+            currentStatus = Status.ALL;
+            typeSwitcher.setBounds(-100, -100, 0, 0);
+        }
 
         if(currentStatus == null) return;
 
@@ -200,7 +241,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
             case NONGRAIDS -> 270;
         };
 
-        typeSwitcher.setBounds(x + width - typeSwitcherWidth - 30, y + 20, typeSwitcherWidth, 50);
+        if(selectedCharacter == null) typeSwitcher.setBounds(x + width - typeSwitcherWidth - 30, y + 20, typeSwitcherWidth, 50);
     }
 
     public static class TypeSwitcher extends Widget {

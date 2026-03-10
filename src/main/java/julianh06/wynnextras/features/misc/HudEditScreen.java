@@ -7,6 +7,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +55,6 @@ public class HudEditScreen extends Screen {
 
         this.parent = parent;
 
-        // Only show elements whose features are enabled
         if (c.provokeTimerToggle) {
             elements.add(new HudElement("provoke", "Provoke: 7s",
                     c.provokeTimerX, c.provokeTimerY, c.provokeTimerScale, c.provokeTimerAlignment));
@@ -73,15 +73,13 @@ public class HudEditScreen extends Screen {
             elements.add(new HudElement("warning", "RECAST TOTEM!",
                     wx, c.totemWarningY, c.totemWarningScale, c.totemWarningAlignment));
         }
-        // Notification always available
-        {
-            int nx = c.notifierX;
-            if (nx == -1) nx = 200;
-            int ny = c.notifierY;
-            if (ny == -1) ny = 100;
-            elements.add(new HudElement("notifier", "NOTIFICATION",
-                    nx, ny, c.notifierScale, c.notifierAlignment));
-        }
+
+        int nx = c.notifierX;
+        if (nx == -1) nx = 200;
+        int ny = c.notifierY;
+        if (ny == -1) ny = 100;
+        elements.add(new HudElement("notifier", "NOTIFICATION",
+                nx, ny, c.notifierScale, c.notifierAlignment));
     }
 
     @Override
@@ -113,7 +111,6 @@ public class HudEditScreen extends Screen {
         focusedMouseY = mouseY;
         ctx.fill(0, 0, width, height, 0x55000000);
 
-        // Draw center crosshair guides
         int centerX = width / 2;
         int centerY = height / 2;
         boolean anySnappedX = false, anySnappedY = false;
@@ -149,7 +146,7 @@ public class HudEditScreen extends Screen {
                     : 0xFFFFFFFF;
 
             ctx.getMatrices().pushMatrix();
-            ctx.getMatrices().translate(e.x + e.sw() / 2f, e.y + e.sh() / 2f);  // Mittelpunkt des Kästchens
+            ctx.getMatrices().translate(e.x + e.sw() / 2f, e.y + e.sh() / 2f);
             ctx.getMatrices().scale(e.scale, e.scale);
             int tw = textRenderer.getWidth(e.preview);
             int th = textRenderer.fontHeight;
@@ -239,13 +236,13 @@ public class HudEditScreen extends Screen {
         int keyCode = input.key();
         int modifiers = input.modifiers();
 
-        boolean shift = (modifiers & 1) != 0; // GLFW_MOD_SHIFT
-        if (shift && (keyCode == 263 || keyCode == 262)) { // Links = 263, Rechts = 262
+        boolean shift = (modifiers & 1) != 0;
+        if (shift && (keyCode == GLFW.GLFW_KEY_LEFT || keyCode == GLFW.GLFW_KEY_RIGHT || keyCode == GLFW.GLFW_KEY_A || keyCode == GLFW.GLFW_KEY_D)) { // Left arrow = 263, Right arrow = 262
             for (HudElement e : elements) {
-                if (e.hovered(focusedMouseX, focusedMouseY)) { // s.u.
-                    if (keyCode == 263) { // links
+                if (e.hovered(focusedMouseX, focusedMouseY)) {
+                    if (keyCode == GLFW.GLFW_KEY_LEFT || keyCode == GLFW.GLFW_KEY_A) { // left
                         e.alignment = e.alignment == WynnExtrasConfig.Align.CENTER ? WynnExtrasConfig.Align.LEFT : e.alignment == WynnExtrasConfig.Align.RIGHT ? WynnExtrasConfig.Align.CENTER : WynnExtrasConfig.Align.LEFT;
-                    } else { // rechts
+                    } else { // right
                         e.alignment = e.alignment == WynnExtrasConfig.Align.CENTER ? WynnExtrasConfig.Align.RIGHT : e.alignment == WynnExtrasConfig.Align.LEFT ? WynnExtrasConfig.Align.CENTER : WynnExtrasConfig.Align.RIGHT;
                     }
                     return true;

@@ -279,6 +279,31 @@ public class WynnExtras implements ClientModInitializer {
 			McUtils.sendMessageToClient(
 				addWynnExtrasPrefix(Text.of("§aA new version of WynnExtras is available: §b" + latestVersion + "§a! You're currently using version §b" + currentVersion + "§a. You can download it now on Modrinth!"))
 			);
+
+			if(isLunarClient()) {
+				McUtils.sendMessageToClient(
+					addWynnExtrasPrefix(Text.of("§aSeems like you are using Lunar Client. Some features (especially the Bank Overlay) will not work correctly with Lunar. We recommend using a different launcher like prism or Modrinth."))
+				);
+			}
 		}
+	}
+
+	public static boolean isLunarClient() {
+		try {
+			Class.forName("com.moonsworth.lunar.genesis.Genesis");
+			return true;
+		} catch (ClassNotFoundException e) {
+			return false;
+		}
+	}
+
+	public static boolean isOnBeta() {
+		MinecraftClient client = MinecraftClient.getInstance();
+
+		if (client == null) return false;
+		if (client.getCurrentServerEntry() == null) return false;
+
+		String serverIP = client.getCurrentServerEntry().address;
+		return serverIP.equalsIgnoreCase("beta.wynncraft.com");
 	}
 }

@@ -290,10 +290,12 @@ public class TotemTimer {
                 textOffsetX = -tw / 2;
             }
 
+            int color = 0xFF000000 | WynnExtrasConfig.INSTANCE.totemTimerWarningTextColor.getRGB();
+
             ctx.getMatrices().pushMatrix();
             ctx.getMatrices().translate(wx, wy);
             ctx.getMatrices().scale(as, as);
-            ctx.drawText(mc.textRenderer, alarmText, textOffsetX, -th / 2, 0xFFFF4444, true);
+            ctx.drawText(mc.textRenderer, alarmText, textOffsetX, -th / 2, color, true);
             ctx.getMatrices().popMatrix();
         }
     }

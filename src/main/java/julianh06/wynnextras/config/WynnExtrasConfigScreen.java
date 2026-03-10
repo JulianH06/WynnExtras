@@ -135,9 +135,6 @@ public class WynnExtrasConfigScreen extends Screen {
             .sub("Shaman Totem Timer")
                 .add(toggle("Totem Timer", "Show totem countdown timer on HUD",
                     () -> config.totemTimerEnabled, v -> config.totemTimerEnabled = v))
-                .add(visibleWhen(dropdown("Text Color", "Color of the totem timer",
-                    WynnExtrasConfig.TextColor.class, () -> config.totemTimerColor, v -> config.totemTimerColor = v),
-                    () -> config.totemTimerEnabled))
                 .add(visibleWhen(toggle("Own Totems Only", "Only show timers for your own totems",
                     () -> config.totemTimerOwnOnly, v -> config.totemTimerOwnOnly = v),
                     () -> config.totemTimerEnabled))
@@ -190,9 +187,7 @@ public class WynnExtrasConfigScreen extends Screen {
                     WynnExtrasConfig.TextColor.class, () -> config.eldritchCallColor, v -> config.eldritchCallColor = v))
             .sub("Provoke Timer")
                 .add(toggle("Enable Provoke Timer", "Show provoke timer on HUD",
-                    () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
-                .add(dropdown("Timer Color", "Timer text color",
-                    WynnExtrasConfig.TextColor.class, () -> config.provokeTimerColor, v -> config.provokeTimerColor = v));
+                    () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v));
 
         // ===== INVENTORY =====
         Category invCategory = category("Inventory", 0xFFea1219);
@@ -728,7 +723,7 @@ public class WynnExtrasConfigScreen extends Screen {
 
         drawButton(ctx, saveX, btnY, 100, 24, "Save & Close", saveHover, TOGGLE_ON);
         drawButton(ctx, cancelX, btnY, 100, 24, "Cancel", cancelHover, ACCENT_RED);
-        drawButton(ctx, editX, btnY, 100, 24, "Edit positions", editHover, PARCHMENT_LIGHT);
+        drawButton(ctx, editX, btnY, 100, 24, "Edit HUD positions", editHover, PARCHMENT_LIGHT);
     }
 
     private void drawButton(DrawContext ctx, int x, int y, int w, int h, String text, boolean hover, int accent) {

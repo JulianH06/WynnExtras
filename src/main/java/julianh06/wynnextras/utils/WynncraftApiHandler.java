@@ -60,7 +60,15 @@ public class WynncraftApiHandler {
             "apikey",
             "",
             context -> {
-                INSTANCE.API_KEY = StringArgumentType.getString(context, "key");
+                String key = StringArgumentType.getString(context, "key");
+                if(key.equals("clear")) {
+                    INSTANCE.API_KEY = null;
+                    save();
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully cleared your api key.")));
+                    return 1;
+                }
+
+                INSTANCE.API_KEY = key;
                 save();
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully set your api key." +
                         " It has been saved in your config. Don't share it publicly.")));
@@ -80,7 +88,7 @@ public class WynncraftApiHandler {
                            1. Add your alt(s) to your existing Wynncraft account so they can share the same API key
                            2. Create a separate Wynncraft account for each Minecraft account, and generate an API key for each
                         You can find a tutorial on how to get your api key in #infos on our discord. \
-                        Run "/WynnExtras discord" to join.""")));
+                        Run "/WynnExtras discord" to join. Run "/WynnExtras apikey clear" to clear your api key.""")));
                 return 1;
             },
             null,
@@ -324,6 +332,11 @@ public class WynncraftApiHandler {
 
         LocalAspectStorage.save(map);
 
+
+        if(WynnExtras.isOnBeta()) {
+            return;
+        }
+
         if(!WynnExtrasConfig.INSTANCE.uploadOwnAspects) return;
 
         // Authenticate with Mojang first
@@ -530,6 +543,10 @@ public class WynncraftApiHandler {
     public static void uploadGambits(List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry> gambits) {
         if (McUtils.player() == null) {
             System.err.println("Cannot upload gambits - player not loaded");
+            return;
+        }
+
+        if(WynnExtras.isOnBeta()) {
             return;
         }
 
@@ -774,6 +791,10 @@ public class WynncraftApiHandler {
     public static void uploadLootrunLootPool(String camp, List<julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem> items) {
         if (McUtils.player() == null) {
             System.err.println("Cannot upload lootrun loot pool - player not loaded");
+            return;
+        }
+
+        if(WynnExtras.isOnBeta()) {
             return;
         }
 

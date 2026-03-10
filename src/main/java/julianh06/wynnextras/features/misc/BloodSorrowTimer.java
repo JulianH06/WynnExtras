@@ -2,7 +2,12 @@ package julianh06.wynnextras.features.misc;
 
 import com.wynntils.models.character.type.ClassType;
 import com.wynntils.core.components.Models;
+import com.wynntils.models.gear.type.GearType;
+import com.wynntils.models.items.WynnItem;
+import com.wynntils.models.items.items.game.GearItem;
+import com.wynntils.models.wynnitem.parsing.WynnItemParser;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.wynn.ItemUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.config.WynnExtrasConfigScreen;
 import julianh06.wynnextras.core.WynnExtras;
@@ -19,11 +24,15 @@ import net.minecraft.client.sound.WeightedSoundSet;
 import net.minecraft.item.ItemStack;
 
 import java.util.Map;
+import java.util.Optional;
 
 public class BloodSorrowTimer {
-
     private static long lastStartMs = Long.MIN_VALUE / 2;
     private static long timerEndMs = 0;
+
+    private static int lastSelectedSlot = -1;
+    private static int skipEstimatesTicks = 0;
+    private static final int SKIP_TICKS_AFTER_SLOT_CHANGE = 10; // ~0.5s
 
     private static int getAcolyteBonus() {
         if(!WynnExtrasConfig.INSTANCE.autoDetectBloodSorrowTime && !WynnExtrasConfig.INSTANCE.autoDetectAcolyteAspectTier) {
@@ -68,7 +77,6 @@ public class BloodSorrowTimer {
     private static void onSound(String path) {
         if (!WynnExtrasConfig.INSTANCE.bloodSorrowTimerEnabled) return;
         if (Models.Character.getClassType() != ClassType.SHAMAN) return;
-        if (path.contains("underwater.enter")) McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("CASTED ELDRITCH CALL"));
         if (!path.contains("wither_skeleton.hurt")) return;
         long now = System.currentTimeMillis();
         long duration = (hasResonance() ? 1250 : 5000) + getAcolyteBonus() * (hasResonance() ? 1L : 4L);
@@ -99,11 +107,38 @@ public class BloodSorrowTimer {
     }
 
     private static void renderHud(DrawContext ctx, RenderTickCounter tickCounter) {
+        if(MinecraftClient.getInstance().player != null && MinecraftClient.getInstance().player.getInventory() != null) {
+            int currentSlot = MinecraftClient.getInstance().player.getInventory().getSelectedSlot();
+            if (lastSelectedSlot != -1 && currentSlot != lastSelectedSlot) {
+                lastStartMs = 0;
+                timerEndMs = 0;
+                skipEstimatesTicks = SKIP_TICKS_AFTER_SLOT_CHANGE;
+            }
+
+            lastSelectedSlot = currentSlot;
+
+            if (skipEstimatesTicks > 0) {
+                skipEstimatesTicks--;
+                return;
+            }
+        }
+
         if (!WynnExtrasConfig.INSTANCE.bloodSorrowTimerEnabled) return;
         long now = System.currentTimeMillis();
         if (now >= timerEndMs) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
+        ItemStack held = mc.player.getMainHandStack();
+        GearItem gearItem = null;
+        Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(held);
+        if (optWynnItem.isPresent() && optWynnItem.get() instanceof GearItem) {
+            gearItem = (GearItem) optWynnItem.get();
+        }
+        if (held == null || held.isEmpty() || !(gearItem != null && gearItem.getGearType() == GearType.RELIK)) {
+            lastStartMs = 0;
+            timerEndMs = 0;
+            return;
+        }
 
         float remaining = (timerEndMs - now) / 1000f;
         int color = remaining > 1.0f ? 0xFF44FF44 : remaining > 0.5f ? 0xFFFFFF00 : 0xFFFF4444;

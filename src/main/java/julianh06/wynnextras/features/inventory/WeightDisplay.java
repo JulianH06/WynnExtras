@@ -348,7 +348,7 @@ public class WeightDisplay {
                         idx.incrementAndGet();
                     }
                     if(scaleData.data().size() > 1 && WynnExtrasConfig.INSTANCE.showScales) {
-                        modified.add(Text.literal("  ↳ Use ↑ / ↓ to cycle").formatted(Formatting.DARK_GRAY));
+                        modified.add(Text.literal("  ↳ Use ↑ / ↓ (or W / S) to cycle").formatted(Formatting.DARK_GRAY));
                     }
                 }
             }

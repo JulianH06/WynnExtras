@@ -144,6 +144,7 @@ public class WynnExtrasConfig {
     public TextColor eldritchCallColor = TextColor.WHITE;
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
+    public boolean showLootpoolButtonInPartyFinder = true;
 
     // ==================== TOTEM TIMER ====================
     public boolean totemTimerEnabled = true;
@@ -156,8 +157,7 @@ public class WynnExtrasConfig {
     public int totemTimerX = 5;
     public int totemTimerY = 40;
     public float totemTimerScale = 1.0f;
-    public TextColor totemTimerColor = TextColor.WHITE;
-    public TextColor totemTimerWarningTextColor = TextColor.WHITE;
+    public TextColor totemTimerWarningTextColor = TextColor.RED;
     public Align totemTimerAlignment = Align.CENTER;
     public int totemWarningX = -1;  // -1 = auto center
     public int totemWarningY = 80;
@@ -181,7 +181,6 @@ public class WynnExtrasConfig {
     public int provokeTimerY = 20;
     public float provokeTimerScale = 1.0f;
     public Align provokeTimerAlignment = Align.CENTER;
-    public TextColor provokeColor = TextColor.WHITE;
     public int customGUIScale = 3;
     public boolean removeFrontPersonView = false;
     public boolean sourceOfTruthToggle = false;

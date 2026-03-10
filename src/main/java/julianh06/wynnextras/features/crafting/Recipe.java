@@ -162,13 +162,18 @@ public class Recipe {
         Vector2d durabilityBase = new Vector2d(this.dura);
         durabilityBase = durabilityBase.mul(materials.getMultiplier());
         Vector2d finalDura = durabilityBase.add(durabilityModifier, durabilityModifier);
+        if(finalDura.x < 10) finalDura.x = 1;
+        if(finalDura.y < 10) finalDura.y = 1;
         return new Vector2i((int) Math.round(finalDura.x), (int) Math.round(finalDura.y));
     }
 
     public Vector2i getDuration(int modifier) {
         Vector2d base = new Vector2d(this.dura);
         if (!getType().isConsumable()) return null;
+        base = base.mul(materials.getMultiplier());
         Vector2d finalDuration = base.add(modifier, modifier);
+        if(finalDuration.x < 10) finalDuration.x = 10;
+        if(finalDuration.y < 10) finalDuration.y = 10;
         return new Vector2i((int) finalDuration.x, (int) finalDuration.y);
     }
 

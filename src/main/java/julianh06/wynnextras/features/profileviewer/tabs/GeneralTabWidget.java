@@ -156,7 +156,8 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             ui.drawText("This player has their classes private.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 3f);
         }
 
-        if (PV.currentPlayerData.getGuild() != null) {
+        boolean hasGuild = PV.currentPlayerData.getGuild() != null;
+        if (hasGuild) {
             String guildString = "[" + PV.currentPlayerData.getGuild().getPrefix() + "] " + PV.currentPlayerData.getGuild().getName();
             String stars = PV.currentPlayerData.getGuild().getRankStars();
             String rankString = (stars == null  ? "" : stars) + " " + PV.currentPlayerData.getGuild().getRank() + " of " + (stars == null  ? "" : stars);
@@ -168,6 +169,8 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             int widgetWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(guildString) * ui.getScaleFactor() * 1.2);
             guildButtonWidget.setBounds(x + 285 - widgetWidth / 2, y + 590, widgetWidth, 20);
             //ui.drawCenteredText(guildString, x + 285, y + 600, CustomColor.fromHexString("FFFFFF"), 3f);
+        } else {
+            ui.drawCenteredText("Not part of a Guild", x + 285, y + 570, CustomColor.fromHexString("FFFFFF"), 3f);
         }
 
         if (PV.currentPlayerData.getFirstJoin() != null) {
@@ -180,22 +183,28 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
 
             String formatted = "First joined: ";
             formatted += formatter.format(PV.currentPlayerData.getFirstJoin());
-            ui.drawCenteredText(formatted, x + 285, y + 630, CustomColor.fromHexString("FFFFFF"), 3f);
+            ui.drawCenteredText(formatted, x + 285, y + (hasGuild ? 630 : 600), CustomColor.fromHexString("FFFFFF"), 3f);
         }
 
         if (PV.currentPlayerData.getPlaytime() != 0) {
-            ui.drawCenteredText("Total Playtime: " + Math.round(PV.currentPlayerData.getPlaytime()) + "h", x + 285, y + 660, CustomColor.fromHexString("FFFFFF"), 3f);
+            ui.drawCenteredText("Total Playtime: " + Math.round(PV.currentPlayerData.getPlaytime()) + "h", x + 285, y + (hasGuild ? 660 : 630), CustomColor.fromHexString("FFFFFF"), 3f);
         }
 
         if(selectedCharacter != null) {
             if(selectedCharacter.getPlaytime() != 0) {
-                ui.drawCenteredText("Class Playtime: " + Math.round(selectedCharacter.getPlaytime()) + "h", x + 285, y + 690, CustomColor.fromHexString("FFFFFF"), 3f);
+                ui.drawCenteredText("Class Playtime: " + Math.round(selectedCharacter.getPlaytime()) + "h", x + 285, y + (hasGuild ? 690 : 660), CustomColor.fromHexString("FFFFFF"), 3f);
             }
         }
 
         if(WETeam != null && PV.currentPlayerData.getUsername() != null) {
             if (WETeam.contains(PV.currentPlayerData.getUsername())) {
                 ui.drawCenteredText("★★★ WynnExtras Team Member ★★★", x + 285, y + 720, CommonColors.SHINE, 3f);
+            }
+        }
+
+        if(WEContributors != null && PV.currentPlayerData.getUsername() != null) {
+            if (WEContributors.contains(PV.currentPlayerData.getUsername())) {
+                ui.drawCenteredText("★★★ WynnExtras Contributor ★★★", x + 285, y + 720, CommonColors.SHINE, 3f);
             }
         }
     }

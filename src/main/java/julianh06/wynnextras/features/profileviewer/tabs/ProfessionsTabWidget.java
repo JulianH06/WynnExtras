@@ -77,6 +77,11 @@ public class ProfessionsTabWidget extends PVScreen.TabWidget {
                 ui.drawCenteredText("Level " + level, x + 306 + i * 408, y + 300, levelColor, 6f);
                 if(level < 132) {
                     ui.drawCenteredText("Progress to next Level: " + prof.getValue().getXpPercent() + "%", x + 306 + i * 408, y + 340, levelColor, 2.4f);
+                } else {
+                    long overflowXP = prof.getValue().getXpPercent() * 66287449L / 100;
+
+                    ui.drawCenteredText("Overflow XP:", x + 306 + i * 408, y + 340, levelColor, 2.4f);
+                    ui.drawCenteredText(formatNumber(overflowXP), x + 306 + i * 408,y + 370, levelColor, 2.4f);
                 }
             } else {
                 ui.drawImage(profTexture, x + 132 + (i - 4) * 204, y + 600, 96, 96);
@@ -91,10 +96,31 @@ public class ProfessionsTabWidget extends PVScreen.TabWidget {
                 if(level < 132) {
                     ui.drawCenteredText("Progress to", x + 180 + (i - 4) * 204, y + 520, levelColor, 2.4f);
                     ui.drawCenteredText("next Level: " + prof.getValue().getXpPercent() + "%", x + 180 + (i - 4) * 204,y + 544, levelColor, 2.4f);
+                } else {
+                    long overflowXP = prof.getValue().getXpPercent() * 66287449L / 100;
+
+                    ui.drawCenteredText("Overflow XP:", x + 180 + (i - 4) * 204, y + 520, levelColor, 2.4f);
+                    ui.drawCenteredText(formatNumber(overflowXP), x + 180 + (i - 4) * 204,y + 544, levelColor, 2.4f);
                 }
             }
 
             i++;
+        }
+    }
+
+    public static String formatNumber(long number) {
+        if (number < 0) return "-" + formatNumber(-number);
+
+        if (number >= 1_000_000_000_000L) {
+            return String.format("%.2fT", number / 1_000_000_000_000.0);
+        } else if (number >= 1_000_000_000L) {
+            return String.format("%.2fB", number / 1_000_000_000.0);
+        } else if (number >= 1_000_000L) {
+            return String.format("%.2fM", number / 1_000_000.0);
+        } else if (number >= 1_000L) {
+            return String.format("%.2fK", number / 1_000.0);
+        } else {
+            return String.valueOf(number);
         }
     }
 }
