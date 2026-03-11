@@ -1,8 +1,7 @@
 package julianh06.wynnextras.features.spellhider;
 
 import com.google.common.reflect.TypeToken;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.gson.*;
 import com.wynntils.mc.extension.EntityExtension;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
@@ -32,6 +31,53 @@ import java.util.Set;
 public class SpellHider {
     public static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()
+            .registerTypeAdapter(SpellModifiers.class, (JsonDeserializer<SpellModifiers>) (json, typeOfT, ctx) -> {
+                if (json.isJsonObject()) {
+                    JsonObject obj = json.getAsJsonObject();
+                    SpellModifiers modifiers = new SpellModifiers();
+                    JsonObject valuesMap = obj.get("values").getAsJsonObject();
+
+                    for (Map.Entry<String, JsonElement> entry : valuesMap.entrySet()) {
+                        String key = entry.getKey();
+                        JsonElement value = entry.getValue();
+
+                        SpellModifier modifier = SpellModifier.from(key);
+                        if (modifier == null) continue;
+
+                        // Parse value based on modifier type
+                        if (modifier == SpellModifier.VISIBLE) {
+                            modifiers.set(modifier, value.getAsBoolean());
+                        } else if (modifier == SpellModifier.SCALE) {
+                            String vecStr = value.getAsString();
+                            modifiers.set(modifier, modifier.parseValue(vecStr, Vector3f.class));
+                        }
+                    }
+
+                    return modifiers;
+                } else {
+                    throw new JsonParseException("Unexpected JSON for IdentificationData: " + json);
+                }
+            })
+            .registerTypeAdapter(SpellNamespace.class, (JsonDeserializer<SpellNamespace>) (json, typeOfT, ctx) -> {
+                if (json.isJsonObject()) {
+                    return SpellNamespace.from(json.getAsString());
+                } else {
+                    throw new JsonParseException("Unexpected JSON for IdentificationData: " + json);
+                }
+            })
+            .registerTypeAdapter(new TypeToken<@NotNull Map<SpellNamespace, SpellModifiers>>(){}.getType(),
+                    (JsonDeserializer<Map<SpellNamespace, SpellModifiers>>) (json, typeOfT, ctx) -> {
+                        Map<SpellNamespace, SpellModifiers> map = new HashMap<>();
+                        JsonObject obj = json.getAsJsonObject();
+
+                        for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
+                            SpellNamespace namespace = SpellNamespace.from(entry.getKey());
+                            SpellModifiers modifiers = ctx.deserialize(entry.getValue(), SpellModifiers.class);
+                            map.put(namespace, modifiers);
+                        }
+
+                        return map;
+                    })
             .create();
 
     private static final Path MODIFIERS_PATH = FabricLoader.getInstance()

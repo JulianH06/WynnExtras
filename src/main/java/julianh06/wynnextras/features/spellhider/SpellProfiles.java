@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.spellhider;
 
 import com.google.common.reflect.TypeToken;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.InitEvent;
 import julianh06.wynnextras.utils.ChatUtils;
@@ -40,7 +41,16 @@ public class SpellProfiles {
         return currentName.equals("default_all");
     }
 
+    // TODO surely you can register a config change listener of some sort
     public static SpellModifiers getModifiers(SpellNamespace namespace) {
+        String config = WynnExtrasConfig.INSTANCE.spellProfile;
+        if (!currentName.equals(config)) {
+            try {
+                loadProfile(config);
+            } catch (IOException e) {
+                WynnExtras.LOGGER.error("failed to load profile: {}", config);
+            }
+        }
         if (currentName.equals("default_off")) return null;
         return currentProfile.get(namespace);
     }
@@ -74,6 +84,7 @@ public class SpellProfiles {
             }.getType();
             currentProfile = GSON.fromJson(json, mapType);
             currentName = fileName;
+            WynnExtrasConfig.INSTANCE.spellProfile = fileName;
         } else {
             WynnExtras.LOGGER.warn("profile doesn't exist: {}", fileName);
             return false;
@@ -82,7 +93,7 @@ public class SpellProfiles {
     }
 
     @SubscribeEvent
-    public static void load(InitEvent empty) {
+    public void load(InitEvent empty) {
         Path names = PROFILES_PATH.resolve("names.json");
         if (Files.exists(names)) {
             try {

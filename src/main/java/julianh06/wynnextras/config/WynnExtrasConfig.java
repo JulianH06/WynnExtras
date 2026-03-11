@@ -26,12 +26,13 @@ public class WynnExtrasConfig {
 
     private static final List<Consumer<WynnExtrasConfig>> saveListeners = new ArrayList<>();
 
-    // ==================== PLAYER HIDER ====================
+    // ==================== HIDERS ====================
     public boolean playerHiderToggle = true;
     public int maxHideDistance = 3;
     public boolean hideAllPlayers = false;
     public boolean hideAllPlayersInWar = false;
     public List<String> hiddenPlayers = new ArrayList<>();
+    public String spellProfile = "default_off";
 
     // ==================== CHAT NOTIFIER ====================
     public List<String> notifierWords = new ArrayList<>();

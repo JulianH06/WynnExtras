@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.spellhider;
 
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.InitEvent;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Identifier;
@@ -43,7 +44,12 @@ public class SpellHiderMappings {
     }
 
     public SpellNamespace getSpellMapping(Identifier id) {
-        return idMappings.get(SpellHider.getFromPath(id.getPath()).getHash());
+        SpellData fromPath = SpellHider.getFromPath(id.getPath());
+        if (fromPath == null) {
+            WynnExtras.LOGGER.warn("the return value of \"julianh06.wynnextras.features.spellhider.SpellHider.getFromPath(String)\" is null");
+            return null;
+        }
+        return idMappings.get(fromPath.getHash());
     }
 
     public void changeNamespace(String oldName, String newName) {

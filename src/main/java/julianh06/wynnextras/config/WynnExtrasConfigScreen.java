@@ -1,6 +1,7 @@
 package julianh06.wynnextras.config;
 
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.features.spellhider.SpellProfiles;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -73,7 +74,7 @@ public class WynnExtrasConfigScreen extends Screen {
     private int scrollbarY, scrollbarHeight, scrollbarThumbY, scrollbarThumbH;
 
     // Dropdown state
-    private EnumOption<?> activeDropdown = null;
+    private DropdownOption<?> activeDropdown = null;
     private int dropdownX, dropdownY, dropdownWidth;
     private double dropdownScroll = 0;
     private static final int DROPDOWN_MAX_HEIGHT = 150;
@@ -239,8 +240,8 @@ public class WynnExtrasConfigScreen extends Screen {
                     () -> config.notgLowerPlatform, v -> config.notgLowerPlatform = v)
                 );
 
-        // ===== Player Hider =====
-        category("Player Hider", 0xFF673190)
+        // ===== Hiders =====
+        category("Hiders", 0xFF673190)
             .add(toggle("Enable Player Hider", "Enable the Player Hider",
                 () -> config.playerHiderToggle, v -> config.playerHiderToggle = v))
             .add(slider("Hide Distance", "Max distance to hide",
@@ -250,7 +251,9 @@ public class WynnExtrasConfigScreen extends Screen {
             .add(toggle("Hide All Players while in Wars", "Hide all players during wars",
                 () -> config.hideAllPlayersInWar, v -> config.hideAllPlayersInWar = v))
             .add(stringList("Hidden Players", "Always hide these players",
-                () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"));
+                () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"))
+            .add(dropdown("Spell Hider Profile", "The default values for the spell hider, this can be changed at will without changing the overrides set with /Wynnextras SpellHider modify",
+                    SpellProfiles.getProfileNames(), () -> config.spellProfile, v -> config.spellProfile = v));
 
 
         // ===== MISC =====
@@ -362,6 +365,10 @@ public class WynnExtrasConfigScreen extends Screen {
 
     private <T extends Enum<T>> ConfigOption dropdown(String name, String desc, Class<T> cls, Supplier<T> get, Consumer<T> set) {
         return new EnumOption<>(name, desc, cls, get, set);
+    }
+
+    private <T> ConfigOption dropdown(String name, String desc, List<T> vals, Supplier<T> get, Consumer<T> set) {
+        return new ListOption<>(name, desc, vals, get, set);
     }
 
     private ConfigOption stringList(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set, String itemName) {
@@ -580,7 +587,7 @@ public class WynnExtrasConfigScreen extends Screen {
 //        ctx.getMatrices().push();
 //        ctx.getMatrices().translate(0, 0, 300);
 
-        Object[] values = activeDropdown.enumClass.getEnumConstants();
+        Object[] values = activeDropdown.getValues();
         int totalContentH = values.length * DROPDOWN_ITEM_HEIGHT;
         int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
         boolean needsScroll = totalContentH > DROPDOWN_MAX_HEIGHT;
@@ -685,7 +692,7 @@ public class WynnExtrasConfigScreen extends Screen {
         int btn = click.button();
 
         if (activeDropdown != null) {
-            Object[] values = activeDropdown.enumClass.getEnumConstants();
+            Object[] values = activeDropdown.getValues();
             int totalContentH = values.length * DROPDOWN_ITEM_HEIGHT;
             int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
             boolean needsScroll = totalContentH > DROPDOWN_MAX_HEIGHT;
@@ -910,7 +917,7 @@ public class WynnExtrasConfigScreen extends Screen {
     public boolean mouseScrolled(double mx, double my, double hAmt, double vAmt) {
         if (activeDropdown != null) {
             // Scroll the dropdown
-            Object[] values = activeDropdown.enumClass.getEnumConstants();
+            Object[] values = activeDropdown.getValues();
             int totalContentH = values.length * DROPDOWN_ITEM_HEIGHT;
             int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
             double maxDropScroll = Math.max(0, totalContentH - visibleH);
@@ -1247,16 +1254,20 @@ public class WynnExtrasConfigScreen extends Screen {
         }
     }
 
-    private class EnumOption<T extends Enum<T>> extends ConfigOption {
-        final Class<T> enumClass;
+    private abstract class DropdownOption<T> extends ConfigOption  {
+        DropdownOption(String name, String desc, Supplier<T> get, Consumer<T> set) {
+            super(name, desc);
+            this.getter = get;
+            this.setter = set;
+        }
+
         final Supplier<T> getter;
         final Consumer<T> setter;
         int btnX, btnY, btnW = 125, btnH = 22;
 
-        EnumOption(String name, String desc, Class<T> cls, Supplier<T> get, Consumer<T> set) {
-            super(name, desc);
-            this.enumClass = cls; this.getter = get; this.setter = set;
-        }
+        abstract void setValueByIndex(int idx);
+        abstract Object[] getValues();
+
 
         @Override
         void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
@@ -1294,9 +1305,45 @@ public class WynnExtrasConfigScreen extends Screen {
             return false;
         }
 
-        void setValueByIndex(int idx) {
-            T[] vals = enumClass.getEnumConstants();
+    }
+
+    private class EnumOption<T extends Enum<T>>extends DropdownOption<T> {
+        final Class<T> enumClass;
+
+        EnumOption(String name, String desc, Class<T> cls, Supplier<T> get, Consumer<T> set) {
+            super(name, desc, get, set);
+            this.enumClass = cls;
+        }
+
+        @Override
+        public void setValueByIndex(int idx) {
+            T[] vals = getValues();
             if (idx >= 0 && idx < vals.length) setter.accept(vals[idx]);
+        }
+
+        @Override
+        public T[] getValues() {
+            return enumClass.getEnumConstants();
+        }
+    }
+
+    private class ListOption<T> extends DropdownOption<T> {
+        private final List<T> values;
+
+        ListOption(String name, String desc, List<T> values, Supplier<T> get, Consumer<T> set) {
+            super(name, desc, get, set);
+            this.values = values;
+        }
+
+        @Override
+        public void setValueByIndex(int idx) {
+            T[] vals = getValues();
+            if (idx >= 0 && idx < vals.length) setter.accept(vals[idx]);
+        }
+
+        @Override
+        public T[] getValues() {
+            return (T[]) values.toArray();
         }
     }
 
