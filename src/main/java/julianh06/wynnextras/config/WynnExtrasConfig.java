@@ -132,6 +132,7 @@ public class WynnExtrasConfig {
     public boolean crowdSourceRaidLootpools = true;
     public boolean crowdSourceLootrunLootpools = true;
     public boolean crowdSourceGambits = true;
+    public boolean crowdSourceTradeMarket = true;
 
     // ==================== BADGES ====================
     public boolean badgesEnabled = false;

@@ -5,6 +5,7 @@ import com.wynntils.mc.event.ItemTooltipRenderEvent;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.utils.mc.TooltipUtils;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
+import julianh06.wynnextras.features.trademarket.TradeMarketCollector;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
@@ -38,10 +39,12 @@ public class ItemStatInfoFeatureMixin {
     private void captureProcessedTooltip(ItemTooltipRenderEvent.Pre event, CallbackInfo ci) {
         // Cache the fully processed tooltip (with [XX.X%] percentages) for comparison panel
         if (currentHoveredStack != null && event.getTooltips() != null) {
+            List<Text> tooltipCopy = new ArrayList<>(event.getTooltips());
             TradeMarketComparisonPanel.cacheHoveredTooltip(
                 currentHoveredStack,
-                new ArrayList<>(event.getTooltips())
+                tooltipCopy
             );
+            TradeMarketCollector.onItemHovered(currentHoveredStack, tooltipCopy);
         }
     }
 }
