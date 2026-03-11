@@ -1,11 +1,7 @@
-package julianh06.wynnextras.config;
+package julianh06.wynnextras.features.spellhider;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.InitEvent;
-import julianh06.wynnextras.features.spellhider.SpellHider;
-import julianh06.wynnextras.features.spellhider.SpellNamespace;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -16,17 +12,13 @@ import java.nio.file.Path;
 import java.util.*;
 
 @WEModule
-public class SpellHiderConfig {
+public class SpellHiderMappings {
     private static final Path MAPPINGS_PATH = FabricLoader.getInstance()
             .getConfigDir()
             .resolve("wynnextras")
             .resolve("default_spell_mappings.json"); //TODO remove default in name and move default to resources
 
-    public static final Gson GSON = new GsonBuilder()
-            .setPrettyPrinting()
-            .create();
-
-    public static SpellHiderConfig INSTANCE = new SpellHiderConfig();
+    public static SpellHiderMappings INSTANCE = new SpellHiderMappings();
 
     private final Map<Integer, SpellNamespace> idMappings;
 
@@ -38,11 +30,11 @@ public class SpellHiderConfig {
         return idMappings.values().stream().anyMatch((v) -> v.getFQName().equals(FQName));
     }
 
-    public SpellHiderConfig() {
+    public SpellHiderMappings() {
         idMappings = new HashMap<>();
     }
 
-    public SpellHiderConfig(Map<Integer, SpellNamespace> idMappings) {
+    public SpellHiderMappings(Map<Integer, SpellNamespace> idMappings) {
         this.idMappings = idMappings;
     }
 
@@ -67,7 +59,8 @@ public class SpellHiderConfig {
 
     @SubscribeEvent
     public void init(InitEvent empty) {
-        //TODO load();
+        //TODO
+        reloadFromFile();
     }
 
     // basically flips the map so each value stores a list of its keys
@@ -75,7 +68,7 @@ public class SpellHiderConfig {
     public static class SaveFormat {
         private final MappedNamespace spellMappings;
 
-        public SaveFormat(SpellHiderConfig config) {
+        public SaveFormat(SpellHiderMappings config) {
             spellMappings = new MappedNamespace("");
             for (Map.Entry<Integer, SpellNamespace> entry : config.idMappings.entrySet()) {
                 Integer hash = entry.getKey();
@@ -90,10 +83,10 @@ public class SpellHiderConfig {
             }
         }
 
-        public SpellHiderConfig toConfig() {
+        public SpellHiderMappings toConfig() {
             Map<Integer, SpellNamespace> result = new HashMap<>();
             spellMappings.recurseAdd(result, "");
-            return new SpellHiderConfig(result);
+            return new SpellHiderMappings(result);
         }
 
         public static class MappedNamespace {
@@ -141,30 +134,26 @@ public class SpellHiderConfig {
         }
     }
 
-    public static void loadDefaults() {
-
-    }
-
     public static void reloadFromFile() {
         try {
             if (Files.exists(MAPPINGS_PATH)) {
                 String json = Files.readString(MAPPINGS_PATH);
-                SaveFormat saveFormat = GSON.fromJson(json, SaveFormat.class);
+                SaveFormat saveFormat = SpellHider.GSON.fromJson(json, SaveFormat.class);
                 INSTANCE = saveFormat.toConfig();
                 if (INSTANCE == null) {
-                    INSTANCE = new SpellHiderConfig();
+                    INSTANCE = new SpellHiderMappings();
                 }
             }
         } catch (IOException e) {
             System.err.println("[WynnExtras] Failed to load spell mappings: " + e.getMessage());
-            INSTANCE = new SpellHiderConfig();
+            INSTANCE = new SpellHiderMappings();
         }
     }
 
     public static void saveToFile() {
         try {
             Files.createDirectories(MAPPINGS_PATH.getParent());
-            Files.writeString(MAPPINGS_PATH, GSON.toJson(new SaveFormat(INSTANCE)));
+            Files.writeString(MAPPINGS_PATH, SpellHider.GSON.toJson(new SaveFormat(INSTANCE)));
         } catch (IOException e) {
             System.err.println("[WynnExtras] Failed to save spell mappings: " + e.getMessage());
         }

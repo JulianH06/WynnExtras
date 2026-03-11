@@ -5,7 +5,6 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.config.SpellHiderConfig;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.event.CommandRegistrationEvent;
@@ -13,6 +12,7 @@ import julianh06.wynnextras.utils.ChatUtils;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.neoforged.bus.api.SubscribeEvent;
+import org.apache.commons.lang3.tuple.Triple;
 import org.joml.Vector3f;
 
 import java.util.Arrays;
@@ -122,7 +122,7 @@ public class SpellHiderCommands {
                 "save",
                 "save mappings",
                 context -> {
-                    SpellHiderConfig.saveToFile();
+                    SpellHiderMappings.saveToFile();
                     return 1;
                 },
                 null,
@@ -133,7 +133,7 @@ public class SpellHiderCommands {
                 "reloadFromFile",
                 "load mappings",
                 context -> {
-                    SpellHiderConfig.reloadFromFile();
+                    SpellHiderMappings.reloadFromFile();
                     return 1;
                 },
                 null,
@@ -146,7 +146,7 @@ public class SpellHiderCommands {
                 context -> {
                     String oldName = StringArgumentType.getString(context, "oldName");
                     String newName = StringArgumentType.getString(context, "newName");
-                    SpellHiderConfig.INSTANCE.changeNamespace(oldName, newName);
+                    SpellHiderMappings.INSTANCE.changeNamespace(oldName, newName);
                     return 1;
                 },
                 null,
@@ -195,29 +195,12 @@ public class SpellHiderCommands {
                 "modify",
                 "modify a spells vfx",
                 context -> {
-                    String FQName = StringArgumentType.getString(context, "namespace");
-                    SpellModifier modifier = SpellModifier.from(StringArgumentType.getString(context, "modifier"));
-                    String value = StringArgumentType.getString(context, "value");
-                    if (modifier == null) {
-                        ChatUtils.sendMessage("invalid modifier");
-                        return 0;
-                    }
-                    if (FQName == null || FQName.isEmpty() || !SpellHiderConfig.INSTANCE.namespaceExists(FQName)) {
-                        ChatUtils.sendMessage("invalid namespace");
-                        return 0;
-                    }
-                    Object parsedValue = null;
-                    switch (modifier) {
-                        case SCALE -> parsedValue = modifier.parseValue(value, Vector3f.class);
-                        case VISIBLE -> parsedValue = modifier.parseValue(value, Boolean.class);
-                    }
-                    if (parsedValue == null) {
-                        ChatUtils.sendMessage("invalid value");
-                        return 0;
-                    }
-                    boolean modify = SpellNamespace.from(FQName).modify(modifier, parsedValue);
+                    Triple<SpellNamespace, SpellModifier, Object> data = validateModifiers(context);
+                    if (data == null) return 0;
+
+                    boolean modify = data.getLeft().modify(data.getMiddle(), data.getRight());
                     if (modify) {
-                        ChatUtils.sendMessage("set " + FQName + "'s " + modifier.name() + " to " + value);
+                        ChatUtils.sendMessage("set " + data.getLeft().getFQName() + "'s " + data.getMiddle().name() + " to " + data.getRight());
                         return 1;
                     } else {
                         ChatUtils.sendMessage("Somehow parsed to wrong class (my fault not yours)");
@@ -241,6 +224,76 @@ public class SpellHiderCommands {
                 )
         );
 
+        SubCommand addToProfileCmd = new SubCommand(
+                "addToProfile",
+                "add a modification to a profile",
+                context -> {
+                    String profileName = StringArgumentType.getString(context, "profile");
+                    if (profileName == null || profileName.isEmpty() || !SpellProfiles.getProfileNames().contains(profileName)) {
+                        ChatUtils.sendMessage("invalid profile");
+                        return 0;
+                    }
+
+                    Triple<SpellNamespace, SpellModifier, Object> data = validateModifiers(context);
+                    if (data == null) return 0;
+
+                    boolean modify = SpellProfiles.addToProfile(profileName, data.getLeft(), data.getMiddle(), data.getRight());
+                    if (modify) {
+                        ChatUtils.sendMessage("set " + data.getLeft().getFQName() + "'s " + data.getMiddle().name() + " to " + data.getRight() + " in profile " + profileName);
+                        return 1;
+                    } else {
+                        ChatUtils.sendMessage("profile doesnt exist");
+                        return 0;
+                    }
+                },
+                null,
+                List.of(
+                        ClientCommandManager.argument("profile", StringArgumentType.string())
+                                .suggests(SpellHiderCommands::profileSelector),
+                        ClientCommandManager.argument("namespace", StringArgumentType.string())
+                                .suggests(SpellHiderCommands::nameSpaceSelector),
+                        ClientCommandManager.argument("modifier", StringArgumentType.string())
+                                .suggests(SpellHiderCommands::skillModifierSelector),
+                        ClientCommandManager.argument("value", StringArgumentType.string())
+                                .suggests((CommandContext<FabricClientCommandSource> context, SuggestionsBuilder builder) -> {
+                                    SpellModifier modifier = SpellModifier.from(StringArgumentType.getString(context, "modifier"));
+                                    if (modifier != null) {
+                                        modifier.getSuggestions().forEach(builder::suggest);
+                                    }
+                                    return builder.buildFuture();
+                                })
+                )
+        );
+
+        SubCommand createProfileCmd = new SubCommand(
+                "createProfile",
+                "create a new profile",
+                context -> {
+                    String name = StringArgumentType.getString(context, "name");
+                    SpellProfiles.createProfile(name);
+                    return 1;
+                },
+                null,
+                List.of(
+                        ClientCommandManager.argument("name", StringArgumentType.string())
+                )
+        );
+
+        SubCommand saveToProfileCmd = new SubCommand(
+                "saveCurrentToProfileCmd",
+                "saves your current modification as a profile",
+                context -> {
+                    String name = StringArgumentType.getString(context, "name");
+                    SpellProfiles.createProfile(name);
+                    SpellProfiles.addAll(SpellHider.getAllModifiers());
+                    return 1;
+                },
+                null,
+                List.of(
+                        ClientCommandManager.argument("name", StringArgumentType.string())
+                )
+        );
+
         SubCommand devCmd = new SubCommand(
                 "development",
                 "assigns a name to a custom model data float",
@@ -253,6 +306,8 @@ public class SpellHiderCommands {
                         recentAdditionsCmd,
                         displayModeCmd,
                         fineTuneCmd,
+                        createProfileCmd,
+                        addToProfileCmd,
                         saveCmd,
                         loadCmd
                 ),
@@ -274,9 +329,17 @@ public class SpellHiderCommands {
 
     private static CompletableFuture<Suggestions> nameSpaceSelector(CommandContext<FabricClientCommandSource> context, SuggestionsBuilder builder) {
         String userInput = builder.getRemaining().toLowerCase().replace('"', ' ').trim();
-        SpellHiderConfig.INSTANCE.getAllNamespaces().stream()
+        SpellHiderMappings.INSTANCE.getAllNamespaces().stream()
                 .filter(spellNameSpace -> spellNameSpace.isRelevant(userInput))
                 .forEach(nameSpace -> builder.suggest('"' + nameSpace.getFQName() + '"'));
+        return builder.buildFuture();
+    }
+
+    private static CompletableFuture<Suggestions> profileSelector(CommandContext<FabricClientCommandSource> context, SuggestionsBuilder builder) {
+        String userInput = builder.getRemaining().toLowerCase().replace('"', ' ').trim();
+        SpellProfiles.getProfileNames().stream()
+                .filter(profileName -> profileName.contains(userInput))
+                .forEach(profileName -> builder.suggest('"' + profileName + '"'));
         return builder.buildFuture();
     }
 
@@ -285,6 +348,30 @@ public class SpellHiderCommands {
             builder.suggest('"' + spellModifier.name() + '"');
         }
         return builder.buildFuture();
+    }
+
+    private static Triple<SpellNamespace, SpellModifier, Object> validateModifiers(CommandContext<FabricClientCommandSource> context) {
+        String FQName = StringArgumentType.getString(context, "namespace");
+        SpellModifier modifier = SpellModifier.from(StringArgumentType.getString(context, "modifier"));
+        String value = StringArgumentType.getString(context, "value");
+        if (modifier == null) {
+            ChatUtils.sendMessage("invalid modifier");
+            return null;
+        }
+        if (FQName == null || FQName.isEmpty() || !SpellHiderMappings.INSTANCE.namespaceExists(FQName)) {
+            ChatUtils.sendMessage("invalid namespace");
+            return null;
+        }
+        Object parsedValue = null;
+        switch (modifier) {
+            case SCALE -> parsedValue = modifier.parseValue(value, Vector3f.class);
+            case VISIBLE -> parsedValue = modifier.parseValue(value, Boolean.class);
+        }
+        if (parsedValue == null) {
+            ChatUtils.sendMessage("invalid value");
+            return null;
+        }
+        return Triple.of(SpellNamespace.from(FQName), modifier, parsedValue);
     }
 
 }

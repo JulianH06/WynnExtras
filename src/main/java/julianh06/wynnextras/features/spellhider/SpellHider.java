@@ -1,6 +1,8 @@
 package julianh06.wynnextras.features.spellhider;
 
 import com.google.common.reflect.TypeToken;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.wynntils.mc.extension.EntityExtension;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
@@ -26,10 +28,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static julianh06.wynnextras.config.SpellHiderConfig.GSON;
-
 @WEModule
 public class SpellHider {
+    public static final Gson GSON = new GsonBuilder()
+            .setPrettyPrinting()
+            .create();
+
     private static final Path MODIFIERS_PATH = FabricLoader.getInstance()
             .getConfigDir()
             .resolve("wynnextras")
@@ -105,12 +109,18 @@ public class SpellHider {
         if (data == null) return null;
         SpellNamespace nameSpace = data.getNamespace();
         if (nameSpace == null || nameSpace.isEmpty()) return null;
-        return modifiersMap.get(nameSpace);
+        SpellModifiers modifiers = modifiersMap.get(nameSpace);
+        if (modifiers == null) modifiers = SpellProfiles.getModifiers(nameSpace);
+        return modifiers;
     }
 
     public static boolean modify(SpellNamespace nameSpace, SpellModifier type, Object value) {
         SpellModifiers modifiers = modifiersMap.compute(nameSpace, (k, v) -> v == null ? new SpellModifiers() : v);
         return modifiers.set(type, value);
+    }
+
+    public static Map<SpellNamespace, SpellModifiers> getAllModifiers() {
+        return modifiersMap;
     }
 
     public static String getAllModifiersAsDisplay() {
@@ -136,8 +146,10 @@ public class SpellHider {
             SpellModifiers modifiers = getModifiers(display);
             if (modifiers == null) return;
 
-            if (Boolean.FALSE.equals(modifiers.get(SpellModifier.VISIBLE)))
+            if (Boolean.FALSE.equals(modifiers.get(SpellModifier.VISIBLE)) ||
+                    (SpellProfiles.isEverythingInvisible() && !Boolean.TRUE.equals(modifiers.get(SpellModifier.VISIBLE)))) {
                 ((EntityExtension) entity).setRendered(false);
+            }
 
             Vector3f scale = modifiers.get(SpellModifier.SCALE);
             if (scale != null) {
@@ -170,8 +182,7 @@ public class SpellHider {
         try {
             if (Files.exists(MODIFIERS_PATH)) {
                 String json = Files.readString(MODIFIERS_PATH);
-                Type mapType = new TypeToken<@NotNull Map<SpellNamespace, SpellModifiers>>() {
-                }.getType();
+                Type mapType = new TypeToken<@NotNull Map<SpellNamespace, SpellModifiers>>() {}.getType();
                 Map<SpellNamespace, SpellModifiers> modifiers = GSON.fromJson(json, mapType);
                 modifiersMap.putAll(modifiers);
             }

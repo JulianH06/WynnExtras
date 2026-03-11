@@ -1,7 +1,6 @@
 package julianh06.wynnextras.features.spellhider;
 
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.config.SpellHiderConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.utils.ChatUtils;
@@ -93,7 +92,7 @@ public class ModelDataLogger {
         }
         SpellNamespace nameSpace = SpellNamespace.from(FQName);
         for (Integer hash : recentHashes) {
-            SpellHiderConfig.INSTANCE.addSpellIdentifier(hash, nameSpace);
+            SpellHiderMappings.INSTANCE.addSpellIdentifier(hash, nameSpace);
         }
         recentHashes.clear();
     }

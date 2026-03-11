@@ -1,6 +1,5 @@
 package julianh06.wynnextras.features.spellhider;
 
-import julianh06.wynnextras.config.SpellHiderConfig;
 import org.jetbrains.annotations.NotNull;
 
 public record SpellNamespace(SpellNamespace parent, String name) {
@@ -29,7 +28,7 @@ public record SpellNamespace(SpellNamespace parent, String name) {
     }
 
     public void addId(Integer hash) {
-        SpellHiderConfig.INSTANCE.addSpellIdentifier(hash, this);
+        SpellHiderMappings.INSTANCE.addSpellIdentifier(hash, this);
     }
 
     public String getFQName() {

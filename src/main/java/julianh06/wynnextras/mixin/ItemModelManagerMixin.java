@@ -1,6 +1,6 @@
 package julianh06.wynnextras.mixin;
 
-import julianh06.wynnextras.config.SpellHiderConfig;
+import julianh06.wynnextras.features.spellhider.SpellHiderMappings;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.spellhider.ModelDataLogger;
 import julianh06.wynnextras.features.spellhider.SpellHider;
@@ -41,7 +41,7 @@ public class ItemModelManagerMixin {
                 SpellHider.addModel(fileName.getPath(), modelData);
             }
 
-            SpellNamespace spellMapping = SpellHiderConfig.INSTANCE.getSpellMapping(fileName);
+            SpellNamespace spellMapping = SpellHiderMappings.INSTANCE.getSpellMapping(fileName);
             if (spellMapping == null || spellMapping.isEmpty()) {
                 ModelDataLogger.addTextToRender(SpellHider.getFromPath(fileName.getPath()).getHash(), entity.getEntityPos());
                 ModelDataLogger.handleUnknownModel(modelData, fileNames);
