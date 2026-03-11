@@ -93,6 +93,15 @@ public class HudEditScreen extends Screen {
             e.x = e.x - e.sw() / 2;
             e.y = e.y - e.sh() / 2;
 
+            if (e.id.equals("totem") && WynnExtrasConfig.INSTANCE.totemTimerX == -1) {
+                e.x = (width - e.sw()) / 2;
+            }
+            if (e.id.equals("provoke") && WynnExtrasConfig.INSTANCE.provokeTimerX == -1) {
+                e.x = (width - e.sw()) / 2;
+            }
+            if (e.id.equals("blood") && WynnExtrasConfig.INSTANCE.bloodSorrowTimerX == -1) {
+                e.x = (width - e.sw()) / 2;
+            }
             if (e.id.equals("warning") && WynnExtrasConfig.INSTANCE.totemWarningX == -1) {
                 e.x = (width - e.sw()) / 2;
             }

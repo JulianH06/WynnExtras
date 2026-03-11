@@ -148,13 +148,13 @@ public class WynnExtrasConfig {
 
     // ==================== TOTEM TIMER ====================
     public boolean totemTimerEnabled = true;
-    public boolean totemTimerOwnOnly = false;
+    public boolean totemTimerOwnOnly = true;
     public boolean totemTimerWarningText = true;
     public boolean totemTimerWarningSound = true;
-    public float totemTimerWarningSoundVolume = 100f;
+    public float totemTimerWarningSoundVolume = 50f;
     public int totemTimerWarningThreshold = 2;
-    public boolean totemTimerEstimate = false;
-    public int totemTimerX = 5;
+    public boolean totemTimerEstimate = true;
+    public int totemTimerX = -1;
     public int totemTimerY = 40;
     public float totemTimerScale = 1.0f;
     public TextColor totemTimerWarningTextColor = TextColor.RED;
@@ -171,13 +171,13 @@ public class WynnExtrasConfig {
     public boolean autoDetectResonanceInHand = true;
     public boolean resoInHand = false;
     public int acolyteAspect = 0;
-    public int bloodSorrowTimerX = 5;
+    public int bloodSorrowTimerX = -1;
     public int bloodSorrowTimerY = 60;
     public float bloodSorrowTimerScale = 1.0f;
     public Align bloodSorrowAlignment = Align.CENTER;
 
     // ==================== PROVOKE TIMER HUD ====================
-    public int provokeTimerX = 5;
+    public int provokeTimerX = -1;
     public int provokeTimerY = 20;
     public float provokeTimerScale = 1.0f;
     public Align provokeTimerAlignment = Align.CENTER;
