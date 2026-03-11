@@ -14,6 +14,7 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
+import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.inventory.data.*;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
@@ -66,6 +67,7 @@ public class BankOverlay {
     public static int currentMaxPages;
 
     public static boolean shouldWait = false;
+    public static long shouldWaitSince = 0L;
 
     public static EnumMap<BankOverlayType, HashMap<Integer, EasyTextInput>> BankPageNameInputsByType = new EnumMap<>(BankOverlayType.class);
 
@@ -195,5 +197,18 @@ public class BankOverlay {
 
             //most (almost all) of the functionality is in HandledScreenMixin
         });
+    }
+
+    @SubscribeEvent
+    public void onWorldChange(WorldChangeEvent event) {
+        currentOverlayType = BankOverlayType.NONE;
+        expectedOverlayType = BankOverlayType.NONE;
+        currentData = null;
+        Pages = null;
+        activeInv = -1;
+        activeInvSlots.clear();
+        annotationCache.clear();
+        heldItem = Items.AIR.getDefaultStack();
+        registeredScroll = false;
     }
 }

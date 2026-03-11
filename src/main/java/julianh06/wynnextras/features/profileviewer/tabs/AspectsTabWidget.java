@@ -200,18 +200,16 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
         }
 
         if(!createdPageWidgets) {
-            if(PV.currentPlayerData.getCharacters() != null) {
-                pageWidgets.clear();
-                clearChildren();
+            pageWidgets.clear();
+            clearChildren();
 
-                for (Page entry : Page.values()) {
-                    pageWidgets.add(new AspectsTabPageButton(entry));
-                }
+            for (Page entry : Page.values()) {
+                pageWidgets.add(new AspectsTabPageButton(entry));
+            }
 
-                children.addAll(pageWidgets);
+            children.addAll(pageWidgets);
 
-                createdPageWidgets = true;
-            };
+            createdPageWidgets = true;
         }
 
         for (AspectsTabPageButton pageWidget : pageWidgets) {
@@ -566,7 +564,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             }
             ItemStack stack;
 
-            if(playerAspect == null) stack = AspectUtils.toItemStack(aspect, false, 0);
+            if(playerAspect == null) stack = AspectUtils.toItemStack(aspect, false, 1);
             else {
                 stack = AspectUtils.toItemStack(aspect, isMaxed(playerAspect), tierInt);
                 try {

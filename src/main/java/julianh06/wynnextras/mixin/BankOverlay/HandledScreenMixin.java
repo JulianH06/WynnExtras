@@ -9,6 +9,7 @@ import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.InventoryKeyPressEvent;
+import julianh06.wynnextras.features.aspects.PartyFinderOpenLootpoolOverlay;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.*;
@@ -51,6 +52,8 @@ public abstract class HandledScreenMixin {
 
     @Unique private IdentifierOverlay identifierOverlay;
 
+    @Unique private PartyFinderOpenLootpoolOverlay partyFinderOpenLootpoolOverlay;
+
     @Unique private CraftingHelperOverlay craftingHelperOverlay;
 
     @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
@@ -77,6 +80,14 @@ public abstract class HandledScreenMixin {
             }
 
             identifierOverlay.render(context, mouseX, mouseY, delta);
+        }
+
+        if(WynnExtrasConfig.INSTANCE.showLootpoolButtonInPartyFinder) {
+            if(partyFinderOpenLootpoolOverlay == null) {
+                partyFinderOpenLootpoolOverlay = new PartyFinderOpenLootpoolOverlay();
+            }
+
+            partyFinderOpenLootpoolOverlay.render(context, mouseX, mouseY, delta);
         }
 
         if(WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
@@ -165,10 +176,19 @@ public abstract class HandledScreenMixin {
             return;
         }
 
-
         if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
             if (identifierOverlay != null && Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
                 identifierOverlay.mouseClicked(mouseX, mouseY, button);
+            }
+        }
+
+        if(WynnExtrasConfig.INSTANCE.showLootpoolButtonInPartyFinder &&
+                MinecraftClient.getInstance().currentScreen != null && MinecraftClient.getInstance().currentScreen.getTitle() != null &&
+                (MinecraftClient.getInstance().currentScreen.getTitle().getString().equals("\uDAFF\uDFE4\uE03E") ||
+                MinecraftClient.getInstance().currentScreen.getTitle().getString().equals("\uDAFF\uDFE4\uE03F") ||
+                MinecraftClient.getInstance().currentScreen.getTitle().getString().equals("\uDAFF\uDFE1\uE00C"))) {
+            if (partyFinderOpenLootpoolOverlay != null) {
+                partyFinderOpenLootpoolOverlay.mouseClicked(mouseX, mouseY, button);
             }
         }
 
@@ -283,17 +303,18 @@ public abstract class HandledScreenMixin {
         if (currentOverlayType != BankOverlayType.NONE) {
             heldItem = Items.AIR.getDefaultStack();
 
-            List<ItemStack> stacks = new ArrayList<>();
-            for (Slot slot : activeInvSlots) {
-                stacks.add(slot.getStack());
-            }
-            if(activeInv != -1) {
+            if (Pages != null && activeInv != -1 && !shouldWait) {
+                List<ItemStack> stacks = new ArrayList<>();
+                for (Slot slot : activeInvSlots) {
+                    stacks.add(slot.getStack());
+                }
                 Pages.BankPages.put(activeInv, stacks);
+                Pages.save();
             }
+
             activeInvSlots.clear();
-            activeInv = 1;
+            activeInv = -1;
             annotationCache.clear();
-            Pages.save();
         }
         currentOverlayType = BankOverlayType.NONE;
     }

@@ -24,9 +24,12 @@ import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.data.BookshelfData;
 import julianh06.wynnextras.features.inventory.data.CharacterBankData;
 import julianh06.wynnextras.features.inventory.data.MiscBucketData;
+import julianh06.wynnextras.features.chat.ChatNotificator;
+import julianh06.wynnextras.features.misc.BloodSorrowTimer;
 import julianh06.wynnextras.features.misc.FastRequeue;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
+import julianh06.wynnextras.features.misc.TotemTimer;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidListData;
@@ -52,6 +55,8 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.DefaultedList;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWKeyCallbackI;
 import org.slf4j.Logger;
@@ -98,7 +103,6 @@ public class WynnExtras implements ClientModInitializer {
 			null
 	);
 
-
 	public static final String MOD_ID = "wynnextras";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -114,8 +118,6 @@ public class WynnExtras implements ClientModInitializer {
 	private static final Text WYNNEXTRAS_FOREGROUND_PILL;
 
 	public static String latestVersion = null;
-
-
 
 	static {
 		BACKGROUND_STYLE = Style.EMPTY.withFont(new StyleSpriteSource.Font(PILL_FONT)).
@@ -162,6 +164,9 @@ public class WynnExtras implements ClientModInitializer {
 		PV.register();
 		GV.register();
 		ProvokeTimer.init();
+		TotemTimer.register();
+		BloodSorrowTimer.register();
+		ChatNotificator.init();
 		Waypoints.register();
 		FastRequeue.registerFastRequeue();
 		TreeLoader.init();
@@ -189,6 +194,12 @@ public class WynnExtras implements ClientModInitializer {
 
 		//WynnExtrasSounds.register();
 		ModSounds.registerSounds();
+
+		if(FabricLoader.getInstance().isModLoaded("devauth")) {
+			try {
+				((org.apache.logging.log4j.core.Logger) LogManager.getLogger("wynntils")).setLevel(Level.ERROR);
+			} catch (Throwable ignored) {}
+		}
 	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)
@@ -268,6 +279,31 @@ public class WynnExtras implements ClientModInitializer {
 			McUtils.sendMessageToClient(
 				addWynnExtrasPrefix(Text.of("§aA new version of WynnExtras is available: §b" + latestVersion + "§a! You're currently using version §b" + currentVersion + "§a. You can download it now on Modrinth!"))
 			);
+
+			if(isLunarClient()) {
+				McUtils.sendMessageToClient(
+					addWynnExtrasPrefix(Text.of("§aSeems like you are using Lunar Client. Some features (especially the Bank Overlay) will not work correctly with Lunar. We recommend using a different launcher like prism or Modrinth."))
+				);
+			}
 		}
+	}
+
+	public static boolean isLunarClient() {
+		try {
+			Class.forName("com.moonsworth.lunar.genesis.Genesis");
+			return true;
+		} catch (ClassNotFoundException e) {
+			return false;
+		}
+	}
+
+	public static boolean isOnBeta() {
+		MinecraftClient client = MinecraftClient.getInstance();
+
+		if (client == null) return false;
+		if (client.getCurrentServerEntry() == null) return false;
+
+		String serverIP = client.getCurrentServerEntry().address;
+		return serverIP.equalsIgnoreCase("beta.wynncraft.com");
 	}
 }

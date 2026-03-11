@@ -180,11 +180,11 @@ public class LootPoolPage extends PageWidget {
             widgetX += widgetWidth + spacing;
         }
 
-        importFromWynntilsButton.setBounds(0, 0, 500, 60);
-        importFromWynntilsButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
-
-        refreshButton.setBounds(0, 65, 350, 60);
+        refreshButton.setBounds(0, 0, 525, 60);
         refreshButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
+
+        importFromWynntilsButton.setBounds(0, 65, 500, 60);
+        importFromWynntilsButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
 
         onlyFavoritesButton.setBounds((int) (width * ui.getScaleFactorF()) - 400, 0, 400, 60);
         onlyFavoritesButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
@@ -936,11 +936,21 @@ public class LootPoolPage extends PageWidget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
-            ui.drawCenteredText("Reload your aspects", x + width / 2f, y + height / 2f);
+            ui.drawCenteredText("Reload your aspects & lootpools", x + width / 2f, y + height / 2f);
         }
 
         @Override
         protected boolean onClick(int button) {
+            lootPoolWidgets.clear();
+
+            for(Raid raid : Raid.values()) {
+                lootPoolWidgets.add(new LootPoolWidget(raid));
+            }
+
+            crowdsourcedLootPools.clear();
+            lastCrowdsourceFetch.clear();
+            fetchRunning.clear();
+            hasOldLootpool.clear();
             personalAspectProgress.clear();
             fetchedPersonalProgress = false;
             for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
