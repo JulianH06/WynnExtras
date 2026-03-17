@@ -170,7 +170,13 @@ public class ModelDataLogger {
             return false;
         }
 
-        newNamespace.addId(SpellHider.getFromPath(itemPath).getHash()); // update the stored mapping of hash -> namespace
+
+        SpellData fromPath = SpellHider.getFromPath(itemPath);
+        if (fromPath == null) {
+            ChatUtils.sendMessage("failed to get item from path: " + itemPath);
+            return false;
+        }
+        newNamespace.addId(fromPath.getHash()); // update the stored mapping of hash -> namespace
         SpellHider.editNameOfPath(itemPath, newNamespace); // update the in-memory model
 
         if (unknownQueue.isEmpty()) ChatUtils.sendMessage("reached the end of the queue");

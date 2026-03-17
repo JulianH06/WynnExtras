@@ -8,16 +8,21 @@ import net.minecraft.util.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+
+import static julianh06.wynnextras.features.spellhider.SpellHider.GSON;
 
 @WEModule
 public class SpellHiderMappings {
     private static final Path MAPPINGS_PATH = FabricLoader.getInstance()
             .getConfigDir()
             .resolve("wynnextras")
-            .resolve("default_spell_mappings.json"); //TODO remove default in name and move default to resources
+            .resolve("spell_mappings.json");
 
     public static SpellHiderMappings INSTANCE = new SpellHiderMappings();
 
@@ -65,8 +70,15 @@ public class SpellHiderMappings {
 
     @SubscribeEvent
     public void init(InitEvent empty) {
-        //TODO
-        reloadFromFile();
+        InputStream input = SpellHiderMappings.class.getClassLoader().getResourceAsStream(SpellHider.RESOURCES_PATH + "spell_mappings.json");
+        if (input == null) {
+            WynnExtras.LOGGER.warn("failed to find spell mapping, spell hider will not work");
+            INSTANCE = new SpellHiderMappings();
+            return;
+        }
+        Reader reader = new InputStreamReader(input);
+        SaveFormat jsonData = GSON.fromJson(reader, SaveFormat.class);
+        INSTANCE = jsonData.toConfig();
     }
 
     // basically flips the map so each value stores a list of its keys
@@ -144,7 +156,7 @@ public class SpellHiderMappings {
         try {
             if (Files.exists(MAPPINGS_PATH)) {
                 String json = Files.readString(MAPPINGS_PATH);
-                SaveFormat saveFormat = SpellHider.GSON.fromJson(json, SaveFormat.class);
+                SaveFormat saveFormat = GSON.fromJson(json, SaveFormat.class);
                 INSTANCE = saveFormat.toConfig();
                 if (INSTANCE == null) {
                     INSTANCE = new SpellHiderMappings();
@@ -159,7 +171,7 @@ public class SpellHiderMappings {
     public static void saveToFile() {
         try {
             Files.createDirectories(MAPPINGS_PATH.getParent());
-            Files.writeString(MAPPINGS_PATH, SpellHider.GSON.toJson(new SaveFormat(INSTANCE)));
+            Files.writeString(MAPPINGS_PATH, GSON.toJson(new SaveFormat(INSTANCE)));
         } catch (IOException e) {
             System.err.println("[WynnExtras] Failed to save spell mappings: " + e.getMessage());
         }

@@ -29,6 +29,7 @@ import java.util.Set;
 
 @WEModule
 public class SpellHider {
+    public static final String RESOURCES_PATH = "assets/wynnextras/default_packages/spell_hider/";
     public static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()
             .registerTypeAdapter(SpellModifiers.class, (JsonDeserializer<SpellModifiers>) (json, typeOfT, ctx) -> {
@@ -190,16 +191,21 @@ public class SpellHider {
         Entity entity = MinecraftClient.getInstance().world.getEntityById(event.getId());
         if (entity instanceof DisplayEntity.ItemDisplayEntity display) {
             SpellModifiers modifiers = getModifiers(display);
-            if (modifiers == null) return;
 
-            if (Boolean.FALSE.equals(modifiers.get(SpellModifier.VISIBLE)) ||
-                    (SpellProfiles.isEverythingInvisible() && !Boolean.TRUE.equals(modifiers.get(SpellModifier.VISIBLE)))) {
-                ((EntityExtension) entity).setRendered(false);
+            boolean hide = SpellProfiles.isEverythingInvisible();
+            if (modifiers != null) {
+                if (Boolean.FALSE.equals(modifiers.get(SpellModifier.VISIBLE))) {
+                    hide = true;
+                }
+
+                Vector3f scale = modifiers.get(SpellModifier.SCALE);
+                if (scale != null) {
+                    EntityUtils.setScale(display, scale);
+                }
             }
 
-            Vector3f scale = modifiers.get(SpellModifier.SCALE);
-            if (scale != null) {
-                EntityUtils.setScale(display, scale);
+            if (hide) {
+                ((EntityExtension) entity).setRendered(false);
             }
         }
     }

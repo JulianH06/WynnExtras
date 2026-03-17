@@ -1,10 +1,7 @@
 package julianh06.wynnextras.mixin;
 
-import julianh06.wynnextras.features.spellhider.SpellHiderMappings;
+import julianh06.wynnextras.features.spellhider.*;
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.features.spellhider.ModelDataLogger;
-import julianh06.wynnextras.features.spellhider.SpellHider;
-import julianh06.wynnextras.features.spellhider.SpellNamespace;
 import julianh06.wynnextras.mixin.Accessor.ItemRenderStateAccessor;
 import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.client.item.ItemModelManager;
@@ -43,7 +40,12 @@ public class ItemModelManagerMixin {
 
             SpellNamespace spellMapping = SpellHiderMappings.INSTANCE.getSpellMapping(fileName);
             if (spellMapping == null || spellMapping.isEmpty()) {
-                ModelDataLogger.addTextToRender(SpellHider.getFromPath(fileName.getPath()).getHash(), entity.getEntityPos());
+                SpellData fromPath = SpellHider.getFromPath(fileName.getPath());
+                if (fromPath == null) {
+                    WynnExtras.LOGGER.warn("Could not find item from path: {}", fileName);
+                    return;
+                }
+                ModelDataLogger.addTextToRender(fromPath.getHash(), entity.getEntityPos());
                 ModelDataLogger.handleUnknownModel(modelData, fileNames);
             } else {
                 SpellHider.addName(fileName.getPath(), spellMapping.getFQName());

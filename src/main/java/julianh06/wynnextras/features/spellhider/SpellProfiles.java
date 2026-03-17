@@ -11,6 +11,9 @@ import net.neoforged.bus.api.SubscribeEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -77,18 +80,35 @@ public class SpellProfiles {
     }
 
     public static boolean loadProfile(String fileName) throws IOException {
-        Path file = PROFILES_PATH.resolve(fileName + ".json");
-        if (Files.exists(file)) {
-            String json = Files.readString(file);
-            Type mapType = new TypeToken<@NotNull Map<SpellNamespace, SpellModifiers>>() {
-            }.getType();
-            currentProfile = GSON.fromJson(json, mapType);
-            currentName = fileName;
-            WynnExtrasConfig.INSTANCE.spellProfile = fileName;
+        Type mapType = new TypeToken<@NotNull Map<SpellNamespace, SpellModifiers>>() {}.getType();
+        Map<SpellNamespace, SpellModifiers> fromJson;
+        if (fileName.startsWith("default_")) {
+            InputStream input = SpellProfiles.class.getClassLoader().getResourceAsStream(SpellHider.RESOURCES_PATH + fileName + ".json");
+            if (input == null) {
+                WynnExtras.LOGGER.warn("failed to load default profile file {}", fileName);
+                return false;
+            }
+            Reader reader = new InputStreamReader(input);
+            fromJson = GSON.fromJson(reader, mapType);
         } else {
-            WynnExtras.LOGGER.warn("profile doesn't exist: {}", fileName);
+            Path file = PROFILES_PATH.resolve(fileName + ".json");
+            if (Files.exists(file)) {
+                String jsonString = Files.readString(file);
+                fromJson = GSON.fromJson(jsonString, mapType);
+            } else {
+                WynnExtras.LOGGER.warn("profile doesn't exist: {}", fileName);
+                return false;
+            }
+        }
+
+        if (fromJson == null) {
+            WynnExtras.LOGGER.warn("failed to load json");
             return false;
         }
+
+        currentProfile = fromJson;
+        currentName = fileName;
+        WynnExtrasConfig.INSTANCE.spellProfile = fileName;
         return true;
     }
 
@@ -100,12 +120,18 @@ public class SpellProfiles {
                 String json = Files.readString(names);
                 Type listType = new TypeToken<@NotNull List<String>>() {}.getType();
                 List<String> loadedNames = GSON.fromJson(json, listType);
+                profileNames.clear();
                 profileNames.addAll(loadedNames);
             } catch (IOException e) {
-                WynnExtras.LOGGER.warn("nameList doesn't exist");
+                WynnExtras.LOGGER.warn("failed to load nameList");
             }
+        } else saveProfilesNames();
+
+        try {
+            loadProfile(WynnExtrasConfig.INSTANCE.spellProfile);
+        } catch (IOException e) {
+            WynnExtras.LOGGER.warn("failed to load profile from config");
         }
-        // TODO get current from main config
     }
 
     public static void createProfile(String fileName) {
@@ -117,6 +143,10 @@ public class SpellProfiles {
         currentName = fileName;
         currentProfile = new HashMap<>();
         saveProfile();
+        saveProfilesNames();
+    }
+
+    private static void saveProfilesNames() {
         Path names = PROFILES_PATH.resolve("names.json");
         try {
             Files.createDirectories(names.getParent());
