@@ -209,9 +209,9 @@ public class WynnExtrasConfigScreen extends Screen {
             .add(slider("Rarity BG Alpha", "Item rarity background opacity",
                     0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
             .add(slider("Max Rows", "The maximum amount of rows (lower can reduce lag)",
-                    2, 3, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
+                    2, 12, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
             .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
-                    2, 3, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
+                    2, 12, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
             .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
                     () -> config.showWeight, v -> config.showWeight = v))
