@@ -511,6 +511,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             context.disableScissor();
 
+            xStart = (int) ((xStart + (xFitAmount / 2) * (162 + 4) - 166) * ui.getScaleFactor());
             inventoryWidget.setBounds(xStart + 160, yStart + (yFitAmount - 1) * (90 + 4 + 10) - 3, (int) (176 * ui.getScaleFactor()), (int) (86 * ui.getScaleFactor()));
             inventoryWidget.setItems(buildInventoryForIndex(0, true));
             inventoryWidget.updateValues();
@@ -659,8 +660,8 @@ public class BankOverlay2 extends WEHandledScreen {
         int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
         int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
 
-        xFitAmount = Math.min(3, Math.floorDiv(screenWidth - 84, 162));
-        yFitAmount = Math.min(4, Math.floorDiv(screenHeight, 104));
+        xFitAmount = Math.min(24, Math.floorDiv(screenWidth - 84, 162));
+        yFitAmount = Math.min(24, Math.floorDiv(screenHeight, 104));
 
         xFitAmount = Math.min(xFitAmount, WynnExtrasConfig.INSTANCE.bankOverlayMaxColumns);
         yFitAmount = Math.min(yFitAmount, WynnExtrasConfig.INSTANCE.bankOverlayMaxRows + 1);
