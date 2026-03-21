@@ -103,6 +103,17 @@ public class WynnExtras implements ClientModInitializer {
 			null
 	);
 
+	private static Command versionCmd = new Command(
+			"version",
+			"",
+			context -> {
+				McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You are using version " + CurrentVersionData.INSTANCE.version));
+				return 1;
+			},
+			null,
+			null
+	);
+
 	public static final String MOD_ID = "wynnextras";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 

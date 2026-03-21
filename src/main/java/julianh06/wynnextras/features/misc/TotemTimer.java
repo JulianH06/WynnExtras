@@ -129,10 +129,12 @@ public class TotemTimer {
 
                 String timeText = "";
                 String[] lines = text.split("\n");
+                // NEU
                 for (String line : lines) {
                     String l = line.trim();
                     if (!l.isEmpty() && !l.contains("'s Totem")) {
-                        timeText = l;
+                        String[] tokens = l.split("\\s+");
+                        timeText = tokens[tokens.length - 1];
                         break;
                     }
                 }
@@ -238,9 +240,11 @@ public class TotemTimer {
             int baseY = c.totemTimerY;
             int i = 0;
             for (TotemInfo t : totems) {
-                String timeDisplay = t.timeText().replaceAll("[^0-9s.~]", "").trim();
+                String timeDisplay = t.timeText().trim();
                 if (timeDisplay.isEmpty()) timeDisplay = "?";
-                String line = t.owner() + "'s Totem: " + timeDisplay;
+
+                String line = c.totemTimerOwnOnly ? ("Totem: " + timeDisplay) : (t.owner() + "'s Totem: " + timeDisplay);
+
                 int color = t.estimated() ? 0xFFAAAAAA : timeColor(t.timeText());
 
                 int tw = mc.textRenderer.getWidth(line);

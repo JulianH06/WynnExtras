@@ -392,18 +392,21 @@ public class AspectScanning {
                     data.getOrCreateRaidData(currentRaid).mythicAspects ++;
                     data.sessionData.mythicAspects++;
                     data.getOrCreateSessionRaidData(currentRaid).mythicAspects++;
+                    data.latestPerRaidData.mythicAspects++;
                 } else if (hexCode.equals("#FF5555")) {
                     rarity = "Fabled";
                     data.fabledAspects ++;
                     data.getOrCreateRaidData(currentRaid).fabledAspects ++;
                     data.sessionData.fabledAspects++;
                     data.getOrCreateSessionRaidData(currentRaid).fabledAspects++;
+                    data.latestPerRaidData.fabledAspects++;
                 } else if (hexCode.equals("#55FFFF")) {
                     rarity = "Legendary";
                     data.legendaryAspects ++;
                     data.getOrCreateRaidData(currentRaid).legendaryAspects ++;
                     data.sessionData.legendaryAspects++;
                     data.getOrCreateSessionRaidData(currentRaid).legendaryAspects++;
+                    data.latestPerRaidData.legendaryAspects++;
                 }
             }
 

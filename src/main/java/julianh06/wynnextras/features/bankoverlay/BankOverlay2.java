@@ -719,8 +719,8 @@ public class BankOverlay2 extends WEHandledScreen {
                         String rawText = rightArrow.getName().getString();
                         String cleanedText = rawText.replaceAll("§[0-9a-fk-or]", "");
                         if (!cleanedText.contains("Page " + (activeInv + 2))) {
-                            if (!shouldWait) {
-                                shouldWait = true;
+                            shouldWait = true;
+                            if (!oldShouldWait) {
                                 shouldWaitSince = System.currentTimeMillis();
                             }
                         } else if (oldShouldWait) {
@@ -736,10 +736,20 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
 
                 if (shouldWait) {
-                    if (System.currentTimeMillis() - shouldWaitSince > 1000) {
+                    long waitDuration = System.currentTimeMillis() - shouldWaitSince;
+
+                    if (waitDuration > 1500) {
+                        System.out.println("retrying jump");
                         shouldWaitSince = System.currentTimeMillis();
                         retryLoad();
-                        BankOverlay.PersonalStorageUtils.jumpToDestination(activeInv + 1);
+                        PersonalStorageUtilitiesFeatureAccessor accessor =
+                                (PersonalStorageUtilitiesFeatureAccessor) BankOverlay.PersonalStorageUtils;
+                        accessor.setLastPage(99);
+                        try {
+                            BankOverlay.PersonalStorageUtils.jumpToDestination(activeInv + 1);
+                        } catch (Exception e) {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils. Please create a bug report on discord if this still appears after you have enabled."));
+                        }
                     }
                     List<ItemStack> cached = Pages.BankPages.get(activeInv);
                     if (cached != null && j < cached.size()) inv.add(cached.get(j));
@@ -931,12 +941,12 @@ public class BankOverlay2 extends WEHandledScreen {
             if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
                 initWynnventoryReflection();
 
-                if (!wynnventoryReady) return;
+                if (wynnventoryReady) {
+                    ItemStack stack = hoveredSlot;
 
-                ItemStack stack = hoveredSlot;
-
-                if (WynnExtrasConfig.INSTANCE.wynnventoryOverlay && stack != null) {
-                    renderPriceTooltipReflective(context, mouseX, mouseY, stack);
+                    if (WynnExtrasConfig.INSTANCE.wynnventoryOverlay && stack != null) {
+                        renderPriceTooltipReflective(context, mouseX, mouseY, stack);
+                    }
                 }
             }
         } catch (Throwable ignored) {}
@@ -1402,6 +1412,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             int i = 0;
             for(SlotWidget slot : slots) {
+                if(i >= items.size()) break;
                 applyAnnotation(items.get(i), annotations, i);
                 slot.setStack(items.get(i));
                 i++;
@@ -1450,6 +1461,22 @@ public class BankOverlay2 extends WEHandledScreen {
                 if(shouldWait) {
                     ui.drawRect(x, y, width, height, CustomColor.fromHexString("000000").withAlpha(0.75f));
                     int dots = (int) ((System.currentTimeMillis() / 750) % 3) + 1;
+
+                    String arrowtext = "";
+
+                    ItemStack rightArrow = null;
+                    try {
+                        rightArrow = McUtils.containerMenu().getSlot(52).getStack();
+                    } catch (IndexOutOfBoundsException e) { }
+
+                    if(rightArrow != null) {
+                        if (rightArrow.getItem() == Items.POTION) {
+                            String rawText = rightArrow.getName().getString();
+                            String cleanedText = rawText.replaceAll("§[0-9a-fk-or]", "");
+                            arrowtext = cleanedText;
+                        }
+                    }
+
                     String loadingText = "Loading" + ".".repeat(dots);
 
                     ui.drawCenteredText(loadingText, x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 1.5f);
@@ -1477,7 +1504,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_NAME).getString().contains(">§4>§c>§4>§c>") &&
                             (pageBuyCustomModelData == 0 || rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0) == pageBuyCustomModelData)
                     ) {
-                        currentData.lastPage = activeInv + 1;
+                        currentData.lastPage = Math.max(currentData.lastPage, activeInv + 1);
                         try {
                             pageBuyCustomModelData = rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0);
                         } catch (Exception ignored) {}
@@ -1525,7 +1552,7 @@ public class BankOverlay2 extends WEHandledScreen {
         protected boolean onClick(int button) {
             if(!isMouseInOverlay) return true;
 
-            if(activeInv == currentData.lastPage - 1) {
+            if(activeInv == currentData.lastPage - 1 && index == currentData.lastPage) {
                 ScreenHandler currScreenHandler = McUtils.containerMenu();
                 if (currScreenHandler == null) {
                     return true;
@@ -1855,6 +1882,9 @@ public class BankOverlay2 extends WEHandledScreen {
         protected boolean onClick(int button) {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             WynnExtrasConfig.INSTANCE.toggleBankOverlay = !WynnExtrasConfig.INSTANCE.toggleBankOverlay;
+            if(WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
+                activeInv = Models.Bank.getCurrentPage() - 1;
+            }
             WynnExtrasConfig.save();
             return false;
         }
