@@ -245,7 +245,7 @@ public class RaidLootTrackerOverlay {
 
         String modeLeftArrow = "[\u25C0 ";
         float modeLeftArrowWidth = getTextWidth(modeLeftArrow);
-        float modeLeftArrowX = modeNameEndX - modeNameWidth - getTextWidth(" ");
+        float modeLeftArrowX = modeNameEndX - modeNameWidth;
         drawTextRight(context, modeLeftArrow, modeLeftArrowX, y, FILTER_ARROW_COLOR);
         modeLeftArrowBounds = new int[]{(int)(modeLeftArrowX - modeLeftArrowWidth), y, (int)modeLeftArrowX, y + LINE_HEIGHT};
         y += LINE_HEIGHT + 3;
@@ -297,7 +297,7 @@ public class RaidLootTrackerOverlay {
             y = drawCompactLine(context, LINE_TOMES, "Tomes", String.valueOf(displayData.totalTomes), TOME_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_CHARMS, "Charms", String.valueOf(displayData.totalCharms), CHARM_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), ASPECT_COLOR, y, inInventory);
-            drawCompactLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
+            if(config.raidLootTrackerMode != mode.LATEST) drawCompactLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
         } else {
             // Full mode
             String emeraldVal = formatEmeralds(stacks, le, eb);
@@ -326,7 +326,7 @@ public class RaidLootTrackerOverlay {
             y = drawLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), ASPECT_COLOR, y, inInventory);
 
             y += 2;
-            drawLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
+            if(config.raidLootTrackerMode != mode.LATEST) drawLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
         }
     }
 
@@ -398,7 +398,9 @@ public class RaidLootTrackerOverlay {
             dataLines = 17; // Emeralds, Amplifiers(4), Bags(4), Tomes(3), Charms, Aspects(4), Runs
         }
 
-        // Subtract hidden lines when not showing them (not in inventory)
+        if(WynnExtrasConfig.INSTANCE.raidLootTrackerMode == mode.LATEST) dataLines--;
+
+            // Subtract hidden lines when not showing them (not in inventory)
         if (!inInventory) {
             dataLines -= (int) hiddenLines.size();
         }
