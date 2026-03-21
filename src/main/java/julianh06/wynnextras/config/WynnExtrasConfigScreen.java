@@ -1,6 +1,7 @@
 package julianh06.wynnextras.config;
 
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.features.misc.HudEditScreen;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
@@ -548,7 +549,7 @@ public class WynnExtrasConfigScreen extends Screen {
         ctx.fill(panelX + 5, 10, panelX + panelW - 5, HEADER_HEIGHT, PARCHMENT);
         ctx.fill(panelX + 5, 10, panelX + panelW - 5, 12, cat.color);
         ctx.drawCenteredTextWithShadow(textRenderer, "WynnExtras", panelX + panelW / 2, 19, TEXT_LIGHT);
-        ctx.drawCenteredTextWithShadow(textRenderer, "Configuration", panelX + panelW / 2, 32, TEXT_DIM);
+        ctx.drawCenteredTextWithShadow(textRenderer, "Configuration - v" + CurrentVersionData.INSTANCE.version, panelX + panelW / 2, 32, TEXT_DIM);
         ctx.fill(panelX + 15, 48, panelX + panelW - 15, 50, cat.color);
 
         drawDiamond(ctx, panelX + 11, 4 + HEADER_HEIGHT / 2, 3, cat.color);

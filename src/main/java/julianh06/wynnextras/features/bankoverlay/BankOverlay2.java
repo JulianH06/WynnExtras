@@ -735,10 +735,19 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
 
                 if (shouldWait) {
-                    if (System.currentTimeMillis() - shouldWaitSince > 1000) {
+                    long waitDuration = System.currentTimeMillis() - shouldWaitSince;
+
+                    if (waitDuration > 2000) {
                         shouldWaitSince = System.currentTimeMillis();
                         retryLoad();
-                        BankOverlay.PersonalStorageUtils.jumpToDestination(activeInv + 1);
+                        PersonalStorageUtilitiesFeatureAccessor accessor =
+                                (PersonalStorageUtilitiesFeatureAccessor) BankOverlay.PersonalStorageUtils;
+                        accessor.setLastPage(99);
+                        try {
+                            BankOverlay.PersonalStorageUtils.jumpToDestination(activeInv + 1);
+                        } catch (Exception e) {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils. Please create a bug report on discord if this still appears after you have enabled."));
+                        }
                     }
                     List<ItemStack> cached = Pages.BankPages.get(activeInv);
                     if (cached != null && j < cached.size()) inv.add(cached.get(j));
@@ -930,12 +939,12 @@ public class BankOverlay2 extends WEHandledScreen {
             if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
                 initWynnventoryReflection();
 
-                if (!wynnventoryReady) return;
+                if (wynnventoryReady) {
+                    ItemStack stack = hoveredSlot;
 
-                ItemStack stack = hoveredSlot;
-
-                if (WynnExtrasConfig.INSTANCE.wynnventoryOverlay && stack != null) {
-                    renderPriceTooltipReflective(context, mouseX, mouseY, stack);
+                    if (WynnExtrasConfig.INSTANCE.wynnventoryOverlay && stack != null) {
+                        renderPriceTooltipReflective(context, mouseX, mouseY, stack);
+                    }
                 }
             }
         } catch (Throwable ignored) {}
@@ -1401,6 +1410,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             int i = 0;
             for(SlotWidget slot : slots) {
+                if(i >= items.size()) break;
                 applyAnnotation(items.get(i), annotations, i);
                 slot.setStack(items.get(i));
                 i++;
@@ -1524,7 +1534,7 @@ public class BankOverlay2 extends WEHandledScreen {
         protected boolean onClick(int button) {
             if(!isMouseInOverlay) return true;
 
-            if(activeInv == currentData.lastPage - 1) {
+            if(activeInv == currentData.lastPage - 1 && index == currentData.lastPage) {
                 ScreenHandler currScreenHandler = McUtils.containerMenu();
                 if (currScreenHandler == null) {
                     return true;

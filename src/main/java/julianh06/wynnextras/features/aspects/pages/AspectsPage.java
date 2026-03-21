@@ -1229,6 +1229,15 @@ public class AspectsPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
+            WynncraftApiHandler.INSTANCE.aspectFetchGeneration.incrementAndGet();
+            WynncraftApiHandler.INSTANCE.isFetchingAspects.set(false);
+
+            synchronized (WynncraftApiHandler.INSTANCE.aspectLock) {
+                for (int j = 0; j < 5; j++) {
+                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[j] = false;
+                }
+            }
+
             searchedPlayerData = null;
             myAspectsData = null;
             searchedPlayerStatus = null;
@@ -1239,6 +1248,7 @@ public class AspectsPage extends PageWidget {
 
             mythicAndFabledWidget.aspectWidgets.clear();
             legendaryWidget.aspectWidgets.clear();
+            WynncraftApiHandler.INSTANCE.aspectList.clear();
 
             if(!searchedPlayer.isEmpty()) performPlayerSearch(searchedPlayer);
 

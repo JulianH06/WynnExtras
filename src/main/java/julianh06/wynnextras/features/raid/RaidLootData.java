@@ -34,9 +34,8 @@ public class RaidLootData {
     public int fabledAspects = 0;
     public int legendaryAspects = 0;
 
-    /* =========================
-       Emerald Normalisierung
-       ========================= */
+    public transient RaidSpecificLoot latestPerRaidData = new RaidSpecificLoot();
+
     public long getTotalLiquidEmeralds() {
         return liquidEmeralds + (emeraldBlocks / 64);
     }
@@ -53,46 +52,28 @@ public class RaidLootData {
         return getTotalLiquidEmeralds() % 64;
     }
 
-    /* =========================
-       Amplifier Totals
-       ========================= */
     public int getTotalAmplifiers() {
         return amplifierTier1 + amplifierTier2 + amplifierTier3;
     }
 
-    /* =========================
-       Crafter Bag Totals
-       ========================= */
     public int getTotalCrafterBags() {
         return totalBags;
     }
 
-    /* =========================
-       Tome Totals
-       ========================= */
     public int getTotalTomesCount() {
         return totalTomes;
     }
 
-    /* =========================
-       Charms Totals
-       ========================= */
     public int getTotalCharmsCount() {
         return totalCharms;
     }
 
-    /* =========================
-       Per-Raid Tracking
-       ========================= */
     public Map<String, RaidSpecificLoot> perRaidData = new HashMap<>();
 
     public RaidSpecificLoot getOrCreateRaidData(String raidName) {
         return perRaidData.computeIfAbsent(raidName, k -> new RaidSpecificLoot());
     }
 
-    /* =========================
-       Session Tracking (transient - not saved)
-       ========================= */
     public transient RaidSpecificLoot sessionData = new RaidSpecificLoot();
     public transient Map<String, RaidSpecificLoot> sessionPerRaidData = new HashMap<>();
 
@@ -104,11 +85,13 @@ public class RaidLootData {
     public void initSession() {
         if (sessionData == null) sessionData = new RaidSpecificLoot();
         if (sessionPerRaidData == null) sessionPerRaidData = new HashMap<>();
+        latestPerRaidData = new RaidSpecificLoot();
     }
 
     public void resetSession() {
         sessionData = new RaidSpecificLoot();
         sessionPerRaidData = new HashMap<>();
+        latestPerRaidData = new RaidSpecificLoot();
     }
 
     public void resetAll() {

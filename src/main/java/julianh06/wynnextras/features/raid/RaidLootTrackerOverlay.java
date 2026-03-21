@@ -19,7 +19,6 @@ import net.minecraft.text.Text;
 import java.util.*;
 
 public class RaidLootTrackerOverlay {
-
     private static final List<String> RAID_FILTERS = Arrays.asList("All", "NOTG", "NOL", "TCC", "TNA");
     private static int selectedFilterIndex = 0;
 
@@ -94,6 +93,11 @@ public class RaidLootTrackerOverlay {
     private static final CustomColor ASPECT_COLOR = CustomColor.fromHexString("AA55FF");
     private static final CustomColor HIDDEN_COLOR = CustomColor.fromHexString("555555");
     private static final CustomColor SESSION_COLOR = CustomColor.fromHexString("55FF55");
+
+    public enum mode { ALL, SESSION, LATEST }
+
+    private static final String[] MODES = {"All-Time", "Session", "Latest"};
+    private static final CustomColor[] MODE_COLORS = {AMPLIFIER_COLOR, SESSION_COLOR, FILTER_COLOR};
 
     public static void register() {
         HudRenderCallback.EVENT.register(RaidLootTrackerOverlay::render);
@@ -176,7 +180,6 @@ public class RaidLootTrackerOverlay {
         RaidLootData data = RaidLootConfig.INSTANCE.data;
         data.initSession();
 
-        boolean showSession = config.raidLootTrackerShowSession;
         boolean compact = config.raidLootTrackerCompact;
         String selectedFilter = RAID_FILTERS.get(selectedFilterIndex);
 
@@ -205,7 +208,8 @@ public class RaidLootTrackerOverlay {
         y += LINE_HEIGHT + 2;
 
         // Raid selector - nicer design with clickable arrows
-        String modeText = showSession ? "Session" : "All-Time";
+        String modeText = MODES[config.raidLootTrackerMode.ordinal()];
+        CustomColor modeColor = MODE_COLORS[config.raidLootTrackerMode.ordinal()];
 
         // Left arrow [◀
         String leftArrowText = "[\u25C0";
@@ -236,7 +240,7 @@ public class RaidLootTrackerOverlay {
 
         float modeNameWidth = getTextWidth(modeText);
         float modeNameEndX = xPos + WIDTH - modeRightArrowWidth - getTextWidth(" ");
-        drawTextRight(context, modeText, modeNameEndX, y, showSession ? SESSION_COLOR : AMPLIFIER_COLOR);
+        drawTextRight(context, modeText, modeNameEndX, y, modeColor);
         modeNameBounds = new int[]{(int)(modeNameEndX - modeNameWidth), y, (int)modeNameEndX, y + LINE_HEIGHT};
 
         String modeLeftArrow = "[\u25C0 ";
@@ -250,23 +254,28 @@ public class RaidLootTrackerOverlay {
         RaidLootData.RaidSpecificLoot displayData;
         int completions;
 
-        if (selectedFilter.equals("All")) {
-            if (showSession) {
-                displayData = data.sessionData;
-                completions = data.sessionData.completionCount;
-            } else {
-                displayData = createAggregateData(data);
-                completions = data.perRaidData.values().stream().mapToInt(r -> r.completionCount).sum();
-            }
+        if(config.raidLootTrackerMode == mode.LATEST) {
+            displayData = data.latestPerRaidData;
+            completions = 1;
         } else {
-            if (showSession) {
-                displayData = data.sessionPerRaidData != null ?
-                        data.sessionPerRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot()) :
-                        new RaidLootData.RaidSpecificLoot();
+            if (selectedFilter.equals("All")) {
+                if (config.raidLootTrackerMode == mode.SESSION) {
+                    displayData = data.sessionData;
+                    completions = data.sessionData.completionCount;
+                } else {
+                    displayData = createAggregateData(data);
+                    completions = data.perRaidData.values().stream().mapToInt(r -> r.completionCount).sum();
+                }
             } else {
-                displayData = data.perRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot());
+                if (config.raidLootTrackerMode == mode.SESSION) {
+                    displayData = data.sessionPerRaidData != null ?
+                            data.sessionPerRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot()) :
+                            new RaidLootData.RaidSpecificLoot();
+                } else {
+                    displayData = data.perRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot());
+                }
+                completions = displayData.completionCount;
             }
-            completions = displayData.completionCount;
         }
 
         // Calculate emerald totals
@@ -516,14 +525,14 @@ public class RaidLootTrackerOverlay {
 
                 // Check if clicked on mode left arrow (toggle to other mode)
                 if (isInBounds(mouseX, mouseY, modeLeftArrowBounds)) {
-                    config.raidLootTrackerShowSession = !config.raidLootTrackerShowSession;
+                    config.raidLootTrackerMode = mode.values()[(config.raidLootTrackerMode.ordinal() - 1 + mode.values().length) % mode.values().length];
                     WynnExtrasConfig.save();
                     return true;
                 }
 
                 // Check if clicked on mode right arrow or mode name (toggle to other mode)
                 if (isInBounds(mouseX, mouseY, modeRightArrowBounds) || isInBounds(mouseX, mouseY, modeNameBounds)) {
-                    config.raidLootTrackerShowSession = !config.raidLootTrackerShowSession;
+                    config.raidLootTrackerMode = mode.values()[(config.raidLootTrackerMode.ordinal() + 1) % mode.values().length];
                     WynnExtrasConfig.save();
                     return true;
                 }
@@ -554,7 +563,7 @@ public class RaidLootTrackerOverlay {
 
             // Right click on mode area = toggle mode (check before drag)
             if (button == 1 && (isInBounds(mouseX, mouseY, modeNameBounds) || isInBounds(mouseX, mouseY, modeLeftArrowBounds))) {
-                config.raidLootTrackerShowSession = !config.raidLootTrackerShowSession;
+                config.raidLootTrackerMode = mode.values()[(config.raidLootTrackerMode.ordinal() + 1) % mode.values().length];
                 WynnExtrasConfig.save();
                 return true;
             }

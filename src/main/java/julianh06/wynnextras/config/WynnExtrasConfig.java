@@ -2,6 +2,7 @@ package julianh06.wynnextras.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.util.Formatting;
@@ -113,11 +114,11 @@ public class WynnExtrasConfig {
     public boolean raidLootTrackerRenderInChat = true;
     public boolean raidLootTrackerOnlyNearChest = true;
     public boolean raidLootTrackerCompact = false;
-    public boolean raidLootTrackerShowSession = false;
     public int raidLootTrackerX = 5;
     public int raidLootTrackerY = 5;
     public List<String> raidLootTrackerHiddenLines = new ArrayList<>();
     public boolean raidLootTrackerBackground = true;
+    public RaidLootTrackerOverlay.mode raidLootTrackerMode = RaidLootTrackerOverlay.mode.ALL;
     public boolean toggleFastRequeue = true;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
