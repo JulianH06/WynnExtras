@@ -660,8 +660,8 @@ public class BankOverlay2 extends WEHandledScreen {
         int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
         int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
 
-        xFitAmount = Math.min(12, Math.floorDiv(screenWidth - 84, 162));
-        yFitAmount = Math.min(12, Math.floorDiv(screenHeight, 104));
+        xFitAmount = Math.min(24, Math.floorDiv(screenWidth - 84, 162));
+        yFitAmount = Math.min(24, Math.floorDiv(screenHeight, 104));
 
         xFitAmount = Math.min(xFitAmount, WynnExtrasConfig.INSTANCE.bankOverlayMaxColumns);
         yFitAmount = Math.min(yFitAmount, WynnExtrasConfig.INSTANCE.bankOverlayMaxRows + 1);
