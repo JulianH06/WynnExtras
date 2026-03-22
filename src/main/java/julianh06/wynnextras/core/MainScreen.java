@@ -7,6 +7,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.tetris.TetrisScreen;
 import julianh06.wynnextras.utils.LinkUtils;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.*;
@@ -42,6 +43,7 @@ public class MainScreen extends WEScreen {
     GitHubButton gitHubButton = new GitHubButton();
     YoutubeButton youtubeButton = new YoutubeButton();
     CloseButton closeButton = new CloseButton();
+    TetrisButton tetrisButton = new TetrisButton();
 
     @Override
     protected void init() {
@@ -56,6 +58,7 @@ public class MainScreen extends WEScreen {
         addRootWidget(gitHubButton);
         addRootWidget(youtubeButton);
         addRootWidget(closeButton);
+        addRootWidget(tetrisButton);
 
         IntStream.range(0, listLength).forEach(i -> {
             SimpleListElement e = new SimpleListElement(i, ui, this);
@@ -76,6 +79,7 @@ public class MainScreen extends WEScreen {
         gitHubButton.setBounds(getLogicalWidth() / 2 + 125, getLogicalHeight() - 110, 100, 100);
         youtubeButton.setBounds(getLogicalWidth() / 2 + 250, getLogicalHeight() - 110, 100, 100);
         closeButton.setBounds(getLogicalWidth() / 2 - 100, getLogicalHeight() - 110, 200, 100);
+        tetrisButton.setBounds(getLogicalWidth() - 120, getLogicalHeight() - 110, 100, 100);
         this.listX = (float) getLogicalWidth() / 2 - 350;
         this.listY = 250f;
         this.listWidth = 700f;
@@ -326,6 +330,25 @@ public class MainScreen extends WEScreen {
         protected boolean onClick(int button) {
             McUtils.setScreen(null);
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
+        }
+    }
+
+    public static class TetrisButton extends Widget {
+        Identifier tetrisTexture = Identifier.of("wynnextras", "textures/general/button/tetris.png");
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 12, hovered, WynnExtrasConfig.INSTANCE.mainMenuDarkMode);
+            float imgH = height * 0.6f;
+            float imgW = imgH * 1.5f;
+            ui.drawImage(tetrisTexture, x + (width - imgW) / 2f, y + (height - imgH) / 2f, imgW, imgH, WynnExtrasConfig.INSTANCE.mainMenuDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.NONE);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            julianh06.wynnextras.features.tetris.TetrisScreen.open();
             return true;
         }
     }

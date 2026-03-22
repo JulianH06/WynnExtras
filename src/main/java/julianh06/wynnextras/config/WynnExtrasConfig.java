@@ -188,6 +188,14 @@ public class WynnExtrasConfig {
     public boolean territoryEstimateToggle = false;
     public boolean removeChroma = false;
 
+    // ==================== TETRIS ====================
+    public int tetrisBestScore = 0;
+    public int tetrisBest40LinesMs = 0;
+    public int tetrisDAS = 100;
+    public int tetrisARR = 30;
+    public int tetrisSDFDelay = 100;
+    public int tetrisSDF = 30;
+
     //==================== Dark Modes ==========================
     public boolean darkmodeToggle = false; //for bank overlay (dont wanna change the variable cause it would reset it to false for everyone)
     public boolean pvDarkmodeToggle = false;
