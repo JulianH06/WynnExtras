@@ -348,7 +348,7 @@ public class MainScreen extends WEScreen {
         @Override
         protected boolean onClick(int button) {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-            julianh06.wynnextras.features.tetris.TetrisScreen.open();
+            TetrisScreen.open();
             return true;
         }
     }
