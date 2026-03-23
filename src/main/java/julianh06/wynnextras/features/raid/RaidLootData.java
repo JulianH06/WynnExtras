@@ -34,7 +34,9 @@ public class RaidLootData {
     public int fabledAspects = 0;
     public int legendaryAspects = 0;
 
-    public transient RaidSpecificLoot latestPerRaidData = new RaidSpecificLoot();
+    public transient RaidSpecificLoot sessionDataButItsAlwaysOneRunOffSoICanSubtractItFromTheNewSessionDataToGetTheLootFromJustTheLatestRaid = new RaidSpecificLoot();
+
+    //TODO: fix latest mode with aspects
 
     public long getTotalLiquidEmeralds() {
         return liquidEmeralds + (emeraldBlocks / 64);
@@ -85,13 +87,13 @@ public class RaidLootData {
     public void initSession() {
         if (sessionData == null) sessionData = new RaidSpecificLoot();
         if (sessionPerRaidData == null) sessionPerRaidData = new HashMap<>();
-        latestPerRaidData = new RaidSpecificLoot();
+        if (sessionDataButItsAlwaysOneRunOffSoICanSubtractItFromTheNewSessionDataToGetTheLootFromJustTheLatestRaid == null) sessionDataButItsAlwaysOneRunOffSoICanSubtractItFromTheNewSessionDataToGetTheLootFromJustTheLatestRaid = new RaidSpecificLoot();
     }
 
     public void resetSession() {
         sessionData = new RaidSpecificLoot();
         sessionPerRaidData = new HashMap<>();
-        latestPerRaidData = new RaidSpecificLoot();
+        sessionDataButItsAlwaysOneRunOffSoICanSubtractItFromTheNewSessionDataToGetTheLootFromJustTheLatestRaid = new RaidSpecificLoot();
     }
 
     public void resetAll() {
@@ -147,6 +149,29 @@ public class RaidLootData {
 
         public int getTotalAmplifiers() {
             return amplifierTier1 + amplifierTier2 + amplifierTier3;
+        }
+
+        public static RaidSpecificLoot copy(RaidSpecificLoot data) {
+            RaidSpecificLoot copy = new RaidSpecificLoot();
+            copy.emeraldBlocks = data.emeraldBlocks;
+            copy.liquidEmeralds = data.liquidEmeralds;
+            copy.amplifierTier1 = data.amplifierTier1;
+            copy.amplifierTier2 = data.amplifierTier2;
+            copy.amplifierTier3 = data.amplifierTier3;
+            copy.totalBags = data.totalBags;
+            copy.stuffedBags = data.stuffedBags;
+            copy.packedBags = data.packedBags;
+            copy.variedBags = data.variedBags;
+            copy.totalTomes = data.totalTomes;
+            copy.mythicTomes = data.mythicTomes;
+            copy.fabledTomes = data.fabledTomes;
+            copy.totalCharms = data.totalCharms;
+            copy.mythicAspects = data.mythicAspects;
+            copy.fabledAspects = data.fabledAspects;
+            copy.legendaryAspects = data.legendaryAspects;
+            copy.totalAspects = data.totalAspects;
+            copy.completionCount = data.completionCount;
+            return copy;
         }
     }
 }

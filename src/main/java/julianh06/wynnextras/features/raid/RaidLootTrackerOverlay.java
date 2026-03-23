@@ -255,7 +255,7 @@ public class RaidLootTrackerOverlay {
         int completions;
 
         if(config.raidLootTrackerMode == mode.LATEST) {
-            displayData = data.latestPerRaidData;
+            displayData = subtractLoot(data.sessionData, data.sessionDataButItsAlwaysOneRunOffSoICanSubtractItFromTheNewSessionDataToGetTheLootFromJustTheLatestRaid);
             completions = 1;
         } else {
             if (selectedFilter.equals("All")) {
@@ -525,14 +525,14 @@ public class RaidLootTrackerOverlay {
                     return true;
                 }
 
-                // Check if clicked on mode left arrow (toggle to other mode)
+                // Check if clicked on mode left arrow (toggle to second mode)
                 if (isInBounds(mouseX, mouseY, modeLeftArrowBounds)) {
                     config.raidLootTrackerMode = mode.values()[(config.raidLootTrackerMode.ordinal() - 1 + mode.values().length) % mode.values().length];
                     WynnExtrasConfig.save();
                     return true;
                 }
 
-                // Check if clicked on mode right arrow or mode name (toggle to other mode)
+                // Check if clicked on mode right arrow or mode name (toggle to second mode)
                 if (isInBounds(mouseX, mouseY, modeRightArrowBounds) || isInBounds(mouseX, mouseY, modeNameBounds)) {
                     config.raidLootTrackerMode = mode.values()[(config.raidLootTrackerMode.ordinal() + 1) % mode.values().length];
                     WynnExtrasConfig.save();
@@ -625,5 +625,28 @@ public class RaidLootTrackerOverlay {
     public static void refreshData() {
         // Data is read fresh each frame, no caching to clear
         // This method exists for future use if caching is added
+    }
+
+    public static RaidLootData.RaidSpecificLoot subtractLoot(RaidLootData.RaidSpecificLoot first, RaidLootData.RaidSpecificLoot second) {
+        RaidLootData.RaidSpecificLoot result = new RaidLootData.RaidSpecificLoot();
+        result.emeraldBlocks = first.emeraldBlocks - second.emeraldBlocks;
+        result.liquidEmeralds = first.liquidEmeralds - second.liquidEmeralds;
+        result.amplifierTier1 = first.amplifierTier1 - second.amplifierTier1;
+        result.amplifierTier2 = first.amplifierTier2 - second.amplifierTier2;
+        result.amplifierTier3 = first.amplifierTier3 - second.amplifierTier3;
+        result.totalBags = first.totalBags - second.totalBags;
+        result.stuffedBags = first.stuffedBags - second.stuffedBags;
+        result.packedBags = first.packedBags - second.packedBags;
+        result.variedBags = first.variedBags - second.variedBags;
+        result.totalTomes = first.totalTomes - second.totalTomes;
+        result.mythicTomes = first.mythicTomes - second.mythicTomes;
+        result.fabledTomes = first.fabledTomes - second.fabledTomes;
+        result.totalCharms = first.totalCharms - second.totalCharms;
+        result.totalAspects = first.totalAspects - second.totalAspects;
+        result.mythicAspects = first.mythicAspects - second.mythicAspects;
+        result.fabledAspects = first.fabledAspects - second.fabledAspects;
+        result.legendaryAspects = first.legendaryAspects - second.legendaryAspects;
+        result.completionCount = first.completionCount - second.completionCount;
+        return result;
     }
 }
