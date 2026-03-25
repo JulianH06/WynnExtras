@@ -6,6 +6,7 @@ import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.LootrunLootPoolData;
 import julianh06.wynnextras.features.aspects.LootrunScanning;
@@ -103,7 +104,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
         ui.drawCenteredText("§6§lWeekly Lootrun Lootpools", centerX, 60, CustomColor.fromInt(0xFFFFFF), 3f);
 
-        ZonedDateTime nextReset = now.with(java.time.DayOfWeek.FRIDAY).withHour(20).withMinute(0).withSecond(0).withNano(0);
+        ZonedDateTime nextReset = ResetTimeConfig.INSTANCE.getNextLootrunReset();
         if (nextReset.isBefore(now) || nextReset.isEqual(now)) {
             nextReset = nextReset.plusWeeks(1);
         }
@@ -664,13 +665,15 @@ public class LootrunLootPoolPage extends PageWidget {
             fetchRunning.clear();
             hasOldLootpool.clear();
 
+            ResetTimeConfig.INSTANCE.refetch();
+
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }
 
     private static boolean shouldFetchLootPool(Camp camp) {
-        ZonedDateTime currentReset = LootrunScanning.getCurrentLootrunReset();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentLootrunReset();
         ZonedDateTime lastFetch = lastCrowdsourceFetch.get(camp);
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
         if(hasOldLootpool.get(camp) != null && hasOldLootpool.get(camp)) return lastFetch.plusSeconds(30).isBefore(now);

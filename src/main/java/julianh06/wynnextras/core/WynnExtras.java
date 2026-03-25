@@ -211,6 +211,8 @@ public class WynnExtras implements ClientModInitializer {
 				((org.apache.logging.log4j.core.Logger) LogManager.getLogger("wynntils")).setLevel(Level.ERROR);
 			} catch (Throwable ignored) {}
 		}
+
+		ResetTimeConfig.INSTANCE.fetchIfNeeded();
 	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)

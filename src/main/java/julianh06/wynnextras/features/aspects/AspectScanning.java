@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.aspects;
 
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
+import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.inventory.BankOverlay;
@@ -20,10 +21,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Pair;
 
-import java.time.DayOfWeek;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.HashMap;
 import java.util.List;
@@ -392,18 +390,21 @@ public class AspectScanning {
                     data.getOrCreateRaidData(currentRaid).mythicAspects ++;
                     data.sessionData.mythicAspects++;
                     data.getOrCreateSessionRaidData(currentRaid).mythicAspects++;
+                    data.latestData.mythicAspects++;
                 } else if (hexCode.equals("#FF5555")) {
                     rarity = "Fabled";
                     data.fabledAspects ++;
                     data.getOrCreateRaidData(currentRaid).fabledAspects ++;
                     data.sessionData.fabledAspects++;
                     data.getOrCreateSessionRaidData(currentRaid).fabledAspects++;
+                    data.latestData.fabledAspects++;
                 } else if (hexCode.equals("#55FFFF")) {
                     rarity = "Legendary";
                     data.legendaryAspects ++;
                     data.getOrCreateRaidData(currentRaid).legendaryAspects ++;
                     data.sessionData.legendaryAspects++;
                     data.getOrCreateSessionRaidData(currentRaid).legendaryAspects++;
+                    data.latestData.legendaryAspects++;
                 }
             }
 
@@ -612,7 +613,7 @@ public class AspectScanning {
             // Upload to crowdsourcing API
             if (!gambitsForSave.isEmpty() && canUploadGambits()) {
                 WynncraftApiHandler.uploadGambits(gambitsForSave);
-                lastGambitUploadReset = getCurrentGambitReset();
+                lastGambitUploadReset = ResetTimeConfig.INSTANCE.getCurrentGambitReset();
             }
         } catch (Exception e) {
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError detecting gambit: " + e.getMessage()));
@@ -746,7 +747,7 @@ public class AspectScanning {
                     // Mark reset as uploaded
                     lastLootpoolUploadReset.put(
                         selectedRaid,
-                        getCurrentLootpoolReset()
+                            ResetTimeConfig.INSTANCE.getCurrentLootpoolReset()
                     );
                 } else {
                     System.out.println("[WynnExtras] Loot pool already uploaded for this reset (" + selectedRaid + ")");
@@ -758,42 +759,15 @@ public class AspectScanning {
         }
     }
 
-    public static ZonedDateTime getCurrentLootpoolReset() {
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-
-        ZonedDateTime thisFriday =
-                now.with(TemporalAdjusters.previousOrSame(DayOfWeek.FRIDAY))
-                        .withHour(19).withMinute(0).withSecond(0).withNano(0);
-
-        if (now.isBefore(thisFriday)) {
-            thisFriday = thisFriday.minusWeeks(1);
-        }
-
-        return thisFriday;
-    }
-
-    public static ZonedDateTime getCurrentGambitReset() {
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-
-        ZonedDateTime todayReset =
-                now.withHour(19).withMinute(0).withSecond(0).withNano(0);
-
-        if (now.isBefore(todayReset)) {
-            todayReset = todayReset.minusDays(1);
-        }
-
-        return todayReset;
-    }
-
     private static boolean canUploadLootpool(String raid) {
-        ZonedDateTime currentReset = getCurrentLootpoolReset();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentLootpoolReset();
         ZonedDateTime lastUploaded = lastLootpoolUploadReset.get(raid);
 
         return lastUploaded == null || currentReset.isAfter(lastUploaded);
     }
 
     private static boolean canUploadGambits() {
-        ZonedDateTime currentReset = getCurrentGambitReset();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentGambitReset();
         return lastGambitUploadReset == null || currentReset.isAfter(lastGambitUploadReset);
     }
 
