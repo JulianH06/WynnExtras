@@ -322,6 +322,8 @@ public class WynnExtrasConfigScreen extends Screen {
                 () -> config.differentGUIScale, v -> config.differentGUIScale = v))
             .add(slider("GUI Scale", "Custom GUI scale value",
             1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
+            .add(toggle("Redirect Wynntils View Stats", "Changes the Wynntils Player Viewer's 'View Player Stats' button to open the Profile Viewer instead of the website stats page",
+                () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v))
             .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
                 () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
             .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
