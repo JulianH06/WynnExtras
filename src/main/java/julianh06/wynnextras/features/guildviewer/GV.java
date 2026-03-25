@@ -9,6 +9,7 @@ import julianh06.wynnextras.event.ClickEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
+import julianh06.wynnextras.features.profileviewer.data.Guild;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.mixin.Accessor.BannerBlockEntityAccessor;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -55,7 +56,7 @@ public class GV {
                     "gv",
                     "",
                     context -> {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to specify the guild you want to view. Usage: /gv [guild prefix]"));
+                        openOwnGuild();
                         return 1;
                     },
                     null,
@@ -117,6 +118,27 @@ public class GV {
         client.send(() -> client.setScreen(null));
         currentGuild = guild;
         inGV = true;
+    }
+
+    public static void openOwnGuild() {
+        WynncraftApiHandler.fetchPlayerData(McUtils.playerName()).thenAccept(playerData -> {
+            if (playerData == null) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Could not load your player data. Try again or use /gv [guild prefix]."));
+                return;
+            }
+
+            Guild guild = playerData.getGuild();
+            if (guild == null || guild.getPrefix() == null || guild.getPrefix().isBlank()) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You are not in a guild. Usage: /gv [guild prefix]"));
+                return;
+            }
+
+            open(guild.getPrefix());
+        }).exceptionally(ex -> {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Could not determine your guild. Usage: /gv [guild prefix]"));
+            System.err.println("Error while getting own guild data: " + ex.getMessage());
+            return null;
+        });
     }
 
     @SubscribeEvent
