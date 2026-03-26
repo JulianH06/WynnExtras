@@ -18,6 +18,7 @@ import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
 import julianh06.wynnextras.features.guildviewer.BannerGuiRenderer;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.features.trademarket.TradeMarketCollector;
 import julianh06.wynnextras.features.inventory.TradeMarketOverlay;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
 import julianh06.wynnextras.features.inventory.BankOverlay;
@@ -262,6 +263,8 @@ public class WynnExtras implements ClientModInitializer {
 
 	@SubscribeEvent
 	public void onClientTick(TickEvent event) {
+		TradeMarketCollector.tick();
+
 		WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
 		if(config.differentGUIScale) {
 			if (MinecraftClient.getInstance().currentScreen == null) {

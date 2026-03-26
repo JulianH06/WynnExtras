@@ -874,6 +874,68 @@ public class WynncraftApiHandler {
     }
 
     /**
+     * Upload trade market listings to crowdsourcing API
+     * @param listings List of JsonObject listings with name, rarity, type, price, stats, etc.
+     */
+    public static void uploadTradeMarketListings(List<JsonObject> listings) {
+        if (McUtils.player() == null) {
+            System.err.println("Cannot upload trade market listings - player not loaded");
+            return;
+        }
+
+        if (WynnExtras.isOnBeta()) {
+            return;
+        }
+
+        if (!WynnExtrasConfig.INSTANCE.crowdSourceTradeMarket) return;
+
+        MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
+            if (wynnextrasToken == null) {
+                System.err.println("Failed to authenticate with Mojang for trade market upload");
+                return;
+            }
+
+            try {
+                JsonObject payload = new JsonObject();
+                JsonArray listingsArray = new JsonArray();
+                for (JsonObject listing : listings) {
+                    listingsArray.add(listing);
+                }
+                payload.add("listings", listingsArray);
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("https://wynnextras.com/trademarket/listings"))
+                        .header("Content-Type", "application/json")
+                        .header("Authorization", wynnextrasToken)
+                        .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                        .timeout(Duration.ofSeconds(8))
+                        .build();
+
+                ApiRequestHelper.sendWithAuthRetry(request, payload)
+                        .thenAccept(response -> {
+                            int code = response.statusCode();
+                            if (code == 401) {
+                                System.err.println("Trade market upload auth error: " + response.body());
+                            } else if (code >= 500) {
+                                System.err.println("Trade market upload server error: " + code + " -> " + response.body());
+                            } else if (code != 200) {
+                                System.err.println("Trade market upload error: " + code + " -> " + response.body());
+                            } else {
+                                System.out.println("[WynnExtras] Trade market listings uploaded successfully");
+                            }
+                        })
+                        .exceptionally(ex -> {
+                            System.err.println("Failed to upload trade market listings: " + ex.getMessage());
+                            return null;
+                        });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    /**
      * Fetch crowdsourced lootrun loot pool from API
      * @param camp SE, SI, MH, C, COTL
      * @return CompletableFuture with list of items or null if not available
