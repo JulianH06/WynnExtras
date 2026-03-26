@@ -2,8 +2,10 @@ package julianh06.wynnextras.features.aspects;
 
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
+import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
+import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
@@ -19,10 +21,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Pair;
 
-import java.time.DayOfWeek;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.HashMap;
 import java.util.List;
@@ -76,6 +75,7 @@ public class AspectScanning {
             // On the first page (SearchedPages == 0), scan the 5 active aspects in center slots FIRST
             if (SearchedPages == 0) {
                 int[] centerSlots = {4, 11, 15, 18, 26};
+
                 for (int slotIdx : centerSlots) {
                     if (slotIdx >= screen.getScreenHandler().slots.size()) continue;
                     Slot slot = screen.getScreenHandler().slots.get(slotIdx);
@@ -118,6 +118,16 @@ public class AspectScanning {
                         bestTierLine = bestTierLine.replaceAll("(\\[MAX])\\1+", "$1");
                         result.put(name, new Pair<>(bestTierLine, rarity));
                     }
+                }
+
+                String classId = BankOverlay.currentCharacterID;
+                if (classId != null && !classId.isEmpty()) {
+                    Map<String, String> activeMap = new LinkedHashMap<>();
+                    for (Map.Entry<String, Pair<String, String>> entry : result.entrySet()) {
+                        activeMap.put(entry.getKey(), entry.getValue().getLeft());
+                    }
+
+                    LocalAspectStorage.saveActiveAspects(classId, activeMap);
                 }
 
                 // Add active aspects to global map immediately
@@ -216,6 +226,87 @@ public class AspectScanning {
         }
     }
 
+    public static void scanCurrentPagePassive() {
+        Screen currScreen = MinecraftClient.getInstance().currentScreen;
+        HandledScreen<?> screen = (currScreen instanceof HandledScreen) ? (HandledScreen<?>) currScreen : null;
+        if (screen == null) return;
+
+        int[] centerSlots = {4, 11, 15, 18, 26};
+        Map<String, String> activeMap = new LinkedHashMap<>();
+        for (int slotIdx : centerSlots) {
+            if (slotIdx >= screen.getScreenHandler().slots.size()) continue;
+            Slot slot = screen.getScreenHandler().slots.get(slotIdx);
+            if (!slot.hasStack()) continue;
+
+            String name = null;
+            String bestTierLine = null;
+            List<Text> tooltips = slot.getStack().getTooltip(
+                    Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
+
+            for (Text tooltip : tooltips) {
+                String s = tooltip.getString().replaceAll("§.", "").trim();
+                if (name == null && (s.contains("Aspect") || s.contains("Embodiment"))) name = s;
+            }
+            for (Text tooltip : tooltips) {
+                String candidate = extractBestTierLine(tooltip).trim();
+                if (candidate.contains("Tier") &&
+                        (candidate.contains(">>>") || candidate.matches(".*\\[\\d+/\\d+\\].*") || candidate.contains("[MAX]"))) {
+                    if (bestTierLine == null || candidate.length() > bestTierLine.length()) bestTierLine = candidate;
+                }
+            }
+            if (name != null && bestTierLine != null) {
+                bestTierLine = bestTierLine.replaceAll("^[^A-Za-z0-9]*", "");
+                activeMap.put(name, bestTierLine);
+            }
+        }
+
+        if (!activeMap.isEmpty()) {
+            String classId = BankOverlay.currentCharacterID;
+            if (classId != null && !classId.isEmpty()) {
+                LocalAspectStorage.saveActiveAspects(classId, activeMap);
+            }
+        }
+
+        int[] slotsToRead = {36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53};
+        for (int i : slotsToRead) {
+            if (i >= screen.getScreenHandler().slots.size()) break;
+            Slot slot = screen.getScreenHandler().slots.get(i);
+            if (!slot.hasStack()) break;
+
+            String name = null;
+            String rarity = "";
+            String bestTierLine = null;
+            List<Text> tooltips = slot.getStack().getTooltip(
+                    Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
+
+            for (Text tooltip : tooltips) {
+                String s = tooltip.getString().replaceAll("§.", "").trim();
+                if (name == null && (s.contains("Aspect") || s.contains("Embodiment"))) {
+                    name = s;
+                    if (slot.getStack().getCustomName() != null &&
+                            slot.getStack().getCustomName().getStyle() != null &&
+                            slot.getStack().getCustomName().getStyle().getColor() != null) {
+                        String hex = slot.getStack().getCustomName().getStyle().getColor().getHexCode();
+                        if (hex.equals("#AA00AA")) rarity = "Mythic";
+                        else if (hex.equals("#FF5555")) rarity = "Fabled";
+                        else if (hex.equals("#55FFFF")) rarity = "Legendary";
+                    }
+                }
+            }
+            for (Text tooltip : tooltips) {
+                String candidate = extractBestTierLine(tooltip).trim();
+                if (candidate.contains("Tier") &&
+                        (candidate.contains(">>>") || candidate.matches(".*\\[\\d+/\\d+\\].*") || candidate.contains("[MAX]"))) {
+                    if (bestTierLine == null || candidate.length() > bestTierLine.length()) bestTierLine = candidate;
+                }
+            }
+            if (name != null && bestTierLine != null) {
+                bestTierLine = bestTierLine.replaceAll("^[^A-Za-z0-9]*", "");
+                allAspects.put(name, new Pair<>(bestTierLine, rarity));
+            }
+        }
+    }
+
     public static void AspectsInRaidChest() {
         Screen currScreen = MinecraftClient.getInstance().currentScreen;
         HandledScreen<?> screen = (currScreen instanceof HandledScreen) ? (HandledScreen<?>) currScreen : null;
@@ -299,18 +390,21 @@ public class AspectScanning {
                     data.getOrCreateRaidData(currentRaid).mythicAspects ++;
                     data.sessionData.mythicAspects++;
                     data.getOrCreateSessionRaidData(currentRaid).mythicAspects++;
+                    data.latestData.mythicAspects++;
                 } else if (hexCode.equals("#FF5555")) {
                     rarity = "Fabled";
                     data.fabledAspects ++;
                     data.getOrCreateRaidData(currentRaid).fabledAspects ++;
                     data.sessionData.fabledAspects++;
                     data.getOrCreateSessionRaidData(currentRaid).fabledAspects++;
+                    data.latestData.fabledAspects++;
                 } else if (hexCode.equals("#55FFFF")) {
                     rarity = "Legendary";
                     data.legendaryAspects ++;
                     data.getOrCreateRaidData(currentRaid).legendaryAspects ++;
                     data.sessionData.legendaryAspects++;
                     data.getOrCreateSessionRaidData(currentRaid).legendaryAspects++;
+                    data.latestData.legendaryAspects++;
                 }
             }
 
@@ -519,7 +613,7 @@ public class AspectScanning {
             // Upload to crowdsourcing API
             if (!gambitsForSave.isEmpty() && canUploadGambits()) {
                 WynncraftApiHandler.uploadGambits(gambitsForSave);
-                lastGambitUploadReset = getCurrentGambitReset();
+                lastGambitUploadReset = ResetTimeConfig.INSTANCE.getCurrentGambitReset();
             }
         } catch (Exception e) {
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError detecting gambit: " + e.getMessage()));
@@ -653,7 +747,7 @@ public class AspectScanning {
                     // Mark reset as uploaded
                     lastLootpoolUploadReset.put(
                         selectedRaid,
-                        getCurrentLootpoolReset()
+                            ResetTimeConfig.INSTANCE.getCurrentLootpoolReset()
                     );
                 } else {
                     System.out.println("[WynnExtras] Loot pool already uploaded for this reset (" + selectedRaid + ")");
@@ -665,42 +759,15 @@ public class AspectScanning {
         }
     }
 
-    public static ZonedDateTime getCurrentLootpoolReset() {
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-
-        ZonedDateTime thisFriday =
-                now.with(TemporalAdjusters.previousOrSame(DayOfWeek.FRIDAY))
-                        .withHour(19).withMinute(0).withSecond(0).withNano(0);
-
-        if (now.isBefore(thisFriday)) {
-            thisFriday = thisFriday.minusWeeks(1);
-        }
-
-        return thisFriday;
-    }
-
-    public static ZonedDateTime getCurrentGambitReset() {
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-
-        ZonedDateTime todayReset =
-                now.withHour(19).withMinute(0).withSecond(0).withNano(0);
-
-        if (now.isBefore(todayReset)) {
-            todayReset = todayReset.minusDays(1);
-        }
-
-        return todayReset;
-    }
-
     private static boolean canUploadLootpool(String raid) {
-        ZonedDateTime currentReset = getCurrentLootpoolReset();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentLootpoolReset();
         ZonedDateTime lastUploaded = lastLootpoolUploadReset.get(raid);
 
         return lastUploaded == null || currentReset.isAfter(lastUploaded);
     }
 
     private static boolean canUploadGambits() {
-        ZonedDateTime currentReset = getCurrentGambitReset();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentGambitReset();
         return lastGambitUploadReset == null || currentReset.isAfter(lastGambitUploadReset);
     }
 

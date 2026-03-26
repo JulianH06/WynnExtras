@@ -55,10 +55,10 @@ public class AspectsPage extends PageWidget {
     private static User searchedPlayerData = null;
     private static WynncraftApiHandler.FetchStatus searchedPlayerStatus = null;
 
-    private User myAspectsData = null;
-    private WynncraftApiHandler.FetchStatus myAspectsFetchStatus = null;
-    private boolean fetchedMyAspects = false;
-    private int myAspectsFetchGeneration = 0;
+    private static User myAspectsData = null;
+    private static WynncraftApiHandler.FetchStatus myAspectsFetchStatus = null;
+    private static boolean fetchedMyAspects = false;
+    private static int myAspectsFetchGeneration = 0;
 
     private static String classFilter = "Warrior";
 
@@ -80,6 +80,7 @@ public class AspectsPage extends PageWidget {
 
     private static LootPoolWidget mythicAndFabledWidget;
     private static LootPoolWidget legendaryWidget;
+    private static RefreshButton refreshButton;
 
     public AspectsPage(AspectScreen parent) {
         super(parent);
@@ -90,6 +91,7 @@ public class AspectsPage extends PageWidget {
 
         progressBarShowMaxWidget = new ProgressBarShowMaxWidget();
         resetToOwnAspectsWidget = new ResetToOwnAspectsWidget();
+        refreshButton = new RefreshButton();
         mythicAndFabledWidget = new LootPoolWidget();
         legendaryWidget = new LootPoolWidget();
     }
@@ -162,6 +164,9 @@ public class AspectsPage extends PageWidget {
             resetToOwnAspectsWidget.setBounds(logicalW - 400, 0, 400, 50);
             resetToOwnAspectsWidget.draw(context, mouseX, mouseY, tickDelta, ui);
         }
+
+        refreshButton.setBounds(0, 0, 300, 50);
+        refreshButton.draw(context, mouseX, mouseY, tickDelta, ui);
 
         switch (activeStatus) {
             case NOKEYSET:
@@ -564,6 +569,7 @@ public class AspectsPage extends PageWidget {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if(resetToOwnAspectsWidget.mouseClicked(mx, my, button)) return true;
+        if(refreshButton.mouseClicked(mx, my, button)) return true;
 
         if(currentTab == Tab.Overview) {
             int logicalW = (int) (width * ui.getScaleFactorF());
@@ -1207,6 +1213,47 @@ public class AspectsPage extends PageWidget {
                 FavoriteAspectsData.INSTANCE.toggleFavorite(aspect.getName());
                 return true;
             }
+        }
+    }
+
+    private static class RefreshButton extends Widget {
+        public RefreshButton() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawCenteredText("Reload aspects", x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            WynncraftApiHandler.INSTANCE.aspectFetchGeneration.incrementAndGet();
+            WynncraftApiHandler.INSTANCE.isFetchingAspects.set(false);
+
+            synchronized (WynncraftApiHandler.INSTANCE.aspectLock) {
+                for (int j = 0; j < 5; j++) {
+                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[j] = false;
+                }
+            }
+
+            searchedPlayerData = null;
+            myAspectsData = null;
+            searchedPlayerStatus = null;
+            myAspectsFetchStatus = null;
+
+            fetchedMyAspects = false;
+            myAspectsFetchGeneration = 0;
+
+            mythicAndFabledWidget.aspectWidgets.clear();
+            legendaryWidget.aspectWidgets.clear();
+            WynncraftApiHandler.INSTANCE.aspectList.clear();
+
+            if(!searchedPlayer.isEmpty()) performPlayerSearch(searchedPlayer);
+
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
         }
     }
 }
