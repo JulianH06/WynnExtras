@@ -34,8 +34,6 @@ public class RaidLootData {
     public int fabledAspects = 0;
     public int legendaryAspects = 0;
 
-    public transient RaidSpecificLoot latestPerRaidData = new RaidSpecificLoot();
-
     public long getTotalLiquidEmeralds() {
         return liquidEmeralds + (emeraldBlocks / 64);
     }
@@ -70,6 +68,8 @@ public class RaidLootData {
 
     public Map<String, RaidSpecificLoot> perRaidData = new HashMap<>();
 
+    public transient RaidSpecificLoot latestData = new RaidSpecificLoot();
+
     public RaidSpecificLoot getOrCreateRaidData(String raidName) {
         return perRaidData.computeIfAbsent(raidName, k -> new RaidSpecificLoot());
     }
@@ -85,13 +85,13 @@ public class RaidLootData {
     public void initSession() {
         if (sessionData == null) sessionData = new RaidSpecificLoot();
         if (sessionPerRaidData == null) sessionPerRaidData = new HashMap<>();
-        latestPerRaidData = new RaidSpecificLoot();
+        if (latestData == null) latestData = new RaidSpecificLoot();
     }
 
     public void resetSession() {
         sessionData = new RaidSpecificLoot();
         sessionPerRaidData = new HashMap<>();
-        latestPerRaidData = new RaidSpecificLoot();
+        latestData = new RaidSpecificLoot();
     }
 
     public void resetAll() {

@@ -255,7 +255,7 @@ public class RaidLootTrackerOverlay {
         int completions;
 
         if(config.raidLootTrackerMode == mode.LATEST) {
-            displayData = data.latestPerRaidData;
+            displayData = data.latestData;
             completions = 1;
         } else {
             if (selectedFilter.equals("All")) {

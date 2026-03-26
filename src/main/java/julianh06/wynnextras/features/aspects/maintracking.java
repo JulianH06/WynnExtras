@@ -10,6 +10,7 @@ import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.aspects.pages.AspectsPage;
+import julianh06.wynnextras.features.raid.RaidLootTracker;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
@@ -354,7 +355,7 @@ public class maintracking {
             }
 
             // Reward chest: scan aspects from slots 11-15 and upload
-            if(inRaidChest && !(scanDone && returnedToFirstPage) && WynnExtrasConfig.INSTANCE.automaticAspectScanning && Time.now().timestamp() > lastAspectRewardScan + 60_000){
+            if(inRaidChest && RaidLootTracker.loggedThisChest && !(scanDone && returnedToFirstPage) && WynnExtrasConfig.INSTANCE.automaticAspectScanning && Time.now().timestamp() > lastAspectRewardScan + 60_000) {
                 try {
                     AspectScanning.AspectsInRaidChest();
                 } catch (Exception e) {

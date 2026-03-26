@@ -5,9 +5,8 @@ import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
-import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.*;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
@@ -142,7 +141,7 @@ public class LootPoolPage extends PageWidget {
 
         ui.drawCenteredText("§6§lWeekly Aspect Lootpools", centerX, 60);
 
-        ZonedDateTime nextReset = now.with(java.time.DayOfWeek.FRIDAY).withHour(19).withMinute(0).withSecond(0).withNano(0);
+        ZonedDateTime nextReset = ResetTimeConfig.INSTANCE.getNextLootpoolReset();
         if (nextReset.isBefore(now) || nextReset.isEqual(now)) {
             nextReset = nextReset.plusWeeks(1);
         }
@@ -953,6 +952,9 @@ public class LootPoolPage extends PageWidget {
             hasOldLootpool.clear();
             personalAspectProgress.clear();
             fetchedPersonalProgress = false;
+
+            ResetTimeConfig.INSTANCE.refetch();
+
             for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
                 lootPoolWidget.aspectWidgets.clear();
             }
@@ -963,7 +965,7 @@ public class LootPoolPage extends PageWidget {
     }
 
     private static boolean shouldFetchRaid(Raid raid) {
-        ZonedDateTime currentReset = AspectScanning.getCurrentLootpoolReset();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentLootpoolReset();
         ZonedDateTime lastFetch = lastCrowdsourceFetch.get(raid);
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
 

@@ -32,7 +32,7 @@ public class RaidLootTracker {
             "TNA",  new double[]{24489, 8, -23878}
     );
 
-    private static boolean loggedThisChest = false;
+    public static boolean loggedThisChest = false;
 
     public static void register() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -198,7 +198,7 @@ public class RaidLootTracker {
             }
         }
 
-        data.latestPerRaidData = latestRun;
+        data.latestData = latestRun;
         RaidLootConfig.INSTANCE.save();
         lastParse = Time.now().timestamp();
     }
