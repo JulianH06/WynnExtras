@@ -316,6 +316,8 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // ===== MISC =====
         category("Misc", 0xFF0872bc)
+            .add(toggle("Show Own Nametag", "Render your nametag above your head",
+                () -> config.showOwnNametag, v -> config.showOwnNametag = v))
             .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
                 () -> config.differentGUIScale, v -> config.differentGUIScale = v))
             .add(slider("GUI Scale", "Custom GUI scale value",

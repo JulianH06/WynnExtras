@@ -148,6 +148,9 @@ public class WynnExtrasConfig {
     public boolean differentGUIScale = false;
     public boolean showLootpoolButtonInPartyFinder = true;
 
+    public boolean showOwnNametag = false;
+    // The code for this is in LivingEntityRendererMixin
+
     // ==================== CHAT PEEK ====================
     public boolean chatPeekEnabled = true;
     public int chatPeekKey = GLFW.GLFW_KEY_Y;

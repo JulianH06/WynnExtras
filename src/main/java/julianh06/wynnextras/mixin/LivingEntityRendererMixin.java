@@ -1,8 +1,10 @@
 package julianh06.wynnextras.mixin;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.wynntils.mc.extension.EntityRenderStateExtension;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.render.PlayerRenderFilter;
-import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.EntityRendererFactory;
@@ -12,6 +14,7 @@ import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.render.entity.state.LivingEntityRenderState;
 import net.minecraft.client.render.state.CameraRenderState;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,7 +26,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LivingEntityRenderer.class)
 public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extends LivingEntityRenderState, M extends EntityModel<? super S>> extends EntityRenderer<T, S> implements FeatureRendererContext<S, M> {
-
     protected LivingEntityRendererMixin(EntityRendererFactory.Context context) {
         super(context);
     }
@@ -38,5 +40,12 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
                 }
             }
         }
+    }
+
+    @ModifyExpressionValue(method = "hasLabel(Lnet/minecraft/entity/LivingEntity;D)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;getCameraEntity()Lnet/minecraft/entity/Entity;"))
+    private Entity showOwnNameTag(Entity entity) {
+        if(entity == MinecraftClient.getInstance().player && WynnExtrasConfig.INSTANCE.showOwnNametag) return null;
+
+        return entity;
     }
 }
