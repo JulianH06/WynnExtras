@@ -11,6 +11,9 @@ public interface HandledScreenAccessor {
     @Accessor("focusedSlot")
     void setFocusedSlot(Slot slot);
 
+    @Accessor("focusedSlot")
+    Slot getFocusedSlot();
+
     @Accessor("touchDragStack")
     ItemStack getTouchDragStack();
 

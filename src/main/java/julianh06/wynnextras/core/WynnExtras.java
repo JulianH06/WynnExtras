@@ -18,13 +18,13 @@ import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
 import julianh06.wynnextras.features.guildviewer.BannerGuiRenderer;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
-import julianh06.wynnextras.features.inventory.TradeMarketOverlay;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.data.BookshelfData;
 import julianh06.wynnextras.features.inventory.data.CharacterBankData;
 import julianh06.wynnextras.features.inventory.data.MiscBucketData;
 import julianh06.wynnextras.features.chat.ChatNotificator;
+import julianh06.wynnextras.features.loader.SkillPointLoader;
 import julianh06.wynnextras.features.misc.BloodSorrowTimer;
 import julianh06.wynnextras.features.misc.FastRequeue;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
@@ -185,6 +185,7 @@ public class WynnExtras implements ClientModInitializer {
 		MaterialTextureResolver.register();
 		RecipeLoader.loadRecipes();
 		TreeRoomMinimap.register();
+		SkillPointLoader.init();
 
 		RaidListData.load();
 		WaypointData.load();

@@ -2,6 +2,7 @@ package julianh06.wynnextras.mixin.BankOverlay;
 
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.Container;
+import com.wynntils.models.containers.containers.CharacterInfoContainer;
 import com.wynntils.models.containers.containers.CharacterSelectionContainer;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.containers.containers.ItemIdentifierContainer;
@@ -215,6 +216,24 @@ public abstract class HandledScreenMixin {
                     cir.cancel();
                 }
             }
+        }
+
+        if (Models.Container.getCurrentContainer() instanceof CharacterInfoContainer
+                && WynnExtrasConfig.INSTANCE.disabledArmorHelper
+                && CompassMenuOverlay.isSelectingWeapon()) {
+            if (compassMenuOverlay != null) {
+                compassMenuOverlay.mouseClicked(mouseX, mouseY, button);
+            }
+            cir.setReturnValue(true);
+            cir.cancel();
+            return;
+        }
+
+        if (compassMenuOverlay != null
+                && Models.Container.getCurrentContainer() instanceof CharacterInfoContainer
+                && WynnExtrasConfig.INSTANCE.disabledArmorHelper
+                && !CompassMenuOverlay.isSelectingWeapon()) {
+            compassMenuOverlay.mouseClicked(mouseX, mouseY, button);
         }
     }
 

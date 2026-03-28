@@ -2,9 +2,21 @@ package julianh06.wynnextras.features.misc;
 
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.containers.CharacterInfoContainer;
+import com.wynntils.models.elements.type.Skill;
+import com.wynntils.models.gear.type.GearRequirements;
+import com.wynntils.models.items.WynnItem;
+import com.wynntils.models.items.items.game.CraftedGearItem;
+import com.wynntils.models.items.items.game.GearItem;
+import com.wynntils.models.items.items.game.UnknownGearItem;
+import com.wynntils.models.stats.type.SkillStatType;
+import com.wynntils.models.stats.type.StatPossibleValues;
+import com.wynntils.models.stats.type.StatType;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.type.Pair;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
+import julianh06.wynnextras.features.loader.SkillPointLoader;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
 import julianh06.wynnextras.utils.UI.WEHandledScreen;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -12,21 +24,25 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.item.tooltip.TooltipType;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Optional;
 
 
 public class CompassMenuOverlay extends WEHandledScreen {
+    AutoAssignButton autoAssignButton;
+    SkipWeaponButton skipWeaponButton;
     List<ItemWidget> itemWidgets = new ArrayList<>();
     static ItemStack hoveredItem = Items.AIR.getDefaultStack();
+
+    static boolean selectingWeapon = false;
+    static ItemStack selectedWeapon = null;
 
     public CompassMenuOverlay() {
         for (int i = 0; i < 4; i++) {
@@ -34,11 +50,43 @@ public class CompassMenuOverlay extends WEHandledScreen {
             itemWidgets.add(itemWidget);
             rootWidgets.add(itemWidget);
         }
+
+        autoAssignButton = new AutoAssignButton();
+        rootWidgets.add(autoAssignButton);
+
+        skipWeaponButton = new SkipWeaponButton();
+        rootWidgets.add(skipWeaponButton);
     }
 
     @Override
     protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
         hoveredItem = Items.AIR.getDefaultStack();
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        boolean handled = super.mouseClicked(mouseX, mouseY, button);
+        if (handled) return true;
+
+        if (!selectingWeapon) return false;
+        if (!(McUtils.screen() instanceof HandledScreen<?> screen)) return false;
+
+        Slot focused = ((HandledScreenAccessor) screen).getFocusedSlot();
+        if (focused == null || !focused.hasStack()) return false;
+
+        ItemStack clicked = focused.getStack();
+        Optional<WynnItem> wynnItemOpt = BankOverlay2.asWynnItem(clicked);
+
+        if (wynnItemOpt.isEmpty() || !(wynnItemOpt.get() instanceof GearItem)) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                    Text.of("That's not a valid weapon. Click a weapon item.")));
+            return true;
+        }
+
+        selectedWeapon = clicked;
+        selectingWeapon = false;
+        startAssignment();
+        return true;
     }
 
     @Override
@@ -50,13 +98,15 @@ public class CompassMenuOverlay extends WEHandledScreen {
         float yStart = (int) ((((HandledScreenAccessor) screen).getY() + ((HandledScreenAccessor) screen).getBackgroundHeight()) * ui.getScaleFactor());
         float backgroundWidth = ((HandledScreenAccessor) screen).getBackgroundWidth() * ui.getScaleFactorF();
 
-        ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix(""), xStart + backgroundWidth / 2f, yStart + 25);
-        ui.drawCenteredText("§6Disabled Armor:", xStart + backgroundWidth / 2f, yStart + 60);
+        autoAssignButton.setBounds((int) (xStart - 200 + backgroundWidth / 2f), (int) (yStart + 125), 400, 50);
+        skipWeaponButton.setBounds((int) (xStart - 200 + backgroundWidth / 2f), (int) (yStart + 185), 400, 50);
+
+        ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("§6Skillpoint helper:"), xStart + backgroundWidth / 2f, yStart + 25);
 
         int itemWidth = 50;
         int itemHeight = itemWidth;
         float itemXStart = xStart + 23;
-        float itemYStart = yStart + 100;
+        float itemYStart = yStart + 60;
         backgroundWidth -= 97;
 
         for(int i = 0; i < 4; i++) {
@@ -75,6 +125,8 @@ public class CompassMenuOverlay extends WEHandledScreen {
 
     private static class ItemWidget extends Widget {
         ItemStack item;
+        WynnItem wynnItem = null;
+        GearRequirements requirements = null;
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
@@ -85,86 +137,338 @@ public class CompassMenuOverlay extends WEHandledScreen {
             if(hovered) {
                 hoveredItem = item;
                 ui.drawRect(x - 0.5f, y - 0.25f, width, height, CustomColor.fromHexString("FFFFFF").withAlpha(0.25f));
-                //if(true) return;
-                int textY = -800;
-                //System.out.println("===================");
-                String[] order = { "STR", "INT", "AGI", "DEX", "DEF" };
+            }
 
-                int index = 0;
+            if(requirements == null) return;
 
-                for(Text text : item.getTooltip(Item.TooltipContext.DEFAULT, null, TooltipType.BASIC)) {
-                    StringBuilder sb = new StringBuilder();
+            if(true) return;
 
-                    String input = text.getString();
-                    for(int codePoint : input.codePoints().toArray()) {
-                        //if(String.format("U+%04X ", codePoint).equals("U+D0003 ")) {
-                            sb.append(String.format("U+%04X ", codePoint));
-                        //}
-                    }
-                    try {
-                        ui.drawText(sb.toString().trim(), 0, textY);
-                        ui.drawText(text, 0, textY + 50);
+            List<Pair<Skill, Integer>> skills = requirements.skills();
 
-                        textY += 100;
-                        //System.out.println(sb);
-                    } catch (Exception ignored) {}
+            if(skills == null) return;
 
-                    String raw = text.getString();
+            int textY = y + 64;
 
-                    if (!isRequirementLine(raw))
-                        continue;
+            for(Pair<Skill, Integer> skill : skills) {
+                String skillName = skill.a().getColorCode().toString() + skill.a().getDisplayName().substring(0, 3) + ": §r";
+                int skillReq = skill.b();
 
-                    int value = extractNumber(raw);
-                    Integer color = findTextColor(text);
+                int skillCurrent = Models.SkillPoint.getAssignedSkillPoints(skill.a());
 
-                    if(index < 4) System.out.println(order[index] + " = " + value + " | color=" + color);
-
-                    index++;
-                }
+                ui.drawCenteredText(skillName + skillCurrent + "/" + skillReq, x + width / 2f, textY);
+                textY += 40;
             }
         }
 
         public void setItem(ItemStack item) {
             this.item = item;
+
+            Optional<WynnItem> wynnItemOpt = BankOverlay2.asWynnItem(item);
+
+            if(wynnItemOpt.isEmpty()) return;
+
+            wynnItem = wynnItemOpt.get();
+
+            if(!(wynnItem instanceof GearItem gearItem)) return;
+
+            if(gearItem.getItemInfo() == null) return;
+
+            requirements = gearItem.getItemInfo().requirements();
+        }
+    }
+
+    private static class AutoAssignButton extends Widget {
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 13, hovered);
+            if (selectingWeapon) {
+                ui.drawCenteredText("§eClick a weapon in your inventory...", x + width / 2f, y + height / 2f);
+            } else {
+                ui.drawCenteredText("Auto assign skill points", x + width / 2f, y + height / 2f);
+            }
         }
 
-        private static int extractNumber(String s) {
-            Matcher m = Pattern.compile("(\\d+)").matcher(s);
-            return m.find() ? Integer.parseInt(m.group(1)) : -1;
+        @Override
+        protected boolean onClick(int button) {
+            if (selectingWeapon) return true;
+            selectedWeapon = null;
+            selectingWeapon = true;
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                    Text.of("Click a weapon in your inventory, or skip weapon selection.")));
+            return true;
+        }
+    }
+
+    private static class SkipWeaponButton extends Widget {
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if (!selectingWeapon) return;
+            ui.drawButton(x, y, width, height, 13, hovered);
+            ui.drawCenteredText("Skip weapon selection", x + width / 2f, y + height / 2f);
         }
 
-        private static Integer findTextColor(Text text) {
-            if (text.getStyle().getColor() != null) {
-                return text.getStyle().getColor().getRgb();
-            }
+        @Override
+        protected boolean onClick(int button) {
+            if (!selectingWeapon) return false;
+            selectedWeapon = null;
+            selectingWeapon = false;
+            startAssignment();
+            return true;
+        }
+    }
 
-            for (Text sibling : text.getSiblings()) {
-                Integer c = findTextColor(sibling);
-                if (c != null) return c;
-            }
 
+    private static void startAssignment() {
+        int[] required = calculateRequiredSkillPoints(selectedWeapon);
+        if (required == null) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                    Text.of("No skill point requirements found.")));
+            return;
+        }
+
+        boolean alreadySatisfied =
+                Models.SkillPoint.getAssignedSkillPoints(Skill.STRENGTH)     >= required[0] &&
+                        Models.SkillPoint.getAssignedSkillPoints(Skill.DEXTERITY)    >= required[1] &&
+                        Models.SkillPoint.getAssignedSkillPoints(Skill.INTELLIGENCE) >= required[2] &&
+                        Models.SkillPoint.getAssignedSkillPoints(Skill.DEFENCE)      >= required[3] &&
+                        Models.SkillPoint.getAssignedSkillPoints(Skill.AGILITY)      >= required[4];
+
+        if (alreadySatisfied) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                    Text.of("Requirements already satisfied.")));
+            return;
+        }
+
+        if(required.length < 5) return;
+
+        SkillPointLoader.getInstance().load(required[0], required[1], required[2], required[3], required[4]);
+    }
+
+    private static int[] calculateRequiredSkillPoints(ItemStack weapon) {
+        List<SolvableItem> nonWeaponItems = new ArrayList<>();
+
+        //Armor
+        for (int i = 0; i < 4; i++) {
+            ItemStack stack = McUtils.player().getEquippedStack(EquipmentSlot.FROM_INDEX.apply(4 - i));
+            SolvableItem si = toSolvableItem(stack);
+            if (si != null) nonWeaponItems.add(si);
+        }
+
+        //Accessories
+        for (int i = 9; i < 13; i++) {
+            ItemStack stack = McUtils.player().getInventory().getStack(i);
+            SolvableItem si = toSolvableItem(stack);
+            if (si != null) nonWeaponItems.add(si);
+        }
+
+        SolvableItem weaponItem = (weapon != null && !weapon.isEmpty()) ? toSolvableItem(weapon) : null;
+
+        if (nonWeaponItems.isEmpty() && weaponItem == null) return null;
+
+        int[] best = null;
+        List<SolvableItem> bestOrder = null;
+
+        int n = nonWeaponItems.size();
+        int[] indices = new int[n];
+        for (int i = 0; i < n; i++) indices[i] = i;
+
+        List<List<Integer>> permutations = new ArrayList<>();
+        generatePermutations(indices, 0, permutations);
+
+        for (List<Integer> perm : permutations) {
+            List<SolvableItem> order = new ArrayList<>();
+            for (int idx : perm) order.add(nonWeaponItems.get(idx));
+
+            int[] candidate = evaluateOrder(order, weaponItem);
+
+            if (best == null || isBetter(candidate, best)) {
+                best = candidate;
+                bestOrder = new ArrayList<>(order);
+            }
+        }
+
+        if (best == null) best = new int[5];
+        //logBestOrder(bestOrder != null ? bestOrder : List.of(), weaponItem, best);
+        return best;
+    }
+
+    private static int[] evaluateOrder(List<SolvableItem> order, SolvableItem weapon) {
+        int[] current = new int[5];
+        int[] assigned = new int[5];
+
+        for (SolvableItem entry : order) {
+            for (int i = 0; i < 5; i++) {
+                if (entry.reqs[i] <= 0) continue;
+                if (current[i] < entry.reqs[i]) {
+                    int diff = entry.reqs[i] - current[i];
+                    assigned[i] += diff;
+                    current[i] += diff;
+                }
+            }
+            for (int i = 0; i < 5; i++) {
+                if (entry.bonuses[i] != 0) {
+                    current[i] += entry.bonuses[i];
+                }
+            }
+        }
+
+        if (weapon != null) {
+            for (int i = 0; i < 5; i++) {
+                if (weapon.reqs[i] <= 0) continue;
+                if (current[i] < weapon.reqs[i]) {
+                    int diff = weapon.reqs[i] - current[i];
+                    assigned[i] += diff;
+                    current[i] += diff;
+                }
+            }
+        }
+
+        for (SolvableItem entry : order) {
+            for (int i = 0; i < 5; i++) {
+                if (entry.reqs[i] <= 0) continue;
+                int effectiveReq = entry.reqs[i] + Math.max(0, entry.bonuses[i]);
+                if (current[i] < effectiveReq) {
+                    int diff = effectiveReq - current[i];
+                    assigned[i] += diff;
+                    current[i] += diff;
+                }
+            }
+        }
+
+        for (int i = 0; i < 5; i++) {
+            assigned[i] = Math.min(150, Math.max(0, assigned[i]));
+        }
+
+        return assigned;
+    }
+
+    private static void logBestOrder(List<SolvableItem> order, SolvableItem weapon, int[] assigned) {
+        String[] skillNames = {"STR", "DEX", "INT", "DEF", "AGI"};
+        System.out.println("[WE-BEST] === Best order found ===");
+        for (SolvableItem si : order) {
+            System.out.println("[WE-BEST]   " + si.name
+                    + " reqs=" + Arrays.toString(si.reqs)
+                    + " bonuses=" + Arrays.toString(si.bonuses));
+        }
+        if (weapon != null) System.out.println("[WE-BEST]   WEAPON " + weapon.name);
+        System.out.println("[WE-BEST]   result=" + Arrays.toString(assigned)
+                + " total=" + (assigned[0]+assigned[1]+assigned[2]+assigned[3]+assigned[4]));
+    }
+
+    private static boolean isBetter(int[] candidate, int[] best) {
+        int sumC = 0, sumB = 0;
+        for (int i = 0; i < 5; i++) { sumC += candidate[i]; sumB += best[i]; }
+        return sumC < sumB;
+    }
+
+    private static void generatePermutations(int[] arr, int start, List<List<Integer>> result) {
+        if (start == arr.length) {
+            List<Integer> perm = new ArrayList<>();
+            for (int v : arr) perm.add(v);
+            result.add(perm);
+            return;
+        }
+        for (int i = start; i < arr.length; i++) {
+            int tmp = arr[start]; arr[start] = arr[i]; arr[i] = tmp;
+            generatePermutations(arr, start + 1, result);
+            tmp = arr[start]; arr[start] = arr[i]; arr[i] = tmp;
+        }
+    }
+
+    private static class SolvableItem {
+        String name = "?";
+        int[] reqs = new int[5];
+        int[] bonuses = new int[5];
+    }
+
+    private static SolvableItem toSolvableItem(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return null;
+        Optional<WynnItem> wynnOpt = BankOverlay2.asWynnItem(stack);
+        if (wynnOpt.isEmpty()) {
+            try {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4Warning: The following item is not recognized and ignored in the calculation: " + stack.getCustomName().getString()));
+            } catch (Exception ignored) {}
             return null;
         }
 
-        private static boolean isRequirementLine(String raw) {
-            String cleaned = stripPrivateUse(raw);
+        WynnItem wynnItem = wynnOpt.get();
 
-            // enthält Zahl
-            if (!cleaned.matches(".*\\d+.*"))
-                return false;
-
-            // darf keine Buchstaben enthalten
-            if (cleaned.matches(".*[a-zA-Z].*"))
-                return false;
-
-            return true;
+        if(wynnItem instanceof UnknownGearItem) {
+            try {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4Warning: The following item is not recognized and ignored in the calculation: " + stack.getCustomName().getString()));
+            } catch (Exception ignored) {}
+            return null;
         }
 
-        private static String stripPrivateUse(String input) {
-            return input
-                    .replaceAll("[\\uE000-\\uF8FF]", "")   // Icons
-                    .replaceAll("[\\uD000-\\uDFFF]", "")   // Steuersequenzen
-                    .replaceAll("[\\uC000-\\uCFFF]", "");  // Farbmarker
+        SolvableItem si = new SolvableItem();
+
+        if (wynnItem instanceof GearItem gearItem) {
+            if (gearItem.getItemInfo() == null) return null;
+
+            GearRequirements req = gearItem.getItemInfo().requirements();
+            if (req != null && req.skills() != null) {
+                for (Pair<Skill, Integer> pair : req.skills()) {
+                    int idx = skillToIndex(pair.a());
+                    if (idx >= 0) si.reqs[idx] = pair.b();
+                }
+            }
+
+            for (Pair<StatType, StatPossibleValues> statPair : gearItem.getItemInfo().variableStats()) {
+                if (!(statPair.a() instanceof SkillStatType skillStat)) continue;
+                int idx = skillToIndex(skillStat.getSkill());
+                if (idx >= 0) si.bonuses[idx] = statPair.b().baseValue();
+            }
+
+            si.name = gearItem.getName();
+        } else if (wynnItem instanceof CraftedGearItem craftedItem) {
+            if (craftedItem.getRequirements() == null) return null;
+
+            System.out.println("[WE-CRAFT] class=" + craftedItem.getClass().getName());
+            for (var method : craftedItem.getClass().getMethods()) {
+                if (method.getName().toLowerCase().contains("req") ||
+                        method.getName().toLowerCase().contains("skill") ||
+                        method.getName().toLowerCase().contains("stat") ||
+                        method.getName().toLowerCase().contains("info")) {
+                    System.out.println("[WE-CRAFT] method: " + method.getName()
+                            + " → " + method.getReturnType().getSimpleName());
+                }
+            }
+
+            GearRequirements req = craftedItem.getRequirements();
+            if (req != null && req.skills() != null) {
+                for (Pair<Skill, Integer> pair : req.skills()) {
+                    int idx = skillToIndex(pair.a());
+                    if (idx >= 0) si.reqs[idx] = pair.b();
+                }
+            }
+
+            si.name = craftedItem.getName();
+        } else {
+            try {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4Warning: The following item is not recognized and ignored in the calculation: " + stack.getCustomName().getString()));
+            } catch (Exception ignored) { }
+            return null;
         }
+
+        return si;
+    }
+
+    private static int skillToIndex(Skill skill) {
+        return switch (skill) {
+            case STRENGTH     -> 0;
+            case DEXTERITY    -> 1;
+            case INTELLIGENCE -> 2;
+            case DEFENCE      -> 3;
+            case AGILITY      -> 4;
+            default           -> -1;
+        };
+    }
+
+    public static boolean isSelectingWeapon() {
+        return selectingWeapon;
+    }
+
+    public static void setSelectingWeapon(boolean selectingWeapon) {
+        CompassMenuOverlay.selectingWeapon = selectingWeapon;
     }
 }
