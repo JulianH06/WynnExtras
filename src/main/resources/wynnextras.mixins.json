@@ -11,11 +11,13 @@
   },
   "client": [
     "ChatClickMixin",
+    "ChatHudFocusedMixin",
     "GameRendererMixin",
     "GuildMapScreenMixin",
     "InventoryScreenMixin",
     "ItemHighlightFeatureMixin",
     "LivingEntityRendererMixin",
+    "MouseScrollMixin",
     "PerspectiveMixin",
     "RaidLootOverlayClickMixin",
     "RaidLootOverlayScreenMixin",

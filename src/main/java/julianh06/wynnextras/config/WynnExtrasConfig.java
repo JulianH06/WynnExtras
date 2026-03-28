@@ -6,6 +6,7 @@ import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.util.Formatting;
+import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -146,6 +147,12 @@ public class WynnExtrasConfig {
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
     public boolean showLootpoolButtonInPartyFinder = true;
+
+    // ==================== CHAT PEEK ====================
+    public boolean chatPeekEnabled = true;
+    public int chatPeekKey = GLFW.GLFW_KEY_Y;
+    public boolean chatPeekToggle = false;
+    public boolean chatPeekAllowVanillaScroll = false;
 
     // ==================== TOTEM TIMER ====================
     public boolean totemTimerEnabled = true;

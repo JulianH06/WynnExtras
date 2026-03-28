@@ -15,6 +15,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -285,7 +286,19 @@ public class WynnExtrasConfigScreen extends Screen {
                     () -> config.notgUpperPlatform, v -> config.notgUpperPlatform = v))
                 .add(toggle("Lower platform spawned", "Lower platform spawn in NOTG minibosses",
                     () -> config.notgLowerPlatform, v -> config.notgLowerPlatform = v)
-                );
+                )
+            .sub("Chat Peek")
+                .add(toggle("Enable Chat Peek", "Hold/toggle a key to see the chat without opening the chat screen",
+                        () -> config.chatPeekEnabled, v -> config.chatPeekEnabled = v))
+                .add(visibleWhen(keybind("Keybind", "Key to peek at the chat",
+                        () -> config.chatPeekKey, v -> config.chatPeekKey = v),
+                        () -> config.chatPeekEnabled))
+                .add(visibleWhen(toggle("Toggle Mode", "Toggle instead of hold",
+                                () -> config.chatPeekToggle, v -> config.chatPeekToggle = v),
+                        () -> config.chatPeekEnabled))
+                .add(visibleWhen(toggle("Vanilla Scroll", "Replace chat scroll with hotbar scroll while peeking",
+                                () -> config.chatPeekAllowVanillaScroll, v -> config.chatPeekAllowVanillaScroll = v),
+                        () -> config.chatPeekEnabled));
 
         // ===== Player Hider =====
         category("Player Hider", 0xFF673190)
@@ -391,6 +404,10 @@ public class WynnExtrasConfigScreen extends Screen {
             if (subHasMatches(sub)) return true;
         }
         return false;
+    }
+
+    private ConfigOption keybind(String name, String desc, Supplier<Integer> get, Consumer<Integer> set) {
+        return new KeybindOption(name, desc, get, set);
     }
 
     private ConfigOption toggle(String name, String desc, Supplier<Boolean> get, Consumer<Boolean> set) {
@@ -992,6 +1009,15 @@ public class WynnExtrasConfigScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyInput input) {
+        // Relay to any listening KeybindOption
+        for (Category cat : categories) {
+            for (SubCategory sub : cat.subCategories) {
+                for (ConfigOption opt : sub.options) {
+                    if (opt instanceof KeybindOption kb && kb.onKeyPressed(input.key())) return true;
+                }
+            }
+        }
+
         int key = input.key();
         if (activeDropdown != null && key == 256) {
             activeDropdown = null;
@@ -1130,6 +1156,73 @@ public class WynnExtrasConfigScreen extends Screen {
             return visibilityCondition.getAsBoolean();
         }
 
+    }
+
+    private static class KeybindOption extends ConfigOption {
+        final Supplier<Integer> getter;
+        final Consumer<Integer> setter;
+        boolean listening = false;
+
+        KeybindOption(String name, String desc, Supplier<Integer> get, Consumer<Integer> set) {
+            super(name, desc);
+            this.getter = get;
+            this.setter = set;
+        }
+
+        private String keyName(int key) {
+            String n = GLFW.glfwGetKeyName(key, 0);
+            if (n != null) return n.toUpperCase();
+            return switch (key) {
+                case GLFW.GLFW_KEY_SPACE -> "SPACE";
+                case GLFW.GLFW_KEY_LEFT_SHIFT -> "LSHIFT";
+                case GLFW.GLFW_KEY_RIGHT_SHIFT -> "RSHIFT";
+                case GLFW.GLFW_KEY_LEFT_ALT -> "LALT";
+                case GLFW.GLFW_KEY_RIGHT_ALT -> "RALT";
+                case GLFW.GLFW_KEY_LEFT_CONTROL -> "LCTRL";
+                case GLFW.GLFW_KEY_RIGHT_CONTROL -> "RCTRL";
+                default -> "KEY_" + key;
+            };
+        }
+
+        @Override
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
+            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
+            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+
+            int bx = x + w - 90, by = y + 10;
+            boolean btnHover = mx >= bx && mx < bx + 80 && my >= by && my < by + 24;
+            ctx.fill(bx, by, bx + 80, by + 24, listening ? categoryColor : BORDER_DARK);
+            ctx.fill(bx + 1, by + 1, bx + 79, by + 23, listening ? PARCHMENT_HOVER : (btnHover ? PARCHMENT_HOVER : PARCHMENT));
+            String label = listening ? "[ ... ]" : "[ " + keyName(getter.get()) + " ]";
+            ctx.drawCenteredTextWithShadow(tr, label, bx + 40, by + 8,
+                    listening ? 0xFFFFDD44 : TEXT_LIGHT);
+        }
+
+        @Override
+        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
+            int bx = x + w - 90, by = y + 10;
+            if (mx >= bx && mx < bx + 80 && my >= by && my < by + 24) {
+                listening = !listening;
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            }
+            if (listening) { listening = false; return true; }
+            return false;
+        }
+
+        boolean onKeyPressed(int key) {
+            if (!listening) return false;
+            if (key == GLFW.GLFW_KEY_ESCAPE) { listening = false; return true; }
+            setter.accept(key);
+            listening = false;
+            WynnExtrasConfig.save();
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
+        }
     }
 
     private static class BooleanOption extends ConfigOption {
