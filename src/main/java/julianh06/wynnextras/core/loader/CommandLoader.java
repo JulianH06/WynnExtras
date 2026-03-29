@@ -84,7 +84,7 @@ public class CommandLoader implements WELoader {
             dispatcher.register(
                     ClientCommandManager.literal("gv")
                             .executes(ctx -> {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to specify the guild you want to view. Usage: /gv [guild prefix]"));
+                                GV.openOwnGuild();
                                 return 1;
                             })
                             .then(
