@@ -347,6 +347,7 @@ public class TreeLoader {
 
 
             if (failCycles.get() >= MAX_FAIL_CYCLES) {
+                System.out.println("[TreeLoader] MAX_FAIL_CYCLES hit | stuck on='" + (abilitiesToClick2.isEmpty() ? "none" : abilitiesToClick2.getFirst().toString()) + "'");
                 resetAll();
                 if(McUtils.mc().currentScreen != null) McUtils.mc().currentScreen.close();
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Something went wrong! Try again")));
@@ -363,6 +364,7 @@ public class TreeLoader {
                 boolean stillHasUnlock = hasUnlockPrefix(pendingClick.abilityName, screen);
 
                 if (!stillHasUnlock) {
+                    System.out.println("[TreeLoader] Confirmed | ability='" + pendingClick.abilityName + "' remaining=" + (abilitiesToClick2.size() - 1));
                     abilitiesToClick2.removeFirst();
                     failCycles.set(0);
                     pendingClick = null;
@@ -400,16 +402,24 @@ public class TreeLoader {
 
             AbilityMapData.Node abilityNode = abilitiesToClick2.getFirst();
             AbilityTreeData.Ability abilityFromNode = getAbilityFromNode(abilityNode, classTree);
-            if (abilityFromNode == null) return; //{ abilitiesToClick2.removeFirst(); return; }
-            String abilityName = extractAbilityNameFromHtml(abilityFromNode.name);
-            if (abilityName == null) return; //{ abilitiesToClick2.removeFirst(); return; }
 
+            if (abilityFromNode == null) {
+                System.out.println("[TreeLoader] getAbilityFromNode returned null | page=" + abilityNode.meta.page + " x=" + abilityNode.coordinates.x + " y=" + abilityNode.coordinates.y);
+                return;
+            }
+
+            String abilityName = extractAbilityNameFromHtml(abilityFromNode.name);
+            if (abilityName == null) {
+                System.out.println("[TreeLoader] extractAbilityNameFromHtml returned null | raw name was: '" + abilityFromNode.name + "'");
+                return;
+            }
             int pageOffset = abilityNode.meta.page - currentPage[0];
             if (pageOffset != 0 && !pendingPageSwitch.get()) {
                 List<ItemStack> inv = new ArrayList<>(McUtils.containerMenu().getStacks());
                 prevPageStacks.set(inv);
 
                 String direction = pageOffset > 0 ? "Next Page" : "Previous Page";
+                System.out.println("[TreeLoader] Switching page | direction=" + direction + " currentPage=" + currentPage[0] + " targetPage=" + abilityNode.meta.page + " for ability='" + abilityName + "'");
                 clickOnAbility(client, player, direction, screen);
                 currentPage[0] += pageOffset > 0 ? 1 : -1;
 
@@ -419,6 +429,7 @@ public class TreeLoader {
             }
 
             if (hasUnlockPrefix(abilityName, screen)) {
+                System.out.println("[TreeLoader] Clicking | ability='" + abilityName + "' page=" + currentPage[0] + " remaining=" + abilitiesToClick2.size());
                 clickOnAbility(client, player, abilityName, screen);
                 pendingClick = new PendingClick(abilityNode, abilityName, currentPage[0]);
                 pendingClick.ticksWaiting = 0;
@@ -430,10 +441,14 @@ public class TreeLoader {
                 }
                 return;
             } else {
-                if (abilitiesToClick2.size() > 1) {
-                    AbilityMapData.Node removed = abilitiesToClick2.removeFirst();
-                    abilitiesToClick2.add(Math.min(failCycles.get(), abilitiesToClick2.size() - 1), removed);
-                    failCycles.set(failCycles.get() + 1); // Count a cycle only if list is requeued
+            System.out.println("[TreeLoader] Not unlockable yet | ability='" + abilityName + "' failCycles=" + failCycles.get() + "/" + MAX_FAIL_CYCLES + " queueSize=" + abilitiesToClick2.size());
+            if (abilitiesToClick2.size() > 1) {
+                AbilityMapData.Node removed = abilitiesToClick2.removeFirst();
+                abilitiesToClick2.add(Math.min(failCycles.get(), abilitiesToClick2.size() - 1), removed);
+                failCycles.set(failCycles.get() + 1);
+            } else {
+                System.out.println("[TreeLoader] FREEZE RISK: single node stuck and not unlockable | ability='" + abilityName + "' page=" + abilityNode.meta.page + " x=" + abilityNode.coordinates.x + " y=" + abilityNode.coordinates.y);
+                failCycles.set(failCycles.get() + 1);
                 }
             }
         });
@@ -525,18 +540,14 @@ public class TreeLoader {
 
 
     public static AbilityTreeData.Ability getAbilityFromNode(AbilityMapData.Node node, AbilityTreeData treeData) {
-        if(treeData == null) return null;
-        Map<String, AbilityTreeData.Ability> page = treeData.pages.get(node.meta.page);
-        for(AbilityTreeData.Ability ability : page.values()) {
-            if(ability.coordinates.x != node.coordinates.x) {
-                continue;
-            }
-            if(ability.coordinates.y != node.coordinates.y % 6) {
-                continue;
-            }
-            return ability;
-        }
+        if (treeData == null) return null;
+        if (node == null || node.meta == null || node.meta.id == null || node.meta.id.isEmpty()) return null;
 
+        for (Map<String, AbilityTreeData.Ability> page : treeData.pages.values()) {
+            if (page == null) continue;
+            AbilityTreeData.Ability ability = page.get(node.meta.id);
+            if (ability != null) return ability;
+        }
         return null;
     }
 
@@ -871,8 +882,21 @@ public class TreeLoader {
             out.addProperty("agility", skillPoints.getAgility());
             String formatted = className.substring(0, 1).toUpperCase() + className.substring(1).toLowerCase();
             out.addProperty("className", formatted);
+            // Mark all nodes in the player's personal map as unlocked (they're only present if unlocked)
+            if (playerTree != null && playerTree.pages != null) {
+                for (List<AbilityMapData.Node> pageNodes : playerTree.pages.values()) {
+                    if (pageNodes == null) continue;
+                    for (AbilityMapData.Node n : pageNodes) {
+                        if (n != null && "ability".equalsIgnoreCase(n.type)) {
+                            n.unlocked = true;
+                        }
+                    }
+                }
+            }
+
             out.add("playerMap", gson.toJsonTree(playerTree));
             out.add("playerTree", gson.toJsonTree(classTree));
+
 
             try (FileWriter writer = new FileWriter(filePath.toFile())) {
                 String prettyJson = gson.toJson(out);

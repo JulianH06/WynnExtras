@@ -531,35 +531,50 @@ public class TreeScreen extends WEScreen {
                 this.withSkillpoints = withSkillpoints;
                 this.action = () -> {
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    TreeData tree = TreeData.getTree(treeName);
-                    if (tree == null) {
+                    TreeData tree1 = TreeData.getTree(treeName);
+                    if (tree1 == null) {
                         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("This tree doesn't exist.")));
                         return;
                     }
+
+                    String classKey = tree1.className.toLowerCase(Locale.ROOT);
+
+                    // If the live API data isn't cached yet, trigger the load and tell the user to retry.
+                    if (AbilityTreeCache.getClassTree(classKey) == null || AbilityTreeCache.getClassMap(classKey) == null) {
+                        AbilityTreeCache.loadClassTree(classKey);
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                Text.of("Loading ability data for " + tree1.className + " from the Wynn API, please click Load again in a moment.")
+                        ));
+                        return;  // <-- do NOT proceed, data isn't ready
+                    }
+
+                    // Data is ready — plan and start loading.
+                    List<AbilityMapData.Node> nodes = ApiAbilityPlanner.planFromSavedTree(tree1);
+                    if (nodes.isEmpty()) {
+                        return; // planner already printed the reason
+                    }
+
                     McUtils.mc().setScreen(null);
                     TreeLoader.resetAll();
                     TreeLoader.wasStarted = true;
                     TreeLoader.resetTree = true;
-                    List<AbilityTreeData.Ability> abilities = TreeLoader.calculateNodeOrder(tree.playerTree.archetypes, TreeLoader.convertNodeMapToList(tree.playerMap), new ArrayList<>(), tree.playerTree);
-
-                    List<AbilityMapData.Node> nodes = new ArrayList<>();
-                    for(AbilityTreeData.Ability ability : abilities) {
-                        nodes.add(TreeLoader.getNodeFromAbility(ability, tree.playerMap));
-                    }
                     TreeLoader.abilitiesToClick2 = nodes;
                     TreeLoader.loadSkillpoints = withSkillpoints;
+
                     int[] points = new int[5];
-                    points[0] = tree.strength;
-                    points[1] = tree.dexterity;
-                    points[2] = tree.intelligence;
-                    points[3] = tree.defence;
-                    points[4] = tree.agility;
+                    points[0] = tree1.strength;
+                    points[1] = tree1.dexterity;
+                    points[2] = tree1.intelligence;
+                    points[3] = tree1.defence;
+                    points[4] = tree1.agility;
                     TreeLoader.skillPointSet = withSkillpoints ? new SavableSkillPointSet(points) : null;
-                    TreeLoader.classTree = tree.playerTree;
+
+                    AbilityTreeData liveClassTree = AbilityTreeCache.getClassTree(classKey);
+                    TreeLoader.classTree = liveClassTree != null ? liveClassTree : tree1.playerTree;
                 };
             }
 
-            @Override
+                @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 ui.drawButton(x, y, width, height, 17, hovered);
                 //ui.drawRect(x, y, width, height);
