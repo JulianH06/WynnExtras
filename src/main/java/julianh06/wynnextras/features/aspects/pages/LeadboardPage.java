@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.aspects.pages;
 
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.LeaderboardEntry;
@@ -13,12 +14,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LeadboardPage extends PageWidget {
-    private List<LeaderboardEntry> leaderboardList = null;
-    private List<LeaderBoardEntryWidget> leaderBoardEntryWidgets = new ArrayList<>();
-    private boolean fetchedLeaderboard = false;
+    private static List<LeaderboardEntry> leaderboardList = null;
+    private static List<LeaderBoardEntryWidget> leaderBoardEntryWidgets = new ArrayList<>();
+    private static boolean fetchedLeaderboard = false;
+
+    private final RefreshButton refreshButton;
 
     public LeadboardPage(AspectScreen parent) {
         super(parent);
+
+        refreshButton = new RefreshButton();
     }
 
     @Override
@@ -69,10 +74,18 @@ public class LeadboardPage extends PageWidget {
         }
 
         ui.drawCenteredText("§7Click on a player to view their aspects", centerX, logicalH - 95);
+
+        refreshButton.setBounds(0, 0, 360, 60);
+        refreshButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if(refreshButton.isHovered()) {
+            refreshButton.onClick(button);
+            return true;
+        }
+
         for(LeaderBoardEntryWidget leaderBoardEntryWidget : leaderBoardEntryWidgets) {
             if(leaderBoardEntryWidget.mouseClicked(mx, my, button)) return true;
         }
@@ -130,6 +143,28 @@ public class LeadboardPage extends PageWidget {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             AspectsPage.performPlayerSearch(entry.getPlayerName());
             AspectScreen.currentPage = AspectScreen.Page.Aspects;
+            return true;
+        }
+    }
+
+    private static class RefreshButton extends Widget {
+        public RefreshButton() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawCenteredText("Reload leaderboards", x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            leaderboardList = null;
+            leaderBoardEntryWidgets = new ArrayList<>();
+            fetchedLeaderboard = false;
+
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }

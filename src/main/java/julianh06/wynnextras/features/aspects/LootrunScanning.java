@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.aspects;
 
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
@@ -14,10 +15,7 @@ import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 
-import java.time.DayOfWeek;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -91,7 +89,7 @@ public class LootrunScanning {
 
                 if (pendingUploadAllowed.getOrDefault(camp, false)) {
                     WynncraftApiHandler.uploadLootrunLootPool(camp, combined);
-                    lastLootrunUploadReset.put(camp, getCurrentLootrunReset());
+                    lastLootrunUploadReset.put(camp, ResetTimeConfig.INSTANCE.getCurrentLootrunReset());
                 }
 
                 pendingItems.remove(camp);
@@ -113,7 +111,7 @@ public class LootrunScanning {
                     waitingForPageLoad = true;
                 } else {
                     WynncraftApiHandler.uploadLootrunLootPool(camp, items);
-                    lastLootrunUploadReset.put(camp, getCurrentLootrunReset());
+                    lastLootrunUploadReset.put(camp, ResetTimeConfig.INSTANCE.getCurrentLootrunReset());
                 }
             }
         } catch (Exception e) {
@@ -295,22 +293,8 @@ public class LootrunScanning {
         settleTicks = 0;
     }
 
-    public static ZonedDateTime getCurrentLootrunReset() {
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-
-        ZonedDateTime thisFriday =
-                now.with(TemporalAdjusters.previousOrSame(DayOfWeek.FRIDAY))
-                        .withHour(20).withMinute(0).withSecond(0).withNano(0);
-
-        if (now.isBefore(thisFriday)) {
-            thisFriday = thisFriday.minusWeeks(1);
-        }
-
-        return thisFriday;
-    }
-
     private static boolean canUploadLootrun(String camp) {
-        ZonedDateTime currentReset = getCurrentLootrunReset();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentLootrunReset();
         ZonedDateTime lastUploaded = lastLootrunUploadReset.get(camp);
 
         return lastUploaded == null || currentReset.isAfter(lastUploaded);

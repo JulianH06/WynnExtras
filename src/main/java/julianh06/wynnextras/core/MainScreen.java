@@ -4,7 +4,7 @@ import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.features.abilitytree.TreeScreen;
+
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.utils.LinkUtils;
@@ -103,7 +103,7 @@ public class MainScreen extends WEScreen {
                 PV.open(McUtils.playerName());
             }
             case 3 -> {
-                WEScreen.open(TreeScreen::new);
+                MinecraftUtils.mc().setScreen(new julianh06.wynnextras.features.misc.HudEditScreen(parent));
             }
             case 4 -> {
                 MinecraftUtils.mc().setScreen(null);
@@ -132,7 +132,7 @@ public class MainScreen extends WEScreen {
             case 0 -> "Config";
             case 1 -> "Loot Pools";
             case 2 -> "Profile Viewer";
-            case 3 -> "Ability Tree Loader";
+            case 3 -> "Edit Gui";
             case 4 -> "Waypoints";
             case 5 -> "Raid List";
             default -> "null";

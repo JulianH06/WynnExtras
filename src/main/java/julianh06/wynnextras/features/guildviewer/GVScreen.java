@@ -303,7 +303,7 @@ public class GVScreen extends WEScreen {
 
         ui.drawCenteredText("★★★★★ OWNER ★★★★★", textX, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.owner != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,
@@ -321,7 +321,7 @@ public class GVScreen extends WEScreen {
         contentHeight += 25;
         ui.drawCenteredText("★★★★ CHIEF ★★★★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.chief != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,
@@ -339,7 +339,7 @@ public class GVScreen extends WEScreen {
         contentHeight += 25;
         ui.drawCenteredText("★★★ STRATEGIST ★★★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.strategist != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,
@@ -357,7 +357,7 @@ public class GVScreen extends WEScreen {
         contentHeight += 25;
         ui.drawCenteredText("★★ CAPTAIN ★★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.captain != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,
@@ -375,7 +375,7 @@ public class GVScreen extends WEScreen {
         contentHeight += 25;
         ui.drawCenteredText("★ RECRUITER ★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.recruiter != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,
@@ -393,7 +393,7 @@ public class GVScreen extends WEScreen {
         contentHeight += 25;
         ui.drawCenteredText("RECRUIT", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.recruit != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,

@@ -2,6 +2,7 @@ package julianh06.wynnextras.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.util.Formatting;
@@ -13,6 +14,8 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public class WynnExtrasConfig {
+    public enum Align { LEFT, CENTER, RIGHT }
+
     private static final Path CONFIG_PATH = FabricLoader.getInstance()
             .getConfigDir()
             .resolve("wynnextras")
@@ -39,8 +42,14 @@ public class WynnExtrasConfig {
     public int textDurationInMs = 2000;
     public TextColor textColor = TextColor.WHITE;
     public NotificationSound notificationSound = NotificationSound.EXPERIENCE_ORB;
-    public float soundVolume = 10f;
+    public float soundVolume = 100f;
     public float soundPitch = 100f;
+    public int notifierX = -1;  // -1 = auto center
+    public int notifierY = -1;  // -1 = auto (30% from top)
+    public float notifierScale = 3.0f;
+    public Align notifierAlignment = Align.CENTER;
+    public int notifierFadeInMs = 250;
+    public int notifierFadeOutMs = 250;
 
     // ==================== CHAT NOTIFIER PREMADES ====================
 
@@ -107,11 +116,11 @@ public class WynnExtrasConfig {
     public boolean raidLootTrackerRenderInChat = true;
     public boolean raidLootTrackerOnlyNearChest = true;
     public boolean raidLootTrackerCompact = false;
-    public boolean raidLootTrackerShowSession = false;
     public int raidLootTrackerX = 5;
     public int raidLootTrackerY = 5;
     public List<String> raidLootTrackerHiddenLines = new ArrayList<>();
     public boolean raidLootTrackerBackground = true;
+    public RaidLootTrackerOverlay.mode raidLootTrackerMode = RaidLootTrackerOverlay.mode.ALL;
     public boolean toggleFastRequeue = true;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
@@ -139,6 +148,43 @@ public class WynnExtrasConfig {
     // ==================== MISC ====================
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
+    public boolean showLootpoolButtonInPartyFinder = true;
+
+    // ==================== TOTEM TIMER ====================
+    public boolean totemTimerEnabled = true;
+    public boolean totemTimerOwnOnly = true;
+    public boolean totemTimerWarningText = true;
+    public boolean totemTimerWarningSound = true;
+    public float totemTimerWarningSoundVolume = 50f;
+    public int totemTimerWarningThreshold = 2;
+    public boolean totemTimerEstimate = true;
+    public int totemTimerX = -1;
+    public int totemTimerY = 40;
+    public float totemTimerScale = 1.0f;
+    public TextColor totemTimerWarningTextColor = TextColor.RED;
+    public Align totemTimerAlignment = Align.CENTER;
+    public int totemWarningX = -1;  // -1 = auto center
+    public int totemWarningY = 80;
+    public float totemWarningScale = 2.0f;
+    public Align totemWarningAlignment = Align.CENTER;
+
+    // ==================== BLOOD SORROW TIMER ====================
+    public boolean bloodSorrowTimerEnabled = true;
+    public boolean autoDetectBloodSorrowTime = true;
+    public boolean autoDetectAcolyteAspectTier = true;
+    public boolean autoDetectResonanceInHand = true;
+    public boolean resoInHand = false;
+    public int acolyteAspect = 0;
+    public int bloodSorrowTimerX = -1;
+    public int bloodSorrowTimerY = 60;
+    public float bloodSorrowTimerScale = 1.0f;
+    public Align bloodSorrowAlignment = Align.CENTER;
+
+    // ==================== PROVOKE TIMER HUD ====================
+    public int provokeTimerX = -1;
+    public int provokeTimerY = 20;
+    public float provokeTimerScale = 1.0f;
+    public Align provokeTimerAlignment = Align.CENTER;
     public int customGUIScale = 3;
     public boolean removeFrontPersonView = false;
     public boolean sourceOfTruthToggle = false;

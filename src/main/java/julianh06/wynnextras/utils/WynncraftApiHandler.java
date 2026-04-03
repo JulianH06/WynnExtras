@@ -13,6 +13,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.features.aspects.LocalAspectStorage;
 import julianh06.wynnextras.features.aspects.pages.LootrunLootPoolPage;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.data.*;
@@ -36,6 +37,8 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -44,6 +47,9 @@ import java.util.stream.Collectors;
 public class WynncraftApiHandler {
     public static WynncraftApiHandler INSTANCE = new WynncraftApiHandler();
 
+    public final AtomicInteger aspectFetchGeneration = new AtomicInteger(0);
+    public final AtomicBoolean isFetchingAspects = new AtomicBoolean(false);
+
     // Reuse HttpClient instance instead of creating new ones
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
@@ -51,7 +57,7 @@ public class WynncraftApiHandler {
     public List<ApiAspect> aspectList = java.util.Collections.synchronizedList(new ArrayList<>());
     public boolean[] waitingForAspectResponse = new boolean[5];
     // Lock object for synchronizing array access
-    private final Object aspectLock = new Object();
+    public final Object aspectLock = new Object();
 
     public static Map<String, JsonObject> cachedItemDatabase;
 
@@ -59,7 +65,15 @@ public class WynncraftApiHandler {
             "apikey",
             "",
             context -> {
-                INSTANCE.API_KEY = StringArgumentType.getString(context, "key");
+                String key = StringArgumentType.getString(context, "key");
+                if(key.equals("clear")) {
+                    INSTANCE.API_KEY = null;
+                    save();
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully cleared your api key.")));
+                    return 1;
+                }
+
+                INSTANCE.API_KEY = key;
                 save();
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully set your api key." +
                         " It has been saved in your config. Don't share it publicly.")));
@@ -79,7 +93,7 @@ public class WynncraftApiHandler {
                            1. Add your alt(s) to your existing Wynncraft account so they can share the same API key
                            2. Create a separate Wynncraft account for each Minecraft account, and generate an API key for each
                         You can find a tutorial on how to get your api key in #infos on our discord. \
-                        Run "/WynnExtras discord" to join.""")));
+                        Run "/WynnExtras discord" to join. Run "/WynnExtras apikey clear" to clear your api key.""")));
                 return 1;
             },
             null,
@@ -154,75 +168,64 @@ public class WynncraftApiHandler {
         }
 
         return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .thenApply(WynncraftApiHandler::parseAspectData);
+            .thenApply(response -> {
+                if (response.statusCode() != 200) {
+                    System.err.println("Aspect API returned status " + response.statusCode() + " for " + className);
+                    return null;
+                }
+                String body = response.body();
+                if (body == null || !body.trim().startsWith("{")) {
+                    System.err.println("Invalid API response for " + className + ": " + body);
+                    return null;
+                }
+                return body;
+            })
+            .thenApply(body -> {
+                if (body == null) return null;
+                return parseAspectData(body);
+            });
     }
 
     public static List<ApiAspect> fetchAllAspects() {
         List<String> classes = List.of("warrior", "shaman", "mage", "archer", "assassin");
         List<ApiAspect> aspectList = WynncraftApiHandler.INSTANCE.aspectList;
 
-        if(!aspectList.isEmpty()) {
+        if (!aspectList.isEmpty()) return aspectList;
+
+        if (!INSTANCE.isFetchingAspects.compareAndSet(false, true)) {
             return aspectList;
         }
 
-        // Synchronize access to waitingForAspectResponse array
-        synchronized (INSTANCE.aspectLock) {
-            // Check if ALL classes are marked as waiting but list is still empty - means previous fetch failed
-            boolean allWaiting = true;
-            for (int j = 0; j < 5; j++) {
-                if (!WynncraftApiHandler.INSTANCE.waitingForAspectResponse[j]) {
-                    allWaiting = false;
-                    break;
-                }
-            }
-            if (allWaiting && aspectList.isEmpty()) {
-                // Reset all flags - previous fetch must have failed
-                for (int j = 0; j < 5; j++) {
-                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[j] = false;
-                }
-            }
+        final int generation = INSTANCE.aspectFetchGeneration.get();
 
-            int i = 0;
-            for(String className : classes) {
-                if(WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i]) {
-                    i++;
-                    continue;
-                }
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-                WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i] = true;
+        int i = 0;
+        for (String className : classes) {
+            CompletableFuture<Void> future = WynncraftApiHandler.fetchAspectList(className)
+                    .thenAccept(result -> {
+                        if (INSTANCE.aspectFetchGeneration.get() != generation) return;
+                        if (result == null || result.isEmpty()) return;
 
-                int finalI = i;
-                CompletableFuture<List<ApiAspect>> future = WynncraftApiHandler.fetchAspectList(className);
-                future.thenAccept(result -> {
-                        if (result == null) return;
-                        if (result.isEmpty()) return;
-
-                        synchronized (INSTANCE.aspectLock) {
-                            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
-                        }
-                        // Only add aspects that aren't already in the list (prevent duplicates)
-                        // aspectList is already synchronized, but we need to check-then-add atomically
                         synchronized (aspectList) {
                             for (ApiAspect aspect : result) {
                                 boolean alreadyExists = aspectList.stream()
                                         .anyMatch(existing -> existing.getName().equals(aspect.getName()));
-                                if (!alreadyExists) {
-                                    aspectList.add(aspect);
-                                }
+                                if (!alreadyExists) aspectList.add(aspect);
                             }
                         }
-                })
-                .exceptionally(ex -> {
-                    System.err.println("Unexpected error fetching aspects: " + ex.getMessage());
-                    synchronized (INSTANCE.aspectLock) {
-                        WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
-                    }
-                    return null;
-                });
-                i++;
-            }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Error fetching aspects for " + className + ": " + ex.getMessage());
+                        return null;
+                    });
+
+            futures.add(future);
+            i++;
         }
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .whenComplete((v, ex) -> INSTANCE.isFetchingAspects.set(false));
 
         return aspectList;
     }
@@ -321,9 +324,14 @@ public class WynncraftApiHandler {
             return;
         }
 
-        if(!WynnExtrasConfig.INSTANCE.uploadOwnAspects) return;
+        LocalAspectStorage.save(map);
 
-        System.out.println("DEBUG: processAspects called with " + map.size() + " aspects");
+
+        if(WynnExtras.isOnBeta()) {
+            return;
+        }
+
+        if(!WynnExtrasConfig.INSTANCE.uploadOwnAspects) return;
 
         // Authenticate with Mojang first
         MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
@@ -383,15 +391,13 @@ public class WynncraftApiHandler {
                 ApiRequestHelper.sendWithAuthRetry(request, payload)
                         .thenAccept(response -> {
                             int code = response.statusCode();
-                            if (code == 200) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSuccessfully uploaded your aspects!"));
-                            } else if (code == 401) {
+                            if (code == 401) {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
                                 System.err.println("Personal aspects upload auth error: " + response.body());
                             } else if (code >= 500) {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cServer error - try again later"));
                                 System.err.println("Personal aspects upload error: " + code + " → " + response.body());
-                            } else {
+                            } else if(code != 200) {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed (error " + code + ")"));
                                 System.err.println("Personal aspects upload error: " + code + " → " + response.body());
                             }
@@ -407,7 +413,7 @@ public class WynncraftApiHandler {
         });
     }
 
-    private static int parseAspectAmount(Pair<String, String> aspect) {
+    public static int parseAspectAmount(Pair<String, String> aspect) {
         String tierText = aspect.getLeft();
         String rarity = aspect.getRight();
 
@@ -531,6 +537,10 @@ public class WynncraftApiHandler {
     public static void uploadGambits(List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry> gambits) {
         if (McUtils.player() == null) {
             System.err.println("Cannot upload gambits - player not loaded");
+            return;
+        }
+
+        if(WynnExtras.isOnBeta()) {
             return;
         }
 
@@ -775,6 +785,10 @@ public class WynncraftApiHandler {
     public static void uploadLootrunLootPool(String camp, List<julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem> items) {
         if (McUtils.player() == null) {
             System.err.println("Cannot upload lootrun loot pool - player not loaded");
+            return;
+        }
+
+        if(WynnExtras.isOnBeta()) {
             return;
         }
 

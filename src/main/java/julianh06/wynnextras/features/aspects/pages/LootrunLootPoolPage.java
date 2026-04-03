@@ -6,6 +6,7 @@ import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.LootrunLootPoolData;
 import julianh06.wynnextras.features.aspects.LootrunScanning;
@@ -30,6 +31,8 @@ public class LootrunLootPoolPage extends PageWidget {
     private static final Map<Camp, Boolean> fetchRunning = new HashMap<>();
     private final static Map<Camp, Boolean> hasOldLootpool = new HashMap<>();
 
+    private final RefreshButton refreshButton;
+
     public enum Camp { SI, SE, CORK, COTL, MH }
 
     private static String[] campNames = {
@@ -52,6 +55,8 @@ public class LootrunLootPoolPage extends PageWidget {
         for(Camp camp : Camp.values()) {
             lootPoolWidgets.add(new LootPoolWidget(camp));
         }
+
+        refreshButton = new RefreshButton();
     }
 
     @Override
@@ -99,7 +104,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
         ui.drawCenteredText("§6§lWeekly Lootrun Lootpools", centerX, 60, CustomColor.fromInt(0xFFFFFF), 3f);
 
-        ZonedDateTime nextReset = now.with(java.time.DayOfWeek.FRIDAY).withHour(20).withMinute(0).withSecond(0).withNano(0);
+        ZonedDateTime nextReset = ResetTimeConfig.INSTANCE.getNextLootrunReset();
         if (nextReset.isBefore(now) || nextReset.isEqual(now)) {
             nextReset = nextReset.plusWeeks(1);
         }
@@ -136,6 +141,9 @@ public class LootrunLootPoolPage extends PageWidget {
             lootPoolWidget.draw(context, mouseX, mouseY, tickDelta, ui);
             widgetX += widgetWidth + spacing;
         }
+
+        refreshButton.setBounds(0, 0, 300, 60);
+        refreshButton.draw(context, mouseX, mouseY, tickDelta, ui);
     }
 
     private static boolean isSamePool(List<LootrunLootPoolData.LootrunItem> oldItems, List<LootrunLootPoolData.LootrunItem> newItems) {
@@ -170,6 +178,11 @@ public class LootrunLootPoolPage extends PageWidget {
     public boolean mouseClicked(double mx, double my, int button) {
         for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
             if(lootPoolWidget.mouseClicked(mx, my, button)) return true;
+        }
+
+        if(refreshButton.isHovered()) {
+            refreshButton.onClick(button);
+            return true;
         }
 
         return false;
@@ -257,7 +270,6 @@ public class LootrunLootPoolPage extends PageWidget {
             }
 
             ui.drawCenteredText(campNames[camp.ordinal()], x + width / 2f, y + 45, CustomColor.fromHexString("FFFFFF"));
-
 
             List<LootrunLootPoolData.LootrunItem> items = getLootPoolForCamp(camp.name());
 
@@ -629,11 +641,41 @@ public class LootrunLootPoolPage extends PageWidget {
         }
     }
 
+    private static class RefreshButton extends Widget {
+        public RefreshButton() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawCenteredText("Reload lootpools", x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            lootPoolWidgets.clear();
+
+            for(Camp camp : Camp.values()) {
+                lootPoolWidgets.add(new LootPoolWidget(camp));
+            }
+
+            crowdsourcedLootPools.clear();
+            lastCrowdsourceFetch.clear();
+            fetchRunning.clear();
+            hasOldLootpool.clear();
+
+            ResetTimeConfig.INSTANCE.refetch();
+
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
+        }
+    }
+
     private static boolean shouldFetchLootPool(Camp camp) {
-        ZonedDateTime currentReset = LootrunScanning.getCurrentLootrunReset();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentLootrunReset();
         ZonedDateTime lastFetch = lastCrowdsourceFetch.get(camp);
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-
         if(hasOldLootpool.get(camp) != null && hasOldLootpool.get(camp)) return lastFetch.plusSeconds(30).isBefore(now);
 
         if(lastFetch != null && lastFetch.plusSeconds(30).isAfter(now)) return false;

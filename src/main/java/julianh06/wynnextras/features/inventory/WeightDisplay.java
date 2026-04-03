@@ -295,10 +295,10 @@ public class WeightDisplay {
 
     @SubscribeEvent
     public void onKey(KeyInputEvent event) {
-        if(event.getKey() == GLFW.GLFW_KEY_UP && event.getAction() == GLFW.GLFW_PRESS) {
+        if((event.getKey() == GLFW.GLFW_KEY_UP || event.getKey() == GLFW.GLFW_KEY_W) && event.getAction() == GLFW.GLFW_PRESS) {
             upPressed = true;
         }
-        if(event.getKey() == GLFW.GLFW_KEY_DOWN && event.getAction() == GLFW.GLFW_PRESS) {
+        if((event.getKey() == GLFW.GLFW_KEY_DOWN || event.getKey() == GLFW.GLFW_KEY_S) && event.getAction() == GLFW.GLFW_PRESS) {
             downPressed = true;
         }
     }
@@ -348,7 +348,7 @@ public class WeightDisplay {
                         idx.incrementAndGet();
                     }
                     if(scaleData.data().size() > 1 && WynnExtrasConfig.INSTANCE.showScales) {
-                        modified.add(Text.literal("  ↳ Use ↑ / ↓ to cycle").formatted(Formatting.DARK_GRAY));
+                        modified.add(Text.literal("  ↳ Use ↑ / ↓ (or W / S) to cycle").formatted(Formatting.DARK_GRAY));
                     }
                 }
             }

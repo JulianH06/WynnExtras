@@ -53,6 +53,7 @@ public class RaidListData {
             try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
                 RaidListData loaded = gson.fromJson(reader, RaidListData.class);
                 if (loaded != null) {
+                    loaded.raids.removeIf(raid -> raid == null || raid.raidInfo.getRaidKind() == null);
                     INSTANCE = loaded;
                 } else {
                     System.err.println("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");
