@@ -61,6 +61,8 @@ public class ChatNotificator {
         WynnExtrasConfig.INSTANCE.syncPremades();
 
         for(Map.Entry<String, Boolean> entry : WynnExtrasConfig.INSTANCE.premades.entrySet()) {
+            if(message.getString().contains(":")) continue;
+
             String[] parts = entry.getKey().split("\\|");
             if(parts.length != 2) continue;
             String trigger = parts[0];

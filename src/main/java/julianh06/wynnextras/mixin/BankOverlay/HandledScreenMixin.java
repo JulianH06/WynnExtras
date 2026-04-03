@@ -102,7 +102,7 @@ public abstract class HandledScreenMixin {
             craftingHelperOverlay.render(context, mouseX, mouseY, delta);
         }
 
-        if(WynnExtrasConfig.INSTANCE.disabledArmorHelper) {
+        if(WynnExtrasConfig.INSTANCE.skillpointHelper) {
             if(compassMenuOverlay == null) {
                 compassMenuOverlay = new CompassMenuOverlay();
             }
@@ -219,7 +219,7 @@ public abstract class HandledScreenMixin {
         }
 
         if (Models.Container.getCurrentContainer() instanceof CharacterInfoContainer
-                && WynnExtrasConfig.INSTANCE.disabledArmorHelper
+                && WynnExtrasConfig.INSTANCE.skillpointHelper
                 && CompassMenuOverlay.isSelectingWeapon()) {
             if (compassMenuOverlay != null) {
                 compassMenuOverlay.mouseClicked(mouseX, mouseY, button);
@@ -231,7 +231,7 @@ public abstract class HandledScreenMixin {
 
         if (compassMenuOverlay != null
                 && Models.Container.getCurrentContainer() instanceof CharacterInfoContainer
-                && WynnExtrasConfig.INSTANCE.disabledArmorHelper
+                && WynnExtrasConfig.INSTANCE.skillpointHelper
                 && !CompassMenuOverlay.isSelectingWeapon()) {
             compassMenuOverlay.mouseClicked(mouseX, mouseY, button);
         }

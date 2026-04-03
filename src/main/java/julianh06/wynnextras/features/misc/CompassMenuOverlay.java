@@ -37,7 +37,6 @@ import java.util.Optional;
 
 public class CompassMenuOverlay extends WEHandledScreen {
     AutoAssignButton autoAssignButton;
-    SkipWeaponButton skipWeaponButton;
     List<ItemWidget> itemWidgets = new ArrayList<>();
     static ItemStack hoveredItem = Items.AIR.getDefaultStack();
 
@@ -53,9 +52,6 @@ public class CompassMenuOverlay extends WEHandledScreen {
 
         autoAssignButton = new AutoAssignButton();
         rootWidgets.add(autoAssignButton);
-
-        skipWeaponButton = new SkipWeaponButton();
-        rootWidgets.add(skipWeaponButton);
     }
 
     @Override
@@ -98,17 +94,20 @@ public class CompassMenuOverlay extends WEHandledScreen {
         float yStart = (int) ((((HandledScreenAccessor) screen).getY() + ((HandledScreenAccessor) screen).getBackgroundHeight()) * ui.getScaleFactor());
         float backgroundWidth = ((HandledScreenAccessor) screen).getBackgroundWidth() * ui.getScaleFactorF();
 
-        autoAssignButton.setBounds((int) (xStart - 200 + backgroundWidth / 2f), (int) (yStart + 125), 400, 50);
-        skipWeaponButton.setBounds((int) (xStart - 200 + backgroundWidth / 2f), (int) (yStart + 185), 400, 50);
-
-        ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("§6Skillpoint helper:"), xStart + backgroundWidth / 2f, yStart + 25);
 
         int itemWidth = 50;
         int itemHeight = itemWidth;
         float itemXStart = xStart + 23;
         float itemYStart = yStart + 60;
-        backgroundWidth -= 97;
 
+        autoAssignButton.setBounds((int) (xStart - 200 + backgroundWidth / 2f), (int) (itemYStart + (65 / 3f) * ui.getScaleFactor()), 400, 50);
+
+        ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("§6Skillpoint helper:"), xStart + backgroundWidth / 2f, yStart + 25, CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF());
+        ui.drawCenteredText(Text.of("§7This is an experimental feature, new items"), xStart + backgroundWidth / 2f, (float) (itemYStart + ((selectingWeapon ? 170 : 130) / 3f) * ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF() / 1.5f);
+        ui.drawCenteredText(Text.of("§7and crafteds might not be recognized yet"), xStart + backgroundWidth / 2f, (float) (itemYStart + ((selectingWeapon ? 190 : 150) / 3f) * ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF() / 1.5f);
+        if(selectingWeapon) ui.drawCenteredText(Text.of("§eClick on a weapon if you want to include it in the calculation."), xStart + backgroundWidth / 2f, (float) (itemYStart + (140 / 3f) * ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF() / 1.25f);
+
+        backgroundWidth -= 97;
         for(int i = 0; i < 4; i++) {
             ItemStack item = McUtils.player().getEquippedStack(EquipmentSlot.FROM_INDEX.apply(4 - i));
             itemWidgets.get(i).setBounds((int) (itemXStart + i * backgroundWidth / 3f), (int) itemYStart, itemWidth, itemHeight);
@@ -182,7 +181,7 @@ public class CompassMenuOverlay extends WEHandledScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             ui.drawButton(x, y, width, height, 13, hovered);
             if (selectingWeapon) {
-                ui.drawCenteredText("§eClick a weapon in your inventory...", x + width / 2f, y + height / 2f);
+                ui.drawCenteredText("Skip weapon selection", x + width / 2f, y + height / 2f);
             } else {
                 ui.drawCenteredText("Auto assign skill points", x + width / 2f, y + height / 2f);
             }
@@ -190,7 +189,13 @@ public class CompassMenuOverlay extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
-            if (selectingWeapon) return true;
+            if (selectingWeapon) {
+                selectedWeapon = null;
+                selectingWeapon = false;
+                startAssignment();
+                return true;
+            }
+
             selectedWeapon = null;
             selectingWeapon = true;
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
@@ -198,25 +203,6 @@ public class CompassMenuOverlay extends WEHandledScreen {
             return true;
         }
     }
-
-    private static class SkipWeaponButton extends Widget {
-        @Override
-        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if (!selectingWeapon) return;
-            ui.drawButton(x, y, width, height, 13, hovered);
-            ui.drawCenteredText("Skip weapon selection", x + width / 2f, y + height / 2f);
-        }
-
-        @Override
-        protected boolean onClick(int button) {
-            if (!selectingWeapon) return false;
-            selectedWeapon = null;
-            selectingWeapon = false;
-            startAssignment();
-            return true;
-        }
-    }
-
 
     private static void startAssignment() {
         int[] required = calculateRequiredSkillPoints(selectedWeapon);

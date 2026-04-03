@@ -100,7 +100,7 @@ public class WynnExtrasConfig {
     public int craftingPreviewOverlayX = 20;
     public int craftingPreviewOverlayY = 20;
     public boolean craftingDynamicTextures = true;
-    public boolean disabledArmorHelper = true;
+    public boolean skillpointHelper = true;
     public boolean wynnventoryOverlay = true;
     public boolean tradeMarketOverlay = true;
     public int tradeMarketOverlayX = 10;

@@ -202,8 +202,8 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         invCategory
-                .add(toggle("Disabled Armor Helper", "Show you your disabled armor in the compass menu to help assign skill points",
-                        () -> config.disabledArmorHelper, v -> config.disabledArmorHelper = v))
+                .add(toggle("Skill point helper (experimental)", "Show you your armor in the compass menu and a button to automatically assign skill points",
+                        () -> config.skillpointHelper, v -> config.skillpointHelper = v))
                 .sub("Bank Overlay")
                 .add(toggle("Enable Bank Overlay", "Custom Bank Overlay",
                         () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v))

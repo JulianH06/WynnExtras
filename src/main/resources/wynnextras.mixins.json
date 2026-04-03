@@ -47,7 +47,6 @@
     "Accessor.ChatHudAccessor",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
     "Accessor.SlotAccessor",
-    "Accessor.TooltipFittingFeatureAccessor",
     "BankOverlay.ContainerScrollFeatureMixin",
     "BankOverlay.PersonalStorageUtilitiesFeatureMixin",
     "Invoker.InventoryEmeraldCountFeatureInvoker",

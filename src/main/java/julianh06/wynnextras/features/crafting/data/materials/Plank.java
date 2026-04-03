@@ -4,7 +4,7 @@ import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.MaterialTextureResolver;
 import net.minecraft.util.Identifier;
 
-public enum Wood implements IMaterial {
+public enum Plank implements IMaterial {
     OAK("Oak",
             Identifier.of("minecraft", "textures/wynn/economy/woodcutting/plank_oak.png"),
             Identifier.of("wynnextras", "textures/materials/wood/oak.png")),
@@ -46,7 +46,7 @@ public enum Wood implements IMaterial {
     private final Identifier serverTexture;
     private final Identifier fallbackTexture;
 
-    Wood(String name, Identifier serverTexture, Identifier fallbackTexture) {
+    Plank(String name, Identifier serverTexture, Identifier fallbackTexture) {
         this.name = name;
         this.serverTexture = serverTexture;
         this.fallbackTexture = fallbackTexture;
@@ -54,7 +54,7 @@ public enum Wood implements IMaterial {
 
     @Override
     public String getName() {
-        return name + " Wood";
+        return name + " Plank";
     }
 
     @Override

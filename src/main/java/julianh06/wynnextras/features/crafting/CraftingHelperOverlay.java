@@ -143,8 +143,8 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         int speedWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(profSpeedBombWidget.text) * ui.getScaleFactor());
         int xpWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(profXpBombWidget.text) * ui.getScaleFactor());
-        profSpeedBombWidget.setBounds((int) ((screen.width / 2f) * ui.getScaleFactorF() - speedWidth / 2f), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 100), speedWidth, 30);
-        profXpBombWidget.setBounds((int) ((screen.width / 2f) * ui.getScaleFactorF() - xpWidth / 2f), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 140), xpWidth, 30);
+        profSpeedBombWidget.setBounds((int) ((screen.width / 2f) * ui.getScaleFactorF() - speedWidth / 2f), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 130), speedWidth, 30);
+        profXpBombWidget.setBounds((int) ((screen.width / 2f) * ui.getScaleFactorF() - xpWidth / 2f), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 170), xpWidth, 30);
 
         profSpeedBombWidget.draw(ctx, mouseX, mouseY, delta, ui);
         profXpBombWidget.draw(ctx, mouseX, mouseY, delta, ui);
@@ -155,12 +155,12 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         if(profXpBombWidget.bomb != null && profXpBombWidget.bomb.server().equals(Models.WorldState.getCurrentWorldName())) dontShowWorldText = true;
 
         if ((profXpBombWidget.isActive || profSpeedBombWidget.isActive) && !dontShowWorldText) {
-            int currentWorldTextYOffset = profXpBombWidget.isActive ? 170 : 130;
+            int currentWorldTextYOffset = profXpBombWidget.isActive ? 200 : 160;
             ui.drawCenteredText("There are no active profession bombs on your world. Click below to switch worlds.", (screen.width / 2f) * ui.getScaleFactorF(), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - currentWorldTextYOffset), CustomColor.fromHexString("FF0000"));
         }
 
         if(!profXpBombWidget.isActive && !profSpeedBombWidget.isActive) {
-            ui.drawCenteredText("There are no active profession bombs.", (screen.width / 2f) * ui.getScaleFactorF(), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 90), CustomColor.fromHexString("FF0000"));
+            ui.drawCenteredText("There are no active profession bombs.", (screen.width / 2f) * ui.getScaleFactorF(), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 120), CustomColor.fromHexString("FF0000"));
         }
 
         ProfessionType type = container.getProfessionType();
@@ -887,7 +887,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 }
 
                 String currentWorld = Models.WorldState.getCurrentWorldName();
-                isActive = false;
+                isActive = true;
                 bomb = null;
 
                 for (BombInfo bomb : Models.Bomb.getBombBells()) {
