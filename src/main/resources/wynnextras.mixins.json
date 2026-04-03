@@ -18,6 +18,7 @@
     "ItemHighlightFeatureMixin",
     "LivingEntityRendererMixin",
     "MouseScrollMixin",
+    "NetManagerMixin",
     "PerspectiveMixin",
     "RaidLootOverlayClickMixin",
     "RaidLootOverlayScreenMixin",

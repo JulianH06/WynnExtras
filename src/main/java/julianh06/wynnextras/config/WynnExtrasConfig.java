@@ -147,6 +147,7 @@ public class WynnExtrasConfig {
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
     public boolean showLootpoolButtonInPartyFinder = true;
+    public boolean redirectWynntilsViewStatsToPV = true;
 
     public boolean showOwnNametag = false;
     // The code for this is in LivingEntityRendererMixin
