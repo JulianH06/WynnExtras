@@ -58,6 +58,8 @@ public class ChatNotificator {
             }
         }
 
+        //TODO: add twp to pv loot tracker aasdfhjk
+
         WynnExtrasConfig.INSTANCE.syncPremades();
 
         for(Map.Entry<String, Boolean> entry : WynnExtrasConfig.INSTANCE.premades.entrySet()) {

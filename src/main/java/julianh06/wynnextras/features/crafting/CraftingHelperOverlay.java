@@ -887,7 +887,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 }
 
                 String currentWorld = Models.WorldState.getCurrentWorldName();
-                isActive = true;
+                isActive = false;
                 bomb = null;
 
                 for (BombInfo bomb : Models.Bomb.getBombBells()) {
