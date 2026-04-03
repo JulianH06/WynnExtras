@@ -359,6 +359,15 @@ public class WynnExtrasConfigScreen extends Screen {
                         config.lootPoolPagesDarkMode = false;
                         config.craftingHelperDarkMode = false;
                         config.mainMenuDarkMode = false; }, "Disable"))
+            .sub("Tetris")
+                .add(slider("DAS", "Delayed Auto Shift (ms) — delay before repeated movement begins",
+                    0, 300, () -> config.tetrisDAS, v -> config.tetrisDAS = v))
+                .add(slider("ARR", "Auto Repeat Rate (ms) — speed of repeated moves, 0 = instant",
+                    0, 100, () -> config.tetrisARR, v -> config.tetrisARR = v))
+                .add(slider("SDF Delay", "Soft Drop delay (ms) before fast-fall kicks in",
+                    0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
+                .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
+                    0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
             .sub("Crowd sourcing")
                 .add(toggle("Upload your own Aspects", "Upload your aspect data so you can see your personal lootpool scores",
                         () -> config.uploadOwnAspects, v -> config.uploadOwnAspects = v))
