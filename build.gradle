@@ -61,8 +61,7 @@ dependencies {
 
 	modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	//modImplementation "maven.modrinth:wynntils:v${project.wynntils_version}-fabric"
-	modImplementation(files("/home/julian/IdeaProjects/Wynntils/fabric/build/libs/wynntils-4.0.0-SNAPSHOT-fabric+MC-1.21.11.jar"))
+	modImplementation "maven.modrinth:wynntils:v${project.wynntils_version}-fabric"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	shadowImpl 'org.reflections:reflections:0.10.2'

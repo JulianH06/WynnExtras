@@ -69,7 +69,6 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import org.joml.Vector2i;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.lang.reflect.Constructor;
@@ -866,7 +865,6 @@ public class BankOverlay2 extends WEHandledScreen {
                     annotation instanceof DungeonKeyItem ||
                     annotation instanceof EmeraldPouchItem ||
                     annotation instanceof GatheringToolItem ||
-                    annotation instanceof HorseItem ||
                     annotation instanceof PowderItem ||
                     annotation instanceof PotionItem ||
                     annotation instanceof CrafterBagItem) {
