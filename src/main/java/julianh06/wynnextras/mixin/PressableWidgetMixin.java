@@ -17,8 +17,12 @@ public class PressableWidgetMixin {
     @Inject(method = "renderWidget", at = @At(value = "HEAD"), cancellable = true)
     void renderWidget(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         try {
-            if((Models.Container.getCurrentContainer() instanceof CraftingStationContainer) && WynnExtrasConfig.INSTANCE.craftingHelperOverlay) ci.cancel();
-            if(BankOverlay.currentOverlayType != BankOverlayType.NONE && WynnExtrasConfig.INSTANCE.toggleBankOverlay) ci.cancel();
+            // Check cheap static field first to avoid expensive getCurrentContainer() call
+            if(BankOverlay.currentOverlayType != BankOverlayType.NONE && WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
+                ci.cancel();
+                return;
+            }
+            if(WynnExtrasConfig.INSTANCE.craftingHelperOverlay && Models.Container.getCurrentContainer() instanceof CraftingStationContainer) ci.cancel();
         } catch (Exception ignored) {}
     }
 }

@@ -6,6 +6,10 @@ import com.wynntils.models.containers.containers.CharacterInfoContainer;
 import com.wynntils.models.containers.containers.CharacterSelectionContainer;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.containers.containers.ItemIdentifierContainer;
+import com.wynntils.models.containers.containers.personal.AccountBankContainer;
+import com.wynntils.models.containers.containers.personal.BookshelfContainer;
+import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
+import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
@@ -50,15 +54,16 @@ public abstract class HandledScreenMixin {
     @Shadow protected int x;
     @Shadow protected int y;
 
-    @Unique private static julianh06.wynnextras.features.bankoverlay.BankOverlay2 bankOverlay;
+    @Unique private julianh06.wynnextras.features.bankoverlay.BankOverlay2 bankOverlay;
+    @Unique private Boolean isBankScreen = null;
 
-    @Unique private static IdentifierOverlay identifierOverlay;
+    @Unique private IdentifierOverlay identifierOverlay;
 
-    @Unique private static PartyFinderOpenLootpoolOverlay partyFinderOpenLootpoolOverlay;
+    @Unique private PartyFinderOpenLootpoolOverlay partyFinderOpenLootpoolOverlay;
 
-    @Unique private static CraftingHelperOverlay craftingHelperOverlay;
+    @Unique private CraftingHelperOverlay craftingHelperOverlay;
 
-    @Unique private static CompassMenuOverlay compassMenuOverlay;
+    @Unique private CompassMenuOverlay compassMenuOverlay;
 
     @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
     private void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci){
@@ -69,14 +74,28 @@ public abstract class HandledScreenMixin {
     
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        if(bankOverlay == null) bankOverlay = new BankOverlay2(ci, (HandledScreen<?>) (Object) this);
-        bankOverlay.ci = ci;
-        bankOverlay.screen = (HandledScreen<?>) (Object) this;
-        bankOverlay.close = close -> {
-            close();
-            return null;
-        };
-        bankOverlay.render(context, mouseX, mouseY, delta);
+        // Only create BankOverlay2 for bank-type containers to avoid expensive
+        // initialization (WynncraftItemDatabase.initialize()) on every GUI open
+        if (isBankScreen == null) {
+            Container container = Models.Container.getCurrentContainer();
+            if (container != null) {
+                isBankScreen = container instanceof AccountBankContainer ||
+                    container instanceof CharacterBankContainer ||
+                    container instanceof BookshelfContainer ||
+                    container instanceof MiscBucketContainer;
+            }
+        }
+
+        if (Boolean.TRUE.equals(isBankScreen) || currentOverlayType != BankOverlayType.NONE) {
+            if (bankOverlay == null) bankOverlay = new BankOverlay2(ci, (HandledScreen<?>) (Object) this);
+            bankOverlay.ci = ci;
+            bankOverlay.screen = (HandledScreen<?>) (Object) this;
+            bankOverlay.close = close -> {
+                close();
+                return null;
+            };
+            bankOverlay.render(context, mouseX, mouseY, delta);
+        }
 
         if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
             if (identifierOverlay == null) {
