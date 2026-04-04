@@ -7,8 +7,11 @@ import com.wynntils.models.items.encoding.type.EncodingSettings;
 import com.wynntils.models.items.items.game.GearItem;
 import com.wynntils.utils.EncodedByteBuffer;
 import com.wynntils.utils.type.ErrorOr;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.item.ItemStack;
 
+import java.util.List;
 import java.util.Optional;
 
 public class ItemUtils {
@@ -51,5 +54,13 @@ public class ItemUtils {
         }
 
         return Models.ItemEncoding.makeItemString(wynnItem, errorOrEncoded.getValue());
+    }
+
+    public static Float getFirsCustomModelDataFloat(ItemStack itemStack) {
+        CustomModelDataComponent modelData = itemStack.get(DataComponentTypes.CUSTOM_MODEL_DATA);
+        if (modelData == null) return null;
+        List<Float> floats = modelData.floats();
+        if (floats == null || floats.isEmpty()) return null;
+        return floats.getFirst();
     }
 }

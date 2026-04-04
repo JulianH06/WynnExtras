@@ -2,6 +2,7 @@ package julianh06.wynnextras.mixin.BankOverlay;
 
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.Container;
+import com.wynntils.models.containers.containers.CharacterInfoContainer;
 import com.wynntils.models.containers.containers.CharacterSelectionContainer;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.containers.containers.ItemIdentifierContainer;
@@ -13,6 +14,7 @@ import julianh06.wynnextras.features.aspects.PartyFinderOpenLootpoolOverlay;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.*;
+import julianh06.wynnextras.features.misc.CompassMenuOverlay;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -56,6 +58,8 @@ public abstract class HandledScreenMixin {
 
     @Unique private CraftingHelperOverlay craftingHelperOverlay;
 
+    @Unique private CompassMenuOverlay compassMenuOverlay;
+
     @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
     private void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci){
         if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) {
@@ -96,6 +100,14 @@ public abstract class HandledScreenMixin {
             }
 
             craftingHelperOverlay.render(context, mouseX, mouseY, delta);
+        }
+
+        if(WynnExtrasConfig.INSTANCE.skillpointHelper) {
+            if(compassMenuOverlay == null) {
+                compassMenuOverlay = new CompassMenuOverlay();
+            }
+
+            compassMenuOverlay.render(context, mouseX, mouseY, delta);
         }
 
 
@@ -204,6 +216,24 @@ public abstract class HandledScreenMixin {
                     cir.cancel();
                 }
             }
+        }
+
+        if (Models.Container.getCurrentContainer() instanceof CharacterInfoContainer
+                && WynnExtrasConfig.INSTANCE.skillpointHelper
+                && CompassMenuOverlay.isSelectingWeapon()) {
+            if (compassMenuOverlay != null) {
+                compassMenuOverlay.mouseClicked(mouseX, mouseY, button);
+            }
+            cir.setReturnValue(true);
+            cir.cancel();
+            return;
+        }
+
+        if (compassMenuOverlay != null
+                && Models.Container.getCurrentContainer() instanceof CharacterInfoContainer
+                && WynnExtrasConfig.INSTANCE.skillpointHelper
+                && !CompassMenuOverlay.isSelectingWeapon()) {
+            compassMenuOverlay.mouseClicked(mouseX, mouseY, button);
         }
     }
 

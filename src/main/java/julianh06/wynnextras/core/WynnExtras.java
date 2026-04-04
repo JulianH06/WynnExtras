@@ -4,11 +4,8 @@ import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
-import julianh06.wynnextras.event.CharInputEvent;
-import julianh06.wynnextras.event.KeyInputEvent;
-import julianh06.wynnextras.event.TickEvent;
+import julianh06.wynnextras.event.*;
 import julianh06.wynnextras.core.loader.WELoader;
-import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
@@ -24,17 +21,15 @@ import julianh06.wynnextras.features.inventory.data.BookshelfData;
 import julianh06.wynnextras.features.inventory.data.CharacterBankData;
 import julianh06.wynnextras.features.inventory.data.MiscBucketData;
 import julianh06.wynnextras.features.chat.ChatNotificator;
+import julianh06.wynnextras.features.loader.SkillPointLoader;
 import julianh06.wynnextras.features.misc.BloodSorrowTimer;
 import julianh06.wynnextras.features.misc.FastRequeue;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.misc.TotemTimer;
 import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.raid.*;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
-import julianh06.wynnextras.features.raid.RaidListData;
-import julianh06.wynnextras.features.raid.RaidLootConfig;
-import julianh06.wynnextras.features.raid.RaidLootTracker;
-import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.waypoints.WaypointData;
 import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
@@ -49,6 +44,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.*;
+import net.minecraft.text.ClickEvent;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.DefaultedList;
@@ -167,6 +163,8 @@ public class WynnExtras implements ClientModInitializer {
 		WELoader.loadAll();
 		TickScheduler.init();
 
+        new InitEvent().post();
+
 		julianh06.wynnextras.event.ClickEvent.register();
 
 		PlayerHider.registerBossPlayerHider();
@@ -186,6 +184,8 @@ public class WynnExtras implements ClientModInitializer {
         RaidLootConfig.INSTANCE.load();
 		MaterialTextureResolver.register();
 		RecipeLoader.loadRecipes();
+		TreeRoomMinimap.register();
+		SkillPointLoader.init();
 
 		RaidListData.load();
 		WaypointData.load();

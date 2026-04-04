@@ -1,6 +1,7 @@
 package julianh06.wynnextras.config;
 
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.features.spellhider.SpellProfiles;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.features.misc.HudEditScreen;
 import net.fabricmc.loader.api.FabricLoader;
@@ -77,7 +78,7 @@ public class WynnExtrasConfigScreen extends Screen {
     private int scrollbarY, scrollbarHeight, scrollbarThumbY, scrollbarThumbH;
 
     // Dropdown state
-    private EnumOption<?> activeDropdown = null;
+    private DropdownOption<?> activeDropdown = null;
     private int dropdownX, dropdownY, dropdownWidth;
     private double dropdownScroll = 0;
     private static final int DROPDOWN_MAX_HEIGHT = 150;
@@ -101,95 +102,98 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // ===== RAIDS =====
         category("Raiding", GOLD_DARK)
-            .add(toggle("Timestamps", "Show timestamps during raids",
-                () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
-            .add(toggle("Fast Requeue", "Auto /pf on chest close",
-                () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
-            .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
-                () -> config.chiropTimer, v -> config.chiropTimer = v))
-            .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests",
-                () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
-            .sub("Loot Tracker")
+                .add(toggle("Timestamps", "Show timestamps during raids",
+                        () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
+                .add(toggle("Fast Requeue", "Auto /pf on chest close",
+                        () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
+                .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
+                        () -> config.chiropTimer, v -> config.chiropTimer = v))
+                .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests",
+                        () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
+                .sub("Loot Tracker")
                 .add(toggle("Enable Tracker", "Track raid loot drops",
-                    () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
+                        () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
                 .add(visibleWhen(toggle("Render in HUD", "Render the Overlay in the HUD",
-                    () -> config.raidLootTrackerRenderInHud, v -> config.raidLootTrackerRenderInHud = v),
-                    () -> config.toggleRaidLootTracker))
+                                () -> config.raidLootTrackerRenderInHud, v -> config.raidLootTrackerRenderInHud = v),
+                        () -> config.toggleRaidLootTracker))
                 .add(visibleWhen(toggle("Render in Inventory", "Render the Overlay while in the inventory",
-                    () -> config.raidLootTrackerRenderInInventory, v -> config.raidLootTrackerRenderInInventory = v),
-                    () -> config.toggleRaidLootTracker))
+                                () -> config.raidLootTrackerRenderInInventory, v -> config.raidLootTrackerRenderInInventory = v),
+                        () -> config.toggleRaidLootTracker))
                 .add(visibleWhen(toggle("Render in Chat", "Render the Overlay while the chat is open",
-                    () -> config.raidLootTrackerRenderInChat, v -> config.raidLootTrackerRenderInChat = v),
-                    () -> config.toggleRaidLootTracker))
+                                () -> config.raidLootTrackerRenderInChat, v -> config.raidLootTrackerRenderInChat = v),
+                        () -> config.toggleRaidLootTracker))
                 .add(visibleWhen(toggle("Only Near Chest", "Show only near reward chest",
-                    () -> config.raidLootTrackerOnlyNearChest, v -> config.raidLootTrackerOnlyNearChest = v),
-                    () -> config.toggleRaidLootTracker))
+                                () -> config.raidLootTrackerOnlyNearChest, v -> config.raidLootTrackerOnlyNearChest = v),
+                        () -> config.toggleRaidLootTracker))
                 .add(visibleWhen(toggle("Compact Mode", "Use compact display",
-                    () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v),
-                    () -> config.toggleRaidLootTracker))
+                                () -> config.raidLootTrackerCompact, v -> config.raidLootTrackerCompact = v),
+                        () -> config.toggleRaidLootTracker))
                 .add(visibleWhen(toggle("Show Background", "Show dark background",
-                    () -> config.raidLootTrackerBackground, v -> config.raidLootTrackerBackground = v),
-                    () -> config.toggleRaidLootTracker));
-
+                                () -> config.raidLootTrackerBackground, v -> config.raidLootTrackerBackground = v),
+                        () -> config.toggleRaidLootTracker))
+                .add(visibleWhen(text("The Tracker is movable", "To change its position open your inventory and drag it where you want"),
+                        () -> config.toggleRaidLootTracker))
+                .sub("TNA Tree Room Map")
+                .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
+                        () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))
+                .add(toggle("Show Tree Map only inside of tree", "Only show the Tree Map while you are the person inside of the tree",
+                        () -> config.showTreeMapOnlyWhileInsideOfTree, v -> config.showTreeMapOnlyWhileInsideOfTree = v))
+                .add(toggle("Show paths on Tree Map", "Show the optimal path to the soul while inside the tree",
+                        () -> config.showPathsOnTreeMap, v -> config.showPathsOnTreeMap = v))
+                .add(toggle("Show Map everywhere", "Enable this if you want to edit the position without going into TNA",
+                        () -> config.showTreeMapEverywhere, v -> config.showTreeMapEverywhere = v))
+                .add(text("The Map is movable", "To change its position open your inventory and drag it where you want"));
 
         // ===== COMBAT =====
         category("Combat", 0xFFfda216)
-            .sub("Shaman Totem Timer")
+                .sub("Shaman Totem Timer")
                 .add(toggle("Totem Timer", "Show totem countdown timer on HUD",
-                    () -> config.totemTimerEnabled, v -> config.totemTimerEnabled = v))
+                        () -> config.totemTimerEnabled, v -> config.totemTimerEnabled = v))
                 .add(visibleWhen(toggle("Own Totems Only", "Only show timers for your own totems",
-                    () -> config.totemTimerOwnOnly, v -> config.totemTimerOwnOnly = v),
-                    () -> config.totemTimerEnabled))
+                                () -> config.totemTimerOwnOnly, v -> config.totemTimerOwnOnly = v),
+                        () -> config.totemTimerEnabled))
                 .add(visibleWhen(toggle("Warning Text", "Show RECAST TOTEM! on screen when low (movable in Edit Gui)",
-                    () -> config.totemTimerWarningText, v -> config.totemTimerWarningText = v),
-                    () -> config.totemTimerEnabled))
+                                () -> config.totemTimerWarningText, v -> config.totemTimerWarningText = v),
+                        () -> config.totemTimerEnabled))
                 .add(visibleWhen(dropdown("Warning Text Color", "Color of the totem timer warning text",
-                    WynnExtrasConfig.TextColor.class, () -> config.totemTimerWarningTextColor, v -> config.totemTimerWarningTextColor = v),
-                    () -> config.totemTimerEnabled && config.totemTimerWarningText))
+                                WynnExtrasConfig.TextColor.class, () -> config.totemTimerWarningTextColor, v -> config.totemTimerWarningTextColor = v),
+                        () -> config.totemTimerEnabled && config.totemTimerWarningText))
                 .add(visibleWhen(toggle("Warning Sound", "Play pling sound when totem is low",
-                    () -> config.totemTimerWarningSound, v -> config.totemTimerWarningSound = v),
-                    () -> config.totemTimerEnabled))
+                                () -> config.totemTimerWarningSound, v -> config.totemTimerWarningSound = v),
+                        () -> config.totemTimerEnabled))
                 .add(visibleWhen(slider("Warning Volume", "The volume of the totem warning",
-                    0, 200, () -> (int)(config.totemTimerWarningSoundVolume), v -> config.totemTimerWarningSoundVolume = v),
-                    () -> config.totemTimerEnabled && config.totemTimerWarningSound))
+                                0, 200, () -> (int)(config.totemTimerWarningSoundVolume), v -> config.totemTimerWarningSoundVolume = v),
+                        () -> config.totemTimerEnabled && config.totemTimerWarningSound))
                 .add(visibleWhen(slider("Warning Threshold", "Seconds remaining to trigger warning",
-                    1, 6, () -> config.totemTimerWarningThreshold, v -> config.totemTimerWarningThreshold = v),
-                    () -> config.totemTimerEnabled && (config.totemTimerWarningSound || config.totemTimerWarningText)))
+                                1, 6, () -> config.totemTimerWarningThreshold, v -> config.totemTimerWarningThreshold = v),
+                        () -> config.totemTimerEnabled && (config.totemTimerWarningSound || config.totemTimerWarningText)))
                 .add(visibleWhen(toggle("Estimate Out-of-Range", "Continue countdown when totem leaves render distance",
-                    () -> config.totemTimerEstimate, v -> config.totemTimerEstimate = v),
-                    () -> config.totemTimerEnabled))
-            .sub("Shaman Blood Sorrow Timer")
+                                () -> config.totemTimerEstimate, v -> config.totemTimerEstimate = v),
+                        () -> config.totemTimerEnabled))
+                .sub("Shaman Blood Sorrow Timer")
                 .add(toggle("Blood Sorrow Timer", "Show Blood Sorrow cooldown on HUD",
-                    () -> config.bloodSorrowTimerEnabled, v -> config.bloodSorrowTimerEnabled = v))
+                        () -> config.bloodSorrowTimerEnabled, v -> config.bloodSorrowTimerEnabled = v))
                 .add(visibleWhen(toggle("Auto detect blood sorrow time", "Checks for acolyte aspect and resonance to calculate the time",
-                    () -> config.autoDetectBloodSorrowTime, v -> config.autoDetectBloodSorrowTime = v),
-                    () -> config.bloodSorrowTimerEnabled))
+                                () -> config.autoDetectBloodSorrowTime, v -> config.autoDetectBloodSorrowTime = v),
+                        () -> config.bloodSorrowTimerEnabled))
                 .add(visibleWhen(toggle("Auto detect acolyte aspect", "Checks for the acolyte aspect tier to calculate the time",
-                    () -> config.autoDetectAcolyteAspectTier, v -> config.autoDetectAcolyteAspectTier = v),
-                    () -> !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
+                                () -> config.autoDetectAcolyteAspectTier, v -> config.autoDetectAcolyteAspectTier = v),
+                        () -> !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
                 .add(visibleWhen(slider("Acolyte aspect tier", "Use this to manually set the tier of your acolyte aspect for the timer",
-                    0, 3, () -> config.acolyteAspect, v -> config.acolyteAspect = v),
-                    () -> !config.autoDetectAcolyteAspectTier && !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
+                                0, 3, () -> config.acolyteAspect, v -> config.acolyteAspect = v),
+                        () -> !config.autoDetectAcolyteAspectTier && !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
                 .add(visibleWhen(toggle("Auto detect resonance", "Checks if you are holding a resonance to calculate the time",
-                    () -> config.autoDetectResonanceInHand, v -> config.autoDetectResonanceInHand = v),
-                    () -> !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
+                                () -> config.autoDetectResonanceInHand, v -> config.autoDetectResonanceInHand = v),
+                        () -> !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
                 .add(visibleWhen(toggle("Resonance", "Manually set if you use a resonance or not",
-                    () -> config.resoInHand, v -> config.resoInHand = v),
-                    () -> !config.autoDetectResonanceInHand && !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
-            .sub("Shaman Totem Range")
-                .add(toggle("Show Totem Range", "Display totem range circle",
-                    () -> config.totemRangeVisualizerToggle, v -> config.totemRangeVisualizerToggle = v))
-                .add(sliderF("Totem Radius", "Size of totem circle",
-                    1f, 30f, 0.5f, () -> config.totemRange, v -> config.totemRange = v))
-                .add(dropdown("Totem Color", "Circle color",
-                    WynnExtrasConfig.TextColor.class, () -> config.totemColor, v -> config.totemColor = v))
-                .add(sliderF("Eldritch Radius", "Eldritch call range",
-                    1f, 30f, 0.5f, () -> config.eldritchCallRange, v -> config.eldritchCallRange = v))
-                .add(dropdown("Eldritch Color", "Circle color",
-                    WynnExtrasConfig.TextColor.class, () -> config.eldritchCallColor, v -> config.eldritchCallColor = v))
-            .sub("Provoke Timer")
+                                () -> config.resoInHand, v -> config.resoInHand = v),
+                        () -> !config.autoDetectResonanceInHand && !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
+                .sub("Provoke Timer")
                 .add(toggle("Enable Provoke Timer", "Show provoke timer on HUD",
-                    () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v));
+                        () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
+                .add(visibleWhen(dropdown("Timer Color", "Timer text color",
+                                WynnExtrasConfig.TextColor.class, () -> config.provokeTimerColor, v -> config.provokeTimerColor = v),
+                        () -> config.provokeTimerToggle));
 
         // ===== INVENTORY =====
         Category invCategory = category("Inventory", 0xFFea1219);
@@ -199,54 +203,60 @@ public class WynnExtrasConfigScreen extends Screen {
                     () -> config.wynnventoryOverlay, v -> config.wynnventoryOverlay = v));
         }
 
-        invCategory.sub("Bank Overlay")
-            .add(toggle("Enable Bank Overlay", "Custom Bank Overlay",
-                    () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v))
-            .add(toggle("Smooth Scroll", "Smooth scrolling",
-                    () -> config.smoothScrollToggle, v -> config.smoothScrollToggle = v))
-            .add(toggle("Quick Toggle", "Show quick toggle button",
-                    () -> config.bankQuickToggle, v -> config.bankQuickToggle = v))
-            .add(toggle("Dark Mode", "Dark bank theme",
-                    () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
-            .add(slider("Rarity BG Alpha", "Item rarity background opacity",
-                    0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
-            .add(slider("Max Rows", "The maximum amount of rows (lower can reduce lag)",
-                    2, 24, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
-            .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
-                    2, 24, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
-            .sub("Tooltips")
+        invCategory
+                .add(toggle("Skill point helper (experimental)", "Show you your armor in the compass menu and a button to automatically assign skill points",
+                        () -> config.skillpointHelper, v -> config.skillpointHelper = v))
+                .sub("Bank Overlay")
+                .add(toggle("Enable Bank Overlay", "Custom Bank Overlay",
+                        () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v))
+                .add(toggle("Smooth Scroll", "Smooth scrolling",
+                        () -> config.smoothScrollToggle, v -> config.smoothScrollToggle = v))
+                .add(toggle("Quick Toggle", "Show quick toggle button",
+                        () -> config.bankQuickToggle, v -> config.bankQuickToggle = v))
+                .add(toggle("Dark Mode", "Dark bank theme",
+                        () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
+                .add(slider("Rarity BG Alpha", "Item rarity background opacity",
+                        0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
+                .add(slider("Max Rows", "The maximum amount of rows (lower can reduce lag)",
+                        2, 24, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
+                .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
+                        2, 24, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
+                .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
-                    () -> config.showWeight, v -> config.showWeight = v))
+                        () -> config.showWeight, v -> config.showWeight = v))
                 .add(toggle("Stat Scales", "Show weights for each stat",
-                    () -> config.showScales, v -> config.showScales = v))
-            .sub("Trade Market")
+                        () -> config.showScales, v -> config.showScales = v))
+                .sub("Trade Market")
                 .add(toggle("Scale background", "Use mythic scale as item background",
-                    () -> config.scaleBackgroundEnabled, v -> config.scaleBackgroundEnabled = v))
+                        () -> config.scaleBackgroundEnabled, v -> config.scaleBackgroundEnabled = v))
                 .add(toggle("Hide scale background button", "Hides the quick toggle for the scale background setting",
                         () -> config.hideScaleBackgroundButton, v -> config.hideScaleBackgroundButton = v))
                 .add(toggle("Hide comparing info text", "Shows a text that informs you that you can compare items with F1",
                         () -> config.hideTMInfoText, v -> config.hideTMInfoText = v))
+                .add(text("The Comparison panels are movable", "To change their position just drag it where you want"))
                 .add(toggle("Trade market price summary", "Trade market overlay that shows you how much money you can claim",
                         () -> config.tradeMarketOverlay, v -> config.tradeMarketOverlay = v))
                 .add(toggle("Price overlay background", "Show a dark background for the price overlay",
                         () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
-            .sub("Crafting")
+                .add(text("The price summary is movable", "To change its position just drag it where you want"))
+                .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
-                    () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
+                        () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
                 .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
                         () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
                 .add(toggle("Crafting preview", "Crafting preview toggle",
                         () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
-                        () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v));
+                        () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
+                .add(text("The preview is movable", "To change its position just drag it where you want"));
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)
-            .add(stringList("Blocked Words", "Hide messages with these",
-                    () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
-            .add(toggle("Quick PV/GV Access", "Click on a players name or guild to open the pv/gv! (EXPERIMENTAL)",
-                    () -> config.chatClickPV, v -> config.chatClickPV = v))
-            .sub("Notifications")
+                .add(stringList("Blocked Words", "Hide messages with these",
+                        () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
+                .add(toggle("Quick PV/GV Access", "Click on a players name or guild to open the pv/gv! (EXPERIMENTAL)",
+                        () -> config.chatClickPV, v -> config.chatClickPV = v))
+                .sub("Notifications")
                 .add(stringListDual("Notifier Words", "Trigger word and display text",
                         () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
                 .add(sliderF("Duration (ms)", "How long notification shows",
@@ -264,77 +274,63 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(slider("Pitch", "Sound pitch",
                         0, 200, () -> (int)(config.soundPitch), v -> config.soundPitch = v))
                 .add(button("Sound Test", "Click the button to test the sound",
-                    v -> McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test"))
-            .sub("Premade Notifications")
+                        v -> McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test"))
+                .sub("Premade Notifications")
                 .add(toggle("Lost Eye", "Lost Eye in TNA light room",
-                    () -> config.lostEye, v -> config.lostEye = v))
+                        () -> config.lostEye, v -> config.lostEye = v))
                 .add(toggle("+1 Goo", "+1 Goo in NOTG Slime Gathering",
-                    () -> config.oneGoo, v -> config.oneGoo = v))
+                        () -> config.oneGoo, v -> config.oneGoo = v))
                 .add(toggle("+2 Goos", "+2 Goos in NOTG Slime Gathering",
-                    () -> config.twoGoo, v -> config.twoGoo = v))
+                        () -> config.twoGoo, v -> config.twoGoo = v))
                 .add(toggle("Next Soul", "When next soul is ready in TNA tree room",
-                    () -> config.soul, v -> config.soul = v))
+                        () -> config.soul, v -> config.soul = v))
                 .add(toggle("+1 Void Matter", "+1 Void Matter in TNA void gathering room",
-                    () -> config.voidMatter, v -> config.voidMatter = v))
+                        () -> config.voidMatter, v -> config.voidMatter = v))
                 .add(toggle("Kill the voidholes", "When holes can be attacked in TNA gathering room",
-                    () -> config.fourOutOfFiveVoidMatter, v -> config.fourOutOfFiveVoidMatter = v))
+                        () -> config.fourOutOfFiveVoidMatter, v -> config.fourOutOfFiveVoidMatter = v))
                 .add(toggle("+1 Crystal", "+1 Crystal in NOL gathering room",
-                    () -> config.oneLightCrystal, v -> config.oneLightCrystal = v))
+                        () -> config.oneLightCrystal, v -> config.oneLightCrystal = v))
                 .add(toggle("+2 Crystals", "+2 Crystals in NOL gathering room",
-                    () -> config.twoLightCrystal, v -> config.twoLightCrystal = v))
+                        () -> config.twoLightCrystal, v -> config.twoLightCrystal = v))
                 .add(toggle("Upper platform spawned", "Upper platform spawn in NOTG minibosses",
-                    () -> config.notgUpperPlatform, v -> config.notgUpperPlatform = v))
+                        () -> config.notgUpperPlatform, v -> config.notgUpperPlatform = v))
                 .add(toggle("Lower platform spawned", "Lower platform spawn in NOTG minibosses",
-                    () -> config.notgLowerPlatform, v -> config.notgLowerPlatform = v)
-                )
-            .sub("Chat Peek")
-                .add(toggle("Enable Chat Peek", "Hold/toggle a key to see the chat without opening the chat screen",
-                        () -> config.chatPeekEnabled, v -> config.chatPeekEnabled = v))
-                .add(visibleWhen(keybind("Keybind", "Key to peek at the chat",
-                        () -> config.chatPeekKey, v -> config.chatPeekKey = v),
-                        () -> config.chatPeekEnabled))
-                .add(visibleWhen(toggle("Toggle Mode", "Toggle instead of hold",
-                                () -> config.chatPeekToggle, v -> config.chatPeekToggle = v),
-                        () -> config.chatPeekEnabled))
-                .add(visibleWhen(toggle("Vanilla Scroll", "Replace chat scroll with hotbar scroll while peeking",
-                                () -> config.chatPeekAllowVanillaScroll, v -> config.chatPeekAllowVanillaScroll = v),
-                        () -> config.chatPeekEnabled));
+                        () -> config.notgLowerPlatform, v -> config.notgLowerPlatform = v))
+                .add(toggle("Artifacts power restored", "When you can charge again in TWP room 3",
+                        () -> config.artifactRestored, v -> config.artifactRestored = v));
 
-        // ===== Player Hider =====
-        category("Player Hider", 0xFF673190)
-            .add(toggle("Enable Player Hider", "Enable the Player Hider",
-                () -> config.playerHiderToggle, v -> config.playerHiderToggle = v))
-            .add(slider("Hide Distance", "Max distance to hide",
-            1, 20, () -> config.maxHideDistance, v -> config.maxHideDistance = v))
-            .add(toggle("Hide All Players", "Hide all players in range",
-                () -> config.hideAllPlayers, v -> config.hideAllPlayers = v))
-            .add(toggle("Hide All Players while in Wars", "Hide all players during wars",
-                () -> config.hideAllPlayersInWar, v -> config.hideAllPlayersInWar = v))
-            .add(stringList("Hidden Players", "Always hide these players",
-                () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"));
-
+        // ===== Hiders =====
+        category("Hiders", 0xFF673190)
+                .add(toggle("Enable Player Hider", "Enable the Player Hider",
+                        () -> config.playerHiderToggle, v -> config.playerHiderToggle = v))
+                .add(slider("Hide Distance", "Max distance to hide",
+                        1, 20, () -> config.maxHideDistance, v -> config.maxHideDistance = v))
+                .add(toggle("Hide All Players", "Hide all players in range",
+                        () -> config.hideAllPlayers, v -> config.hideAllPlayers = v))
+                .add(toggle("Hide All Players while in Wars", "Hide all players during wars",
+                        () -> config.hideAllPlayersInWar, v -> config.hideAllPlayersInWar = v))
+                .add(stringList("Hidden Players", "Always hide these players",
+                        () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"))
+            .add(dropdown("Spell Hider Profile", "The default values for the spell hider, this can be changed at will without changing the overrides set with /Wynnextras SpellHider modify",
+                    SpellProfiles.getProfileNames(), () -> config.spellProfile, v -> config.spellProfile = v));
 
         // ===== MISC =====
         category("Misc", 0xFF0872bc)
-            .add(toggle("Show Own Nametag", "Render your nametag above your head",
-                () -> config.showOwnNametag, v -> config.showOwnNametag = v))
-            .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
-                () -> config.differentGUIScale, v -> config.differentGUIScale = v))
-            .add(slider("GUI Scale", "Custom GUI scale value",
-            1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
-            .add(toggle("Redirect Wynntils View Stats", "Changes the Wynntils Player Viewer's 'View Player Stats' button to open the Profile Viewer instead of the website stats page",
-                () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v))
-            .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
-                () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
-            .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
-                () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
-            .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
-                () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
-            .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
-                () -> config.badgesEnabled, v -> config.badgesEnabled = v))
-            .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
-                    () -> config.removeChroma, v -> config.removeChroma = v))
-            .sub("Dark Mode Toggles")
+                .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
+                        () -> config.differentGUIScale, v -> config.differentGUIScale = v))
+                .add(slider("GUI Scale", "Custom GUI scale value",
+                        1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
+                .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
+                        () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
+                .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
+                        () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
+                .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
+                        () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
+                .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
+                        () -> config.badgesEnabled, v -> config.badgesEnabled = v))
+                .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
+                        () -> config.removeChroma, v -> config.removeChroma = v))
+                .sub("Dark Mode Toggles")
                 .add(toggle("Bank Overlay", "Dark mode for the Bank Overlay",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
                 .add(toggle("Profile Viewer", "Dark mode for the Profile viewer",
@@ -346,12 +342,12 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Main menu", "Dark mode for the WynnExtras main menu (/we)",
                         () -> config.mainMenuDarkMode, v -> config.mainMenuDarkMode = v))
                 .add(button("Enable for all", "Enable the Dark mode for all options above",
-                    v -> {
-                        config.darkmodeToggle = true;
-                        config.pvDarkmodeToggle = true;
-                        config.lootPoolPagesDarkMode = true;
-                        config.craftingHelperDarkMode = true;
-                        config.mainMenuDarkMode = true; }, "Enable"))
+                        v -> {
+                            config.darkmodeToggle = true;
+                            config.pvDarkmodeToggle = true;
+                            config.lootPoolPagesDarkMode = true;
+                            config.craftingHelperDarkMode = true;
+                            config.mainMenuDarkMode = true; }, "Enable"))
                 .add(button("Disable for all", "Disable the Dark mode for all options above",
                     v -> {
                         config.darkmodeToggle = false;
@@ -406,19 +402,18 @@ public class WynnExtrasConfigScreen extends Screen {
     // Check if category has any matching options
     private boolean categoryHasMatches(Category cat) {
         if (searchQuery.isEmpty()) return true;
-        // Check if category name matches
         if (cat.name.toLowerCase().contains(searchQuery.toLowerCase())) return true;
-        // Check top-level options
         for (ConfigOption opt : cat.options) {
             if (matchesSearch(opt)) return true;
         }
-        // Check subcategories
         for (SubCategory sub : cat.subCategories) {
             if (subHasMatches(sub)) return true;
         }
         return false;
     }
 
+    private ConfigOption text(String name, String desc) {
+        return new TextOption(name, desc);
     private ConfigOption keybind(String name, String desc, Supplier<Integer> get, Consumer<Integer> set) {
         return new KeybindOption(name, desc, get, set);
     }
@@ -439,6 +434,10 @@ public class WynnExtrasConfigScreen extends Screen {
         return new EnumOption<>(name, desc, cls, get, set);
     }
 
+    private <T> ConfigOption dropdown(String name, String desc, List<T> vals, Supplier<T> get, Consumer<T> set) {
+        return new ListOption<>(name, desc, vals, get, set);
+    }
+
     private ConfigOption stringList(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set, String itemName) {
         return new StringListOption(name, desc, get, set, itemName, false);
     }
@@ -455,7 +454,6 @@ public class WynnExtrasConfigScreen extends Screen {
         option.visibleWhen(condition);
         return option;
     }
-
 
     // ==================== SCREEN LIFECYCLE ====================
     @Override
@@ -475,10 +473,8 @@ public class WynnExtrasConfigScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         updateMaxScroll();
-
         scrollOffset = Math.min(scrollOffset, maxScroll);
 
-        // Normal render
         ctx.fill(0, 0, width, height, BG_DARK);
 
         // Disable hover when dropdown is open
@@ -503,13 +499,9 @@ public class WynnExtrasConfigScreen extends Screen {
     }
 
     private void drawSidebar(DrawContext ctx, int mouseX, int mouseY) {
-        // Clean solid background
         ctx.fill(0, 0, SIDEBAR_WIDTH, height, BG_MEDIUM);
-
-        // Right border
         ctx.fill(SIDEBAR_WIDTH - 2, 0, SIDEBAR_WIDTH, height, BORDER_DARK);
 
-        // Title
         ctx.drawCenteredTextWithShadow(textRenderer, "Categories", SIDEBAR_WIDTH / 2, 18, GOLD);
         ctx.fill(20, 32, SIDEBAR_WIDTH - 20, 33, GOLD_DARK);
 
@@ -529,7 +521,6 @@ public class WynnExtrasConfigScreen extends Screen {
         ctx.drawTextWithShadow(textRenderer, displayText + (searchFocused ? "_" : ""),
                 14, searchY + 10, searchTextColor);
 
-        // Clear button if there's text
         if (!searchQuery.isEmpty()) {
             int clearX = SIDEBAR_WIDTH - 28;
             boolean clearHovered = mouseX >= clearX && mouseX < clearX + 20
@@ -542,13 +533,11 @@ public class WynnExtrasConfigScreen extends Screen {
         for (int i = 0; i < categories.size(); i++) {
             Category cat = categories.get(i);
 
-            // Filter categories - only show if they have matching options
             if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) continue;
 
             boolean hovered = mouseX >= 8 && mouseX < SIDEBAR_WIDTH - 8 && mouseY >= y && mouseY < y + 22;
             boolean selected = i == selectedCategory;
 
-            // Background
             if (selected) {
                 ctx.fill(8, y, SIDEBAR_WIDTH - 8, y + 22, PARCHMENT);
                 ctx.fill(8, y, 12, y + 22, cat.color);
@@ -556,7 +545,6 @@ public class WynnExtrasConfigScreen extends Screen {
                 ctx.fill(8, y, SIDEBAR_WIDTH - 8, y + 22, BG_LIGHT);
             }
 
-            // Color dot and text
             drawDiamond(ctx, 20, y + 10, 4, cat.color);
             ctx.drawTextWithShadow(textRenderer, cat.name, 30, y + 7, selected ? TEXT_LIGHT : TEXT_DIM);
 
@@ -590,7 +578,6 @@ public class WynnExtrasConfigScreen extends Screen {
         int listTop = HEADER_HEIGHT + 15;
         int listBottom = height - FOOTER_HEIGHT - 10;
 
-        // Category header
         drawDiamond(ctx, contentX + 5, listTop + 2, 5, cat.color);
         ctx.drawTextWithShadow(textRenderer, cat.name, contentX + 16, listTop - 1, cat.color);
         ctx.fill(contentX, listTop + 12, contentX + contentW, listTop + 13, cat.color);
@@ -599,14 +586,12 @@ public class WynnExtrasConfigScreen extends Screen {
 
         int y = listTop + 20 - (int)scrollOffset;
 
-        // Render subcategories with filtering
         for (SubCategory sub : cat.subCategories) {
             if (subHasMatches(sub)) {
                 y = renderSubCategory(ctx, sub, contentX, y, contentW, mouseX, mouseY, listTop + 15, listBottom);
             }
         }
 
-        // Render top-level options with filtering
         for (ConfigOption opt : cat.options) {
             if (matchesSearch(opt)) {
                 if (y + OPTION_HEIGHT > listTop && y < listBottom) {
@@ -619,7 +604,6 @@ public class WynnExtrasConfigScreen extends Screen {
 
         ctx.disableScissor();
 
-        // Scrollbar
         if (maxScroll > 0) {
             int sbX = panelX + panelW - 12;
             scrollbarY = listTop + 15;
@@ -660,56 +644,42 @@ public class WynnExtrasConfigScreen extends Screen {
         return y;
     }
 
-    // Dropdown overlay - renders in place on top of content
     private void renderDropdownOverlay(DrawContext ctx, int mouseX, int mouseY) {
-//        ctx.getMatrices().push();
-//        ctx.getMatrices().translate(0, 0, 300);
-
-        Object[] values = activeDropdown.enumClass.getEnumConstants();
+        Object[] values = activeDropdown.getValues();
         int totalContentH = values.length * DROPDOWN_ITEM_HEIGHT;
         int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
         boolean needsScroll = totalContentH > DROPDOWN_MAX_HEIGHT;
 
-        // Position near the button
         int ddW = dropdownWidth + (needsScroll ? 10 : 0);
         int ddX = dropdownX;
         int ddY = dropdownY;
 
-        // Make sure dropdown fits on screen
         if (ddY + visibleH > height - 10) {
             ddY = dropdownY - visibleH - 24;
         }
 
-        // Clamp scroll
         double maxScroll = Math.max(0, totalContentH - visibleH);
         dropdownScroll = MathHelper.clamp(dropdownScroll, 0, maxScroll);
 
-        // Outer frame - solid border
         ctx.fill(ddX - 3, ddY - 3, ddX + ddW + 3, ddY + visibleH + 3, BORDER_DARK);
         ctx.fill(ddX - 2, ddY - 2, ddX + ddW + 2, ddY + visibleH + 2, selectedCategoryColor);
         ctx.fill(ddX - 1, ddY - 1, ddX + ddW + 1, ddY + visibleH + 1, BG_MEDIUM);
-
-        // Content area - FULLY OPAQUE solid background
         ctx.fill(ddX, ddY, ddX + ddW, ddY + visibleH, PARCHMENT);
 
-        // Scissor for scrolling content
         ctx.enableScissor(ddX, ddY, ddX + ddW - (needsScroll ? 8 : 0), ddY + visibleH);
 
         for (int i = 0; i < values.length; i++) {
             int iy = ddY + i * DROPDOWN_ITEM_HEIGHT - (int)dropdownScroll;
 
-            // Skip if out of visible area
             if (iy + DROPDOWN_ITEM_HEIGHT < ddY || iy > ddY + visibleH) continue;
 
             boolean hovered = mouseX >= ddX && mouseX < ddX + ddW - (needsScroll ? 8 : 0)
                     && mouseY >= Math.max(ddY, iy) && mouseY < Math.min(ddY + visibleH, iy + DROPDOWN_ITEM_HEIGHT);
             boolean selected = values[i].equals(activeDropdown.getter.get());
 
-            // Item background - fully opaque
             int itemBg = selected ? selectedCategoryColor : (hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(ddX, iy, ddX + ddW - (needsScroll ? 8 : 0), iy + DROPDOWN_ITEM_HEIGHT, itemBg);
 
-            // Separator
             if (i > 0) {
                 ctx.fill(ddX + 8, iy, ddX + ddW - (needsScroll ? 16 : 8), iy + 1, BG_LIGHT);
             }
@@ -721,7 +691,6 @@ public class WynnExtrasConfigScreen extends Screen {
 
         ctx.disableScissor();
 
-        // Scrollbar if needed
         if (needsScroll) {
             int sbX = ddX + ddW - 6;
             int sbH = visibleH;
@@ -731,8 +700,6 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(sbX, ddY, sbX + 5, ddY + sbH, BG_DARK);
             ctx.fill(sbX + 1, thumbY, sbX + 4, thumbY + thumbH, selectedCategoryColor);
         }
-
-        //ctx.getMatrices().pop();
     }
 
     private void drawFooter(DrawContext ctx, int mouseX, int mouseY) {
@@ -773,7 +740,7 @@ public class WynnExtrasConfigScreen extends Screen {
         int btn = click.button();
 
         if (activeDropdown != null) {
-            Object[] values = activeDropdown.enumClass.getEnumConstants();
+            Object[] values = activeDropdown.getValues();
             int totalContentH = values.length * DROPDOWN_ITEM_HEIGHT;
             int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
             boolean needsScroll = totalContentH > DROPDOWN_MAX_HEIGHT;
@@ -781,12 +748,10 @@ public class WynnExtrasConfigScreen extends Screen {
             int ddX = dropdownX;
             int ddY = dropdownY;
 
-            // Match the flip logic from render
             if (ddY + visibleH > height - 10) {
                 ddY = dropdownY - visibleH - 24;
             }
 
-            // Check if click is inside dropdown area
             if (mx >= ddX && mx < ddX + ddW && my >= ddY && my < ddY + visibleH) {
                 for (int i = 0; i < values.length; i++) {
                     int iy = ddY + i * DROPDOWN_ITEM_HEIGHT - (int)dropdownScroll;
@@ -801,7 +766,7 @@ public class WynnExtrasConfigScreen extends Screen {
                         return true;
                     }
                 }
-                return true; // Clicked inside but not on item (scrollbar area)
+                return true;
             }
 
             activeDropdown = null;
@@ -826,7 +791,7 @@ public class WynnExtrasConfigScreen extends Screen {
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
-            //======== Edit Position =========
+            //======== Edit HUD Position =========
             if (mx >= width - 335 && mx < width - 235) {
                 WynnExtrasConfig.save();
                 WynnExtrasConfig.load();
@@ -839,7 +804,6 @@ public class WynnExtrasConfigScreen extends Screen {
         // Search bar in sidebar
         int sidebarSearchY = 40;
         if (mx >= 8 && mx < SIDEBAR_WIDTH - 8 && my >= sidebarSearchY && my < sidebarSearchY + SEARCH_BAR_HEIGHT) {
-            // Clear button
             if (!searchQuery.isEmpty()) {
                 int clearX = SIDEBAR_WIDTH - 28;
                 if (mx >= clearX && mx < clearX + 20) {
@@ -851,12 +815,10 @@ public class WynnExtrasConfigScreen extends Screen {
                     return true;
                 }
             }
-            // Click on search bar
             searchFocused = true;
             return true;
         }
 
-        // Click outside search bar removes focus
         if (searchFocused && (my < sidebarSearchY || my >= sidebarSearchY + SEARCH_BAR_HEIGHT || mx < 8 || mx >= SIDEBAR_WIDTH - 8)) {
             if (mx < SIDEBAR_WIDTH) {
                 searchFocused = false;
@@ -868,7 +830,6 @@ public class WynnExtrasConfigScreen extends Screen {
             int y = sidebarSearchY + SEARCH_BAR_HEIGHT + 8;
             for (int i = 0; i < categories.size(); i++) {
                 Category cat = categories.get(i);
-                // Skip filtered categories
                 if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) continue;
 
                 if (my >= y && my < y + 24) {
@@ -1005,8 +966,7 @@ public class WynnExtrasConfigScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mx, double my, double hAmt, double vAmt) {
         if (activeDropdown != null) {
-            // Scroll the dropdown
-            Object[] values = activeDropdown.enumClass.getEnumConstants();
+            Object[] values = activeDropdown.getValues();
             int totalContentH = values.length * DROPDOWN_ITEM_HEIGHT;
             int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
             double maxDropScroll = Math.max(0, totalContentH - visibleH);
@@ -1037,7 +997,6 @@ public class WynnExtrasConfigScreen extends Screen {
             return true;
         }
 
-        // Handle search bar input
         if (searchFocused) {
             if (key == 259) { // Backspace
                 if (!searchQuery.isEmpty()) {
@@ -1063,7 +1022,7 @@ public class WynnExtrasConfigScreen extends Screen {
     public boolean charTyped(CharInput charInput) {
         if (searchFocused) {
             char c = (char) charInput.codepoint();
-            if (c >= 32 && c < 127) { // Printable ASCII
+            if (c >= 32 && c < 127) {
                 searchQuery += c;
                 scrollOffset = 0;
                 updateMaxScroll();
@@ -1074,12 +1033,10 @@ public class WynnExtrasConfigScreen extends Screen {
         return super.charTyped(charInput);
     }
 
-    // Auto-select first category with matches when searching
     private void autoSelectMatchingCategory() {
         if (!searchQuery.isEmpty() && selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category currentCat = categories.get(selectedCategory);
             if (!categoryHasMatches(currentCat)) {
-                // Find first category with matches
                 for (int i = 0; i < categories.size(); i++) {
                     if (categoryHasMatches(categories.get(i))) {
                         selectedCategory = i;
@@ -1145,7 +1102,7 @@ public class WynnExtrasConfigScreen extends Screen {
         final String name;
         final List<ConfigOption> options = new ArrayList<>();
         boolean expanded = true;
-        SubCategory(String name) { this.name = name;}
+        SubCategory(String name) { this.name = name; }
     }
 
     // ==================== CONFIG OPTIONS ====================
@@ -1168,7 +1125,22 @@ public class WynnExtrasConfigScreen extends Screen {
         boolean isVisible() {
             return visibilityCondition.getAsBoolean();
         }
+    }
 
+    private static class TextOption extends ConfigOption {
+        TextOption(String name, String desc) {
+            super(name, desc);
+        }
+
+        @Override
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
+            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
+            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+        }
     }
 
     private static class KeybindOption extends ConfigOption {
@@ -1416,16 +1388,20 @@ public class WynnExtrasConfigScreen extends Screen {
         }
     }
 
-    private class EnumOption<T extends Enum<T>> extends ConfigOption {
-        final Class<T> enumClass;
+    private abstract class DropdownOption<T> extends ConfigOption  {
+        DropdownOption(String name, String desc, Supplier<T> get, Consumer<T> set) {
+            super(name, desc);
+            this.getter = get;
+            this.setter = set;
+        }
+
         final Supplier<T> getter;
         final Consumer<T> setter;
         int btnX, btnY, btnW = 125, btnH = 22;
 
-        EnumOption(String name, String desc, Class<T> cls, Supplier<T> get, Consumer<T> set) {
-            super(name, desc);
-            this.enumClass = cls; this.getter = get; this.setter = set;
-        }
+        abstract void setValueByIndex(int idx);
+        abstract Object[] getValues();
+
 
         @Override
         void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
@@ -1456,16 +1432,52 @@ public class WynnExtrasConfigScreen extends Screen {
                 dropdownX = btnX;
                 dropdownY = btnY + btnH;
                 dropdownWidth = btnW;
-                dropdownScroll = 0; // Reset scroll when opening
+                dropdownScroll = 0;
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
             return false;
         }
 
-        void setValueByIndex(int idx) {
-            T[] vals = enumClass.getEnumConstants();
+    }
+
+    private class EnumOption<T extends Enum<T>>extends DropdownOption<T> {
+        final Class<T> enumClass;
+
+        EnumOption(String name, String desc, Class<T> cls, Supplier<T> get, Consumer<T> set) {
+            super(name, desc, get, set);
+            this.enumClass = cls;
+        }
+
+        @Override
+        public void setValueByIndex(int idx) {
+            T[] vals = getValues();
             if (idx >= 0 && idx < vals.length) setter.accept(vals[idx]);
+        }
+
+        @Override
+        public T[] getValues() {
+            return enumClass.getEnumConstants();
+        }
+    }
+
+    private class ListOption<T> extends DropdownOption<T> {
+        private final List<T> values;
+
+        ListOption(String name, String desc, List<T> values, Supplier<T> get, Consumer<T> set) {
+            super(name, desc, get, set);
+            this.values = values;
+        }
+
+        @Override
+        public void setValueByIndex(int idx) {
+            T[] vals = getValues();
+            if (idx >= 0 && idx < vals.length) setter.accept(vals[idx]);
+        }
+
+        @Override
+        public T[] getValues() {
+            return (T[]) values.toArray();
         }
     }
 
@@ -1625,36 +1637,29 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.drawCenteredTextWithShadow(textRenderer, title, width / 2, 35, GOLD);
             ctx.fill(px + 20, 48, px + pw - 20, 49, GOLD_DARK);
 
-            // Input fields
             int inputY = 65;
             if (dualInput) {
                 if (isEditing) {
-                    // Two input fields for trigger|display
                     int fieldW = (pw - 140) / 2;
 
-                    // Trigger field
                     ctx.drawTextWithShadow(textRenderer, "Trigger:", px + 15, inputY - 10, TEXT_DIM);
                     ctx.fill(px + 15, inputY, px + 15 + fieldW, inputY + 24, BORDER_DARK);
                     ctx.fill(px + 16, inputY + 1, px + 14 + fieldW, inputY + 23, activeField == 0 ? PARCHMENT_LIGHT : PARCHMENT);
                     ctx.drawTextWithShadow(textRenderer, input1 + (activeField == 0 ? "_" : ""), px + 20, inputY + 8, TEXT_LIGHT);
 
-                    // Display field
                     ctx.drawTextWithShadow(textRenderer, "Display:", px + 20 + fieldW, inputY - 10, TEXT_DIM);
                     ctx.fill(px + 20 + fieldW, inputY, px + 20 + fieldW * 2, inputY + 24, BORDER_DARK);
                     ctx.fill(px + 21 + fieldW, inputY + 1, px + 19 + fieldW * 2, inputY + 23, activeField == 1 ? PARCHMENT_LIGHT : PARCHMENT);
                     ctx.drawTextWithShadow(textRenderer, input2 + (activeField == 1 ? "_" : ""), px + 25 + fieldW, inputY + 8, TEXT_LIGHT);
                 } else {
-                    // Two input fields for trigger|display
                     int fieldW = (pw - 90) / 2;
 
-                    // Trigger field
                     ctx.drawTextWithShadow(textRenderer, "Trigger:", px + 15, inputY - 10, TEXT_DIM);
                     ctx.fill(px + 15, inputY, px + 15 + fieldW, inputY + 24, BORDER_DARK);
                     ctx.fill(px + 16, inputY + 1, px + 14 + fieldW, inputY + 23, activeField == 0 ? PARCHMENT_LIGHT : PARCHMENT);
                     String t1 = input1.length() > 18 ? input1.substring(0, 16) + ".." : input1;
                     ctx.drawTextWithShadow(textRenderer, t1 + (activeField == 0 ? "_" : ""), px + 20, inputY + 8, TEXT_LIGHT);
 
-                    // Display field
                     ctx.drawTextWithShadow(textRenderer, "Display:", px + 23 + fieldW, inputY - 10, TEXT_DIM);
                     ctx.fill(px + 23 + fieldW, inputY, px + 23 + fieldW * 2, inputY + 24, BORDER_DARK);
                     ctx.fill(px + 24 + fieldW, inputY + 1, px + 22 + fieldW * 2, inputY + 23, activeField == 1 ? PARCHMENT_LIGHT : PARCHMENT);
@@ -1662,7 +1667,6 @@ public class WynnExtrasConfigScreen extends Screen {
                     ctx.drawTextWithShadow(textRenderer, t2 + (activeField == 1 ? "_" : ""), px + 28 + fieldW, inputY + 8, TEXT_LIGHT);
                 }
             } else {
-                // Single input field
                 if (isEditing) {
                     ctx.fill(px + 15, inputY, px + pw - 120, inputY + 24, BORDER_DARK);
                     ctx.fill(px + 16, inputY + 1, px + pw - 121, inputY + 23, PARCHMENT);
@@ -1674,21 +1678,17 @@ public class WynnExtrasConfigScreen extends Screen {
                 }
             }
 
-            // Add/Save and Cancel buttons
             if (isEditing) {
-                // Save button (left)
                 boolean saveH = mx >= px + pw - 115 && mx < px + pw - 68 && my >= inputY && my < inputY + 24;
                 ctx.fill(px + pw - 115, inputY, px + pw - 68, inputY + 24, BORDER_DARK);
                 ctx.fill(px + pw - 114, inputY + 1, px + pw - 69, inputY + 23, saveH ? TOGGLE_ON : PARCHMENT);
                 ctx.drawCenteredTextWithShadow(textRenderer, "Save", px + pw - 91, inputY + 8, TEXT_LIGHT);
 
-                // Cancel button (right)
                 boolean cancelEditH = mx >= px + pw - 63 && mx < px + pw - 16 && my >= inputY && my < inputY + 24;
                 ctx.fill(px + pw - 63, inputY, px + pw - 16, inputY + 24, BORDER_DARK);
                 ctx.fill(px + pw - 62, inputY + 1, px + pw - 17, inputY + 23, cancelEditH ? ACCENT_RED : PARCHMENT);
                 ctx.drawCenteredTextWithShadow(textRenderer, "Cancel", px + pw - 39, inputY + 8, TEXT_LIGHT);
             } else {
-                // Add button
                 boolean addH = mx >= px + pw - 60 && mx < px + pw - 15 && my >= inputY && my < inputY + 24;
                 ctx.fill(px + pw - 60, inputY, px + pw - 15, inputY + 24, BORDER_DARK);
                 ctx.fill(px + pw - 59, inputY + 1, px + pw - 16, inputY + 23, addH ? TOGGLE_ON : PARCHMENT);
@@ -1741,9 +1741,8 @@ public class WynnExtrasConfigScreen extends Screen {
             int inputY = 65;
             boolean isEditing = editingIndex >= 0;
 
-            // Click on input fields (for dual input mode)
             if (dualInput) {
-                if(isEditing) {
+                if (isEditing) {
                     int fieldW = (pw - 140) / 2;
                     if (mx >= px + 15 && mx < px + 15 + fieldW && my >= inputY && my < inputY + 24) {
                         activeField = 0;
@@ -1766,9 +1765,7 @@ public class WynnExtrasConfigScreen extends Screen {
                 }
             }
 
-            // Add/Save and Cancel buttons
             if (isEditing) {
-                // Save button (left)
                 if (mx >= px + pw - 115 && mx < px + pw - 68 && my >= inputY && my < inputY + 24) {
                     if (!input1.isEmpty()) {
                         saveCurrentInput();
@@ -1776,14 +1773,12 @@ public class WynnExtrasConfigScreen extends Screen {
                     }
                     return true;
                 }
-                // Cancel button (right)
                 if (mx >= px + pw - 63 && mx < px + pw - 16 && my >= inputY && my < inputY + 24) {
                     clearInputs();
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
             } else {
-                // Add button
                 if (mx >= px + pw - 60 && mx < px + pw - 15 && my >= inputY && my < inputY + 24) {
                     if (!input1.isEmpty()) {
                         saveCurrentInput();
@@ -1793,7 +1788,6 @@ public class WynnExtrasConfigScreen extends Screen {
                 }
             }
 
-            // Done/Cancel buttons
             int by = height - 55;
             if (mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24) {
                 setter.accept(items);
@@ -1807,12 +1801,10 @@ public class WynnExtrasConfigScreen extends Screen {
                 return true;
             }
 
-            // List items
             int listTop = inputY + 30;
             int y = listTop - (int)scroll;
             for (int i = 0; i < items.size(); i++) {
                 if (my >= y && my < y + 24) {
-                    // Delete button
                     if (mx >= px + pw - 45 && mx < px + pw - 15) {
                         items.remove(i);
                         if (editingIndex == i) clearInputs();
@@ -1820,7 +1812,6 @@ public class WynnExtrasConfigScreen extends Screen {
                         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }
-                    // Click on item to edit
                     if (mx >= px + 15 && mx < px + pw - 50) {
                         loadItemForEditing(i);
                         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
@@ -1865,12 +1856,10 @@ public class WynnExtrasConfigScreen extends Screen {
         @Override
         public boolean charTyped(CharInput charInput) {
             int c = charInput.codepoint();
-
             if (c >= 32) {
                 setActiveInput(getActiveInput() + (char) c);
                 return true;
             }
-
             return super.charTyped(charInput);
         }
 
