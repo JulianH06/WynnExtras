@@ -156,6 +156,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
     private static Pair<Integer, Integer> lastClickedSlot = new Pair<>(-1, -1);
 
+    private static boolean wynncraftItemDatabaseInitialized = false;
+
     public BankOverlay2(CallbackInfo ci, HandledScreen<?> screen) {
         this.ci = ci;
         this.screen = screen;
@@ -178,12 +180,17 @@ public class BankOverlay2 extends WEHandledScreen {
         scissorx2 = 0;
         scissory2 = 0;
 
-        try {
-            if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-                Class<?> clazz = Class.forName("com.wynnmod.wynncraft.item.map.WynncraftItemDatabase");
-                clazz.getMethod("initialize").invoke(null);
+        if (!wynncraftItemDatabaseInitialized) {
+            try {
+                if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
+                    Class<?> clazz = Class.forName("com.wynnmod.wynncraft.item.map.WynncraftItemDatabase");
+                    clazz.getMethod("initialize").invoke(null);
+                }
+                wynncraftItemDatabaseInitialized = true;
+            } catch (Exception ignored) {
+                wynncraftItemDatabaseInitialized = true;
             }
-        } catch (Exception ignored) {}
+        }
     }
 
 
