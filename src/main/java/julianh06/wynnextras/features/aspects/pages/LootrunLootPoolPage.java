@@ -18,6 +18,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.lwjgl.glfw.GLFW;
 
 import java.time.Duration;
 import java.time.ZoneId;
@@ -33,14 +34,16 @@ public class LootrunLootPoolPage extends PageWidget {
 
     private final RefreshButton refreshButton;
 
-    public enum Camp { SI, SE, CORK, COTL, MH }
+    public enum Camp { SI, SE, CORK, COTL, MH, WFF, EFF }
 
     private static String[] campNames = {
         "Sky Islands",
         "Silent Expanse",
         "Corkus Traversal",
         "Canyon of the Lost",
-        "Molten Heights"
+        "Molten Heights",
+        "West Fruma Foray",
+        "East Fruma Foray"
     };
 
     static List<LootPoolWidget> lootPoolWidgets = new ArrayList<>();
@@ -48,6 +51,13 @@ public class LootrunLootPoolPage extends PageWidget {
     private static List<Text> hoveredTooltip = new ArrayList<>();
 
     private static LootrunLootPoolData.LootrunItem hoveredItem = null;
+
+    private static float hScrollOffset = 0f;
+    private static float hScrollTarget = 0f;
+    private static float hScrollMax = 0f;
+    private static final int FIXED_WIDGET_WIDTH = 550;
+    private static final int H_WIDGET_SPACING = 40;
+    private static HorizontalScrollBarWidget hScrollBarWidget;
 
     public LootrunLootPoolPage(AspectScreen parent) {
         super(parent);
@@ -57,6 +67,14 @@ public class LootrunLootPoolPage extends PageWidget {
         }
 
         refreshButton = new RefreshButton();
+
+        hScrollBarWidget = new HorizontalScrollBarWidget(
+                () -> hScrollTarget,
+                v -> hScrollTarget = v,
+                () -> hScrollOffset,
+                v -> hScrollOffset = v,
+                () -> hScrollMax
+        );
     }
 
     @Override
@@ -126,21 +144,40 @@ public class LootrunLootPoolPage extends PageWidget {
 
         ui.drawCenteredText(countdown, centerX, 100);
 
-        int spacing = 20;
-        int widgetX = spacing;
-        int widgetY = 175;
-        int widgets = lootPoolWidgets.size();
-        int totalSpacing = spacing * (widgets + 1);
         float scaledWidth = width * ui.getScaleFactorF();
-        int widgetWidth = (int) ((scaledWidth - totalSpacing) / widgets);
+        int totalContentWidth = lootPoolWidgets.size() * (FIXED_WIDGET_WIDTH + H_WIDGET_SPACING) + H_WIDGET_SPACING;
+        hScrollMax = Math.max(0, totalContentWidth - scaledWidth);
 
-        int widgetHeight = (int) (height * ui.getScaleFactorF() * 0.9f - widgetY);
+        if (hScrollTarget > hScrollMax) hScrollTarget = hScrollMax;
 
-        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
-            lootPoolWidget.setBounds(widgetX, widgetY, widgetWidth, widgetHeight);
+        float snapValue = 0.5f;
+        float speed = 0.3f;
+        float hDiff = hScrollTarget - hScrollOffset;
+        if (Math.abs(hDiff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) hScrollOffset = hScrollTarget;
+        else hScrollOffset += hDiff * speed * tickDelta;
+
+        int widgetY = 175;
+        int scrollBarHeight = 30;
+        int widgetHeight = (int) (height * ui.getScaleFactorF() * 0.9f - widgetY - scrollBarHeight - 5);
+
+        context.enableScissor(
+                0,
+                0,
+                (int) (scaledWidth / ui.getScaleFactor()),
+                (int) ((widgetY + widgetHeight) / ui.getScaleFactor())
+        );
+
+        int widgetX = H_WIDGET_SPACING - (int) hScrollOffset;
+        for (LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+            lootPoolWidget.setBounds(widgetX, widgetY, FIXED_WIDGET_WIDTH, widgetHeight);
             lootPoolWidget.draw(context, mouseX, mouseY, tickDelta, ui);
-            widgetX += widgetWidth + spacing;
+            widgetX += FIXED_WIDGET_WIDTH + H_WIDGET_SPACING;
         }
+        context.disableScissor();
+
+        int scrollBarY = widgetY + widgetHeight + 5;
+        hScrollBarWidget.setBounds(40, scrollBarY, (int) scaledWidth - 80, scrollBarHeight);
+        hScrollBarWidget.draw(context, mouseX, mouseY, tickDelta, ui);
 
         refreshButton.setBounds(0, 0, 300, 60);
         refreshButton.draw(context, mouseX, mouseY, tickDelta, ui);
@@ -168,8 +205,20 @@ public class LootrunLootPoolPage extends PageWidget {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
-            if(lootPoolWidget.mouseScrolled(mx, my, delta)) return true;
+        long window = MinecraftClient.getInstance().getWindow().getHandle();
+        boolean shiftHeld = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
+
+        if (shiftHeld) {
+            if (delta > 0) hScrollTarget -= 60f;
+            else hScrollTarget += 60f;
+            if (hScrollTarget < 0) hScrollTarget = 0;
+            if (hScrollTarget > hScrollMax) hScrollTarget = hScrollMax;
+            return true;
+        }
+
+        for (LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+            if (lootPoolWidget.mouseScrolled(mx, my, delta)) return true;
         }
         return false;
     }
@@ -185,6 +234,11 @@ public class LootrunLootPoolPage extends PageWidget {
             return true;
         }
 
+        if (hScrollBarWidget.isHovered()) {
+            hScrollBarWidget.onClick(button);
+            return true;
+        }
+
         return false;
     }
 
@@ -193,6 +247,8 @@ public class LootrunLootPoolPage extends PageWidget {
         for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
             lootPoolWidget.mouseReleased(mx, my, button);
         }
+
+        hScrollBarWidget.scrollBarButtonWidget.isHold = false;
         return false;
     }
 
@@ -669,6 +725,106 @@ public class LootrunLootPoolPage extends PageWidget {
 
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
+        }
+    }
+
+
+
+    private static class HorizontalScrollBarWidget extends Widget {
+        private HorizontalScrollBarWidget.HorizontalScrollBarButtonWidget scrollBarButtonWidget;
+        int currentMouseX = 0;
+
+        private final java.util.function.Supplier<Float> getTarget;
+        private final java.util.function.Consumer<Float> setTarget;
+        private final java.util.function.Supplier<Float> getActual;
+        private final java.util.function.Consumer<Float> setActual;
+        private final java.util.function.Supplier<Float> getMax;
+
+        public HorizontalScrollBarWidget(
+                java.util.function.Supplier<Float> getTarget,
+                java.util.function.Consumer<Float> setTarget,
+                java.util.function.Supplier<Float> getActual,
+                java.util.function.Consumer<Float> setActual,
+                java.util.function.Supplier<Float> getMax) {
+            super(0, 0, 0, 0);
+            this.getTarget = getTarget;
+            this.setTarget = setTarget;
+            this.getActual = getActual;
+            this.setActual = setActual;
+            this.getMax = getMax;
+            this.scrollBarButtonWidget = new HorizontalScrollBarWidget.HorizontalScrollBarButtonWidget();
+            addChild(scrollBarButtonWidget);
+        }
+
+        private void setOffset(int mouseX, float maxOffset, int scrollAreaWidth) {
+            float relativeX = mouseX - x - scrollBarButtonWidget.getWidth() / 2f;
+            relativeX = Math.max(0, Math.min(relativeX, scrollAreaWidth));
+
+            float scrollPercent = relativeX / scrollAreaWidth;
+            setTarget.accept(scrollPercent * maxOffset);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            currentMouseX = mouseX;
+            ui.drawSliderBackground(x, y, width, height, 5, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+
+            float maxOffset = getMax.get();
+            int buttonWidth = maxOffset == 0 ? width : 750;
+            int scrollAreaWidth = width - buttonWidth;
+
+            if (scrollBarButtonWidget.isHold) {
+                setOffset((int) (mouseX * ui.getScaleFactor()), maxOffset, scrollAreaWidth);
+                setActual.accept(getTarget.get());
+            }
+
+            int xPos = maxOffset == 0 ? x : (int) (x + scrollAreaWidth * Math.min((getActual.get() / maxOffset), 1));
+            scrollBarButtonWidget.setBounds(xPos, y, buttonWidth, height);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            float maxOffset = getMax.get();
+            int buttonWidth = Math.max(40, (int) (width * (width / (width + maxOffset))));
+            int scrollAreaWidth = width - buttonWidth;
+
+            if (scrollBarButtonWidget.isHovered()) scrollBarButtonWidget.isHold = true;
+            setOffset((int) (currentMouseX * ui.getScaleFactor()), maxOffset, scrollAreaWidth);
+            return false;
+        }
+
+        @Override
+        public boolean mouseReleased(double mx, double my, int button) {
+            scrollBarButtonWidget.mouseReleased(mx, my, button);
+            return true;
+        }
+
+        private static class HorizontalScrollBarButtonWidget extends Widget {
+            public boolean isHold;
+
+            public HorizontalScrollBarButtonWidget() {
+                super(0, 0, 0, 0);
+                isHold = false;
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                ui.drawButton(x, y, width, height, 5, hovered || isHold, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            }
+
+            @Override
+            protected boolean onClick(int button) {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                isHold = true;
+                return true;
+            }
+
+            @Override
+            public boolean mouseReleased(double mx, double my, int button) {
+                isHold = false;
+                return true;
+            }
         }
     }
 

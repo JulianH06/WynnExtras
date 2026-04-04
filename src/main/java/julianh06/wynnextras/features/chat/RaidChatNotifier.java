@@ -117,6 +117,16 @@ public class RaidChatNotifier {
                     "§bWings picked up §c",
                     "wings"
             ),
+            new SingleOccurrenceDetector(
+                    "Collected the Left Key!",
+                    "§bLeft key collected §c",
+                    "hubertLeftKey"
+            ),
+            new SingleOccurrenceDetector(
+                    "Collected the Right Key!",
+                    "§bRight key collected §c",
+                    "hubertRightKey"
+            ),
 
             new MultiOccurrenceDetector(
                     "A new platform has appeared on the Lower Area!",

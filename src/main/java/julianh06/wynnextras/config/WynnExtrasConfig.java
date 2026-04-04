@@ -64,6 +64,7 @@ public class WynnExtrasConfig {
     public boolean twoLightCrystal = true;
     public boolean notgUpperPlatform = true;
     public boolean notgLowerPlatform = true;
+    public boolean artifactRestored = true;
 
     public void syncPremades() {
         if(premades == null) premades = new HashMap<>();
@@ -78,6 +79,7 @@ public class WynnExtrasConfig {
         premades.put("+2 Light Crystal|+2 Crystals", twoLightCrystal);
         premades.put("The players on the|UPPER PLATFORM SPAWNED", notgUpperPlatform);
         premades.put("A new platform has|LOWER PLATFORM SPAWNED", notgLowerPlatform);
+        premades.put("The Artifact's power has been restored|SPEAR RECHARGED", artifactRestored);
     }
 
     // ==================== CHAT BLOCKER ====================

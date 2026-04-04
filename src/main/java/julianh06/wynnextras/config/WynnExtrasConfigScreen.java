@@ -294,7 +294,9 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Upper platform spawned", "Upper platform spawn in NOTG minibosses",
                         () -> config.notgUpperPlatform, v -> config.notgUpperPlatform = v))
                 .add(toggle("Lower platform spawned", "Lower platform spawn in NOTG minibosses",
-                        () -> config.notgLowerPlatform, v -> config.notgLowerPlatform = v));
+                        () -> config.notgLowerPlatform, v -> config.notgLowerPlatform = v))
+                .add(toggle("Artifacts power restored", "When you can charge again in TWP room 3",
+                        () -> config.artifactRestored, v -> config.artifactRestored = v));
 
         // ===== Hiders =====
         category("Hiders", 0xFF673190)
