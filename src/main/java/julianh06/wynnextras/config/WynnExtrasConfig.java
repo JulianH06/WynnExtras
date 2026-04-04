@@ -162,6 +162,7 @@ public class WynnExtrasConfig {
     public int chatPeekKey = GLFW.GLFW_KEY_Y;
     public boolean chatPeekToggle = false;
     public boolean chatPeekAllowVanillaScroll = false;
+    //WIP, not used currently
 
     // ==================== TOTEM TIMER ====================
     public boolean totemTimerEnabled = true;
