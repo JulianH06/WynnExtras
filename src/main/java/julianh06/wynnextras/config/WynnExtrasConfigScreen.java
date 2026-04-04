@@ -16,6 +16,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -348,13 +349,22 @@ public class WynnExtrasConfigScreen extends Screen {
                             config.craftingHelperDarkMode = true;
                             config.mainMenuDarkMode = true; }, "Enable"))
                 .add(button("Disable for all", "Disable the Dark mode for all options above",
-                        v -> {
-                            config.darkmodeToggle = false;
-                            config.pvDarkmodeToggle = false;
-                            config.lootPoolPagesDarkMode = false;
-                            config.craftingHelperDarkMode = false;
-                            config.mainMenuDarkMode = false; }, "Disable"))
-                .sub("Crowd sourcing")
+                    v -> {
+                        config.darkmodeToggle = false;
+                        config.pvDarkmodeToggle = false;
+                        config.lootPoolPagesDarkMode = false;
+                        config.craftingHelperDarkMode = false;
+                        config.mainMenuDarkMode = false; }, "Disable"))
+            .sub("Tetris")
+                .add(slider("DAS", "Delayed Auto Shift (ms) — delay before repeated movement begins",
+                    0, 300, () -> config.tetrisDAS, v -> config.tetrisDAS = v))
+                .add(slider("ARR", "Auto Repeat Rate (ms) — speed of repeated moves, 0 = instant",
+                    0, 100, () -> config.tetrisARR, v -> config.tetrisARR = v))
+                .add(slider("SDF Delay", "Soft Drop delay (ms) before fast-fall kicks in",
+                    0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
+                .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
+                    0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
+            .sub("Crowd sourcing")
                 .add(toggle("Upload your own Aspects", "Upload your aspect data so you can see your personal lootpool scores",
                         () -> config.uploadOwnAspects, v -> config.uploadOwnAspects = v))
                 .add(toggle("Lootrun lootpools", "Help gather the current lootrun lootpool so others can see it with /we lootruns",
@@ -404,6 +414,8 @@ public class WynnExtrasConfigScreen extends Screen {
 
     private ConfigOption text(String name, String desc) {
         return new TextOption(name, desc);
+    private ConfigOption keybind(String name, String desc, Supplier<Integer> get, Consumer<Integer> set) {
+        return new KeybindOption(name, desc, get, set);
     }
 
     private ConfigOption toggle(String name, String desc, Supplier<Boolean> get, Consumer<Boolean> set) {
@@ -970,6 +982,15 @@ public class WynnExtrasConfigScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyInput input) {
+        // Relay to any listening KeybindOption
+        for (Category cat : categories) {
+            for (SubCategory sub : cat.subCategories) {
+                for (ConfigOption opt : sub.options) {
+                    if (opt instanceof KeybindOption kb && kb.onKeyPressed(input.key())) return true;
+                }
+            }
+        }
+
         int key = input.key();
         if (activeDropdown != null && key == 256) {
             activeDropdown = null;
@@ -1119,6 +1140,73 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
             ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
             ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+        }
+    }
+
+    private static class KeybindOption extends ConfigOption {
+        final Supplier<Integer> getter;
+        final Consumer<Integer> setter;
+        boolean listening = false;
+
+        KeybindOption(String name, String desc, Supplier<Integer> get, Consumer<Integer> set) {
+            super(name, desc);
+            this.getter = get;
+            this.setter = set;
+        }
+
+        private String keyName(int key) {
+            String n = GLFW.glfwGetKeyName(key, 0);
+            if (n != null) return n.toUpperCase();
+            return switch (key) {
+                case GLFW.GLFW_KEY_SPACE -> "SPACE";
+                case GLFW.GLFW_KEY_LEFT_SHIFT -> "LSHIFT";
+                case GLFW.GLFW_KEY_RIGHT_SHIFT -> "RSHIFT";
+                case GLFW.GLFW_KEY_LEFT_ALT -> "LALT";
+                case GLFW.GLFW_KEY_RIGHT_ALT -> "RALT";
+                case GLFW.GLFW_KEY_LEFT_CONTROL -> "LCTRL";
+                case GLFW.GLFW_KEY_RIGHT_CONTROL -> "RCTRL";
+                default -> "KEY_" + key;
+            };
+        }
+
+        @Override
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
+            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
+            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+
+            int bx = x + w - 90, by = y + 10;
+            boolean btnHover = mx >= bx && mx < bx + 80 && my >= by && my < by + 24;
+            ctx.fill(bx, by, bx + 80, by + 24, listening ? categoryColor : BORDER_DARK);
+            ctx.fill(bx + 1, by + 1, bx + 79, by + 23, listening ? PARCHMENT_HOVER : (btnHover ? PARCHMENT_HOVER : PARCHMENT));
+            String label = listening ? "[ ... ]" : "[ " + keyName(getter.get()) + " ]";
+            ctx.drawCenteredTextWithShadow(tr, label, bx + 40, by + 8,
+                    listening ? 0xFFFFDD44 : TEXT_LIGHT);
+        }
+
+        @Override
+        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
+            int bx = x + w - 90, by = y + 10;
+            if (mx >= bx && mx < bx + 80 && my >= by && my < by + 24) {
+                listening = !listening;
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            }
+            if (listening) { listening = false; return true; }
+            return false;
+        }
+
+        boolean onKeyPressed(int key) {
+            if (!listening) return false;
+            if (key == GLFW.GLFW_KEY_ESCAPE) { listening = false; return true; }
+            setter.accept(key);
+            listening = false;
+            WynnExtrasConfig.save();
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
         }
     }
 

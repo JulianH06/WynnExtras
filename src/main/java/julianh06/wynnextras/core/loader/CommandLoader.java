@@ -18,6 +18,7 @@ import julianh06.wynnextras.features.raid.RaidLootData;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.misc.HudEditScreen;
+import julianh06.wynnextras.features.tetris.TetrisScreen;
 import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.item.ItemStack;
@@ -89,7 +90,7 @@ public class CommandLoader implements WELoader {
             dispatcher.register(
                     ClientCommandManager.literal("gv")
                             .executes(ctx -> {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to specify the guild you want to view. Usage: /gv [guild prefix]"));
+                                GV.openOwnGuild();
                                 return 1;
                             })
                             .then(
@@ -177,6 +178,12 @@ public class CommandLoader implements WELoader {
                             MinecraftClient.getInstance().send(() -> {
                                 MinecraftClient.getInstance().setScreen(new HudEditScreen());
                             });
+                            return 1;
+                        })
+                    )
+                    .then(ClientCommandManager.literal("tetris")
+                        .executes(ctx -> {
+                            TetrisScreen.open();
                             return 1;
                         })
                     )

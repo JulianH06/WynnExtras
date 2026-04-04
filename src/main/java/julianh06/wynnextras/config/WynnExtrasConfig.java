@@ -6,6 +6,7 @@ import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.util.Formatting;
+import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -151,6 +152,16 @@ public class WynnExtrasConfig {
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
     public boolean showLootpoolButtonInPartyFinder = true;
+    public boolean redirectWynntilsViewStatsToPV = true;
+
+    public boolean showOwnNametag = false;
+    // The code for this is in LivingEntityRendererMixin
+
+    // ==================== CHAT PEEK ====================
+    public boolean chatPeekEnabled = true;
+    public int chatPeekKey = GLFW.GLFW_KEY_Y;
+    public boolean chatPeekToggle = false;
+    public boolean chatPeekAllowVanillaScroll = false;
 
     // ==================== TOTEM TIMER ====================
     public boolean totemTimerEnabled = true;
@@ -192,6 +203,14 @@ public class WynnExtrasConfig {
     public boolean sourceOfTruthToggle = false;
     public boolean territoryEstimateToggle = false;
     public boolean removeChroma = false;
+
+    // ==================== TETRIS ====================
+    public int tetrisBestScore = 0;
+    public int tetrisBest40LinesMs = 0;
+    public int tetrisDAS = 100;
+    public int tetrisARR = 30;
+    public int tetrisSDFDelay = 100;
+    public int tetrisSDF = 30;
 
     //==================== Dark Modes ==========================
     public boolean darkmodeToggle = false; //for bank overlay (dont wanna change the variable cause it would reset it to false for everyone)
