@@ -80,10 +80,10 @@ public class Recipe {
 
     public Recipe(String[] ingredients, Materials materials, Vector2i level, CraftableType type) {
         this(
-                Arrays.stream(ingredients).map(CraftingUtils::getIng).toArray(IngredientInfo[]::new),
-                materials,
-                level,
-                type
+                Arrays.stream(ingredients)
+                    .map(CraftingUtils::getIng)
+                    .toArray(IngredientInfo[]::new),
+                materials, level, type
         );
     }
 

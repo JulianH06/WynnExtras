@@ -50,15 +50,15 @@ public abstract class HandledScreenMixin {
     @Shadow protected int x;
     @Shadow protected int y;
 
-    @Unique private julianh06.wynnextras.features.bankoverlay.BankOverlay2 bankOverlay;
+    @Unique private static julianh06.wynnextras.features.bankoverlay.BankOverlay2 bankOverlay;
 
-    @Unique private IdentifierOverlay identifierOverlay;
+    @Unique private static IdentifierOverlay identifierOverlay;
 
-    @Unique private PartyFinderOpenLootpoolOverlay partyFinderOpenLootpoolOverlay;
+    @Unique private static PartyFinderOpenLootpoolOverlay partyFinderOpenLootpoolOverlay;
 
-    @Unique private CraftingHelperOverlay craftingHelperOverlay;
+    @Unique private static CraftingHelperOverlay craftingHelperOverlay;
 
-    @Unique private CompassMenuOverlay compassMenuOverlay;
+    @Unique private static CompassMenuOverlay compassMenuOverlay;
 
     @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
     private void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci){

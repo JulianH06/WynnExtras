@@ -7,23 +7,22 @@ import com.wynntils.handlers.tooltip.type.TooltipIdentificationDecorator;
 import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.ingredients.type.IngredientInfo;
 import com.wynntils.models.stats.type.StatPossibleValues;
+import com.wynntils.models.wynnitem.type.ItemMaterial;
 import com.wynntils.utils.mc.KeyboardUtils;
 import com.wynntils.utils.type.Pair;
 import com.wynntils.utils.type.RangedValue;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class CraftingUtils {
-
     private static Map<String, IngredientInfo> allIngredients;
+    private static boolean initAttempted = false;
 
     public static IngredientInfo getIng(String name) {
         initIngs();
+        if(allIngredients == null) return null;
         return allIngredients.get(name);
     }
 
@@ -33,16 +32,19 @@ public class CraftingUtils {
     }
 
     private static void initIngs() {
-        if (allIngredients == null) {
-            try {
-                allIngredients = Models.Ingredient.getAllIngredientInfos()
-                        .collect(Collectors.toMap(
-                                IngredientInfo::name,
-                                ingredient -> ingredient
-                        ));
-            } catch (Exception e) {
-                System.err.println("Failed to load ingredient list from wynntills");
-            }
+        if (initAttempted) return;
+        initAttempted = true;
+
+        try {
+            allIngredients = Models.Ingredient.getAllIngredientInfos()
+                    .collect(Collectors.toMap(
+                            IngredientInfo::name,
+                            ingredient -> ingredient
+                    ));
+        } catch (Exception e) {
+            System.err.println("Failed to load ingredient list from wynntills: " + e.getMessage());
+            allIngredients = new HashMap<>();
+            initAttempted = false;
         }
     }
 

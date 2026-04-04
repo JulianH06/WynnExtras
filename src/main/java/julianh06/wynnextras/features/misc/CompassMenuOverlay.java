@@ -87,7 +87,7 @@ public class CompassMenuOverlay extends WEHandledScreen {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        if(!(Models.Container.getCurrentContainer() instanceof CharacterInfoContainer container)) return;
+        if(!(Models.Container.getCurrentContainer() instanceof CharacterInfoContainer)) return;
         if(!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
 
         float xStart = (int) (((HandledScreenAccessor) screen).getX() * ui.getScaleFactor());
@@ -179,6 +179,7 @@ public class CompassMenuOverlay extends WEHandledScreen {
     private static class AutoAssignButton extends Widget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if(!(Models.Container.getCurrentContainer() instanceof CharacterInfoContainer)) return;
             ui.drawButton(x, y, width, height, 13, hovered);
             if (selectingWeapon) {
                 ui.drawCenteredText("Skip weapon selection", x + width / 2f, y + height / 2f);
