@@ -1785,7 +1785,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             Pages.BankPageNames.put(index, pageName);
 
-            textInputWidget.setTextColor((activeInv == index && !shouldWait) ? CustomColor.fromHexString("FFEA00") : CustomColor.fromHexString("FFFFFF"));
+            textInputWidget.setTextColor((activeInv == index && !shouldWait) ? CustomColor.fromHexString("DEC800") : CustomColor.fromHexString("FFFFFF"));
             textInputWidget.setBounds(x, y, width, height);
             textInputWidget.setInput(pageName);
             textInputWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
