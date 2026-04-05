@@ -386,7 +386,7 @@ public class BankOverlay2 extends WEHandledScreen {
             scissorx1 = xStart - 5;
             scissory1 = yStart;
             scissorx2 = xStart + 166 * xFitAmount;
-            scissory2 = yStart + 100 * (yFitAmount - 1);
+            scissory2 = yStart + 104 * (yFitAmount - 1) - 12;
 
             context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
             ui.updateContext(context, ui.getScaleFactor(), 0, 0);
