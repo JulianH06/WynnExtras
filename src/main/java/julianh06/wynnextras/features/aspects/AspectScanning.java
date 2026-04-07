@@ -643,6 +643,8 @@ public class AspectScanning {
                 selectedRaid = "TCC";
             } else if (screenTitle.endsWith("\uF00E")) {
                 selectedRaid = "TNA";
+            } else if (screenTitle.endsWith("\uF04B")) {
+                selectedRaid = "TWP";
             }
 
             Map<String, Pair<String, String>> foundAspects = new HashMap<>();

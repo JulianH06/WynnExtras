@@ -75,6 +75,7 @@ public class ProvokeTimer {
         if (!isActive()) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
+        if (mc.options.hudHidden) return;
 
         int secs = calculatedSeconds;
         int color;
@@ -84,7 +85,7 @@ public class ProvokeTimer {
 
         String text = "Provoke: " + secs + "s";
         float scale = WynnExtrasConfig.INSTANCE.provokeTimerScale;
-        int x = WynnExtrasConfig.INSTANCE.provokeTimerX;
+        int x = WynnExtrasConfig.INSTANCE.provokeTimerX == -1 ? mc.getWindow().getScaledWidth() / 2 : WynnExtrasConfig.INSTANCE.provokeTimerX;
         int y = WynnExtrasConfig.INSTANCE.provokeTimerY;
 
         int tw = mc.textRenderer.getWidth(text);

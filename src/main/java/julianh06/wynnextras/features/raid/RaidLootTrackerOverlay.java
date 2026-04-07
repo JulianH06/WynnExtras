@@ -142,6 +142,7 @@ public class RaidLootTrackerOverlay {
 
         // Don't render via HUD callback when screen is open
         if (mc.currentScreen != null) return;
+        if (mc.options.hudHidden) return;
 
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         if (!config.toggleRaidLootTracker) return;

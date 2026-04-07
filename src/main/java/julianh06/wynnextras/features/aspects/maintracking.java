@@ -260,7 +260,8 @@ public class maintracking {
             inPreviewChest = InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00B") || // NOTG
                     InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00C") || // NOL
                     InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00D") || // TCC
-                    InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00E");   // TNA
+                    InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00E") || // TNA
+                    InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF04B"); // TWP
 
             inLootrunPreviewChest = LootrunLootPoolData.isLootrunChest(InventoryTitle);
 

@@ -231,12 +231,13 @@ public class TotemTimer {
         if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
+        if (mc.options.hudHidden) return;
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
 
         if (!totems.isEmpty()) {
             float ts = c.totemTimerScale;
             int lineH = (int) (10 * ts);
-            int baseX = c.totemTimerX;
+            int baseX = c.totemTimerX == -1 ? mc.getWindow().getScaledWidth() / 2 : c.totemTimerX;
             int baseY = c.totemTimerY;
             int i = 0;
             for (TotemInfo t : totems) {
@@ -275,7 +276,7 @@ public class TotemTimer {
         if (warningActive && c.totemTimerWarningText) {
             String alarmText = "RECAST TOTEM!";
             float as = c.totemWarningScale;
-            int wx = c.totemWarningX;
+            int wx = c.totemWarningX == -1 ? mc.getWindow().getScaledWidth() / 2 : c.totemWarningX;
             int wy = c.totemWarningY;
 
             int tw = mc.textRenderer.getWidth(alarmText);

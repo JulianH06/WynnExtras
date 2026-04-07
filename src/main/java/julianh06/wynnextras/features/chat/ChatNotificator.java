@@ -96,6 +96,7 @@ public class ChatNotificator {
         }
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
+        if (mc.options.hudHidden) return;
 
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
         long fadeInMs = c.notifierFadeInMs;

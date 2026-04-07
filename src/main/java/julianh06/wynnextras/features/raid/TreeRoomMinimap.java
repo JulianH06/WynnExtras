@@ -101,8 +101,10 @@ public class TreeRoomMinimap {
 
     public static void register() {
         HudRenderCallback.EVENT.register((context, renderTickCounter) -> {
-            boolean isInventory = MinecraftClient.getInstance().currentScreen instanceof InventoryScreen;
-            boolean isChat = MinecraftClient.getInstance().currentScreen instanceof ChatScreen;
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc.options.hudHidden) return;
+            boolean isInventory = mc.currentScreen instanceof InventoryScreen;
+            boolean isChat = mc.currentScreen instanceof ChatScreen;
             if (isInventory || isChat) return;
 
             TreeRoomMinimap.render(context, renderTickCounter);

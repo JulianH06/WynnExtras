@@ -473,7 +473,7 @@ public class WynncraftApiHandler {
 
         // Validate raid type (short codes only)
         if (!raidType.equals("NOTG") && !raidType.equals("NOL") &&
-            !raidType.equals("TCC") && !raidType.equals("TNA")) {
+            !raidType.equals("TCC") && !raidType.equals("TNA") && !raidType.equals("TWP")) {
             System.err.println("Unknown raid type: " + raidType);
             return;
         }
