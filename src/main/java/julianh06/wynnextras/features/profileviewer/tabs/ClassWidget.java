@@ -43,6 +43,8 @@ public class ClassWidget extends Widget {
     private final Runnable action;
     private final boolean isAtiveCharacter;
 
+    private static final int MAX_CONTENT_COMPLETION = 1286;
+
     public ClassWidget(CharacterData characterData, boolean isAtiveCharacter) {
         super(0, 0, 0, 0);
         this.characterData = characterData;
@@ -69,7 +71,7 @@ public class ClassWidget extends Widget {
         if(x == 0) return;
 
         Identifier classTexture;
-        if(characterData.getLevel() == 106) {
+        if(characterData.getLevel() == 121) {
             classTexture = getGoldClassTexture(characterData.getType());
         } else {
             classTexture = getClassTexture(characterData.getType());
@@ -93,7 +95,7 @@ public class ClassWidget extends Widget {
             int level = characterData.getLevel();
             int totalLevel = characterData.getTotalLevel();
             CustomColor levelColor;
-            if (characterData.getContentCompletion() == 1133 && !WynnExtrasConfig.INSTANCE.removeChroma) {
+            if (characterData.getContentCompletion() == MAX_CONTENT_COMPLETION && !WynnExtrasConfig.INSTANCE.removeChroma) {
                 levelColor = CommonColors.RAINBOW;
             } else {
                 levelColor = CustomColor.fromHexString("FFFFFF");
@@ -103,7 +105,7 @@ public class ClassWidget extends Widget {
             ui.drawText(getClassName(characterData), x + 111, y + 18, levelColor, 2.1f);
             ui.drawText("Level " + level, x + 111, y + 42, levelColor, 2.1f);
             ui.drawText("Total Level " + totalLevel, x + 111, y + 66, levelColor, 2.1f);
-            ui.drawText("Completion " + (characterData.getContentCompletion() * 100/1133) + "%", x + 111, y + 90, levelColor, 2.1f);
+            ui.drawText("Completion " + (characterData.getContentCompletion() * 100 / MAX_CONTENT_COMPLETION) + "%", x + 111, y + 90, levelColor, 2.1f);
         }
 
         List<String> gamemodes = characterData.getGamemode();

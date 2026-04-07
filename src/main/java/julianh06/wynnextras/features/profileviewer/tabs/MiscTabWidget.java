@@ -27,6 +27,8 @@ public class MiscTabWidget extends PVScreen.TabWidget {
         Global data = PV.currentPlayerData.getGlobalData();
         Map<String, Long> rankingData = PV.currentPlayerData.getRanking();
 
+        if(rankingData == null) return;
+
         int gameModeRankingsY = 400;
         if(data == null) {
             gameModeRankingsY = 140;
