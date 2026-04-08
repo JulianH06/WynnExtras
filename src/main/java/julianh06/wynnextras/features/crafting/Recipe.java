@@ -153,7 +153,7 @@ public class Recipe {
         // 30 and 70 are technically 1 & 2 respectively
         if (level.y <= 29) return 1;
         else if (level.y <= 69) return 2;
-        else return 3; // TODO fruma
+        else return 3;
     }
 
     public Vector2i getDurability(int durabilityModifier) {
