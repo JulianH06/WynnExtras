@@ -119,9 +119,9 @@ public class TotemTimer {
             for (DisplayEntity.TextDisplayEntity tde : allTdes) {
                 String raw = tde.getText().getString();
                 String text = Formatting.strip(raw);
-                if (text == null || !text.contains("'s Totem")) continue;
+                if (text == null || (!text.contains("'s Totem") && !text.contains("' Totem"))) continue;
 
-                int idx = text.indexOf("'s Totem");
+                int idx = text.contains("'s Totem") ? text.indexOf("'s Totem") : text.indexOf("' Totem");
                 String owner = idx > 0 ? text.substring(0, idx).trim() : "?";
 
                 // Own-only filter
@@ -129,10 +129,12 @@ public class TotemTimer {
 
                 String timeText = "";
                 String[] lines = text.split("\n");
+                // NEU
                 for (String line : lines) {
                     String l = line.trim();
                     if (!l.isEmpty() && !l.contains("'s Totem")) {
-                        timeText = l;
+                        String[] tokens = l.split("\\s+");
+                        timeText = tokens[tokens.length - 1];
                         break;
                     }
                 }
@@ -229,18 +231,23 @@ public class TotemTimer {
         if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
+        if (mc.options.hudHidden) return;
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
 
         if (!totems.isEmpty()) {
             float ts = c.totemTimerScale;
             int lineH = (int) (10 * ts);
-            int baseX = c.totemTimerX;
+            int baseX = c.totemTimerX == -1 ? mc.getWindow().getScaledWidth() / 2 : c.totemTimerX;
             int baseY = c.totemTimerY;
             int i = 0;
             for (TotemInfo t : totems) {
-                String timeDisplay = t.timeText().replaceAll("[^0-9s.~]", "").trim();
+                String timeDisplay = t.timeText().trim();
                 if (timeDisplay.isEmpty()) timeDisplay = "?";
-                String line = t.owner() + "'s Totem: " + timeDisplay;
+
+                String line = (c.totemTimerOwnOnly && c.totemTimerTimeOnly) ? timeDisplay
+                        : (c.totemTimerOwnOnly ? ("Totem: " + timeDisplay)
+                        : (t.owner() + "'s Totem: " + timeDisplay));
+
                 int color = t.estimated() ? 0xFFAAAAAA : timeColor(t.timeText());
 
                 int tw = mc.textRenderer.getWidth(line);
@@ -271,7 +278,7 @@ public class TotemTimer {
         if (warningActive && c.totemTimerWarningText) {
             String alarmText = "RECAST TOTEM!";
             float as = c.totemWarningScale;
-            int wx = c.totemWarningX;
+            int wx = c.totemWarningX == -1 ? mc.getWindow().getScaledWidth() / 2 : c.totemWarningX;
             int wy = c.totemWarningY;
 
             int tw = mc.textRenderer.getWidth(alarmText);

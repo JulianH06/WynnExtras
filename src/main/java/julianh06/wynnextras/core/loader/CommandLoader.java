@@ -9,6 +9,8 @@ import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.command.ChatCommands;
+import julianh06.wynnextras.event.CommandRegistrationEvent;
+import julianh06.wynnextras.features.aspects.ScreenTitleDebugger;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
@@ -16,6 +18,7 @@ import julianh06.wynnextras.features.raid.RaidLootData;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.misc.HudEditScreen;
+import julianh06.wynnextras.features.tetris.TetrisScreen;
 import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.item.ItemStack;
@@ -36,6 +39,9 @@ public class CommandLoader implements WELoader {
 
     public CommandLoader() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+
+            new CommandRegistrationEvent().post();
+
             LiteralArgumentBuilder<FabricClientCommandSource> base = ClientCommandManager.literal("WynnExtras");
             LiteralArgumentBuilder<FabricClientCommandSource> baseLowerCase = ClientCommandManager.literal("wynnextras");
             LiteralArgumentBuilder<FabricClientCommandSource> alias = ClientCommandManager.literal("we");
@@ -84,7 +90,7 @@ public class CommandLoader implements WELoader {
             dispatcher.register(
                     ClientCommandManager.literal("gv")
                             .executes(ctx -> {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You need to specify the guild you want to view. Usage: /gv [guild prefix]"));
+                                GV.openOwnGuild();
                                 return 1;
                             })
                             .then(
@@ -175,10 +181,22 @@ public class CommandLoader implements WELoader {
                             return 1;
                         })
                     )
+                    .then(ClientCommandManager.literal("tetris")
+                        .executes(ctx -> {
+                            TetrisScreen.open();
+                            return 1;
+                        })
+                    )
                     .then(ClientCommandManager.literal("debug")
                         .then(ClientCommandManager.literal("slot")
                             .executes(ctx -> {
                                 TradeMarketComparisonPanel.toggleSlotDebug();
+                                return 1;
+                            })
+                        )
+                        .then(ClientCommandManager.literal("screen")
+                            .executes(ctx -> {
+                                ScreenTitleDebugger.toggleDebug();
                                 return 1;
                             })
                         )

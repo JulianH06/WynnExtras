@@ -5,6 +5,7 @@ import com.wynntils.handlers.chat.event.ChatMessageEvent;
 import com.wynntils.mc.event.SystemMessageEvent;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
+import julianh06.wynnextras.features.raid.TreeRoomMinimap;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -20,12 +21,14 @@ public class MessageFilterFeatureMixin {
         String raw = e.getMessage().withoutFormatting().getString();
         String msgLower = raw.toLowerCase(Locale.ROOT);
 
+        TreeRoomMinimap.handleMessage(raw);
+
         if (!msgLower.contains(": ")) {
             for (Pattern pattern : RaidChatNotifier.BLOCKED_PATTERNS) {
                 if (pattern.matcher(msgLower).find()
                         && !msgLower.contains("[wynnextras]")
                         && WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) {
-                    RaidChatNotifier.handleMessage(e.getMessage().withoutFormatting().getString());
+                    RaidChatNotifier.handleMessage(raw);
                     e.cancelChat();
                     return;
                 }

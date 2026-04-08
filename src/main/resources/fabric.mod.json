@@ -29,7 +29,8 @@
 	"custom": {
 		"modmenu": {
 			"links": {
-				"modmenu.discord": "https://discord.gg/UbC6vZDaD5"
+				"modmenu.discord": "https://discord.gg/UbC6vZDaD5",
+				"modmenu.modrinth": "https://modrinth.com/mod/wynnextras"
 			}
 		}
 	},

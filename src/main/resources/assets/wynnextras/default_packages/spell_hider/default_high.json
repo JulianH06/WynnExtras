@@ -1,0 +1,317 @@
+{
+  "mage:heal:arcane_transfer": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "archer:arrow_shield:hound": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:heal:arcane_transfer:judrajin": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:war_scream:tempest": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:meteor:explosion": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "archer:arrow_shield": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:totem:rain_dance": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:tribal_chants:fanatic": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:tribal_chants:heretic": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:multihit:swing": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:ice_snake": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:war_scream:mantles:shield_strike": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:war_scream:air_shout": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:war_scream:mantles": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "archer:ultimate:twilight": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:multihit:bamboozle": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:dash:vanish": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:dash:malicious_mockery": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:tribal_chants:lunatic": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:awakened": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:main_attack:pyrokinesis": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:bloodlust": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:totem:puppet": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "archer:arrow_bomb:trap:chilling_snare": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:meteor:chunk": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:spin_attack:lacerate": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:spin_attack:nightcloak_knives": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:war_scream": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:war_scream:mantles:broken": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:uppercut:whirlwind_strike": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "archer:arrow_bomb": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:meteor:burning_sigil": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:ultimate:sundered_skies": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:jasmine_bloom:maxed": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:aura:invigorating_wave": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:jasmine_bloom": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:war_scream:cyclone": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:bash:thunderclap": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:ultimate:pierce_the_veil": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:spin_attack": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:main_attack:bloodied_armory": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:war_scream:emboldening_cry": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:ice_snake:freezing_sigil": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:heal:sunflare": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:meteor:ring": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:uppercut:halfmoon_strike": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:ice_snake:frozen_tornado": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:ripple": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:teleport:dimensional_tear:riftspawn": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:ultimate:judgment": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:totem:totemic_shatter": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:aura": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:uppercut:flaming_uppercut": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:uppercut:sacred_surge": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:heal:sunshower": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:meteor:thunderstorm": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "archer:arrow_storm:bryophite_roots": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:violent_vortex": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:war_scream:bak\u0027al\u0027s_grasp": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:uproot": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:bash:boiling_blood": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:smoke_bomb:black_hole": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:teleport:dimensional_tear:riftspawn:projectile": {
+    "values": {
+      "VISIBLE": false
+    }
+  }
+}

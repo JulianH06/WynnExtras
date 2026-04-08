@@ -128,6 +128,7 @@ public class BloodSorrowTimer {
         if (now >= timerEndMs) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
+        if (mc.options.hudHidden) return;
         ItemStack held = mc.player.getMainHandStack();
         GearItem gearItem = null;
         Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(held);
@@ -145,7 +146,7 @@ public class BloodSorrowTimer {
         String text = String.format("Blood Sorrow: %.1fs", remaining);
 
         float bs = WynnExtrasConfig.INSTANCE.bloodSorrowTimerScale;
-        int x = WynnExtrasConfig.INSTANCE.bloodSorrowTimerX;
+        int x = WynnExtrasConfig.INSTANCE.bloodSorrowTimerX == -1 ? mc.getWindow().getScaledWidth() / 2 : WynnExtrasConfig.INSTANCE.bloodSorrowTimerX;
         int y = WynnExtrasConfig.INSTANCE.bloodSorrowTimerY;
 
         int tw = mc.textRenderer.getWidth(text);

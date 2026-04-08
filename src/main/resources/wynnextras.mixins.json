@@ -11,22 +11,28 @@
   },
   "client": [
     "ChatClickMixin",
+    "ClientPacketListenerMixin",
     "GameRendererMixin",
     "GuildMapScreenMixin",
     "InventoryScreenMixin",
     "ItemHighlightFeatureMixin",
+    "ItemModelManagerMixin",
     "LivingEntityRendererMixin",
+    "NetManagerMixin",
     "PerspectiveMixin",
     "RaidLootOverlayClickMixin",
     "RaidLootOverlayScreenMixin",
+    "SpriteContentsMixin",
     "WeightScaleBackgroundMixin",
     "WorldRendererAccessor",
     "Accessor.BannerBlockEntityRendererAccessor",
     "Accessor.GuildMapScreenAccessor",
     "Accessor.HandledScreenAccessor",
+    "Accessor.ItemRenderStateAccessor",
     "Accessor.KeybindingAccessor",
     "BankOverlay.DrawContextMixin",
     "BankOverlay.HandledScreenMixin",
+    "Invoker.GetTransformationInvoker",
     "Invoker.HandledScreenInvoker"
   ],
   "mixins": [
@@ -47,7 +53,6 @@
     "Accessor.ChatHudAccessor",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
     "Accessor.SlotAccessor",
-    "Accessor.TooltipFittingFeatureAccessor",
     "BankOverlay.ContainerScrollFeatureMixin",
     "BankOverlay.PersonalStorageUtilitiesFeatureMixin",
     "Invoker.InventoryEmeraldCountFeatureInvoker",
@@ -61,11 +66,6 @@
     "Raid.RaidEndedEventFailedMixin",
     "Raid.RaidEndedEventMixin",
     "Raid.RaidModelMixin",
-    "Raid.RaidStartEventMixin",
-    "ShamanTotem.ShamanTotemCircleActivate",
-    "ShamanTotem.ShamanTotemCircleRemoved",
-    "ShamanTotem.ShamanTotemCircleSummoned",
-    "ShamanTotem.ShamanTotemCircleUpdated",
-    "ShamanTotem.ShamanTotemModelMixin"
+    "Raid.RaidStartEventMixin"
   ]
 }

@@ -2,9 +2,11 @@ package julianh06.wynnextras.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.util.Formatting;
+import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,12 +30,13 @@ public class WynnExtrasConfig {
 
     private static final List<Consumer<WynnExtrasConfig>> saveListeners = new ArrayList<>();
 
-    // ==================== PLAYER HIDER ====================
+    // ==================== HIDERS ====================
     public boolean playerHiderToggle = true;
     public int maxHideDistance = 3;
     public boolean hideAllPlayers = false;
     public boolean hideAllPlayersInWar = false;
     public List<String> hiddenPlayers = new ArrayList<>();
+    public String spellProfile = "default_off";
 
     // ==================== CHAT NOTIFIER ====================
     public List<String> notifierWords = new ArrayList<>();
@@ -62,6 +65,7 @@ public class WynnExtrasConfig {
     public boolean twoLightCrystal = true;
     public boolean notgUpperPlatform = true;
     public boolean notgLowerPlatform = true;
+    public boolean artifactRestored = true;
 
     public void syncPremades() {
         if(premades == null) premades = new HashMap<>();
@@ -76,6 +80,7 @@ public class WynnExtrasConfig {
         premades.put("+2 Light Crystal|+2 Crystals", twoLightCrystal);
         premades.put("The players on the|UPPER PLATFORM SPAWNED", notgUpperPlatform);
         premades.put("A new platform has|LOWER PLATFORM SPAWNED", notgLowerPlatform);
+        premades.put("The Artifact's power has been restored|SPEAR RECHARGED", artifactRestored);
     }
 
     // ==================== CHAT BLOCKER ====================
@@ -88,6 +93,7 @@ public class WynnExtrasConfig {
     public boolean bankQuickToggle = true;
     public int bankOverlayMaxRows = 3;
     public int bankOverlayMaxColumns = 3;
+    public boolean bankOverlayHideEmptyRows = false;
     public boolean showWeight = true;
     public boolean showScales = true;
     public boolean scaleBackgroundEnabled = true;
@@ -99,6 +105,7 @@ public class WynnExtrasConfig {
     public int craftingPreviewOverlayX = 20;
     public int craftingPreviewOverlayY = 20;
     public boolean craftingDynamicTextures = true;
+    public boolean skillpointHelper = true;
     public boolean wynnventoryOverlay = true;
     public boolean tradeMarketOverlay = true;
     public int tradeMarketOverlayX = 10;
@@ -113,16 +120,22 @@ public class WynnExtrasConfig {
     public boolean raidLootTrackerRenderInChat = true;
     public boolean raidLootTrackerOnlyNearChest = true;
     public boolean raidLootTrackerCompact = false;
-    public boolean raidLootTrackerShowSession = false;
     public int raidLootTrackerX = 5;
     public int raidLootTrackerY = 5;
     public List<String> raidLootTrackerHiddenLines = new ArrayList<>();
     public boolean raidLootTrackerBackground = true;
+    public RaidLootTrackerOverlay.mode raidLootTrackerMode = RaidLootTrackerOverlay.mode.ALL;
     public boolean toggleFastRequeue = true;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
     public boolean chiropTimer = false;
     public boolean automaticAspectScanning = true;
+    public boolean tnaTreeMap = true;
+    public boolean showTreeMapOnlyWhileInsideOfTree = false;
+    public boolean showPathsOnTreeMap = true;
+    public boolean showTreeMapEverywhere = false;
+    public int treeMapX = 5;
+    public int treeMapY = 5;
 
     // ==================== CHAT CLICK ====================
     public boolean chatClickPV = false;
@@ -137,14 +150,20 @@ public class WynnExtrasConfig {
     public boolean badgesEnabled = false;
 
     // ==================== MISC ====================
-    public boolean totemRangeVisualizerToggle = true;
-    public float totemRange = 10f;
-    public TextColor totemColor = TextColor.WHITE;
-    public float eldritchCallRange = 15f;
-    public TextColor eldritchCallColor = TextColor.WHITE;
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
     public boolean showLootpoolButtonInPartyFinder = true;
+    public boolean redirectWynntilsViewStatsToPV = true;
+
+    public boolean showOwnNametag = false;
+    // The code for this is in LivingEntityRendererMixin
+
+    // ==================== CHAT PEEK ====================
+    public boolean chatPeekEnabled = true;
+    public int chatPeekKey = GLFW.GLFW_KEY_Y;
+    public boolean chatPeekToggle = false;
+    public boolean chatPeekAllowVanillaScroll = false;
+    //WIP, not used currently
 
     // ==================== TOTEM TIMER ====================
     public boolean totemTimerEnabled = true;
@@ -154,6 +173,7 @@ public class WynnExtrasConfig {
     public float totemTimerWarningSoundVolume = 50f;
     public int totemTimerWarningThreshold = 2;
     public boolean totemTimerEstimate = true;
+    public boolean totemTimerTimeOnly = false;
     public int totemTimerX = -1;
     public int totemTimerY = 40;
     public float totemTimerScale = 1.0f;
@@ -186,6 +206,14 @@ public class WynnExtrasConfig {
     public boolean sourceOfTruthToggle = false;
     public boolean territoryEstimateToggle = false;
     public boolean removeChroma = false;
+
+    // ==================== TETRIS ====================
+    public int tetrisBestScore = 0;
+    public int tetrisBest40LinesMs = 0;
+    public int tetrisDAS = 100;
+    public int tetrisARR = 30;
+    public int tetrisSDFDelay = 100;
+    public int tetrisSDF = 30;
 
     //==================== Dark Modes ==========================
     public boolean darkmodeToggle = false; //for bank overlay (dont wanna change the variable cause it would reset it to false for everyone)

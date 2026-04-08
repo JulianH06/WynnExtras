@@ -10,13 +10,13 @@ import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.mc.SkinUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import julianh06.wynnextras.features.profileviewer.tabs.*;
 import julianh06.wynnextras.utils.UI.UIUtils;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.WEElement;
 import julianh06.wynnextras.utils.UI.Widget;
 import julianh06.wynnextras.utils.UI.WEScreen;
@@ -25,17 +25,13 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.EntityPose;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerModelPart;
 import net.minecraft.entity.player.SkinTextures;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import org.joml.Quaternionf;
 
 
 import java.io.IOException;
@@ -45,7 +41,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 public class PVScreen extends WEScreen {
     public static int mouseX = 0;
@@ -468,6 +463,14 @@ public class PVScreen extends WEScreen {
         for (int i = start; i <= end; i++) {
             WEElement<?> e = listElements.get(i);
             e.draw(context, mouseX, mouseY, delta, ui);
+        }
+
+        if (WynncraftApiHandler.INSTANCE.API_KEY == null || WynncraftApiHandler.INSTANCE.API_KEY.isEmpty()) {
+            ui.drawRect(xStart + 200, yStart + 100, currentTabWidget.getWidth() - 400, currentTabWidget.getHeight() - 200, CustomColor.fromHexString("808080"));
+            ui.drawCenteredText("§eSince the fruma update, the PV requires an api key.", xStart + 900, yStart + 300, CustomColor.fromHexString("FFFF55"), 3f);
+            ui.drawCenteredText("§eThis is not a decision we made, it is required by the wynncraft api.", xStart + 900, yStart + 350, CustomColor.fromHexString("FFFF55"), 3f);
+            ui.drawCenteredText("§eThis restriction might be removed, according to nepmia (the dev of the api)", xStart + 900, yStart + 400, CustomColor.fromHexString("FFFF55"), 3f);
+            ui.drawCenteredText("§eUse §b/we apikey §efor info on how to set your api key.", xStart + 900, yStart + 450, CustomColor.fromHexString("FFFF55"), 3f);
         }
     }
 

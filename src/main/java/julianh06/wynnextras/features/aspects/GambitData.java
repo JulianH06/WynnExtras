@@ -2,11 +2,11 @@ package julianh06.wynnextras.features.aspects;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import julianh06.wynnextras.core.ResetTimeConfig;
 
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,27 +49,12 @@ public class GambitData {
     }
 
     /**
-     * Get the last reset time (most recent RESET_HOUR:RESET_MINUTE CET before now)
-     */
-    public static ZonedDateTime getLastResetTime() {
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-        ZonedDateTime resetToday = now.withHour(RESET_HOUR).withMinute(RESET_MINUTE).withSecond(0).withNano(0);
-
-        // If we haven't reached reset time today, last reset was yesterday
-        if (now.isBefore(resetToday)) {
-            resetToday = resetToday.minusDays(1);
-        }
-
-        return resetToday;
-    }
-
-    /**
      * Check if we have valid gambits (saved after the last reset)
      */
     public boolean hasToday() {
         if (gambits.isEmpty()) return false;
 
-        long lastReset = getLastResetTime().toInstant().toEpochMilli();
+        long lastReset = ResetTimeConfig.INSTANCE.getCurrentGambitReset().toInstant().toEpochMilli();
         return savedTimestamp >= lastReset;
     }
 

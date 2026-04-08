@@ -2,9 +2,14 @@ package julianh06.wynnextras.mixin.BankOverlay;
 
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.Container;
+import com.wynntils.models.containers.containers.CharacterInfoContainer;
 import com.wynntils.models.containers.containers.CharacterSelectionContainer;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.containers.containers.ItemIdentifierContainer;
+import com.wynntils.models.containers.containers.personal.AccountBankContainer;
+import com.wynntils.models.containers.containers.personal.BookshelfContainer;
+import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
+import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
@@ -13,6 +18,7 @@ import julianh06.wynnextras.features.aspects.PartyFinderOpenLootpoolOverlay;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.*;
+import julianh06.wynnextras.features.misc.CompassMenuOverlay;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -49,12 +55,15 @@ public abstract class HandledScreenMixin {
     @Shadow protected int y;
 
     @Unique private julianh06.wynnextras.features.bankoverlay.BankOverlay2 bankOverlay;
+    @Unique private Boolean isBankScreen = null;
 
     @Unique private IdentifierOverlay identifierOverlay;
 
     @Unique private PartyFinderOpenLootpoolOverlay partyFinderOpenLootpoolOverlay;
 
     @Unique private CraftingHelperOverlay craftingHelperOverlay;
+
+    @Unique private CompassMenuOverlay compassMenuOverlay;
 
     @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
     private void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci){
@@ -65,14 +74,28 @@ public abstract class HandledScreenMixin {
     
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        if(bankOverlay == null) bankOverlay = new BankOverlay2(ci, (HandledScreen<?>) (Object) this);
-        bankOverlay.ci = ci;
-        bankOverlay.screen = (HandledScreen<?>) (Object) this;
-        bankOverlay.close = close -> {
-            close();
-            return null;
-        };
-        bankOverlay.render(context, mouseX, mouseY, delta);
+        // Only create BankOverlay2 for bank-type containers to avoid expensive
+        // initialization (WynncraftItemDatabase.initialize()) on every GUI open
+        if (isBankScreen == null) {
+            Container container = Models.Container.getCurrentContainer();
+            if (container != null) {
+                isBankScreen = container instanceof AccountBankContainer ||
+                    container instanceof CharacterBankContainer ||
+                    container instanceof BookshelfContainer ||
+                    container instanceof MiscBucketContainer;
+            }
+        }
+
+        if (Boolean.TRUE.equals(isBankScreen) || currentOverlayType != BankOverlayType.NONE) {
+            if (bankOverlay == null) bankOverlay = new BankOverlay2(ci, (HandledScreen<?>) (Object) this);
+            bankOverlay.ci = ci;
+            bankOverlay.screen = (HandledScreen<?>) (Object) this;
+            bankOverlay.close = close -> {
+                close();
+                return null;
+            };
+            bankOverlay.render(context, mouseX, mouseY, delta);
+        }
 
         if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
             if (identifierOverlay == null) {
@@ -96,6 +119,14 @@ public abstract class HandledScreenMixin {
             }
 
             craftingHelperOverlay.render(context, mouseX, mouseY, delta);
+        }
+
+        if(WynnExtrasConfig.INSTANCE.skillpointHelper) {
+            if(compassMenuOverlay == null) {
+                compassMenuOverlay = new CompassMenuOverlay();
+            }
+
+            compassMenuOverlay.render(context, mouseX, mouseY, delta);
         }
 
 
@@ -204,6 +235,24 @@ public abstract class HandledScreenMixin {
                     cir.cancel();
                 }
             }
+        }
+
+        if (Models.Container.getCurrentContainer() instanceof CharacterInfoContainer
+                && WynnExtrasConfig.INSTANCE.skillpointHelper
+                && CompassMenuOverlay.isSelectingWeapon()) {
+            if (compassMenuOverlay != null) {
+                compassMenuOverlay.mouseClicked(mouseX, mouseY, button);
+            }
+            cir.setReturnValue(true);
+            cir.cancel();
+            return;
+        }
+
+        if (compassMenuOverlay != null
+                && Models.Container.getCurrentContainer() instanceof CharacterInfoContainer
+                && WynnExtrasConfig.INSTANCE.skillpointHelper
+                && !CompassMenuOverlay.isSelectingWeapon()) {
+            compassMenuOverlay.mouseClicked(mouseX, mouseY, button);
         }
     }
 

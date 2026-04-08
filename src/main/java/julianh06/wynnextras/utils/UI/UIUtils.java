@@ -176,6 +176,36 @@ public final class UIUtils {
         drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f);
     }
 
+    public void drawText(Text text, float x, float y, CustomColor color, HorizontalAlignment hAlign, VerticalAlignment vAlign, TextShadow shadow, float textScale) {
+        FontRenderer.getInstance().renderText(
+                drawContext,
+                StyledText.fromComponent(text),
+                sx(x),
+                sy(y),
+                color,
+                hAlign,
+                vAlign,
+                shadow,
+                (float)(textScale / scaleFactor)
+        );
+    }
+
+    public void drawText(Text text, float x, float y, CustomColor color, HorizontalAlignment hAlign, VerticalAlignment vAlign, float textScale) {
+        drawText(text, x, y, color, hAlign, vAlign, TextShadow.NORMAL, textScale);
+    }
+
+    public void drawText(Text text, float x, float y, CustomColor color, float textScale) {
+        drawText(text, x, y, color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, textScale);
+    }
+
+    public void drawText(Text text, float x, float y, CustomColor color) {
+        drawText(text, x, y, color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f);
+    }
+
+    public void drawText(Text text, float x, float y) {
+        drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 3f);
+    }
+
     public void drawCenteredText(String text, float x, float y, CustomColor color, float textScale) {
         drawText(text, x, y, color, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, textScale);
     }
@@ -185,6 +215,18 @@ public final class UIUtils {
     }
 
     public void drawCenteredText(String text, float x, float y) {
+        drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f);
+    }
+
+    public void drawCenteredText(Text text, float x, float y, CustomColor color, float textScale) {
+        drawText(text, x, y, color, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, textScale);
+    }
+
+    public void drawCenteredText(Text text, float x, float y, CustomColor color) {
+        drawText(text, x, y, color, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f);
+    }
+
+    public void drawCenteredText(Text text, float x, float y) {
         drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f);
     }
 

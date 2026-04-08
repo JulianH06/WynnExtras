@@ -37,6 +37,8 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -45,6 +47,9 @@ import java.util.stream.Collectors;
 public class WynncraftApiHandler {
     public static WynncraftApiHandler INSTANCE = new WynncraftApiHandler();
 
+    public final AtomicInteger aspectFetchGeneration = new AtomicInteger(0);
+    public final AtomicBoolean isFetchingAspects = new AtomicBoolean(false);
+
     // Reuse HttpClient instance instead of creating new ones
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
@@ -52,7 +57,7 @@ public class WynncraftApiHandler {
     public List<ApiAspect> aspectList = java.util.Collections.synchronizedList(new ArrayList<>());
     public boolean[] waitingForAspectResponse = new boolean[5];
     // Lock object for synchronizing array access
-    private final Object aspectLock = new Object();
+    public final Object aspectLock = new Object();
 
     public static Map<String, JsonObject> cachedItemDatabase;
 
@@ -163,75 +168,64 @@ public class WynncraftApiHandler {
         }
 
         return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .thenApply(WynncraftApiHandler::parseAspectData);
+            .thenApply(response -> {
+                if (response.statusCode() != 200) {
+                    System.err.println("Aspect API returned status " + response.statusCode() + " for " + className);
+                    return null;
+                }
+                String body = response.body();
+                if (body == null || !body.trim().startsWith("{")) {
+                    System.err.println("Invalid API response for " + className + ": " + body);
+                    return null;
+                }
+                return body;
+            })
+            .thenApply(body -> {
+                if (body == null) return null;
+                return parseAspectData(body);
+            });
     }
 
     public static List<ApiAspect> fetchAllAspects() {
         List<String> classes = List.of("warrior", "shaman", "mage", "archer", "assassin");
         List<ApiAspect> aspectList = WynncraftApiHandler.INSTANCE.aspectList;
 
-        if(!aspectList.isEmpty()) {
+        if (!aspectList.isEmpty()) return aspectList;
+
+        if (!INSTANCE.isFetchingAspects.compareAndSet(false, true)) {
             return aspectList;
         }
 
-        // Synchronize access to waitingForAspectResponse array
-        synchronized (INSTANCE.aspectLock) {
-            // Check if ALL classes are marked as waiting but list is still empty - means previous fetch failed
-            boolean allWaiting = true;
-            for (int j = 0; j < 5; j++) {
-                if (!WynncraftApiHandler.INSTANCE.waitingForAspectResponse[j]) {
-                    allWaiting = false;
-                    break;
-                }
-            }
-            if (allWaiting && aspectList.isEmpty()) {
-                // Reset all flags - previous fetch must have failed
-                for (int j = 0; j < 5; j++) {
-                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[j] = false;
-                }
-            }
+        final int generation = INSTANCE.aspectFetchGeneration.get();
 
-            int i = 0;
-            for(String className : classes) {
-                if(WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i]) {
-                    i++;
-                    continue;
-                }
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-                WynncraftApiHandler.INSTANCE.waitingForAspectResponse[i] = true;
+        int i = 0;
+        for (String className : classes) {
+            CompletableFuture<Void> future = WynncraftApiHandler.fetchAspectList(className)
+                    .thenAccept(result -> {
+                        if (INSTANCE.aspectFetchGeneration.get() != generation) return;
+                        if (result == null || result.isEmpty()) return;
 
-                int finalI = i;
-                CompletableFuture<List<ApiAspect>> future = WynncraftApiHandler.fetchAspectList(className);
-                future.thenAccept(result -> {
-                        if (result == null) return;
-                        if (result.isEmpty()) return;
-
-                        synchronized (INSTANCE.aspectLock) {
-                            WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
-                        }
-                        // Only add aspects that aren't already in the list (prevent duplicates)
-                        // aspectList is already synchronized, but we need to check-then-add atomically
                         synchronized (aspectList) {
                             for (ApiAspect aspect : result) {
                                 boolean alreadyExists = aspectList.stream()
                                         .anyMatch(existing -> existing.getName().equals(aspect.getName()));
-                                if (!alreadyExists) {
-                                    aspectList.add(aspect);
-                                }
+                                if (!alreadyExists) aspectList.add(aspect);
                             }
                         }
-                })
-                .exceptionally(ex -> {
-                    System.err.println("Unexpected error fetching aspects: " + ex.getMessage());
-                    synchronized (INSTANCE.aspectLock) {
-                        WynncraftApiHandler.INSTANCE.waitingForAspectResponse[finalI] = false;
-                    }
-                    return null;
-                });
-                i++;
-            }
+                    })
+                    .exceptionally(ex -> {
+                        System.err.println("Error fetching aspects for " + className + ": " + ex.getMessage());
+                        return null;
+                    });
+
+            futures.add(future);
+            i++;
         }
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .whenComplete((v, ex) -> INSTANCE.isFetchingAspects.set(false));
 
         return aspectList;
     }
@@ -479,7 +473,7 @@ public class WynncraftApiHandler {
 
         // Validate raid type (short codes only)
         if (!raidType.equals("NOTG") && !raidType.equals("NOL") &&
-            !raidType.equals("TCC") && !raidType.equals("TNA")) {
+            !raidType.equals("TCC") && !raidType.equals("TNA") && !raidType.equals("TWP")) {
             System.err.println("Unknown raid type: " + raidType);
             return;
         }

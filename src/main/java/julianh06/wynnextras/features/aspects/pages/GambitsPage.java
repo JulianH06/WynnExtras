@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.aspects.pages;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.*;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -78,7 +79,7 @@ public class GambitsPage extends PageWidget{
         ui.drawCenteredText("§6§lToday's Gambits", centerX, 60);
 
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-        ZonedDateTime nextReset = now.withHour(19).withMinute(0).withSecond(0).withNano(0);
+        ZonedDateTime nextReset = ResetTimeConfig.INSTANCE.getNextGambitReset();
         if (nextReset.isBefore(now) || nextReset.isEqual(now)) {
             nextReset = nextReset.plusWeeks(1);
         }
@@ -287,7 +288,7 @@ public class GambitsPage extends PageWidget{
     }
 
     private static boolean shouldFetchGambits() {
-        ZonedDateTime currentReset = GambitData.getLastResetTime();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentGambitReset();
         ZonedDateTime lastFetch = lastCrowdsourceFetch;
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
 
@@ -316,6 +317,8 @@ public class GambitsPage extends PageWidget{
             lastCrowdsourceFetch = null;
             fetchRunning = false;
             hasOldData = false;
+
+            ResetTimeConfig.INSTANCE.refetch();
 
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
