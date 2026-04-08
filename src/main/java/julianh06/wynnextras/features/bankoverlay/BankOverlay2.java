@@ -74,6 +74,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -181,14 +182,14 @@ public class BankOverlay2 extends WEHandledScreen {
         scissory2 = 0;
 
         if (!wynncraftItemDatabaseInitialized) {
-            try {
-                if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
-                    Class<?> clazz = Class.forName("com.wynnmod.wynncraft.item.map.WynncraftItemDatabase");
-                    clazz.getMethod("initialize").invoke(null);
-                }
-                wynncraftItemDatabaseInitialized = true;
-            } catch (Exception ignored) {
-                wynncraftItemDatabaseInitialized = true;
+            wynncraftItemDatabaseInitialized = true;
+            if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        Class<?> clazz = Class.forName("com.wynnmod.wynncraft.item.map.WynncraftItemDatabase");
+                        clazz.getMethod("initialize").invoke(null);
+                    } catch (Exception ignored) {}
+                });
             }
         }
     }
