@@ -244,7 +244,9 @@ public class TotemTimer {
                 String timeDisplay = t.timeText().trim();
                 if (timeDisplay.isEmpty()) timeDisplay = "?";
 
-                String line = c.totemTimerOwnOnly ? ("Totem: " + timeDisplay) : (t.owner() + "'s Totem: " + timeDisplay);
+                String line = (c.totemTimerOwnOnly && c.totemTimerTimeOnly) ? timeDisplay
+                        : (c.totemTimerOwnOnly ? ("Totem: " + timeDisplay)
+                        : (t.owner() + "'s Totem: " + timeDisplay));
 
                 int color = t.estimated() ? 0xFFAAAAAA : timeColor(t.timeText());
 

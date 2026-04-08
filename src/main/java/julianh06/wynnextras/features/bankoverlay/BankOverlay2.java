@@ -672,7 +672,7 @@ public class BankOverlay2 extends WEHandledScreen {
         xFitAmount = Math.min(xFitAmount, WynnExtrasConfig.INSTANCE.bankOverlayMaxColumns);
         yFitAmount = Math.min(yFitAmount, WynnExtrasConfig.INSTANCE.bankOverlayMaxRows + 1);
 
-        if (currentData != null && currentData.lastPage > 0) {
+        if (currentData != null && currentData.lastPage > 0 && WynnExtrasConfig.INSTANCE.bankOverlayHideEmptyRows) {
             int totalPages = currentData.lastPage;
             int rowsNeeded = (int) Math.ceil((double) totalPages / xFitAmount);
 

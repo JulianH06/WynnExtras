@@ -93,6 +93,7 @@ public class WynnExtrasConfig {
     public boolean bankQuickToggle = true;
     public int bankOverlayMaxRows = 3;
     public int bankOverlayMaxColumns = 3;
+    public boolean bankOverlayHideEmptyRows = false;
     public boolean showWeight = true;
     public boolean showScales = true;
     public boolean scaleBackgroundEnabled = true;
@@ -172,6 +173,7 @@ public class WynnExtrasConfig {
     public float totemTimerWarningSoundVolume = 50f;
     public int totemTimerWarningThreshold = 2;
     public boolean totemTimerEstimate = true;
+    public boolean totemTimerTimeOnly = false;
     public int totemTimerX = -1;
     public int totemTimerY = 40;
     public float totemTimerScale = 1.0f;

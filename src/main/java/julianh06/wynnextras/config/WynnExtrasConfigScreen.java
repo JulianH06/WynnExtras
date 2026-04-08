@@ -152,6 +152,9 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(visibleWhen(toggle("Own Totems Only", "Only show timers for your own totems",
                                 () -> config.totemTimerOwnOnly, v -> config.totemTimerOwnOnly = v),
                         () -> config.totemTimerEnabled))
+                .add(visibleWhen(toggle("Minimalistic Timer", "Show only the time, without the totem label",
+                                () -> config.totemTimerTimeOnly, v -> config.totemTimerTimeOnly = v),
+                        () -> config.totemTimerEnabled && config.totemTimerOwnOnly))
                 .add(visibleWhen(toggle("Warning Text", "Show RECAST TOTEM! on screen when low (movable in Edit Gui)",
                                 () -> config.totemTimerWarningText, v -> config.totemTimerWarningText = v),
                         () -> config.totemTimerEnabled))
@@ -221,6 +224,8 @@ public class WynnExtrasConfigScreen extends Screen {
                         2, 24, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
                 .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
                         2, 24, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
+                .add(toggle("Hide empty rows", "Hides rows that only have locked pages",
+                        () -> config.bankOverlayHideEmptyRows, v -> config.bankOverlayHideEmptyRows = v))
                 .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
                         () -> config.showWeight, v -> config.showWeight = v))
