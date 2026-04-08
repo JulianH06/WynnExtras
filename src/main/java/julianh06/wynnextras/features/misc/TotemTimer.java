@@ -119,9 +119,9 @@ public class TotemTimer {
             for (DisplayEntity.TextDisplayEntity tde : allTdes) {
                 String raw = tde.getText().getString();
                 String text = Formatting.strip(raw);
-                if (text == null || !text.contains("'s Totem")) continue;
+                if (text == null || (!text.contains("'s Totem") && !text.contains("' Totem"))) continue;
 
-                int idx = text.indexOf("'s Totem");
+                int idx = text.contains("'s Totem") ? text.indexOf("'s Totem") : text.indexOf("' Totem");
                 String owner = idx > 0 ? text.substring(0, idx).trim() : "?";
 
                 // Own-only filter
