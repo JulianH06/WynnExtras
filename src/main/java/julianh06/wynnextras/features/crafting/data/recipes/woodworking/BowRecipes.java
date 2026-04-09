@@ -2,6 +2,8 @@ package julianh06.wynnextras.features.crafting.data.recipes.woodworking;
 
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
+import julianh06.wynnextras.features.crafting.data.materials.Ingot;
+import julianh06.wynnextras.features.crafting.data.materials.Paper;
 import julianh06.wynnextras.features.crafting.data.materials.StringMaterial;
 import julianh06.wynnextras.features.crafting.data.materials.Plank;
 import julianh06.wynnextras.utils.Pair;
@@ -32,10 +34,14 @@ public class BowRecipes implements IRecipeData {
             return List.of(new Pair<>(Plank.PINE, 5), new Pair<>(StringMaterial.RICE, 10));
         } else if (level < 100) {
             return List.of(new Pair<>(Plank.AVO, 6), new Pair<>(StringMaterial.SORGHUM, 12));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Plank.SKY, 6), new Pair<>(StringMaterial.HEMP, 12));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Plank.DERNIC, 6), new Pair<>(StringMaterial.DERNIC, 12));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Plank.MAPLE, 7), new Pair<>(StringMaterial.JUTE, 14));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Plank.REDWOOD, 7), new Pair<>(StringMaterial.HEATHER, 14));
         } else {
             return List.of();
         }

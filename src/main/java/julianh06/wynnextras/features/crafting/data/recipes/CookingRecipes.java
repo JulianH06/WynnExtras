@@ -4,6 +4,7 @@ import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.materials.Grains;
 import julianh06.wynnextras.features.crafting.data.materials.Meat;
+import julianh06.wynnextras.features.crafting.data.materials.Oil;
 import julianh06.wynnextras.utils.Pair;
 
 import java.util.List;
@@ -32,10 +33,14 @@ public class CookingRecipes implements IRecipeData {
             return List.of(new Pair<>(Meat.BASS, 10), new Pair<>(Grains.RICE, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Meat.MOLTEN, 12), new Pair<>(Grains.SORGHUM, 6));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Meat.STARFISH, 12), new Pair<>(Grains.HEMP, 6));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Meat.DERNIC, 12), new Pair<>(Grains.DERNIC, 6));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Meat.STURGEON, 14), new Pair<>(Grains.JUTE, 7));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Meat.MAHSEER, 14), new Pair<>(Grains.HEATHER, 7));
         } else {
             return List.of();
         }

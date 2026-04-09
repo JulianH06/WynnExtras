@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.crafting.data.recipes.tailoring;
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.materials.Ingot;
+import julianh06.wynnextras.features.crafting.data.materials.Paper;
 import julianh06.wynnextras.features.crafting.data.materials.StringMaterial;
 import julianh06.wynnextras.utils.Pair;
 
@@ -32,10 +33,14 @@ public class BootsRecipes implements IRecipeData {
             return List.of(new Pair<>(Ingot.DIAMOND, 5), new Pair<>(StringMaterial.RICE, 10));
         } else if (level < 100) {
             return List.of(new Pair<>(Ingot.MOLTEN, 6), new Pair<>(StringMaterial.SORGHUM, 12));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Ingot.VOIDSTONE, 6), new Pair<>(StringMaterial.HEMP, 12));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Ingot.DERNIC, 6), new Pair<>(StringMaterial.DERNIC, 12));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Ingot.TITANIUM, 7), new Pair<>(StringMaterial.JUTE, 14));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Ingot.CINNABAR, 7), new Pair<>(StringMaterial.HEATHER, 14));
         } else {
             return List.of();
         }

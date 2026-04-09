@@ -32,10 +32,14 @@ public class HelmetRecipes implements IRecipeData {
             return List.of(new Pair<>(Paper.PINE, 10), new Pair<>(Ingot.DIAMOND, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Paper.AVO, 12), new Pair<>(Ingot.MOLTEN, 6));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Paper.SKY, 12), new Pair<>(Ingot.VOIDSTONE, 6));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Paper.DERNIC, 12), new Pair<>(Ingot.DERNIC, 6));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Paper.MAPLE, 14), new Pair<>(Ingot.TITANIUM, 7));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Paper.REDWOOD, 14), new Pair<>(Ingot.CINNABAR, 7));
         } else {
             return List.of();
         }

@@ -40,7 +40,13 @@ public enum Plank implements IMaterial {
             Identifier.of("wynnextras", "textures/materials/wood/sky.png")),
     DERNIC("Dernic",
             Identifier.of("minecraft", "textures/wynn/economy/woodcutting/plank_dernic.png"),
-            Identifier.of("wynnextras", "textures/materials/wood/dernic.png"));
+            Identifier.of("wynnextras", "textures/materials/wood/dernic.png")),
+    MAPLE("Maple",
+            Identifier.of("minecraft", "textures/wynn/economy/woodcutting/plank_maple.png"),
+            Identifier.of("wynnextras", "textures/materials/ingot/dernic.png")),
+    REDWOOD("Redwood",
+            Identifier.of("minecraft", "textures/wynn/economy/woodcutting/plank_redwood.png"),
+            Identifier.of("wynnextras", "textures/materials/ingot/dernic.png"));
 
     private final String name;
     private final Identifier serverTexture;

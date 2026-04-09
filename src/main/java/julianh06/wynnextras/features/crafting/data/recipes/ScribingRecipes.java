@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.crafting.data.recipes;
 
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
+import julianh06.wynnextras.features.crafting.data.materials.Grains;
 import julianh06.wynnextras.features.crafting.data.materials.Oil;
 import julianh06.wynnextras.features.crafting.data.materials.Paper;
 import julianh06.wynnextras.utils.Pair;
@@ -36,10 +37,14 @@ public class ScribingRecipes implements IRecipeData {
             return List.of(new Pair<>(Paper.PINE, 5), new Pair<>(Oil.BASS, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Paper.AVO, 6), new Pair<>(Oil.MOLTEN, 6));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Paper.SKY, 6), new Pair<>(Oil.STARFISH, 6));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Paper.DERNIC, 6), new Pair<>(Oil.DERNIC, 6));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Paper.MAPLE, 7), new Pair<>(Oil.STURGEON, 7));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Paper.REDWOOD, 7), new Pair<>(Oil.MAHSEER, 7));
         } else {
             return List.of();
         }
