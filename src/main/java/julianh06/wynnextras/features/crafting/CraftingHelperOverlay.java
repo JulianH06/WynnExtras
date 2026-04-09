@@ -12,12 +12,14 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.Time;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.features.crafting.data.*;
+import julianh06.wynnextras.features.crafting.data.IMaterial;
+import julianh06.wynnextras.features.crafting.data.IRecipeData;
+import julianh06.wynnextras.features.crafting.data.VcitCompat;
 import julianh06.wynnextras.features.crafting.data.recipes.AlchemismRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.CookingRecipes;
+import julianh06.wynnextras.features.crafting.data.recipes.ScribingRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.armouring.ChestplateRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.armouring.HelmetRecipes;
-import julianh06.wynnextras.features.crafting.data.recipes.ScribingRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.jeweling.BraceletRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.jeweling.NecklaceRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.jeweling.RingRecipes;
@@ -49,7 +51,7 @@ import net.minecraft.util.Identifier;
 import java.util.*;
 
 public class CraftingHelperOverlay extends WEHandledScreen {
-    private static boolean registeredScroll = false;
+    private static final boolean registeredScroll = false;
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 50; // in ms
     public static float targetOffset = 0;
@@ -104,12 +106,12 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         targetOffset = ui == null ? -10 : -10 / ui.getScaleFactorF();
         statusMessage = "";
 
-        if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
+        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
         ProfessionType type = container.getProfessionType();
 
-        if(type == null) return;
+        if (type == null) return;
 
-        if(lastState.isEmpty()) return;
+        if (lastState.isEmpty()) return;
 
         state = lastState.get(type);
 
@@ -124,22 +126,23 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     }
 
     @Override
-    protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float delta) { }
+    protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    }
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
-        if(!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
+        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
+        if (!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
 
-        if(state == null) state = RecipeState.NONE;
+        if (state == null) state = RecipeState.NONE;
 
         int xStart = ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth();
         int yStart = (int) (((HandledScreenAccessor) screen).getY() + (70 / ui.getScaleFactor()));
         int widgetWidth = 600;
         int widgetHeight = (int) (((HandledScreenAccessor) screen).getBackgroundHeight() - (24 * 3 / ui.getScaleFactor()));
 
-        if(profSpeedBombWidget == null) profSpeedBombWidget = new ProfBombWidget(BombType.PROFESSION_SPEED);
-        if(profXpBombWidget == null) profXpBombWidget = new ProfBombWidget(BombType.PROFESSION_XP);
+        if (profSpeedBombWidget == null) profSpeedBombWidget = new ProfBombWidget(BombType.PROFESSION_SPEED);
+        if (profXpBombWidget == null) profXpBombWidget = new ProfBombWidget(BombType.PROFESSION_XP);
 
         int speedWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(profSpeedBombWidget.text) * ui.getScaleFactor());
         int xpWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(profXpBombWidget.text) * ui.getScaleFactor());
@@ -149,34 +152,34 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         profSpeedBombWidget.draw(ctx, mouseX, mouseY, delta, ui);
         profXpBombWidget.draw(ctx, mouseX, mouseY, delta, ui);
 
-        boolean dontShowWorldText = false;
+        boolean dontShowWorldText = profSpeedBombWidget.bomb != null && profSpeedBombWidget.bomb.server().equals(Models.WorldState.getCurrentWorldName());
 
-        if(profSpeedBombWidget.bomb != null && profSpeedBombWidget.bomb.server().equals(Models.WorldState.getCurrentWorldName())) dontShowWorldText = true;
-        if(profXpBombWidget.bomb != null && profXpBombWidget.bomb.server().equals(Models.WorldState.getCurrentWorldName())) dontShowWorldText = true;
+        if (profXpBombWidget.bomb != null && profXpBombWidget.bomb.server().equals(Models.WorldState.getCurrentWorldName()))
+            dontShowWorldText = true;
 
         if ((profXpBombWidget.isActive || profSpeedBombWidget.isActive) && !dontShowWorldText) {
             int currentWorldTextYOffset = profXpBombWidget.isActive ? 200 : 160;
             ui.drawCenteredText("There are no active profession bombs on your world. Click below to switch worlds.", (screen.width / 2f) * ui.getScaleFactorF(), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - currentWorldTextYOffset), CustomColor.fromHexString("FF0000"));
         }
 
-        if(!profXpBombWidget.isActive && !profSpeedBombWidget.isActive) {
+        if (!profXpBombWidget.isActive && !profSpeedBombWidget.isActive) {
             ui.drawCenteredText("There are no active profession bombs.", (screen.width / 2f) * ui.getScaleFactorF(), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 120), CustomColor.fromHexString("FF0000"));
         }
 
         ProfessionType type = container.getProfessionType();
         lastState.put(type, state);
-        
-        if(selectionWidget1 == null) {
+
+        if (selectionWidget1 == null) {
             selectionWidget1 = new SelectionWidget(0);
             rootWidgets.add(selectionWidget1);
         }
 
-        if(selectionWidget2 == null) {
+        if (selectionWidget2 == null) {
             selectionWidget2 = new SelectionWidget(1);
             rootWidgets.add(selectionWidget2);
         }
 
-        if(selectionWidget3 == null) {
+        if (selectionWidget3 == null) {
             selectionWidget3 = new SelectionWidget(2);
             rootWidgets.add(selectionWidget3);
         }
@@ -202,7 +205,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             }
         }
 
-        if(WynnExtrasConfig.INSTANCE.craftingHelperDarkMode) {
+        if (WynnExtrasConfig.INSTANCE.craftingHelperDarkMode) {
             ui.drawNineSlice((int) (xStart * ui.getScaleFactor() + 5),
                     (int) (yStart * ui.getScaleFactor()) - (big ? 66 : 0), widgetWidth,
                     (int) (widgetHeight * ui.getScaleFactor()) + (big ? 66 : 0), 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
@@ -213,7 +216,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         }
 
         int step = 142;
-        int recipeWidgetAmount = 12;
+        int recipeWidgetAmount = 14;
 
         int contentHeight = recipeWidgetAmount * step;
 
@@ -221,17 +224,22 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         int maxOffset = Math.max(0, contentHeight - visibleHeight);
 
-        if(helperWidget == null) {
+        if (helperWidget == null) {
             helperWidget = new HelperWidget(maxOffset);
             rootWidgets.add(helperWidget);
         }
 
-        if(helperWidget.recipeData == null) {
+        if (helperWidget.recipeData == null) {
             IRecipeData data = getRecipeDataInstance(type);
-            if (state != RecipeState.NONE) helperWidget.setRecipeData(data);
+            if (
+                    type == ProfessionType.SCRIBING ||
+                            type == ProfessionType.ALCHEMISM ||
+                            type == ProfessionType.COOKING ||
+                            state != RecipeState.NONE
+            ) helperWidget.setRecipeData(data);
         }
 
-        if(scrollBarWidget == null) {
+        if (scrollBarWidget == null) {
             scrollBarWidget = new ScrollBarWidget(maxOffset);
         }
 
@@ -242,7 +250,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         scrollBarWidget.draw(ctx, mouseX, mouseY, delta, ui);
 
         int scissorX1 = xStart;
-        int scissorY1 = (int) (yStart + Math.round((big ? - 46.5f : 20) / ui.getScaleFactor()));
+        int scissorY1 = (int) (yStart + Math.round((big ? -46.5f : 20) / ui.getScaleFactor()));
         int scissorX2 = xStart + widgetWidth;
         int scissorY2 = (int) (yStart + widgetHeight - Math.round(20 / ui.getScaleFactor()));
 
@@ -258,9 +266,9 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         selectionWidget2.setScissorBounds(scissorX1, scissorY1, scissorX2, scissorY2);
         selectionWidget3.setScissorBounds(scissorX1, scissorY1, scissorX2, scissorY2);
 
-        helperWidget.setBounds((int) (xStart * ui.getScaleFactor() + 5), (int) ((yStart + (big ? - 15 : 7)) * ui.getScaleFactor()), widgetWidth, (int) ((widgetHeight + (big ? 12 : - 14)) * ui.getScaleFactor()));
+        helperWidget.setBounds((int) (xStart * ui.getScaleFactor() + 5), (int) ((yStart + (big ? -15 : 7)) * ui.getScaleFactor()), widgetWidth, (int) ((widgetHeight + (big ? 12 : -14)) * ui.getScaleFactor()));
     }
-    
+
     private void setupSelectionWidget(SelectionWidget selectionWidget, ProfessionType type, int i, int maxWidgets, int xStart, int yStart, int widgetWidth) {
         int spacing = 20;
 
@@ -277,7 +285,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
     private String getSelectorText(ProfessionType type, int i) {
         return switch (type) {
-            case ARMOURING -> switch(i) {
+            case ARMOURING -> switch (i) {
                 case 0 -> "Helmet";
                 case 1 -> "Chestplate";
                 default -> null;
@@ -310,30 +318,31 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
-        if(!(McUtils.screen() instanceof HandledScreen<?>)) return;
+        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
+        if (!(McUtils.screen() instanceof HandledScreen<?>)) return;
 
         try {
             ctx.disableScissor();
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if(scrollBarWidget != null) scrollBarWidget.mouseClicked(x, y, button);
-        if(profSpeedBombWidget != null) profSpeedBombWidget.mouseClicked(x, y, button);
-        if(profXpBombWidget != null) profXpBombWidget.mouseClicked(x, y, button);
+        if (scrollBarWidget != null) scrollBarWidget.mouseClicked(x, y, button);
+        if (profSpeedBombWidget != null) profSpeedBombWidget.mouseClicked(x, y, button);
+        if (profXpBombWidget != null) profXpBombWidget.mouseClicked(x, y, button);
         return super.mouseClicked(x, y, button);
     }
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
-        if(scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
+        if (scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
         return super.mouseReleased(x, y, button);
     }
 
     private static IRecipeData getRecipeDataInstance(ProfessionType type) {
-        if(state == null) return null;
+        if (state == null) return null;
 
         return switch (type) {
             case WEAPONSMITHING -> switch (state) {
@@ -366,17 +375,17 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 case SECOND -> BootsRecipes.INSTANCE;
                 case NONE, THIRD -> null;
             };
-            case null, default ->  null;
+            case null, default -> null;
         };
     }
 
     private static void drawRecipe(DrawContext ctx, int x, int y, int width, int height, int level,
                                    IRecipeData recipe, boolean hovered, UIUtils ui) {
-        if(recipe == null) return;
+        if (recipe == null) return;
 
         List<Pair<IMaterial, Integer>> materials = recipe.getMaterials(level);
 
-        if(materials.isEmpty() || materials.size() < 2) return;
+        if (materials.isEmpty() || materials.size() < 2) return;
 
         //ui.drawRect(x, y, width, height, CustomColor.fromHexString("080808"));
 
@@ -468,7 +477,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             this.maxOffset = maxOffset;
             recipeData = null;
 
-            if(MinecraftClient.getInstance().currentScreen == null) return;
+            if (MinecraftClient.getInstance().currentScreen == null) return;
             ScreenMouseEvents.afterMouseScroll(MinecraftClient.getInstance().currentScreen).register((
                     screen,
                     mX,
@@ -496,37 +505,37 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
+            if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
             ProfessionType type = container.getProfessionType();
 
-            if(state == RecipeState.NONE && type != ProfessionType.ALCHEMISM && type != ProfessionType.COOKING && type != ProfessionType.SCRIBING) {
+            if (state == RecipeState.NONE && type != ProfessionType.ALCHEMISM && type != ProfessionType.COOKING && type != ProfessionType.SCRIBING) {
                 ui.drawCenteredText("Select the type", x + width / 2f, y + height / 2f - 30, CustomColor.fromHexString("FF0000"), 4);
                 ui.drawCenteredText("you want to craft.", x + width / 2f, y + height / 2f + 30, CustomColor.fromHexString("FF0000"), 4);
             }
 
-            if(recipeData == null) return;
+            if (recipeData == null) return;
 
             float snapValue = 0.5f;
 
             int widgetHeight = 130;
-            int widgetAmount = 12;
+            int widgetAmount = 14;
 
             boolean big = type == ProfessionType.ALCHEMISM || type == ProfessionType.COOKING || type == ProfessionType.SCRIBING;
             targetOffset = ui == null ? 0 : Math.clamp(targetOffset, big ? (-8 * (ui.getScaleFactorF() - 3)) : 0, maxOffset);
 
             float speed = 0.3f;
             float diff = (targetOffset - actualOffset);
-            if(Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffset = targetOffset;
+            if (Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle)
+                actualOffset = targetOffset;
             else actualOffset += diff * speed * tickDelta;
 
             Map<RecipeState, Float> map = lastOffset.get(type) == null ? new HashMap<>() : lastOffset.get(type);
             map.put(state, actualOffset);
             lastOffset.put(type, map);
 
-            if(recipeWidgets.isEmpty()) {
+            if (recipeWidgets.isEmpty()) {
                 for (int i = 0; i < widgetAmount; i++) {
-                    int level = i * 10;
-                    if(i == 11) level = 103;
+                    int level = (i > 10) ? 50 + i * 5 : i * 10;
 
                     RecipeWidget recipeWidget = new RecipeWidget(recipeData, i, level);
 
@@ -577,7 +586,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             boolean isClicking;
 
             public RecipeWidget(IRecipeData recipeData, int index, int level) {
-                super(0, 0 , 0,0);
+                super(0, 0, 0, 0);
                 this.recipeData = recipeData;
                 this.index = index;
                 this.level = level;
@@ -590,21 +599,17 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 ui.drawButton(x, y, width, height, 19, hovered && helperWidget.hovered, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
                 drawRecipe(ctx, x, y, width, height, level, recipeData, hovered, ui);
                 ui.drawLine(x + width * 0.8f, y + 5, x + width * 0.8f, y + height - 9, ui.getScaleFactorF(), WynnExtrasConfig.INSTANCE.craftingHelperDarkMode ? hovered ? CustomColor.fromHexString("6a6a71") : CustomColor.fromHexString("444448") : hovered ? CustomColor.fromHexString("c5b490") : CustomColor.fromHexString("a68a73"));
-                if(level < 100) {
+                if (level < 100) {
                     ui.drawCenteredText(String.valueOf(Math.max(1, level)), x + width * 0.9f, y + height / 4f + 4);
                     ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
                     ui.drawCenteredText(String.valueOf(level + 9), x + width * 0.9f, y + 3 * height / 4f - 4);
-                } else if(level == 100) {
-                    ui.drawCenteredText("100", x + width * 0.9f, y + height / 4f + 4);
+                } else {
+                    ui.drawCenteredText(String.valueOf(level), x + width * 0.9f, y + height / 4f + 4);
                     ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
-                    ui.drawCenteredText("103", x + width * 0.9f, y + 3 * height / 4f - 4);
-                } else if(level == 103) {
-                    ui.drawCenteredText("103", x + width * 0.9f, y + height / 4f + 4);
-                    ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
-                    ui.drawCenteredText("105", x + width * 0.9f, y + 3 * height / 4f - 4);
+                    ui.drawCenteredText(String.valueOf(level + 4), x + width * 0.9f, y + 3 * height / 4f - 4);
                 }
 
-                if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
+                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
 
                 ProfessionType profession = container.getProfessionType();
 
@@ -616,15 +621,17 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                         ui.drawCenteredText("Requires " + profession.getDisplayName(), x + width / 2f, y + height / 2f - 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
                         ui.drawCenteredText("level " + this.level + " to craft.", x + width / 2f, y + height / 2f + 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
                 checkClick();
             }
 
             @Override
             protected boolean onClick(int button) {
-                if(!helperWidget.hovered) return false;
+                if (!helperWidget.hovered) return false;
 
-                if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return false;
+                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container))
+                    return false;
 
                 statusMessage = "";
 
@@ -634,7 +641,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
                 List<Pair<IMaterial, Integer>> materials = recipeData.getMaterials(this.level);
 
-                if(materials.isEmpty() || materials.size() < 2) return true;
+                if (materials.isEmpty() || materials.size() < 2) return true;
 
                 clickMaterial(materials.getFirst(), true);
                 clickMaterial(materials.get(1), false);
@@ -649,11 +656,11 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 int available = 0;
 
                 boolean canClick = false;
-                for(Slot slot : slots) {
+                for (Slot slot : slots) {
                     try {
-                        if(!(slot.inventory instanceof PlayerInventory)) continue;
+                        if (!(slot.inventory instanceof PlayerInventory)) continue;
 
-                        if(slot.getStack().getCustomName().getString().contains(material.getFirst().getName())) {
+                        if (slot.getStack().getCustomName().getString().contains(material.getFirst().getName())) {
                             canClick = true;
                             for (int i = 0; i < materialAmount; i++) {
                                 CLICK_QUEUE.add(slot.id);
@@ -661,27 +668,29 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                             break;
                         }
 
-                        if(available >= materialAmount) break;
-                    } catch (Exception ignored) {}
+                        if (available >= materialAmount) break;
+                    } catch (Exception ignored) {
+                    }
                 }
 
-                if(!canClick) {
+                if (!canClick) {
                     statusMessage = "You don't have the required materials to craft this.";
                 }
             }
 
             private void checkClick() {
-                if(McUtils.containerMenu().getSlot(0).getStack().getCustomName() == null ||
+                if (McUtils.containerMenu().getSlot(0).getStack().getCustomName() == null ||
                         McUtils.containerMenu().getSlot(9).getStack().getCustomName() == null) return;
 
-                if(McUtils.containerMenu().getSlot(0).getStack().getCustomName().getString() == null ||
+                if (McUtils.containerMenu().getSlot(0).getStack().getCustomName().getString() == null ||
                         McUtils.containerMenu().getSlot(9).getStack().getCustomName().getString() == null) return;
 
-                if((!McUtils.containerMenu().getSlot(0).getStack().getCustomName().getString().contains("Material Slot")
-                || !McUtils.containerMenu().getSlot(9).getStack().getCustomName().getString().contains("Material Slot")) && !isClicking) return;
+                if ((!McUtils.containerMenu().getSlot(0).getStack().getCustomName().getString().contains("Material Slot")
+                        || !McUtils.containerMenu().getSlot(9).getStack().getCustomName().getString().contains("Material Slot")) && !isClicking)
+                    return;
 
                 isClicking = true;
-                if(!CLICK_QUEUE.isEmpty() && lastClick < Time.now().timestamp() - 1) {
+                if (!CLICK_QUEUE.isEmpty() && lastClick < Time.now().timestamp() - 1) {
                     Integer next = CLICK_QUEUE.poll();
                     if (next == null) return;
 
@@ -693,7 +702,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                     );
 
                     lastClick = Time.now().timestamp();
-                } else if(CLICK_QUEUE.isEmpty()) isClicking = false;
+                } else if (CLICK_QUEUE.isEmpty()) isClicking = false;
             }
         }
     }
@@ -706,7 +715,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         int scissorX1, scissorY1, scissorX2, scissorY2;
 
         public SelectionWidget(int index) {
-            super(0, 0 , 0,0);
+            super(0, 0, 0, 0);
             this.index = index;
         }
 
@@ -719,12 +728,13 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if(!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
-            if(state == null) return;
+            if (!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
+            if (state == null) return;
 
             ctx.disableScissor();
             ui.drawButton(x, y - 6, width + 2, height + 10, 13, hovered, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
-            if(index == state.ordinal() - 1) ui.drawRectBorders(x + 2, y - 2, x + width, y + height - 2, CustomColor.fromHexString("FFFF00"));
+            if (index == state.ordinal() - 1)
+                ui.drawRectBorders(x + 2, y - 2, x + width, y + height - 2, CustomColor.fromHexString("FFFF00"));
             ui.drawCenteredText(text, x + width / 2f, y + height / 2f);
             int xStart = ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth();
             int yStart = ((HandledScreenAccessor) screen).getY() + 22;
@@ -743,7 +753,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
             switch (index) {
                 case 0 -> {
-                    if (state != RecipeState.FIRST) state =  RecipeState.FIRST;
+                    if (state != RecipeState.FIRST) state = RecipeState.FIRST;
                     else state = RecipeState.NONE;
                 }
                 case 1 -> {
@@ -758,12 +768,12 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
             helperWidget.recipeData = null;
 
-            if(!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return true;
+            if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return true;
             ProfessionType type = container.getProfessionType();
 
             targetOffset = 0;
 
-            if(type == null) return true;
+            if (type == null) return true;
 
             Map<RecipeState, Float> offsets = lastOffset.get(type);
             if (offsets == null) return true;
@@ -882,7 +892,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             try {
-                if(bomb != null) {
+                if (bomb != null) {
                     if (bomb.server().equals(Models.WorldState.getCurrentWorldName())) hovered = false;
                 }
 
@@ -907,10 +917,10 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                     String worldColor = bomb.server().equals(currentWorld) ? "§a" : "§f";
                     worldColor += (hovered ? "§n" : "");
                     String bombType = "?";
-                    if(type == BombType.PROFESSION_SPEED) bombType = "Speed";
-                    if(type == BombType.PROFESSION_XP) bombType = "XP";
+                    if (type == BombType.PROFESSION_SPEED) bombType = "Speed";
+                    if (type == BombType.PROFESSION_XP) bombType = "XP";
 
-                    text = "§6" + (hovered ? "§n" : "") + "Profession " + bombType  + " §7" + (hovered ? "§n" : "") + "on " + worldColor + bomb.server() + " §6" + (hovered ? "§n" : "") + "(" + bomb.getRemainingString() + ")";
+                    text = "§6" + (hovered ? "§n" : "") + "Profession " + bombType + " §7" + (hovered ? "§n" : "") + "on " + worldColor + bomb.server() + " §6" + (hovered ? "§n" : "") + "(" + bomb.getRemainingString() + ")";
 
                     if (bomb.getRemainingLong() < 30000) {
                         long seconds = Time.now().timestamp() / 1000;
@@ -925,15 +935,16 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
                     ui.drawCenteredText(text, x + width / 2f, y + height / 2f);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         @Override
         protected boolean onClick(int button) {
-            if(bomb.server().equals(Models.WorldState.getCurrentWorldName())) return true;
+            if (bomb.server().equals(Models.WorldState.getCurrentWorldName())) return true;
 
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-            if(bomb == null) return true;
+            if (bomb == null) return true;
             MinecraftClient client = MinecraftClient.getInstance();
 
             if (client.player != null) {
