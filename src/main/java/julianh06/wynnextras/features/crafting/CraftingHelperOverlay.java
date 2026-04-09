@@ -228,7 +228,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         if(helperWidget.recipeData == null) {
             IRecipeData data = getRecipeDataInstance(type);
-            helperWidget.setRecipeData(data);
+            if (state != RecipeState.NONE) helperWidget.setRecipeData(data);
         }
 
         if(scrollBarWidget == null) {
