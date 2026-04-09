@@ -40,6 +40,7 @@ public class LootPoolData {
         lootPools.put("NOL", new ArrayList<>());
         lootPools.put("TCC", new ArrayList<>());
         lootPools.put("TNA", new ArrayList<>());
+        lootPools.put("TWP", new ArrayList<>());
     }
 
     public static class AspectEntry {
@@ -185,6 +186,7 @@ public class LootPoolData {
         lootPools.put("NOL", new ArrayList<>());
         lootPools.put("TCC", new ArrayList<>());
         lootPools.put("TNA", new ArrayList<>());
+        lootPools.put("TWP", new ArrayList<>());
         save();
     }
 }

@@ -498,7 +498,7 @@ public class AspectsPage extends PageWidget {
         int barX = centerX - barWidth / 2;
 
         int totalAspects = allAspects.size();
-        int totalCount = progressBarShowMax ? countMaxedAspects(allAspects, playerAspects) : (int) playerAspects.stream().filter(a -> a.getAmount() > 0).count();
+        int totalCount = progressBarShowMax ? countMaxedAspects(allAspects, playerAspects) : (int) playerAspects.stream().filter(a -> a.getAmount() > 1).count();
 
         int mythicTotal = (int) allAspects.stream().filter(a -> a.getRarity().equalsIgnoreCase("mythic")).count();
         int mythicCount = progressBarShowMax ? countMaxedByRarity(allAspects, playerAspects, "mythic") : countUnlockedByRarity(allAspects, playerAspects, "mythic");
@@ -789,7 +789,7 @@ public class AspectsPage extends PageWidget {
     private int countUnlockedForClassAndRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String className, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
-            if (playerAspect.getAmount() <= 1) continue; //TODO: total amount still not working kinda when on main tab
+            if (playerAspect.getAmount() <= 1) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (!apiAspect.getRequiredClass().equalsIgnoreCase(className)) continue;

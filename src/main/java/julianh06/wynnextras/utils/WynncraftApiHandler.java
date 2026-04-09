@@ -658,14 +658,14 @@ public class WynncraftApiHandler {
 
     /**
      * Fetch crowdsourced loot pool from API
-     * @param raidType NOTG, NOL, TCC, TNA
+     * @param raidType NOTG, NOL, TCC, TNA, TWP
      * @return CompletableFuture with list of aspects or null if not available
      */
     public static CompletableFuture<List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry>> fetchCrowdsourcedLootPool(String raidType) {
         try {
             // Validate raid type (short codes only)
             if (!raidType.equals("NOTG") && !raidType.equals("NOL") &&
-                !raidType.equals("TCC") && !raidType.equals("TNA")) {
+                !raidType.equals("TCC") && !raidType.equals("TNA") && !raidType.equals("TWP")) {
                 System.err.println("Unknown raid type: " + raidType);
                 return CompletableFuture.completedFuture(null);
             }
