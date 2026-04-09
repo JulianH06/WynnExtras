@@ -577,7 +577,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             ctx.drawItem(stack, x / 5 + 2, y / 5 + 2);
             ctx.getMatrices().popMatrix();
 
-            if(playerAspect == null) {
+            if(playerAspect == null || playerAspect.getAmount() <= 1) {
                 RenderUtils.drawTexturedRect(
                     ctx,
                     Texture.HIGHLIGHT.identifier(),

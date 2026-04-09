@@ -299,7 +299,7 @@ public class maintracking {
                 passiveScanActive = true;
             }
 
-            if (inAspectMenu && passiveScanActive) {
+            if (inAspectMenu && passiveScanActive && !AspectScanreq && !nextPage) {
                 if (GuiSettleTicks > 5) {
                     GuiSettleTicks = 0;
                     AspectScanning.scanCurrentPagePassive();

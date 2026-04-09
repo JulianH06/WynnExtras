@@ -209,6 +209,7 @@ public class AspectsPage extends PageWidget {
         int maxedForClass = 0;
 
         for (Aspect playerAspect : activeAspectsData.getAspects()) {
+            if (playerAspect.getAmount() <= 1) continue;
             ApiAspect apiAspect = allAspects.stream()
                     .filter(a -> a.getName().equals(playerAspect.getName()))
                     .findFirst()
@@ -323,13 +324,25 @@ public class AspectsPage extends PageWidget {
             List<Aspect> mythicAndFabledAspects = new ArrayList<>();
             List<Aspect> legendaryAspects = new ArrayList<>();
 
-            for(Aspect aspect : activeAspectsData.getAspects()) {
-                for(ApiAspect apiAspect : allAspects) {
-                    if(!apiAspect.getRequiredClass().equalsIgnoreCase(currentTab.name())) continue;
-                    if(!apiAspect.getName().equalsIgnoreCase(aspect.getName())) continue;
-                    if(apiAspect.getRarity().equalsIgnoreCase("legendary")) legendaryAspects.add(aspect);
-                    else mythicAndFabledAspects.add(aspect);
+            for(ApiAspect apiAspect : allAspects) {
+                if(!apiAspect.getRequiredClass().equalsIgnoreCase(currentTab.name())) continue;
+                Aspect playerAspect = null;
+                for(Aspect a : activeAspectsData.getAspects()) {
+                    if(a.getName().equalsIgnoreCase(apiAspect.getName())) {
+                        playerAspect = a;
+                        break;
+                    }
                 }
+                if(playerAspect == null || playerAspect.getAmount() <= 1) {
+                    Aspect stub = new Aspect();
+                    stub.setName(apiAspect.getName());
+                    stub.setRarity(apiAspect.getRarity());
+                    stub.setRequiredClass(apiAspect.getRequiredClass());
+                    stub.setAmount(0);
+                    playerAspect = stub;
+                }
+                if(apiAspect.getRarity().equalsIgnoreCase("legendary")) legendaryAspects.add(playerAspect);
+                else mythicAndFabledAspects.add(playerAspect);
             }
 
             mythicAndFabledWidget.aspectEntries = mythicAndFabledAspects;
@@ -485,7 +498,7 @@ public class AspectsPage extends PageWidget {
         int barX = centerX - barWidth / 2;
 
         int totalAspects = allAspects.size();
-        int totalCount = progressBarShowMax ? countMaxedAspects(allAspects, playerAspects) : playerAspects.size();
+        int totalCount = progressBarShowMax ? countMaxedAspects(allAspects, playerAspects) : (int) playerAspects.stream().filter(a -> a.getAmount() > 0).count();
 
         int mythicTotal = (int) allAspects.stream().filter(a -> a.getRarity().equalsIgnoreCase("mythic")).count();
         int mythicCount = progressBarShowMax ? countMaxedByRarity(allAspects, playerAspects, "mythic") : countUnlockedByRarity(allAspects, playerAspects, "mythic");
@@ -689,6 +702,7 @@ public class AspectsPage extends PageWidget {
     private int countMaxedAspects(List<ApiAspect> allAspects, List<Aspect> playerAspects) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
+            if (playerAspect.getAmount() <= 1) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
 
@@ -711,6 +725,7 @@ public class AspectsPage extends PageWidget {
     private int countMaxedByRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
+            if (playerAspect.getAmount() <= 1) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (!apiAspect.getRarity().equalsIgnoreCase(rarity)) continue;
@@ -734,6 +749,7 @@ public class AspectsPage extends PageWidget {
     private int countUnlockedByRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
+            if (playerAspect.getAmount() <= 1) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (apiAspect.getRarity().equalsIgnoreCase(rarity)) {
@@ -748,6 +764,7 @@ public class AspectsPage extends PageWidget {
     private int countMaxedForClassAndRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String className, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
+            if (playerAspect.getAmount() <= 1) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (!apiAspect.getRequiredClass().equalsIgnoreCase(className)) continue;
@@ -772,6 +789,7 @@ public class AspectsPage extends PageWidget {
     private int countUnlockedForClassAndRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String className, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
+            if (playerAspect.getAmount() <= 1) continue; //TODO: total amount still not working kinda when on main tab
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (!apiAspect.getRequiredClass().equalsIgnoreCase(className)) continue;
@@ -1145,21 +1163,22 @@ public class AspectsPage extends PageWidget {
                     displayName = displayName.substring(0, maxChars - ((hovered || isFavorite) ? 5 : 3)) + "...";
                 }
 
-                String tierInfo = AspectUtils.convertAmountToTierInfo(aspect.getAmount(), aspect.getRarity());
+                boolean isNotUnlocked = aspect.getAmount() <= 1;
+                String tierInfo = isNotUnlocked ? "Not unlocked" : AspectUtils.convertAmountToTierInfo(aspect.getAmount(), aspect.getRarity());
 
                 boolean isMax = tierInfo.contains("MAX");
-                CustomColor textColor = CustomColor.fromHexString("FFFFFF");
+                CustomColor textColor = isNotUnlocked ? CustomColor.fromHexString("808080") : CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
                 if(isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
                     textColor = CommonColors.RAINBOW;
-                } else {
+                } else if(!isNotUnlocked) {
                     if(aspect.getRarity().equalsIgnoreCase("mythic")) rarityColorCode = "§5";
                     else if(aspect.getRarity().equalsIgnoreCase("fabled")) rarityColorCode = "§c";
                     else if(aspect.getRarity().equalsIgnoreCase("legendary")) rarityColorCode = "§b";
                 }
 
-                ui.drawText(rarityColorCode + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 90, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
-
+                String namePrefix = isNotUnlocked ? "§8" : rarityColorCode;
+                ui.drawText(namePrefix + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 90, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
 
                 ApiAspect apiAspect = findApiAspectByName(aspect.getName());
                 ItemStack flameItem = createAspectFlameIcon(apiAspect, isMax);
@@ -1176,7 +1195,7 @@ public class AspectsPage extends PageWidget {
                 if(hovered && parent.isHovered()) {
                     List<Text> tooltip = new ArrayList<>();
                     if(apiAspect == null) return;
-                    int tier = 0;
+                    int tier = 1;
                     if(isMax) {
                         if(aspect.getRarity().equalsIgnoreCase("legendary")) tier = 4;
                         else tier = 3;

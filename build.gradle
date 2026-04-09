@@ -109,6 +109,7 @@ remapJar {
 tasks.named("shadowJar").configure {
 	configurations = [project.configurations.shadowImpl, project.configurations.shadowModImpl]
 	archiveClassifier.set('all')
+	exclude 'javassist/tools/rmi/AppletServer.class'
 }
 
 // configure the maven publication
