@@ -2,9 +2,7 @@ package julianh06.wynnextras.features.crafting.data.recipes.woodworking;
 
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
-import julianh06.wynnextras.features.crafting.data.materials.Ingot;
 import julianh06.wynnextras.features.crafting.data.materials.Oil;
-import julianh06.wynnextras.features.crafting.data.materials.Paper;
 import julianh06.wynnextras.features.crafting.data.materials.Plank;
 import julianh06.wynnextras.utils.Pair;
 
@@ -14,7 +12,7 @@ public class RelikRecipes implements IRecipeData {
     public static RelikRecipes INSTANCE = new RelikRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Plank.OAK, 1), new Pair<>(Oil.GUDGEON, 2));
         } else if (level < 20) {
             return List.of(new Pair<>(Plank.BIRCH, 2), new Pair<>(Oil.TROUT, 4));

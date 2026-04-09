@@ -4,7 +4,6 @@ import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.materials.Grains;
 import julianh06.wynnextras.features.crafting.data.materials.Meat;
-import julianh06.wynnextras.features.crafting.data.materials.Oil;
 import julianh06.wynnextras.utils.Pair;
 
 import java.util.List;
@@ -13,7 +12,7 @@ public class CookingRecipes implements IRecipeData {
     public static CookingRecipes INSTANCE = new CookingRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Meat.GUDGEON, 2), new Pair<>(Grains.WHEAT, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Meat.TROUT, 4), new Pair<>(Grains.BARLEY, 2));

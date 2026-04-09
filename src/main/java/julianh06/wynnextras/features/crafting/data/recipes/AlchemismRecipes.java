@@ -2,10 +2,8 @@ package julianh06.wynnextras.features.crafting.data.recipes;
 
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
-import julianh06.wynnextras.features.crafting.data.materials.Ingot;
-import julianh06.wynnextras.features.crafting.data.materials.Oil;
 import julianh06.wynnextras.features.crafting.data.materials.Grains;
-import julianh06.wynnextras.features.crafting.data.materials.Plank;
+import julianh06.wynnextras.features.crafting.data.materials.Oil;
 import julianh06.wynnextras.utils.Pair;
 
 import java.util.List;
@@ -14,7 +12,7 @@ public class AlchemismRecipes implements IRecipeData {
     public static AlchemismRecipes INSTANCE = new AlchemismRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Grains.WHEAT, 2), new Pair<>(Oil.GUDGEON, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Grains.BARLEY, 4), new Pair<>(Oil.TROUT, 2));

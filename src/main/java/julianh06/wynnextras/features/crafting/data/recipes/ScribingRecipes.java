@@ -2,7 +2,6 @@ package julianh06.wynnextras.features.crafting.data.recipes;
 
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
-import julianh06.wynnextras.features.crafting.data.materials.Grains;
 import julianh06.wynnextras.features.crafting.data.materials.Oil;
 import julianh06.wynnextras.features.crafting.data.materials.Paper;
 import julianh06.wynnextras.utils.Pair;
@@ -16,8 +15,8 @@ public class ScribingRecipes implements IRecipeData {
 //        return switch (level) {
 //            case int l when l < 10 -> List.of(new Pair<>(Paper.OAK, 1), new Pair<>(Oil.GUDGEON, 1));
 //        } this apparently only works with jdk 23, ill keep this here in case minecraft decides to upgrade the java version
-        
-        if(level < 10) {
+
+        if (level < 10) {
             return List.of(new Pair<>(Paper.OAK, 1), new Pair<>(Oil.GUDGEON, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Paper.BIRCH, 2), new Pair<>(Oil.TROUT, 2));

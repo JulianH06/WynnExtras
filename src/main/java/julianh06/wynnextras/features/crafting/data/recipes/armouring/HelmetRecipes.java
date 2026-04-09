@@ -1,8 +1,8 @@
 package julianh06.wynnextras.features.crafting.data.recipes.armouring;
 
+import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.materials.Ingot;
-import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.materials.Paper;
 import julianh06.wynnextras.utils.Pair;
 
@@ -12,7 +12,7 @@ public class HelmetRecipes implements IRecipeData {
     public static HelmetRecipes INSTANCE = new HelmetRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Paper.OAK, 2), new Pair<>(Ingot.COPPER, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Paper.BIRCH, 4), new Pair<>(Ingot.GRANITE, 2));

@@ -1,9 +1,8 @@
 package julianh06.wynnextras.features.crafting.data.recipes.weaponsmithing;
 
+import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.materials.Ingot;
-import julianh06.wynnextras.features.crafting.data.IMaterial;
-import julianh06.wynnextras.features.crafting.data.materials.Paper;
 import julianh06.wynnextras.features.crafting.data.materials.Plank;
 import julianh06.wynnextras.utils.Pair;
 
@@ -13,7 +12,7 @@ public class DaggerRecipes implements IRecipeData {
     public static DaggerRecipes INSTANCE = new DaggerRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Plank.OAK, 1), new Pair<>(Ingot.COPPER, 2));
         } else if (level < 20) {
             return List.of(new Pair<>(Plank.BIRCH, 2), new Pair<>(Ingot.GRANITE, 4));

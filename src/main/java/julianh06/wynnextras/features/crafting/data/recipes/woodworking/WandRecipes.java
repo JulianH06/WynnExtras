@@ -2,8 +2,6 @@ package julianh06.wynnextras.features.crafting.data.recipes.woodworking;
 
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
-import julianh06.wynnextras.features.crafting.data.materials.Ingot;
-import julianh06.wynnextras.features.crafting.data.materials.Paper;
 import julianh06.wynnextras.features.crafting.data.materials.Plank;
 import julianh06.wynnextras.features.crafting.data.materials.StringMaterial;
 import julianh06.wynnextras.utils.Pair;
@@ -14,7 +12,7 @@ public class WandRecipes implements IRecipeData {
     public static WandRecipes INSTANCE = new WandRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Plank.OAK, 2), new Pair<>(StringMaterial.WHEAT, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Plank.BIRCH, 4), new Pair<>(StringMaterial.BARLEY, 2));

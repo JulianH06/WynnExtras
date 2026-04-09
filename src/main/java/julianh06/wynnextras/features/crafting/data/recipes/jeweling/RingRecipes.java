@@ -2,7 +2,8 @@ package julianh06.wynnextras.features.crafting.data.recipes.jeweling;
 
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
-import julianh06.wynnextras.features.crafting.data.materials.*;
+import julianh06.wynnextras.features.crafting.data.materials.Gem;
+import julianh06.wynnextras.features.crafting.data.materials.Oil;
 import julianh06.wynnextras.utils.Pair;
 
 import java.util.List;
@@ -11,7 +12,7 @@ public class RingRecipes implements IRecipeData {
     public static RingRecipes INSTANCE = new RingRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Gem.COPPER, 1), new Pair<>(Oil.GUDGEON, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Gem.GRANITE, 2), new Pair<>(Oil.TROUT, 2));
