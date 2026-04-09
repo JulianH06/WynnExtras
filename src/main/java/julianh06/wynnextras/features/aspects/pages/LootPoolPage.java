@@ -425,24 +425,24 @@ public class LootPoolPage extends PageWidget {
             //aspectWidgets.clear();
             if(aspectWidgets.isEmpty()) {
                 for (LootPoolData.AspectEntry entry : mythicAspects) {
-                    if(hideMax && entry.tierInfo.contains("MAX")) continue;
+                    if(hideMax && entry.tierInfo != null && entry.tierInfo.contains("MAX")) continue;
                     if(onlyFavorites && !FavoriteAspectsData.INSTANCE.isFavorite(entry.name)) continue;
                     aspectWidgets.add(new AspectWidget(entry, this));
                 }
                 for (LootPoolData.AspectEntry entry : fabledAspects) {
-                    if(hideMax && entry.tierInfo.contains("MAX")) continue;
+                    if(hideMax && entry.tierInfo != null && entry.tierInfo.contains("MAX")) continue;
                     if(onlyFavorites && !FavoriteAspectsData.INSTANCE.isFavorite(entry.name)) continue;
                     aspectWidgets.add(new AspectWidget(entry, this));
                 }
                 for (LootPoolData.AspectEntry entry : legendaryAspects) {
-                    if(hideMax && entry.tierInfo.contains("MAX")) continue;
+                    if(hideMax && entry.tierInfo != null && entry.tierInfo.contains("MAX")) continue;
                     if(onlyFavorites && !FavoriteAspectsData.INSTANCE.isFavorite(entry.name)) continue;
                     aspectWidgets.add(new AspectWidget(entry, this));
                 }
             }
 
             for(LootPoolData.AspectEntry aspectEntry : lootPool) {
-                if(aspectEntry.tierInfo.isEmpty()) continue;
+                if(aspectEntry.tierInfo == null || aspectEntry.tierInfo.isEmpty()) continue;
 
                 for(AspectWidget aspectWidget : aspectWidgets) {
                     if(!aspectWidget.aspect.tierInfo.isEmpty()) continue;
@@ -600,8 +600,16 @@ public class LootPoolPage extends PageWidget {
             for (LootPoolData.AspectEntry aspect : aspects) {
                 String tierInfo = aspect.tierInfo;
 
-                if (tierInfo == null || tierInfo.isEmpty() || tierInfo.contains("[MAX]")) {
-                    continue; // Already maxed or no data, no score contribution
+                if (tierInfo != null && tierInfo.contains("[MAX]")) {
+                    continue; // Already maxed, no score contribution
+                }
+
+                // Not unlocked / no progress yet: treat as start of Tier I
+                if (tierInfo == null || tierInfo.isEmpty()) {
+                    String rarityCapitalized = aspect.rarity == null || aspect.rarity.isEmpty() ? "" :
+                            Character.toUpperCase(aspect.rarity.charAt(0)) + aspect.rarity.substring(1).toLowerCase();
+                    tierInfo = AspectUtils.convertAmountToTierInfo(1, rarityCapitalized);
+                    if (tierInfo == null || tierInfo.isEmpty()) continue; // Unknown rarity
                 }
 
                 // Parse tierInfo: "Tier I >>>>>> Tier II [10/14]"
@@ -672,7 +680,7 @@ public class LootPoolPage extends PageWidget {
                             String rarity = progress.getSecond();
 
                             // Convert amount to tier info string
-                            String tierInfo = convertAmountToTierInfo(amount, rarity);
+                            String tierInfo = amount < 1 ? null : convertAmountToTierInfo(amount, rarity);
 
                             // Create new entry with personal tier info
                             withProgress.add(new LootPoolData.AspectEntry(aspect.name, rarity, tierInfo, aspect.description));
@@ -843,16 +851,18 @@ public class LootPoolPage extends PageWidget {
                 }
 
 
-                boolean isMax = aspect.tierInfo != null && aspect.tierInfo.contains("MAX");
-                CustomColor textColor = CustomColor.fromHexString("FFFFFF");
+                boolean isNotOwned = aspect.tierInfo == null || aspect.tierInfo.isEmpty() || aspect.tierInfo.contains("Tier I [0/");
+                boolean isMax = !isNotOwned && aspect.tierInfo.contains("MAX");
+                CustomColor textColor = isNotOwned ? CustomColor.fromHexString("808080") : CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
                 if(isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
                     textColor = CommonColors.RAINBOW;
-                } else {
+                } else if(!isNotOwned) {
                     rarityColorCode = getAspectColorCode(aspect);
                 }
 
-                ui.drawText(rarityColorCode + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 87, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
+                String namePrefix = isNotOwned ? "§8" : rarityColorCode;
+                ui.drawText(namePrefix + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 87, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
 
 
                 ApiAspect apiAspect = findApiAspectByName(aspect.name);
@@ -870,7 +880,7 @@ public class LootPoolPage extends PageWidget {
                 if(hovered && parent.isHovered() && mouseY * ui.getScaleFactorF() > parent.y + 190) {
                     List<Text> tooltip = new ArrayList<>();
                     if(apiAspect == null) return;
-                    int tier = 0;
+                    int tier = 1;
                     if(isMax) {
                         if(aspect.rarity.equalsIgnoreCase("Legendary")) tier = 4;
                         else tier = 3;
@@ -895,8 +905,8 @@ public class LootPoolPage extends PageWidget {
                     }
 
                     String name = tooltip.getFirst().getString();
-
-                    tooltip.set(0, Text.of(name + (aspect.tierInfo == null ? " " : " §7" + aspect.tierInfo)));
+                    String tierSuffix = isNotOwned ? "Not unlocked" : aspect.tierInfo;
+                    tooltip.set(0, Text.of(name + " §7" + tierSuffix));
 
                     hoveredTooltip = tooltip;
                 }

@@ -47,17 +47,17 @@ import java.util.stream.Collectors;
 public class WynncraftApiHandler {
     public static WynncraftApiHandler INSTANCE = new WynncraftApiHandler();
 
-    public final AtomicInteger aspectFetchGeneration = new AtomicInteger(0);
-    public final AtomicBoolean isFetchingAspects = new AtomicBoolean(false);
+    public transient final AtomicInteger aspectFetchGeneration = new AtomicInteger(0);
+    public transient final AtomicBoolean isFetchingAspects = new AtomicBoolean(false);
 
     // Reuse HttpClient instance instead of creating new ones
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
     // Use synchronized list to prevent concurrent modification
-    public List<ApiAspect> aspectList = java.util.Collections.synchronizedList(new ArrayList<>());
-    public boolean[] waitingForAspectResponse = new boolean[5];
+    public transient List<ApiAspect> aspectList = java.util.Collections.synchronizedList(new ArrayList<>());
+    public transient boolean[] waitingForAspectResponse = new boolean[5];
     // Lock object for synchronizing array access
-    public final Object aspectLock = new Object();
+    public transient final Object aspectLock = new Object();
 
     public static Map<String, JsonObject> cachedItemDatabase;
 
@@ -1079,7 +1079,7 @@ public class WynncraftApiHandler {
             try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
                 WynncraftApiHandler loaded = gson.fromJson(reader, WynncraftApiHandler.class);
                 if (loaded != null) {
-                    INSTANCE = loaded;
+                    INSTANCE.API_KEY = loaded.API_KEY;
                 } else {
                     System.err.println("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");
                 }
