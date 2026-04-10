@@ -26,17 +26,6 @@ import java.util.Map;
 public class LootrunScanning {
     private static final Map<String, ZonedDateTime> lastLootrunUploadReset = new HashMap<>();
 
-    private static boolean lootDebugEnabled = false;
-
-    public static void toggleLootDebug() {
-        lootDebugEnabled = !lootDebugEnabled;
-        if (lootDebugEnabled) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aLootrun item debugging ENABLED — open a lootrun preview chest to dump its contents to the log"));
-        } else {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cLootrun item debugging DISABLED"));
-        }
-    }
-
     private static final Map<String, List<LootrunLootPoolData.LootrunItem>> pendingItems = new HashMap<>();
     private static final Map<String, Boolean> pendingUploadAllowed = new HashMap<>();
     private static boolean waitingForPageLoad = false;
