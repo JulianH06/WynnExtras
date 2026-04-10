@@ -851,7 +851,7 @@ public class LootPoolPage extends PageWidget {
                 }
 
 
-                boolean isNotOwned = aspect.tierInfo == null || aspect.tierInfo.isEmpty() || aspect.tierInfo.contains("Tier I [0/");
+                boolean isNotOwned = aspect.tierInfo == null || aspect.tierInfo.isEmpty();
                 boolean isMax = !isNotOwned && aspect.tierInfo.contains("MAX");
                 CustomColor textColor = isNotOwned ? CustomColor.fromHexString("808080") : CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
