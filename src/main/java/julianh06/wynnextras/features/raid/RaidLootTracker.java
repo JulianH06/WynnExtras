@@ -196,6 +196,15 @@ public class RaidLootTracker {
                 sessionRaidData.totalCharms += count;
                 latestRun.totalCharms += count;
             }
+
+            // ===== Wards =====
+            if (name.contains("Ward")) {
+                data.totalWards += count;
+                raidData.totalWards += count;
+                data.sessionData.totalWards += count;
+                sessionRaidData.totalWards += count;
+                latestRun.totalWards += count;
+            }
         }
 
         data.latestData = latestRun;

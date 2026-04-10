@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -118,34 +118,34 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
 
         if(ranking != null && currentStatus == Status.ALL) {
             NOTGRank = ranking.getOrDefault("grootslangCompletion", -1L);
-            if(NOTGRank <= 100 && NOTGRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgColor = CommonColors.RAINBOW;
+            if(NOTGRank <= 100 && NOTGRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgColor = WynncraftShaderColor.RAINBOW.color;
 
             NOLRank = ranking.getOrDefault("orphionCompletion", -1L);
-            if(NOLRank <= 100 && NOLRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolColor = CommonColors.RAINBOW;
+            if(NOLRank <= 100 && NOLRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolColor = WynncraftShaderColor.RAINBOW.color;
 
             TCCRank = ranking.getOrDefault("colossusCompletion", -1L);
-            if(TCCRank <= 100 && TCCRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccColor = CommonColors.RAINBOW;
+            if(TCCRank <= 100 && TCCRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccColor = WynncraftShaderColor.RAINBOW.color;
 
             TNARank = ranking.getOrDefault("namelessCompletion", -1L);
-            if(TNARank <= 100 && TNARank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaColor = CommonColors.RAINBOW;
+            if(TNARank <= 100 && TNARank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaColor = WynncraftShaderColor.RAINBOW.color;
 
             TWPRank = ranking.getOrDefault("palaceCompletion", -1L);
-            if(TWPRank <= 100 && TWPRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpColor = CommonColors.RAINBOW;
+            if(TWPRank <= 100 && TWPRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpColor = WynncraftShaderColor.RAINBOW.color;
 
             NOTGSRRank = ranking.getOrDefault("grootslangSrPlayers", -1L);
-            if(NOTGSRRank <= 100 && NOTGSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgSRColor = CommonColors.RAINBOW;
+            if(NOTGSRRank <= 100 && NOTGSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgSRColor = WynncraftShaderColor.RAINBOW.color;
 
             NOLSRRank = ranking.getOrDefault("orphionSrPlayers", -1L);
-            if(NOLSRRank <= 100 && NOLSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolSRColor = CommonColors.RAINBOW;
+            if(NOLSRRank <= 100 && NOLSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolSRColor = WynncraftShaderColor.RAINBOW.color;
 
             TCCSRRank = ranking.getOrDefault("colossusSrPlayers", -1L);
-            if(TCCSRRank <= 100 && TCCSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccSRColor = CommonColors.RAINBOW;
+            if(TCCSRRank <= 100 && TCCSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccSRColor = WynncraftShaderColor.RAINBOW.color;
 
             TNASRRank = ranking.getOrDefault("namelessSrPlayers", -1L);
-            if(TNASRRank <= 100 && TNASRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaSRColor = CommonColors.RAINBOW;
+            if(TNASRRank <= 100 && TNASRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaSRColor = WynncraftShaderColor.RAINBOW.color;
 
             TWPSRRank = ranking.getOrDefault("palaceSrPlayers", -1L);
-            if(TWPSRRank <= 100 && TWPSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpSRColor = CommonColors.RAINBOW;
+            if(TWPSRRank <= 100 && TWPSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpSRColor = WynncraftShaderColor.RAINBOW.color;
 
             if(NOTGRank != -1) {
                 ui.drawText("Completion Rank #" + formatter.format(NOTGRank), x + 240f, y + 195f, notgColor, 3f);

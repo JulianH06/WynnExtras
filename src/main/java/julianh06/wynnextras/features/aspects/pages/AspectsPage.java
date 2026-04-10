@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
@@ -209,7 +209,7 @@ public class AspectsPage extends PageWidget {
         int maxedForClass = 0;
 
         for (Aspect playerAspect : activeAspectsData.getAspects()) {
-            if (playerAspect.getAmount() <= 1) continue;
+            if (playerAspect.getAmount() <= 0) continue;
             ApiAspect apiAspect = allAspects.stream()
                     .filter(a -> a.getName().equals(playerAspect.getName()))
                     .findFirst()
@@ -333,7 +333,7 @@ public class AspectsPage extends PageWidget {
                         break;
                     }
                 }
-                if(playerAspect == null || playerAspect.getAmount() <= 1) {
+                if(playerAspect == null || playerAspect.getAmount() <= 0) {
                     Aspect stub = new Aspect();
                     stub.setName(apiAspect.getName());
                     stub.setRarity(apiAspect.getRarity());
@@ -702,7 +702,7 @@ public class AspectsPage extends PageWidget {
     private int countMaxedAspects(List<ApiAspect> allAspects, List<Aspect> playerAspects) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
-            if (playerAspect.getAmount() <= 1) continue;
+            if (playerAspect.getAmount() <= 0) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
 
@@ -725,7 +725,7 @@ public class AspectsPage extends PageWidget {
     private int countMaxedByRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
-            if (playerAspect.getAmount() <= 1) continue;
+            if (playerAspect.getAmount() <= 0) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (!apiAspect.getRarity().equalsIgnoreCase(rarity)) continue;
@@ -749,7 +749,7 @@ public class AspectsPage extends PageWidget {
     private int countUnlockedByRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
-            if (playerAspect.getAmount() <= 1) continue;
+            if (playerAspect.getAmount() <= 0) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (apiAspect.getRarity().equalsIgnoreCase(rarity)) {
@@ -764,7 +764,7 @@ public class AspectsPage extends PageWidget {
     private int countMaxedForClassAndRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String className, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
-            if (playerAspect.getAmount() <= 1) continue;
+            if (playerAspect.getAmount() <= 0) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (!apiAspect.getRequiredClass().equalsIgnoreCase(className)) continue;
@@ -789,7 +789,7 @@ public class AspectsPage extends PageWidget {
     private int countUnlockedForClassAndRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String className, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
-            if (playerAspect.getAmount() <= 1) continue;
+            if (playerAspect.getAmount() <= 0) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (!apiAspect.getRequiredClass().equalsIgnoreCase(className)) continue;
@@ -1163,14 +1163,14 @@ public class AspectsPage extends PageWidget {
                     displayName = displayName.substring(0, maxChars - ((hovered || isFavorite) ? 5 : 3)) + "...";
                 }
 
-                boolean isNotUnlocked = aspect.getAmount() <= 1;
+                boolean isNotUnlocked = aspect.getAmount() <= 0;
                 String tierInfo = isNotUnlocked ? "Not unlocked" : AspectUtils.convertAmountToTierInfo(aspect.getAmount(), aspect.getRarity());
 
                 boolean isMax = tierInfo.contains("MAX");
                 CustomColor textColor = isNotUnlocked ? CustomColor.fromHexString("808080") : CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
                 if(isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
-                    textColor = CommonColors.RAINBOW;
+                    textColor = WynncraftShaderColor.RAINBOW.color;
                 } else if(!isNotUnlocked) {
                     if(aspect.getRarity().equalsIgnoreCase("mythic")) rarityColorCode = "§5";
                     else if(aspect.getRarity().equalsIgnoreCase("fabled")) rarityColorCode = "§c";

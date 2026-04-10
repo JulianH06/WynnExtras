@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
@@ -458,7 +458,7 @@ public class LootPoolPage extends PageWidget {
                 scoreString = "MAXED";
             }
 
-            ui.drawCenteredText(raidNames[raid.ordinal()], x + width / 2f, y + textureWidth - 20, (max && !WynnExtrasConfig.INSTANCE.removeChroma) ? CommonColors.RAINBOW : CustomColor.fromHexString("FFFFFF"));
+            ui.drawCenteredText(raidNames[raid.ordinal()], x + width / 2f, y + textureWidth - 20, (max && !WynnExtrasConfig.INSTANCE.removeChroma) ? WynncraftShaderColor.RAINBOW.color : CustomColor.fromHexString("FFFFFF"));
 
             scoreWidget.scoreString = scoreString;
             int scoreWidth = MinecraftClient.getInstance().textRenderer.getWidth(scoreString);
@@ -801,7 +801,7 @@ public class LootPoolPage extends PageWidget {
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 if(scoreString.isEmpty()) return;
 
-                if(scoreString.equals("MAXED") && !WynnExtrasConfig.INSTANCE.removeChroma) ui.drawText(scoreString, x, y, CommonColors.RAINBOW);
+                if(scoreString.equals("MAXED") && !WynnExtrasConfig.INSTANCE.removeChroma) ui.drawText(scoreString, x, y, WynncraftShaderColor.RAINBOW.color);
                 else ui.drawText((hovered ? "§n" : "") + scoreString, x, y, CustomColor.fromHexString("c0c0c0"));
 
                 if(hovered) {
@@ -856,7 +856,7 @@ public class LootPoolPage extends PageWidget {
                 CustomColor textColor = isNotOwned ? CustomColor.fromHexString("808080") : CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
                 if(isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
-                    textColor = CommonColors.RAINBOW;
+                    textColor = WynncraftShaderColor.RAINBOW.color;
                 } else if(!isNotOwned) {
                     rarityColorCode = getAspectColorCode(aspect);
                 }

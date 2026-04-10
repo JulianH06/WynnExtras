@@ -34,6 +34,9 @@ public class RaidLootData {
     public int fabledAspects = 0;
     public int legendaryAspects = 0;
 
+    // ===== Wards =====
+    public int totalWards = 0;
+
     public long getTotalLiquidEmeralds() {
         return liquidEmeralds + (emeraldBlocks / 64);
     }
@@ -112,6 +115,7 @@ public class RaidLootData {
         mythicAspects = 0;
         fabledAspects = 0;
         legendaryAspects = 0;
+        totalWards = 0;
         perRaidData = new HashMap<>();
         resetSession();
     }
@@ -139,6 +143,7 @@ public class RaidLootData {
         public int mythicAspects = 0;
         public int fabledAspects = 0;
         public int legendaryAspects = 0;
+        public int totalWards = 0;
         public int completionCount = 0;
 
         public long getTotalLiquidEmeralds() {

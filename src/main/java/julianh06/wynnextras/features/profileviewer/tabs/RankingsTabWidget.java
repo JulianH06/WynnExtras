@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
@@ -171,7 +171,7 @@ public class RankingsTabWidget extends PVScreen.TabWidget {
 
             CustomColor textColor = CustomColor.fromHexString("FFFFFF");
             if(globalPlacement <= 100 && globalPlacement > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) {
-                textColor = CommonColors.RAINBOW;
+                textColor = WynncraftShaderColor.RAINBOW.color;
             }
 
             if(i < 12) {

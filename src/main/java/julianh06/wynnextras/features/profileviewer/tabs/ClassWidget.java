@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
@@ -96,7 +96,7 @@ public class ClassWidget extends Widget {
             int totalLevel = characterData.getTotalLevel();
             CustomColor levelColor;
             if (characterData.getContentCompletion() == MAX_CONTENT_COMPLETION && !WynnExtrasConfig.INSTANCE.removeChroma) {
-                levelColor = CommonColors.RAINBOW;
+                levelColor = WynncraftShaderColor.RAINBOW.color;
             } else {
                 levelColor = CustomColor.fromHexString("FFFFFF");
             }

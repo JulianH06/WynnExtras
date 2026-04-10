@@ -849,9 +849,8 @@ public class WynncraftApiHandler {
                                 JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
                                 String status = result.get("status").getAsString();
 
-                                String campName = julianh06.wynnextras.features.aspects.LootrunLootPoolData.CAMP_NAMES.get(camp);
                                 if (status.equals("approved")) {
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aLootrun pool for §e" + campName + " §aapproved!"));
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aLootrun pool for §e" + camp + " §aapproved!"));
                                 } else {
                                     McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Lootrun pool submitted. Waiting for more confirmations."));
                                 }

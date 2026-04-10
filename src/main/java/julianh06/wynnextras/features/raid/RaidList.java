@@ -35,7 +35,7 @@ public class RaidList {
         long raidEndTime = System.currentTimeMillis();
 
         // Debug logging
-        System.out.println("[WynnExtras] Raid ended - type: " + event.getRaid().toString());
+        System.out.println("[WynnExtras] Raid ended - type: " + event.getRaid().getRaidKind().getRaidName());
         System.out.println("[WynnExtras] Raid end time: " + raidEndTime);
         System.out.println("[WynnExtras] Raid start time from event: " + event.getRaid().getRaidStartTime());
         System.out.println("[WynnExtras] Time in raid (ms): " + event.getRaid().getTimeInRaid());

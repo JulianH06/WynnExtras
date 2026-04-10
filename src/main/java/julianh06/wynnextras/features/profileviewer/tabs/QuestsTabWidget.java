@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -74,7 +74,7 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
         String titleString;
         CustomColor textColor;
         if(quests.size() == 287 && !WynnExtrasConfig.INSTANCE.removeChroma) {
-            textColor = CommonColors.RAINBOW;
+            textColor = WynncraftShaderColor.RAINBOW.color;
         } else {
             textColor = CustomColor.fromHexString("FFFFFF");
         }

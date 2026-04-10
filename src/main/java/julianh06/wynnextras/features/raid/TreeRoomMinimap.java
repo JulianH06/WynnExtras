@@ -246,7 +246,7 @@ public class TreeRoomMinimap {
         RenderUtils.drawTexturedRect(
                 context,
                 texture,
-                position.getFirst(), position.getSecond(),
+                xPos + position.getFirst(), yPos + position.getSecond(),
                 16, 16,
                 40, 8, 8, 8,
                 64, 64

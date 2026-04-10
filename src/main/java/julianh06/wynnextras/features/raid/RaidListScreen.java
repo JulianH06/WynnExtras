@@ -44,6 +44,7 @@ public class RaidListScreen extends Screen {
     RaidFilterButton NOLFilterButton = new RaidFilterButton(-1, -1, 40, 40);
     RaidFilterButton TCCFilterButton = new RaidFilterButton(-1, -1, 40, 40);
     RaidFilterButton TNAFilterButton = new RaidFilterButton(-1, -1, 40, 40);
+    RaidFilterButton TWPFilterButton = new RaidFilterButton(-1, -1, 40, 40);
     RaidFilterButton PBFilterButton = new RaidFilterButton(-1, -1, 40, 40);
 
     RaidListFilter Filter = new RaidListFilter(-1, -1, -1, -1);
@@ -56,10 +57,12 @@ public class RaidListScreen extends Screen {
     Identifier NOLTexture = Identifier.of("wynnextras", "textures/gui/raid/raidicons/orphionsnexusoflight-small.png");
     Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/raid/raidicons/thecanyoncolossus-small.png");
     Identifier TNATexture = Identifier.of("wynnextras", "textures/gui/raid/raidicons/thenamelessanomaly-small.png");
+    Identifier TWPTexture = Identifier.of("wynnextras", "textures/gui/raid/raidicons/thewartornpalace-small.png");
     Identifier NOTGTextureBW = Identifier.of("wynnextras", "textures/gui/raid/raidicons/nestofthegrootslangs-small-bw.png");
     Identifier NOLTextureBW = Identifier.of("wynnextras", "textures/gui/raid/raidicons/orphionsnexusoflight-small-bw.png");
     Identifier TCCTextureBW = Identifier.of("wynnextras", "textures/gui/raid/raidicons/thecanyoncolossus-small-bw.png");
     Identifier TNATextureBW = Identifier.of("wynnextras", "textures/gui/raid/raidicons/thenamelessanomaly-small-bw.png");
+    Identifier TWPTextureBW = Identifier.of("wynnextras", "textures/gui/raid/raidicons/thewartornpalace-small-bw.png");
     Identifier ScrollTextureTopLeft = Identifier.of("wynnextras", "textures/gui/raid/scrolltop/scrollleft.png");
     Identifier ScrollTextureTopMid = Identifier.of("wynnextras", "textures/gui/raid/scrolltop/scrollmid.png");
     Identifier ScrollTextureTopRight = Identifier.of("wynnextras", "textures/gui/raid/scrolltop/scrollright.png");
@@ -221,16 +224,18 @@ public class RaidListScreen extends Screen {
         RenderUtils.drawTexturedRect(context, ButtonBackgroundMidTexture, CustomColor.NONE, xStart + 40, 0, MidButtonBackgroundWidth, 80, MidButtonBackgroundWidth, 80);
         RenderUtils.drawTexturedRect(context, ButtonBackgroundRightTexture, CustomColor.NONE, xStart + width - 50, 0, 120, 80, 120, 80);
 
-        NOTGFilterButton.setX(xStart + width / 2 - 180);
+        NOTGFilterButton.setX(xStart + width / 2 - 200);
         NOTGFilterButton.setY(16);
-        NOLFilterButton.setX(xStart + width / 2 - 100);
+        NOLFilterButton.setX(xStart + width / 2 - 130);
         NOLFilterButton.setY(16);
-        PBFilterButton.setX(xStart + width / 2 - 20);
+        PBFilterButton.setX(xStart + width / 2 - 60);
         PBFilterButton.setY(16);
-        TCCFilterButton.setX(xStart + width / 2 + 60);
+        TCCFilterButton.setX(xStart + width / 2 + 10);
         TCCFilterButton.setY(16);
-        TNAFilterButton.setX(xStart + width / 2 + 140);
+        TNAFilterButton.setX(xStart + width / 2 + 80);
         TNAFilterButton.setY(16);
+        TWPFilterButton.setX(xStart + width / 2 + 150);
+        TWPFilterButton.setY(16);
 
         Filter.setHeight(14);
         Filter.setWidth(width);
@@ -247,6 +252,8 @@ public class RaidListScreen extends Screen {
         else TCCFilterButton.drawWithTexture(context, TCCTextureBW);
         if(TNAFilterButton.isActive) TNAFilterButton.drawWithTexture(context, TNATexture);
         else TNAFilterButton.drawWithTexture(context, TNATextureBW);
+        if(TWPFilterButton.isActive) TWPFilterButton.drawWithTexture(context, TWPTexture);
+        else TWPFilterButton.drawWithTexture(context, TWPTextureBW);
         if(PBFilterButton.isActive) PBFilterButton.drawWithTexture(context, PBTexture);
         else PBFilterButton.drawWithTexture(context, PBTextureBW);
 
@@ -299,6 +306,7 @@ public class RaidListScreen extends Screen {
             case "TNA" -> TNATexture;
             case "NOL" -> NOLTexture;
             case "TCC" -> TCCTexture;
+            case "TWP" -> TWPTexture;
             default -> null;
         };
     }
@@ -338,6 +346,11 @@ public class RaidListScreen extends Screen {
 
         if(TNAFilterButton.isClickInBounds((int) mouseX, (int) mouseY)) {
             TNAFilterButton.click();
+            return true;
+        }
+
+        if(TWPFilterButton.isClickInBounds((int) mouseX, (int) mouseY)) {
+            TWPFilterButton.click();
             return true;
         }
 
@@ -446,6 +459,10 @@ public class RaidListScreen extends Screen {
                 continue;
             }
             if(TNAFilterButton.isActive && raid.raidInfo.getRaidKind() instanceof TheNamelessAnomalyRaid) {
+                result.add(raid);
+                continue;
+            }
+            if(TWPFilterButton.isActive && raid.raidInfo.getRaidKind() instanceof TheWartornPalaceRaid) {
                 result.add(raid);
                 continue;
             }

@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
@@ -198,13 +198,13 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
 
         if(WETeam != null && PV.currentPlayerData.getUsername() != null) {
             if (WETeam.contains(PV.currentPlayerData.getUsername())) {
-                ui.drawCenteredText("★★★ WynnExtras Team Member ★★★", x + 285, y + 720, CommonColors.SHINE, 3f);
+                ui.drawCenteredText("★★★ WynnExtras Team Member ★★★", x + 285, y + 720, WynncraftShaderColor.SHINE.color, 3f);
             }
         }
 
         if(WEContributors != null && PV.currentPlayerData.getUsername() != null) {
             if (WEContributors.contains(PV.currentPlayerData.getUsername())) {
-                ui.drawCenteredText("★★★ WynnExtras Contributor ★★★", x + 285, y + 720, CommonColors.SHINE, 3f);
+                ui.drawCenteredText("★★★ WynnExtras Contributor ★★★", x + 285, y + 720, WynncraftShaderColor.SHINE.color, 3f);
             }
         }
     }
