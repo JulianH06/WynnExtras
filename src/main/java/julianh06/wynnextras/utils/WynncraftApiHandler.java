@@ -949,10 +949,19 @@ public class WynncraftApiHandler {
     }
 
     public static CompletableFuture<Map<String, JsonObject>> fetchItemDatabase() {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.wynncraft.com/v3/item/database?fullResult"))
-                .GET()
-                .build();
+        HttpRequest request;
+        if (INSTANCE.API_KEY == null) {
+            request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.wynncraft.com/v3/item/database?fullResult"))
+                    .GET()
+                    .build();
+        } else {
+            request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.wynncraft.com/v3/item/database?fullResult"))
+                    .header("Authorization", "Bearer " + INSTANCE.API_KEY)
+                    .GET()
+                    .build();
+        }
 
         return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpResponse::body)

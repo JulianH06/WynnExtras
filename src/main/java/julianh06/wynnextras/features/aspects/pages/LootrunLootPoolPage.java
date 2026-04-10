@@ -16,6 +16,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
@@ -340,9 +341,9 @@ public class LootrunLootPoolPage extends PageWidget {
             int totalContentHeight = 0;
 
             if (items.isEmpty()) {
-                ui.drawCenteredText("§7No data", x + width / 2f, contentStartY + 40, CustomColor.fromInt(0xFFFFFF), 3f);
-                ui.drawCenteredText("§7Open lootrun", x + width / 2f, contentStartY + 80, CustomColor.fromInt(0xFFFFFF), 2.5f);
-                ui.drawCenteredText("§7chest to scan", x + width / 2f, contentStartY + 110, CustomColor.fromInt(0xFFFFFF), 2.5f);
+                ui.drawCenteredText("§4No data", x + width / 2f, contentStartY + 90, CustomColor.fromInt(0xFFFFFF), 3f);
+                ui.drawCenteredText("§7Open lootrun", x + width / 2f, contentStartY + 120, CustomColor.fromInt(0xFFFFFF), 2.5f);
+                ui.drawCenteredText("§7chest to scan", x + width / 2f, contentStartY + 150, CustomColor.fromInt(0xFFFFFF), 2.5f);
             } else {
                 int itemSpacing = 32;
 
@@ -369,6 +370,8 @@ public class LootrunLootPoolPage extends PageWidget {
                 textY = drawMythicItems(ctx, textX, textY, items, width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
                 ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
                 textY = drawTomeItems(ctx, textX, textY, items, width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                textY = drawWardItems(ctx, textX, textY, items, width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
                 ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
                 textY = drawItemsByRarity(ctx, textX, textY, items, "Fabled", width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
                 ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
@@ -428,6 +431,27 @@ public class LootrunLootPoolPage extends PageWidget {
             return textY + 20;
         }
 
+        private float drawWardItems(DrawContext context, float x, float textY, List<LootrunLootPoolData.LootrunItem> items,
+                                      float colWidth, float mouseX, float mouseY, float contentStartY, float contentHeight, float scrollOffset) {
+            int itemSpacing = 32;
+
+            java.util.Set<String> seenWards = new java.util.HashSet<>();
+            List<LootrunLootPoolData.LootrunItem> wardItems = items.stream()
+                    .filter(i -> i.name.contains("Ward"))
+                    .filter(i -> seenWards.add(i.name)) //to prevent two of the same wards from being rendered
+                    .toList();
+
+            if (wardItems.isEmpty()) {
+                ui.drawText("No Ward", x + 20, textY, CustomColor.fromHexString("f9508e"), 2.8f);
+                return textY + itemSpacing + 20;
+            }
+
+            for (LootrunLootPoolData.LootrunItem item : wardItems) {
+                textY = drawItem(context, x, textY, item, colWidth, mouseX, mouseY, contentStartY, contentHeight, scrollOffset, itemSpacing);
+            }
+            return textY + 20;
+        }
+
         private float drawTomeItems(DrawContext context, float x, float textY, List<LootrunLootPoolData.LootrunItem> items,
                                     float colWidth, float mouseX, float mouseY, float contentStartY, float contentHeight, float scrollOffset) {
             int itemSpacing = 32;
@@ -465,27 +489,39 @@ public class LootrunLootPoolPage extends PageWidget {
                         mouseY * ui.getScaleFactorF() >= textY && mouseY * ui.getScaleFactorF() <= textY + itemSpacing - 5;
 
                 String rarityColor = item.type.equals("tome") ? "§d" : getRarityColor(item.rarity);
+                if(item.name.contains("Ward")) rarityColor = "§#f9508eff";
                 String displayName = truncate(item.name, width / 2 - 30).replace("Unidentified ", "");
 
                 if (item.type.equals("shiny")) {
-                    ui.drawText(displayName.replace("⬡ ", ""), x + 20, textY, WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : CommonColors.RAINBOW, 3f);
+                    ui.drawText(displayName.replace("⬡ ", ""), x + 20, textY, WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : CommonColors.RAINBOW, 4f);
                 } else {
                     ui.drawText(rarityColor + displayName, x + 20, textY, CustomColor.fromInt(0xFFFFFF), 2.8f);
                 }
                 boolean isShiny = item.type.equals("shiny") && item.shinyStat != null && !item.shinyStat.isEmpty();
                 if (isShiny) {
-                    ui.drawText(item.shinyStat.replace(": §f0", ""), x + 20, textY + 35, CustomColor.fromInt(0xFFFFFF), 2.2f);
+                    ui.drawText("§7" + item.shinyStat.replace(": §f0", ""), x + 20, textY + 45, CustomColor.fromInt(0xFFFFFF), 2.2f);
                 }
 
                 if (hovering && WynncraftApiHandler.cachedItemDatabase != null && mouseY * ui.getScaleFactorF() > y + 80) {
                     JsonObject jsonItem = WynncraftApiHandler.cachedItemDatabase.get(item.name.replace("Unidentified ", "").replace("⬡ ", "").replace("Shiny ", ""));
                     List<Text> tooltip = new ArrayList<>();
-                    tooltip.add(Text.of(rarityColor + item.name.replace("Unidentified ", "")));
+                    if(rarityColor.startsWith("§#")) {
+                        String hex = rarityColor.substring(2); // "12345678"
+                        int r = Integer.parseInt(hex.substring(0, 2), 16);
+                        int g = Integer.parseInt(hex.substring(2, 4), 16);
+                        int b = Integer.parseInt(hex.substring(4, 6), 16);
+
+                        tooltip.add(Text.literal(displayName)
+                                .styled(style -> style.withColor(net.minecraft.util.math.ColorHelper.getArgb(255, r, g, b))));
+                    } else {
+                        tooltip.add(Text.of(rarityColor + item.name.replace("Unidentified ", "")));
+                    }
+
                     if(jsonItem != null && item.name.contains("Tome")) tooltip.addAll(buildTooltipFromApi(jsonItem));
                     hoveredTooltip = tooltip;
                 }
             }
-            int extraSpacing = (item.type.equals("shiny") && item.shinyStat != null && !item.shinyStat.isEmpty()) ? 35 : 0;
+            int extraSpacing = (item.type.equals("shiny") && item.shinyStat != null && !item.shinyStat.isEmpty()) ? 40 : 0;
             return textY + itemSpacing + extraSpacing;
         }
 

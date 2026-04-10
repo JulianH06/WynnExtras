@@ -74,6 +74,8 @@ public class LootrunLootPoolData {
             String lower = name.toLowerCase();
             if (lower.contains("tome")) {
                 return "tome";
+            } else if (lower.contains("ward")) {
+                return "ward";
             } else if (lower.contains("shiny")) {
                 return "shiny";
             }
@@ -218,6 +220,10 @@ public class LootrunLootPoolData {
             return "CORK";
         } else if (screenTitle.endsWith("\uF006")) {
             return "COTL";
+        } else if (screenTitle.endsWith("\uF04A")) {
+            return "WFF";
+        } else if (screenTitle.endsWith("\uF049")) {
+            return "EFF";
         }
         return null;
     }
@@ -230,6 +236,8 @@ public class LootrunLootPoolData {
                screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF009") || // Sky Islands
                screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF008") || // Molten Heights
                screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF007") || // Corkus
-               screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF006");   // Canyon of the Lost
+               screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF006") || // Canyon of the Lost
+               screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF04A") || // West Fruma Foray
+               screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF049"); // East Fruma Foray
     }
 }
