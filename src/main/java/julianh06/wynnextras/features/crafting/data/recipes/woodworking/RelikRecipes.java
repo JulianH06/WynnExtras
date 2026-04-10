@@ -12,7 +12,7 @@ public class RelikRecipes implements IRecipeData {
     public static RelikRecipes INSTANCE = new RelikRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Plank.OAK, 1), new Pair<>(Oil.GUDGEON, 2));
         } else if (level < 20) {
             return List.of(new Pair<>(Plank.BIRCH, 2), new Pair<>(Oil.TROUT, 4));
@@ -32,10 +32,14 @@ public class RelikRecipes implements IRecipeData {
             return List.of(new Pair<>(Plank.PINE, 5), new Pair<>(Oil.BASS, 10));
         } else if (level < 100) {
             return List.of(new Pair<>(Plank.AVO, 6), new Pair<>(Oil.MOLTEN, 12));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Plank.SKY, 6), new Pair<>(Oil.STARFISH, 12));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Plank.DERNIC, 6), new Pair<>(Oil.DERNIC, 12));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Plank.MAPLE, 7), new Pair<>(Oil.STURGEON, 14));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Plank.REDWOOD, 7), new Pair<>(Oil.MAHSEER, 14));
         } else {
             return List.of();
         }

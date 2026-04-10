@@ -12,7 +12,7 @@ public class BootsRecipes implements IRecipeData {
     public static BootsRecipes INSTANCE = new BootsRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Ingot.COPPER, 1), new Pair<>(StringMaterial.WHEAT, 2));
         } else if (level < 20) {
             return List.of(new Pair<>(Ingot.GRANITE, 2), new Pair<>(StringMaterial.BARLEY, 4));
@@ -32,10 +32,14 @@ public class BootsRecipes implements IRecipeData {
             return List.of(new Pair<>(Ingot.DIAMOND, 5), new Pair<>(StringMaterial.RICE, 10));
         } else if (level < 100) {
             return List.of(new Pair<>(Ingot.MOLTEN, 6), new Pair<>(StringMaterial.SORGHUM, 12));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Ingot.VOIDSTONE, 6), new Pair<>(StringMaterial.HEMP, 12));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Ingot.DERNIC, 6), new Pair<>(StringMaterial.DERNIC, 12));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Ingot.TITANIUM, 7), new Pair<>(StringMaterial.JUTE, 14));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Ingot.CINNABAR, 7), new Pair<>(StringMaterial.HEATHER, 14));
         } else {
             return List.of();
         }

@@ -1,8 +1,8 @@
 package julianh06.wynnextras.features.crafting.data.recipes.armouring;
 
+import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.materials.Ingot;
-import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.materials.Paper;
 import julianh06.wynnextras.utils.Pair;
 
@@ -12,7 +12,7 @@ public class HelmetRecipes implements IRecipeData {
     public static HelmetRecipes INSTANCE = new HelmetRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Paper.OAK, 2), new Pair<>(Ingot.COPPER, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Paper.BIRCH, 4), new Pair<>(Ingot.GRANITE, 2));
@@ -32,10 +32,14 @@ public class HelmetRecipes implements IRecipeData {
             return List.of(new Pair<>(Paper.PINE, 10), new Pair<>(Ingot.DIAMOND, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Paper.AVO, 12), new Pair<>(Ingot.MOLTEN, 6));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Paper.SKY, 12), new Pair<>(Ingot.VOIDSTONE, 6));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Paper.DERNIC, 12), new Pair<>(Ingot.DERNIC, 6));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Paper.MAPLE, 14), new Pair<>(Ingot.TITANIUM, 7));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Paper.REDWOOD, 14), new Pair<>(Ingot.CINNABAR, 7));
         } else {
             return List.of();
         }

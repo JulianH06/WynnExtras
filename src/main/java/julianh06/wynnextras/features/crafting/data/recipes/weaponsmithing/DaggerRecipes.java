@@ -1,8 +1,8 @@
 package julianh06.wynnextras.features.crafting.data.recipes.weaponsmithing;
 
+import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.materials.Ingot;
-import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.materials.Plank;
 import julianh06.wynnextras.utils.Pair;
 
@@ -12,7 +12,7 @@ public class DaggerRecipes implements IRecipeData {
     public static DaggerRecipes INSTANCE = new DaggerRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Plank.OAK, 1), new Pair<>(Ingot.COPPER, 2));
         } else if (level < 20) {
             return List.of(new Pair<>(Plank.BIRCH, 2), new Pair<>(Ingot.GRANITE, 4));
@@ -32,10 +32,14 @@ public class DaggerRecipes implements IRecipeData {
             return List.of(new Pair<>(Plank.PINE, 5), new Pair<>(Ingot.DIAMOND, 10));
         } else if (level < 100) {
             return List.of(new Pair<>(Plank.AVO, 6), new Pair<>(Ingot.MOLTEN, 12));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Plank.SKY, 6), new Pair<>(Ingot.VOIDSTONE, 12));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Plank.DERNIC, 6), new Pair<>(Ingot.DERNIC, 12));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Plank.MAPLE, 7), new Pair<>(Ingot.TITANIUM, 14));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Plank.REDWOOD, 7), new Pair<>(Ingot.CINNABAR, 14));
         } else {
             return List.of();
         }

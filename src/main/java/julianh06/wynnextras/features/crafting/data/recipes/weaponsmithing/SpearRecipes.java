@@ -1,8 +1,8 @@
 package julianh06.wynnextras.features.crafting.data.recipes.weaponsmithing;
 
+import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.materials.Ingot;
-import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.materials.Plank;
 import julianh06.wynnextras.utils.Pair;
 
@@ -12,7 +12,7 @@ public class SpearRecipes implements IRecipeData {
     public static SpearRecipes INSTANCE = new SpearRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Plank.OAK, 2), new Pair<>(Ingot.COPPER, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Plank.BIRCH, 4), new Pair<>(Ingot.GRANITE, 2));
@@ -32,10 +32,14 @@ public class SpearRecipes implements IRecipeData {
             return List.of(new Pair<>(Plank.PINE, 10), new Pair<>(Ingot.DIAMOND, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Plank.AVO, 12), new Pair<>(Ingot.MOLTEN, 6));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Plank.SKY, 12), new Pair<>(Ingot.VOIDSTONE, 6));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Plank.DERNIC, 12), new Pair<>(Ingot.DERNIC, 6));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Plank.MAPLE, 14), new Pair<>(Ingot.TITANIUM, 7));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Plank.REDWOOD, 14), new Pair<>(Ingot.CINNABAR, 7));
         } else {
             return List.of();
         }

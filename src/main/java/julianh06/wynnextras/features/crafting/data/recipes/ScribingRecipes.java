@@ -15,8 +15,8 @@ public class ScribingRecipes implements IRecipeData {
 //        return switch (level) {
 //            case int l when l < 10 -> List.of(new Pair<>(Paper.OAK, 1), new Pair<>(Oil.GUDGEON, 1));
 //        } this apparently only works with jdk 23, ill keep this here in case minecraft decides to upgrade the java version
-        
-        if(level < 10) {
+
+        if (level < 10) {
             return List.of(new Pair<>(Paper.OAK, 1), new Pair<>(Oil.GUDGEON, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Paper.BIRCH, 2), new Pair<>(Oil.TROUT, 2));
@@ -36,10 +36,14 @@ public class ScribingRecipes implements IRecipeData {
             return List.of(new Pair<>(Paper.PINE, 5), new Pair<>(Oil.BASS, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Paper.AVO, 6), new Pair<>(Oil.MOLTEN, 6));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Paper.SKY, 6), new Pair<>(Oil.STARFISH, 6));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Paper.DERNIC, 6), new Pair<>(Oil.DERNIC, 6));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Paper.MAPLE, 7), new Pair<>(Oil.STURGEON, 7));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Paper.REDWOOD, 7), new Pair<>(Oil.MAHSEER, 7));
         } else {
             return List.of();
         }

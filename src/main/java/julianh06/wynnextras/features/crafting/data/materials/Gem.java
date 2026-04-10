@@ -40,7 +40,13 @@ public enum Gem implements IMaterial {
             Identifier.of("wynnextras", "textures/materials/gem/voidstone.png")),
     DERNIC("Dernic",
             Identifier.of("minecraft", "textures/wynn/economy/mining/gem_dernic.png"),
-            Identifier.of("wynnextras", "textures/materials/gem/dernic.png"));
+            Identifier.of("wynnextras", "textures/materials/gem/dernic.png")),
+    TITANIUM("Titanium",
+            Identifier.of("minecraft", "textures/wynn/economy/mining/gem_titanium.png"),
+            Identifier.of("wynnextras", "textures/materials/ingot/dernic.png")),
+    CINNABAR("Cinnabar",
+            Identifier.of("minecraft", "textures/wynn/economy/mining/gem_cinnabar.png"),
+            Identifier.of("wynnextras", "textures/materials/ingot/dernic.png"));
 
     private final String name;
     private final Identifier serverTexture;

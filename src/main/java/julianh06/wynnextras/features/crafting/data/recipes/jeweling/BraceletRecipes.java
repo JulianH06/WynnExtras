@@ -12,7 +12,7 @@ public class BraceletRecipes implements IRecipeData {
     public static BraceletRecipes INSTANCE = new BraceletRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Gem.COPPER, 2), new Pair<>(Oil.GUDGEON, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Gem.GRANITE, 4), new Pair<>(Oil.TROUT, 2));
@@ -32,10 +32,14 @@ public class BraceletRecipes implements IRecipeData {
             return List.of(new Pair<>(Gem.DIAMOND, 10), new Pair<>(Oil.BASS, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Gem.MOLTEN, 12), new Pair<>(Oil.MOLTEN, 6));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Gem.VOIDSTONE, 12), new Pair<>(Oil.STARFISH, 6));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Gem.DERNIC, 12), new Pair<>(Oil.DERNIC, 6));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Gem.TITANIUM, 14), new Pair<>(Oil.STURGEON, 7));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Gem.CINNABAR, 14), new Pair<>(Oil.MAHSEER, 7));
         } else {
             return List.of();
         }

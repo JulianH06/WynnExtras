@@ -7,7 +7,6 @@ import com.wynntils.handlers.tooltip.type.TooltipIdentificationDecorator;
 import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.ingredients.type.IngredientInfo;
 import com.wynntils.models.stats.type.StatPossibleValues;
-import com.wynntils.models.wynnitem.type.ItemMaterial;
 import com.wynntils.utils.mc.KeyboardUtils;
 import com.wynntils.utils.type.Pair;
 import com.wynntils.utils.type.RangedValue;
@@ -22,7 +21,7 @@ public class CraftingUtils {
 
     public static IngredientInfo getIng(String name) {
         initIngs();
-        if(allIngredients == null) return null;
+        if (allIngredients == null) return null;
         return allIngredients.get(name);
     }
 
@@ -39,7 +38,8 @@ public class CraftingUtils {
             allIngredients = Models.Ingredient.getAllIngredientInfos()
                     .collect(Collectors.toMap(
                             IngredientInfo::name,
-                            ingredient -> ingredient
+                            ingredient -> ingredient,
+                            (existing, replacement) -> existing
                     ));
         } catch (Exception e) {
             System.err.println("Failed to load ingredient list from wynntills: " + e.getMessage());

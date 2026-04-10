@@ -1,6 +1,5 @@
 package julianh06.wynnextras.features.crafting;
 
-import com.wynntils.core.WynntilsMod;
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.utils.colors.CustomColor;
@@ -14,11 +13,15 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.tooltip.TooltipType;
+import net.minecraft.text.Style;
+import net.minecraft.text.StyleSpriteSource;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.collection.DefaultedList;
 import org.joml.Vector2i;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,20 +63,17 @@ public class CraftingResultPreviewer {
     public static void onRender(DrawContext context) {
         if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
 
-        if(!WynnExtrasConfig.INSTANCE.craftingPreviewOverlay) return;
+        if (!WynnExtrasConfig.INSTANCE.craftingPreviewOverlay) return;
 
         loadConfig();
         if (result != null) {
-            loadConfig();
-
             List<Text> lines = result.getTooltip();
 
             int width = getOverlayWidth(lines);
             int height = getOverlayHeight(lines);
-
             int bgColor = 0xCC1A1A1A;
 
-            if(WynnExtrasConfig.INSTANCE.craftingPreviewBackground) {
+            if (WynnExtrasConfig.INSTANCE.craftingPreviewBackground) {
                 drawBackground(
                         context,
                         xPos - 4,
@@ -124,12 +124,10 @@ public class CraftingResultPreviewer {
             }
             Vector2i lvl = new Vector2i(minLvl, maxLvl);
 
-            String mat1 = getTooltip(stacks, 0).getFirst().getString();
-            int mat1Tier = parseMaterialTier(mat1);
+            int mat1Tier = parseMaterialTier(getTooltip(stacks, 0));
             int mat1Count = stacks.getFirst().getCount();
 
-            String mat2 = getTooltip(stacks, 9).getFirst().getString();
-            int mat2Tier = parseMaterialTier(mat2);
+            int mat2Tier = parseMaterialTier(getTooltip(stacks, 9));
             int mat2Count = stacks.get(9).getCount();
 
             Recipe.Materials mats = new Recipe.Materials(mat1Tier, mat1Count, mat2Tier, mat2Count);
@@ -159,37 +157,39 @@ public class CraftingResultPreviewer {
 
     private static String getIngName(DefaultedList<ItemStack> stacks, int slot) {
         String name = getTooltip(stacks, slot).getFirst().getString();
-        int index = name.indexOf("[");
-        if (index == -1) return null;
-        return name.substring(0, index).trim();
+        return name.replace("\uDAFC\uDC00", "").trim();
     }
 
-    private static int parseMaterialTier(String name) {
-        int startIdx = name.indexOf("[");
-        int endIdx = name.indexOf("]", startIdx);
+    private static int parseMaterialTier(List<Text> tooltip) {
+        String tierStr = "";
+        for (Text line : tooltip) {
+            Optional<String> result = line.visit((style, string) -> {
+                if (style.getFont() instanceof StyleSpriteSource.Font(Identifier id)) {
+                    if (Identifier.ofVanilla("banner/symbol").equals(id)) {
+                        return Optional.of(string);
+                    }
+                }
+                return Optional.empty();
+            }, Style.EMPTY);
 
-        if (startIdx == -1 || endIdx == -1) return -1;
-
-        String tierIndicator = name.substring(startIdx + 1, endIdx);
-        return switch (tierIndicator) {
-            case "§e✫§8✫✫§6" -> 1;
-            case "§e✫✫§8✫§6" -> 2;
-            case "§e✫✫✫§6" -> 3;
-            default -> {
-                WynntilsMod.warn("Cannot parse tier from: " + tierIndicator);
-                yield 1;
+            if (result.isPresent()) {
+                tierStr = result.get();
+                break;
             }
+        }
+        return switch (tierStr) {
+            case "\uE060\uDAFF\uDFFF\uE001\uDAFF\uDFFF\uE062\uDAFF\uDFF7" -> 1;
+            case "\uE060\uDAFF\uDFFF\uE001\uDAFF\uDFFF\uE001\uDAFF\uDFFF\uE062\uDAFF\uDFF0" -> 2;
+            case "\uE060\uDAFF\uDFFF\uE001\uDAFF\uDFFF\uE001\uDAFF\uDFFF\uE001\uDAFF\uDFFF\uE062\uDAFF\uDFE9" -> 3;
+            default -> -1;
         };
     }
 
-    public static boolean handleClick(double mouseX, double mouseY, int button, int action) {
-        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer))
-            return false;
+    public static void handleClick(double mouseX, double mouseY, int button, int action) {
+        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
+        if (currentWidth == 0 || currentHeight == 0) return;
 
         loadConfig();
-
-        if (currentWidth == 0 || currentHeight == 0)
-            return false;
 
         boolean inBounds =
                 mouseX >= xPos && mouseX <= xPos + currentWidth &&
@@ -199,20 +199,18 @@ public class CraftingResultPreviewer {
         if (action == 0 && button == 0 && isDragging) {
             isDragging = false;
             saveConfig();
-            return true;
+            return;
         }
 
-        if (!inBounds) return false;
+        if (!inBounds) return;
 
         // Drag Start (Right Click)
         if (action == 1 && button == 0) {
             isDragging = true;
             dragOffsetX = (int) mouseX - xPos;
             dragOffsetY = (int) mouseY - yPos;
-            return true;
         }
 
-        return true;
     }
 
     public static void handleMouseMove(double mouseX, double mouseY) {
@@ -227,8 +225,8 @@ public class CraftingResultPreviewer {
         int screenW = mc.getWindow().getScaledWidth();
         int screenH = mc.getWindow().getScaledHeight();
 
-        xPos = Math.max(0, Math.min(xPos, screenW - currentWidth));
-        yPos = Math.max(0, Math.min(yPos, screenH - currentHeight));
+        xPos = Math.clamp(xPos, 0, screenW - currentWidth);
+        yPos = Math.clamp(yPos, 0, screenH - currentHeight);
     }
 
     private static int getOverlayWidth(List<Text> lines) {

@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -18,7 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RecipeLoader {
-    private static Map<CraftableType, Map<Vector2i, RecipeData>> recipes = new HashMap<>();
+    private static final Map<CraftableType, Map<Vector2i, RecipeData>> recipes = new HashMap<>();
 
     public static RecipeData getRecipe(CraftableType type, Vector2i lvl) {
         Map<Vector2i, RecipeData> allTypeDataMap = recipes.get(type);
@@ -135,7 +136,7 @@ public class RecipeLoader {
     public static double getRemoteVersion() {
         String end = "";
         try {
-            URL url = new URL("https://raw.githubusercontent.com/wynnbuilder/wynnbuilder.github.io/master/recipes_compress.json");
+            URL url = new URI("https://raw.githubusercontent.com/wynnbuilder/wynnbuilder.github.io/master/recipes_compress.json").toURL();
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
             // Get file size
