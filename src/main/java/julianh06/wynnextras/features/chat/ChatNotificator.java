@@ -1,10 +1,10 @@
 package julianh06.wynnextras.features.chat;
 
-import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.ChatEvent;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -12,6 +12,8 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.sound.SoundEvent;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
@@ -47,11 +49,38 @@ public class ChatNotificator {
         notify(event.message);
     }
 
+    private static final String[] BOMB_KEYWORDS = {"bomb", "bombs", "any prof", "dxp"};
+    private static final String[] BOMB_EXCLUDE = {"shout", "combat level", "storm"};
+
     private static void notify(Text message) {
         if(message.getString().contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
 
+        // Bomb share suggestion: player chat messages contain ":"
+        if (WynnExtrasConfig.INSTANCE.bombShareSuggestion) {
+            String msg = message.getString().toLowerCase();
+            if (msg.contains(":")) {
+                boolean excluded = false;
+                for (String ex : BOMB_EXCLUDE) { if (msg.contains(ex)) { excluded = true; break; } }
+                if (!excluded) for (String keyword : BOMB_KEYWORDS) {
+                    if (msg.contains(keyword)) {
+                        MinecraftClient.getInstance().send(() -> {
+                            McUtils.sendMessageToClient(
+                                WynnExtras.addWynnExtrasPrefix(Text.literal(""))
+                                    .append(Text.literal("§e§n[Share bombs with Guild]").setStyle(Style.EMPTY
+                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild"))))
+                                    .append(Text.literal("  "))
+                                    .append(Text.literal("§c§n[Disable]").setStyle(Style.EMPTY
+                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare disable"))))
+                            );
+                        });
+                        break;
+                    }
+                }
+            }
+        }
+
         for(String notificator : WynnExtrasConfig.INSTANCE.notifierWords) {
-            if(!notificator.contains("|")) return;
+            if(!notificator.contains("|")) continue;
             String[] parts = notificator.split("\\|");
             if(message.getString().toLowerCase().contains(parts[0].toLowerCase())) {
                 displayAndPlaySound(parts[1]);
@@ -88,6 +117,7 @@ public class ChatNotificator {
     }
 
     private static void renderHud(DrawContext ctx, RenderTickCounter tickCounter) {
+        if (MinecraftClient.getInstance().options.hudHidden) return;
         if (activeText == null) return;
         long now = System.currentTimeMillis();
         if (now >= expireTimeMs) {
@@ -140,7 +170,9 @@ public class ChatNotificator {
         ctx.getMatrices().pushMatrix();
         ctx.getMatrices().translate(cx, cy);
         ctx.getMatrices().scale(scale, scale);
-        ctx.drawText(mc.textRenderer, activeText, textOffsetX, -th / 2, CustomColor.fromInt(activeColor).withAlpha(alpha).asInt(), true);
+        int alphaInt = (int) (alpha * 255) & 0xFF;
+        int colorWithAlpha = (alphaInt << 24) | (activeColor & 0x00FFFFFF);
+        ctx.drawText(mc.textRenderer, activeText, textOffsetX, -th / 2, colorWithAlpha, true);
         ctx.getMatrices().popMatrix();
     }
 }

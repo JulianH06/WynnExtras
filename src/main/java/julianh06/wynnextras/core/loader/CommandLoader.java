@@ -39,6 +39,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.sound.SoundEvents;
 
 import java.util.*;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -77,7 +78,7 @@ public class CommandLoader implements WELoader {
             }
 
             var bombshare = ClientCommandManager.literal("bombshare")
-                .executes(ctx -> { executeBombshare("g"); return 1; })
+                .executes(ctx -> { executeBombshare("g", false); return 1; })
                 .then(ClientCommandManager.argument("channel", StringArgumentType.word())
                     .suggests((ctx, builder) -> {
                         builder.suggest("guild");
@@ -88,9 +89,9 @@ public class CommandLoader implements WELoader {
                     .executes(ctx -> {
                         String channel = StringArgumentType.getString(ctx, "channel").toLowerCase();
                         switch (channel) {
-                            case "guild", "g" -> executeBombshare("g");
-                            case "party", "p" -> executeBombshare("p");
-                            case "all" -> executeBombshare(null);
+                            case "guild", "g" -> executeBombshare("g", false);
+                            case "party", "p" -> executeBombshare("p", false);
+                            case "all" -> executeBombshare(null, false);
                             case "disable" -> {
                                 WynnExtrasConfig.INSTANCE.bombShareSuggestion = false;
                                 WynnExtrasConfig.save();
@@ -99,7 +100,21 @@ public class CommandLoader implements WELoader {
                             default -> McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel + ". Use guild, party, or all."));
                         }
                         return 1;
-                    }));
+                    })
+                    .then(ClientCommandManager.argument("filter", StringArgumentType.word())
+                        .suggests((ctx, builder) -> { builder.suggest("prof"); return builder.buildFuture(); })
+                        .executes(ctx -> {
+                            String channel = StringArgumentType.getString(ctx, "channel").toLowerCase();
+                            String filter = StringArgumentType.getString(ctx, "filter").toLowerCase();
+                            boolean profOnly = filter.equals("prof");
+                            switch (channel) {
+                                case "guild", "g" -> executeBombshare("g", profOnly);
+                                case "party", "p" -> executeBombshare("p", profOnly);
+                                case "all" -> executeBombshare(null, profOnly);
+                                default -> McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel));
+                            }
+                            return 1;
+                        })));
             base = base.then(bombshare);
             alias = alias.then(bombshare);
 
@@ -372,7 +387,9 @@ public class CommandLoader implements WELoader {
         return root;
     }
 
-    private static void executeBombshare(String chatPrefix) {
+    private static final Set<BombType> PROF_BOMBS = Set.of(BombType.PROFESSION_XP, BombType.PROFESSION_SPEED);
+
+    private static void executeBombshare(String chatPrefix, boolean profOnly) {
         if (!Models.WorldState.onWorld()) {
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cYou must be on a world to use this command."));
             return;
@@ -381,6 +398,7 @@ public class CommandLoader implements WELoader {
         Map<BombType, List<String>> bombsByType = new LinkedHashMap<>();
         for (BombInfo bomb : Models.Bomb.getBombBells()) {
             if (!bomb.isActive()) continue;
+            if (profOnly && !PROF_BOMBS.contains(bomb.bomb())) continue;
             bombsByType.computeIfAbsent(bomb.bomb(), k -> new ArrayList<>()).add(bomb.server());
         }
 
