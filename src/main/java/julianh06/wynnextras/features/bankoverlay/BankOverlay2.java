@@ -667,18 +667,15 @@ public class BankOverlay2 extends WEHandledScreen {
         shownPages = pageAmount;
 
         drawEmeraldOverlay(context, xStart - 36, yStart - 14);
-        // Count bags on the live current page and store as numbers in BankData.bagCounts,
-        // which survives serialization (unlike Wynntils item annotations on cached ItemStacks).
-        cacheCurrentBankPageIfPossible();
-        // Grid is 3 cols (tiers) × 4 rows (raids) at 28px per cell, so shift further left
-        // to keep the right edge just left of the custom bank UI.
-        // Grid is scoped to the live current page; the top-right header uses numeric totals.
-        drawBagOverlay(
-                context,
-                xStart - 36 - 56,
-                yStart - 14 + 4 * 28,
-                getCurrentPageStacks(),
-                collectTotalBagCounts());
+        if (WynnExtrasConfig.INSTANCE.bankBagOverlay) {
+            cacheCurrentBankPageIfPossible();
+            drawBagOverlay(
+                    context,
+                    xStart - 36 - 56,
+                    yStart - 14 + 4 * 28,
+                    getCurrentPageStacks(),
+                    collectTotalBagCounts());
+        }
 
         renderHoveredSlotHighlight(context,  screen);
         renderHoveredTooltip(context, screen, mouseX, mouseY);
@@ -1672,6 +1669,7 @@ public class BankOverlay2 extends WEHandledScreen {
      */
     public static void drawVanillaBankBagsOverlay(DrawContext context, HandledScreen<?> screen) {
         if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
+        if (!WynnExtrasConfig.INSTANCE.bankBagOverlay) return;
         // Custom bank overlay draws bags from BankOverlay2.render(), so skip here when active.
         if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) return;
 

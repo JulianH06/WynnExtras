@@ -231,6 +231,8 @@ public class WynnExtrasConfigScreen extends Screen {
                         2, 24, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
                 .add(toggle("Hide empty rows", "Hides rows that only have locked pages",
                         () -> config.bankOverlayHideEmptyRows, v -> config.bankOverlayHideEmptyRows = v))
+                .add(toggle("Bag Overlay", "Show crafter bag counts by raid/tier on bank screens",
+                        () -> config.bankBagOverlay, v -> config.bankBagOverlay = v))
                 .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
                         () -> config.showWeight, v -> config.showWeight = v))

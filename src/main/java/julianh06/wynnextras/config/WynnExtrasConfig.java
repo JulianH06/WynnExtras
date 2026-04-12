@@ -97,6 +97,7 @@ public class WynnExtrasConfig {
     public int bankOverlayMaxRows = 3;
     public int bankOverlayMaxColumns = 3;
     public boolean bankOverlayHideEmptyRows = false;
+    public boolean bankBagOverlay = false;
     public boolean showWeight = true;
     public boolean showScales = true;
     public boolean scaleBackgroundEnabled = true;
