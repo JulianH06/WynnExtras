@@ -50,7 +50,7 @@ public class ChatNotificator {
     }
 
     private static final String[] BOMB_KEYWORDS = {"bomb", "bombs", "any prof", "dxp"};
-    private static final String[] BOMB_EXCLUDE = {"shout", "combat level", "storm", "love bomb", "smoke bomb", "arrow bomb", "arrow rain", "wynnextras"};
+    private static final String[] BOMB_EXCLUDE = {"shout", "combat level", "storm"};
 
     private static void notify(Text message) {
         if(message.getString().contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
