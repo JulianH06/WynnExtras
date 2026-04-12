@@ -1459,7 +1459,7 @@ public class BankOverlay2 extends WEHandledScreen {
     // Hardcoded layout for the total-bags grid: all known raids × the three crafter-bag tiers.
     // Bags that don't match one of these combos still get counted into the header total, but
     // their own row won't be shown (we also don't have icons for combinations that never occur).
-    private static final String[] BAG_RAID_ORDER = {"NOG", "NOL", "TCC", "TNA"};
+    private static final String[] BAG_RAID_ORDER = {"NOG", "NOL", "TCC", "TNA", "TWP"};
     private static final GearTier[] BAG_TIER_ORDER = {GearTier.LEGENDARY, GearTier.RARE, GearTier.UNIQUE};
 
     /** Sort mode for the top-right bag breakdown. Click the "[By Type]"/"[By Count]" label to toggle. */
