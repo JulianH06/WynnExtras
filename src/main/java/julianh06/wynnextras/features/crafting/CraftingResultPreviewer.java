@@ -97,6 +97,7 @@ public class CraftingResultPreviewer {
             currentHeight = height;
         }
 
+        if (McUtils.player() == null) return;
         DefaultedList<ItemStack> stacks = McUtils.containerMenu().getStacks();
         if (stacks.equals(CraftingResultPreviewer.stacks))
             return; // probably a slot changed even but i dont wanna find it

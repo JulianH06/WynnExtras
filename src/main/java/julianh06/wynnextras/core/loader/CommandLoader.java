@@ -23,10 +23,12 @@ import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
+import julianh06.wynnextras.features.crafting.calc.ProfessionCalculatorScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.tetris.TetrisScreen;
 import julianh06.wynnextras.utils.ItemUtils;
+import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -234,6 +236,12 @@ public class CommandLoader implements WELoader {
                                 return 1;
                             })
                         )
+                    )
+                    .then(ClientCommandManager.literal("prof")
+                        .executes(ctx -> {
+                            WEScreen.open(ProfessionCalculatorScreen::new);
+                            return 1;
+                        })
                     )
                     .then(ClientCommandManager.literal("profession")
                         .then(ClientCommandManager.literal("reload")

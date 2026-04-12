@@ -20,6 +20,7 @@ public class TextInputWidget extends Widget {
     protected CustomColor backgroundColor = CustomColor.fromHexString("FFFFFF");
     protected CustomColor focusedColor = CustomColor.fromHexString("FFEA00");
     protected CustomColor textColor = CustomColor.fromHexString("000000");
+    protected CustomColor placeholderColor = CustomColor.fromHexString("FFFFFF");
 
     int textXOffset, textYOffset, textScale;
 
@@ -50,7 +51,7 @@ public class TextInputWidget extends Widget {
         int textY = y + textYOffset;
 
         if (input.isEmpty() && !isFocused()) {
-            ui.drawText(placeholder, textX, textY, CustomColor.fromHexString("FFFFFF"), textScale);
+            ui.drawText(placeholder, textX, textY, placeholderColor, textScale);
         } else {
             if (cursorPos > input.length()) cursorPos = input.length();
             ui.drawText(input, textX, textY, textColor, textScale);
@@ -148,5 +149,6 @@ public class TextInputWidget extends Widget {
     }
 
     public void setPlaceholder(String placeholder) { this.placeholder = placeholder; }
+    public void setPlaceholderColor(CustomColor placeholderColor) { this.placeholderColor = placeholderColor; }
 }
 

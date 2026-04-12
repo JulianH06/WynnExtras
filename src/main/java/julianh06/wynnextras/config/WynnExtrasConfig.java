@@ -104,6 +104,10 @@ public class WynnExtrasConfig {
     public boolean hideTMInfoText = false;
     public boolean hideScaleBackgroundButton = false;
     public boolean craftingHelperOverlay = true;
+    public boolean craftingAutoStart = false;
+    public List<String> craftingLastMaterialNames = new ArrayList<>();
+    public List<Integer> craftingLastMaterialCounts = new ArrayList<>();
+    public List<String> craftingLastIngredientNames = new ArrayList<>();
     public boolean craftingPreviewOverlay = true;
     public boolean craftingPreviewBackground = true;
     public int craftingPreviewOverlayX = 20;

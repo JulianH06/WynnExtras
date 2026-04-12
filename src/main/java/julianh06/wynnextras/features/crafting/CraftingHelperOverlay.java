@@ -12,11 +12,13 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.Time;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.features.crafting.data.CraftableType;
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.VcitCompat;
 import julianh06.wynnextras.features.crafting.data.recipes.AlchemismRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.CookingRecipes;
+import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
 import julianh06.wynnextras.features.crafting.data.recipes.ScribingRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.armouring.ChestplateRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.armouring.HelmetRecipes;
@@ -30,6 +32,8 @@ import julianh06.wynnextras.features.crafting.data.recipes.weaponsmithing.SpearR
 import julianh06.wynnextras.features.crafting.data.recipes.woodworking.BowRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.woodworking.RelikRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.woodworking.WandRecipes;
+import julianh06.wynnextras.features.crafting.wynnbuilder.DecodedCraft;
+import julianh06.wynnextras.features.crafting.wynnbuilder.WynnBuilderDecoder;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.UI.UIUtils;
@@ -62,6 +66,24 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     SelectionWidget selectionWidget1;
     SelectionWidget selectionWidget2;
     SelectionWidget selectionWidget3;
+
+
+    private static final Queue<Integer> WB_CLICK_QUEUE = new ArrayDeque<>();
+    private static long wbLastClick = 0;
+    private static boolean wbClicking = false;
+    private static String wbStatusMessage = "";
+    private static int wbTotalClicks = 0;
+    private static int wbClicksDone = 0;
+    private static boolean wbIsReuse = false; // true = filling from Reuse Last, false = from Clipboard
+    private static long wbFinishedTime = 0; // timestamp when queue emptied, used to delay completion check
+    private static boolean lastResultSlotsEmpty = true; // tracks output slots to detect craft completion
+    private static final int[] RESULT_SLOTS = {5, 6, 7, 8, 14, 15, 16, 17, 23, 24, 25, 26};
+    private static final int[] INGREDIENT_SLOTS = {2, 3, 11, 12, 20, 21};
+
+    // "Reuse last" - stores item names from the last craft (saved when items are queued for placement)
+    private static final List<String> lastMaterialNames = new ArrayList<>();  // material names (from inventory)
+    private static final List<Integer> lastMaterialCounts = new ArrayList<>(); // click count per material
+    private static final List<String> lastIngredientNames = new ArrayList<>(); // ingredient names (from inventory)
 
     private static RecipeState state = RecipeState.NONE;
 
@@ -105,6 +127,9 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         actualOffset = 0;
         targetOffset = ui == null ? -10 : -10 / ui.getScaleFactorF();
         statusMessage = "";
+        wbStatusMessage = "";
+        WB_CLICK_QUEUE.clear();
+        wbClicking = false;
 
         if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
         ProfessionType type = container.getProfessionType();
@@ -254,6 +279,95 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         int scissorX2 = xStart + widgetWidth;
         int scissorY2 = (int) (yStart + widgetHeight - Math.round(20 / ui.getScaleFactor()));
 
+        // Buttons (left side of crafting station, right-aligned near GUI)
+        // All positions in SCREEN coordinates (same as mouse coords)
+        int leftX = ((HandledScreenAccessor) screen).getX();
+        int screenY = ((HandledScreenAccessor) screen).getY();
+        float sf = ui.getScaleFactorF();
+
+        // Button dimensions in screen coords
+        int wbBtnW = (leftX - 10) / 2;
+        int wbBtnH = 20;
+        int wbBtnX = leftX - wbBtnW - 5; // right-aligned, 5px gap from GUI
+        int wbBtnY = screenY + 5;
+
+        // Render coordinates (multiply by sf for drawing)
+        int rBtnX = (int) (wbBtnX * sf);
+        int rBtnY = (int) (wbBtnY * sf);
+        int rBtnW = (int) (wbBtnW * sf);
+        int rBtnH = (int) (wbBtnH * sf);
+
+        boolean clipboardFilling = wbClicking && !wbIsReuse;
+        boolean btnHovered = !wbClicking && mouseX >= wbBtnX && mouseX <= wbBtnX + wbBtnW && mouseY >= wbBtnY && mouseY <= wbBtnY + wbBtnH;
+
+        if (clipboardFilling) {
+            ui.drawButton(rBtnX, rBtnY, rBtnW, rBtnH, 10, false, true);
+            int progress = wbTotalClicks > 0 ? (int) ((float) wbClicksDone / wbTotalClicks * rBtnW) : 0;
+            ui.drawRect(rBtnX, rBtnY, progress, rBtnH, CustomColor.fromHexString("2a7a2a").withAlpha(0.5f));
+            ui.drawCenteredText("Filling... " + wbClicksDone + "/" + wbTotalClicks, rBtnX + rBtnW / 2f, rBtnY + rBtnH / 2f);
+        } else {
+            ui.drawButton(rBtnX, rBtnY, rBtnW, rBtnH, 10, btnHovered, true);
+            ui.drawCenteredText("Load from Clipboard", rBtnX + rBtnW / 2f, rBtnY + rBtnH / 2f);
+        }
+
+        // Reuse Last button (below Load from Clipboard)
+        int reuseBtnY = wbBtnY + wbBtnH + 5;
+        int rReuseBtnY = (int) (reuseBtnY * sf);
+        boolean hasLastCraft = !lastMaterialNames.isEmpty() || !lastIngredientNames.isEmpty();
+        boolean reuseFilling = wbClicking && wbIsReuse;
+        boolean reuseBtnHovered = !wbClicking && hasLastCraft && mouseX >= wbBtnX && mouseX <= wbBtnX + wbBtnW && mouseY >= reuseBtnY && mouseY <= reuseBtnY + wbBtnH;
+
+        if (reuseFilling) {
+            ui.drawButton(rBtnX, rReuseBtnY, rBtnW, rBtnH, 10, false, true);
+            int progress = wbTotalClicks > 0 ? (int) ((float) wbClicksDone / wbTotalClicks * rBtnW) : 0;
+            ui.drawRect(rBtnX, rReuseBtnY, progress, rBtnH, CustomColor.fromHexString("2a7a2a").withAlpha(0.5f));
+            ui.drawCenteredText("Filling... " + wbClicksDone + "/" + wbTotalClicks, rBtnX + rBtnW / 2f, rReuseBtnY + rBtnH / 2f);
+        } else {
+            ui.drawButton(rBtnX, rReuseBtnY, rBtnW, rBtnH, 10, reuseBtnHovered, true);
+            ui.drawCenteredText("Reuse Last", rBtnX + rBtnW / 2f, rReuseBtnY + rBtnH / 2f, hasLastCraft ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("666666"));
+        }
+
+        // Auto Start toggle (below Reuse Last)
+        int autoStartBtnY = reuseBtnY + wbBtnH + 5;
+        int rAutoStartBtnY = (int) (autoStartBtnY * sf);
+        boolean autoStartHovered = mouseX >= wbBtnX && mouseX <= wbBtnX + wbBtnW && mouseY >= autoStartBtnY && mouseY <= autoStartBtnY + wbBtnH;
+        boolean autoStartOn = WynnExtrasConfig.INSTANCE.craftingAutoStart;
+        ui.drawButton(rBtnX, rAutoStartBtnY, rBtnW, rBtnH, 10, autoStartHovered, true);
+        String autoStartLabel = "Auto Start: " + (autoStartOn ? "§aON" : "§cOFF");
+        ui.drawCenteredText(autoStartLabel, rBtnX + rBtnW / 2f, rAutoStartBtnY + rBtnH / 2f);
+
+        // Status message below buttons
+        if (!wbStatusMessage.isEmpty()) {
+            CustomColor statusColor = wbStatusMessage.startsWith("Missing") || wbStatusMessage.startsWith("Wrong") || wbStatusMessage.startsWith("Invalid") || wbStatusMessage.startsWith("Unknown") || wbStatusMessage.startsWith("Paste") || wbStatusMessage.startsWith("Not")
+                    ? CustomColor.fromHexString("FF4444") : CustomColor.fromHexString("44FF44");
+            int statusRY = rAutoStartBtnY + rBtnH + 10;
+            ui.drawText(wbStatusMessage, rBtnX, statusRY, statusColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2f);
+        }
+
+        // Process WynnBuilder click queue
+        processWynnBuilderClicks();
+
+        // Auto-capture craft: when any result slot gets an item, save the current materials + ingredients
+        try {
+            boolean hasOutput = false;
+            for (int slot : RESULT_SLOTS) {
+                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                if (stack != null && !stack.isEmpty()) {
+                    String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
+                    if (!name.isEmpty() && !name.contains("Crafted Item Slot")) {
+                        hasOutput = true;
+                        break;
+                    }
+                }
+            }
+            if (lastResultSlotsEmpty && hasOutput) {
+                System.out.println("[REUSE-DEBUG] Result slots got items! Capturing...");
+                captureCurrentMaterials();
+                captureCurrentIngredients();
+            }
+            lastResultSlotsEmpty = !hasOutput;
+        } catch (Exception ignored) {}
+
         ui.drawCenteredText(statusMessage, (xStart + (ui.getScaleFactorF() == 2 ? 40 : 0)) * ui.getScaleFactorF(), (((HandledScreenAccessor) screen).getY() + ((HandledScreenAccessor) screen).getBackgroundHeight() + 10) * ui.getScaleFactorF(), CustomColor.fromHexString("FF0000"));
 
         ctx.enableScissor(
@@ -329,9 +443,47 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if (scrollBarWidget != null) scrollBarWidget.mouseClicked(x, y, button);
-        if (profSpeedBombWidget != null) profSpeedBombWidget.mouseClicked(x, y, button);
-        if (profXpBombWidget != null) profXpBombWidget.mouseClicked(x, y, button);
+        if(scrollBarWidget != null) scrollBarWidget.mouseClicked(x, y, button);
+        if(profSpeedBombWidget != null) profSpeedBombWidget.mouseClicked(x, y, button);
+        if(profXpBombWidget != null) profXpBombWidget.mouseClicked(x, y, button);
+
+        // Check button clicks (screen coordinates)
+        if (McUtils.screen() instanceof HandledScreen<?> screen) {
+            int leftX = ((HandledScreenAccessor) screen).getX();
+            int screenY = ((HandledScreenAccessor) screen).getY();
+            int wbBtnW = (leftX - 10) / 2;
+            int wbBtnH = 20;
+            int wbBtnX = leftX - wbBtnW - 5;
+            int wbBtnY = screenY + 5;
+
+            if (x >= wbBtnX && x <= wbBtnX + wbBtnW && y >= wbBtnY && y <= wbBtnY + wbBtnH) {
+                if (!wbClicking) {
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    String clipboard = MinecraftClient.getInstance().keyboard.getClipboard();
+                    loadFromWynnBuilder(clipboard);
+                }
+                return true;
+            }
+
+            // Reuse Last button click
+            int reuseBtnY = wbBtnY + wbBtnH + 5;
+            boolean hasLastCraft = !lastMaterialNames.isEmpty() || !lastIngredientNames.isEmpty();
+            if (hasLastCraft && x >= wbBtnX && x <= wbBtnX + wbBtnW && y >= reuseBtnY && y <= reuseBtnY + wbBtnH) {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                reuseLast();
+                return true;
+            }
+
+            // Auto Start toggle click
+            int autoStartBtnY = reuseBtnY + wbBtnH + 5;
+            if (x >= wbBtnX && x <= wbBtnX + wbBtnW && y >= autoStartBtnY && y <= autoStartBtnY + wbBtnH) {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                WynnExtrasConfig.INSTANCE.craftingAutoStart = !WynnExtrasConfig.INSTANCE.craftingAutoStart;
+                WynnExtrasConfig.save();
+                return true;
+            }
+        }
+
         return super.mouseClicked(x, y, button);
     }
 
@@ -339,6 +491,350 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     public boolean mouseReleased(double x, double y, int button) {
         if (scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
         return super.mouseReleased(x, y, button);
+    }
+
+
+    private void loadFromWynnBuilder(String link) {
+
+        // Block re-clicking while already processing
+        if (wbClicking) {
+            return;
+        }
+
+        if (link == null || link.isBlank()) {
+            wbStatusMessage = "Clipboard is empty.";
+            return;
+        }
+
+        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) {
+            wbStatusMessage = "Not at a crafting station.";
+            return;
+        }
+
+        DecodedCraft craft = WynnBuilderDecoder.decode(link);
+        if (craft == null) {
+            wbStatusMessage = "Invalid WynnBuilder link.";
+            return;
+        }
+
+        RecipeLoader.RecipeData recipeData = RecipeLoader.getRecipeById(craft.recipeId());
+        if (recipeData == null) {
+            wbStatusMessage = "Unknown recipe ID: " + craft.recipeId();
+            return;
+        }
+
+        // Verify correct crafting station
+        ProfessionType stationProf = container.getProfessionType();
+        if (stationProf != recipeData.skill()) {
+            wbStatusMessage = "Wrong station! Need " + recipeData.skill().getDisplayName() + ", at " + stationProf.getDisplayName();
+            return;
+        }
+
+        // Get material data for this recipe
+        IRecipeData materialData = getRecipeDataForType(recipeData.type());
+        if (materialData == null) {
+            wbStatusMessage = "Could not find material data for " + recipeData.type();
+            return;
+        }
+
+        List<Pair<IMaterial, Integer>> materials = materialData.getMaterials(recipeData.lvl().x);
+        if (materials == null || materials.size() < 2) {
+            wbStatusMessage = "Could not determine materials for this recipe.";
+            return;
+        }
+
+        // Clear queue
+        WB_CLICK_QUEUE.clear();
+
+        // Reset all crafting slots first (not counted in progress)
+        try {
+            for (int slot : new int[]{0, 9, 2, 3, 11, 12, 20, 21}) {
+                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                if (stack != null && !stack.isEmpty()) {
+                    String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
+                    if (!name.contains("Material Slot") && !name.contains("Ingredient Slot") && !name.isEmpty()) {
+                        ContainerUtils.clickOnSlot(slot, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // Queue material clicks - match by base material name (ignore stars/tiers)
+        for (int m = 0; m < 2; m++) {
+            Pair<IMaterial, Integer> mat = materials.get(m);
+            int amount = mat.getSecond();
+            String matName = mat.getFirst().getName();
+            for (Slot slot : McUtils.containerMenu().slots) {
+                try {
+                    if (!(slot.inventory instanceof PlayerInventory)) continue;
+                    String slotName = slot.getStack().getCustomName().getString();
+                    if (slotName.contains(matName)) {
+                        for (int i = 0; i < amount; i++) {
+                            WB_CLICK_QUEUE.add(slot.id);
+                        }
+                        break;
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // Note: ingredient auto-fill from clipboard is not available (requires ingredient loader)
+        // Ingredients can still be placed manually or via "Reuse Last"
+
+        wbTotalClicks = WB_CLICK_QUEUE.size();
+        wbClicksDone = 0;
+
+        // Save for "Reuse Last"
+        List<String> matNamesForSave = new ArrayList<>();
+        List<Integer> matCountsForSave = new ArrayList<>();
+        for (int m = 0; m < 2; m++) {
+            matNamesForSave.add(materials.get(m).getFirst().getName());
+            matCountsForSave.add(materials.get(m).getSecond());
+        }
+        saveLastCraft(matNamesForSave, matCountsForSave, new ArrayList<>());
+
+        wbStatusMessage = recipeData.type().getDisplayName() + " " + recipeData.lvl().x + "-" + recipeData.lvl().y;
+
+        wbIsReuse = false;
+        wbFinishedTime = 0;
+        wbClicking = true;
+    }
+
+    private static void processWynnBuilderClicks() {
+        if (!wbClicking) return;
+
+        if (WB_CLICK_QUEUE.isEmpty()) {
+            // Wait 500ms after last click before checking completion
+            if (wbFinishedTime == 0) {
+                wbFinishedTime = System.currentTimeMillis();
+                return;
+            }
+            if (System.currentTimeMillis() - wbFinishedTime < 500) return;
+
+            wbClicking = false;
+            wbFinishedTime = 0;
+            if (wbStatusMessage.startsWith("Done!") || wbStatusMessage.startsWith("Crafting!")) return;
+
+            // Check if slot 13 still shows "Incomplete Recipe"
+            try {
+                ItemStack craftSlot = McUtils.containerMenu().getSlot(13).getStack();
+                String craftName = craftSlot.getCustomName() != null ? craftSlot.getCustomName().getString() : "";
+                if (craftName.contains("Incomplete")) {
+                    wbStatusMessage = "Missing materials or ingredients!";
+                    return;
+                }
+            } catch (Exception ignored) {}
+
+            wbStatusMessage = "Done!";
+
+            // Auto Start: shift-click the craft button (slot 13) after filling
+            if (WynnExtrasConfig.INSTANCE.craftingAutoStart) {
+                ContainerUtils.shiftClickOnSlot(13, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+                wbStatusMessage = "Crafting!";
+            }
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (now - wbLastClick < 10) return; // 10ms between clicks
+
+        Integer next = WB_CLICK_QUEUE.poll();
+        if (next == null) return;
+
+        ContainerUtils.clickOnSlot(next, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+        wbLastClick = now;
+        wbClicksDone++;
+    }
+
+    private static boolean isProfSpeedBombActive() {
+        try {
+            String currentWorld = Models.WorldState.getCurrentWorldName();
+            for (BombInfo bomb : Models.Bomb.getBombBells()) {
+                if (bomb.bomb() == BombType.PROFESSION_SPEED && bomb.isActive() && bomb.server().equals(currentWorld)) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private static String formatMissing(List<String> missingItems) {
+        if (missingItems.isEmpty()) return "";
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (String item : missingItems) {
+            counts.merge(item, 1, Integer::sum);
+        }
+        StringBuilder sb = new StringBuilder("Missing: ");
+        boolean first = true;
+        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
+            if (!first) sb.append(", ");
+            if (entry.getValue() > 1) sb.append(entry.getValue()).append("x ");
+            sb.append(entry.getKey());
+            first = false;
+        }
+        return sb.toString();
+    }
+
+    private static void saveLastCraft(List<String> matNames, List<Integer> matCounts, List<String> ingNames) {
+        lastMaterialNames.clear();
+        lastMaterialNames.addAll(matNames);
+        lastMaterialCounts.clear();
+        lastMaterialCounts.addAll(matCounts);
+        // Only overwrite ingredients if new list has actual entries
+        if (ingNames != null && ingNames.stream().anyMatch(Objects::nonNull)) {
+            lastIngredientNames.clear();
+            lastIngredientNames.addAll(ingNames);
+        }
+        System.out.println("[REUSE-DEBUG] SAVED mats=" + lastMaterialNames + " counts=" + lastMaterialCounts + " ings=" + lastIngredientNames);
+    }
+
+    /**
+     * Read ingredient names currently in the crafting slots and save them.
+     */
+    private static void captureCurrentIngredients() {
+        if (McUtils.containerMenu() == null) return;
+        List<String> ingNames = new ArrayList<>();
+        boolean hasAny = false;
+        for (int slot : INGREDIENT_SLOTS) {
+            try {
+                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
+                if (!name.isEmpty() && !name.contains("Ingredient Slot")) {
+                    ingNames.add(name);
+                    hasAny = true;
+                } else {
+                    ingNames.add(null);
+                }
+            } catch (Exception e) {
+                ingNames.add(null);
+            }
+        }
+        if (hasAny) {
+            lastIngredientNames.clear();
+            lastIngredientNames.addAll(ingNames);
+        }
+    }
+
+    /**
+     * Read material names currently in the crafting slots and save them.
+     */
+    private static void captureCurrentMaterials() {
+        if (McUtils.containerMenu() == null) return;
+        List<String> matNames = new ArrayList<>();
+        List<Integer> matCounts = new ArrayList<>();
+        boolean hasAny = false;
+        for (int slot : new int[]{0, 9}) {
+            try {
+                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
+                if (!name.isEmpty() && !name.contains("Material Slot")) {
+                    matNames.add(name);
+                    matCounts.add(stack.getCount());
+                    hasAny = true;
+                } else {
+                    matNames.add(null);
+                    matCounts.add(0);
+                }
+            } catch (Exception e) {
+                matNames.add(null);
+                matCounts.add(0);
+            }
+        }
+        if (hasAny) {
+            lastMaterialNames.clear();
+            lastMaterialNames.addAll(matNames);
+            lastMaterialCounts.clear();
+            lastMaterialCounts.addAll(matCounts);
+        }
+    }
+
+    private void reuseLast() {
+        if (McUtils.containerMenu() == null) return;
+
+        if (lastMaterialNames.isEmpty() && lastIngredientNames.isEmpty()) {
+            wbStatusMessage = "No previous craft to reuse.";
+            return;
+        }
+
+        // Clear existing slots and queue
+        WB_CLICK_QUEUE.clear();
+        wbClicking = false;
+
+        // Reset all crafting slots immediately
+        for (int slot : new int[]{0, 9, 2, 3, 11, 12, 20, 21}) {
+            ContainerUtils.clickOnSlot(slot, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+        }
+
+        // Queue material clicks
+        for (int m = 0; m < Math.min(2, lastMaterialNames.size()); m++) {
+            String matName = lastMaterialNames.get(m);
+            int amount = lastMaterialCounts.get(m);
+            if (matName == null || amount <= 0) continue;
+
+            for (Slot slot : McUtils.containerMenu().slots) {
+                try {
+                    if (!(slot.inventory instanceof PlayerInventory)) continue;
+                    if (slot.getStack().getCustomName().getString().contains(matName)) {
+                        for (int i = 0; i < amount; i++) {
+                            WB_CLICK_QUEUE.add(slot.id);
+                        }
+                        break;
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // Queue ingredient clicks
+        System.out.println("[REUSE-DEBUG] Queuing ingredients: " + lastIngredientNames);
+        for (int i = 0; i < Math.min(6, lastIngredientNames.size()); i++) {
+            String ingName = lastIngredientNames.get(i);
+            if (ingName == null) continue;
+
+            boolean found = false;
+            for (Slot slot : McUtils.containerMenu().slots) {
+                try {
+                    if (!(slot.inventory instanceof PlayerInventory)) continue;
+                    String slotName = slot.getStack().getCustomName().getString();
+                    if (slotName.contains(ingName)) {
+                        WB_CLICK_QUEUE.add(slot.id);
+                        System.out.println("[REUSE-DEBUG] Found ingredient '" + ingName + "' in slot " + slot.id);
+                        found = true;
+                        break;
+                    }
+                } catch (Exception ignored) {}
+            }
+            if (!found) {
+                System.out.println("[REUSE-DEBUG] NOT FOUND ingredient '" + ingName + "' in inventory");
+            }
+        }
+
+        wbTotalClicks = WB_CLICK_QUEUE.size();
+        wbClicksDone = 0;
+        wbStatusMessage = "Reusing last craft...";
+
+        wbIsReuse = true;
+        wbFinishedTime = 0;
+        wbClicking = true;
+    }
+
+    private static IRecipeData getRecipeDataForType(CraftableType type) {
+        return switch (type) {
+            case HELMET -> HelmetRecipes.INSTANCE;
+            case CHESTPLATE -> ChestplateRecipes.INSTANCE;
+            case LEGGINGS -> LeggingsRecipes.INSTANCE;
+            case BOOTS -> BootsRecipes.INSTANCE;
+            case SPEAR -> SpearRecipes.INSTANCE;
+            case DAGGER -> DaggerRecipes.INSTANCE;
+            case BOW -> BowRecipes.INSTANCE;
+            case WAND -> WandRecipes.INSTANCE;
+            case RELIK -> RelikRecipes.INSTANCE;
+            case RING -> RingRecipes.INSTANCE;
+            case BRACELET -> BraceletRecipes.INSTANCE;
+            case NECKLACE -> NecklaceRecipes.INSTANCE;
+            case POTION -> AlchemismRecipes.INSTANCE;
+            case SCROLL -> ScribingRecipes.INSTANCE;
+            case FOOD -> CookingRecipes.INSTANCE;
+        };
     }
 
     private static IRecipeData getRecipeDataInstance(ProfessionType type) {
@@ -535,7 +1031,10 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
             if (recipeWidgets.isEmpty()) {
                 for (int i = 0; i < widgetAmount; i++) {
-                    int level = (i > 10) ? 50 + i * 5 : i * 10;
+                    // Reverse order: highest level first (103, 100, 90, 80, ... 10, 0)
+                    int level;
+                    if (i == 0) level = 103;
+                    else level = (widgetAmount - 1 - i) * 10;
 
                     RecipeWidget recipeWidget = new RecipeWidget(recipeData, i, level);
 
@@ -559,7 +1058,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         @Override
         public boolean mouseClicked(double mx, double my, int button) {
-            if (contains((int) mx, (int) my)) {
+            if (contains((int) mx, (int) my) && recipeData != null && !recipeWidgets.isEmpty()) {
                 resetMaterialSlots();
             }
 
@@ -567,10 +1066,11 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         }
 
         public void setRecipeData(IRecipeData recipeData) {
+            boolean hadRecipe = this.recipeData != null;
             this.recipeData = recipeData;
             recipeWidgets.clear();
             children.clear();
-            resetMaterialSlots();
+            if (hadRecipe) resetMaterialSlots();
         }
 
         private static void resetMaterialSlots() {
@@ -645,6 +1145,15 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
                 clickMaterial(materials.getFirst(), true);
                 clickMaterial(materials.get(1), false);
+
+                // Save for "Reuse Last" (recipe clicks only place materials, no ingredients)
+                List<String> matNames = new ArrayList<>();
+                List<Integer> matCounts = new ArrayList<>();
+                for (Pair<IMaterial, Integer> mat : materials) {
+                    matNames.add(mat.getFirst().getName());
+                    matCounts.add(mat.getSecond());
+                }
+                saveLastCraft(matNames, matCounts, new ArrayList<>());
 
                 return true;
             }

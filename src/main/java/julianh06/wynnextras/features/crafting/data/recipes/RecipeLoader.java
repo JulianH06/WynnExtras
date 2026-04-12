@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 
 public class RecipeLoader {
     private static final Map<CraftableType, Map<Vector2i, RecipeData>> recipes = new HashMap<>();
+    private static Map<Integer, RecipeData> recipesById = new HashMap<>();
 
     public static RecipeData getRecipe(CraftableType type, Vector2i lvl) {
         Map<Vector2i, RecipeData> allTypeDataMap = recipes.get(type);
@@ -28,6 +29,23 @@ public class RecipeLoader {
             return null;
         }
         return allTypeDataMap.get(lvl);
+    }
+
+    public static RecipeData getRecipeById(int id) {
+        return recipesById.get(id);
+    }
+
+    public static RecipeData getRecipeByMaxLevel(CraftableType type, int maxLevel) {
+        Map<Vector2i, RecipeData> typeMap = recipes.get(type);
+        if (typeMap == null) return null;
+        for (Map.Entry<Vector2i, RecipeData> entry : typeMap.entrySet()) {
+            if (entry.getKey().y == maxLevel) return entry.getValue();
+        }
+        // Try nearby levels (±2)
+        for (Map.Entry<Vector2i, RecipeData> entry : typeMap.entrySet()) {
+            if (Math.abs(entry.getKey().y - maxLevel) <= 2) return entry.getValue();
+        }
+        return null;
     }
 
     public record RecipeData(
@@ -61,8 +79,8 @@ public class RecipeLoader {
         }
 
         public static class Material {
-            String item;
-            int amount;
+            public String item;
+            public int amount;
 
             @Override
             public String toString() {
@@ -123,6 +141,7 @@ public class RecipeLoader {
             for (RecipeData jsonRecipe : jsonRecipes.recipes) {
                 Map<Vector2i, RecipeData> levelMap = recipes.computeIfAbsent(jsonRecipe.type, k -> new HashMap<>());
                 levelMap.put(jsonRecipe.lvl, jsonRecipe);
+                recipesById.put(jsonRecipe.id, jsonRecipe);
             }
 
             System.out.println("Loaded " + recipes.values().stream().mapToInt(Map::size).sum() + " recipes from file");
