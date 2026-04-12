@@ -212,6 +212,134 @@ public class CrossClassBankSearch {
     }
 
     /**
+     * Get ALL pages from ALL characters including the current one, with account bank on top
+     */
+    public static List<SearchResult> getAllCharacterPagesIncludingCurrent() {
+        List<SearchResult> results = new ArrayList<>();
+
+        if (McUtils.player() == null) return results;
+
+        // Account bank first
+        results.addAll(getAccountBankPages());
+
+        Path configDir = FabricLoader.getInstance().getConfigDir()
+                .resolve("wynnextras/" + McUtils.player().getUuid().toString());
+
+        if (!Files.exists(configDir)) return results;
+
+        try (Stream<Path> files = Files.list(configDir)) {
+            List<Path> bankFiles = files
+                    .filter(p -> p.getFileName().toString().startsWith("characterbank_"))
+                    .filter(p -> p.getFileName().toString().endsWith(".json"))
+                    .toList();
+
+            for (Path file : bankFiles) {
+                String fileName = file.getFileName().toString();
+                String characterId = fileName.substring("characterbank_".length(), fileName.length() - ".json".length());
+
+                List<SearchResult> characterPages = loadAllPagesFromCharacter(file, characterId);
+                results.addAll(characterPages);
+            }
+        } catch (IOException e) {
+            System.err.println("[WynnExtras] Error listing character bank files: " + e.getMessage());
+        }
+
+        return results;
+    }
+
+    /**
+     * Search across all character banks including the current one, with account bank on top
+     */
+    public static List<SearchResult> searchAllCharactersIncludingCurrent(String query) {
+        List<SearchResult> results = new ArrayList<>();
+
+        if (McUtils.player() == null) return results;
+
+        // Search account bank first
+        SearchQueryParser.ParsedQuery parsedQuery = SearchQueryParser.parse(query);
+        results.addAll(searchAccountBank(parsedQuery));
+
+        Path configDir = FabricLoader.getInstance().getConfigDir()
+                .resolve("wynnextras/" + McUtils.player().getUuid().toString());
+
+        if (!Files.exists(configDir)) return results;
+
+        try (Stream<Path> files = Files.list(configDir)) {
+            files.filter(p -> p.getFileName().toString().startsWith("characterbank_"))
+                 .filter(p -> p.getFileName().toString().endsWith(".json"))
+                 .forEach(file -> {
+                     String fileName = file.getFileName().toString();
+                     String characterId = fileName.substring("characterbank_".length(), fileName.length() - ".json".length());
+
+                     List<SearchResult> characterResults = searchCharacterBank(file, characterId, parsedQuery);
+                     results.addAll(characterResults);
+                 });
+        } catch (IOException e) {
+            System.err.println("[WynnExtras] Error listing character bank files: " + e.getMessage());
+        }
+
+        return results;
+    }
+
+    /**
+     * Get all account bank pages as SearchResults
+     */
+    public static List<SearchResult> getAccountBankPages() {
+        List<SearchResult> results = new ArrayList<>();
+        try {
+            AccountBankData data = AccountBankData.INSTANCE;
+            if (data == null || data.BankPages == null) return results;
+
+            for (Map.Entry<Integer, List<ItemStack>> entry : data.BankPages.entrySet()) {
+                int pageNum = entry.getKey();
+                List<ItemStack> pageItems = entry.getValue();
+                if (pageItems == null || pageItems.isEmpty()) continue;
+                boolean hasItems = pageItems.stream().anyMatch(s -> s != null && !s.isEmpty());
+                if (hasItems) {
+                    results.add(new SearchResult("__account__", "Account Bank", 0, pageNum, pageItems, pageItems));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[WynnExtras] Error loading account bank pages: " + e.getMessage());
+        }
+        return results;
+    }
+
+    /**
+     * Search account bank pages with a query
+     */
+    private static List<SearchResult> searchAccountBank(SearchQueryParser.ParsedQuery query) {
+        List<SearchResult> results = new ArrayList<>();
+        try {
+            AccountBankData data = AccountBankData.INSTANCE;
+            if (data == null || data.BankPages == null) return results;
+
+            for (Map.Entry<Integer, List<ItemStack>> entry : data.BankPages.entrySet()) {
+                int pageNum = entry.getKey();
+                List<ItemStack> pageItems = entry.getValue();
+                if (pageItems == null) continue;
+
+                List<ItemStack> matchingItems = new ArrayList<>();
+                for (ItemStack stack : pageItems) {
+                    if (stack == null || stack.isEmpty()) continue;
+                    WynnItem wynnItem = null;
+                    Optional<WynnItem> opt = Models.Item.getWynnItem(stack);
+                    if (opt.isPresent()) wynnItem = opt.get();
+                    if (SearchQueryParser.matches(stack, wynnItem, query)) {
+                        matchingItems.add(stack);
+                    }
+                }
+                if (!matchingItems.isEmpty()) {
+                    results.add(new SearchResult("__account__", "Account Bank", 0, pageNum, matchingItems, pageItems));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[WynnExtras] Error searching account bank: " + e.getMessage());
+        }
+        return results;
+    }
+
+    /**
      * Load ALL pages from a character bank file (no filtering)
      */
     private static List<SearchResult> loadAllPagesFromCharacter(Path file, String characterId) {

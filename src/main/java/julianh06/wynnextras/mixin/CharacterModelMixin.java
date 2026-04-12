@@ -7,6 +7,7 @@ import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.CharacterBankData;
+import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.utils.TickScheduler;
@@ -49,6 +50,9 @@ public class CharacterModelMixin {
 
         BankOverlay.currentCharacterID = id;
         CharacterBankData.INSTANCE.load();
+
+        // Reset profession overlay state on character swap
+        ProfessionOverlay.onCharacterSwap();
 
         // Delay to allow Wynntils to finish populating character data
         final String characterId = id;
@@ -123,6 +127,15 @@ public class CharacterModelMixin {
                         CharacterBankData.INSTANCE.save();
                         System.out.println("[WynnExtras] API updated character: " + displayName + " Lv." + apiLevel + " for ID: " + characterId);
                     }
+
+                    // Initialize profession overflow XP from API
+                    ProfessionOverlay.initOverflowFromApi(characterId, charData);
+
+                    // Fetch leaderboard data for max-level professions
+                    // Delay slightly to let Wynntils profession levels load
+                    julianh06.wynnextras.utils.TickScheduler.runAfterTicks(60, () -> {
+                        ProfessionOverlay.fetchLeaderboardForAllProfessions();
+                    });
                     break;
                 }
             }

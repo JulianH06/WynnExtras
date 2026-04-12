@@ -16,8 +16,10 @@ import com.wynntils.models.containers.containers.personal.BookshelfContainer;
 import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
 import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
 import com.wynntils.models.emeralds.type.EmeraldUnits;
+import com.wynntils.models.gear.type.GearTier;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.*;
+import com.wynntils.models.raid.raids.RaidKind;
 import com.wynntils.models.items.properties.DurableItemProperty;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
@@ -35,7 +37,13 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.features.inventory.data.AccountBankData;
+import julianh06.wynnextras.features.inventory.data.BankData;
+import julianh06.wynnextras.features.inventory.data.BookshelfData;
+import julianh06.wynnextras.features.inventory.data.CharacterBankData;
 import julianh06.wynnextras.features.inventory.data.CrossClassBankSearch;
+import julianh06.wynnextras.features.inventory.data.MiscBucketData;
+import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
 import julianh06.wynnextras.mixin.ItemFavoriteFeatureAccessor;
@@ -74,6 +82,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -146,6 +155,24 @@ public class BankOverlay2 extends WEHandledScreen {
     // Character ID to highlight in /class menu (set when clicking cross-class page)
     public static String targetCharacterIdForClassMenu = null;
     public static String targetCharacterNameForClassMenu = null;
+    public static int targetCharacterLevelForClassMenu = 0;
+
+    // All characters browse mode
+    private static boolean allCharactersBrowseMode = false;
+    private static AllCharactersButtonWidget allCharactersButtonWidget = null;
+
+    // Saved search from cross-class swap (persists across bank close/reopen)
+    private static String savedCrossClassSearch = null;
+    private static long savedCrossClassSearchTime = 0;
+    private static final long SAVED_SEARCH_EXPIRY_MS = 2 * 60 * 1000; // 2 minutes
+
+    // Reload bank
+    private static boolean isReloading = false;
+    private static int reloadCurrentPage = 0;
+    private static int reloadTotalPages = 0;
+    private static int reloadOriginalPage = -1;
+    private static boolean reloadPageLoaded = false;
+    private static ReloadBankWidget reloadBankWidget = null;
 
     static int shownPages;
 
@@ -168,6 +195,11 @@ public class BankOverlay2 extends WEHandledScreen {
         crossClassPages.clear();
         lastCrossClassSearchQuery = "";
         crossClassSearchActive = false;
+        allCharactersBrowseMode = false;
+        allCharactersButtonWidget = null;
+        isReloading = false;
+        reloadPageLoaded = false;
+        reloadBankWidget = null;
         signMids.clear();
         inventoryWidget = null;
         switchButtonWidget = null;
@@ -299,6 +331,37 @@ public class BankOverlay2 extends WEHandledScreen {
         if(!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return;
         if(Pages == null) return;
 
+        // Reload bank state machine
+        if (isReloading) {
+            if (!shouldWait && reloadPageLoaded) {
+                // Current page loaded and cached, advance to next
+                reloadCurrentPage++;
+                if (reloadCurrentPage >= reloadTotalPages) {
+                    // All done
+                    isReloading = false;
+                    activeInv = reloadOriginalPage;
+                    try {
+                        BankOverlay.PersonalStorageUtils.jumpToDestination(reloadOriginalPage + 1);
+                    } catch (Exception ignored) {}
+                    retryLoad();
+                    reloadPageLoaded = false;
+                    Pages.save();
+                } else {
+                    // Navigate to next page
+                    reloadPageLoaded = false;
+                    activeInv = reloadCurrentPage;
+                    try {
+                        BankOverlay.PersonalStorageUtils.jumpToDestination(reloadCurrentPage + 1);
+                    } catch (Exception ignored) {}
+                    retryLoad();
+                }
+            }
+            // Detect that current page finished loading
+            if (!shouldWait && !reloadPageLoaded && activeInv == reloadCurrentPage) {
+                reloadPageLoaded = true;
+            }
+        }
+
         if(pages.isEmpty()) {
             for (int i = 0; i < currentMaxPages; i++) {
                 PageWidget pageWidget = new PageWidget(i, yStart, (int) (yStart + (yFitAmount) * (90 + 4 + 10) * Math.max(2, ui.getScaleFactor())));
@@ -357,10 +420,35 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             };
             rootWidgets.add(searchbar2);
+
+            // Restore saved search from cross-class swap if still valid
+            if (savedCrossClassSearch != null && !savedCrossClassSearch.isEmpty()) {
+                long elapsed = System.currentTimeMillis() - savedCrossClassSearchTime;
+                if (elapsed < SAVED_SEARCH_EXPIRY_MS) {
+                    searchbar2.setInput(savedCrossClassSearch);
+
+                    // Auto-switch to character bank if we're on account bank
+                    if (currentOverlayType == BankOverlayType.ACCOUNT) {
+                        ScreenHandler handler = McUtils.containerMenu();
+                        if (handler != null) {
+                            clickOnSlot(47, handler.syncId, 0, handler.getStacks());
+                        }
+                    }
+                }
+                savedCrossClassSearch = null;
+            }
         }
 
         if(quickActionWidget == null) {
             quickActionWidget = new QuickActionWidget();
+        }
+
+        if(allCharactersButtonWidget == null) {
+            allCharactersButtonWidget = new AllCharactersButtonWidget();
+        }
+
+        if(reloadBankWidget == null) {
+            reloadBankWidget = new ReloadBankWidget();
         }
 
         if(scrollBarWidget == null) {
@@ -386,39 +474,45 @@ public class BankOverlay2 extends WEHandledScreen {
             int i = 0;
             int visuali = 0;
             scissorx1 = xStart - 5;
-            scissory1 = yStart;
+            scissory1 = yStart - (allCharactersBrowseMode || crossClassSearchActive ? 12 : 0);
             scissorx2 = xStart + 166 * xFitAmount;
             scissory2 = yStart + 104 * (yFitAmount - 1) - 12;
 
             context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
             ui.updateContext(context, ui.getScaleFactor(), 0, 0);
 
-            // Check for cross-class search (@)
+            // Check for cross-class search (@ or all characters browse mode)
             String rawSearchInput = searchbar2.getInput();
-            boolean isCrossClassSearch = rawSearchInput != null && rawSearchInput.contains("@");
+            boolean isCrossClassSearch = (rawSearchInput != null && rawSearchInput.contains("@")) || allCharactersBrowseMode;
             String searchInput = rawSearchInput;
 
             // Strip @ from search query for actual matching
-            if (isCrossClassSearch && searchInput != null) {
+            if (searchInput != null && searchInput.contains("@")) {
                 searchInput = searchInput.replace("@", "").trim();
             }
 
-            // Trigger cross-class search if needed (@ present, with or without search text)
+            // Trigger cross-class search if needed
             if (isCrossClassSearch) {
-                if (!rawSearchInput.equals(lastCrossClassSearchQuery)) {
-                    lastCrossClassSearchQuery = rawSearchInput;
+                String cacheKey = allCharactersBrowseMode ? ("__allchars__" + (rawSearchInput != null ? rawSearchInput : "")) : rawSearchInput;
+                if (!cacheKey.equals(lastCrossClassSearchQuery)) {
+                    lastCrossClassSearchQuery = cacheKey;
                     crossClassSearchActive = true;
 
-                    // Perform cross-class search
                     crossClassPages.clear();
 
-                    // If no search text after @, get ALL pages from all other characters
-                    // If search text exists, only get matching pages
                     List<CrossClassBankSearch.SearchResult> results;
-                    if (searchInput == null || searchInput.isEmpty()) {
-                        results = CrossClassBankSearch.getAllCharacterPages();
+                    if (allCharactersBrowseMode) {
+                        if (searchInput == null || searchInput.isEmpty()) {
+                            results = CrossClassBankSearch.getAllCharacterPagesIncludingCurrent();
+                        } else {
+                            results = CrossClassBankSearch.searchAllCharactersIncludingCurrent(searchInput);
+                        }
                     } else {
-                        results = CrossClassBankSearch.searchAllCharacters(searchInput);
+                        if (searchInput == null || searchInput.isEmpty()) {
+                            results = CrossClassBankSearch.getAllCharacterPages();
+                        } else {
+                            results = CrossClassBankSearch.searchAllCharacters(searchInput);
+                        }
                     }
 
                     for (CrossClassBankSearch.SearchResult result : results) {
@@ -435,7 +529,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     }
                 }
             } else {
-                // Clear cross-class results if @ is not in search
+                // Clear cross-class results if not in cross-class mode
                 if (crossClassSearchActive) {
                     crossClassPages.clear();
                     lastCrossClassSearchQuery = "";
@@ -443,62 +537,65 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             }
 
-            for(PageWidget page : pages) {
-                float invX = xStart + (visuali % xFitAmount) * (162 + 4);
-                float invY = yStart + Math.floorDiv(visuali, xFitAmount) * (90 + 4 + 10) - actualOffset;
-                page.setBounds((int) (invX * ui.getScaleFactor()), (int) (invY * ui.getScaleFactor()), (int) (164 * ui.getScaleFactor()), (int) (92 * ui.getScaleFactor()));
-                page.setItems(buildInventoryForIndex(i, false));
-                page.updateValues();
+            // Skip regular pages when browsing all characters
+            if (!allCharactersBrowseMode) {
+                for(PageWidget page : pages) {
+                    float invX = xStart + (visuali % xFitAmount) * (162 + 4);
+                    float invY = yStart + Math.floorDiv(visuali, xFitAmount) * (90 + 4 + 10) - actualOffset;
+                    page.setBounds((int) (invX * ui.getScaleFactor()), (int) (invY * ui.getScaleFactor()), (int) (164 * ui.getScaleFactor()), (int) (92 * ui.getScaleFactor()));
+                    page.setItems(buildInventoryForIndex(i, false));
+                    page.updateValues();
 
-                if(searchInput != null && !searchInput.isEmpty()) {
-                    // Check if this page was already evaluated for the current search term
-                    boolean alreadyMatched = searchInput.equals(page.lastInput);
-                    boolean containsSearch = alreadyMatched;
+                    if(searchInput != null && !searchInput.isEmpty()) {
+                        // Check if this page was already evaluated for the current search term
+                        boolean alreadyMatched = searchInput.equals(page.lastInput);
+                        boolean containsSearch = alreadyMatched;
 
-                    // Only search if we don't already know the result
-                    if (!alreadyMatched) {
-                        // Use advanced search parser
-                        SearchQueryParser.ParsedQuery query = SearchQueryParser.parse(searchInput);
+                        // Only search if we don't already know the result
+                        if (!alreadyMatched) {
+                            // Use advanced search parser
+                            SearchQueryParser.ParsedQuery query = SearchQueryParser.parse(searchInput);
 
-                        for(ItemStack stack : page.getItems()) {
-                            if(stack == null) continue;
-                            if(stack.isEmpty()) continue;
+                            for(ItemStack stack : page.getItems()) {
+                                if(stack == null) continue;
+                                if(stack.isEmpty()) continue;
 
-                            // Get WynnItem annotation if available
-                            WynnItem wynnItem = null;
-                            Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(stack);
-                            if (optWynnItem.isPresent()) {
-                                wynnItem = optWynnItem.get();
-                            }
+                                // Get WynnItem annotation if available
+                                WynnItem wynnItem = null;
+                                Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(stack);
+                                if (optWynnItem.isPresent()) {
+                                    wynnItem = optWynnItem.get();
+                                }
 
-                            // Use advanced search matching
-                            if (SearchQueryParser.matches(stack, wynnItem, query)) {
-                                containsSearch = true;
-                                page.lastInput = searchInput;
-                                break;
+                                // Use advanced search matching
+                                if (SearchQueryParser.matches(stack, wynnItem, query)) {
+                                    containsSearch = true;
+                                    page.lastInput = searchInput;
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    if(!containsSearch) {
-                        i++;
-                        page.setEnabled(false);
-                        page.lastInput = "";
-                        continue;
+                        if(!containsSearch) {
+                            i++;
+                            page.setEnabled(false);
+                            page.lastInput = "";
+                            continue;
+                        } else {
+                            page.setEnabled(true);
+                            pageAmount++;
+                        }
                     } else {
+                        // No search input - reset lastInput and enable page
+                        page.lastInput = "";
                         page.setEnabled(true);
                         pageAmount++;
                     }
-                } else {
-                    // No search input - reset lastInput and enable page
-                    page.lastInput = "";
-                    page.setEnabled(true);
-                    pageAmount++;
-                }
 
-                if(invY > yStart - 100 && invY < yStart + 103 * (yFitAmount - 1)) page.draw(context, mouseX, mouseY, delta, ui);
-                i++;
-                visuali++;
+                    if(invY > yStart - 100 && invY < yStart + 103 * (yFitAmount - 1)) page.draw(context, mouseX, mouseY, delta, ui);
+                    i++;
+                    visuali++;
+                }
             }
 
             // Render cross-class pages after regular pages
@@ -524,54 +621,98 @@ public class BankOverlay2 extends WEHandledScreen {
             inventoryWidget.updateValues();
             inventoryWidget.draw(context, mouseX, mouseY, delta, ui);
 
-            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
-                switchButtonWidget.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
-                switchButtonWidget.draw(context, mouseX, mouseY, delta, ui);
+            if (!allCharactersBrowseMode) {
+                if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+                    switchButtonWidget.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+                    switchButtonWidget.draw(context, mouseX, mouseY, delta, ui);
+                } else {
+                    switchButtonWidget.setBounds(0, 0, 0, 0);
+                }
+
+                if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
+                    ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackgroundDark : buttonBackgroundShortDark, buttonWidgetsX - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+                } else {
+                    ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackground : buttonBackgroundShort, buttonWidgetsX - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+                }
             } else {
                 switchButtonWidget.setBounds(0, 0, 0, 0);
             }
 
-            if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
-                ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackgroundDark : buttonBackgroundShortDark, buttonWidgetsX - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
-            } else {
-                ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackground : buttonBackgroundShort, buttonWidgetsX - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
-            }
-
-            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+            if (allCharactersBrowseMode) {
+                // In browse mode: only show search bar and new buttons, positioned compactly
+                searchbar2.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+            } else if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
                 searchbar2.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 59, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
             } else {
                 searchbar2.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 31, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
             }
 
             searchbar2.setTextColor(CustomColor.fromHexString("FFFFFF"));
-            searchbar2.setBackgroundColor(null);
+            searchbar2.setBackgroundColor(CustomColor.fromHSV(0, 0, 0, 0.5f));
+            searchbar2.setFocusedColor(CustomColor.fromHSV(0, 0, 0.15f, 0.6f));
             searchbar2.draw(context, mouseX, mouseY, delta, ui);
 
-            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
-                ui.drawCenteredText("Switch to " + (currentOverlayType == BankOverlayType.ACCOUNT ? "Character" : "Account") + " Bank", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, CustomColor.fromHexString("FFFFFF"), 1.1f);
-            }
-            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
-                ui.drawCenteredText("Quick Actions", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 44, CustomColor.fromHexString("FFFFFF"), 1.1f);
-            } else {
-                ui.drawCenteredText("Quick Actions", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, CustomColor.fromHexString("FFFFFF"), 1.1f);
+            if (!allCharactersBrowseMode) {
+                if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+                    ui.drawCenteredText("Switch to " + (currentOverlayType == BankOverlayType.ACCOUNT ? "Character" : "Account") + " Bank", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, CustomColor.fromHexString("FFFFFF"), 1.1f);
+                }
+                if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+                    ui.drawCenteredText("Quick Actions", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 44, CustomColor.fromHexString("FFFFFF"), 1.1f);
+                } else {
+                    ui.drawCenteredText("Quick Actions", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, CustomColor.fromHexString("FFFFFF"), 1.1f);
+                }
             }
         }
 
         shownPages = pageAmount;
 
         drawEmeraldOverlay(context, xStart - 36, yStart - 14);
+        // Count bags on the live current page and store as numbers in BankData.bagCounts,
+        // which survives serialization (unlike Wynntils item annotations on cached ItemStacks).
+        cacheCurrentBankPageIfPossible();
+        // Grid is 3 cols (tiers) × 4 rows (raids) at 28px per cell, so shift further left
+        // to keep the right edge just left of the custom bank UI.
+        // Grid is scoped to the live current page; the top-right header uses numeric totals.
+        drawBagOverlay(
+                context,
+                xStart - 36 - 56,
+                yStart - 14 + 4 * 28,
+                getCurrentPageStacks(),
+                collectTotalBagCounts());
 
         renderHoveredSlotHighlight(context,  screen);
         renderHoveredTooltip(context, screen, mouseX, mouseY);
         renderHeldItemOverlay(context, mouseX, mouseY);
 
-        if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
-            quickActionWidget.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 31, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+        if (!allCharactersBrowseMode) {
+            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+                quickActionWidget.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 31, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+            } else {
+                quickActionWidget.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+            }
+            quickActionWidget.draw(context, mouseX, mouseY, delta, ui);
         } else {
-            quickActionWidget.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+            quickActionWidget.setBounds(0, 0, 0, 0);
         }
 
-        quickActionWidget.draw(context, mouseX, mouseY, delta, ui);
+        // Draw new buttons (below search bar normally, or below search bar in browse mode)
+        if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+            int btnY = allCharactersBrowseMode
+                    ? yStart + (yFitAmount - 1) * (90 + 4 + 10) + 29
+                    : yStart + (yFitAmount - 1) * (90 + 4 + 10) + 85;
+            int halfWidth = (int) (75 * ui.getScaleFactor());
+            int btnHeight = (int) (18 * ui.getScaleFactor());
+            int gap = (int) (5 * ui.getScaleFactor());
+
+            allCharactersButtonWidget.setBounds(xStart, btnY, halfWidth, btnHeight);
+            allCharactersButtonWidget.draw(context, mouseX, mouseY, delta, ui);
+
+            reloadBankWidget.setBounds(xStart + halfWidth + gap, btnY, halfWidth, btnHeight);
+            reloadBankWidget.draw(context, mouseX, mouseY, delta, ui);
+        } else {
+            allCharactersButtonWidget.setBounds(0, 0, 0, 0);
+            reloadBankWidget.setBounds(0, 0, 0, 0);
+        }
     }
 
     private void drawBackgroundRect(DrawContext context, float xRemain, float yRemain) {
@@ -617,6 +758,28 @@ public class BankOverlay2 extends WEHandledScreen {
         if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return false;
         if (currentOverlayType == BankOverlayType.NONE) return false;
 
+        if (allCharactersBrowseMode) {
+            // In browse mode: check UI controls first, then cross-class pages
+            if(searchbar2 != null && searchbar2.mouseClicked(x, y, button)) return true;
+            if(scrollBarWidget != null && scrollBarWidget.mouseClicked(x, y, button)) return true;
+            if(allCharactersButtonWidget != null && allCharactersButtonWidget.mouseClicked(x, y, button)) return true;
+            if(reloadBankWidget != null && reloadBankWidget.mouseClicked(x, y, button)) return true;
+            for(CrossClassPageWidget ccPage : crossClassPages) {
+                if (ccPage.mouseClicked(x, y, button)) {
+                    return true;
+                }
+            }
+            return true;
+        }
+
+        // Check UI controls first (so they don't get stolen by overlapping cross-class pages)
+        if(searchbar2 != null && searchbar2.mouseClicked(x, y, button)) return true;
+        if(scrollBarWidget != null && scrollBarWidget.mouseClicked(x, y, button)) return true;
+        if(allCharactersButtonWidget != null && allCharactersButtonWidget.mouseClicked(x, y, button)) return true;
+        if(reloadBankWidget != null && reloadBankWidget.mouseClicked(x, y, button)) return true;
+        if(switchButtonWidget != null && switchButtonWidget.mouseClicked(x, y, button)) return true;
+        if(quickActionWidget != null && quickActionWidget.mouseClicked(x, y, button)) return true;
+
         for(PageWidget page : pages) {
             page.mouseClicked(x, y, button);
         }
@@ -627,10 +790,6 @@ public class BankOverlay2 extends WEHandledScreen {
             }
         }
         if(inventoryWidget != null) inventoryWidget.mouseClicked(x, y, button);
-        if(switchButtonWidget != null) switchButtonWidget.mouseClicked(x, y, button);
-        if(quickActionWidget != null) quickActionWidget.mouseClicked(x, y, button);
-        if(searchbar2 != null) searchbar2.mouseClicked(x, y, button);
-        if(scrollBarWidget != null) scrollBarWidget.mouseClicked(x, y, button);
         return true;
     }
 
@@ -1292,6 +1451,448 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 
+    // Hardcoded layout for the total-bags grid: all known raids × the three crafter-bag tiers.
+    // Bags that don't match one of these combos still get counted into the header total, but
+    // their own row won't be shown (we also don't have icons for combinations that never occur).
+    private static final String[] BAG_RAID_ORDER = {"NOG", "NOL", "TCC", "TNA"};
+    private static final GearTier[] BAG_TIER_ORDER = {GearTier.LEGENDARY, GearTier.RARE, GearTier.UNIQUE};
+
+    /** Sort mode for the top-right bag breakdown. Click the "[By Type]"/"[By Count]" label to toggle. */
+    public enum BagSortMode { BY_TYPE, BY_AMOUNT }
+    public static BagSortMode bagSortMode = BagSortMode.BY_TYPE;
+    // Click bounds for the sort toggle label, updated each frame so the mixin click handler can hit-test.
+    private static int sortToggleX = 0, sortToggleY = 0, sortToggleW = 0, sortToggleH = 0;
+
+    /**
+     * Draws the bag grid from live {@code gridStacks} and the top-right "Total Bags"
+     * breakdown from pre-counted {@code totalCounts} (raid|tier → count).
+     */
+    static void drawBagOverlay(DrawContext context, int x, int y,
+                               List<ItemStack> gridStacks, Map<String, Integer> totalCounts) {
+        drawBagTopRightHeader(context, totalCounts);
+        drawBagGrid(context, x, y, gridStacks);
+    }
+
+    /** Simple (raidAbbrev, tier) pair for the top-right text lines. */
+    private record BagCountEntry(String raidAbbrev, GearTier tier, int count) {}
+
+    /**
+     * Draws the "Total Bags" block floating in the top-right corner. Shows per-(raid, tier)
+     * lines (skipping zero-count combos) and a clickable sort-mode toggle below the total.
+     * Uses pre-counted numbers so it doesn't depend on Wynntils item annotations.
+     */
+    private static void drawBagTopRightHeader(DrawContext context, Map<String, Integer> totalCounts) {
+        int totalCount = 0;
+        for (int c : totalCounts.values()) totalCount += c;
+
+        // Build non-zero lines
+        List<BagCountEntry> lines = new ArrayList<>();
+        for (String raid : BAG_RAID_ORDER) {
+            for (GearTier tier : BAG_TIER_ORDER) {
+                String key = raid + "|" + tier.name();
+                int count = totalCounts.getOrDefault(key, 0);
+                if (count > 0) lines.add(new BagCountEntry(raid, tier, count));
+            }
+        }
+
+        // Sort per mode
+        if (bagSortMode == BagSortMode.BY_AMOUNT) {
+            lines.sort((a, b) -> Integer.compare(b.count(), a.count()));
+        } else {
+            lines.sort(Comparator
+                    .<BagCountEntry>comparingInt(e -> indexInArray(BAG_RAID_ORDER, e.raidAbbrev()))
+                    .thenComparingInt(e -> e.tier() != null ? -e.tier().ordinal() : 1));
+        }
+
+        MinecraftClient mc = MinecraftClient.getInstance();
+        TextRenderer tr = mc.textRenderer;
+        int screenWidth = mc.currentScreen != null ? mc.currentScreen.width : mc.getWindow().getScaledWidth();
+
+        int lineY = 5;
+
+        // Total header
+        String header = "Total Bags: " + totalCount;
+        int headerWidth = tr.getWidth(header);
+        context.drawText(tr, header, screenWidth - headerWidth - 5, lineY, 0xFFFFFFFF, true);
+        lineY += tr.fontHeight + 2;
+
+        // Clickable sort toggle
+        String toggle = "[Sort: " + (bagSortMode == BagSortMode.BY_TYPE ? "By Type" : "By Count") + "]";
+        int toggleW = tr.getWidth(toggle);
+        int toggleX = screenWidth - toggleW - 5;
+        int toggleY = lineY;
+        context.drawText(tr, toggle, toggleX, toggleY, 0xFFAAAAAA, true);
+        sortToggleX = toggleX;
+        sortToggleY = toggleY;
+        sortToggleW = toggleW;
+        sortToggleH = tr.fontHeight;
+        lineY += tr.fontHeight + 3;
+
+        // Per-(raid, tier) lines
+        for (BagCountEntry e : lines) {
+            String tierName = e.tier() != null
+                    ? e.tier().name().charAt(0) + e.tier().name().substring(1).toLowerCase()
+                    : "?";
+            String line = e.raidAbbrev() + " " + tierName + ": " + e.count();
+            int lineWidth = tr.getWidth(line);
+            context.drawText(tr, line, screenWidth - lineWidth - 5, lineY, getTierColorArgb(e.tier()), true);
+            lineY += tr.fontHeight + 1;
+        }
+    }
+
+    private static int indexInArray(String[] arr, String value) {
+        for (int i = 0; i < arr.length; i++) {
+            if (arr[i].equals(value)) return i;
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    /**
+     * Click hit-test for the sort-mode toggle label. Returns true if the click toggled the mode.
+     * Called from HandledScreenMixin.mouseClicked.
+     */
+    public static boolean handleSortToggleClick(double mouseX, double mouseY) {
+        if (sortToggleW <= 0 || sortToggleH <= 0) return false;
+        if (mouseX < sortToggleX || mouseX >= sortToggleX + sortToggleW) return false;
+        if (mouseY < sortToggleY || mouseY >= sortToggleY + sortToggleH) return false;
+        bagSortMode = bagSortMode == BagSortMode.BY_TYPE ? BagSortMode.BY_AMOUNT : BagSortMode.BY_TYPE;
+        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        return true;
+    }
+
+    /**
+     * Draws the (raid × tier) grid of bag boxes. Raid rows with 0 total bags are skipped
+     * entirely, and if no bags exist in the scoped data the grid isn't drawn at all.
+     */
+    private static void drawBagGrid(DrawContext context, int x, int y, List<ItemStack> stacks) {
+        Map<String, BagGroup> groups = groupBagsFromStacks(stacks);
+        if (groups.isEmpty()) return;
+
+        // Only render raids where at least one tier has a bag in the scoped data
+        List<String> visibleRaids = new ArrayList<>();
+        for (String raid : BAG_RAID_ORDER) {
+            for (GearTier tier : BAG_TIER_ORDER) {
+                BagGroup g = groups.get(raid + "|" + tier.name());
+                if (g != null && g.count > 0) {
+                    visibleRaids.add(raid);
+                    break;
+                }
+            }
+        }
+        if (visibleRaids.isEmpty()) return;
+
+        int row = 0;
+        for (String raid : visibleRaids) {
+            for (int col = 0; col < BAG_TIER_ORDER.length; col++) {
+                GearTier tier = BAG_TIER_ORDER[col];
+                String key = raid + "|" + tier.name();
+                BagGroup group = groups.get(key);
+                int count = group != null ? group.count : 0;
+
+                int cellX = x + col * 28;
+                int cellY = y + row * 28;
+
+                RenderUtils.drawTexturedRect(
+                        context,
+                        Texture.EMERALD_COUNT_BACKGROUND.identifier(),
+                        cellX,
+                        cellY,
+                        28,
+                        28,
+                        0,
+                        0,
+                        Texture.EMERALD_COUNT_BACKGROUND.width(),
+                        Texture.EMERALD_COUNT_BACKGROUND.height(),
+                        Texture.EMERALD_COUNT_BACKGROUND.width(),
+                        Texture.EMERALD_COUNT_BACKGROUND.height());
+
+                // Icon: only when we have a real stack for this combo
+                if (group != null && !group.icon.isEmpty()) {
+                    context.drawItem(group.icon, cellX + 6, cellY + 6);
+                }
+
+                CustomColor tierColor = CustomColor.fromChatFormatting(tier.getChatFormatting());
+
+                // Raid abbreviation in top-left, colored by tier
+                FontRenderer.getInstance()
+                        .renderAlignedTextInBox(
+                                context,
+                                StyledText.fromString(raid),
+                                cellX + 1,
+                                cellX + 28 - 1,
+                                cellY + 1,
+                                cellY + 28 - 2,
+                                0,
+                                tierColor,
+                                HorizontalAlignment.LEFT,
+                                VerticalAlignment.TOP,
+                                TextShadow.OUTLINE);
+
+                // Count in bottom-right (dimmed when zero, compacted for large counts so "1200" fits)
+                CustomColor countColor = count > 0 ? CommonColors.WHITE : CustomColor.fromInt(0xFF808080);
+                FontRenderer.getInstance()
+                        .renderAlignedTextInBox(
+                                context,
+                                StyledText.fromString(formatCompactCount(count)),
+                                cellX,
+                                cellX + 28 - 2,
+                                cellY,
+                                cellY + 28 - 2,
+                                0,
+                                countColor,
+                                HorizontalAlignment.RIGHT,
+                                VerticalAlignment.BOTTOM,
+                                TextShadow.OUTLINE);
+            }
+            row++;
+        }
+    }
+
+    /** Compact-format a count so it fits in a 28px-wide box. 1420 -> "1.42k", 12345 -> "12.3k". */
+    private static String formatCompactCount(int count) {
+        if (count < 1000) return String.valueOf(count);
+        if (count < 10000) return String.format("%.2fk", count / 1000.0);
+        if (count < 100000) return String.format("%.1fk", count / 1000.0);
+        if (count < 1000000) return (count / 1000) + "k";
+        return (count / 1000000) + "m";
+    }
+
+    /** ARGB int for a gear tier's chat color (for TextRenderer.drawText), or white if absent. */
+    private static int getTierColorArgb(GearTier tier) {
+        if (tier == null) return 0xFFFFFFFF;
+        Integer rgb = tier.getChatFormatting().getColorValue();
+        return rgb != null ? (0xFF000000 | rgb) : 0xFFFFFFFF;
+    }
+
+    /**
+     * Entry point for drawing the bag overlay in vanilla bank mode or trade market
+     * (i.e. whenever the custom overlay isn't drawing it itself).
+     * Positions the boxes to the right of the vanilla container; the "Total Bags: N"
+     * header is drawn by drawBagOverlay in the top-right of the screen.
+     */
+    public static void drawVanillaBankBagsOverlay(DrawContext context, HandledScreen<?> screen) {
+        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
+        // Custom bank overlay draws bags from BankOverlay2.render(), so skip here when active.
+        if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) return;
+
+        Container container = Models.Container.getCurrentContainer();
+        boolean isBank = container instanceof AccountBankContainer
+                || container instanceof CharacterBankContainer
+                || container instanceof BookshelfContainer
+                || container instanceof MiscBucketContainer;
+
+        // On bank screens: refresh the cached entry for the current page so the
+        // cross-page total stays accurate as the user browses pages in vanilla mode.
+        if (isBank) cacheCurrentBankPageIfPossible();
+
+        // Show the bag overlay on any container screen (bank, trade market, player trade, etc.)
+        // The overlay is purely informational. If there's no bag data, drawBagOverlay returns early.
+        HandledScreenAccessor accessor = (HandledScreenAccessor) screen;
+        int screenX = accessor.getX();
+        int screenY = accessor.getY();
+        int bgWidth = accessor.getBackgroundWidth();
+        int x = screenX + bgWidth + 4;
+        int y = screenY + 14;
+
+        // Bank screens use same-bank totals; everything else aggregates across all bank types.
+        Map<String, Integer> totalCounts = isBank
+                ? collectTotalBagCounts()
+                : collectAllBanksTotalBagCounts();
+        List<ItemStack> gridStacks = isBank ? getCurrentPageStacks() : Collections.emptyList();
+        drawBagOverlay(context, x, y, gridStacks, totalCounts);
+    }
+
+    // Debounce for the auto-save that runs while the bag overlay is caching pages.
+    private static long lastBagCacheSaveMs = 0;
+    private static final long BAG_CACHE_SAVE_DEBOUNCE_MS = 2000;
+
+    /**
+     * Counts CrafterBags on the current live page via Wynntils annotations (which only
+     * exist for live ItemStacks, NOT deserialized ones) and stores the counts as plain
+     * numbers in {@code BankData.bagCounts[pageNum]}. Auto-persists to disk (debounced).
+     */
+    public static void cacheCurrentBankPageIfPossible() {
+        if (BankOverlay.shouldWait) return;
+
+        BankData data = getBankDataForCurrentContainer();
+        if (data == null) return;
+
+        int pageNum = getCurrentBankPageNumber();
+        if (pageNum < 0) return;
+
+        List<ItemStack> live = getCurrentPageStacks();
+        if (live.isEmpty()) return;
+
+        // Count bags from live (annotated) stacks
+        HashMap<String, Integer> counts = new HashMap<>();
+        for (ItemStack stack : live) {
+            if (stack == null || stack.isEmpty()) continue;
+            Optional<WynnItem> item = asWynnItem(stack);
+            if (item.isEmpty() || !(item.get() instanceof CrafterBagItem bag)) continue;
+            RaidKind raidKind = bag.getRaidKind();
+            GearTier tier = bag.getGearTier();
+            String key = (raidKind != null ? raidKind.getAbbreviation() : "?")
+                    + "|" + (tier != null ? tier.name() : "?");
+            counts.merge(key, stack.getCount(), Integer::sum);
+        }
+
+        // Check if anything changed before saving
+        HashMap<String, Integer> existing = data.bagCounts.get(pageNum);
+        if (existing != null && existing.equals(counts)) return;
+
+        data.bagCounts.put(pageNum, counts);
+
+        long now = System.currentTimeMillis();
+        if (now - lastBagCacheSaveMs > BAG_CACHE_SAVE_DEBOUNCE_MS) {
+            data.save();
+            lastBagCacheSaveMs = now;
+        }
+    }
+
+    /** True if the current open container is one of the personal bank types. */
+    public static boolean isCurrentContainerBank() {
+        Container container = Models.Container.getCurrentContainer();
+        return container instanceof AccountBankContainer
+                || container instanceof CharacterBankContainer
+                || container instanceof BookshelfContainer
+                || container instanceof MiscBucketContainer;
+    }
+
+    /** Saves the BankData for the currently open bank container, if any. */
+    public static void saveCurrentBankData() {
+        BankData data = getBankDataForCurrentContainer();
+        if (data != null) data.save();
+    }
+
+    /**
+     * Aggregates bag counts from all cached pages of the current bank container
+     * (stored as plain numbers in BankData.bagCounts, so they don't depend on
+     * Wynntils item annotations).
+     */
+    private static Map<String, Integer> collectTotalBagCounts() {
+        Map<String, Integer> totals = new HashMap<>();
+        BankData bankData = getBankDataForCurrentContainer();
+        if (bankData != null && bankData.bagCounts != null) {
+            for (Map<String, Integer> pageCounts : bankData.bagCounts.values()) {
+                if (pageCounts == null) continue;
+                for (Map.Entry<String, Integer> e : pageCounts.entrySet()) {
+                    totals.merge(e.getKey(), e.getValue(), Integer::sum);
+                }
+            }
+        }
+        return totals;
+    }
+
+    /**
+     * Aggregates bag counts from all cached pages across every bank type
+     * (account, character, bookshelf, misc bucket). Used in the Trade Market.
+     */
+    private static Map<String, Integer> collectAllBanksTotalBagCounts() {
+        Map<String, Integer> totals = new HashMap<>();
+        BankData[] sources = new BankData[]{
+                AccountBankData.INSTANCE,
+                CharacterBankData.INSTANCE,
+                BookshelfData.INSTANCE,
+                MiscBucketData.INSTANCE
+        };
+        for (BankData data : sources) {
+            if (data == null || data.bagCounts == null) continue;
+            for (Map<String, Integer> pageCounts : data.bagCounts.values()) {
+                if (pageCounts == null) continue;
+                for (Map.Entry<String, Integer> e : pageCounts.entrySet()) {
+                    totals.merge(e.getKey(), e.getValue(), Integer::sum);
+                }
+            }
+        }
+        return totals;
+    }
+
+    private static Map<String, BagGroup> groupBagsFromStacks(Iterable<ItemStack> stacks) {
+        Map<String, BagGroup> groups = new LinkedHashMap<>();
+        for (ItemStack stack : stacks) {
+            if (stack == null || stack.isEmpty()) continue;
+            Optional<WynnItem> item = asWynnItem(stack);
+            if (item.isEmpty() || !(item.get() instanceof CrafterBagItem bag)) continue;
+
+            RaidKind raidKind = bag.getRaidKind();
+            GearTier tier = bag.getGearTier();
+            String raidAbbrev = raidKind != null ? raidKind.getAbbreviation() : "?";
+            String key = raidAbbrev + "|" + (tier != null ? tier.name() : "?");
+
+            BagGroup group = groups.get(key);
+            if (group == null) {
+                group = new BagGroup(raidAbbrev, tier, stack);
+                groups.put(key, group);
+            }
+            group.count += stack.getCount();
+        }
+        return groups;
+    }
+
+    private static List<ItemStack> getCurrentPageStacks() {
+        List<ItemStack> stacks = new ArrayList<>();
+        // Only trust activeInvSlots while the custom overlay is actively managing it.
+        // In vanilla mode it's often empty OR holds stale references from a previous
+        // custom-mode session, which would silently corrupt the cache.
+        boolean customOverlayActive = WynnExtrasConfig.INSTANCE.toggleBankOverlay
+                && currentOverlayType != BankOverlayType.NONE;
+        if (customOverlayActive && BankOverlay.activeInvSlots != null && !BankOverlay.activeInvSlots.isEmpty()) {
+            for (Slot slot : BankOverlay.activeInvSlots) {
+                stacks.add(slot.getStack());
+            }
+            return stacks;
+        }
+        // Otherwise read the current ScreenHandler directly (excludes player inventory slots).
+        MinecraftClient mc = MinecraftClient.getInstance();
+        ScreenHandler menu = McUtils.containerMenu();
+        if (menu == null || mc.player == null) return stacks;
+        Inventory playerInv = mc.player.getInventory();
+        for (Slot slot : menu.slots) {
+            if (slot.inventory == playerInv) continue;
+            stacks.add(slot.getStack());
+        }
+        return stacks;
+    }
+
+    /**
+     * Returns the 0-based current bank page number (matching the Pages.BankPages cache key
+     * convention, see HandledScreenMixin.onClose which does Pages.BankPages.put(activeInv, ...)),
+     * or -1 if unavailable. Prefers {@code Models.Bank.getCurrentPage()} because it's accurate
+     * in both custom and vanilla modes, falling back to BankOverlay.activeInv only if Wynntils
+     * hasn't reported a page yet. {@code Models.Bank.getCurrentPage()} is 1-based, so we
+     * subtract 1 to align with the cache.
+     */
+    private static int getCurrentBankPageNumber() {
+        try {
+            int p = Models.Bank.getCurrentPage();
+            if (p > 0) return p - 1;
+        } catch (Exception ignored) {}
+        if (BankOverlay.activeInv != -1) return BankOverlay.activeInv;
+        return -1;
+    }
+
+    private static BankData getBankDataForCurrentContainer() {
+        Container container = Models.Container.getCurrentContainer();
+        if (container instanceof AccountBankContainer) return AccountBankData.INSTANCE;
+        if (container instanceof CharacterBankContainer) return CharacterBankData.INSTANCE;
+        if (container instanceof BookshelfContainer) return BookshelfData.INSTANCE;
+        if (container instanceof MiscBucketContainer) return MiscBucketData.INSTANCE;
+        return null;
+    }
+
+    private static class BagGroup {
+        final String raidAbbrev;
+        final GearTier tier;
+        final ItemStack icon;
+        int count = 0;
+
+        BagGroup(String raidAbbrev, GearTier tier, ItemStack icon) {
+            this.raidAbbrev = raidAbbrev;
+            this.tier = tier;
+            this.icon = icon;
+        }
+    }
+
     //Weight display stuff
 
     // Hovered Slot
@@ -1601,7 +2202,7 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static class SlotWidget extends Widget {
-        private ItemStack stack;
+        protected ItemStack stack;
         int index;
         final boolean isInventorySlot;
         final int inventoryIndex;
@@ -1711,6 +2312,17 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            if (button == 2) {
+                if (stack != null && !stack.isEmpty() && searchbar2 != null) {
+                    String itemName = stack.getName().getString().replaceAll("\u00a7[0-9a-fk-or]", "").trim();
+                    if (!itemName.isEmpty()) {
+                        searchbar2.setInput(itemName);
+                        for (PageWidget page : pages) page.lastInput = "";
+                    }
+                }
+                return true;
+            }
+            if (isReloading) return false;
             if(shouldWait) return false;
             if(!isMouseInOverlay && !isInventorySlot) return false;
             if(inventoryIndex >= currentData.lastPage && !isInventorySlot) return false;
@@ -1854,6 +2466,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            if (isReloading) return false;
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             ScreenHandler currScreenHandler = McUtils.containerMenu();
 
@@ -1878,6 +2491,96 @@ public class BankOverlay2 extends WEHandledScreen {
             if(currScreenHandler == null) { return false; }
             clickOnSlot(47, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
             registeredScroll = false;
+            return true;
+        }
+    }
+
+    private static class AllCharactersButtonWidget extends Widget {
+        public AllCharactersButtonWidget() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 3, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            String text = allCharactersBrowseMode ? "Back" : "All Characters";
+            ui.drawCenteredText(text, x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 0.85f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if (isReloading) return false;
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+
+            allCharactersBrowseMode = !allCharactersBrowseMode;
+            if (allCharactersBrowseMode) {
+                // Force cross-class reload
+                lastCrossClassSearchQuery = "";
+                crossClassPages.clear();
+                crossClassSearchActive = false;
+                targetOffset = 0;
+                actualOffset = 0;
+            } else {
+                crossClassPages.clear();
+                lastCrossClassSearchQuery = "";
+                crossClassSearchActive = false;
+                targetOffset = 0;
+                actualOffset = 0;
+            }
+            return true;
+        }
+    }
+
+    private static class ReloadBankWidget extends Widget {
+        public ReloadBankWidget() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, 3, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            String text;
+            if (isReloading) {
+                text = "Reloading " + (reloadCurrentPage + 1) + "/" + reloadTotalPages;
+            } else {
+                text = "Reload";
+            }
+            ui.drawCenteredText(text, x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 0.85f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+
+            if (isReloading) {
+                // Cancel reload
+                isReloading = false;
+                reloadPageLoaded = false;
+                activeInv = reloadOriginalPage;
+                try {
+                    BankOverlay.PersonalStorageUtils.jumpToDestination(reloadOriginalPage + 1);
+                } catch (Exception ignored) {}
+                retryLoad();
+                Pages.save();
+            } else {
+                // Start reload
+                if (allCharactersBrowseMode) return false; // Can't reload while browsing all chars
+                reloadOriginalPage = activeInv;
+                reloadTotalPages = Math.max(currentData.lastPage, currentMaxPages);
+                if (reloadTotalPages <= 0) return false;
+                reloadCurrentPage = 0;
+                isReloading = true;
+                reloadPageLoaded = false;
+                activeInv = 0;
+                try {
+                    BankOverlay.PersonalStorageUtils.jumpToDestination(1);
+                } catch (Exception e) {
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils."));
+                    isReloading = false;
+                    return false;
+                }
+                retryLoad();
+            }
             return true;
         }
     }
@@ -2024,10 +2727,14 @@ public class BankOverlay2 extends WEHandledScreen {
             if (ui == null) return;
             if (y > botBorder || y + height < topBorder) return;
 
+            // Draw solid background behind label area to cover vanilla UI
+            String bgColor = WynnExtrasConfig.INSTANCE.darkmodeToggle ? "2c2d2f" : "81644b";
+            ui.drawRect(x, y - 11, width, 11, CustomColor.fromHexString(bgColor));
+
             // Draw bank texture background
             ui.drawImage(WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankTextureDark : bankTexture, x, y, width, height);
 
-            // Draw character label above the page (e.g., "@Dark Wizard Lv.106 Page 1")
+            // Draw character label above the page
             String name = (characterNickname != null && !characterNickname.isEmpty())
                     ? characterNickname
                     : (characterId.length() > 8 ? characterId.substring(0, 8) + "..." : characterId);
@@ -2051,38 +2758,107 @@ public class BankOverlay2 extends WEHandledScreen {
             updateValues();
         }
 
+        private boolean isCurrentCharacter() {
+            return characterId != null && characterId.equals(BankOverlay.currentCharacterID);
+        }
+
+        private boolean isAccountBank() {
+            return "__account__".equals(characterId);
+        }
+
         @Override
         protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if (ui == null) return;
             if (y > botBorder || y + height < topBorder) return;
 
-            // Dim overlay to indicate this is from another character
+            // Dim overlay
             ui.drawRect(x, y, width, height, CustomColor.fromHSV(40, 0.4f, 0.8f, 0.2f));
 
-            // Orange/yellow border to indicate cross-class result
-            ui.drawRectBorders(x, y + 0.5f, x + 164, y + 92, CustomColor.fromHexString("FFAA00"));
+            // Border color: green for current character, blue for account, orange for others
+            String borderColor = isCurrentCharacter() ? "55FF55" : isAccountBank() ? "5555FF" : "FFAA00";
+            ui.drawRectBorders(x, y + 0.5f, x + 164, y + 92, CustomColor.fromHexString(borderColor));
 
-            // "Click to /class" hint at bottom of page
-            ui.drawText("§7Click to /class", x + 2, y + height - 10, CustomColor.fromHexString("AAAAAA"), 0.7f);
+            // Hint text
+            String hint;
+            if (isCurrentCharacter()) {
+                hint = "§7Click to go to page";
+            } else if (isAccountBank()) {
+                hint = "§7Click to switch to account bank";
+            } else {
+                hint = "§7Click to /class";
+            }
+            ui.drawText(hint, x + 2, y + height - 10, CustomColor.fromHexString("AAAAAA"), 0.7f);
         }
 
         @Override
         protected boolean onClick(int button) {
-            if (button == 0) { // Left click
-                // Store target character for highlighting in /class menu
-                targetCharacterIdForClassMenu = characterId;
-                String name = (characterNickname != null && !characterNickname.isEmpty())
-                        ? characterNickname
-                        : characterId;
-                String levelStr = characterLevel > 0 ? " Lv." + characterLevel : "";
-                targetCharacterNameForClassMenu = name + levelStr;
-
-                // Send /class command
-                Handlers.Command.queueCommand("class");
-
-                // Play click sound
+            if (button == 0) {
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
+
+                if (isCurrentCharacter()) {
+                    // Switch back to character bank and navigate to this page
+                    allCharactersBrowseMode = false;
+                    crossClassPages.clear();
+                    lastCrossClassSearchQuery = "";
+                    crossClassSearchActive = false;
+                    targetOffset = 0;
+                    actualOffset = 0;
+
+                    activeInv = pageNumber;
+                    try {
+                        BankOverlay.PersonalStorageUtils.jumpToDestination(pageNumber + 1);
+                    } catch (Exception ignored) {}
+                    retryLoad();
+                    return true;
+                } else if (isAccountBank()) {
+                    // Switch to account bank
+                    allCharactersBrowseMode = false;
+                    crossClassPages.clear();
+                    lastCrossClassSearchQuery = "";
+                    crossClassSearchActive = false;
+                    targetOffset = 0;
+                    actualOffset = 0;
+
+                    // Click slot 47 to switch to account bank if we're on character bank
+                    if (currentOverlayType == BankOverlayType.CHARACTER) {
+                        ScreenHandler handler = McUtils.containerMenu();
+                        if (handler != null) {
+                            clickOnSlot(47, handler.syncId, 0, handler.getStacks());
+                        }
+                    }
+                    return true;
+                } else {
+                    // Other character - save search, close bank, then run /class with auto-select
+                    targetCharacterIdForClassMenu = characterId;
+                    targetCharacterNameForClassMenu = (characterNickname != null && !characterNickname.isEmpty())
+                            ? characterNickname : null;
+                    targetCharacterLevelForClassMenu = characterLevel;
+
+                    // Save current search so it persists after class swap
+                    if (searchbar2 != null && searchbar2.getInput() != null && !searchbar2.getInput().isEmpty()) {
+                        savedCrossClassSearch = searchbar2.getInput().replace("@", "").trim();
+                        savedCrossClassSearchTime = System.currentTimeMillis();
+                    }
+
+                    // Close the bank screen properly to prevent stuck-in-inventory bug
+                    MinecraftClient mc = MinecraftClient.getInstance();
+                    if (mc.player != null) {
+                        mc.player.closeHandledScreen();
+                    }
+                    mc.setScreen(null);
+
+                    // Reset bank overlay state
+                    allCharactersBrowseMode = false;
+                    crossClassPages.clear();
+                    crossClassSearchActive = false;
+                    BankOverlay.currentOverlayType = BankOverlayType.NONE;
+
+                    // Queue /class after a short delay to let the screen close
+                    julianh06.wynnextras.utils.TickScheduler.runAfterTicks(5, () -> {
+                        Handlers.Command.queueCommand("class");
+                    });
+                    return true;
+                }
             }
             return false;
         }
@@ -2126,7 +2902,16 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
-            // No click interaction for cross-class slots
+            if (button == 2) {
+                if (stack != null && !stack.isEmpty() && searchbar2 != null) {
+                    String itemName = stack.getName().getString().replaceAll("\u00a7[0-9a-fk-or]", "").trim();
+                    if (!itemName.isEmpty()) {
+                        searchbar2.setInput(itemName);
+                        for (PageWidget page : pages) page.lastInput = "";
+                    }
+                }
+                return true;
+            }
             return false;
         }
     }

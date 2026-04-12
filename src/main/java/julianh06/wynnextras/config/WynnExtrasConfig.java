@@ -30,6 +30,9 @@ public class WynnExtrasConfig {
 
     private static final List<Consumer<WynnExtrasConfig>> saveListeners = new ArrayList<>();
 
+    // ==================== MASTER TOGGLE ====================
+    public boolean modEnabled = true;
+
     // ==================== HIDERS ====================
     public boolean playerHiderToggle = true;
     public int maxHideDistance = 3;
@@ -139,15 +142,13 @@ public class WynnExtrasConfig {
 
     // ==================== CHAT CLICK ====================
     public boolean chatClickPV = false;
+    public boolean bombShareSuggestion = true;
 
     // ==================== Crowd Sourcing ================
     public boolean uploadOwnAspects = true;
     public boolean crowdSourceRaidLootpools = true;
     public boolean crowdSourceLootrunLootpools = true;
     public boolean crowdSourceGambits = true;
-
-    // ==================== BADGES ====================
-    public boolean badgesEnabled = false;
 
     // ==================== MISC ====================
     public TextColor provokeTimerColor = TextColor.WHITE;
@@ -157,6 +158,7 @@ public class WynnExtrasConfig {
 
     public boolean showOwnNametag = false;
     // The code for this is in LivingEntityRendererMixin
+    public boolean badgesEnabled = true;
 
     // ==================== CHAT PEEK ====================
     public boolean chatPeekEnabled = true;
@@ -196,6 +198,15 @@ public class WynnExtrasConfig {
     public float bloodSorrowTimerScale = 1.0f;
     public Align bloodSorrowAlignment = Align.CENTER;
 
+    // ==================== PROFESSION OVERLAY ====================
+    public boolean professionOverlayEnabled = true;
+    public int professionOverlayX = 5;
+    public int professionOverlayY = 100;
+    public float professionOverlayScale = 1.0f;
+    public boolean professionOverlayExactXp = false;
+    public Map<String, Float> professionOverflowXp = new HashMap<>();
+    public Map<String, Float> professionGoals = new HashMap<>();
+
     // ==================== PROVOKE TIMER HUD ====================
     public int provokeTimerX = -1;
     public int provokeTimerY = 20;
@@ -206,6 +217,23 @@ public class WynnExtrasConfig {
     public boolean sourceOfTruthToggle = false;
     public boolean territoryEstimateToggle = false;
     public boolean removeChroma = false;
+
+    // ==================== CUSTOM CLASS SELECTION ====================
+    public boolean customClassSelectionEnabled = true;
+    public String customClassPngPath = "";
+    public List<String> classCardOrder = new ArrayList<>(); // ordered list of character UUIDs
+    public Map<String, String> clientNicknames = new HashMap<>(); // UUID -> nickname
+    public Map<String, CharIdentity> charIdentities = new HashMap<>(); // UUID -> identity data
+
+    public static class CharIdentity {
+        public String uuid = "";
+        public String name = "";
+        public String classType = "";
+        public int color = 0;
+        public double timePlayed = 0;
+        public int level = 0;
+        public int xpPercent = 0;
+    }
 
     // ==================== TETRIS ====================
     public int tetrisBestScore = 0;
@@ -304,6 +332,11 @@ public class WynnExtrasConfig {
                 if (INSTANCE.blockedWords == null) INSTANCE.blockedWords = new ArrayList<>();
                 if (INSTANCE.raidLootTrackerHiddenLines == null) INSTANCE.raidLootTrackerHiddenLines = new ArrayList<>();
                 if (INSTANCE.raidPBs == null) INSTANCE.raidPBs = new HashMap<>();
+                if (INSTANCE.professionOverflowXp == null) INSTANCE.professionOverflowXp = new HashMap<>();
+                if (INSTANCE.professionGoals == null) INSTANCE.professionGoals = new HashMap<>();
+                if (INSTANCE.classCardOrder == null) INSTANCE.classCardOrder = new ArrayList<>();
+                if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
+                if (INSTANCE.charIdentities == null) INSTANCE.charIdentities = new HashMap<>();
             }
         } catch (IOException e) {
             System.err.println("[WynnExtras] Failed to load config: " + e.getMessage());

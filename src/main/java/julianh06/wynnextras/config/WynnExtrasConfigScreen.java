@@ -100,6 +100,11 @@ public class WynnExtrasConfigScreen extends Screen {
     private void initCategories() {
         categories.clear();
 
+        // ===== GENERAL =====
+        category("General", 0xFF888888)
+                .add(toggle("Enable WynnExtras", "Master toggle — disable to turn off all WynnExtras features",
+                        () -> config.modEnabled, v -> config.modEnabled = v));
+
         // ===== RAIDS =====
         category("Raiding", GOLD_DARK)
                 .add(toggle("Timestamps", "Show timestamps during raids",
@@ -261,6 +266,8 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
                 .add(toggle("Quick PV/GV Access", "Click on a players name or guild to open the pv/gv! (EXPERIMENTAL)",
                         () -> config.chatClickPV, v -> config.chatClickPV = v))
+                .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs when someone asks about them in chat",
+                        () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
                 .sub("Notifications")
                 .add(stringListDual("Notifier Words", "Trigger word and display text",
                         () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
@@ -337,6 +344,14 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.badgesEnabled, v -> config.badgesEnabled = v))
                 .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
                         () -> config.removeChroma, v -> config.removeChroma = v))
+                .sub("Profession Overlay")
+                .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
+                        () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))
+                .add(visibleWhen(toggle("Show Exact XP", "Show exact XP values instead of percentages",
+                        () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
+                        () -> config.professionOverlayEnabled))
+                .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
+                        () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
                 .sub("Dark Mode Toggles")
                 .add(toggle("Bank Overlay", "Dark mode for the Bank Overlay",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
@@ -1007,7 +1022,27 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         if (searchFocused) {
-            if (key == 259) { // Backspace
+            boolean ctrl = (input.modifiers() & org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL) != 0;
+            if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_V) {
+                String clipboard = net.minecraft.client.MinecraftClient.getInstance().keyboard.getClipboard();
+                if (clipboard != null && !clipboard.isEmpty()) {
+                    searchQuery += clipboard.replaceAll("[\\r\\n\\t]", "");
+                    scrollOffset = 0;
+                    updateMaxScroll();
+                    autoSelectMatchingCategory();
+                }
+                return true;
+            } else if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_C) {
+                net.minecraft.client.MinecraftClient.getInstance().keyboard.setClipboard(searchQuery);
+                return true;
+            } else if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_X) {
+                net.minecraft.client.MinecraftClient.getInstance().keyboard.setClipboard(searchQuery);
+                searchQuery = "";
+                scrollOffset = 0;
+                updateMaxScroll();
+                autoSelectMatchingCategory();
+                return true;
+            } else if (key == 259) { // Backspace
                 if (!searchQuery.isEmpty()) {
                     searchQuery = searchQuery.substring(0, searchQuery.length() - 1);
                     scrollOffset = 0;
@@ -1029,6 +1064,12 @@ public class WynnExtrasConfigScreen extends Screen {
 
     @Override
     public boolean charTyped(CharInput charInput) {
+        // Block character input when Ctrl is held (Ctrl+V etc.)
+        long window = net.minecraft.client.MinecraftClient.getInstance().getWindow().getHandle();
+        boolean ctrlHeld = org.lwjgl.glfw.GLFW.glfwGetKey(window, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS
+                || org.lwjgl.glfw.GLFW.glfwGetKey(window, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        if (ctrlHeld) return true;
+
         if (searchFocused) {
             char c = (char) charInput.codepoint();
             if (c >= 32 && c < 127) {

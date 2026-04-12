@@ -1,9 +1,15 @@
 package julianh06.wynnextras.core.loader;
 
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.wynntils.core.components.Models;
+import com.wynntils.models.profession.type.ProfessionType;
+import com.wynntils.models.worlds.type.BombInfo;
+import com.wynntils.models.worlds.type.BombType;
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.MainScreen;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -18,6 +24,7 @@ import julianh06.wynnextras.features.raid.RaidLootData;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.misc.HudEditScreen;
+import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.tetris.TetrisScreen;
 import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.screen.slot.Slot;
@@ -29,7 +36,7 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.sound.SoundEvents;
 
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -66,6 +73,33 @@ public class CommandLoader implements WELoader {
                 base = base.then(buildCommandTree(cmd));
                 alias = alias.then(buildCommandTree(cmd));
             }
+
+            var bombshare = ClientCommandManager.literal("bombshare")
+                .executes(ctx -> { executeBombshare("g"); return 1; })
+                .then(ClientCommandManager.argument("channel", StringArgumentType.word())
+                    .suggests((ctx, builder) -> {
+                        builder.suggest("guild");
+                        builder.suggest("party");
+                        builder.suggest("all");
+                        return builder.buildFuture();
+                    })
+                    .executes(ctx -> {
+                        String channel = StringArgumentType.getString(ctx, "channel").toLowerCase();
+                        switch (channel) {
+                            case "guild", "g" -> executeBombshare("g");
+                            case "party", "p" -> executeBombshare("p");
+                            case "all" -> executeBombshare(null);
+                            case "disable" -> {
+                                WynnExtrasConfig.INSTANCE.bombShareSuggestion = false;
+                                WynnExtrasConfig.save();
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aBomb share suggestions disabled. Re-enable in /we config > Chat."));
+                            }
+                            default -> McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel + ". Use guild, party, or all."));
+                        }
+                        return 1;
+                    }));
+            base = base.then(bombshare);
+            alias = alias.then(bombshare);
 
             dispatcher.register(base);
             dispatcher.register(baseLowerCase);
@@ -201,6 +235,114 @@ public class CommandLoader implements WELoader {
                             })
                         )
                     )
+                    .then(ClientCommandManager.literal("profession")
+                        .then(ClientCommandManager.literal("reload")
+                            .executes(ctx -> {
+                                ProfessionOverlay.reload();
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aProfession overlay reloaded! Session XP reset, re-fetching data..."));
+                                return 1;
+                            })
+                        )
+                        .then(ClientCommandManager.literal("exact")
+                            .executes(ctx -> {
+                                WynnExtrasConfig.INSTANCE.professionOverlayExactXp = !WynnExtrasConfig.INSTANCE.professionOverlayExactXp;
+                                WynnExtrasConfig.save();
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                    WynnExtrasConfig.INSTANCE.professionOverlayExactXp ? "§aExact XP numbers enabled" : "§7Exact XP numbers disabled (using short format)"));
+                                return 1;
+                            })
+                        )
+                        .then(ClientCommandManager.literal("set")
+                            .executes(ctx -> {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we profession set <profession> <amount>"));
+                                return 1;
+                            })
+                            .then(ClientCommandManager.argument("profession", StringArgumentType.word())
+                                .then(ClientCommandManager.argument("amount", FloatArgumentType.floatArg(0))
+                                    .executes(ctx -> {
+                                        String profName = StringArgumentType.getString(ctx, "profession");
+                                        float amount = FloatArgumentType.getFloat(ctx, "amount");
+                                        ProfessionType prof = ProfessionType.fromString(profName);
+                                        if (prof == null) {
+                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                            return 0;
+                                        }
+                                        String charId = Models.Character.getId();
+                                        String className = Models.Character.getClassType() != null ? Models.Character.getClassType().getName() : "unknown";
+                                        if (charId == null || charId.isEmpty()) {
+                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected. Make sure you're logged into a class."));
+                                            return 0;
+                                        }
+                                        ProfessionOverlay.setOverflow(prof, amount);
+                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " overflow XP to " + String.format("%.0f", amount) + " §7(class: " + className + ")"));
+                                        return 1;
+                                    })
+                                )
+                            )
+                        )
+                        .then(ClientCommandManager.literal("goal")
+                            .executes(ctx -> {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we profession goal <profession> <amount|clear>"));
+                                return 1;
+                            })
+                            .then(ClientCommandManager.argument("goalProfession", StringArgumentType.word())
+                                .executes(ctx -> {
+                                    String profName = StringArgumentType.getString(ctx, "goalProfession");
+                                    ProfessionType prof = ProfessionType.fromString(profName);
+                                    if (prof == null) {
+                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                        return 0;
+                                    }
+                                    float goal = ProfessionOverlay.getGoal(prof);
+                                    float overflow = ProfessionOverlay.getOverflow(prof);
+                                    if (goal <= 0) {
+                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No goal set for " + prof.getDisplayName() + ". Current overflow: " + String.format("%.0f", overflow)));
+                                    } else {
+                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§b" + prof.getDisplayName() + " goal: " + String.format("%.0f", goal) + " | Current: " + String.format("%.0f", overflow) + " | Remaining: " + String.format("%.0f", Math.max(0, goal - overflow))));
+                                    }
+                                    return 1;
+                                })
+                                .then(ClientCommandManager.literal("clear")
+                                    .executes(ctx -> {
+                                        String profName = StringArgumentType.getString(ctx, "goalProfession");
+                                        ProfessionType prof = ProfessionType.fromString(profName);
+                                        if (prof == null) {
+                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                            return 0;
+                                        }
+                                        String charId = Models.Character.getId();
+                                        if (charId == null || charId.isEmpty()) {
+                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected."));
+                                            return 0;
+                                        }
+                                        ProfessionOverlay.clearGoal(prof);
+                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aCleared " + prof.getDisplayName() + " goal."));
+                                        return 1;
+                                    })
+                                )
+                                .then(ClientCommandManager.argument("goalAmount", FloatArgumentType.floatArg(1))
+                                    .executes(ctx -> {
+                                        String profName = StringArgumentType.getString(ctx, "goalProfession");
+                                        float amount = FloatArgumentType.getFloat(ctx, "goalAmount");
+                                        ProfessionType prof = ProfessionType.fromString(profName);
+                                        if (prof == null) {
+                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                            return 0;
+                                        }
+                                        String charId = Models.Character.getId();
+                                        String className = Models.Character.getClassType() != null ? Models.Character.getClassType().getName() : "unknown";
+                                        if (charId == null || charId.isEmpty()) {
+                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected."));
+                                            return 0;
+                                        }
+                                        ProfessionOverlay.setGoal(prof, amount);
+                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " goal to " + String.format("%.0f", amount) + " overflow XP §7(class: " + className + ")"));
+                                        return 1;
+                                    })
+                                )
+                            )
+                        )
+                    )
             );
         });
     }
@@ -220,6 +362,46 @@ public class CommandLoader implements WELoader {
         current.executes(cmd::onExecute);
 
         return root;
+    }
+
+    private static void executeBombshare(String chatPrefix) {
+        if (!Models.WorldState.onWorld()) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cYou must be on a world to use this command."));
+            return;
+        }
+
+        Map<BombType, List<String>> bombsByType = new LinkedHashMap<>();
+        for (BombInfo bomb : Models.Bomb.getBombBells()) {
+            if (!bomb.isActive()) continue;
+            bombsByType.computeIfAbsent(bomb.bomb(), k -> new ArrayList<>()).add(bomb.server());
+        }
+
+        String message;
+        if (bombsByType.isEmpty()) {
+            message = "[WynnExtras] No active Bombs!";
+        } else {
+            StringBuilder sb = new StringBuilder("[WynnExtras]");
+            Map<BombType, String> shortNames = Map.of(
+                BombType.PROFESSION_XP, "ProfXP",
+                BombType.PROFESSION_SPEED, "ProfSpd",
+                BombType.COMBAT_XP, "CombatXP",
+                BombType.DUNGEON, "Dungeon",
+                BombType.LOOT, "Loot",
+                BombType.LOOT_CHEST, "LootChest"
+            );
+            for (var entry : bombsByType.entrySet()) {
+                String name = shortNames.getOrDefault(entry.getKey(), entry.getKey().getDisplayName());
+                sb.append(" [").append(name).append("] ").append(String.join(", ", entry.getValue()));
+            }
+            message = sb.toString();
+        }
+
+        if (chatPrefix == null) {
+            // "all" - just show locally
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
+        } else {
+            McUtils.player().networkHandler.sendChatCommand(chatPrefix + " " + message);
+        }
     }
 
     public static ArgumentBuilder<FabricClientCommandSource, ?> chainArguments(

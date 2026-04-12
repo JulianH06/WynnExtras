@@ -1,7 +1,7 @@
 package julianh06.wynnextras.utils;
 
 import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.items.game.GearItem;
+import com.wynntils.models.items.items.game.*;
 import com.wynntils.models.gear.type.GearTier;
 import com.wynntils.models.character.type.ClassType;
 import net.minecraft.component.DataComponentTypes;
@@ -35,12 +35,15 @@ public class SearchQueryParser {
             List<String> rarities,
             String profession,
             Float minMainScale,
-            Float maxMainScale
+            Float maxMainScale,
+            Boolean crafted,
+            String type
     ) {
         public boolean hasFilters() {
             return minLevel != null || maxLevel != null || classType != null ||
                     (rarities != null && !rarities.isEmpty()) || profession != null ||
                     minMainScale != null || maxMainScale != null ||
+                    crafted != null || type != null ||
                     (textSearch != null && !textSearch.isEmpty());
         }
     }
@@ -50,10 +53,12 @@ public class SearchQueryParser {
     private static final Pattern RARITY_PATTERN = Pattern.compile("rarity:(common|unique|rare|legendary|fabled|mythic|set)", Pattern.CASE_INSENSITIVE);
     private static final Pattern PROF_PATTERN = Pattern.compile("prof:(\\w+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern MAINSCALE_PATTERN = Pattern.compile("@mainscale:(\\d+(?:\\.\\d+)?)(?:-(\\d+(?:\\.\\d+)?))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CRAFTED_PATTERN = Pattern.compile("crafted:(true|false)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TYPE_PATTERN = Pattern.compile("type:(gear|craftedgear|craftedconsumable|box|powder|potion|tome|tool|ingredient|pouch|key|horse|scroll|amplifier|charm|aspect|trinket|rune|material|insulator)", Pattern.CASE_INSENSITIVE);
 
     public static ParsedQuery parse(String input) {
         if (input == null || input.isEmpty()) {
-            return new ParsedQuery(null, null, null, null, null, null, null, null);
+            return new ParsedQuery(null, null, null, null, null, null, null, null, null, null);
         }
 
         String remaining = input.trim();
@@ -118,11 +123,28 @@ public class SearchQueryParser {
             remaining = remaining.replace(mainscaleMatcher.group(), "").trim();
         }
 
+        // Parse crafted filter
+        Boolean crafted = null;
+        Matcher craftedMatcher = CRAFTED_PATTERN.matcher(remaining);
+        if (craftedMatcher.find()) {
+            crafted = craftedMatcher.group(1).equalsIgnoreCase("true");
+            remaining = remaining.replace(craftedMatcher.group(), "").trim();
+        }
+
+        // Parse type filter
+        String type = null;
+        Matcher typeMatcher = TYPE_PATTERN.matcher(remaining);
+        if (typeMatcher.find()) {
+            type = typeMatcher.group(1).toLowerCase();
+            remaining = remaining.replace(typeMatcher.group(), "").trim();
+        }
+
         // Remaining text is the name search
         String textSearch = remaining.isEmpty() ? null : remaining;
 
         return new ParsedQuery(textSearch, minLevel, maxLevel, classType,
-                rarities.isEmpty() ? null : rarities, profession, minMainScale, maxMainScale);
+                rarities.isEmpty() ? null : rarities, profession, minMainScale, maxMainScale,
+                crafted, type);
     }
 
     // Patterns for parsing level from lore
@@ -208,6 +230,21 @@ public class SearchQueryParser {
             // TODO: Integrate with weight calculation system
         }
 
+        // Crafted filter
+        if (query.crafted != null) {
+            boolean isCrafted = wynnItem instanceof CraftedGearItem || wynnItem instanceof CraftedConsumableItem;
+            if (query.crafted != isCrafted) {
+                return false;
+            }
+        }
+
+        // Type filter
+        if (query.type != null) {
+            if (!matchesType(wynnItem, query.type)) {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -273,6 +310,35 @@ public class SearchQueryParser {
         if (loreLower.contains("set")) return "set";
         if (loreLower.contains("common")) return "common";
         return null;
+    }
+
+    /**
+     * Check if a WynnItem matches a type filter string.
+     */
+    private static boolean matchesType(WynnItem wynnItem, String type) {
+        if (wynnItem == null) return false;
+        return switch (type) {
+            case "gear" -> wynnItem instanceof GearItem;
+            case "craftedgear" -> wynnItem instanceof CraftedGearItem;
+            case "craftedconsumable" -> wynnItem instanceof CraftedConsumableItem;
+            case "box" -> wynnItem instanceof GearBoxItem;
+            case "powder" -> wynnItem instanceof PowderItem;
+            case "potion" -> wynnItem instanceof PotionItem || wynnItem instanceof MultiHealthPotionItem;
+            case "tome" -> wynnItem instanceof TomeItem;
+            case "tool" -> wynnItem instanceof GatheringToolItem;
+            case "ingredient" -> wynnItem instanceof IngredientItem;
+            case "pouch" -> wynnItem instanceof EmeraldPouchItem;
+            case "key" -> wynnItem instanceof DungeonKeyItem;
+            case "scroll" -> wynnItem instanceof TeleportScrollItem;
+            case "amplifier" -> wynnItem instanceof AmplifierItem;
+            case "charm" -> wynnItem instanceof CharmItem;
+            case "aspect" -> wynnItem instanceof AspectItem;
+            case "trinket" -> wynnItem instanceof TrinketItem;
+            case "rune" -> wynnItem instanceof RuneItem;
+            case "material" -> wynnItem instanceof MaterialItem;
+            case "insulator" -> wynnItem instanceof InsulatorItem;
+            default -> false;
+        };
     }
 
     /**

@@ -18,6 +18,7 @@ import julianh06.wynnextras.features.aspects.PartyFinderOpenLootpoolOverlay;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.*;
+import julianh06.wynnextras.features.misc.ClassSelectionOverlay;
 import julianh06.wynnextras.features.misc.CompassMenuOverlay;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
 import net.minecraft.client.MinecraftClient;
@@ -63,17 +64,56 @@ public abstract class HandledScreenMixin {
 
     @Unique private CraftingHelperOverlay craftingHelperOverlay;
 
+    @Unique private ClassSelectionOverlay classSelectionOverlay;
+
     @Unique private CompassMenuOverlay compassMenuOverlay;
 
     @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
     private void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci){
+        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
         if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) {
             ci.cancel();
         }
+        if (classSelectionOverlay != null) {
+            ci.cancel();
+        }
     }
-    
+
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
+        // Class Selection Overlay
+        if (WynnExtrasConfig.INSTANCE.customClassSelectionEnabled && !ClassSelectionOverlay.vanillaMode) {
+            HandledScreen<?> self = (HandledScreen<?>) (Object) this;
+            String title = self.getTitle().getString();
+            if (ClassSelectionOverlay.isClassSelectionScreen(title)) {
+                if (classSelectionOverlay == null || classSelectionOverlay.getMode() != ClassSelectionOverlay.ScreenMode.CLASS_SELECTION) {
+                    classSelectionOverlay = new ClassSelectionOverlay(self, ClassSelectionOverlay.ScreenMode.CLASS_SELECTION);
+                }
+                classSelectionOverlay.render(context, mouseX, mouseY, delta);
+                ci.cancel();
+                return;
+            } else if (ClassSelectionOverlay.isClassEditScreen(title)) {
+                if (classSelectionOverlay == null || classSelectionOverlay.getMode() != ClassSelectionOverlay.ScreenMode.CLASS_EDIT) {
+                    classSelectionOverlay = new ClassSelectionOverlay(self, ClassSelectionOverlay.ScreenMode.CLASS_EDIT);
+                }
+                classSelectionOverlay.render(context, mouseX, mouseY, delta);
+                ci.cancel();
+                return;
+            } else if (ClassSelectionOverlay.isIconEditScreen(title)) {
+                if (classSelectionOverlay == null || classSelectionOverlay.getMode() != ClassSelectionOverlay.ScreenMode.ICON_EDIT) {
+                    classSelectionOverlay = new ClassSelectionOverlay(self, ClassSelectionOverlay.ScreenMode.ICON_EDIT);
+                }
+                classSelectionOverlay.render(context, mouseX, mouseY, delta);
+                ci.cancel();
+                return;
+            } else {
+                classSelectionOverlay = null;
+            }
+        } else {
+            classSelectionOverlay = null;
+        }
+
         // Only create BankOverlay2 for bank-type containers to avoid expensive
         // initialization (WynncraftItemDatabase.initialize()) on every GUI open
         if (isBankScreen == null) {
@@ -136,11 +176,17 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "render", at = @At("TAIL"), cancellable = true)
     private void renderForeground(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        // Vanilla mode toggle button for class selection
+        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
+        ClassSelectionOverlay.renderVanillaToggleButton(context, self);
         // Trade Market Overlay (Your Trades value display)
         TradeMarketOverlay.renderOnScreen(context);
 
         // Trade Market Comparison Panel
         TradeMarketComparisonPanel.render(context);
+
+        // Bank bag overlay in vanilla bank mode (custom mode draws it from BankOverlay2.render())
+        BankOverlay2.drawVanillaBankBagsOverlay(context, self);
     }
 
     @Unique
@@ -164,7 +210,7 @@ public abstract class HandledScreenMixin {
             if (stack == null || stack.isEmpty()) continue;
 
             // Check if this item's name/lore matches our target character
-            String itemName = stack.getName().getString().replaceAll("§[0-9a-fk-or]", "");
+            String itemName = stack.getName().getString().replaceAll("\u00a7[0-9a-fk-or]", "");
 
             // Characters in /class menu show class name in item name
             // Match by checking if target name starts with the class name in the item
@@ -181,7 +227,7 @@ public abstract class HandledScreenMixin {
 
                 // Draw label above
                 context.drawText(MinecraftClient.getInstance().textRenderer,
-                        "§e◀ " + targetName,
+                        "\u00a7e\u25c0 " + targetName,
                         slotX - 10, slotY - 12, 0xFFFFAA00, true);
             }
         }
@@ -191,9 +237,29 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClick(Click click, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
+        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
         double mouseX = click.x();
         double mouseY = click.y();
         int button = click.button();
+
+        // Bag overlay sort-mode toggle (top-right clickable label)
+        if (BankOverlay2.handleSortToggleClick(mouseX, mouseY)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
+        // Vanilla mode toggle click (shown when in vanilla mode on class selection screens)
+        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
+        if (ClassSelectionOverlay.handleVanillaToggleClick(mouseX, mouseY, self)) {
+            cir.setReturnValue(true);
+            return;
+        }
+        // Class Selection Overlay click handling
+        if (classSelectionOverlay != null) {
+            classSelectionOverlay.mouseClicked(mouseX, mouseY, button);
+            cir.setReturnValue(true);
+            return;
+        }
 
         // Trade Market Comparison Panel click handling
         if (TradeMarketComparisonPanel.handleClick(mouseX, mouseY, button, 1)) {
@@ -265,6 +331,13 @@ public abstract class HandledScreenMixin {
         double mouseY = click.y();
         int button = click.button();
 
+        // Class Selection Overlay release (for drag-to-reorder)
+        if (classSelectionOverlay != null) {
+            classSelectionOverlay.onMouseReleased(mouseX, mouseY, button);
+            cir.setReturnValue(true);
+            return;
+        }
+
         // Trade Market Comparison Panel release
         if (TradeMarketComparisonPanel.handleClick(mouseX, mouseY, button, 0)) {
             cir.setReturnValue(true);
@@ -292,10 +365,17 @@ public abstract class HandledScreenMixin {
         }
     }
 
-    @Inject(method = "mouseDragged", at = @At("HEAD"))
+    @Inject(method = "mouseDragged", at = @At("HEAD"), cancellable = true)
     private void onMouseDragged(Click click, double deltaX, double deltaY, CallbackInfoReturnable<Boolean> cir) {
         double mouseX = click.x();
         double mouseY = click.y();
+
+        // Class Selection Overlay dragging (for drag-to-reorder)
+        if (classSelectionOverlay != null) {
+            classSelectionOverlay.onMouseDragged(mouseX, mouseY);
+            cir.setReturnValue(true);
+            return;
+        }
 
         // Handle Trade Market Comparison Panel dragging
         if (TradeMarketComparisonPanel.isDragging()) {
@@ -310,6 +390,10 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "isClickOutsideBounds", at = @At("HEAD"), cancellable = true)
     private void onIsClickOutsideBounds(double mouseX, double mouseY, int left, int top, CallbackInfoReturnable<Boolean> cir) {
+        if (classSelectionOverlay != null) {
+            cir.setReturnValue(false);
+            return;
+        }
         if(WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
             if (currentOverlayType != BankOverlayType.NONE) {
                 cir.setReturnValue(false);
@@ -320,18 +404,31 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "init", at = @At("HEAD"))
     public void onInit(CallbackInfo ci) {
+        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
         heldItem = Items.AIR.getDefaultStack();
         craftingHelperOverlay = null;
+        classSelectionOverlay = null;
     }
 
     @Inject(method = "close", at = @At("HEAD"))
     public void onClose(CallbackInfo ci) {
         craftingHelperOverlay = null;
+        classSelectionOverlay = null;
 
         // Clear Trade Market Comparison on close
         TradeMarketComparisonPanel.clearComparison();
 
-        if(!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return;
+        // Vanilla-mode bank cache persistence: in vanilla mode the drawVanillaBankBagsOverlay
+        // hook has been live-updating BankData.BankPages for the current page while the bank
+        // was open. Flush those updates to disk now (the custom-mode branch below already
+        // does its own save).
+        if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
+            if (BankOverlay2.isCurrentContainerBank()) {
+                BankOverlay2.cacheCurrentBankPageIfPossible();
+                BankOverlay2.saveCurrentBankData();
+            }
+            return;
+        }
         bankOverlay = null;
 
         MinecraftClient client = MinecraftClient.getInstance();
@@ -370,9 +467,17 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     private void keyPressedPre(KeyInput input, CallbackInfoReturnable<Boolean> cir) {
+        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
         int keyCode = input.key();
         int scanCode = input.scancode();
         int modifiers = input.modifiers();
+
+        // Block all key presses when nickname input is active (handled via CharInputEvent/KeyInputEvent)
+        if (ClassSelectionOverlay.nicknameInputActive) {
+            cir.setReturnValue(true);
+            cir.cancel();
+            return;
+        }
 
         // F1 key in Trade Market for item comparison
         if (keyCode == GLFW.GLFW_KEY_F1 && TradeMarketComparisonPanel.isInTradeMarket()) {

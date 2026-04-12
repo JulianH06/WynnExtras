@@ -27,6 +27,9 @@ public abstract class BankData {
     public HashMap<Integer, String> BankPageNames = new HashMap<>();
     public String characterNickname = null; // For character banks - stores the character's class name (e.g., "Dark Wizard")
     public int characterLevel = 0; // For character banks - stores the character's combat level
+    /** Per-page bag counts keyed by "RAID|TIER" (e.g. "NOG|LEGENDARY" -> 3). Stored as plain
+     *  numbers so they survive serialization without depending on Wynntils item annotations. */
+    public HashMap<Integer, HashMap<String, Integer>> bagCounts = new HashMap<>();
 
     public abstract Path getConfigPath();
 
@@ -62,6 +65,7 @@ public abstract class BankData {
                     this.BankPageNames = loaded.BankPageNames;
                     this.characterNickname = loaded.characterNickname;
                     this.characterLevel = loaded.characterLevel;
+                    this.bagCounts = loaded.bagCounts != null ? loaded.bagCounts : new HashMap<>();
                 }
             } catch (IOException e) {
                 System.err.println("[WynnExtras] Couldn't read bank data:");

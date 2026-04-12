@@ -17,6 +17,7 @@ import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.inventory.data.*;
+import julianh06.wynnextras.features.misc.ClassSelectionOverlay;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
@@ -77,12 +78,13 @@ public class BankOverlay {
 
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
+        if (ClassSelectionOverlay.handleKeyInput(event)) return;
         if(BankOverlay2.searchbar2 != null && (event.getAction() == GLFW.GLFW_PRESS || event.getAction() == GLFW.GLFW_REPEAT)) {
-            BankOverlay2.searchbar2.keyPressed(event.getKey(), event.getScanCode(), 0);
+            BankOverlay2.searchbar2.keyPressed(event.getKey(), event.getScanCode(), event.getModifiers());
         }
         for(BankOverlay2.PageWidget page : BankOverlay2.pages) {
             if((event.getAction() == GLFW.GLFW_PRESS || event.getAction() == GLFW.GLFW_REPEAT)) {
-                page.keyPressed(event.getKey(), event.getScanCode(), 0);
+                page.keyPressed(event.getKey(), event.getScanCode(), event.getModifiers());
             }
         }
         if(activeTextInput != null) {
@@ -92,15 +94,29 @@ public class BankOverlay {
 
     @SubscribeEvent
     public void onChar(CharInputEvent event) {
+        if (ClassSelectionOverlay.handleCharInput(event)) return;
         if(BankOverlay2.searchbar2 != null) {
-            BankOverlay2.searchbar2.charTyped(event.getCharacter(), 0);
+            // Don't insert character if Ctrl is held (it's a shortcut like Ctrl+V)
+            if (!isCtrlHeld()) {
+                BankOverlay2.searchbar2.charTyped(event.getCharacter(), 0);
+            }
         }
         for(BankOverlay2.PageWidget page : BankOverlay2.pages) {
-            page.charTyped(event.getCharacter(), 0);
+            if (!isCtrlHeld()) {
+                page.charTyped(event.getCharacter(), 0);
+            }
         }
         if(activeTextInput != null) {
-            activeTextInput.onCharInput(event);
+            if (!isCtrlHeld()) {
+                activeTextInput.onCharInput(event);
+            }
         }
+    }
+
+    private static boolean isCtrlHeld() {
+        long window = net.minecraft.client.MinecraftClient.getInstance().getWindow().getHandle();
+        return org.lwjgl.glfw.GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
+            || org.lwjgl.glfw.GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
     }
 
     @SubscribeEvent
