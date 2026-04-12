@@ -674,18 +674,16 @@ public class BankOverlay2 extends WEHandledScreen {
         shownPages = pageAmount;
 
         drawEmeraldOverlay(context, xStart - 36, yStart - 14);
-        // Count bags on the live current page and store as numbers in BankData.bagCounts,
-        // which survives serialization (unlike Wynntils item annotations on cached ItemStacks).
-        cacheCurrentBankPageIfPossible();
-        // Grid is 3 cols (tiers) × 4 rows (raids) at 28px per cell, so shift further left
-        // to keep the right edge just left of the custom bank UI.
-        // Grid is scoped to the live current page; the top-right header uses numeric totals.
-        drawBagOverlay(
-                context,
-                xStart - 36 - 56,
-                yStart - 14 + 4 * 28,
-                getCurrentPageStacks(),
-                collectTotalBagCounts());
+        if (WynnExtrasConfig.INSTANCE.bankBagOverlay
+                && (currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER)) {
+            cacheCurrentBankPageIfPossible();
+            drawBagOverlay(
+                    context,
+                    xStart - 36 - 56,
+                    yStart - 14 + 4 * 28,
+                    getCurrentPageStacks(),
+                    collectAccountAndCharacterBagCounts());
+        }
 
         renderHoveredSlotHighlight(context,  screen);
         renderHoveredTooltip(context, screen, mouseX, mouseY);
@@ -1679,34 +1677,20 @@ public class BankOverlay2 extends WEHandledScreen {
      */
     public static void drawVanillaBankBagsOverlay(DrawContext context, HandledScreen<?> screen) {
         if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
-        // Custom bank overlay draws bags from BankOverlay2.render(), so skip here when active.
+        if (!WynnExtrasConfig.INSTANCE.bankBagOverlay) return;
         if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) return;
 
+        // Only show in account bank or character bank
         Container container = Models.Container.getCurrentContainer();
-        boolean isBank = container instanceof AccountBankContainer
-                || container instanceof CharacterBankContainer
-                || container instanceof BookshelfContainer
-                || container instanceof MiscBucketContainer;
+        if (!(container instanceof AccountBankContainer) && !(container instanceof CharacterBankContainer)) return;
 
-        // On bank screens: refresh the cached entry for the current page so the
-        // cross-page total stays accurate as the user browses pages in vanilla mode.
-        if (isBank) cacheCurrentBankPageIfPossible();
+        cacheCurrentBankPageIfPossible();
 
-        // Show the bag overlay on any container screen (bank, trade market, player trade, etc.)
-        // The overlay is purely informational. If there's no bag data, drawBagOverlay returns early.
         HandledScreenAccessor accessor = (HandledScreenAccessor) screen;
-        int screenX = accessor.getX();
-        int screenY = accessor.getY();
-        int bgWidth = accessor.getBackgroundWidth();
-        int x = screenX + bgWidth + 4;
-        int y = screenY + 14;
+        int x = accessor.getX() + accessor.getBackgroundWidth() + 4;
+        int y = accessor.getY() + 14;
 
-        // Bank screens use same-bank totals; everything else aggregates across all bank types.
-        Map<String, Integer> totalCounts = isBank
-                ? collectTotalBagCounts()
-                : collectAllBanksTotalBagCounts();
-        List<ItemStack> gridStacks = isBank ? getCurrentPageStacks() : Collections.emptyList();
-        drawBagOverlay(context, x, y, gridStacks, totalCounts);
+        drawBagOverlay(context, x, y, getCurrentPageStacks(), collectAccountAndCharacterBagCounts());
     }
 
     // Debounce for the auto-save that runs while the bag overlay is caching pages.
@@ -1776,33 +1760,12 @@ public class BankOverlay2 extends WEHandledScreen {
      * (stored as plain numbers in BankData.bagCounts, so they don't depend on
      * Wynntils item annotations).
      */
-    private static Map<String, Integer> collectTotalBagCounts() {
-        Map<String, Integer> totals = new HashMap<>();
-        BankData bankData = getBankDataForCurrentContainer();
-        if (bankData != null && bankData.bagCounts != null) {
-            for (Map<String, Integer> pageCounts : bankData.bagCounts.values()) {
-                if (pageCounts == null) continue;
-                for (Map.Entry<String, Integer> e : pageCounts.entrySet()) {
-                    totals.merge(e.getKey(), e.getValue(), Integer::sum);
-                }
-            }
-        }
-        return totals;
-    }
-
     /**
-     * Aggregates bag counts from all cached pages across every bank type
-     * (account, character, bookshelf, misc bucket). Used in the Trade Market.
+     * Aggregates bag counts from Account Bank + Character Bank only.
      */
-    private static Map<String, Integer> collectAllBanksTotalBagCounts() {
+    private static Map<String, Integer> collectAccountAndCharacterBagCounts() {
         Map<String, Integer> totals = new HashMap<>();
-        BankData[] sources = new BankData[]{
-                AccountBankData.INSTANCE,
-                CharacterBankData.INSTANCE,
-                BookshelfData.INSTANCE,
-                MiscBucketData.INSTANCE
-        };
-        for (BankData data : sources) {
+        for (BankData data : new BankData[]{AccountBankData.INSTANCE, CharacterBankData.INSTANCE}) {
             if (data == null || data.bagCounts == null) continue;
             for (Map<String, Integer> pageCounts : data.bagCounts.values()) {
                 if (pageCounts == null) continue;
