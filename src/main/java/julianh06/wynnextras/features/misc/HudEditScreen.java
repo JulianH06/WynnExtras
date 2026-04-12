@@ -19,6 +19,8 @@ public class HudEditScreen extends Screen {
         final String id;
         final String preview;
         int x, y, w;
+        int customH = -1; // -1 = use default H
+        boolean fixedSize = false; // true = don't allow scaling, don't center-shift in init
         float scale;
         boolean dragging;
         int dragOffX, dragOffY;
@@ -35,7 +37,7 @@ public class HudEditScreen extends Screen {
         }
 
         int sw() { return (int) (w * scale); }
-        int sh() { return (int) (H * scale); }
+        int sh() { return (int) ((customH > 0 ? customH : H) * scale); }
         boolean hovered(double mx, double my) {
             return mx >= x - 2 && mx <= x + sw() + 2 && my >= y - 2 && my <= y + sh() + 2;
         }
@@ -73,6 +75,22 @@ public class HudEditScreen extends Screen {
             elements.add(new HudElement("warning", "RECAST TOTEM!",
                     wx, c.totemWarningY, c.totemWarningScale, c.totemWarningAlignment));
         }
+        if (c.radiantHudEnabled) {
+            elements.add(new HudElement("radiant", "Radiant III 1:30",
+                    c.radiantHudX, c.radiantHudY, c.radiantHudScale, WynnExtrasConfig.Align.CENTER));
+        }
+        if (c.professionOverlayEnabled) {
+            elements.add(new HudElement("profession", "Mining Lv. 87  1234/5678 (21.7%)",
+                    c.professionOverlayX, c.professionOverlayY, c.professionOverlayScale, WynnExtrasConfig.Align.CENTER));
+        }
+        if (c.tnaTreeMap) {
+            HudElement treemap = new HudElement("treemap", "Tree Minimap",
+                    c.treeMapX, c.treeMapY, c.treeMapScale, WynnExtrasConfig.Align.LEFT);
+            treemap.customH = 130;
+            treemap.w = 130;
+            treemap.fixedSize = true;
+            elements.add(treemap);
+        }
 
         int nx = c.notifierX;
         if (nx == -1) nx = 200;
@@ -89,9 +107,11 @@ public class HudEditScreen extends Screen {
     public void init() {
         super.init();
         for (HudElement e : elements) {
-            e.w = textRenderer.getWidth(e.preview) + 6;
-            e.x = e.x - e.sw() / 2;
-            e.y = e.y - e.sh() / 2;
+            if (!e.fixedSize) {
+                e.w = textRenderer.getWidth(e.preview) + 6;
+                e.x = e.x - e.sw() / 2;
+                e.y = e.y - e.sh() / 2;
+            }
 
             if (e.id.equals("totem") && WynnExtrasConfig.INSTANCE.totemTimerX == -1) {
                 e.x = (width - e.sw()) / 2;
@@ -278,8 +298,17 @@ public class HudEditScreen extends Screen {
                 case "warning" -> {
                     c.totemWarningX = e.x + e.sw() / 2; c.totemWarningY = e.y + e.sh() / 2; c.totemWarningScale = e.scale; c.totemWarningAlignment = e.alignment;
                 }
+                case "radiant" -> {
+                    c.radiantHudX = e.x; c.radiantHudY = e.y; c.radiantHudScale = e.scale;
+                }
+                case "profession" -> {
+                    c.professionOverlayX = e.x; c.professionOverlayY = e.y; c.professionOverlayScale = e.scale;
+                }
                 case "notifier" -> {
                     c.notifierX = e.x + e.sw() / 2; c.notifierY = e.y + e.sh() / 2; c.notifierScale = e.scale; c.notifierAlignment = e.alignment;
+                }
+                case "treemap" -> {
+                    c.treeMapX = e.x; c.treeMapY = e.y; c.treeMapScale = e.scale;
                 }
             }
         }

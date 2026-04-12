@@ -352,6 +352,9 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(visibleWhen(toggle("Show Exact XP", "Show exact XP values instead of percentages",
                         () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
                         () -> config.professionOverlayEnabled))
+                .sub("Radiant HUD")
+                .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
+                        () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))
                 .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
                         () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
                 .sub("Dark Mode Toggles")

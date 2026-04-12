@@ -31,7 +31,8 @@ public class WaypointRenderer {
                 WEVec namePos = new WEVec(waypoint.x + 0.5f, waypoint.y + 2f, waypoint.z + 0.5f);
                 Color color = Color.cyan;
                 if(waypoint.getCategory() != null) {
-                    color = Color.getHSBColor(waypoint.getCategory().color.asHSB()[0], waypoint.getCategory().color.asHSB()[1], waypoint.getCategory().color.asHSB()[2]);
+                    float[] hsb = waypoint.getCategory().color.asHSB();
+                    color = Color.getHSBColor(hsb[0], hsb[1], hsb[2]);
                 }
 
                 if(waypoint.show) {

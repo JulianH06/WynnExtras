@@ -156,7 +156,7 @@ public class PlayerHider {
 
             for (PlayerEntity player : client.world.getPlayers()) {
                 if (player == null) {
-                    return;
+                    continue;
                 }
 
                 if (player == me) {
@@ -165,7 +165,7 @@ public class PlayerHider {
 
                 if(!WynnExtrasConfig.INSTANCE.playerHiderToggle) {
                     if(isHidden(player)) { show(player); }
-                    return;
+                    continue;
                 }
 
                 double distance = player.getBlockPos().toBottomCenterPos().distanceTo(me.getBlockPos().toBottomCenterPos());
@@ -178,7 +178,10 @@ public class PlayerHider {
                 boolean inWarAndHiding = WynnExtrasConfig.INSTANCE.hideAllPlayersInWar && Models.War.isWarActive();
 
                 // Hide all players mode, in war mode, or specific player in list
-                if(WynnExtrasConfig.INSTANCE.hideAllPlayers || inWarAndHiding || WynnExtrasConfig.INSTANCE.hiddenPlayers.toString().toLowerCase().contains(player.getName().getString().toLowerCase())) {
+                String playerName = player.getName().getString().toLowerCase();
+                boolean inList = WynnExtrasConfig.INSTANCE.hiddenPlayers.stream()
+                        .anyMatch(name -> name.equalsIgnoreCase(playerName));
+                if(WynnExtrasConfig.INSTANCE.hideAllPlayers || inWarAndHiding || inList) {
                     hide(player);
                 } else {
                     if(isHidden(player)) { show(player); }

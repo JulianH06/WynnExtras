@@ -144,6 +144,7 @@ public class WynnExtrasConfig {
     public boolean showTreeMapEverywhere = false;
     public int treeMapX = 5;
     public int treeMapY = 5;
+    public float treeMapScale = 1.0f;
 
     // ==================== CHAT CLICK ====================
     public boolean chatClickPV = false;
@@ -211,6 +212,12 @@ public class WynnExtrasConfig {
     public boolean professionOverlayExactXp = false;
     public Map<String, Float> professionOverflowXp = new HashMap<>();
     public Map<String, Float> professionGoals = new HashMap<>();
+
+    // ==================== RADIANT HUD ====================
+    public boolean radiantHudEnabled = false;
+    public int radiantHudX = 5;
+    public int radiantHudY = 80;
+    public float radiantHudScale = 1.0f;
 
     // ==================== PROVOKE TIMER HUD ====================
     public int provokeTimerX = -1;

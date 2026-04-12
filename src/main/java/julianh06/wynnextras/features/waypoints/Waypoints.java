@@ -47,7 +47,7 @@ public class Waypoints {
                     "add",
                     "",
                     context -> {
-                        if(MinecraftClient.getInstance().player == null || WaypointData.INSTANCE.packages.getFirst() == null) return 1;
+                        if(MinecraftClient.getInstance().player == null || WaypointData.INSTANCE.packages.isEmpty()) return 1;
                         int x = IntegerArgumentType.getInteger(context, "x");
                         int y = IntegerArgumentType.getInteger(context, "y");
                         int z = IntegerArgumentType.getInteger(context, "z");
@@ -68,7 +68,7 @@ public class Waypoints {
                     "add",
                     "",
                     context -> {
-                        if(MinecraftClient.getInstance().player == null || WaypointData.INSTANCE.packages.getFirst() == null) return 1;
+                        if(MinecraftClient.getInstance().player == null || WaypointData.INSTANCE.packages.isEmpty()) return 1;
                         int x = (int) Math.floor(MinecraftClient.getInstance().player.getX());
                         int y = (int) Math.floor(MinecraftClient.getInstance().player.getY()) - 1;
                         int z = (int) Math.floor(MinecraftClient.getInstance().player.getZ());
