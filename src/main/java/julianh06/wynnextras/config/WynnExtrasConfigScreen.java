@@ -256,6 +256,8 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
                 .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
                         () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
+                .add(toggle("Auto Start", "Automatically start crafting when a recipe is loaded",
+                        () -> config.craftingAutoStart, v -> config.craftingAutoStart = v))
                 .add(toggle("Crafting preview", "Crafting preview toggle",
                         () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
