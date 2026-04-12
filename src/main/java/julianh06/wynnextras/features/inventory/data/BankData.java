@@ -60,9 +60,9 @@ public abstract class BankData {
             try (Reader reader = Files.newBufferedReader(path)) {
                 BankData loaded = getGson().fromJson(reader, this.getClass());
                 if (loaded != null) {
-                    this.BankPages = loaded.BankPages;
+                    this.BankPages = loaded.BankPages != null ? loaded.BankPages : new HashMap<>();
                     this.lastPage = loaded.lastPage;
-                    this.BankPageNames = loaded.BankPageNames;
+                    this.BankPageNames = loaded.BankPageNames != null ? loaded.BankPageNames : new HashMap<>();
                     this.characterNickname = loaded.characterNickname;
                     this.characterLevel = loaded.characterLevel;
                     this.bagCounts = loaded.bagCounts != null ? loaded.bagCounts : new HashMap<>();

@@ -75,9 +75,10 @@ public class ClassSelectionPngOverlay {
                 cachedTexture = null;
             }
 
-            InputStream stream = new FileInputStream(path);
-            NativeImage image = NativeImage.read(stream);
-            stream.close();
+            NativeImage image;
+            try (InputStream stream = new FileInputStream(path)) {
+                image = NativeImage.read(stream);
+            }
 
             imgWidth = image.getWidth();
             imgHeight = image.getHeight();

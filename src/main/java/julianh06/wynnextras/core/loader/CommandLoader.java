@@ -156,6 +156,7 @@ public class CommandLoader implements WELoader {
 
             dispatcher.register(
                 ClientCommandManager.literal("dwoc").executes(ctx -> {
+                    if (McUtils.player() == null) return 0;
                     McUtils.player().networkHandler.sendChatCommand("emote explode");
                     SCHEDULER.schedule(() -> {
                         MinecraftClient.getInstance().execute(() -> {
@@ -425,7 +426,7 @@ public class CommandLoader implements WELoader {
         if (chatPrefix == null) {
             // "all" - just show locally
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
-        } else {
+        } else if (McUtils.player() != null) {
             McUtils.player().networkHandler.sendChatCommand(chatPrefix + " " + message);
         }
     }

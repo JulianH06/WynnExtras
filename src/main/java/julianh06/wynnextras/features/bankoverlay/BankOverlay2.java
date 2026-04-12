@@ -2106,7 +2106,7 @@ public class BankOverlay2 extends WEHandledScreen {
                             pageBuyCustomModelData != 0 && rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0) != pageBuyCustomModelData
                     ) {
                         confirmText = "§7Click again to confirm.";
-                    } else if (rightArrow.getCustomName().getString().contains(String.valueOf(currentData.lastPage + 1)) && activeInv == currentData.lastPage - 1) {
+                    } else if (rightArrow.getCustomName() != null && rightArrow.getCustomName().getString().contains(String.valueOf(currentData.lastPage + 1)) && activeInv == currentData.lastPage - 1) {
                         currentData.lastPage++;
                         pageBuyCustomModelData = 0;
                         priceText = null;
@@ -2220,7 +2220,7 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             try {
-                if (stack.getCustomName().getString().contains("Potions")) {
+                if (stack.getCustomName() != null && stack.getCustomName().getString().contains("Potions")) {
                     Pattern pattern = Pattern.compile("\\[(\\d+)/(\\d+)]");
                     Matcher matcher = pattern.matcher(stack.getCustomName().getString());
 
@@ -2237,7 +2237,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             ctx.drawItem(stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()));
             try {
-                if(stack.getCustomName().getString().contains("Ingredient Pouch")) ctx.drawStackOverlay(MinecraftClient.getInstance().textRenderer, stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()), renderOne ? "1" : stack.getCount() == 1 ? "" : String.valueOf(stack.getCount()));
+                if(stack.getCustomName() != null && stack.getCustomName().getString().contains("Ingredient Pouch")) ctx.drawStackOverlay(MinecraftClient.getInstance().textRenderer, stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()), renderOne ? "1" : stack.getCount() == 1 ? "" : String.valueOf(stack.getCount()));
                 else if(stack.getCount() > 1) ui.drawText(String.valueOf(stack.getCount()), (int) (width + x / ui.getScaleFactor()), (int) (height - 8 + y / ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 1);
             } catch (Exception ignored) {}
 
