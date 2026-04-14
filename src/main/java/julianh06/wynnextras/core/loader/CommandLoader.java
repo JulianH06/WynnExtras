@@ -71,50 +71,62 @@ public class CommandLoader implements WELoader {
                 return 1;
             });
 
-            for (Command cmd: Command.COMMAND_LIST) {
-                if((cmd instanceof SubCommand)) continue;
+            for (Command cmd : Command.COMMAND_LIST) {
+                if ((cmd instanceof SubCommand)) continue;
                 base = base.then(buildCommandTree(cmd));
                 alias = alias.then(buildCommandTree(cmd));
             }
 
             var bombshare = ClientCommandManager.literal("bombshare")
-                .executes(ctx -> { executeBombshare("g", false); return 1; })
-                .then(ClientCommandManager.argument("channel", StringArgumentType.word())
-                    .suggests((ctx, builder) -> {
-                        builder.suggest("guild");
-                        builder.suggest("party");
-                        builder.suggest("all");
-                        return builder.buildFuture();
-                    })
                     .executes(ctx -> {
-                        String channel = StringArgumentType.getString(ctx, "channel").toLowerCase();
-                        switch (channel) {
-                            case "guild", "g" -> executeBombshare("g", false);
-                            case "party", "p" -> executeBombshare("p", false);
-                            case "all" -> executeBombshare(null, false);
-                            case "disable" -> {
-                                WynnExtrasConfig.INSTANCE.bombShareSuggestion = false;
-                                WynnExtrasConfig.save();
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aBomb share suggestions disabled. Re-enable in /we config > Chat."));
-                            }
-                            default -> McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel + ". Use guild, party, or all."));
-                        }
+                        executeBombshare("g", false);
                         return 1;
                     })
-                    .then(ClientCommandManager.argument("filter", StringArgumentType.word())
-                        .suggests((ctx, builder) -> { builder.suggest("prof"); return builder.buildFuture(); })
-                        .executes(ctx -> {
-                            String channel = StringArgumentType.getString(ctx, "channel").toLowerCase();
-                            String filter = StringArgumentType.getString(ctx, "filter").toLowerCase();
-                            boolean profOnly = filter.equals("prof");
-                            switch (channel) {
-                                case "guild", "g" -> executeBombshare("g", profOnly);
-                                case "party", "p" -> executeBombshare("p", profOnly);
-                                case "all" -> executeBombshare(null, profOnly);
-                                default -> McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel));
-                            }
-                            return 1;
-                        })));
+                    .then(ClientCommandManager.argument("channel", StringArgumentType.word())
+                            .suggests((ctx, builder) -> {
+                                builder.suggest("guild");
+                                builder.suggest("party");
+                                builder.suggest("local");
+                                builder.suggest("clipboard");
+                                builder.suggest("disable");
+                                return builder.buildFuture();
+                            })
+                            .executes(ctx -> {
+                                String channel = StringArgumentType.getString(ctx, "channel").toLowerCase();
+                                switch (channel) {
+                                    case "guild", "g" -> executeBombshare("g", false);
+                                    case "party", "p" -> executeBombshare("p", false);
+                                    case "local" -> executeBombshare(null, false);
+                                    case "clipboard" -> copyBombshareToClipboard(false);
+                                        case "disable" -> {
+                                            WynnExtrasConfig.INSTANCE.bombShareSuggestion = false;
+                                            WynnExtrasConfig.save();
+                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aBomb share suggestions disabled. Re-enable in /we config > Chat."));
+                                        }
+                                        default ->
+                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel + ". Use guild, party, local or clipboard."));
+                                }
+                                return 1;
+                            })
+                            .then(ClientCommandManager.argument("filter", StringArgumentType.word())
+                                    .suggests((ctx, builder) -> {
+                                        builder.suggest("prof");
+                                        return builder.buildFuture();
+                                    })
+                                    .executes(ctx -> {
+                                        String channel = StringArgumentType.getString(ctx, "channel").toLowerCase();
+                                        String filter = StringArgumentType.getString(ctx, "filter").toLowerCase();
+                                        boolean profOnly = filter.equals("prof");
+                                        switch (channel) {
+                                            case "guild", "g" -> executeBombshare("g", profOnly);
+                                            case "party", "p" -> executeBombshare("p", profOnly);
+                                            case "local" -> executeBombshare(null, profOnly);
+                                            case "clipboard" -> copyBombshareToClipboard(profOnly);
+                                            default ->
+                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel));
+                                        }
+                                        return 1;
+                                    })));
             base = base.then(bombshare);
             alias = alias.then(bombshare);
 
@@ -169,204 +181,204 @@ public class CommandLoader implements WELoader {
 
             // Raid Loot Tracker reset commands and debug commands - combined under single /we
             dispatcher.register(
-                ClientCommandManager.literal("we")
-                    .then(ClientCommandManager.literal("raidloot")
-                        .then(ClientCommandManager.literal("reset")
-                            .executes(ctx -> {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we raidloot reset <all|session|notg|nol|tcc|tna>"));
-                                return 1;
-                            })
-                            .then(ClientCommandManager.literal("all")
-                                .executes(ctx -> {
-                                    RaidLootConfig.INSTANCE.data.resetAll();
-                                    RaidLootConfig.INSTANCE.save();
-                                    RaidLootTrackerOverlay.refreshData();
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset all raid loot data!"));
-                                    return 1;
-                                }))
-                            .then(ClientCommandManager.literal("session")
-                                .executes(ctx -> {
-                                    RaidLootConfig.INSTANCE.data.resetSession();
-                                    RaidLootTrackerOverlay.refreshData();
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset session raid loot data!"));
-                                    return 1;
-                                }))
-                            .then(ClientCommandManager.literal("notg")
-                                .executes(ctx -> {
-                                    RaidLootConfig.INSTANCE.data.resetRaid("NOTG");
-                                    RaidLootConfig.INSTANCE.save();
-                                    RaidLootTrackerOverlay.refreshData();
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset NOTG raid loot data!"));
-                                    return 1;
-                                }))
-                            .then(ClientCommandManager.literal("nol")
-                                .executes(ctx -> {
-                                    RaidLootConfig.INSTANCE.data.resetRaid("NOL");
-                                    RaidLootConfig.INSTANCE.save();
-                                    RaidLootTrackerOverlay.refreshData();
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset NOL raid loot data!"));
-                                    return 1;
-                                }))
-                            .then(ClientCommandManager.literal("tcc")
-                                .executes(ctx -> {
-                                    RaidLootConfig.INSTANCE.data.resetRaid("TCC");
-                                    RaidLootConfig.INSTANCE.save();
-                                    RaidLootTrackerOverlay.refreshData();
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset TCC raid loot data!"));
-                                    return 1;
-                                }))
-                            .then(ClientCommandManager.literal("tna")
-                                .executes(ctx -> {
-                                    RaidLootConfig.INSTANCE.data.resetRaid("TNA");
-                                    RaidLootConfig.INSTANCE.save();
-                                    RaidLootTrackerOverlay.refreshData();
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset TNA raid loot data!"));
-                                    return 1;
-                                }))
-                        )
-                    )
-                    .then(ClientCommandManager.literal("gui")
-                        .executes(ctx -> {
-                            MinecraftClient.getInstance().send(() -> {
-                                MinecraftClient.getInstance().setScreen(new HudEditScreen());
-                            });
-                            return 1;
-                        })
-                    )
-                    .then(ClientCommandManager.literal("tetris")
-                        .executes(ctx -> {
-                            TetrisScreen.open();
-                            return 1;
-                        })
-                    )
-                    .then(ClientCommandManager.literal("debug")
-                        .then(ClientCommandManager.literal("slot")
-                            .executes(ctx -> {
-                                TradeMarketComparisonPanel.toggleSlotDebug();
-                                return 1;
-                            })
-                        )
-                        .then(ClientCommandManager.literal("screen")
-                            .executes(ctx -> {
-                                ScreenTitleDebugger.toggleDebug();
-                                return 1;
-                            })
-                        )
-                    )
-                    .then(ClientCommandManager.literal("prof")
-                        .executes(ctx -> {
-                            WEScreen.open(ProfessionCalculatorScreen::new);
-                            return 1;
-                        })
-                    )
-                    .then(ClientCommandManager.literal("profession")
-                        .then(ClientCommandManager.literal("reload")
-                            .executes(ctx -> {
-                                ProfessionOverlay.reload();
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aProfession overlay reloaded! Session XP reset, re-fetching data..."));
-                                return 1;
-                            })
-                        )
-                        .then(ClientCommandManager.literal("exact")
-                            .executes(ctx -> {
-                                WynnExtrasConfig.INSTANCE.professionOverlayExactXp = !WynnExtrasConfig.INSTANCE.professionOverlayExactXp;
-                                WynnExtrasConfig.save();
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                                    WynnExtrasConfig.INSTANCE.professionOverlayExactXp ? "§aExact XP numbers enabled" : "§7Exact XP numbers disabled (using short format)"));
-                                return 1;
-                            })
-                        )
-                        .then(ClientCommandManager.literal("set")
-                            .executes(ctx -> {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we profession set <profession> <amount>"));
-                                return 1;
-                            })
-                            .then(ClientCommandManager.argument("profession", StringArgumentType.word())
-                                .then(ClientCommandManager.argument("amount", FloatArgumentType.floatArg(0))
-                                    .executes(ctx -> {
-                                        String profName = StringArgumentType.getString(ctx, "profession");
-                                        float amount = FloatArgumentType.getFloat(ctx, "amount");
-                                        ProfessionType prof = ProfessionType.fromString(profName);
-                                        if (prof == null) {
-                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
-                                            return 0;
-                                        }
-                                        String charId = Models.Character.getId();
-                                        String className = Models.Character.getClassType() != null ? Models.Character.getClassType().getName() : "unknown";
-                                        if (charId == null || charId.isEmpty()) {
-                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected. Make sure you're logged into a class."));
-                                            return 0;
-                                        }
-                                        ProfessionOverlay.setOverflow(prof, amount);
-                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " overflow XP to " + String.format("%.0f", amount) + " §7(class: " + className + ")"));
-                                        return 1;
-                                    })
-                                )
+                    ClientCommandManager.literal("we")
+                            .then(ClientCommandManager.literal("raidloot")
+                                    .then(ClientCommandManager.literal("reset")
+                                            .executes(ctx -> {
+                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we raidloot reset <all|session|notg|nol|tcc|tna>"));
+                                                return 1;
+                                            })
+                                            .then(ClientCommandManager.literal("all")
+                                                    .executes(ctx -> {
+                                                        RaidLootConfig.INSTANCE.data.resetAll();
+                                                        RaidLootConfig.INSTANCE.save();
+                                                        RaidLootTrackerOverlay.refreshData();
+                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset all raid loot data!"));
+                                                        return 1;
+                                                    }))
+                                            .then(ClientCommandManager.literal("session")
+                                                    .executes(ctx -> {
+                                                        RaidLootConfig.INSTANCE.data.resetSession();
+                                                        RaidLootTrackerOverlay.refreshData();
+                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset session raid loot data!"));
+                                                        return 1;
+                                                    }))
+                                            .then(ClientCommandManager.literal("notg")
+                                                    .executes(ctx -> {
+                                                        RaidLootConfig.INSTANCE.data.resetRaid("NOTG");
+                                                        RaidLootConfig.INSTANCE.save();
+                                                        RaidLootTrackerOverlay.refreshData();
+                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset NOTG raid loot data!"));
+                                                        return 1;
+                                                    }))
+                                            .then(ClientCommandManager.literal("nol")
+                                                    .executes(ctx -> {
+                                                        RaidLootConfig.INSTANCE.data.resetRaid("NOL");
+                                                        RaidLootConfig.INSTANCE.save();
+                                                        RaidLootTrackerOverlay.refreshData();
+                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset NOL raid loot data!"));
+                                                        return 1;
+                                                    }))
+                                            .then(ClientCommandManager.literal("tcc")
+                                                    .executes(ctx -> {
+                                                        RaidLootConfig.INSTANCE.data.resetRaid("TCC");
+                                                        RaidLootConfig.INSTANCE.save();
+                                                        RaidLootTrackerOverlay.refreshData();
+                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset TCC raid loot data!"));
+                                                        return 1;
+                                                    }))
+                                            .then(ClientCommandManager.literal("tna")
+                                                    .executes(ctx -> {
+                                                        RaidLootConfig.INSTANCE.data.resetRaid("TNA");
+                                                        RaidLootConfig.INSTANCE.save();
+                                                        RaidLootTrackerOverlay.refreshData();
+                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset TNA raid loot data!"));
+                                                        return 1;
+                                                    }))
+                                    )
                             )
-                        )
-                        .then(ClientCommandManager.literal("goal")
-                            .executes(ctx -> {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we profession goal <profession> <amount|clear>"));
-                                return 1;
-                            })
-                            .then(ClientCommandManager.argument("goalProfession", StringArgumentType.word())
-                                .executes(ctx -> {
-                                    String profName = StringArgumentType.getString(ctx, "goalProfession");
-                                    ProfessionType prof = ProfessionType.fromString(profName);
-                                    if (prof == null) {
-                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
-                                        return 0;
-                                    }
-                                    float goal = ProfessionOverlay.getGoal(prof);
-                                    float overflow = ProfessionOverlay.getOverflow(prof);
-                                    if (goal <= 0) {
-                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No goal set for " + prof.getDisplayName() + ". Current overflow: " + String.format("%.0f", overflow)));
-                                    } else {
-                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§b" + prof.getDisplayName() + " goal: " + String.format("%.0f", goal) + " | Current: " + String.format("%.0f", overflow) + " | Remaining: " + String.format("%.0f", Math.max(0, goal - overflow))));
-                                    }
-                                    return 1;
-                                })
-                                .then(ClientCommandManager.literal("clear")
+                            .then(ClientCommandManager.literal("gui")
                                     .executes(ctx -> {
-                                        String profName = StringArgumentType.getString(ctx, "goalProfession");
-                                        ProfessionType prof = ProfessionType.fromString(profName);
-                                        if (prof == null) {
-                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
-                                            return 0;
-                                        }
-                                        String charId = Models.Character.getId();
-                                        if (charId == null || charId.isEmpty()) {
-                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected."));
-                                            return 0;
-                                        }
-                                        ProfessionOverlay.clearGoal(prof);
-                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aCleared " + prof.getDisplayName() + " goal."));
+                                        MinecraftClient.getInstance().send(() -> {
+                                            MinecraftClient.getInstance().setScreen(new HudEditScreen());
+                                        });
                                         return 1;
                                     })
-                                )
-                                .then(ClientCommandManager.argument("goalAmount", FloatArgumentType.floatArg(1))
-                                    .executes(ctx -> {
-                                        String profName = StringArgumentType.getString(ctx, "goalProfession");
-                                        float amount = FloatArgumentType.getFloat(ctx, "goalAmount");
-                                        ProfessionType prof = ProfessionType.fromString(profName);
-                                        if (prof == null) {
-                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
-                                            return 0;
-                                        }
-                                        String charId = Models.Character.getId();
-                                        String className = Models.Character.getClassType() != null ? Models.Character.getClassType().getName() : "unknown";
-                                        if (charId == null || charId.isEmpty()) {
-                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected."));
-                                            return 0;
-                                        }
-                                        ProfessionOverlay.setGoal(prof, amount);
-                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " goal to " + String.format("%.0f", amount) + " overflow XP §7(class: " + className + ")"));
-                                        return 1;
-                                    })
-                                )
                             )
-                        )
-                    )
+                            .then(ClientCommandManager.literal("tetris")
+                                    .executes(ctx -> {
+                                        TetrisScreen.open();
+                                        return 1;
+                                    })
+                            )
+                            .then(ClientCommandManager.literal("debug")
+                                    .then(ClientCommandManager.literal("slot")
+                                            .executes(ctx -> {
+                                                TradeMarketComparisonPanel.toggleSlotDebug();
+                                                return 1;
+                                            })
+                                    )
+                                    .then(ClientCommandManager.literal("screen")
+                                            .executes(ctx -> {
+                                                ScreenTitleDebugger.toggleDebug();
+                                                return 1;
+                                            })
+                                    )
+                            )
+                            .then(ClientCommandManager.literal("prof")
+                                    .executes(ctx -> {
+                                        WEScreen.open(ProfessionCalculatorScreen::new);
+                                        return 1;
+                                    })
+                            )
+                            .then(ClientCommandManager.literal("profession")
+                                    .then(ClientCommandManager.literal("reload")
+                                            .executes(ctx -> {
+                                                ProfessionOverlay.reload();
+                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aProfession overlay reloaded! Session XP reset, re-fetching data..."));
+                                                return 1;
+                                            })
+                                    )
+                                    .then(ClientCommandManager.literal("exact")
+                                            .executes(ctx -> {
+                                                WynnExtrasConfig.INSTANCE.professionOverlayExactXp = !WynnExtrasConfig.INSTANCE.professionOverlayExactXp;
+                                                WynnExtrasConfig.save();
+                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                                        WynnExtrasConfig.INSTANCE.professionOverlayExactXp ? "§aExact XP numbers enabled" : "§7Exact XP numbers disabled (using short format)"));
+                                                return 1;
+                                            })
+                                    )
+                                    .then(ClientCommandManager.literal("set")
+                                            .executes(ctx -> {
+                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we profession set <profession> <amount>"));
+                                                return 1;
+                                            })
+                                            .then(ClientCommandManager.argument("profession", StringArgumentType.word())
+                                                    .then(ClientCommandManager.argument("amount", FloatArgumentType.floatArg(0))
+                                                            .executes(ctx -> {
+                                                                String profName = StringArgumentType.getString(ctx, "profession");
+                                                                float amount = FloatArgumentType.getFloat(ctx, "amount");
+                                                                ProfessionType prof = ProfessionType.fromString(profName);
+                                                                if (prof == null) {
+                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                                                    return 0;
+                                                                }
+                                                                String charId = Models.Character.getId();
+                                                                String className = Models.Character.getClassType() != null ? Models.Character.getClassType().getName() : "unknown";
+                                                                if (charId == null || charId.isEmpty()) {
+                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected. Make sure you're logged into a class."));
+                                                                    return 0;
+                                                                }
+                                                                ProfessionOverlay.setOverflow(prof, amount);
+                                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " overflow XP to " + String.format("%.0f", amount) + " §7(class: " + className + ")"));
+                                                                return 1;
+                                                            })
+                                                    )
+                                            )
+                                    )
+                                    .then(ClientCommandManager.literal("goal")
+                                            .executes(ctx -> {
+                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we profession goal <profession> <amount|clear>"));
+                                                return 1;
+                                            })
+                                            .then(ClientCommandManager.argument("goalProfession", StringArgumentType.word())
+                                                    .executes(ctx -> {
+                                                        String profName = StringArgumentType.getString(ctx, "goalProfession");
+                                                        ProfessionType prof = ProfessionType.fromString(profName);
+                                                        if (prof == null) {
+                                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                                            return 0;
+                                                        }
+                                                        float goal = ProfessionOverlay.getGoal(prof);
+                                                        float overflow = ProfessionOverlay.getOverflow(prof);
+                                                        if (goal <= 0) {
+                                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No goal set for " + prof.getDisplayName() + ". Current overflow: " + String.format("%.0f", overflow)));
+                                                        } else {
+                                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§b" + prof.getDisplayName() + " goal: " + String.format("%.0f", goal) + " | Current: " + String.format("%.0f", overflow) + " | Remaining: " + String.format("%.0f", Math.max(0, goal - overflow))));
+                                                        }
+                                                        return 1;
+                                                    })
+                                                    .then(ClientCommandManager.literal("clear")
+                                                            .executes(ctx -> {
+                                                                String profName = StringArgumentType.getString(ctx, "goalProfession");
+                                                                ProfessionType prof = ProfessionType.fromString(profName);
+                                                                if (prof == null) {
+                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                                                    return 0;
+                                                                }
+                                                                String charId = Models.Character.getId();
+                                                                if (charId == null || charId.isEmpty()) {
+                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected."));
+                                                                    return 0;
+                                                                }
+                                                                ProfessionOverlay.clearGoal(prof);
+                                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aCleared " + prof.getDisplayName() + " goal."));
+                                                                return 1;
+                                                            })
+                                                    )
+                                                    .then(ClientCommandManager.argument("goalAmount", FloatArgumentType.floatArg(1))
+                                                            .executes(ctx -> {
+                                                                String profName = StringArgumentType.getString(ctx, "goalProfession");
+                                                                float amount = FloatArgumentType.getFloat(ctx, "goalAmount");
+                                                                ProfessionType prof = ProfessionType.fromString(profName);
+                                                                if (prof == null) {
+                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                                                    return 0;
+                                                                }
+                                                                String charId = Models.Character.getId();
+                                                                String className = Models.Character.getClassType() != null ? Models.Character.getClassType().getName() : "unknown";
+                                                                if (charId == null || charId.isEmpty()) {
+                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected."));
+                                                                    return 0;
+                                                                }
+                                                                ProfessionOverlay.setGoal(prof, amount);
+                                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " goal to " + String.format("%.0f", amount) + " overflow XP §7(class: " + className + ")"));
+                                                                return 1;
+                                                            })
+                                                    )
+                                            )
+                                    )
+                            )
             );
         });
     }
@@ -377,11 +389,11 @@ public class CommandLoader implements WELoader {
         ArgumentBuilder<FabricClientCommandSource, ?> current = root;
 
         for (Command sub : cmd.getSubCommands()) {
-            if(sub != null) current = current.then(buildCommandTree(sub));
+            if (sub != null) current = current.then(buildCommandTree(sub));
         }
 
         ArgumentBuilder<FabricClientCommandSource, ?> args = chainArguments(cmd.getArguments(), cmd);
-        if(args != null) current = current.then(args);
+        if (args != null) current = current.then(args);
 
         current.executes(cmd::onExecute);
 
@@ -405,16 +417,16 @@ public class CommandLoader implements WELoader {
 
         String message;
         if (bombsByType.isEmpty()) {
-            message = "[WynnExtras] No active Bombs!";
+            message = "[WynnExtras Bombshare] No active Bombs!";
         } else {
-            StringBuilder sb = new StringBuilder("[WynnExtras]");
+            StringBuilder sb = new StringBuilder("[WynnExtras Bombshare]");
             Map<BombType, String> shortNames = Map.of(
-                BombType.PROFESSION_XP, "ProfXP",
-                BombType.PROFESSION_SPEED, "ProfSpd",
-                BombType.COMBAT_XP, "CombatXP",
-                BombType.DUNGEON, "Dungeon",
-                BombType.LOOT, "Loot",
-                BombType.LOOT_CHEST, "LootChest"
+                    BombType.PROFESSION_XP, "ProfXP",
+                    BombType.PROFESSION_SPEED, "ProfSpeed",
+                    BombType.COMBAT_XP, "CombatXP",
+                    BombType.DUNGEON, "Dungeon",
+                    BombType.LOOT, "Loot",
+                    BombType.LOOT_CHEST, "LootChest"
             );
             for (var entry : bombsByType.entrySet()) {
                 String name = shortNames.getOrDefault(entry.getKey(), entry.getKey().getDisplayName());
@@ -424,11 +436,47 @@ public class CommandLoader implements WELoader {
         }
 
         if (chatPrefix == null) {
-            // "all" - just show locally
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
         } else if (McUtils.player() != null) {
             McUtils.player().networkHandler.sendChatCommand(chatPrefix + " " + message);
         }
+    }
+
+    private static void copyBombshareToClipboard(boolean profOnly) {
+        if (!Models.WorldState.onWorld()) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cYou must be on a world to use this command."));
+            return;
+        }
+
+        Map<BombType, List<String>> bombsByType = new LinkedHashMap<>();
+        for (BombInfo bomb : Models.Bomb.getBombBells()) {
+            if (!bomb.isActive()) continue;
+            if (profOnly && !PROF_BOMBS.contains(bomb.bomb())) continue;
+            bombsByType.computeIfAbsent(bomb.bomb(), k -> new ArrayList<>()).add(bomb.server());
+        }
+
+        String message;
+        if (bombsByType.isEmpty()) {
+            message = "[WynnExtras Bombshare] No active Bombs!";
+        } else {
+            StringBuilder sb = new StringBuilder("[WynnExtras Bombshare]");
+            Map<BombType, String> shortNames = Map.of(
+                    BombType.PROFESSION_XP, "ProfXP",
+                    BombType.PROFESSION_SPEED, "ProfSpeed",
+                    BombType.COMBAT_XP, "CombatXP",
+                    BombType.DUNGEON, "Dungeon",
+                    BombType.LOOT, "Loot",
+                    BombType.LOOT_CHEST, "LootChest"
+            );
+            for (var entry : bombsByType.entrySet()) {
+                String name = shortNames.getOrDefault(entry.getKey(), entry.getKey().getDisplayName());
+                sb.append(" [").append(name).append("] ").append(String.join(", ", entry.getValue()));
+            }
+            message = sb.toString();
+        }
+
+        MinecraftClient.getInstance().keyboard.setClipboard(message);
+        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Copied bombshare to clipboard."));
     }
 
     public static ArgumentBuilder<FabricClientCommandSource, ?> chainArguments(

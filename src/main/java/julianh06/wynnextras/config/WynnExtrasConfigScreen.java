@@ -102,8 +102,14 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // ===== GENERAL =====
         category("General", 0xFF888888)
-                .add(toggle("Enable WynnExtras", "Master toggle — disable to turn off all WynnExtras features",
-                        () -> config.modEnabled, v -> config.modEnabled = v));
+            .add(button("Disable everything", "Click this to turn off everything so you can configure it yourself",
+                (x) -> {
+                    config.disableAll();
+                }, "Disable"))
+            .add(button("Reset to defaults", "Reset all settings back to their default values",
+                (x) -> {
+                    config.resetToDefaults();
+                }, "Reset"));
 
         // ===== RAIDS =====
         category("Raiding", GOLD_DARK)

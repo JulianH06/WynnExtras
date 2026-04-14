@@ -329,6 +329,27 @@ public class WynnExtrasConfig {
         }
     }
 
+    // ==================== RESET / DISABLE ALL ====================
+    public void resetToDefaults() {
+        WynnExtrasConfig defaults = new WynnExtrasConfig();
+        for (java.lang.reflect.Field field : WynnExtrasConfig.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+            try {
+                field.set(this, field.get(defaults));
+            } catch (IllegalAccessException ignored) {}
+        }
+    }
+
+    public void disableAll() {
+        for (java.lang.reflect.Field field : WynnExtrasConfig.class.getDeclaredFields()) {
+            if (field.getType() == boolean.class) {
+                try {
+                    field.set(this, false);
+                } catch (IllegalAccessException ignored) {}
+            }
+        }
+    }
+
     // ==================== SAVE/LOAD ====================
     public static void load() {
         try {
