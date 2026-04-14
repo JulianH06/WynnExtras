@@ -127,6 +127,11 @@ public class RaidChatNotifier {
                     "§bRight key collected §c",
                     "hubertRightKey"
             ),
+            new SingleOccurrenceDetector(
+                    "Key! [2/2]",
+                    "§bBoth keys collected §c",
+                    "hubertBothKeys"
+            ),
 
             new MultiOccurrenceDetector(
                     "A new platform has appeared on the Lower Area!",
@@ -238,8 +243,6 @@ public class RaidChatNotifier {
                         );
                     }
                 });
-
-                return;
             }
         }
     }
@@ -309,7 +312,9 @@ public class RaidChatNotifier {
             Pattern.compile("A player must stand on the platform", Pattern.CASE_INSENSITIVE),
             Pattern.compile("A miniboss has spawned! It has sped", Pattern.CASE_INSENSITIVE),
             Pattern.compile("The golem has been defeated, and", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE)
+            Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("Collected the Left Key!", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("Collected the Right Key!", Pattern.CASE_INSENSITIVE)
     );
 
 

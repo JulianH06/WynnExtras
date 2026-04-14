@@ -1889,6 +1889,22 @@ public class WynnExtrasConfigScreen extends Screen {
         @Override
         public boolean keyPressed(KeyInput input) {
             int key = input.key();
+            boolean ctrl = (input.modifiers() & org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL) != 0;
+
+            if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_V) {
+                String clipboard = client.keyboard.getClipboard();
+                if (clipboard != null && !clipboard.isEmpty()) {
+                    setActiveInput(getActiveInput() + clipboard.replaceAll("[\\r\\n\\t]", ""));
+                }
+                return true;
+            } else if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_C) {
+                client.keyboard.setClipboard(getActiveInput());
+                return true;
+            } else if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_X) {
+                client.keyboard.setClipboard(getActiveInput());
+                setActiveInput("");
+                return true;
+            }
 
             String current = getActiveInput();
             if (key == 259 && !current.isEmpty()) {
@@ -1918,6 +1934,10 @@ public class WynnExtrasConfigScreen extends Screen {
 
         @Override
         public boolean charTyped(CharInput charInput) {
+            long window = client.getWindow().getHandle();
+            boolean ctrlHeld = org.lwjgl.glfw.GLFW.glfwGetKey(window, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS
+                    || org.lwjgl.glfw.GLFW.glfwGetKey(window, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+            if (ctrlHeld) return true;
             int c = charInput.codepoint();
             if (c >= 32) {
                 setActiveInput(getActiveInput() + (char) c);

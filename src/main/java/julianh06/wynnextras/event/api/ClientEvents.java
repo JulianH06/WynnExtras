@@ -2,7 +2,6 @@ package julianh06.wynnextras.event.api;
 
 
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.event.DisconnectEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.event.WorldChangeEvent;
@@ -10,7 +9,6 @@ import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
-import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.input.KeyboardInput;
@@ -38,8 +36,7 @@ public class ClientEvents {
             new WorldChangeEvent().post();
         });
 
-        ClientReceiveMessageEvents.GAME.register((message, var2) -> {
-            new ChatEvent(message).post();
-        });
+        // ChatEvent is already posted by ChatPacketRecievedEventMixin
+        // Don't register here too or every handler fires twice
     }
 }

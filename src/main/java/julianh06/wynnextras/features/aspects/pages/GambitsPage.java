@@ -81,7 +81,7 @@ public class GambitsPage extends PageWidget{
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
         ZonedDateTime nextReset = ResetTimeConfig.INSTANCE.getNextGambitReset();
         if (nextReset.isBefore(now) || nextReset.isEqual(now)) {
-            nextReset = nextReset.plusWeeks(1);
+            nextReset = nextReset.plusDays(1);
         }
 
         // Calculate time difference
