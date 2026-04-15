@@ -498,7 +498,7 @@ public class AspectsPage extends PageWidget {
         int barX = centerX - barWidth / 2;
 
         int totalAspects = allAspects.size();
-        int totalCount = progressBarShowMax ? countMaxedAspects(allAspects, playerAspects) : (int) playerAspects.stream().filter(a -> a.getAmount() > 0).count();
+        int totalCount = progressBarShowMax ? countMaxedAspects(allAspects, playerAspects) : (int) playerAspects.stream().filter(a -> a.getAmount() > 1).count();
 
         int mythicTotal = (int) allAspects.stream().filter(a -> a.getRarity().equalsIgnoreCase("mythic")).count();
         int mythicCount = progressBarShowMax ? countMaxedByRarity(allAspects, playerAspects, "mythic") : countUnlockedByRarity(allAspects, playerAspects, "mythic");

@@ -109,7 +109,8 @@ public class WynnExtrasConfigScreen extends Screen {
             .add(button("Reset to defaults", "Reset all settings back to their default values",
                 (x) -> {
                     config.resetToDefaults();
-                }, "Reset"));
+                }, "Reset"))
+            .add(text("", "If you accidentally cicked on of these buttons click on \"cancel\" to get your old settings back.")); //TODO; improve wording here
 
         // ===== RAIDS =====
         category("Raiding", GOLD_DARK)

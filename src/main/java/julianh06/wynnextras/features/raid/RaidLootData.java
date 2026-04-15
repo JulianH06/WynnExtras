@@ -13,6 +13,7 @@ public class RaidLootData {
     public int amplifierTier1 = 0;
     public int amplifierTier2 = 0;
     public int amplifierTier3 = 0;
+    public int amplifierTier4 = 0;
 
     // ===== Crafter Bags =====
     public int totalBags = 0;
@@ -54,7 +55,7 @@ public class RaidLootData {
     }
 
     public int getTotalAmplifiers() {
-        return amplifierTier1 + amplifierTier2 + amplifierTier3;
+        return amplifierTier1 + amplifierTier2 + amplifierTier3 + amplifierTier4;
     }
 
     public int getTotalCrafterBags() {
@@ -103,6 +104,7 @@ public class RaidLootData {
         amplifierTier1 = 0;
         amplifierTier2 = 0;
         amplifierTier3 = 0;
+        amplifierTier4 = 0;
         totalBags = 0;
         stuffedBags = 0;
         packedBags = 0;
@@ -131,6 +133,7 @@ public class RaidLootData {
         public int amplifierTier1 = 0;
         public int amplifierTier2 = 0;
         public int amplifierTier3 = 0;
+        public int amplifierTier4 = 0;
         public int totalBags = 0;
         public int stuffedBags = 0;
         public int packedBags = 0;
@@ -151,7 +154,7 @@ public class RaidLootData {
         }
 
         public int getTotalAmplifiers() {
-            return amplifierTier1 + amplifierTier2 + amplifierTier3;
+            return amplifierTier1 + amplifierTier2 + amplifierTier3 + amplifierTier4;
         }
     }
 }

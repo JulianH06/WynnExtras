@@ -313,6 +313,7 @@ public class RaidLootTrackerOverlay {
             y = drawLine(context, LINE_AMP_T1, "  Tier I", String.valueOf(displayData.amplifierTier1), AMPLIFIER_COLOR, y, inInventory);
             y = drawLine(context, LINE_AMP_T2, "  Tier II", String.valueOf(displayData.amplifierTier2), AMPLIFIER_COLOR, y, inInventory);
             y = drawLine(context, LINE_AMP_T3, "  Tier III", String.valueOf(displayData.amplifierTier3), AMPLIFIER_COLOR, y, inInventory);
+            y = drawLine(context, LINE_AMP_T3, "  Tier IV", String.valueOf(displayData.amplifierTier4), AMPLIFIER_COLOR, y, inInventory);
 
             y = drawLine(context, LINE_BAGS, "Crafter Bags", String.valueOf(displayData.totalBags), BAG_COLOR, y, inInventory);
             y = drawLine(context, LINE_BAGS_STUFFED, "  Stuffed", String.valueOf(displayData.stuffedBags), BAG_COLOR, y, inInventory);
@@ -343,6 +344,7 @@ public class RaidLootTrackerOverlay {
         agg.amplifierTier1 = data.amplifierTier1;
         agg.amplifierTier2 = data.amplifierTier2;
         agg.amplifierTier3 = data.amplifierTier3;
+        agg.amplifierTier4 = data.amplifierTier4;
         agg.totalBags = data.totalBags;
         agg.stuffedBags = data.stuffedBags;
         agg.packedBags = data.packedBags;

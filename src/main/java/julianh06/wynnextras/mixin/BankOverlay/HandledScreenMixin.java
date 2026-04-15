@@ -70,7 +70,6 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
     private void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci){
-        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
         if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) {
             ci.cancel();
         }
@@ -81,7 +80,6 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
         // Class Selection Overlay
         if (WynnExtrasConfig.INSTANCE.customClassSelectionEnabled && !ClassSelectionOverlay.vanillaMode) {
             HandledScreen<?> self = (HandledScreen<?>) (Object) this;
@@ -237,7 +235,6 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClick(Click click, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
-        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
         double mouseX = click.x();
         double mouseY = click.y();
         int button = click.button();
@@ -404,7 +401,6 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "init", at = @At("HEAD"))
     public void onInit(CallbackInfo ci) {
-        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
         heldItem = Items.AIR.getDefaultStack();
         craftingHelperOverlay = null;
         classSelectionOverlay = null;
@@ -467,7 +463,6 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     private void keyPressedPre(KeyInput input, CallbackInfoReturnable<Boolean> cir) {
-        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
         int keyCode = input.key();
         int scanCode = input.scancode();
         int modifiers = input.modifiers();

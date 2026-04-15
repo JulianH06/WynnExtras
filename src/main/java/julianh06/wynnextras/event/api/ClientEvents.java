@@ -35,8 +35,5 @@ public class ClientEvents {
         ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> {
             new WorldChangeEvent().post();
         });
-
-        // ChatEvent is already posted by ChatPacketRecievedEventMixin
-        // Don't register here too or every handler fires twice
     }
 }

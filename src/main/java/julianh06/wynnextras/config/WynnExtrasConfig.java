@@ -30,9 +30,6 @@ public class WynnExtrasConfig {
 
     private static final List<Consumer<WynnExtrasConfig>> saveListeners = new ArrayList<>();
 
-    // ==================== MASTER TOGGLE ====================
-    public boolean modEnabled = true;
-
     // ==================== HIDERS ====================
     public boolean playerHiderToggle = true;
     public int maxHideDistance = 3;

@@ -1676,7 +1676,6 @@ public class BankOverlay2 extends WEHandledScreen {
      * header is drawn by drawBagOverlay in the top-right of the screen.
      */
     public static void drawVanillaBankBagsOverlay(DrawContext context, HandledScreen<?> screen) {
-        if (!WynnExtrasConfig.INSTANCE.modEnabled) return;
         if (!WynnExtrasConfig.INSTANCE.bankBagOverlay) return;
         if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) return;
 

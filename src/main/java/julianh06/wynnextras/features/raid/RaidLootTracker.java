@@ -115,7 +115,13 @@ public class RaidLootTracker {
 
             // ===== Amplifiers =====
             if (name.contains("Amplifier")) {
-                if (name.contains(" III")) {
+                if (name.contains(" IV")) {
+                    data.amplifierTier4 += count;
+                    raidData.amplifierTier4 += count;
+                    data.sessionData.amplifierTier4 += count;
+                    sessionRaidData.amplifierTier4 += count;
+                    latestRun.amplifierTier4 += count;
+                } else if (name.contains(" III")) {
                     data.amplifierTier3 += count;
                     raidData.amplifierTier3 += count;
                     data.sessionData.amplifierTier3 += count;
@@ -261,7 +267,8 @@ public class RaidLootTracker {
                                 d.getTotalAmplifiers() +
                                 " §7(I: " + d.amplifierTier1 +
                                 " | II: " + d.amplifierTier2 +
-                                " | III: " + d.amplifierTier3 + ")"
+                                " | III: " + d.amplifierTier3 +
+                                " | IV: " + d.amplifierTier4 + ")"
                 ),
                 false
         );

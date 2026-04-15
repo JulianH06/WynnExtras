@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.chat;
 
+import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -15,7 +16,6 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
 
@@ -55,41 +55,7 @@ public class ChatNotificator {
     private static void notify(Text message) {
         if(message.getString().contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
 
-        // Bomb share suggestion: player chat messages contain ":"
-        if (WynnExtrasConfig.INSTANCE.bombShareSuggestion) {
-            String msg = message.getString().toLowerCase();
-            if (msg.contains(":")) {
-                boolean excluded = false;
-                for (String ex : BOMB_EXCLUDE) { if (msg.contains(ex)) { excluded = true; break; } }
-                if (!excluded) for (String keyword : BOMB_KEYWORDS) {
-                    if (msg.contains(keyword)) {
-                        boolean lootRelated = msg.contains("loot");
-                        boolean combatRelated = msg.contains("combat");
-                        MinecraftClient.getInstance().send(() -> {
-                            var text = WynnExtras.addWynnExtrasPrefix(Text.literal(""))
-                                    .append(Text.literal("§e§n[Share all]").setStyle(Style.EMPTY
-                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild"))))
-                                    .append(Text.literal("  "));
-                            if (lootRelated) {
-                                text.append(Text.literal("§a§n[Loot only]").setStyle(Style.EMPTY
-                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild loot"))));
-                            } else if (combatRelated) {
-                                text.append(Text.literal("§a§n[Combat only]").setStyle(Style.EMPTY
-                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild combat"))));
-                            } else {
-                                text.append(Text.literal("§a§n[Prof only]").setStyle(Style.EMPTY
-                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild prof"))));
-                            }
-                            text.append(Text.literal("  "))
-                                    .append(Text.literal("§c§n[Disable]").setStyle(Style.EMPTY
-                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare disable"))));
-                            McUtils.sendMessageToClient(text);
-                        });
-                        break;
-                    }
-                }
-            }
-        }
+        handleBombshareSuggestion(message);
 
         for(String notificator : WynnExtrasConfig.INSTANCE.notifierWords) {
             if(!notificator.contains("|")) continue;
@@ -99,11 +65,10 @@ public class ChatNotificator {
             }
         }
 
-        //TODO: add twp to pv loot tracker aasdfhjk
-
         WynnExtrasConfig.INSTANCE.syncPremades();
 
         for(Map.Entry<String, Boolean> entry : WynnExtrasConfig.INSTANCE.premades.entrySet()) {
+            if(message.getString().contains(":")) continue;
 
             String[] parts = entry.getKey().split("\\|");
             if(parts.length != 2) continue;
@@ -181,9 +146,53 @@ public class ChatNotificator {
         ctx.getMatrices().pushMatrix();
         ctx.getMatrices().translate(cx, cy);
         ctx.getMatrices().scale(scale, scale);
-        int alphaInt = (int) (alpha * 255) & 0xFF;
-        int colorWithAlpha = (alphaInt << 24) | (activeColor & 0x00FFFFFF);
-        ctx.drawText(mc.textRenderer, activeText, textOffsetX, -th / 2, colorWithAlpha, true);
+        ctx.drawText(mc.textRenderer, activeText, textOffsetX, -th / 2, CustomColor.fromInt(activeColor).withAlpha(alpha).asInt(), true);
         ctx.getMatrices().popMatrix();
+    }
+
+    private static void handleBombshareSuggestion(Text message) {
+        // Bomb share suggestion: player chat messages contain ":"
+        if (!WynnExtrasConfig.INSTANCE.bombShareSuggestion) return;
+
+        String msg = message.getString().toLowerCase();
+        if (!msg.contains(":")) return;
+
+        boolean excluded = false;
+        for (String ex : BOMB_EXCLUDE) {
+            if (msg.contains(ex)) {
+                excluded = true;
+                break;
+            }
+        }
+
+        if(excluded) return;
+
+        for (String keyword : BOMB_KEYWORDS) {
+            if (!msg.contains(keyword)) continue;
+
+            boolean lootRelated = msg.contains("loot");
+            boolean combatRelated = msg.contains("combat");
+            MinecraftClient.getInstance().send(() -> {
+                var text = WynnExtras.addWynnExtrasPrefix(Text.literal(""))
+                        .append(Text.literal("§e§n[Share all]").setStyle(Style.EMPTY
+                                .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild"))))
+                        .append(Text.literal("  "));
+                if (lootRelated) {
+                    text.append(Text.literal("§a§n[Loot only]").setStyle(Style.EMPTY
+                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild loot"))));
+                } else if (combatRelated) {
+                    text.append(Text.literal("§a§n[Combat only]").setStyle(Style.EMPTY
+                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild combat"))));
+                } else {
+                    text.append(Text.literal("§a§n[Prof only]").setStyle(Style.EMPTY
+                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild prof"))));
+                }
+                text.append(Text.literal("  "))
+                        .append(Text.literal("§c§n[Disable]").setStyle(Style.EMPTY
+                                .withClickEvent(new ClickEvent.RunCommand("/we bombshare disable"))));
+                McUtils.sendMessageToClient(text);
+            });
+            break;
+        }
     }
 }
