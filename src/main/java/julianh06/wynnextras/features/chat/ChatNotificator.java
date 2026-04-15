@@ -63,15 +63,27 @@ public class ChatNotificator {
                 for (String ex : BOMB_EXCLUDE) { if (msg.contains(ex)) { excluded = true; break; } }
                 if (!excluded) for (String keyword : BOMB_KEYWORDS) {
                     if (msg.contains(keyword)) {
+                        boolean lootRelated = msg.contains("loot");
+                        boolean combatRelated = msg.contains("combat");
                         MinecraftClient.getInstance().send(() -> {
-                            McUtils.sendMessageToClient(
-                                WynnExtras.addWynnExtrasPrefix(Text.literal(""))
-                                    .append(Text.literal("§e§n[Share bombs with Guild]").setStyle(Style.EMPTY
+                            var text = WynnExtras.addWynnExtrasPrefix(Text.literal(""))
+                                    .append(Text.literal("§e§n[Share all]").setStyle(Style.EMPTY
                                         .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild"))))
-                                    .append(Text.literal("  "))
+                                    .append(Text.literal("  "));
+                            if (lootRelated) {
+                                text.append(Text.literal("§a§n[Loot only]").setStyle(Style.EMPTY
+                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild loot"))));
+                            } else if (combatRelated) {
+                                text.append(Text.literal("§a§n[Combat only]").setStyle(Style.EMPTY
+                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild combat"))));
+                            } else {
+                                text.append(Text.literal("§a§n[Prof only]").setStyle(Style.EMPTY
+                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild prof"))));
+                            }
+                            text.append(Text.literal("  "))
                                     .append(Text.literal("§c§n[Disable]").setStyle(Style.EMPTY
-                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare disable"))))
-                            );
+                                        .withClickEvent(new ClickEvent.RunCommand("/we bombshare disable"))));
+                            McUtils.sendMessageToClient(text);
                         });
                         break;
                     }
