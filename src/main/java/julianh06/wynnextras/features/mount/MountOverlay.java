@@ -108,13 +108,14 @@ public class MountOverlay {
         Map<MaterialType, MaterialStats> result = new HashMap<>();
         for (MaterialType mat : MaterialType.values()) {
             Set<MountStat> statTypesOnMaterial = mat.getStats();
-            int lowest = Integer.MAX_VALUE;
+            int highest = Integer.MIN_VALUE;
             for (MountStat stat : statTypesOnMaterial) {
-                lowest = Math.min(lowest, mountStats.get(stat).current());
+                highest = Math.max(highest, mountStats.get(stat).current());
             }
 
-            MaterialStats materialStats = MaterialStats.get(mat, lowest);
+            MaterialStats materialStats = MaterialStats.get(mat, highest);
             result.put(mat, materialStats);
+            //System.out.println(mat + " highest: " + highest + " stats: " + materialStats);
         }
         return result;
     }

@@ -14,9 +14,9 @@ public enum MaterialType {
     GEM(Gem.class, MountStat.SPEED, MountStat.ENERGY, MountStat.TRAINING),
     PLANK(Plank.class, MountStat.SPEED, MountStat.ACCELERATION, MountStat.TOUGHNESS),
     PAPER(Paper.class, MountStat.ALTITUDE, MountStat.BOOST),
-    STRING(StringMaterial.class, MountStat.ACCELERATION, MountStat.HANDLING),
+    STRING(StringMaterial.class, MountStat.ACCELERATION, MountStat.HANDLING, MountStat.BOOST),
     GRAINS(Grains.class, MountStat.SPEED, MountStat.ALTITUDE),
-    OIL(Oil.class, MountStat.ALTITUDE, MountStat.HANDLING),
+    OIL(Oil.class, MountStat.ALTITUDE, MountStat.HANDLING, MountStat.TRAINING),
     MEAT(Meat.class, MountStat.ACCELERATION, MountStat.ENERGY);
 
     private final Set<MountStat> stats = new HashSet<>();

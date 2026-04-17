@@ -125,4 +125,9 @@ public class MaterialStats {
                 ));
         return new MaterialStats(result, lvl);
     }
+
+    @Override
+    public String toString() {
+        return "level: " + level + " stats: " + stats;
+    }
 }
