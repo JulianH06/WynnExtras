@@ -20,14 +20,13 @@ import net.minecraft.util.Identifier;
 
 import java.util.*;
 import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 
 @WEModule
 public class MountOverlay {
     public record RequiredMaterialInfo(Identifier texture, String name, Integer quantity, Integer level) {}
     public record StatEntry(Integer current, Integer limit, Integer max) {}
 
-    private static Map<ItemStack, List<RequiredMaterialInfo>> cache = new HashMap<>();
+    private static final Map<ItemStack, List<RequiredMaterialInfo>> cache = new HashMap<>();
 
     public static void render(DrawContext context, int mouseX, int mouseY) {
         Screen currentScreen = MinecraftClient.getInstance().currentScreen;
@@ -103,21 +102,9 @@ public class MountOverlay {
         return result;
     }
 
-    private static Map<MaterialType, MaterialStats> findHighestLevel(Map<MountStat, StatEntry> mountStats) {
-        if (mountStats.isEmpty()) return new HashMap<>();
-        Map<MaterialType, MaterialStats> result = new HashMap<>();
-        for (MaterialType mat : MaterialType.values()) {
-            Set<MountStat> statTypesOnMaterial = mat.getStats();
-            int highest = Integer.MIN_VALUE;
-            for (MountStat stat : statTypesOnMaterial) {
-                highest = Math.max(highest, mountStats.get(stat).current());
-            }
-
-            MaterialStats materialStats = MaterialStats.get(mat, highest);
-            result.put(mat, materialStats);
-            //System.out.println(mat + " highest: " + highest + " stats: " + materialStats);
-        }
-        return result;
+    private static OptionalInt findHighestLevel(Map<MountStat, StatEntry> mountStats) {
+        if (mountStats.isEmpty()) return OptionalInt.of(0);
+        return mountStats.values().stream().mapToInt(s -> s.current).reduce(Math::max);
     }
 
     public static List<RequiredMaterialInfo> solve(Slot slot) {
@@ -126,14 +113,9 @@ public class MountOverlay {
         if (cached != null) return cached;
 
         Map<MountStat, StatEntry> goal = getStats(slot.getStack());
-        Map<MaterialType, MaterialStats> materialData = findHighestLevel(goal);
-        if (materialData.isEmpty()) return new ArrayList<>();
 
         Map<MaterialType, Integer> result = new HashMap<>();
-        Map<MaterialType, Integer> levelMap = materialData.entrySet().stream().collect(Collectors.toMap(
-                Map.Entry::getKey,
-                e -> e.getValue().getLevel()
-        ));
+        int highestLevel = findHighestLevel(goal).orElse(0);
 
         // Calculate needed for each stat
         Map<MountStat, Integer> needed = new HashMap<>();
@@ -148,7 +130,8 @@ public class MountOverlay {
             int bestScore = 0;
 
             for (MaterialType type : MaterialType.values()) {
-                MaterialStats stats = materialData.get(type);
+                MaterialStats stats = MaterialStats.get(type, highestLevel);
+                highestLevel = stats.getLevel(); // rounds it to an actual level
                 int score = 0;
                 for (Map.Entry<MountStat, Integer> need : needed.entrySet()) {
                     score += stats.getStats().getOrDefault(need.getKey(), 0);
@@ -162,7 +145,7 @@ public class MountOverlay {
             if (bestType == null) break;
 
             result.merge(bestType, 1, Integer::sum);
-            MaterialStats stats = materialData.get(bestType);
+            MaterialStats stats = MaterialStats.get(bestType, highestLevel);
             stats.getStats().forEach((stat, value) -> {
                 int remaining = needed.getOrDefault(stat, 0) - value;
                 if (remaining <= 0) needed.remove(stat);
@@ -171,10 +154,9 @@ public class MountOverlay {
         }
 
         List<RequiredMaterialInfo> finalR = new ArrayList<>();
-        result.forEach((type, quantity) -> {
-            Integer lvl = levelMap.get(type);
-            finalR.add(new RequiredMaterialInfo(type.getTexture(lvl), type.getName(lvl), quantity, lvl));
-        });
+        int lvl = highestLevel;
+        result.forEach((type, quantity) ->
+                finalR.add(new RequiredMaterialInfo(type.getTexture(lvl), type.getName(lvl), quantity, lvl)));
 
         cache.put(slot.getStack(), finalR);
         return finalR;
