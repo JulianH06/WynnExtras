@@ -20,7 +20,7 @@ import java.util.regex.Matcher;
 public class MountOverlay {
 
     @SubscribeEvent
-    public void onTick(TickEvent event) {
+    public void onTick(TickEvent event) { // TODO cache and display results
         Screen currentScreen = MinecraftClient.getInstance().currentScreen;
         if (currentScreen == null) return;
         List<Text> siblings = currentScreen.getTitle().getSiblings();
@@ -42,7 +42,8 @@ public class MountOverlay {
             Map<MountStat, StatEntry> stats = getStats(mountOne);
             Map<MaterialType, MaterialStats> materialData = findHighestLevel(stats);
 
-            //Map<MaterialType, Integer> solved = Solver.solve(stats, materialData);
+            Map<MaterialType, Integer> solved = solve(stats, materialData);
+            System.out.println("found result: " + solved);
 
         } else WynnExtras.LOGGER.warn("mount screen is not a container");
     }
@@ -85,5 +86,46 @@ public class MountOverlay {
             result.put(mat, materialStats);
         }
         return result; // TODO we also need to return the lvl
+    }
+
+    public static Map<MaterialType, Integer> solve(Map<MountStat, StatEntry> goal, Map<MaterialType, MaterialStats> materialData) {
+        Map<MaterialType, Integer> result = new HashMap<>();
+
+        // Calculate needed for each stat
+        Map<MountStat, Integer> needed = new HashMap<>();
+        for (Map.Entry<MountStat, StatEntry> entry : goal.entrySet()) {
+            int need = entry.getValue().max() - entry.getValue().limit();
+            if (need > 0) needed.put(entry.getKey(), need);
+        }
+
+        // Keep adding the most efficient material for remaining needs
+        while (!needed.isEmpty()) {
+            MaterialType bestType = null;
+            int bestScore = 0;
+
+            for (MaterialType type : MaterialType.values()) {
+                MaterialStats stats = materialData.get(type);
+                int score = 0;
+                for (Map.Entry<MountStat, Integer> need : needed.entrySet()) {
+                    score += stats.getStats().getOrDefault(need.getKey(), 0);
+                }
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestType = type;
+                }
+            }
+
+            if (bestType == null) break;
+
+            result.merge(bestType, 1, Integer::sum);
+            MaterialStats stats = materialData.get(bestType);
+            stats.getStats().forEach((stat, value) -> {
+                int remaining = needed.getOrDefault(stat, 0) - value;
+                if (remaining <= 0) needed.remove(stat);
+                else needed.put(stat, remaining);
+            });
+        }
+
+        return result;
     }
 }
