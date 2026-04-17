@@ -174,7 +174,7 @@ public class ChatNotificator {
             boolean combatRelated = msg.contains("combat");
             MinecraftClient.getInstance().send(() -> {
                 var text = WynnExtras.addWynnExtrasPrefix(Text.literal(""))
-                        .append(Text.literal("§e§n[Share all]").setStyle(Style.EMPTY
+                        .append(Text.literal("§e§n[Share all Bombs]").setStyle(Style.EMPTY
                                 .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild"))))
                         .append(Text.literal("  "));
                 if (lootRelated) {

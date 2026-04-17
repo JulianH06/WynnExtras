@@ -1696,6 +1696,12 @@ public class BankOverlay2 extends WEHandledScreen {
     private static long lastBagCacheSaveMs = 0;
     private static final long BAG_CACHE_SAVE_DEBOUNCE_MS = 2000;
 
+    // Page settle tracking: don't update bag cache until page has been stable for a few frames,
+    // otherwise Wynntils annotations haven't loaded yet and we'd overwrite good cached counts with 0.
+    private static int bagCacheLastPage = -1;
+    private static int bagCacheStableFrames = 0;
+    private static final int BAG_CACHE_SETTLE_FRAMES = 10; // ~0.5s at 20 tps
+
     /**
      * Counts CrafterBags on the current live page via Wynntils annotations (which only
      * exist for live ItemStacks, NOT deserialized ones) and stores the counts as plain
@@ -1709,6 +1715,15 @@ public class BankOverlay2 extends WEHandledScreen {
 
         int pageNum = getCurrentBankPageNumber();
         if (pageNum < 0) return;
+
+        // Wait for page to settle after navigation so Wynntils has time to annotate items.
+        // Without this, we'd overwrite cached bag counts with 0 during the transition.
+        if (pageNum != bagCacheLastPage) {
+            bagCacheLastPage = pageNum;
+            bagCacheStableFrames = 0;
+            return;
+        }
+        if (++bagCacheStableFrames < BAG_CACHE_SETTLE_FRAMES) return;
 
         List<ItemStack> live = getCurrentPageStacks();
         if (live.isEmpty()) return;

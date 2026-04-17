@@ -1,8 +1,11 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.models.character.type.ClassType;
+import com.wynntils.models.gear.type.GearType;
+import com.wynntils.models.items.WynnItem;
+import com.wynntils.models.items.items.game.GearItem;
 import com.wynntils.core.components.Models;
 import com.wynntils.utils.mc.McUtils;
+import net.minecraft.item.ItemStack;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -24,11 +27,16 @@ import net.minecraft.util.math.Box;
 import java.util.*;
 
 public class TotemTimer {
+    // Track previous selected slot so we can detect relik->relik swaps (eldritch call despawn meta)
     private static int lastSelectedSlot = -1;
-    private static int skipEstimatesTicks = 0;
-    private static final int SKIP_TICKS_AFTER_SLOT_CHANGE = 10; // ~0.5s
 
     public record TotemInfo(String owner, String timeText, boolean estimated) {}
+
+    private static boolean isRelik(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        Optional<WynnItem> opt = Models.Item.getWynnItem(stack);
+        return opt.isPresent() && opt.get() instanceof GearItem gear && gear.getGearType() == GearType.RELIK;
+    }
 
     private static float parseSeconds(String timeText) {
         String digits = timeText.replaceAll("[^0-9.]", "");
@@ -77,27 +85,24 @@ public class TotemTimer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if(client.player == null) return;
 
-
-            if(client.player.getInventory() != null) {
+            // Relik -> relik swap (despawn-eldritch-call meta) clears all totems server-side,
+            // so wipe estimates. Any other slot change is unrelated to totem state.
+            if (client.player.getInventory() != null) {
                 int currentSlot = client.player.getInventory().getSelectedSlot();
                 if (lastSelectedSlot != -1 && currentSlot != lastSelectedSlot) {
-                    estimatedTotems.clear();
-                    skipEstimatesTicks = SKIP_TICKS_AFTER_SLOT_CHANGE;
-                } else if (skipEstimatesTicks > 0) {
-                    estimatedTotems.clear();
-                    skipEstimatesTicks--;
+                    ItemStack prevStack = client.player.getInventory().getStack(lastSelectedSlot);
+                    ItemStack newStack = client.player.getInventory().getStack(currentSlot);
+                    if (isRelik(prevStack) && isRelik(newStack)) {
+                        estimatedTotems.clear();
+                    }
                 }
                 lastSelectedSlot = currentSlot;
-
             }
-
-            boolean skipEstimatesThisTick = skipEstimatesTicks > 0;
 
             totems.clear();
             warningActive = false;
             if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled) return;
             if (client.world == null || client.player == null) return;
-            if (Models.Character.getClassType() != ClassType.SHAMAN) return;
 
             tickCounter++;
             WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
@@ -160,7 +165,7 @@ public class TotemTimer {
                 foundKeys.add(key);
 
                 float secs = parseSeconds(timeText);
-                if (secs > 0 && !skipEstimatesThisTick) {
+                if (secs > 0) {
                     estimatedTotems.put(key, new float[]{ secs, tickCounter });
                 }
 
@@ -168,7 +173,7 @@ public class TotemTimer {
             }
 
             // Out-of-render estimation
-            if (c.totemTimerEstimate && !skipEstimatesThisTick) {
+            if (c.totemTimerEstimate) {
                 List<String> toRemove = new ArrayList<>();
                 for (Map.Entry<String, float[]> entry : estimatedTotems.entrySet()) {
                     String key = entry.getKey();
@@ -218,7 +223,6 @@ public class TotemTimer {
 
     private static void onSound(String path) {
         if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled || !WynnExtrasConfig.INSTANCE.totemTimerEstimate) return;
-        if (Models.Character.getClassType() != ClassType.SHAMAN) return;
         if (!path.contains("underwater.enter")) return;
 
         estimatedTotems.forEach((k, v) -> {

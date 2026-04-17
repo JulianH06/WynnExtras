@@ -30,6 +30,17 @@ public class WynnExtrasConfig {
 
     private static final List<Consumer<WynnExtrasConfig>> saveListeners = new ArrayList<>();
 
+    // ==================== MASTER TOGGLE ====================
+    public boolean modEnabled = true;
+
+    /** When non-null, WynnExtras is "disabled": stores the previous values of every boolean
+     *  field so they can be restored on re-enable. While disabled, all boolean fields are false. */
+    public HashMap<String, Boolean> disabledStateBackup = null;
+
+    /** Named bool-only profiles. Each profile maps fieldName -> value. Switching a profile
+     *  applies its bool snapshot; non-bool settings (positions, colors, etc.) are shared. */
+    public LinkedHashMap<String, HashMap<String, Boolean>> configProfiles = new LinkedHashMap<>();
+    public String activeProfile = null;
     // ==================== HIDERS ====================
     public boolean playerHiderToggle = true;
     public int maxHideDistance = 3;
@@ -347,6 +358,73 @@ public class WynnExtrasConfig {
         }
     }
 
+    public boolean isWynnExtrasEnabled() {
+        return disabledStateBackup == null;
+    }
+
+    /** Snapshots every boolean field, then sets all of them to false. */
+    public void disableWynnExtras() {
+        if (disabledStateBackup != null) return;
+        HashMap<String, Boolean> backup = new HashMap<>();
+        for (java.lang.reflect.Field field : WynnExtrasConfig.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+            if (field.getType() != boolean.class) continue;
+            try {
+                backup.put(field.getName(), field.getBoolean(this));
+                field.setBoolean(this, false);
+            } catch (IllegalAccessException ignored) {}
+        }
+        disabledStateBackup = backup;
+    }
+
+    /** Restores every boolean field from the snapshot taken in disableWynnExtras. */
+    public void enableWynnExtras() {
+        if (disabledStateBackup == null) return;
+        for (Map.Entry<String, Boolean> entry : disabledStateBackup.entrySet()) {
+            try {
+                java.lang.reflect.Field field = WynnExtrasConfig.class.getDeclaredField(entry.getKey());
+                if (field.getType() == boolean.class) {
+                    field.setBoolean(this, entry.getValue());
+                }
+            } catch (NoSuchFieldException | IllegalAccessException ignored) {}
+        }
+        disabledStateBackup = null;
+    }
+
+    // ==================== CONFIG PROFILES ====================
+    /** Snapshots all current boolean field values into a profile with the given name. */
+    public void saveCurrentAsProfile(String name) {
+        if (name == null || name.isBlank()) return;
+        HashMap<String, Boolean> snap = new HashMap<>();
+        for (java.lang.reflect.Field field : WynnExtrasConfig.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+            if (field.getType() != boolean.class) continue;
+            try { snap.put(field.getName(), field.getBoolean(this)); } catch (IllegalAccessException ignored) {}
+        }
+        configProfiles.put(name, snap);
+        activeProfile = name;
+    }
+
+    /** Applies the boolean snapshot stored under the given profile name. */
+    public void applyProfile(String name) {
+        HashMap<String, Boolean> snap = configProfiles.get(name);
+        if (snap == null) return;
+        for (Map.Entry<String, Boolean> entry : snap.entrySet()) {
+            try {
+                java.lang.reflect.Field field = WynnExtrasConfig.class.getDeclaredField(entry.getKey());
+                if (field.getType() == boolean.class) {
+                    field.setBoolean(this, entry.getValue());
+                }
+            } catch (NoSuchFieldException | IllegalAccessException ignored) {}
+        }
+        activeProfile = name;
+    }
+
+    public void deleteProfile(String name) {
+        configProfiles.remove(name);
+        if (name != null && name.equals(activeProfile)) activeProfile = null;
+    }
+
     // ==================== SAVE/LOAD ====================
     public static void load() {
         try {
@@ -367,6 +445,7 @@ public class WynnExtrasConfig {
                 if (INSTANCE.classCardOrder == null) INSTANCE.classCardOrder = new ArrayList<>();
                 if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
                 if (INSTANCE.charIdentities == null) INSTANCE.charIdentities = new HashMap<>();
+                if (INSTANCE.configProfiles == null) INSTANCE.configProfiles = new LinkedHashMap<>();
             }
         } catch (IOException e) {
             System.err.println("[WynnExtras] Failed to load config: " + e.getMessage());

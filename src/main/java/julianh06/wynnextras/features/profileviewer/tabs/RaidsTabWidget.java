@@ -43,6 +43,15 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
 
     private static Status currentStatus = Status.ALL;
 
+    /** API hasn't added TWP yet — it currently shows up under "unknown". Fall back to that key. */
+    private static long twpComps(Map<String, Integer> list) {
+        if (list == null) return 0;
+        Integer val = list.get("The Wartorn Palace");
+        if (val != null) return val;
+        val = list.get("unknown");
+        return val != null ? val : 0;
+    }
+
     private TypeSwitcher typeSwitcher;
 
     @Override
@@ -213,7 +222,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 long NOLComps = raids.getList().getOrDefault("Orphion's Nexus of Light", 0);
                 long TCCComps = raids.getList().getOrDefault("The Canyon Colossus", 0);
                 long TNAComps = raids.getList().getOrDefault("The Nameless Anomaly", 0);
-                long TWPComps = raids.getList().getOrDefault("The Wartorn Palace", 0);
+                long TWPComps = twpComps(raids.getList());
                 long TotalComps = raids.getTotal();
 
                 ui.drawText(formatter.format(NOTGComps) + " Completions", x + 240f, y + 160f, notgColor, 3f);
@@ -229,7 +238,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 long NOLComps = guildRaids.getList().getOrDefault("Orphion's Nexus of Light", 0);
                 long TCCComps = guildRaids.getList().getOrDefault("The Canyon Colossus", 0);
                 long TNAComps = guildRaids.getList().getOrDefault("The Nameless Anomaly", 0);
-                long TWPComps = guildRaids.getList().getOrDefault("The Wartorn Palace", 0);
+                long TWPComps = twpComps(guildRaids.getList());
                 long TotalComps = guildRaids.getTotal();
 
                 ui.drawText(formatter.format(NOTGComps) + " Completions", x + 240f, y + 160f, notgColor, 3f);
@@ -245,14 +254,14 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 long NOLComps = raids.getList().getOrDefault("Orphion's Nexus of Light", 0);
                 long TCCComps = raids.getList().getOrDefault("The Canyon Colossus", 0);
                 long TNAComps = raids.getList().getOrDefault("The Nameless Anomaly", 0);
-                long TWPComps = raids.getList().getOrDefault("The Wartorn Palace", 0);
+                long TWPComps = twpComps(raids.getList());
                 long TotalComps = raids.getTotal();
 
                 long NOTGGraidComps = guildRaids.getList().getOrDefault("Nest of the Grootslangs", 0);
                 long NOLGraidComps = guildRaids.getList().getOrDefault("Orphion's Nexus of Light", 0);
                 long TCCGraidComps = guildRaids.getList().getOrDefault("The Canyon Colossus", 0);
                 long TNAGraidComps = guildRaids.getList().getOrDefault("The Nameless Anomaly", 0);
-                long TWPGraidComps = guildRaids.getList().getOrDefault("The Wartorn Palace", 0);
+                long TWPGraidComps = twpComps(guildRaids.getList());
                 long TotalGraidComps = guildRaids.getTotal();
 
                 ui.drawText(formatter.format(NOTGComps - NOTGGraidComps) + " Completions", x + 240f, y + 160f, notgColor, 3f);
