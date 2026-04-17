@@ -27,7 +27,6 @@ import net.minecraft.util.math.Box;
 import java.util.*;
 
 public class TotemTimer {
-    // Track previous selected slot so we can detect relik->relik swaps (eldritch call despawn meta)
     private static int lastSelectedSlot = -1;
 
     public record TotemInfo(String owner, String timeText, boolean estimated) {}
@@ -62,6 +61,7 @@ public class TotemTimer {
 
     // Out-of-render estimation: owner -> {lastKnownSeconds, lastUpdateTick}
     private static final Map<String, float[]> estimatedTotems = new HashMap<>();
+    private static final List<String> lastFoundKeys = new ArrayList<>();
     private static long tickCounter = 0;
 
     public static List<TotemInfo> getTotems() {
@@ -85,8 +85,6 @@ public class TotemTimer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if(client.player == null) return;
 
-            // Relik -> relik swap (despawn-eldritch-call meta) clears all totems server-side,
-            // so wipe estimates. Any other slot change is unrelated to totem state.
             if (client.player.getInventory() != null) {
                 int currentSlot = client.player.getInventory().getSelectedSlot();
                 if (lastSelectedSlot != -1 && currentSlot != lastSelectedSlot) {
@@ -106,78 +104,75 @@ public class TotemTimer {
 
             tickCounter++;
             WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
-            float threshold = c.totemTimerWarningThreshold;
             String playerName = McUtils.playerName();
 
-            double px = client.player.getX(), py = client.player.getY(), pz = client.player.getZ();
-            Box searchBox = new Box(px - 64, py - 32, pz - 64, px + 64, py + 32, pz + 64);
+            if (tickCounter % 10 == 0) {
+                double px = client.player.getX(), py = client.player.getY(), pz = client.player.getZ();
+                Box searchBox = new Box(px - 64, py - 32, pz - 64, px + 64, py + 32, pz + 64);
 
-            List<DisplayEntity.TextDisplayEntity> allTdes = new ArrayList<>();
-            for (Entity e : client.world.getNonSpectatingEntities(Entity.class, searchBox)) {
-                if (e instanceof DisplayEntity.TextDisplayEntity tde) allTdes.add(tde);
-            }
-
-            // Count per-owner to distinguish multiple totems (owner#0, owner#1, etc.)
-            Map<String, Integer> ownerCounts = new HashMap<>();
-            List<String> foundKeys = new ArrayList<>();
-
-            for (DisplayEntity.TextDisplayEntity tde : allTdes) {
-                String raw = tde.getText().getString();
-                String text = Formatting.strip(raw);
-                if (text == null || (!text.contains("'s Totem") && !text.contains("' Totem"))) continue;
-
-                int idx = text.contains("'s Totem") ? text.indexOf("'s Totem") : text.indexOf("' Totem");
-                String owner = idx > 0 ? text.substring(0, idx).trim() : "?";
-
-                // Own-only filter
-                if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
-
-                String timeText = "";
-                String[] lines = text.split("\n");
-                // NEU
-                for (String line : lines) {
-                    String l = line.trim();
-                    if (!l.isEmpty() && !l.contains("'s Totem")) {
-                        String[] tokens = l.split("\\s+");
-                        timeText = tokens[tokens.length - 1];
-                        break;
-                    }
+                List<DisplayEntity.TextDisplayEntity> allTdes = new ArrayList<>();
+                for (Entity e : client.world.getNonSpectatingEntities(Entity.class, searchBox)) {
+                    if (e instanceof DisplayEntity.TextDisplayEntity tde) allTdes.add(tde);
                 }
-                if (timeText.isEmpty()) {
-                    double tx = tde.getX(), ty = tde.getY(), tz = tde.getZ();
-                    double bestDist2 = Double.MAX_VALUE;
-                    for (DisplayEntity.TextDisplayEntity other : allTdes) {
-                        if (other == tde) continue;
-                        String otherRaw = Formatting.strip(other.getText().getString());
-                        if (otherRaw == null || otherRaw.isBlank()) continue;
-                        double dx = other.getX() - tx, dy = other.getY() - ty, dz = other.getZ() - tz;
-                        double dist2 = dx * dx + dy * dy + dz * dz;
-                        if (dist2 <= 4.0 && dist2 < bestDist2) {
-                            bestDist2 = dist2;
-                            timeText = otherRaw.trim();
+
+                Map<String, Integer> ownerCounts = new HashMap<>();
+                lastFoundKeys.clear();
+
+                for (DisplayEntity.TextDisplayEntity tde : allTdes) {
+                    String raw = tde.getText().getString();
+                    String text = Formatting.strip(raw);
+                    if (text == null || (!text.contains("'s Totem") && !text.contains("' Totem"))) continue;
+
+                    int idx = text.contains("'s Totem") ? text.indexOf("'s Totem") : text.indexOf("' Totem");
+                    String owner = idx > 0 ? text.substring(0, idx).trim() : "?";
+
+                    if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
+
+                    String timeText = "";
+                    String[] lines = text.split("\n");
+                    for (String line : lines) {
+                        String l = line.trim();
+                        if (!l.isEmpty() && !l.contains("'s Totem")) {
+                            String[] tokens = l.split("\\s+");
+                            timeText = tokens[tokens.length - 1];
+                            break;
                         }
                     }
+                    if (timeText.isEmpty()) {
+                        double tx = tde.getX(), ty = tde.getY(), tz = tde.getZ();
+                        double bestDist2 = Double.MAX_VALUE;
+                        for (DisplayEntity.TextDisplayEntity other : allTdes) {
+                            if (other == tde) continue;
+                            String otherRaw = Formatting.strip(other.getText().getString());
+                            if (otherRaw == null || otherRaw.isBlank()) continue;
+                            double dx = other.getX() - tx, dy = other.getY() - ty, dz = other.getZ() - tz;
+                            double dist2 = dx * dx + dy * dy + dz * dz;
+                            if (dist2 <= 4.0 && dist2 < bestDist2) {
+                                bestDist2 = dist2;
+                                timeText = otherRaw.trim();
+                            }
+                        }
+                    }
+
+                    int num = ownerCounts.getOrDefault(owner, 0);
+                    ownerCounts.put(owner, num + 1);
+                    String key = owner + "#" + num;
+                    lastFoundKeys.add(key);
+
+                    float secs = parseSeconds(timeText);
+                    if (secs > 0) {
+                        estimatedTotems.put(key, new float[]{ secs, tickCounter });
+                    }
+
+                    totems.add(new TotemInfo(owner, timeText, false));
                 }
-
-                int num = ownerCounts.getOrDefault(owner, 0);
-                ownerCounts.put(owner, num + 1);
-                String key = owner + "#" + num;
-                foundKeys.add(key);
-
-                float secs = parseSeconds(timeText);
-                if (secs > 0) {
-                    estimatedTotems.put(key, new float[]{ secs, tickCounter });
-                }
-
-                totems.add(new TotemInfo(owner, timeText, false));
             }
 
-            // Out-of-render estimation
             if (c.totemTimerEstimate) {
                 List<String> toRemove = new ArrayList<>();
                 for (Map.Entry<String, float[]> entry : estimatedTotems.entrySet()) {
                     String key = entry.getKey();
-                    if (foundKeys.contains(key)) continue;
+                    if (lastFoundKeys.contains(key)) continue;
                     String owner = key.contains("#") ? key.substring(0, key.lastIndexOf('#')) : key;
                     if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
 
@@ -198,7 +193,7 @@ public class TotemTimer {
                 toRemove.forEach(estimatedTotems::remove);
             }
 
-            // Check warning condition
+            float threshold = c.totemTimerWarningThreshold;
             if (c.totemTimerWarningText || c.totemTimerWarningSound) {
                 for (TotemInfo t : totems) {
                     float secs = parseSeconds(t.timeText());

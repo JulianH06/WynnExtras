@@ -16,11 +16,25 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static julianh06.wynnextras.features.render.PlayerRenderFilter.*;
 
 public class PlayerHider {
+    private static Set<String> hiddenPlayersLower = new HashSet<>();
+    private static int lastHiddenListSize = -1;
+
+    private static void rebuildHiddenSet() {
+        List<String> list = WynnExtrasConfig.INSTANCE.hiddenPlayers;
+        if (list.size() != lastHiddenListSize) {
+            hiddenPlayersLower = new HashSet<>();
+            for (String name : list) hiddenPlayersLower.add(name.toLowerCase());
+            lastHiddenListSize = list.size();
+        }
+    }
+
     private static SubCommand toggleSubCmd;
 
     private static SubCommand addSubCmd;
@@ -174,13 +188,11 @@ public class PlayerHider {
                     continue;
                 }
 
-                // Check if in war and hideAllInWar is enabled
                 boolean inWarAndHiding = WynnExtrasConfig.INSTANCE.hideAllPlayersInWar && Models.War.isWarActive();
 
-                // Hide all players mode, in war mode, or specific player in list
+                rebuildHiddenSet();
                 String playerName = player.getName().getString().toLowerCase();
-                boolean inList = WynnExtrasConfig.INSTANCE.hiddenPlayers.stream()
-                        .anyMatch(name -> name.equalsIgnoreCase(playerName));
+                boolean inList = hiddenPlayersLower.contains(playerName);
                 if(WynnExtrasConfig.INSTANCE.hideAllPlayers || inWarAndHiding || inList) {
                     hide(player);
                 } else {

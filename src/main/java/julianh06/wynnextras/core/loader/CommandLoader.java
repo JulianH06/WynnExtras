@@ -138,6 +138,35 @@ public class CommandLoader implements WELoader {
             base = base.then(bombshare);
             alias = alias.then(bombshare);
 
+            var hide = ClientCommandManager.literal("hide")
+                    .executes(ctx -> {
+                        WynnExtrasConfig.INSTANCE.playerHiderToggle = !WynnExtrasConfig.INSTANCE.playerHiderToggle;
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                WynnExtrasConfig.INSTANCE.playerHiderToggle ? "§aEnabled Player Hider" : "§cDisabled Player Hider"));
+                        WynnExtrasConfig.save();
+                        return 1;
+                    })
+                    .then(ClientCommandManager.literal("war").executes(ctx -> {
+                        WynnExtrasConfig.INSTANCE.hideAllPlayersInWar = !WynnExtrasConfig.INSTANCE.hideAllPlayersInWar;
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                WynnExtrasConfig.INSTANCE.hideAllPlayersInWar
+                                        ? "§aEnabled Hide All Players in Wars (range: " + WynnExtrasConfig.INSTANCE.maxHideDistance + ")"
+                                        : "§cDisabled Hide All Players in Wars"));
+                        WynnExtrasConfig.save();
+                        return 1;
+                    }))
+                    .then(ClientCommandManager.literal("all").executes(ctx -> {
+                        WynnExtrasConfig.INSTANCE.hideAllPlayers = !WynnExtrasConfig.INSTANCE.hideAllPlayers;
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                WynnExtrasConfig.INSTANCE.hideAllPlayers
+                                        ? "§aEnabled Hide All Players (range: " + WynnExtrasConfig.INSTANCE.maxHideDistance + ")"
+                                        : "§cDisabled Hide All Players"));
+                        WynnExtrasConfig.save();
+                        return 1;
+                    }));
+            base = base.then(hide);
+            alias = alias.then(hide);
+
             dispatcher.register(base);
             dispatcher.register(baseLowerCase);
             dispatcher.register(alias);

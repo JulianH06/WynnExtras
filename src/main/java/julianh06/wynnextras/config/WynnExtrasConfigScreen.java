@@ -157,6 +157,20 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.toggleRaidLootTracker))
                 .add(visibleWhen(text("The Tracker is movable", "To change its position open your inventory and drag it where you want"),
                         () -> config.toggleRaidLootTracker))
+                .sub("Session Tracker")
+                .add(toggle("Enable Session Tracker", "Track raids per hour, completions, fails, and avg time",
+                        () -> config.raidSessionEnabled, v -> config.raidSessionEnabled = v))
+                .add(visibleWhen(toggle("Only show in raid", "Only display the HUD while inside a raid",
+                        () -> config.raidSessionOnlyInRaid, v -> config.raidSessionOnlyInRaid = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Only show in inventory", "Only display the HUD while inventory is open",
+                        () -> config.raidSessionOnlyInInventory, v -> config.raidSessionOnlyInInventory = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(sliderF("HUD Scale", "Scale of the session tracker HUD", 0.5f, 3.0f, 0.1f,
+                        () -> config.raidSessionHudScale, v -> config.raidSessionHudScale = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(text("Movable in inventory", "Open inventory to drag the tracker or click [ADD]/[X]/[||] buttons"),
+                        () -> config.raidSessionEnabled))
                 .sub("TNA Tree Room Map")
                 .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
                         () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))

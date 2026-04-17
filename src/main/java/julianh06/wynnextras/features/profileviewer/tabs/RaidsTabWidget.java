@@ -43,7 +43,6 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
 
     private static Status currentStatus = Status.ALL;
 
-    /** API hasn't added TWP yet — it currently shows up under "unknown". Fall back to that key. */
     private static long twpComps(Map<String, Integer> list) {
         if (list == null) return 0;
         Integer val = list.get("The Wartorn Palace");

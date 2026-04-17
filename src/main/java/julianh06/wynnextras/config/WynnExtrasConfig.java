@@ -141,6 +141,12 @@ public class WynnExtrasConfig {
     public List<String> raidLootTrackerHiddenLines = new ArrayList<>();
     public boolean raidLootTrackerBackground = true;
     public RaidLootTrackerOverlay.mode raidLootTrackerMode = RaidLootTrackerOverlay.mode.ALL;
+    public boolean raidSessionEnabled = false;
+    public boolean raidSessionOnlyInRaid = false;
+    public boolean raidSessionOnlyInInventory = false;
+    public int raidSessionHudX = 4;
+    public int raidSessionHudY = 270;
+    public float raidSessionHudScale = 1.0f;
     public boolean toggleFastRequeue = true;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();

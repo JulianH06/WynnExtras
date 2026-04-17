@@ -181,6 +181,7 @@ public class WynnExtras implements ClientModInitializer {
 		maintracking.init();
         RaidLootTracker.register();
         RaidLootTrackerOverlay.register();
+        RaidSessionTracker.register();
         RaidLootConfig.INSTANCE.load();
 		MaterialTextureResolver.register();
 		RecipeLoader.loadRecipes();

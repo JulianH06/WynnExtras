@@ -19,7 +19,6 @@ import net.minecraft.client.render.RenderTickCounter;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -524,25 +523,6 @@ public class ProfessionOverlay {
             drawLine(ctx, mc, line5goal, baseX, baseY, lineH, lineIdx++, scale, goalColor);
         }
 
-        // Line 6: Inventory crafts remaining (weaponsmithing dagger only)
-        if (lastProfession != null && lastProfession.getDisplayName().equals("Weaponsmithing")) {
-            int[] mats = countDaggerMats();
-            if (mats != null) {
-                int craftsLeft = Math.min(mats[0] / 6, Math.min(mats[1] / 3, mats[2] / 6));
-
-                MutableText invText = Text.empty();
-                invText.append(Text.literal("Ingot: ").formatted(Formatting.GRAY));
-                invText.append(Text.literal(String.valueOf(mats[0])).formatted(mats[0] < 10 ? Formatting.RED : Formatting.GREEN));
-                invText.append(Text.literal(" | Wood: ").formatted(Formatting.GRAY));
-                invText.append(Text.literal(String.valueOf(mats[1])).formatted(mats[1] < 10 ? Formatting.RED : Formatting.GREEN));
-                invText.append(Text.literal(" | Ing: ").formatted(Formatting.GRAY));
-                invText.append(Text.literal(String.valueOf(mats[2])).formatted(mats[2] < 10 ? Formatting.RED : Formatting.GREEN));
-                invText.append(Text.literal(" | Crafts: ").formatted(Formatting.GRAY));
-                invText.append(Text.literal(String.valueOf(craftsLeft)).formatted(craftsLeft < 3 ? Formatting.RED : Formatting.WHITE));
-
-                drawLineText(ctx, mc, invText, baseX, baseY, lineH, lineIdx++, scale);
-            }
-        }
     }
 
     private static void drawLine(DrawContext ctx, MinecraftClient mc, String text, int baseX, int baseY, int lineH, int lineIdx, float scale, int color) {
@@ -559,43 +539,6 @@ public class ProfessionOverlay {
         ctx.getMatrices().scale(scale, scale);
         ctx.drawText(mc.textRenderer, text.asOrderedText(), 0, 0, 0xFFFFFFFF, true);
         ctx.getMatrices().popMatrix();
-    }
-
-    /**
-     * Count weaponsmithing dagger materials in player inventory.
-     * Dagger recipe: 6 ingots, 3 wood, 6 weaponsmithing ingredients.
-     * @return [ingots, wood, ingredients] or null if player unavailable
-     */
-    private static int[] countDaggerMats() {
-        var player = MinecraftClient.getInstance().player;
-        if (player == null) return null;
-
-        int ingots = 0, wood = 0, ingredients = 0;
-
-        for (int i = 0; i < player.getInventory().size(); i++) {
-            ItemStack stack = player.getInventory().getStack(i);
-            if (stack.isEmpty()) continue;
-
-            List<Text> tooltip = stack.getTooltip(Item.TooltipContext.DEFAULT, player, TooltipType.BASIC);
-            if (tooltip.isEmpty()) continue;
-
-            String name = tooltip.getFirst().getString();
-
-            if (name.contains("Ingot")) {
-                ingots += stack.getCount();
-            } else if (name.contains("Wood")) {
-                wood += stack.getCount();
-            } else {
-                for (Text line : tooltip) {
-                    if (line.getString().contains("Weaponsmithing")) {
-                        ingredients += stack.getCount();
-                        break;
-                    }
-                }
-            }
-        }
-
-        return new int[]{ingots, wood, ingredients};
     }
 
     private static String formatTime(double hours) {

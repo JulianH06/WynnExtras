@@ -34,6 +34,14 @@ public class BloodSorrowTimer {
     private static int skipEstimatesTicks = 0;
     private static final int SKIP_TICKS_AFTER_SLOT_CHANGE = 10; // ~0.5s
 
+    private static int cachedAcolyteBonus = -1;
+    private static String cachedAcolyteBonusClassId = null;
+
+    public static void invalidateAcolyteCache() {
+        cachedAcolyteBonus = -1;
+        cachedAcolyteBonusClassId = null;
+    }
+
     private static int getAcolyteBonus() {
         if(!WynnExtrasConfig.INSTANCE.autoDetectBloodSorrowTime && !WynnExtrasConfig.INSTANCE.autoDetectAcolyteAspectTier) {
             return switch (WynnExtrasConfig.INSTANCE.acolyteAspect) {
@@ -45,6 +53,10 @@ public class BloodSorrowTimer {
 
         String classId = BankOverlay.currentCharacterID;
         if (classId == null || classId.isEmpty()) return 0;
+
+        if (cachedAcolyteBonus >= 0 && classId.equals(cachedAcolyteBonusClassId)) {
+            return cachedAcolyteBonus;
+        }
 
         Map<String, String> active = LocalAspectStorage.loadActiveAspects(classId);
 
@@ -58,6 +70,9 @@ public class BloodSorrowTimer {
             else if (tierLine.contains("Tier II")) result = 250;
             else if (tierLine.contains("Tier I")) result = 250;
         }
+
+        cachedAcolyteBonus = result;
+        cachedAcolyteBonusClassId = classId;
         return result;
     }
 
