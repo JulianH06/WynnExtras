@@ -22,7 +22,7 @@ public enum MountStat {
         display.addAll(Arrays.stream(names).collect(Collectors.toSet()));
     }
 
-    public static Pattern PATTERN = Pattern.compile(
+    public static final Pattern PATTERN = Pattern.compile(
             "(?<stat>Speed|Acceleration|Altitude|Jump Height|Energy|Handling|Toughness|Boost|Training)[^\\d/()]+" +
                     "(?<current>\\d+)/(?<limit>\\d+) \\(\\s*(?<max>\\d+)\\)\\D+"
     );

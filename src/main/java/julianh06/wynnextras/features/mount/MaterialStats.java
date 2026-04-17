@@ -57,16 +57,23 @@ public class MaterialStats {
     }
 
     private final Map<MountStat, Integer> stats = new HashMap<>();
+    private final int level;
 
     private MaterialStats() {
+        this.level = -1;
     }
 
-    private MaterialStats(Map<MountStat, Integer> other) {
+    private MaterialStats(Map<MountStat, Integer> other, int level) {
         this.stats.putAll(other);
+        this.level = level;
     }
 
     public Map<MountStat, Integer> getStats() {
         return stats;
+    }
+
+    public int getLevel() {
+        return level;
     }
 
     private MaterialStats speed(int value) {
@@ -116,6 +123,6 @@ public class MaterialStats {
                         Map.Entry::getKey,
                         entry -> lvlMapping.fromInt(entry.getValue())
                 ));
-        return new MaterialStats(result);
+        return new MaterialStats(result, lvl);
     }
 }

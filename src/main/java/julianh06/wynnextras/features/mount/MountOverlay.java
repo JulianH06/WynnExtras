@@ -1,9 +1,14 @@
 package julianh06.wynnextras.features.mount;
 
+import com.wynntils.utils.colors.CustomColor;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.event.TickEvent;
+import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
+import julianh06.wynnextras.utils.UI.UIUtils;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.item.Item;
@@ -11,18 +16,26 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
-import net.neoforged.bus.api.SubscribeEvent;
+import net.minecraft.util.Identifier;
 
 import java.util.*;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 
 @WEModule
 public class MountOverlay {
+    public record RequiredMaterialInfo(Identifier texture, String name, Integer quantity, Integer level) {}
+    public record StatEntry(Integer current, Integer limit, Integer max) {}
 
-    @SubscribeEvent
-    public void onTick(TickEvent event) { // TODO cache and display results
+    private static Map<ItemStack, List<RequiredMaterialInfo>> cache = new HashMap<>();
+
+    public static void render(DrawContext context, int mouseX, int mouseY) {
         Screen currentScreen = MinecraftClient.getInstance().currentScreen;
-        if (currentScreen == null) return;
+        if (currentScreen == null) {
+            cache.clear();
+            return;
+        }
+        if (!WynnExtrasConfig.INSTANCE.showMountHelper) return;
         List<Text> siblings = currentScreen.getTitle().getSiblings();
         if (siblings == null || siblings.isEmpty()) return;
         if (!siblings.getFirst().getString().equals("\uDAFF\uDFED\uE058")) return;
@@ -33,22 +46,39 @@ public class MountOverlay {
                 WynnExtras.LOGGER.warn("Found to small mount container");
                 return;
             }
-            ItemStack mountOne = slots.get(9).getStack();
-            ItemStack mountTwo = slots.get(18).getStack();
-            ItemStack mountThree = slots.get(27).getStack();
-            ItemStack mountFour = slots.get(36).getStack();
-            ItemStack mountFive = slots.get(45).getStack();
 
-            Map<MountStat, StatEntry> stats = getStats(mountOne);
-            Map<MaterialType, MaterialStats> materialData = findHighestLevel(stats);
-
-            Map<MaterialType, Integer> solved = solve(stats, materialData);
-            System.out.println("found result: " + solved);
+            renderMaterialReqs(context, container, slots.get(9), mouseX, mouseY);
+            renderMaterialReqs(context, container, slots.get(18), mouseX, mouseY);
+            renderMaterialReqs(context, container, slots.get(27), mouseX, mouseY);
+            renderMaterialReqs(context, container, slots.get(36), mouseX, mouseY);
+            renderMaterialReqs(context, container, slots.get(45), mouseX, mouseY);
 
         } else WynnExtras.LOGGER.warn("mount screen is not a container");
     }
 
-    public Map<MountStat, StatEntry> getStats(ItemStack stack) {
+    public static void renderMaterialReqs(DrawContext context, GenericContainerScreen container, Slot slot, int mouseX, int mouseY) {
+        HandledScreenAccessor screen = (HandledScreenAccessor) container;
+        List<RequiredMaterialInfo> solved = solve(slot);
+        UIUtils ui = new UIUtils(context, 1, 0, 0);
+        Text hoverText = null;
+        for (int i = 0; i < solved.size(); i++) {
+            int xPos = screen.getX() + slot.x - i * 20 - 30;
+            int yPos = screen.getY() + slot.y;
+            RequiredMaterialInfo info = solved.get(i);
+            ui.drawImage(info.texture, xPos, yPos, 16, 16);
+            ui.drawText(Text.literal(String.valueOf(info.quantity)), xPos + 10, yPos + 10, CustomColor.NONE, 1f);
+            if (mouseX > xPos && mouseX < xPos + 16 && mouseY > yPos && mouseY < yPos + 16) {
+                hoverText = Text.literal(info.quantity + "x " + info.name + " (lvl " + info.level + ")");
+            }
+        }
+        if (hoverText != null) {
+            TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
+            int width = textRenderer.getWidth(hoverText.getString());
+            ui.drawText(hoverText, mouseX - width, mouseY - textRenderer.fontHeight, CustomColor.NONE, 1f);
+        }
+    }
+
+    public static Map<MountStat, StatEntry> getStats(ItemStack stack) {
         List<Text> tooltip = stack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
         Map<MountStat, StatEntry> result = new HashMap<>();
 
@@ -73,7 +103,8 @@ public class MountOverlay {
         return result;
     }
 
-    private Map<MaterialType, MaterialStats> findHighestLevel(Map<MountStat, StatEntry> mountStats) {
+    private static Map<MaterialType, MaterialStats> findHighestLevel(Map<MountStat, StatEntry> mountStats) {
+        if (mountStats.isEmpty()) return new HashMap<>();
         Map<MaterialType, MaterialStats> result = new HashMap<>();
         for (MaterialType mat : MaterialType.values()) {
             Set<MountStat> statTypesOnMaterial = mat.getStats();
@@ -85,11 +116,23 @@ public class MountOverlay {
             MaterialStats materialStats = MaterialStats.get(mat, lowest);
             result.put(mat, materialStats);
         }
-        return result; // TODO we also need to return the lvl
+        return result;
     }
 
-    public static Map<MaterialType, Integer> solve(Map<MountStat, StatEntry> goal, Map<MaterialType, MaterialStats> materialData) {
+    public static List<RequiredMaterialInfo> solve(Slot slot) {
+        if (slot.getStack() == null) return new ArrayList<>();
+        var cached = cache.get(slot.getStack());
+        if (cached != null) return cached;
+
+        Map<MountStat, StatEntry> goal = getStats(slot.getStack());
+        Map<MaterialType, MaterialStats> materialData = findHighestLevel(goal);
+        if (materialData.isEmpty()) return new ArrayList<>();
+
         Map<MaterialType, Integer> result = new HashMap<>();
+        Map<MaterialType, Integer> levelMap = materialData.entrySet().stream().collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> e.getValue().getLevel()
+        ));
 
         // Calculate needed for each stat
         Map<MountStat, Integer> needed = new HashMap<>();
@@ -126,6 +169,13 @@ public class MountOverlay {
             });
         }
 
-        return result;
+        List<RequiredMaterialInfo> finalR = new ArrayList<>();
+        result.forEach((type, quantity) -> {
+            Integer lvl = levelMap.get(type);
+            finalR.add(new RequiredMaterialInfo(type.getTexture(lvl), type.getName(lvl), quantity, lvl));
+        });
+
+        cache.put(slot.getStack(), finalR);
+        return finalR;
     }
 }

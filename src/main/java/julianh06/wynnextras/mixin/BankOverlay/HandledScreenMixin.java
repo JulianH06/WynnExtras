@@ -20,6 +20,7 @@ import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.misc.CompassMenuOverlay;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
+import julianh06.wynnextras.features.mount.MountOverlay;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -74,6 +75,7 @@ public abstract class HandledScreenMixin {
     
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        MountOverlay.render(context, mouseX, mouseY);
         // Only create BankOverlay2 for bank-type containers to avoid expensive
         // initialization (WynncraftItemDatabase.initialize()) on every GUI open
         if (isBankScreen == null) {

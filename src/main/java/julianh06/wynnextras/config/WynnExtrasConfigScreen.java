@@ -253,7 +253,9 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
                         () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
-                .add(text("The preview is movable", "To change its position just drag it where you want"));
+                .add(text("The preview is movable", "To change its position just drag it where you want"))
+                .add(toggle("Show Mount Helper", "Renders the needed materials to max out a mounts stats in the feeder",
+                        () -> config.showMountHelper, v -> config.showMountHelper = v));
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)
