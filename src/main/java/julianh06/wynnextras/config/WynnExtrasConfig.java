@@ -148,6 +148,8 @@ public class WynnExtrasConfig {
     public int raidSessionHudY = 270;
     public float raidSessionHudScale = 1.0f;
     public boolean toggleFastRequeue = true;
+    public boolean quickRepairEnabled = true;
+    public int quickRepairKey = org.lwjgl.glfw.GLFW.GLFW_KEY_R;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
     public boolean chiropTimer = false;

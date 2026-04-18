@@ -97,75 +97,93 @@ public class TotemTimer {
                 lastSelectedSlot = currentSlot;
             }
 
-            totems.clear();
             warningActive = false;
-            if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled) return;
-            if (client.world == null || client.player == null) return;
+            if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled) { totems.clear(); return; }
+            if (client.world == null || client.player == null) { totems.clear(); return; }
 
             tickCounter++;
             WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
             String playerName = McUtils.playerName();
 
-            if (tickCounter % 10 == 0) {
-                double px = client.player.getX(), py = client.player.getY(), pz = client.player.getZ();
-                Box searchBox = new Box(px - 64, py - 32, pz - 64, px + 64, py + 32, pz + 64);
-
-                List<DisplayEntity.TextDisplayEntity> allTdes = new ArrayList<>();
-                for (Entity e : client.world.getNonSpectatingEntities(Entity.class, searchBox)) {
-                    if (e instanceof DisplayEntity.TextDisplayEntity tde) allTdes.add(tde);
+            // Warning check + sound runs every tick
+            if (c.totemTimerWarningText || c.totemTimerWarningSound) {
+                float threshold = c.totemTimerWarningThreshold;
+                for (TotemInfo t : totems) {
+                    float secs = parseSeconds(t.timeText());
+                    if (secs > 0 && secs <= threshold) {
+                        warningActive = true;
+                        break;
+                    }
                 }
+            }
+            if (warningActive && c.totemTimerWarningSound) {
+                McUtils.playSoundAmbient(
+                    SoundEvent.of(Identifier.of("block.note_block.pling")),
+                    c.totemTimerWarningSoundVolume / 100, 2.0f
+                );
+            }
 
-                Map<String, Integer> ownerCounts = new HashMap<>();
-                lastFoundKeys.clear();
+            if (tickCounter % 10 != 0) return;
 
-                for (DisplayEntity.TextDisplayEntity tde : allTdes) {
-                    String raw = tde.getText().getString();
-                    String text = Formatting.strip(raw);
-                    if (text == null || (!text.contains("'s Totem") && !text.contains("' Totem"))) continue;
+            totems.clear();
+            double px = client.player.getX(), py = client.player.getY(), pz = client.player.getZ();
+            Box searchBox = new Box(px - 64, py - 32, pz - 64, px + 64, py + 32, pz + 64);
 
-                    int idx = text.contains("'s Totem") ? text.indexOf("'s Totem") : text.indexOf("' Totem");
-                    String owner = idx > 0 ? text.substring(0, idx).trim() : "?";
+            List<DisplayEntity.TextDisplayEntity> allTdes = new ArrayList<>();
+            for (Entity e : client.world.getNonSpectatingEntities(Entity.class, searchBox)) {
+                if (e instanceof DisplayEntity.TextDisplayEntity tde) allTdes.add(tde);
+            }
 
-                    if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
+            Map<String, Integer> ownerCounts = new HashMap<>();
+            lastFoundKeys.clear();
 
-                    String timeText = "";
-                    String[] lines = text.split("\n");
-                    for (String line : lines) {
-                        String l = line.trim();
-                        if (!l.isEmpty() && !l.contains("'s Totem")) {
-                            String[] tokens = l.split("\\s+");
-                            timeText = tokens[tokens.length - 1];
-                            break;
+            for (DisplayEntity.TextDisplayEntity tde : allTdes) {
+                String raw = tde.getText().getString();
+                String text = Formatting.strip(raw);
+                if (text == null || (!text.contains("'s Totem") && !text.contains("' Totem"))) continue;
+
+                int idx = text.contains("'s Totem") ? text.indexOf("'s Totem") : text.indexOf("' Totem");
+                String owner = idx > 0 ? text.substring(0, idx).trim() : "?";
+
+                if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
+
+                String timeText = "";
+                String[] lines = text.split("\n");
+                for (String line : lines) {
+                    String l = line.trim();
+                    if (!l.isEmpty() && !l.contains("'s Totem")) {
+                        String[] tokens = l.split("\\s+");
+                        timeText = tokens[tokens.length - 1];
+                        break;
+                    }
+                }
+                if (timeText.isEmpty()) {
+                    double tx = tde.getX(), ty = tde.getY(), tz = tde.getZ();
+                    double bestDist2 = Double.MAX_VALUE;
+                    for (DisplayEntity.TextDisplayEntity other : allTdes) {
+                        if (other == tde) continue;
+                        String otherRaw = Formatting.strip(other.getText().getString());
+                        if (otherRaw == null || otherRaw.isBlank()) continue;
+                        double dx = other.getX() - tx, dy = other.getY() - ty, dz = other.getZ() - tz;
+                        double dist2 = dx * dx + dy * dy + dz * dz;
+                        if (dist2 <= 4.0 && dist2 < bestDist2) {
+                            bestDist2 = dist2;
+                            timeText = otherRaw.trim();
                         }
                     }
-                    if (timeText.isEmpty()) {
-                        double tx = tde.getX(), ty = tde.getY(), tz = tde.getZ();
-                        double bestDist2 = Double.MAX_VALUE;
-                        for (DisplayEntity.TextDisplayEntity other : allTdes) {
-                            if (other == tde) continue;
-                            String otherRaw = Formatting.strip(other.getText().getString());
-                            if (otherRaw == null || otherRaw.isBlank()) continue;
-                            double dx = other.getX() - tx, dy = other.getY() - ty, dz = other.getZ() - tz;
-                            double dist2 = dx * dx + dy * dy + dz * dz;
-                            if (dist2 <= 4.0 && dist2 < bestDist2) {
-                                bestDist2 = dist2;
-                                timeText = otherRaw.trim();
-                            }
-                        }
-                    }
-
-                    int num = ownerCounts.getOrDefault(owner, 0);
-                    ownerCounts.put(owner, num + 1);
-                    String key = owner + "#" + num;
-                    lastFoundKeys.add(key);
-
-                    float secs = parseSeconds(timeText);
-                    if (secs > 0) {
-                        estimatedTotems.put(key, new float[]{ secs, tickCounter });
-                    }
-
-                    totems.add(new TotemInfo(owner, timeText, false));
                 }
+
+                int num = ownerCounts.getOrDefault(owner, 0);
+                ownerCounts.put(owner, num + 1);
+                String key = owner + "#" + num;
+                lastFoundKeys.add(key);
+
+                float secs = parseSeconds(timeText);
+                if (secs > 0) {
+                    estimatedTotems.put(key, new float[]{ secs, tickCounter });
+                }
+
+                totems.add(new TotemInfo(owner, timeText, false));
             }
 
             if (c.totemTimerEstimate) {
@@ -193,24 +211,6 @@ public class TotemTimer {
                 toRemove.forEach(estimatedTotems::remove);
             }
 
-            float threshold = c.totemTimerWarningThreshold;
-            if (c.totemTimerWarningText || c.totemTimerWarningSound) {
-                for (TotemInfo t : totems) {
-                    float secs = parseSeconds(t.timeText());
-                    if (secs > 0 && secs <= threshold) {
-                        warningActive = true;
-                        break;
-                    }
-                }
-            }
-
-            // Play warning sound
-            if (warningActive && c.totemTimerWarningSound) {
-                McUtils.playSoundAmbient(
-                    SoundEvent.of(Identifier.of("block.note_block.pling")),
-                    c.totemTimerWarningSoundVolume / 100, 2.0f
-                );
-            }
         });
 
         HudRenderCallback.EVENT.register(TotemTimer::renderHud);

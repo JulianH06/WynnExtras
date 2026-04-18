@@ -22,6 +22,7 @@ public class RaidSessionTracker {
     private static final List<Session> sessions = new ArrayList<>();
     private static boolean wasInRaid = false;
     private static boolean lastRaidCompleted = false;
+    private static long hudTickCounter = 0;
     private static boolean wasClicking = false;
     private static boolean dragging = false;
     private static double dragOffX = 0, dragOffY = 0;
@@ -39,6 +40,7 @@ public class RaidSessionTracker {
         long manualPauseStart = 0;
         long totalRunTimeMs = 0;
         int timedRunCount = 0;
+        String cachedStatsLine = "";
 
         Session() {
             startTime = System.currentTimeMillis();
@@ -196,10 +198,16 @@ public class RaidSessionTracker {
             }
         });
 
-        // Detect raid start + auto-start first session
+        // Detect raid start + auto-start first session + refresh cached stats
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (!WynnExtrasConfig.INSTANCE.raidSessionEnabled) return;
             if (client.player == null) return;
+            hudTickCounter++;
+            if (hudTickCounter % 20 == 0) {
+                for (int i = 0; i < sessions.size(); i++) {
+                    sessions.get(i).cachedStatsLine = sessions.get(i).buildStatsLine(i);
+                }
+            }
             try {
                 boolean inRaid = Models.Raid.getCurrentRaid() != null;
                 if (inRaid && !wasInRaid) {
@@ -299,7 +307,7 @@ public class RaidSessionTracker {
 
         for (int i = 0; i < sessions.size(); i++) {
             Session s = sessions.get(i);
-            String line = s.buildStatsLine(i);
+            String line = s.cachedStatsLine.isEmpty() ? s.buildStatsLine(i) : s.cachedStatsLine;
             int lineColor = s.manuallyPaused ? 0xFFFFFF66 : 0xFFAAFFAA;
             int y = i * LINE_HEIGHT;
 

@@ -19,6 +19,12 @@ import julianh06.wynnextras.event.CommandRegistrationEvent;
 import julianh06.wynnextras.features.aspects.ScreenTitleDebugger;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.features.profileviewer.data.CharacterData;
+import julianh06.wynnextras.features.profileviewer.data.PlayerData;
+import julianh06.wynnextras.features.profileviewer.data.Profession;
+import julianh06.wynnextras.features.profileviewer.data.Raids;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
@@ -167,6 +173,14 @@ public class CommandLoader implements WELoader {
             base = base.then(hide);
             alias = alias.then(hide);
 
+            var changelog = ClientCommandManager.literal("changelog").executes(ctx -> {
+                MinecraftClient.getInstance().send(() ->
+                        MinecraftClient.getInstance().setScreen(new julianh06.wynnextras.config.ChangelogScreen()));
+                return 1;
+            });
+            base = base.then(changelog);
+            alias = alias.then(changelog);
+
             dispatcher.register(base);
             dispatcher.register(baseLowerCase);
             dispatcher.register(alias);
@@ -185,6 +199,20 @@ public class CommandLoader implements WELoader {
                                                 return 1;
                                             })
                             )
+            );
+
+            dispatcher.register(
+                    ClientCommandManager.literal("ri")
+                            .executes(ctx -> { sendRaidInfo(McUtils.playerName()); return 1; })
+                            .then(ClientCommandManager.argument("player", StringArgumentType.word())
+                                    .executes(ctx -> { sendRaidInfo(StringArgumentType.getString(ctx, "player")); return 1; }))
+            );
+
+            dispatcher.register(
+                    ClientCommandManager.literal("stats")
+                            .executes(ctx -> { sendStats(McUtils.playerName()); return 1; })
+                            .then(ClientCommandManager.argument("player", StringArgumentType.word())
+                                    .executes(ctx -> { sendStats(StringArgumentType.getString(ctx, "player")); return 1; }))
             );
 
             dispatcher.register(
@@ -445,6 +473,14 @@ public class CommandLoader implements WELoader {
         executeBombshare(chatPrefix, profOnly ? PROF_BOMBS : null);
     }
 
+    private static String filterName(Set<BombType> filter) {
+        if (filter == null) return "";
+        if (filter.equals(PROF_BOMBS)) return " prof";
+        if (filter.equals(LOOT_BOMBS)) return " loot";
+        if (filter.equals(COMBAT_BOMBS)) return " combat";
+        return "";
+    }
+
     private static void executeBombshare(String chatPrefix, Set<BombType> filter) {
         if (!Models.WorldState.onWorld()) {
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cYou must be on a world to use this command."));
@@ -460,9 +496,9 @@ public class CommandLoader implements WELoader {
 
         String message;
         if (bombsByType.isEmpty()) {
-            message = "[WynnExtras Bombshare] No active Bombs!";
+            message = "[WynnExtras] No active" + filterName(filter) + " bombs!";
         } else {
-            StringBuilder sb = new StringBuilder("[WynnExtras Bombshare]");
+            StringBuilder sb = new StringBuilder("[WynnExtras]");
             Map<BombType, String> shortNames = Map.of(
                     BombType.PROFESSION_XP, "ProfXP",
                     BombType.PROFESSION_SPEED, "ProfSpeed",
@@ -500,9 +536,9 @@ public class CommandLoader implements WELoader {
 
         String message;
         if (bombsByType.isEmpty()) {
-            message = "[WynnExtras Bombshare] No active Bombs!";
+            message = "[WynnExtras] No active" + filterName(filter) + " bombs!";
         } else {
-            StringBuilder sb = new StringBuilder("[WynnExtras Bombshare]");
+            StringBuilder sb = new StringBuilder("[WynnExtras]");
             Map<BombType, String> shortNames = Map.of(
                     BombType.PROFESSION_XP, "ProfXP",
                     BombType.PROFESSION_SPEED, "ProfSpeed",
@@ -534,6 +570,99 @@ public class CommandLoader implements WELoader {
         } else {
             return head.then(chainArguments(args.subList(1, args.size()), cmd));
         }
+    }
+
+    private static void sendRaidInfo(String playerName) {
+        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Fetching raid info for §e" + playerName + "§7..."));
+        WynncraftApiHandler.fetchPlayerData(playerName).thenAccept(data -> {
+            if (data == null) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo data found for " + playerName));
+                return;
+            }
+            if (data.getGlobalData() == null || data.getGlobalData().getRaids() == null) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                        "§cNo raid data — the Wynncraft API needs an API key. Set one with §e/apikey <key>"));
+                return;
+            }
+            Raids raids = data.getGlobalData().getRaids();
+            Map<String, Integer> list = raids.getList() != null ? raids.getList() : new HashMap<>();
+            int twp = list.getOrDefault("The Wartorn Palace", 0);
+            if (twp == 0) twp = list.getOrDefault("unknown", 0);
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("§6§l").append(data.getUsername()).append("§r §7— §eTotal: §f").append(raids.getTotal()).append("\n");
+            sb.append("§7NOTG: §f").append(list.getOrDefault("Nest of the Grootslangs", 0));
+            sb.append(" §7| NOL: §f").append(list.getOrDefault("Orphion's Nexus of Light", 0));
+            sb.append(" §7| TCC: §f").append(list.getOrDefault("The Canyon Colossus", 0));
+            sb.append("\n§7TNA: §f").append(list.getOrDefault("The Nameless Anomaly", 0));
+            sb.append(" §7| TWP: §f").append(twp);
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
+        }).exceptionally(ex -> {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError fetching data: " + ex.getMessage()));
+            return null;
+        });
+    }
+
+    private static void sendStats(String playerName) {
+        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Fetching stats for §e" + playerName + "§7..."));
+        WynncraftApiHandler.fetchPlayerData(playerName).thenAccept(data -> {
+            if (data == null) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo data found for " + playerName));
+                return;
+            }
+            if (data.getCharacters() == null || data.getCharacters().isEmpty()) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                        "§cNo characters in response — the Wynncraft API needs an API key for character data. Set one with §e/apikey <key>"));
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.append("§6§l").append(data.getUsername()).append("§r §7— ").append(data.getCharacters().size()).append(" characters\n");
+
+            List<Map.Entry<String, CharacterData>> sorted = new ArrayList<>(data.getCharacters().entrySet());
+            sorted.sort((a, b) -> Integer.compare(b.getValue().getLevel(), a.getValue().getLevel()));
+
+            int i = 0;
+            for (Map.Entry<String, CharacterData> e : sorted) {
+                CharacterData ch = e.getValue();
+                String uuid = e.getKey();
+                String className = ch.getType() != null ? formatClassName(ch.getType()) : "?";
+
+                sb.append("§e").append(className).append(" §7Lv§f").append(ch.getLevel())
+                  .append(" §7(Total §f").append(ch.getTotalLevel()).append("§7)");
+
+                // Raids completed
+                if (ch.getRaids() != null) {
+                    sb.append(" §7Raids:§f").append(ch.getRaids().getTotal());
+                }
+
+                // Profession summary - show highest 3
+                if (ch.getProfessions() != null && !ch.getProfessions().isEmpty()) {
+                    List<Map.Entry<String, Profession>> profs = new ArrayList<>(ch.getProfessions().entrySet());
+                    profs.sort((a, b) -> Integer.compare(b.getValue().getLevel(), a.getValue().getLevel()));
+                    sb.append(" §7Profs: ");
+                    int shown = 0;
+                    for (Map.Entry<String, Profession> p : profs) {
+                        if (shown >= 3) break;
+                        if (p.getValue().getLevel() <= 0) continue;
+                        if (shown > 0) sb.append("§7,");
+                        sb.append("§f").append(p.getKey(), 0, Math.min(4, p.getKey().length()))
+                          .append(" §f").append(p.getValue().getLevel());
+                        shown++;
+                    }
+                }
+                sb.append("\n");
+                if (++i >= 10) break; // cap at 10 chars so chat doesn't explode
+            }
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
+        }).exceptionally(ex -> {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError fetching data: " + ex.getMessage()));
+            return null;
+        });
+    }
+
+    private static String formatClassName(String type) {
+        if (type == null || type.isEmpty()) return "?";
+        return type.substring(0, 1).toUpperCase() + type.substring(1).toLowerCase();
     }
 
 }

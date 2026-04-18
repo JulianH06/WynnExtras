@@ -26,6 +26,7 @@ import julianh06.wynnextras.features.misc.BloodSorrowTimer;
 import julianh06.wynnextras.features.misc.FastRequeue;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
+import julianh06.wynnextras.features.misc.QuickRepair;
 import julianh06.wynnextras.features.misc.TotemTimer;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.raid.*;
@@ -182,6 +183,7 @@ public class WynnExtras implements ClientModInitializer {
         RaidLootTracker.register();
         RaidLootTrackerOverlay.register();
         RaidSessionTracker.register();
+        QuickRepair.register();
         RaidLootConfig.INSTANCE.load();
 		MaterialTextureResolver.register();
 		RecipeLoader.loadRecipes();

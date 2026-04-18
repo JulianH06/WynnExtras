@@ -179,6 +179,8 @@ public class BankOverlay2 extends WEHandledScreen {
     private static int reloadTotalPages = 0;
     private static int reloadOriginalPage = -1;
     private static boolean reloadPageLoaded = false;
+    private static int reloadSettleTicks = 0;
+    private static final int RELOAD_SETTLE_DELAY = 5;
     private static ReloadBankWidget reloadBankWidget = null;
 
     static int shownPages;
@@ -341,31 +343,33 @@ public class BankOverlay2 extends WEHandledScreen {
         // Reload bank state machine
         if (isReloading) {
             if (!shouldWait && reloadPageLoaded) {
-                // Current page loaded and cached, advance to next
-                reloadCurrentPage++;
-                if (reloadCurrentPage >= reloadTotalPages) {
-                    // All done
-                    isReloading = false;
-                    activeInv = reloadOriginalPage;
-                    try {
-                        BankOverlay.PersonalStorageUtils.jumpToDestination(reloadOriginalPage + 1);
-                    } catch (Exception ignored) {}
-                    retryLoad();
-                    reloadPageLoaded = false;
-                    Pages.save();
+                if (++reloadSettleTicks < RELOAD_SETTLE_DELAY) {
+                    // Wait a few ticks for server to fully process the page
                 } else {
-                    // Navigate to next page
-                    reloadPageLoaded = false;
-                    activeInv = reloadCurrentPage;
-                    try {
-                        BankOverlay.PersonalStorageUtils.jumpToDestination(reloadCurrentPage + 1);
-                    } catch (Exception ignored) {}
-                    retryLoad();
+                    reloadSettleTicks = 0;
+                    reloadCurrentPage++;
+                    if (reloadCurrentPage >= reloadTotalPages) {
+                        isReloading = false;
+                        activeInv = reloadOriginalPage;
+                        try {
+                            BankOverlay.PersonalStorageUtils.jumpToDestination(reloadOriginalPage + 1);
+                        } catch (Exception ignored) {}
+                        retryLoad();
+                        reloadPageLoaded = false;
+                        Pages.save();
+                    } else {
+                        reloadPageLoaded = false;
+                        activeInv = reloadCurrentPage;
+                        try {
+                            BankOverlay.PersonalStorageUtils.jumpToDestination(reloadCurrentPage + 1);
+                        } catch (Exception ignored) {}
+                        retryLoad();
+                    }
                 }
             }
-            // Detect that current page finished loading
             if (!shouldWait && !reloadPageLoaded && activeInv == reloadCurrentPage) {
                 reloadPageLoaded = true;
+                reloadSettleTicks = 0;
             }
         }
 

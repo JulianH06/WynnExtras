@@ -130,6 +130,11 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
                 .add(toggle("Fast Requeue", "Auto /pf on chest close",
                         () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
+                .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
+                        () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
+                .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
+                        () -> config.quickRepairKey, v -> config.quickRepairKey = v),
+                        () -> config.quickRepairEnabled))
                 .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
                         () -> config.chiropTimer, v -> config.chiropTimer = v))
                 .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests",

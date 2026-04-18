@@ -21,6 +21,7 @@ import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.misc.ClassSelectionOverlay;
 import julianh06.wynnextras.features.misc.CompassMenuOverlay;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
+import julianh06.wynnextras.features.misc.QuickRepair;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -185,6 +186,9 @@ public abstract class HandledScreenMixin {
 
         // Bank bag overlay in vanilla bank mode (custom mode draws it from BankOverlay2.render())
         BankOverlay2.drawVanillaBankBagsOverlay(context, self);
+
+        // Quick Repair button in blacksmith
+        QuickRepair.renderButton(context, self, mouseX, mouseY);
     }
 
     @Unique
@@ -254,6 +258,11 @@ public abstract class HandledScreenMixin {
         // Class Selection Overlay click handling
         if (classSelectionOverlay != null) {
             classSelectionOverlay.mouseClicked(mouseX, mouseY, button);
+            cir.setReturnValue(true);
+            return;
+        }
+        // Quick Repair button click
+        if (QuickRepair.handleClick(mouseX, mouseY, (HandledScreen<?>) (Object) this)) {
             cir.setReturnValue(true);
             return;
         }
@@ -504,6 +513,21 @@ public abstract class HandledScreenMixin {
 
         if(bankOverlay != null) {
             if (WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
+                // Offhand swap (F key) in custom bank overlay
+                if (bankOverlay.touchHoveredSlot != null) {
+                    MinecraftClient mc = MinecraftClient.getInstance();
+                    if (((julianh06.wynnextras.mixin.Accessor.KeybindingAccessor) mc.options.swapHandsKey).getBoundKey().getCode() == keyCode) {
+                        ScreenHandler handler = McUtils.containerMenu();
+                        if (handler != null) {
+                            int slotIndex = bankOverlay.touchHoveredSlot.id;
+                            mc.interactionManager.clickSlot(handler.syncId, slotIndex, 40, net.minecraft.screen.slot.SlotActionType.SWAP, mc.player);
+                            cir.setReturnValue(true);
+                            cir.cancel();
+                            return;
+                        }
+                    }
+                }
+
                 InventoryKeyPressEvent event = new InventoryKeyPressEvent(keyCode, scanCode, modifiers, bankOverlay.touchHoveredSlot);
                 event.post();
 
