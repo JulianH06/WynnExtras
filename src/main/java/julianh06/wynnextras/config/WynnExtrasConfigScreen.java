@@ -108,8 +108,11 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
                 .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
                         () -> config.chiropTimer, v -> config.chiropTimer = v))
-                .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests",
+                .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests by quickly clicking through the rewards",
                         () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
+                .add(visibleWhen(toggle("Passive aspect scanning", "Scan your aspects passively without bothering you",
+                        () -> config.passiveAspectScanning, v -> config.passiveAspectScanning = v),
+                        () -> !config.automaticAspectScanning))
                 .sub("Loot Tracker")
                 .add(toggle("Enable Tracker", "Track raid loot drops",
                         () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
@@ -218,8 +221,6 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.bankQuickToggle, v -> config.bankQuickToggle = v))
                 .add(toggle("Dark Mode", "Dark bank theme",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
-                .add(slider("Rarity BG Alpha", "Item rarity background opacity",
-                        0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
                 .add(slider("Max Rows", "The maximum amount of rows (lower can reduce lag)",
                         2, 24, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
                 .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
@@ -228,9 +229,13 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.bankOverlayHideEmptyRows, v -> config.bankOverlayHideEmptyRows = v))
                 .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
-                        () -> config.showWeight, v -> config.showWeight = v))
-                .add(toggle("Stat Scales", "Show weights for each stat",
-                        () -> config.showScales, v -> config.showScales = v))
+                        () -> config.showWeight, v -> {
+                            config.showWeight = v;
+                            if(!v) config.showScales = true;
+                        }))
+                .add(visibleWhen(toggle("Stat Scales", "Show weights for each stat",
+                        () -> config.showScales, v -> config.showScales = v),
+                        () -> config.showWeight))
                 .sub("Trade Market")
                 .add(toggle("Scale background", "Use mythic scale as item background",
                         () -> config.scaleBackgroundEnabled, v -> config.scaleBackgroundEnabled = v))
@@ -259,7 +264,7 @@ public class WynnExtrasConfigScreen extends Screen {
         category("Chat", 0xFFc80069)
                 .add(stringList("Blocked Words", "Hide messages with these",
                         () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
-                .add(toggle("Quick PV/GV Access", "Click on a players name or guild to open the pv/gv! (EXPERIMENTAL)",
+                .add(toggle("Quick PV/GV Access (EXPERIMENTAL)", "Click on a players name or guild to open the pv/gv!",
                         () -> config.chatClickPV, v -> config.chatClickPV = v))
                 .sub("Notifications")
                 .add(stringListDual("Notifier Words", "Trigger word and display text",
@@ -316,7 +321,7 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.hideAllPlayersInWar, v -> config.hideAllPlayersInWar = v))
                 .add(stringList("Hidden Players", "Always hide these players",
                         () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"))
-            .add(dropdown("Spell Hider Profile", "The default values for the spell hider, this can be changed at will without changing the overrides set with /Wynnextras SpellHider modify",
+            .add(dropdown("Spell Hider Profile (EXPERIMENTAL)", "The default values for the spell hider, this can be changed at will without changing the overrides set with /Wynnextras SpellHider modify",
                     SpellProfiles.getProfileNames(), () -> config.spellProfile, v -> config.spellProfile = v));
 
         // ===== MISC =====
@@ -327,6 +332,10 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.differentGUIScale, v -> config.differentGUIScale = v))
                 .add(slider("GUI Scale", "Custom GUI scale value",
                         1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
+                .add(toggle("Lootpool button in pf menu", "Show a button to quickly access /we lootpool through the pf menu",
+                        () -> config.showLootpoolButtonInPartyFinder, v -> config.showLootpoolButtonInPartyFinder = v))
+                .add(toggle("Redirect Wynntils View Stats", "Changes the Wynntils 'View Player Stats' button to open the pv instead of the wynn website",
+                        () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v))
                 .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
                         () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
                 .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
@@ -372,8 +381,6 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
                     0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
             .sub("Crowd sourcing")
-                .add(toggle("Upload your own Aspects", "Upload your aspect data so you can see your personal lootpool scores",
-                        () -> config.uploadOwnAspects, v -> config.uploadOwnAspects = v))
                 .add(toggle("Lootrun lootpools", "Help gather the current lootrun lootpool so others can see it with /we lootruns",
                         () -> config.crowdSourceLootrunLootpools, v -> config.crowdSourceLootrunLootpools = v))
                 .add(toggle("Raid lootpools", "Help gather the current raid lootpool so others can see it with /we lootpool",

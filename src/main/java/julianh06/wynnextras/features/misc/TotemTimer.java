@@ -132,7 +132,7 @@ public class TotemTimer {
                 // NEU
                 for (String line : lines) {
                     String l = line.trim();
-                    if (!l.isEmpty() && !l.contains("'s Totem")) {
+                    if (!l.isEmpty() && !l.contains("'s Totem") && !l.contains("' Totem")) {
                         String[] tokens = l.split("\\s+");
                         timeText = tokens[tokens.length - 1];
                         break;

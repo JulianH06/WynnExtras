@@ -125,7 +125,7 @@ public class SpellHider {
         if (existing != null) {
             existing.setCustomModelData(modelF.intValue());
             byModel.put(modelF.intValue(), existing);
-        } else WynnExtras.LOGGER.warn("No Path Found when adding a spell model number: {}", path);
+        }
     }
 
     public static void editNameOfPath(String path, SpellNamespace namespace) {
@@ -137,7 +137,7 @@ public class SpellHider {
 
             existing.setFQName(newName);
             byName.computeIfAbsent(newName, (k) -> new HashSet<>()).add(existing);
-        } else WynnExtras.LOGGER.warn("edited name of non-existing path: {}", path);
+        }
     }
 
     public static void addName(String path, String FQName) {
@@ -145,7 +145,7 @@ public class SpellHider {
         if (existing != null) {
             existing.setFQName(FQName);
             byName.computeIfAbsent(FQName, (k) -> new HashSet<>()).add(existing);
-        } else WynnExtras.LOGGER.warn("No Path Found when adding a spell name mapping: {}", path);
+        }
     }
 
     public static SpellModifiers getModifiers(DisplayEntity.ItemDisplayEntity display) {

@@ -42,7 +42,6 @@ public class ItemModelManagerMixin {
             if (spellMapping == null || spellMapping.isEmpty()) {
                 SpellData fromPath = SpellHider.getFromPath(fileName.getPath());
                 if (fromPath == null) {
-                    WynnExtras.LOGGER.warn("Could not find item from path: {}", fileName);
                     return;
                 }
                 ModelDataLogger.addTextToRender(fromPath.getHash(), entity.getEntityPos());
@@ -60,7 +59,6 @@ public class ItemModelManagerMixin {
         int layerCount = renderStateAccess.getLayerCount();
         ItemRenderState.LayerRenderState[] layers = renderStateAccess.getLayers();
         if (layers == null || layerCount == 0) {
-            WynnExtras.LOGGER.warn("No item layer found in ItemRenderStateAccessor");
             return null;
         }
 

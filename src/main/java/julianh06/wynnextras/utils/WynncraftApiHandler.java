@@ -331,7 +331,6 @@ public class WynncraftApiHandler {
             return;
         }
 
-        if(!WynnExtrasConfig.INSTANCE.uploadOwnAspects) return;
 
         // Authenticate with Mojang first
         MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {

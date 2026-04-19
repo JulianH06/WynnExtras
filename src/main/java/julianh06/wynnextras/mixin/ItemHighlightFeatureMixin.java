@@ -4,10 +4,10 @@ import com.wynntils.core.components.Models;
 import com.wynntils.features.inventory.ItemHighlightFeature;
 import com.wynntils.models.gear.type.GearTier;
 import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.items.game.GearBoxItem;
 import com.wynntils.models.items.items.game.GearItem;
 import com.wynntils.utils.colors.CustomColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.features.inventory.WeightDisplay;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
@@ -36,28 +36,19 @@ public class ItemHighlightFeatureMixin {
 
     @Inject(method = "getHighlightColor", at = @At("HEAD"), cancellable = true)
     private void disableMythicHighlight(ItemStack itemStack, boolean hotbarHighlight, CallbackInfoReturnable<CustomColor> cir) {
-        // Only intercept if our scale background is enabled
         if (!WynnExtrasConfig.INSTANCE.scaleBackgroundEnabled) return;
-        if (!WynnExtrasConfig.INSTANCE.showScales) return;
 
-        // Only disable Wynntils highlight in Trade Market (elsewhere keep their purple)
         if (!isInTradeMarket()) return;
+        if (WeightDisplay.isUnidentified(itemStack)) return;
+        if (!WeightDisplay.weightCacheByHash.containsKey(itemStack.getComponents().hashCode())) return; // show normal background incase weights fail
 
-        // Check if this is a mythic item (identified or unidentified)
         Optional<WynnItem> wynnItemOpt = Models.Item.getWynnItem(itemStack);
         if (wynnItemOpt.isEmpty()) return;
 
         WynnItem wynnItem = wynnItemOpt.get();
 
-        // Check for identified mythic
         if (wynnItem instanceof GearItem gearItem) {
             if (gearItem.getGearTier() == GearTier.MYTHIC) {
-                cir.setReturnValue(CustomColor.NONE);
-            }
-        }
-        // Check for unidentified mythic
-        else if (wynnItem instanceof GearBoxItem gearBox) {
-            if (gearBox.getGearTier() == GearTier.MYTHIC) {
                 cir.setReturnValue(CustomColor.NONE);
             }
         }

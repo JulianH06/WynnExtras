@@ -15,6 +15,7 @@ import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
 import julianh06.wynnextras.features.guildviewer.BannerGuiRenderer;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.features.inventory.WeightDisplay;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.data.BookshelfData;
@@ -61,6 +62,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 // TODO: Use WELogger instead of normal logger
@@ -199,10 +203,11 @@ public class WynnExtras implements ClientModInitializer {
 			MiscBucketData.INSTANCE.load();
 			WynncraftApiHandler.load();
 			WynncraftApiHandler.fetchItemDatabase().thenAccept(result -> WynncraftApiHandler.cachedItemDatabase = result);
-			System.out.println("loaded bankdata");
+
+			ExecutorService executor = Executors.newFixedThreadPool(4);
+			CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool, executor).thenRunAsync(WeightDisplay::populateStatRangesFromDatabase, executor);
 		});
 
-		//WynnExtrasSounds.register();
 		ModSounds.registerSounds();
 
 		if(FabricLoader.getInstance().isModLoaded("devauth")) {

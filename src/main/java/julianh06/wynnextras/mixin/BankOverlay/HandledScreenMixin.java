@@ -329,7 +329,7 @@ public abstract class HandledScreenMixin {
         craftingHelperOverlay = null;
 
         // Clear Trade Market Comparison on close
-        TradeMarketComparisonPanel.clearComparison();
+        TradeMarketComparisonPanel.clearAllPanels();
 
         if(!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return;
         bankOverlay = null;
@@ -376,20 +376,10 @@ public abstract class HandledScreenMixin {
 
         // F1 key in Trade Market for item comparison
         if (keyCode == GLFW.GLFW_KEY_F1 && TradeMarketComparisonPanel.isInTradeMarket()) {
-            // If hovering a slot, add/toggle that item
-            if (focusedSlot != null) {
-                if (TradeMarketComparisonPanel.handleF1Press(focusedSlot)) {
-                    cir.setReturnValue(true);
-                    cir.cancel();
-                    return;
-                }
-            } else {
-                // No slot focused - clear all panels
-                if (TradeMarketComparisonPanel.handleF1NoSlot()) {
-                    cir.setReturnValue(true);
-                    cir.cancel();
-                    return;
-                }
+            if (TradeMarketComparisonPanel.handleF1Press(focusedSlot)) {
+                cir.setReturnValue(true);
+                cir.cancel();
+                return;
             }
         }
 

@@ -314,6 +314,19 @@ public class SpellHiderCommands {
                 null
         );
 
+        SubCommand resetCmd = new SubCommand(
+                "reset",
+                "reset the spell hider to default settings",
+                context -> {
+                    SpellHider.modifiersMap.clear();
+                    SpellHider.saveModifiers();
+                    ChatUtils.sendMessage("Spell hider reset to defaults.");
+                    return 1;
+                },
+                null,
+                null
+        );
+
         new Command(
                 "spellhider",
                 "modify the appearance of skill vfx",
@@ -321,7 +334,8 @@ public class SpellHiderCommands {
                 List.of(
                         modifyCmd,
                         devCmd,
-                        getModificationsCmd
+                        getModificationsCmd,
+                        resetCmd
                 ),
                 null
         );

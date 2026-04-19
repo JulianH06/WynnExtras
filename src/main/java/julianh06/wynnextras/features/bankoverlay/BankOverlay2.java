@@ -84,7 +84,6 @@ import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
 import static com.wynntils.utils.wynn.ContainerUtils.shiftClickOnSlot;
 import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredStack;
-import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredWynnitem;
 
 public class BankOverlay2 extends WEHandledScreen {
     static ItemStack hoveredSlot = Items.AIR.getDefaultStack();
@@ -969,7 +968,6 @@ public class BankOverlay2 extends WEHandledScreen {
         Optional<WynnItem> item = asWynnItem(hoveredSlot);
         List<Text> tooltip = item.map(i -> {
                     currentHoveredStack = hoveredSlot;
-                    currentHoveredWynnitem = i;
                     return TooltipUtils.getWynnItemTooltip(hoveredSlot, i);
                 }).filter(t -> !t.isEmpty())
                 .orElse(hoveredSlot.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC));

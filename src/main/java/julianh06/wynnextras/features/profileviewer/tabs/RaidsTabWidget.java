@@ -129,7 +129,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
             TNARank = ranking.getOrDefault("namelessCompletion", -1L);
             if(TNARank <= 100 && TNARank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaColor = WynncraftShaderColor.RAINBOW.color;
 
-            TWPRank = ranking.getOrDefault("palaceCompletion", -1L);
+            TWPRank = ranking.getOrDefault("frumaCompletion", -1L);
             if(TWPRank <= 100 && TWPRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpColor = WynncraftShaderColor.RAINBOW.color;
 
             NOTGSRRank = ranking.getOrDefault("grootslangSrPlayers", -1L);
@@ -144,7 +144,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
             TNASRRank = ranking.getOrDefault("namelessSrPlayers", -1L);
             if(TNASRRank <= 100 && TNASRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaSRColor = WynncraftShaderColor.RAINBOW.color;
 
-            TWPSRRank = ranking.getOrDefault("palaceSrPlayers", -1L);
+            TWPSRRank = ranking.getOrDefault("frumaSrPlayers", -1L);
             if(TWPSRRank <= 100 && TWPSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpSRColor = WynncraftShaderColor.RAINBOW.color;
 
             if(NOTGRank != -1) {

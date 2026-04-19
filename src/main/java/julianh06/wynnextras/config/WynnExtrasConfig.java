@@ -88,14 +88,13 @@ public class WynnExtrasConfig {
 
     // ==================== INVENTORY ====================
     public boolean toggleBankOverlay = true;
-    public int wynntilsItemRarityBackgroundAlpha = 150;
     public boolean smoothScrollToggle = true;
     public boolean bankQuickToggle = true;
     public int bankOverlayMaxRows = 3;
     public int bankOverlayMaxColumns = 3;
     public boolean bankOverlayHideEmptyRows = false;
-    public boolean showWeight = true;
-    public boolean showScales = true;
+    public boolean showWeight = false;
+    public boolean showScales = false;
     public boolean scaleBackgroundEnabled = true;
     public boolean hideTMInfoText = false;
     public boolean hideScaleBackgroundButton = false;
@@ -125,11 +124,12 @@ public class WynnExtrasConfig {
     public List<String> raidLootTrackerHiddenLines = new ArrayList<>();
     public boolean raidLootTrackerBackground = true;
     public RaidLootTrackerOverlay.mode raidLootTrackerMode = RaidLootTrackerOverlay.mode.ALL;
-    public boolean toggleFastRequeue = true;
+    public boolean toggleFastRequeue = false;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
     public boolean chiropTimer = false;
-    public boolean automaticAspectScanning = true;
+    public boolean automaticAspectScanning = false;
+    public boolean passiveAspectScanning = true;
     public boolean tnaTreeMap = true;
     public boolean showTreeMapOnlyWhileInsideOfTree = false;
     public boolean showPathsOnTreeMap = true;
@@ -141,7 +141,6 @@ public class WynnExtrasConfig {
     public boolean chatClickPV = false;
 
     // ==================== Crowd Sourcing ================
-    public boolean uploadOwnAspects = true;
     public boolean crowdSourceRaidLootpools = true;
     public boolean crowdSourceLootrunLootpools = true;
     public boolean crowdSourceGambits = true;
@@ -153,13 +152,13 @@ public class WynnExtrasConfig {
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
     public boolean showLootpoolButtonInPartyFinder = true;
-    public boolean redirectWynntilsViewStatsToPV = true;
+    public boolean redirectWynntilsViewStatsToPV = false;
 
     public boolean showOwnNametag = false;
     // The code for this is in LivingEntityRendererMixin
 
     // ==================== CHAT PEEK ====================
-    public boolean chatPeekEnabled = true;
+    public boolean chatPeekEnabled = false;
     public int chatPeekKey = GLFW.GLFW_KEY_Y;
     public boolean chatPeekToggle = false;
     public boolean chatPeekAllowVanillaScroll = false;
@@ -169,7 +168,7 @@ public class WynnExtrasConfig {
     public boolean totemTimerEnabled = true;
     public boolean totemTimerOwnOnly = true;
     public boolean totemTimerWarningText = true;
-    public boolean totemTimerWarningSound = true;
+    public boolean totemTimerWarningSound = false;
     public float totemTimerWarningSoundVolume = 50f;
     public int totemTimerWarningThreshold = 2;
     public boolean totemTimerEstimate = true;
@@ -185,7 +184,7 @@ public class WynnExtrasConfig {
     public Align totemWarningAlignment = Align.CENTER;
 
     // ==================== BLOOD SORROW TIMER ====================
-    public boolean bloodSorrowTimerEnabled = true;
+    public boolean bloodSorrowTimerEnabled = false;
     public boolean autoDetectBloodSorrowTime = true;
     public boolean autoDetectAcolyteAspectTier = true;
     public boolean autoDetectResonanceInHand = true;

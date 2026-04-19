@@ -1,10 +1,10 @@
 {
-  "required": true,
+  "required": false,
   "package": "julianh06.wynnextras.mixin",
   "plugin": "julianh06.wynnextras.mixin.ModMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   },
   "overwrites": {
     "requireAnnotations": true
@@ -48,7 +48,6 @@
     "ScreenHandlerMixin",
     "TerritoryInfoMixin",
     "TooltipFittingFeatureMixin",
-    "TooltipUtilsMixin",
     "Accessor.BannerBlockEntityAccessor",
     "Accessor.ChatHudAccessor",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
