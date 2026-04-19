@@ -87,29 +87,6 @@ public class WeightDisplay {
          });
     }
 
-    public static WeightData getCachedWeight(boolean forceUpdate, ItemStack stack) {
-        if (stack == null || stack.isEmpty()) return null;
-        int hash = stack.getComponents().hashCode();
-        ItemData itemData = weightCacheByHash.get(hash);
-        WeightData weightData = (itemData != null && !itemData.data().isEmpty()) ? itemData.data().get(itemData.index()) : null;
-
-        if (forceUpdate || weightData == null) {
-            calculateScale(hash, stack);
-            ItemData updated = weightCacheByHash.get(hash);
-            if (updated != null && !updated.data().isEmpty()) {
-                weightData = updated.data().get(updated.index());
-            }
-        }
-        return weightData;
-    }
-
-    public static void calculateScale(int cacheKey, ItemStack stack) {
-        ItemData result = computeScale(stack);
-        if (result != null) {
-            weightCacheByHash.put(cacheKey, new ItemData(extractCleanName(stack), result.data(), 0));
-        }
-    }
-
     public static ItemData computeScale(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return null;
         String key = extractCleanName(stack);

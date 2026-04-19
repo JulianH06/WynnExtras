@@ -101,11 +101,11 @@ public class SpellHiderCommands {
                         return 0;
                     }
                     if (state == ModelDataLogger.DisplayState.GET_CURRENT) {
-                        ChatUtils.sendMessage("current state is " + ModelDataLogger.getDisplayState().name());
+                        ChatUtils.sendMessage("current state is " + ModelDataLogger.getDisplayState().name() + " (Warning: this feature is experimental!)");
                         return 1;
                     }
                     ModelDataLogger.setDisplayState(state);
-                    ChatUtils.sendMessage("set state to " + state);
+                    ChatUtils.sendMessage("set state to " + state + " (Warning: this feature is experimental!)");
                     return 1;
                 },
                 null,
@@ -166,7 +166,7 @@ public class SpellHiderCommands {
                     for (Integer recentHash : recentHashes) {
                         ChatUtils.sendMessage(String.valueOf(recentHash));
                     }
-                    ChatUtils.sendMessage(recentHashes.size() + " new unknown hashes");
+                    ChatUtils.sendMessage(recentHashes.size() + " new unknown hashes (Warning: this feature is experimental!)");
                     return 1;
                 },
                 null,
@@ -181,7 +181,7 @@ public class SpellHiderCommands {
                     Set<SpellData> current = SpellHider.getFromName(FQName);
                     ModelDataLogger.addForFineTuning(current);
                     ModelDataLogger.progressQueue("");
-                    ChatUtils.sendMessage("added " + current.size() + " items to queue");
+                    ChatUtils.sendMessage("added " + current.size() + " items to queue (Warning: this feature is experimental!)");
                     return 1;
                 },
                 null,
@@ -200,7 +200,7 @@ public class SpellHiderCommands {
 
                     boolean modify = data.getLeft().modify(data.getMiddle(), data.getRight());
                     if (modify) {
-                        ChatUtils.sendMessage("set " + data.getLeft().getFQName() + "'s " + data.getMiddle().name() + " to " + data.getRight());
+                        ChatUtils.sendMessage("set " + data.getLeft().getFQName() + "'s " + data.getMiddle().name() + " to " + data.getRight() + "  (Warning: this feature is experimental!)");
                         return 1;
                     } else {
                         ChatUtils.sendMessage("Somehow parsed to wrong class (my fault not yours)");
@@ -239,7 +239,7 @@ public class SpellHiderCommands {
 
                     boolean modify = SpellProfiles.addToProfile(profileName, data.getLeft(), data.getMiddle(), data.getRight());
                     if (modify) {
-                        ChatUtils.sendMessage("set " + data.getLeft().getFQName() + "'s " + data.getMiddle().name() + " to " + data.getRight() + " in profile " + profileName);
+                        ChatUtils.sendMessage("set " + data.getLeft().getFQName() + "'s " + data.getMiddle().name() + " to " + data.getRight() + " in profile " + profileName + "  (Warning: this feature is experimental)");
                         return 1;
                     } else {
                         ChatUtils.sendMessage("profile doesnt exist");
@@ -320,6 +320,7 @@ public class SpellHiderCommands {
                 context -> {
                     SpellHider.modifiersMap.clear();
                     SpellHider.saveModifiers();
+                    SpellHider.resetRenderedState();
                     ChatUtils.sendMessage("Spell hider reset to defaults.");
                     return 1;
                 },

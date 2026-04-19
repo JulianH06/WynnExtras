@@ -243,6 +243,16 @@ public class SpellHider {
         }
     }
 
+    public static void resetRenderedState() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world == null) return;
+        client.world.getEntities().forEach(entity -> {
+            if (entity instanceof DisplayEntity.ItemDisplayEntity) {
+                ((EntityExtension) entity).setRendered(true);
+            }
+        });
+    }
+
     public static void saveModifiers() {
         try {
             Files.createDirectories(MODIFIERS_PATH.getParent());
