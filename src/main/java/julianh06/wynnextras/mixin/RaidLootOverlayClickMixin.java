@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Mouse.class)
 public class RaidLootOverlayClickMixin {
@@ -58,5 +59,21 @@ public class RaidLootOverlayClickMixin {
         CraftingResultPreviewer.handleMouseMove(x, y);
 
         TreeRoomMinimap.handleMouseMove(x, y);
+    }
+
+    @Inject(method = "onMouseScroll", at = @At("HEAD"), cancellable = true)
+    private void onMouseScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
+        Mouse mouse = (Mouse) (Object) this;
+        double mouseX = mouse.getX();
+        double mouseY = mouse.getY();
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.getWindow() != null) {
+            double scale = mc.getWindow().getScaleFactor();
+            mouseX = mouseX / scale;
+            mouseY = mouseY / scale;
+        }
+        if (TreeRoomMinimap.handleScroll(mouseX, mouseY, vertical)) {
+            ci.cancel();
+        }
     }
 }

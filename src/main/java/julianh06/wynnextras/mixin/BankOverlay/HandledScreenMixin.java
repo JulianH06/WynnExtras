@@ -421,7 +421,7 @@ public abstract class HandledScreenMixin {
         classSelectionOverlay = null;
 
         // Clear Trade Market Comparison on close
-        TradeMarketComparisonPanel.clearComparison();
+        TradeMarketComparisonPanel.clearAllPanels();
 
         // Vanilla-mode bank cache persistence: in vanilla mode the drawVanillaBankBagsOverlay
         // hook has been live-updating BankData.BankPages for the current page while the bank
@@ -485,20 +485,10 @@ public abstract class HandledScreenMixin {
 
         // F1 key in Trade Market for item comparison
         if (keyCode == GLFW.GLFW_KEY_F1 && TradeMarketComparisonPanel.isInTradeMarket()) {
-            // If hovering a slot, add/toggle that item
-            if (focusedSlot != null) {
-                if (TradeMarketComparisonPanel.handleF1Press(focusedSlot)) {
-                    cir.setReturnValue(true);
-                    cir.cancel();
-                    return;
-                }
-            } else {
-                // No slot focused - clear all panels
-                if (TradeMarketComparisonPanel.handleF1NoSlot()) {
-                    cir.setReturnValue(true);
-                    cir.cancel();
-                    return;
-                }
+            if (TradeMarketComparisonPanel.handleF1Press(focusedSlot)) {
+                cir.setReturnValue(true);
+                cir.cancel();
+                return;
             }
         }
 

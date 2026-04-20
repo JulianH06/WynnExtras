@@ -989,15 +989,34 @@ public class TreeLoader {
 
     static public void clickOnAbility(MinecraftClient client, PlayerEntity player, String nameToClick, HandledScreen<?> screen) {
         if (!inTreeMenu) return;
-        clickOnNameInInventory(nameToClick, screen, client);
-    }
-    static public boolean hasUnlockPrefix(String ability, HandledScreen<?> screen) {
-        String unlockName = "Unlock " + ability;
+        // "Next Page" / "Previous Page" are menu buttons, not abilities — use the fuzzy matcher
+        if (nameToClick.equals("Next Page") || nameToClick.equals("Previous Page")) {
+            clickOnNameInInventory(nameToClick, screen, client);
+            return;
+        }
+        // For ability clicks, use exact-name match to avoid hitting tiered names like
+        // "Haste II" when the target is "Haste".
+        String target = "Unlock " + nameToClick;
         for (int i = 0; i < screen.getScreenHandler().slots.size(); i++) {
             Slot slot = screen.getScreenHandler().slots.get(i);
             if (!slot.hasStack() || slot.getStack().getCustomName() == null) continue;
-            String name = slot.getStack().getCustomName().getString();
-            if (name.contains(unlockName)) { // Substring match instead of exact match
+            String raw = slot.getStack().getCustomName().getString();
+            String stripped = raw.replaceAll("§[0-9a-fk-or]", "").trim();
+            if (stripped.equals(target)) {
+                clickSlotHelper(i, screen, client);
+                return;
+            }
+        }
+    }
+
+    static public boolean hasUnlockPrefix(String ability, HandledScreen<?> screen) {
+        String target = "Unlock " + ability;
+        for (int i = 0; i < screen.getScreenHandler().slots.size(); i++) {
+            Slot slot = screen.getScreenHandler().slots.get(i);
+            if (!slot.hasStack() || slot.getStack().getCustomName() == null) continue;
+            String raw = slot.getStack().getCustomName().getString();
+            String stripped = raw.replaceAll("§[0-9a-fk-or]", "").trim();
+            if (stripped.equals(target)) {
                 return true;
             }
         }

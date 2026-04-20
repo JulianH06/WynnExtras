@@ -100,9 +100,9 @@ import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
 import static com.wynntils.utils.wynn.ContainerUtils.shiftClickOnSlot;
 import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredStack;
-import static julianh06.wynnextras.features.inventory.WeightDisplay.currentHoveredWynnitem;
 
 public class BankOverlay2 extends WEHandledScreen {
+    private static final Pattern POTIONS_USES_PATTERN = Pattern.compile("\\[(\\d+)/(\\d+)]");
     static ItemStack hoveredSlot = Items.AIR.getDefaultStack();
     int hoveredX = -1;
     int hoveredY = -1;
@@ -110,6 +110,9 @@ public class BankOverlay2 extends WEHandledScreen {
     public int hoveredInvIndex = -1;
 
     static ItemHighlightFeature itemHighlightFeature;
+    static ItemTextOverlayFeature itemTextOverlayFeature;
+    static UnidentifiedItemIconFeature unidentifiedItemIconFeature;
+    static ItemFavoriteFeature itemFavoriteFeature;
 
     public Identifier buttonBackground = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbg.png");
     public Identifier buttonBackgroundShort = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbgshort.png");
@@ -1053,12 +1056,14 @@ public class BankOverlay2 extends WEHandledScreen {
                     annotation instanceof PowderItem ||
                     annotation instanceof PotionItem ||
                     annotation instanceof CrafterBagItem) {
-
-                 ((ItemTextOverlayFeatureMixin) Managers.Feature.getFeatureInstance(ItemTextOverlayFeature.class)).invokeDrawTextOverlay(context, stack, x, y, false);
+                if (itemTextOverlayFeature == null) itemTextOverlayFeature = Managers.Feature.getFeatureInstance(ItemTextOverlayFeature.class);
+                ((ItemTextOverlayFeatureMixin) itemTextOverlayFeature).invokeDrawTextOverlay(context, stack, x, y, false);
             }
 
-            ((UnidentifiedItemIconFeatureInvoker) Managers.Feature.getFeatureInstance(UnidentifiedItemIconFeature.class)).invokeDrawIcon(context, stack, x, y, 100);
-            if(((ItemFavoriteFeatureAccessor) Managers.Feature.getFeatureInstance(ItemFavoriteFeature.class)).callIsFavorited(stack)) {
+            if (unidentifiedItemIconFeature == null) unidentifiedItemIconFeature = Managers.Feature.getFeatureInstance(UnidentifiedItemIconFeature.class);
+            ((UnidentifiedItemIconFeatureInvoker) unidentifiedItemIconFeature).invokeDrawIcon(context, stack, x, y, 100);
+            if (itemFavoriteFeature == null) itemFavoriteFeature = Managers.Feature.getFeatureInstance(ItemFavoriteFeature.class);
+            if(((ItemFavoriteFeatureAccessor) itemFavoriteFeature).callIsFavorited(stack)) {
                 RenderUtils.drawScalingTexturedRect(
                         context,
                         Texture.FAVORITE_ICON.identifier(),
@@ -1137,7 +1142,6 @@ public class BankOverlay2 extends WEHandledScreen {
         Optional<WynnItem> item = asWynnItem(hoveredSlot);
         List<Text> tooltip = item.map(i -> {
                     currentHoveredStack = hoveredSlot;
-                    currentHoveredWynnitem = i;
                     return TooltipUtils.getWynnItemTooltip(hoveredSlot, i);
                 }).filter(t -> !t.isEmpty())
                 .orElse(hoveredSlot.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC));
@@ -2235,8 +2239,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             try {
                 if (stack.getCustomName() != null && stack.getCustomName().getString().contains("Potions")) {
-                    Pattern pattern = Pattern.compile("\\[(\\d+)/(\\d+)]");
-                    Matcher matcher = pattern.matcher(stack.getCustomName().getString());
+                    Matcher matcher = POTIONS_USES_PATTERN.matcher(stack.getCustomName().getString());
 
                     if (matcher.find()) {
                         int remainingUses = Integer.parseInt(matcher.group(1));

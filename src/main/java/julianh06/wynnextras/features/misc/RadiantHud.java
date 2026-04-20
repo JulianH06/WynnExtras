@@ -14,8 +14,10 @@ import java.util.List;
 
 public class RadiantHud {
 
-    private record CachedEntry(String display, int color) {}
+    public record CachedEntry(String display, int color) {}
     private static final List<CachedEntry> cachedEntries = new ArrayList<>();
+
+    public static List<CachedEntry> getCachedEntries() { return cachedEntries; }
     private static int tickCount = 0;
 
     public static void init() {

@@ -56,9 +56,15 @@ public class SearchQueryParser {
     private static final Pattern ID_PATTERN = Pattern.compile("id:(\\w+)(?:([><])(\\d+))?", Pattern.CASE_INSENSITIVE);
     private static final Pattern IDENTIFIED_PATTERN = Pattern.compile("identified:(true|false)", Pattern.CASE_INSENSITIVE);
 
+    private static String cachedInput = null;
+    private static ParsedQuery cachedQuery = null;
+
     public static ParsedQuery parse(String input) {
         if (input == null || input.isEmpty()) {
             return new ParsedQuery(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        }
+        if (input.equals(cachedInput) && cachedQuery != null) {
+            return cachedQuery;
         }
 
         String remaining = input.trim();
@@ -159,9 +165,12 @@ public class SearchQueryParser {
 
         String textSearch = remaining.isEmpty() ? null : remaining;
 
-        return new ParsedQuery(textSearch, minLevel, maxLevel, classType,
+        ParsedQuery result = new ParsedQuery(textSearch, minLevel, maxLevel, classType,
                 rarities.isEmpty() ? null : rarities, profession, minMainScale, maxMainScale,
                 crafted, type, slot, idName, idOp, idValue, identified);
+        cachedInput = input;
+        cachedQuery = result;
+        return result;
     }
 
     private static final Pattern LORE_LEVEL_RANGE_PATTERN = Pattern.compile("Lv\\.? ?Range:? ?§?f?(\\d+)-(\\d+)", Pattern.CASE_INSENSITIVE);

@@ -521,7 +521,7 @@ public class AspectScanning {
             Map<String, Pair<String, String>> aspectsCopy = new HashMap<>(allAspects);
             WynncraftApiHandler.processAspects(aspectsCopy);
             resetAllAspects();
-            SearchedPages = 0; //TODO
+            SearchedPages = 0;
         }
     }
     private static void NextPageRaid(HandledScreen<?> screen) {

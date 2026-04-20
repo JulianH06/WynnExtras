@@ -79,6 +79,7 @@ public class RaidSessionTracker {
         }
 
         String buildStatsLine(int index) {
+            julianh06.wynnextras.config.WynnExtrasConfig c = julianh06.wynnextras.config.WynnExtrasConfig.INSTANCE;
             long elapsed = getElapsedMs();
             double hours = elapsed / 3_600_000.0;
             double runsPerHour = hours > 0.001 ? raidCount / hours : 0;
@@ -86,18 +87,33 @@ public class RaidSessionTracker {
             long h = totalMin / 60;
             long m = totalMin % 60;
             String time = h > 0 ? h + "h " + m + "m" : m + "m";
-            String prefix = sessions.size() > 1 ? "#" + (index + 1) + " " : "";
-            String line = failCount > 0
-                    ? String.format("%sRuns: %d (%d F) | %.1f/hr | %s", prefix, raidCount, failCount, runsPerHour, time)
-                    : String.format("%sRuns: %d | %.1f/hr | %s", prefix, raidCount, runsPerHour, time);
-            if (timedRunCount > 0) {
+
+            StringBuilder sb = new StringBuilder();
+            if (sessions.size() > 1) sb.append("#").append(index + 1).append(" ");
+
+            if (c.raidSessionShowRuns) {
+                sb.append("Runs: ").append(raidCount);
+                if (c.raidSessionShowFails && failCount > 0) {
+                    sb.append(" (").append(failCount).append(" F)");
+                }
+            }
+            if (c.raidSessionShowRate) {
+                if (sb.length() > 0 && !sb.toString().endsWith(" ")) sb.append(" | ");
+                sb.append(String.format("%.1f/hr", runsPerHour));
+            }
+            if (c.raidSessionShowTime) {
+                if (sb.length() > 0 && !sb.toString().endsWith(" ")) sb.append(" | ");
+                sb.append(time);
+            }
+            if (c.raidSessionShowAvgTime && timedRunCount > 0) {
                 long avgMs = totalRunTimeMs / timedRunCount;
                 long avgMin = avgMs / 60_000;
                 long avgSec = (avgMs % 60_000) / 1000;
-                line += String.format(" | avg %d:%02d", avgMin, avgSec);
+                if (sb.length() > 0 && !sb.toString().endsWith(" ")) sb.append(" | ");
+                sb.append(String.format("avg %d:%02d", avgMin, avgSec));
             }
-            if (manuallyPaused) line += " (Paused)";
-            return line;
+            if (manuallyPaused) sb.append(" (Paused)");
+            return sb.toString();
         }
     }
 

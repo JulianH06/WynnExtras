@@ -1,21 +1,18 @@
 package julianh06.wynnextras.features.inventory;
 
 import com.google.gson.*;
-import com.wynntils.core.components.Managers;
-import com.wynntils.core.components.Models;
-import com.wynntils.core.text.StyledText;
-import com.wynntils.features.tooltips.ItemStatInfoFeature;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.stats.type.StatType;
-import com.wynntils.models.wynnitem.parsing.WynnItemParser;
-import com.wynntils.utils.wynn.ColorScaleUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.Core;
 import julianh06.wynnextras.event.KeyInputEvent;
+import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
+import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.ItemStack;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -27,10 +24,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
 
 
 @WEModule
@@ -38,147 +33,272 @@ public class WeightDisplay {
     public record WeightData(String weightName, Map<String, Float> identifications, Float score) {}
     public record ItemData(String name, List<WeightData> data, int index) {}
 
-    //For the item info itself, e.g hero, warp
     public static Map<String, ItemData> itemCache = new ConcurrentHashMap<>();
-
-    //For the individual items with calculated scales
-    public static final Map<String, ItemData> weightCache = new ConcurrentHashMap<>();
+    public static final Map<Integer, ItemData> weightCacheByHash = new ConcurrentHashMap<>();
+    public static final Map<String, Map<String, float[]>> itemStatRanges = new ConcurrentHashMap<>();
+    public static final Map<Integer, Map<String, Float>> tooltipIdentCache = new ConcurrentHashMap<>();
 
     public static boolean upPressed = false;
     public static boolean downPressed = false;
     public static ItemStack currentHoveredStack = null;
-    public static WynnItem currentHoveredWynnitem = null;
 
-    public WeightDisplay() { //runs on gamestart
-        CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool);
+    public WeightDisplay() {
+         ItemTooltipCallback.EVENT.register((stack, tooltipContext, tooltipType, lines) -> {
+             if (stack.isEmpty()) return;
+             String cleanName = extractCleanName(stack);
+             if (!itemCache.containsKey(cleanName)) return;
+             if (isUnidentified(stack)) return;
+
+             if (upPressed || downPressed) {
+                 MinecraftClient mc = MinecraftClient.getInstance();
+                 boolean isHovered = false;
+                 if (mc.currentScreen instanceof HandledScreen<?> hs) {
+                     Slot focused = ((HandledScreenAccessor) hs).getFocusedSlot();
+                     isHovered = focused != null && ItemStack.areItemsAndComponentsEqual(focused.getStack(), stack);
+                 }
+                 if (isHovered) {
+                     ItemData itemData = itemCache.get(cleanName);
+                     if (itemData != null && !itemData.data().isEmpty()) {
+                         int nextIndex = itemData.index();
+                         if (downPressed) nextIndex = (nextIndex + 1) % itemData.data().size();
+                         else nextIndex = (nextIndex - 1 + itemData.data().size()) % itemData.data().size();
+                         itemCache.put(cleanName, new ItemData(itemData.name(), itemData.data(), nextIndex));
+                     }
+                     upPressed = false;
+                     downPressed = false;
+                 }
+             }
+
+             int hash = stack.getComponents().hashCode();
+             ItemData scaleData = weightCacheByHash.get(hash);
+             if (scaleData == null) {
+                 scaleData = computeScale(stack);
+                 if (scaleData != null && !scaleData.data().isEmpty()) weightCacheByHash.put(hash, scaleData);
+             }
+             if (scaleData == null || scaleData.data().isEmpty()) return;
+             ItemData profile = itemCache.get(cleanName);
+             int idx = (profile != null) ? Math.min(profile.index(), scaleData.data().size() - 1) : 0;
+             boolean wynntilsEnabled = isItemStatInfoFeatureEnabled();
+             if (!wynntilsEnabled) {
+                 //wynntils feature check cause if its enabled we have to append the annotations later otherwise they would be overwritten by wynntils
+                 //if this is enabled then its appended in ItemStatInfoFeatureMixin
+                 appendWeightAnnotations(lines, cleanName, idx, scaleData);
+             }
+         });
     }
 
-    public static WeightData getCachedWeight(String encodedItem, ItemStack itemStack, List<Text> wynntilsTooltip) {
-        return getCachedWeight(encodedItem, false, itemStack, wynntilsTooltip);
-    }
-
-    public static WeightData getCachedWeight(String encodedItem, boolean forceUpdate, ItemStack itemStack, List<Text> wynntilsTooltip) {
-        ItemData itemData = weightCache.get(encodedItem);
-        WeightData weightData = null;
-        if(itemData != null) {
-            weightData = itemData.data.get(itemData.index);
-        }
-
-        if (forceUpdate && weightData == null) {
-            calculateScale(encodedItem, itemStack, wynntilsTooltip);
-        }
-
-        return weightData;
-    }
-
-    public static void calculateScale(String encodedItem, ItemStack itemStack, List<Text> wynntilsTooltip) {
-        if(itemStack.getCustomName() == null) return;
-
-        String key = itemStack.getCustomName().getString()
-                .replace("À", "")
-                .replaceAll("§[0-9a-fk-or]", "")
-                .replace("⬡ Shiny ", "")
-                .strip();
+    public static ItemData computeScale(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return null;
+        String key = extractCleanName(stack);
         ItemData weightProfile = itemCache.get(key);
-        if (weightProfile == null) return;
+        if (weightProfile == null) return null;
+
+        int hash = stack.getComponents().hashCode();
+        Map<String, Float> identifications = tooltipIdentCache.get(hash);
+        if (identifications == null || identifications.isEmpty()) {
+            identifications = extractIdentificationsFromLore(stack, key);
+        }
+        if (identifications.isEmpty()) return null;
 
         List<WeightData> calculatedList = new ArrayList<>();
-
         for (WeightData weightData : weightProfile.data) {
-            Map<String, Float> identifications = extractIdentifications(wynntilsTooltip);
-            if (identifications.isEmpty()) return;
-
             Map<String, Float> scaled = new HashMap<>();
             float score = 0f;
-
             for (Map.Entry<String, Float> entry : identifications.entrySet()) {
                 String stat = entry.getKey();
                 Float value = entry.getValue();
                 Float scale = weightData.identifications.getOrDefault(stat, 0f);
                 scaled.put(stat, value * scale);
-                if(scale < 0) {
-                    // If the weight is negative, we need to invert the percentage and make the scale positive
+                if (scale < 0) {
                     score += Math.abs((100 - value) * scale);
                 } else {
                     score += value * scale;
                 }
             }
 
-            WeightData calculated = new WeightData(weightData.weightName, scaled, score);
-            calculatedList.add(calculated);
+            calculatedList.add(new WeightData(weightData.weightName, scaled, score));
         }
-
-        ItemData result = new ItemData(encodedItem, calculatedList, 0);
-        weightCache.put(encodedItem, result);
+        return new ItemData(key, calculatedList, 0);
     }
 
-    public static Map<String, Float> extractIdentifications(List<Text> wynntilsTooltip) {
-        Map<String, Float> percentages = new HashMap<>();
+    private static final java.util.regex.Pattern VANILLA_PATTERN =
+            java.util.regex.Pattern.compile("^([A-Z][A-Za-z ]*?)\\P{ASCII}.*?([+-][\\d,]+(?:\\.\\d+)?(?:%|/\\d+s)?) \\P{ASCII}.*$");
 
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null) return percentages;
+    private static final java.util.regex.Pattern WYNNTILS_PATTERN =
+            java.util.regex.Pattern.compile("^([A-Z][A-Za-z ]*?)\\s*([+-][\\d,]+(?:\\.\\d+)?(?:%|/\\d+s)?)");
 
-        for (Text line : wynntilsTooltip) {
-            String raw = line.getString().strip();
+    public static String[] extractStatFromLine(String lineStr) {
+        java.util.regex.Matcher m = VANILLA_PATTERN.matcher(lineStr);
+        if (m.matches()) return new String[]{m.group(1).strip(), m.group(2)};
 
-            //from wynntils: e.g: -100 health [50.0%]
-            if (raw.matches(".*\\[\\d+(\\.\\d+)?%\\]$")) {
-                int bracketStart = raw.lastIndexOf('[');
-                int bracketEnd = raw.lastIndexOf('%');
-                if (bracketStart != -1 && bracketEnd != -1 && bracketEnd > bracketStart) {
-                    try {
-                        float percent = Float.parseFloat(raw.substring(bracketStart + 1, bracketEnd));
+        String stripped = lineStr.replaceAll("[^\\x20-\\x7E]", "").trim();
 
-                        String statPart = raw.substring(0, bracketStart).strip();
-                        boolean isRaw = !statPart.contains("%");
-//                        boolean isPerSecond
+        m = WYNNTILS_PATTERN.matcher(stripped);
+        if (m.find()) return new String[]{m.group(1).strip(), m.group(2)};
 
-                        String[] parts = statPart.split("\\s+");
-                        if (parts.length >= 2) {
-                            String stat = String.join(" ", Arrays.copyOfRange(parts, 1, parts.length));
-                            String key = statToApiKey.getOrDefault(stat, fallbackCamelCase(stat));
-                            if (key.contains("Cost")) {
-                                for (Map.Entry<String, String> entry : spellCostMap.entrySet()) {
-                                    if (key.toLowerCase().contains(entry.getKey().toLowerCase())) {
-                                        key = entry.getValue();
-                                        break;
-                                    }
-                                }
-                            }
+        return null;
+    }
 
-                            if(isRaw && !key.equals("healthRegen") && !key.equals("manaRegen") && !key.contains("Steal") && !key.contains("poison") && !key.contains("jump") && !key.contains("AttackSpeed")) {
-                                key = key.substring(0,1).toUpperCase() + key.substring(1);
-                                key = "raw" + key;
-                            } else if (isRaw && key.equals("healthRegen")) {
-                                key = key + "Raw"; //healthRegen is the only stat that has "Raw" at the end of the string instead of the start
-                            } else if (isRaw && key.contains("AttackSpeed")) {
-                                key = "rawAttackSpeed";
-                            }
-                            percentages.put(key, percent);
-                        }
-                    } catch (NumberFormatException ignored) {}
+    private static Map<String, Float> extractIdentificationsFromLore(ItemStack stack, String itemName) {
+        var lore = stack.get(DataComponentTypes.LORE);
+        if (lore == null || lore.lines().isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, float[]> ranges = itemStatRanges.get(itemName);
+        if (ranges == null) {
+            return Map.of();
+        }
+
+        Map<String, Float> result = new HashMap<>();
+        for (Text line : lore.lines()) {
+            String raw = line.getString();
+            java.util.regex.Matcher m = VANILLA_PATTERN.matcher(raw);
+            if (!m.matches()) continue;
+
+            String statName = m.group(1).strip();
+            String rawValue = m.group(2);
+            String[] keyAndRaw = resolveIdentKey(statName, rawValue);
+            String apiKey = keyAndRaw[0];
+
+            float[] range = ranges.get(apiKey);
+            if (range == null) {
+                continue;
+            }
+
+            java.util.regex.Matcher numM = java.util.regex.Pattern.compile("[+-]?([\\d,]+(?:\\.\\d+)?)").matcher(rawValue);
+            if (!numM.find()) continue;
+            float current = Float.parseFloat(numM.group(1).replace(",", ""));
+
+            float min = range[0], max = range[1];
+            if (max == min) continue;
+
+            float percent = (current - min) / (max - min) * 100f;
+            if(apiKey.contains("SpellCost") ^ rawValue.contains("-")) { //Invert for negative stats or (exclusive) if it's a spell cost stat
+                percent = 100 - percent;
+            }
+            percent = Math.clamp(percent, 0f, 100f);
+            result.put(apiKey, percent);
+        }
+        return result;
+    }
+
+    public static void populateStatRangesFromDatabase() {
+        int retries = 30;
+        while (WynncraftApiHandler.cachedItemDatabase == null && retries-- > 0) {
+            // sleep shouldnt cause any problems here cause this function is only called asynchronously
+            try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+        }
+        if (WynncraftApiHandler.cachedItemDatabase == null) {
+            return;
+        }
+
+        for (String itemName : itemCache.keySet()) {
+            com.google.gson.JsonObject itemJson = WynncraftApiHandler.cachedItemDatabase.get(itemName);
+            if (itemJson == null || !itemJson.has("identifications")) continue;
+
+            com.google.gson.JsonObject ids = itemJson.getAsJsonObject("identifications");
+            Map<String, float[]> ranges = new HashMap<>();
+            for (Map.Entry<String, com.google.gson.JsonElement> entry : ids.entrySet()) {
+                if (!entry.getValue().isJsonObject()) continue;
+                com.google.gson.JsonObject rangeObj = entry.getValue().getAsJsonObject();
+                if (!rangeObj.has("min") || !rangeObj.has("max")) continue;
+                float a = Math.abs(rangeObj.get("min").getAsFloat());
+                float b = Math.abs(rangeObj.get("max").getAsFloat());
+                float[] range = new float[]{Math.min(a, b), Math.max(a, b)};
+                ranges.put(entry.getKey(), range);
+            }
+            if (!ranges.isEmpty()) {
+                itemStatRanges.put(itemName, ranges);
+            }
+        }
+    }
+
+    public static String extractCleanName(ItemStack stack) {
+        return stack.getName().getString()
+            .replace("À", "")
+            .replaceAll("§[0-9a-fk-orA-FK-OR]", "")
+            .replaceAll("[^\\x20-\\x7E]", "")
+            .replaceAll("^\\s*Shiny\\s+", "")
+            .strip();
+    }
+
+    public static boolean isTrackedMythic(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        return itemCache.containsKey(extractCleanName(stack));
+    }
+
+    public static boolean isUnidentified(ItemStack stack) {
+        var lore = stack.get(DataComponentTypes.LORE);
+        if (lore == null) return false;
+        for (Text line : lore.lines()) {
+            String s = line.getString();
+            if (s.contains("This item's power has been sealed")) return true;
+        }
+        return false;
+    }
+
+    public static int getScaleColor(float score) {
+        score = Math.max(0, Math.min(100, score));
+        if (score < 40) return lerpColor(0xFF5555, 0xFFAA00, score / 40f);
+        if (score < 70) return lerpColor(0xFFAA00, 0xFFFF55, (score - 40) / 30f);
+        if (score < 90) return lerpColor(0xFFFF55, 0x55FF55, (score - 70) / 20f);
+        return lerpColor(0x55FF55, 0x55FFFF, (score - 90) / 10f);
+    }
+
+    private static int lerpColor(int c1, int c2, float t) {
+        t = Math.max(0, Math.min(1, t));
+        int r = (int) (((c1 >> 16) & 0xFF) + t * (((c2 >> 16) & 0xFF) - ((c1 >> 16) & 0xFF)));
+        int g = (int) (((c1 >>  8) & 0xFF) + t * (((c2 >>  8) & 0xFF) - ((c1 >>  8) & 0xFF)));
+        int b = (int) ((c1 & 0xFF) + t * ((c2 & 0xFF) - (c1 & 0xFF)));
+        return (r << 16) | (g << 8) | b;
+    }
+
+    public static String[] resolveIdentKey(String statName, String rawValue) {
+        boolean isPercent = rawValue.endsWith("%");
+        boolean isPerSecond = rawValue.endsWith("/5s");
+
+        String key = statToApiKey.getOrDefault(statName, fallbackCamelCase(statName));
+        if (key.contains("Cost")) {
+            for (Map.Entry<String, String> entry : spellCostMap.entrySet()) {
+                if (key.toLowerCase().contains(entry.getKey().toLowerCase())) {
+                    key = entry.getValue();
+                    break;
                 }
             }
         }
-
-
-        return percentages;
+        if (!isPercent && !isPerSecond) {
+            if (key.equals("healthRegen")) {
+                key = key + "Raw";
+            } else if (key.contains("AttackSpeed")) {
+                key = "rawAttackSpeed";
+            } else if (!key.equals("manaRegen") && !key.contains("Steal") && !key.contains("poison") && !key.contains("jump")) {
+                key = "raw" + key.substring(0, 1).toUpperCase() + key.substring(1);
+            }
+        }
+        return new String[]{key, rawValue};
     }
 
+    private static boolean isItemStatInfoFeatureEnabled() {
+        try {
+            Class<?> featureClass = Class.forName("com.wynntils.features.tooltips.ItemStatInfoFeature");
+            Class<?> managersClass = Class.forName("com.wynntils.core.components.Managers");
+            Object featureManager = managersClass.getField("Feature").get(null);
+            Object feature = featureManager.getClass().getMethod("getFeatureInstance", Class.class).invoke(featureManager, featureClass);
+            if (feature == null) return false;
+            return (boolean) feature.getClass().getMethod("isEnabled").invoke(feature);
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
-    private static void getWeightsFromWynnpool() {
+    public static void getWeightsFromWynnpool() {
         try {
             URL url = new URI("https://api.wynnpool.com/item/weight/all").toURL();
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
             conn.setRequestMethod("GET");
             conn.setDoOutput(false);
-//            conn.setRequestProperty("Content-Type", "application/json");
-
-//            String body = "{\"encoded_item\": \"" + encodedItem + "\"}";
-//            try (OutputStream os = conn.getOutputStream()) {
-//                os.write(body.getBytes(StandardCharsets.UTF_8));
-//            }
 
             int responseCode = conn.getResponseCode();
             if (responseCode != 200) {
@@ -193,7 +313,6 @@ public class WeightDisplay {
                     response.append(line);
                 }
 
-                // Parse JSON
                 parseAndCacheWeights(response.toString());
             }
         } catch (IOException e) {
@@ -224,12 +343,8 @@ public class WeightDisplay {
             grouped.computeIfAbsent(itemName, k -> new ArrayList<>()).add(weightData);
         }
 
-        // Indexing and caching
         for (Map.Entry<String, List<WeightData>> entry : grouped.entrySet()) {
-            String name = entry.getKey();
-            List<WeightData> data = entry.getValue();
-            ItemData itemData = new ItemData(name, data, 0); // index = 0 by default
-            itemCache.put(name, itemData);
+            itemCache.put(entry.getKey(), new ItemData(entry.getKey(), entry.getValue(), 0));
         }
     }
 
@@ -253,7 +368,9 @@ public class WeightDisplay {
             Map.entry("Intelligence", "intelligence"),
             Map.entry("Strength", "strength"),
             Map.entry("Jump Height", "jumpHeight"),
-            Map.entry("Poison", "poison")
+            Map.entry("Poison", "poison"),
+            Map.entry("Loot", "lootBonus"),
+            Map.entry("Combat Experience", "xpBonus")
     );
 
     private static String fallbackCamelCase(String stat) {
@@ -303,92 +420,103 @@ public class WeightDisplay {
         }
     }
 
-    //the getWynnItemTooltipWithScale method has been moved to TooltipUtilsMixin
-
-    public static List<Text> modifyTooltip(List<Text> tooltips, WeightDisplay.WeightData weightData, ItemStack itemStack, String encodedItem) {
+    public static List<Text> modifyTooltip(List<Text> tooltips, ItemStack itemStack) {
         List<Text> modified = new ArrayList<>();
 
-        if (!tooltips.isEmpty()) {
-            if (itemStack.getCustomName() != null) {
-                String key = itemStack.getCustomName().getString()
-                        .replace("À", "")
-                        .replaceAll("§[0-9a-fk-or]", "")
-                        .replace("⬡ Shiny ", "")
-                        .strip();
-
-                ItemData itemData = itemCache.getOrDefault(key, null);
-                ItemData scaleData = weightCache.getOrDefault(encodedItem, null);
-
-                if (itemData != null && scaleData != null && !scaleData.data().isEmpty()) {
-                    final int index = itemData.index();
-
-                    Text first = tooltips.getFirst();
-                    modified.add(first.copy());
-
-                    final AtomicInteger idx = new AtomicInteger(0);
-                    for(WeightData data : scaleData.data()) {
-                        float score = data.score();
-                        String scale = data.weightName();
-                        Formatting color = (index == idx.get() && scaleData.data().size() > 1 && WynnExtrasConfig.INSTANCE.showScales) ? Formatting.WHITE : Formatting.GRAY;
-
-                        ItemStatInfoFeature itemStatInfoFeature = Managers.Feature.getFeatureInstance(ItemStatInfoFeature.class);
-                        Text statWeight = Text.literal("↳ " + scale + " Scale")
-                                .formatted(color)
-                                .styled(style -> index == idx.get() && scaleData.data().size() > 1 && WynnExtrasConfig.INSTANCE.showScales
-                                        ? style.withBold(true)
-                                        : style
-                                )
-                                .append(ColorScaleUtils.getPercentageTextComponent(
-                                        itemStatInfoFeature.getColorMap(),
-                                        score,
-                                        itemStatInfoFeature.colorLerp.get(),
-                                        itemStatInfoFeature.decimalPlaces.get()
-                                ));
-                        modified.add(Text.literal("  ").append(statWeight));
-                        idx.incrementAndGet();
-                    }
-                    if(scaleData.data().size() > 1 && WynnExtrasConfig.INSTANCE.showScales) {
-                        modified.add(Text.literal("  ↳ Use ↑ / ↓ (or W / S) to cycle").formatted(Formatting.DARK_GRAY));
-                    }
-                }
-            }
-        }
+        String key = extractCleanName(itemStack);
+        ItemData itemData = itemCache.getOrDefault(key, null);
+        ItemData scaleData = weightCacheByHash.getOrDefault(itemStack.getComponents().hashCode(), null);
 
         for (int i = 1; i < tooltips.size(); i++) {
             Text line = tooltips.get(i);
             modified.add(line);
 
-            if (!WynnExtrasConfig.INSTANCE.showScales) continue;
+            if (i == 3 && WynnExtrasConfig.INSTANCE.showScales && WynnExtrasConfig.INSTANCE.showWeight && itemData != null && scaleData != null && !scaleData.data().isEmpty()) {
+                final int index = itemData.index();
 
-            // Try to find matching stat
-            StyledText normed = StyledText.fromComponent(line).getNormalized();
-            Matcher statMatcher = normed.getMatcher(WynnItemParser.IDENTIFICATION_STAT_PATTERN);
-            if (!statMatcher.matches()) continue;
+                modified.add(tooltips.getFirst().copy());
 
-            StatType statType = Models.Stat.fromDisplayName(
-                    statMatcher.group(6).split("§")[0], statMatcher.group(3)
-            );
-            if(statType == null) continue;
+                final AtomicInteger aidx = new AtomicInteger(0);
+                for (WeightData data : scaleData.data()) {
+                    float score = data.score();
+                    String scale = data.weightName();
+                    boolean isCurrent = (index == aidx.get() && scaleData.data().size() > 1);
+                    Formatting labelColor = isCurrent ? Formatting.WHITE : Formatting.GRAY;
 
-            String apiName = statType.getApiName();
-            if(itemStack.getCustomName() == null) continue;
-            String key = itemStack.getCustomName().getString()
-                    .replace("À", "")
-                    .replaceAll("§[0-9a-fk-or]", "")
-                    .replace("⬡ Shiny ", "")
-                    .strip();
-            WeightDisplay.ItemData itemData = itemCache.getOrDefault(key, null);
-            if(itemData == null) continue;
+                    Text scoreText = Text.literal(String.format(" %.1f%%", score))
+                            .styled(s -> s.withColor(getScaleColor(score)));
+
+                    Text statWeight = Text.literal("↳ " + scale + " Scale")
+                            .formatted(labelColor)
+                            .styled(s -> isCurrent ? s.withBold(true) : s)
+                            .append(scoreText);
+                    modified.add(Text.literal("  ").append(statWeight));
+                    aidx.incrementAndGet();
+                }
+                if (scaleData.data().size() > 1) {
+                    modified.add(Text.literal("  ↳ Use ↑ / ↓ (W / S) to cycle").formatted(Formatting.DARK_GRAY));
+                }
+            }
+
+            if (!WynnExtrasConfig.INSTANCE.showScales || !WynnExtrasConfig.INSTANCE.showWeight) continue;
+
+            if (itemData == null) continue;
+            String[] statParts = extractStatFromLine(line.getString());
+            if (statParts == null) continue;
+            String apiName = resolveIdentKey(statParts[0], statParts[1])[0];
 
             Float weight = itemData.data().get(itemData.index()).identifications().get(apiName);
-            if(weight == null) continue;
-            String formattedWeight = String.format("%.02f", weight * 100);
+            if (weight == null) continue;
 
-            Text statWeight = Text.literal("  ↳ Weight: " + formattedWeight + "%")
-                    .formatted(Formatting.DARK_GRAY);
-            modified.add(statWeight);
+            modified.add(Text.literal(String.format("  ↳ Weight: %.2f%%", weight * 100))
+                    .formatted(Formatting.DARK_GRAY));
         }
 
         return modified;
+    }
+
+    public static void appendWeightAnnotations(List<Text> lines, String cleanName, int currentIdx, ItemData scaleData) {
+        ItemData itemData = itemCache.get(cleanName);
+        if (itemData == null) return;
+
+        List<Text> original = new ArrayList<>(lines);
+        lines.clear();
+
+        WeightData currentProfile = itemData.data().get(currentIdx);
+
+        for (int i = 0; i < original.size(); i++) {
+            Text line = original.get(i);
+            if (i == 4 && WynnExtrasConfig.INSTANCE.showWeight) {
+                lines.add(Text.empty());
+                for (int j = 0; j < scaleData.data().size(); j++) {
+                    WeightData wd = scaleData.data().get(j);
+                    boolean cur = (j == currentIdx);
+                    float score = wd.score();
+                    Text scoreText = Text.literal(String.format(" [%.1f%%]", score))
+                        .styled(s -> s.withColor(getScaleColor(score)).withBold(cur));
+                    Text label = Text.literal("  ↳ " + wd.weightName() + " Scale")
+                        .styled(s -> s.withColor(cur ? 0xFFFFFF : 0xAAAAAA).withBold(cur))
+                        .copy().append(scoreText);
+                    lines.add(label);
+                }
+                if (scaleData.data().size() > 1) {
+                    lines.add(Text.literal("  ↳ Use ↑/↓ (W/S) to cycle").styled(s -> s.withColor(0x555555)));
+                }
+            }
+            lines.add(line);
+
+            if (!WynnExtrasConfig.INSTANCE.showScales || !WynnExtrasConfig.INSTANCE.showWeight) continue;
+
+            String[] statParts = extractStatFromLine(line.getString());
+            if (statParts == null) continue;
+
+            String statApiName = resolveIdentKey(statParts[0], statParts[1])[0];
+
+            Float scale = currentProfile.identifications.getOrDefault(statApiName, 0f);
+            if (scale == null || scale == 0f) continue;
+
+            lines.add(Text.literal(String.format("  ↳ Weight: %.1f%%", scale * 100))
+                    .styled(s -> s.withColor(0x555555)));
+        }
     }
 }

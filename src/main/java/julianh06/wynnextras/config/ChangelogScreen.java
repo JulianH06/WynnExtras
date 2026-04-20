@@ -37,6 +37,15 @@ public class ChangelogScreen extends Screen {
                 () -> c.quickRepairEnabled, v -> c.quickRepairEnabled = v, true,
                 () -> c.quickRepairKey, v -> c.quickRepairKey = v, GLFW.GLFW_KEY_R);
         addToggle("Bomb share suggestions in chat", () -> c.bombShareSuggestion, v -> c.bombShareSuggestion = v, true);
+        addToggle("Block Guild Raid clicks (Shift to allow)", () -> c.shiftDisableGuildRaid, v -> c.shiftDisableGuildRaid = v, true);
+        addToggle("Auto /stream on world swap", () -> c.autoStreamEnabled, v -> c.autoStreamEnabled = v, false);
+        addToggle("Auto skip dialogue", () -> c.autoSkipDialogueEnabled, v -> c.autoSkipDialogueEnabled = v, false);
+        addToggle("Stack duplicate chat messages", () -> c.stackDuplicateMessages, v -> c.stackDuplicateMessages = v, false);
+        addToggle("Aura ping HUD overlay", () -> c.auraPingEnabled, v -> c.auraPingEnabled = v, false);
+        addToggle("Weekly war count HUD", () -> c.weeklyWarCountEnabled, v -> c.weeklyWarCountEnabled = v, false);
+        addToggle("War DPS / Tower HP info", () -> c.warDpsEnabled, v -> c.warDpsEnabled = v, false);
+        addToggle("Attack Timer Menu", () -> c.attackTimerMenuEnabled, v -> c.attackTimerMenuEnabled = v, false);
+        addToggle("War beacon at soonest territory", () -> c.warBeaconEnabled, v -> c.warBeaconEnabled = v, false);
         addInfo("Config Profiles (save/switch named toggle presets)");
         addInfo("Disable/Enable WynnExtras toggle (preserves settings)");
         addInfo("Bank search: slot: filter (e.g. slot:necklace, slot:chestplate)");

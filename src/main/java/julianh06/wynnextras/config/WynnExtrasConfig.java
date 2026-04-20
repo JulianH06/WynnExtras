@@ -30,9 +30,6 @@ public class WynnExtrasConfig {
 
     private static final List<Consumer<WynnExtrasConfig>> saveListeners = new ArrayList<>();
 
-    // ==================== MASTER TOGGLE ====================
-    public boolean modEnabled = true;
-
     /** When non-null, WynnExtras is "disabled": stores the previous values of every boolean
      *  field so they can be restored on re-enable. While disabled, all boolean fields are false. */
     public HashMap<String, Boolean> disabledStateBackup = null;
@@ -77,6 +74,8 @@ public class WynnExtrasConfig {
     public boolean notgUpperPlatform = true;
     public boolean notgLowerPlatform = true;
     public boolean artifactRestored = true;
+    public boolean isopteraBlue = true;
+    public boolean itemZeroDurability = true;
 
     public void syncPremades() {
         if(premades == null) premades = new HashMap<>();
@@ -92,6 +91,8 @@ public class WynnExtrasConfig {
         premades.put("The players on the|UPPER PLATFORM SPAWNED", notgUpperPlatform);
         premades.put("A new platform has|LOWER PLATFORM SPAWNED", notgLowerPlatform);
         premades.put("The Artifact's power has been restored|SPEAR RECHARGED", artifactRestored);
+        premades.put("The Interdimensional Isoptera is in the Blue Grotto|BLUE", isopteraBlue);
+        premades.put("One of your items has reached zero durability|ITEM BROKE", itemZeroDurability);
     }
 
     // ==================== CHAT BLOCKER ====================
@@ -99,7 +100,6 @@ public class WynnExtrasConfig {
 
     // ==================== INVENTORY ====================
     public boolean toggleBankOverlay = true;
-    public int wynntilsItemRarityBackgroundAlpha = 150;
     public boolean smoothScrollToggle = true;
     public boolean bankQuickToggle = true;
     public int bankOverlayMaxRows = 3;
@@ -141,20 +141,55 @@ public class WynnExtrasConfig {
     public List<String> raidLootTrackerHiddenLines = new ArrayList<>();
     public boolean raidLootTrackerBackground = true;
     public RaidLootTrackerOverlay.mode raidLootTrackerMode = RaidLootTrackerOverlay.mode.ALL;
+    public boolean autoIgnorePartyInRaid = false;
     public boolean raidSessionEnabled = false;
     public boolean raidSessionOnlyInRaid = false;
     public boolean raidSessionOnlyInInventory = false;
+    public boolean raidSessionShowRuns = true;
+    public boolean raidSessionShowFails = true;
+    public boolean raidSessionShowRate = true;
+    public boolean raidSessionShowTime = true;
+    public boolean raidSessionShowAvgTime = true;
     public int raidSessionHudX = 4;
     public int raidSessionHudY = 270;
     public float raidSessionHudScale = 1.0f;
     public boolean toggleFastRequeue = true;
     public boolean quickRepairEnabled = true;
     public int quickRepairKey = org.lwjgl.glfw.GLFW.GLFW_KEY_R;
+    public boolean shiftDisableGuildRaid = true;
+    public boolean sequoiaBridgeEnabled = true;
+    public int sequoiaFullThresholdPercent = 100;
+
+    public boolean autoStreamEnabled = false;
+    public boolean autoSkipDialogueEnabled = false;
+    public boolean stackDuplicateMessages = false;
+    public int stackDuplicateWindowMinutes = 5;
+    public boolean auraPingEnabled = false;
+    public String auraPingColor = "FF6F00";
+    public boolean weeklyWarCountEnabled = false;
+    public int weeklyWarCountX = 5;
+    public int weeklyWarCountY = 5;
+    public List<Long> weeklyWars = new ArrayList<>();
+    public boolean warDpsEnabled = false;
+    public int warDpsX = 5;
+    public int warDpsY = 50;
+    public boolean attackTimerMenuEnabled = false;
+    public boolean attackTimerAutoBroadcast = true;
+    public int attackTimerX = 5;
+    public int attackTimerY = 150;
+    public boolean warBeaconEnabled = false;
+    public HashMap<String, Integer> hudColorOverrides = new HashMap<>();
+    public boolean territoryMenuKeyEnabled = true;
+    public int territoryMenuKey = org.lwjgl.glfw.GLFW.GLFW_KEY_I;
+    public boolean guildBankKeyEnabled = true;
+    public int guildBankKey = org.lwjgl.glfw.GLFW.GLFW_KEY_Y;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
     public boolean chiropTimer = false;
-    public boolean automaticAspectScanning = true;
+    public boolean automaticAspectScanning = false;
+    public boolean passiveAspectScanning = true;
     public boolean tnaTreeMap = true;
+    public float tnaTreeMapScale = 1.0f;
     public boolean showTreeMapOnlyWhileInsideOfTree = false;
     public boolean showPathsOnTreeMap = true;
     public boolean showTreeMapEverywhere = false;
@@ -167,7 +202,6 @@ public class WynnExtrasConfig {
     public boolean bombShareSuggestion = true;
 
     // ==================== Crowd Sourcing ================
-    public boolean uploadOwnAspects = true;
     public boolean crowdSourceRaidLootpools = true;
     public boolean crowdSourceLootrunLootpools = true;
     public boolean crowdSourceGambits = true;
@@ -176,14 +210,14 @@ public class WynnExtrasConfig {
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
     public boolean showLootpoolButtonInPartyFinder = true;
-    public boolean redirectWynntilsViewStatsToPV = true;
+    public boolean redirectWynntilsViewStatsToPV = false;
 
     public boolean showOwnNametag = false;
     // The code for this is in LivingEntityRendererMixin
     public boolean badgesEnabled = true;
 
     // ==================== CHAT PEEK ====================
-    public boolean chatPeekEnabled = true;
+    public boolean chatPeekEnabled = false;
     public int chatPeekKey = GLFW.GLFW_KEY_Y;
     public boolean chatPeekToggle = false;
     public boolean chatPeekAllowVanillaScroll = false;
@@ -193,7 +227,7 @@ public class WynnExtrasConfig {
     public boolean totemTimerEnabled = true;
     public boolean totemTimerOwnOnly = true;
     public boolean totemTimerWarningText = true;
-    public boolean totemTimerWarningSound = true;
+    public boolean totemTimerWarningSound = false;
     public float totemTimerWarningSoundVolume = 50f;
     public int totemTimerWarningThreshold = 2;
     public boolean totemTimerEstimate = true;
@@ -209,7 +243,7 @@ public class WynnExtrasConfig {
     public Align totemWarningAlignment = Align.CENTER;
 
     // ==================== BLOOD SORROW TIMER ====================
-    public boolean bloodSorrowTimerEnabled = true;
+    public boolean bloodSorrowTimerEnabled = false;
     public boolean autoDetectBloodSorrowTime = true;
     public boolean autoDetectAcolyteAspectTier = true;
     public boolean autoDetectResonanceInHand = true;
@@ -454,6 +488,8 @@ public class WynnExtrasConfig {
                 if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
                 if (INSTANCE.charIdentities == null) INSTANCE.charIdentities = new HashMap<>();
                 if (INSTANCE.configProfiles == null) INSTANCE.configProfiles = new LinkedHashMap<>();
+                if (INSTANCE.weeklyWars == null) INSTANCE.weeklyWars = new ArrayList<>();
+                if (INSTANCE.hudColorOverrides == null) INSTANCE.hudColorOverrides = new HashMap<>();
             }
         } catch (IOException e) {
             System.err.println("[WynnExtras] Failed to load config: " + e.getMessage());

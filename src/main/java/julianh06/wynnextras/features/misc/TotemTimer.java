@@ -141,6 +141,7 @@ public class TotemTimer {
                 String raw = tde.getText().getString();
                 String text = Formatting.strip(raw);
                 if (text == null || (!text.contains("'s Totem") && !text.contains("' Totem"))) continue;
+                if (text.contains("Totem of Tales")) continue;
 
                 int idx = text.contains("'s Totem") ? text.indexOf("'s Totem") : text.indexOf("' Totem");
                 String owner = idx > 0 ? text.substring(0, idx).trim() : "?";
@@ -151,7 +152,7 @@ public class TotemTimer {
                 String[] lines = text.split("\n");
                 for (String line : lines) {
                     String l = line.trim();
-                    if (!l.isEmpty() && !l.contains("'s Totem")) {
+                    if (!l.isEmpty() && !l.contains("'s Totem") && !l.contains("' Totem")) {
                         String[] tokens = l.split("\\s+");
                         timeText = tokens[tokens.length - 1];
                         break;

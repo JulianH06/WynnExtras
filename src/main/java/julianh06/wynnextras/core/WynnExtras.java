@@ -15,6 +15,7 @@ import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
 import julianh06.wynnextras.features.guildviewer.BannerGuiRenderer;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.features.inventory.WeightDisplay;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.data.BookshelfData;
@@ -62,6 +63,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 // TODO: Use WELogger instead of normal logger
@@ -175,6 +179,11 @@ public class WynnExtras implements ClientModInitializer {
 		ProvokeTimer.init();
 		TotemTimer.register();
 		BloodSorrowTimer.register();
+		julianh06.wynnextras.features.misc.RadiantHud.init();
+		julianh06.wynnextras.features.misc.ProfessionOverlay.register();
+		julianh06.wynnextras.features.misc.ClassSelectionPngOverlay.register();
+		julianh06.wynnextras.features.misc.SequoiaBridge.register();
+		julianh06.wynnextras.features.misc.EmeraldGiver.register();
 		ChatNotificator.init();
 		Waypoints.register();
 		FastRequeue.registerFastRequeue();
@@ -183,7 +192,16 @@ public class WynnExtras implements ClientModInitializer {
         RaidLootTracker.register();
         RaidLootTrackerOverlay.register();
         RaidSessionTracker.register();
+        julianh06.wynnextras.features.raid.PartyIgnoreOnRaid.register();
         QuickRepair.register();
+        julianh06.wynnextras.features.qol.AutoStream.register();
+        julianh06.wynnextras.features.qol.AutoSkipDialogue.register();
+        julianh06.wynnextras.features.qol.AuraPing.register();
+        julianh06.wynnextras.features.qol.WeeklyWarCount.register();
+        julianh06.wynnextras.features.qol.WarDPS.register();
+        julianh06.wynnextras.features.qol.AttackTimerMenu.register();
+        julianh06.wynnextras.features.qol.WarBeacon.register();
+        julianh06.wynnextras.features.qol.TerritoryMenuKey.register();
         RaidLootConfig.INSTANCE.load();
 		MaterialTextureResolver.register();
 		RecipeLoader.loadRecipes();
@@ -202,10 +220,11 @@ public class WynnExtras implements ClientModInitializer {
 			MiscBucketData.INSTANCE.load();
 			WynncraftApiHandler.load();
 			WynncraftApiHandler.fetchItemDatabase().thenAccept(result -> WynncraftApiHandler.cachedItemDatabase = result);
-			System.out.println("loaded bankdata");
+
+			ExecutorService executor = Executors.newFixedThreadPool(4);
+			CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool, executor).thenRunAsync(WeightDisplay::populateStatRangesFromDatabase, executor);
 		});
 
-		//WynnExtrasSounds.register();
 		ModSounds.registerSounds();
 
 		if(FabricLoader.getInstance().isModLoaded("devauth")) {

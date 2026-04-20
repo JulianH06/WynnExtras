@@ -138,6 +138,12 @@ public class TreeRoomMinimap {
             return;
         }
 
+        float scale = Math.max(0.3f, Math.min(3.0f, config.tnaTreeMapScale));
+        context.getMatrices().pushMatrix();
+        context.getMatrices().translate(xPos, yPos);
+        context.getMatrices().scale(scale, scale);
+        context.getMatrices().translate(-xPos, -yPos);
+
         RenderUtils.drawTexturedRect(
                 context,
                 background,
@@ -157,6 +163,7 @@ public class TreeRoomMinimap {
         renderPlayer(playerGrotto, context, getSkinTexture(player));
 
         renderOverlay(context);
+        context.getMatrices().popMatrix();
     }
 
     public static void renderOverlay(DrawContext context) {
@@ -367,8 +374,10 @@ public class TreeRoomMinimap {
         loadConfig();
         MinecraftClient mc = MinecraftClient.getInstance();
 
-        boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + WIDTH + 2 &&
-                mouseY >= yPos - 2 && mouseY <= yPos + WIDTH + 4;
+        float scale = Math.max(0.3f, Math.min(3.0f, config.tnaTreeMapScale));
+        int scaledW = (int) (WIDTH * scale);
+        boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + scaledW + 2 &&
+                mouseY >= yPos - 2 && mouseY <= yPos + scaledW + 4;
 
         if (action == 0) {
             if (button == 0 && isDragging) {
@@ -416,6 +425,25 @@ public class TreeRoomMinimap {
             xPos = Math.max(0, Math.min(xPos, screenWidth - WIDTH));
             yPos = Math.max(0, Math.min(yPos, screenHeight - 100));
         }
+    }
+
+    public static boolean handleScroll(double mouseX, double mouseY, double verticalAmount) {
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        if (!config.tnaTreeMap) return false;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        boolean inEditScreen = mc.currentScreen instanceof InventoryScreen || mc.currentScreen instanceof ChatScreen;
+        if (!inEditScreen) return false;
+
+        float scale = Math.max(0.3f, Math.min(3.0f, config.tnaTreeMapScale));
+        int scaledW = (int) (WIDTH * scale);
+        boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + scaledW + 2 &&
+                mouseY >= yPos - 2 && mouseY <= yPos + scaledW + 4;
+        if (!inBounds) return false;
+
+        float newScale = (float) Math.max(0.3, Math.min(3.0, scale + verticalAmount * 0.1));
+        config.tnaTreeMapScale = newScale;
+        WynnExtrasConfig.save();
+        return true;
     }
 
     private static Identifier getSkinTexture(String name) {

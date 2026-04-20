@@ -296,7 +296,7 @@ public class maintracking {
             }
             if (inAspectMenu && !wasInAspectMenu) {
                 wasInAspectMenu = true;
-                passiveScanActive = true;
+                passiveScanActive = WynnExtrasConfig.INSTANCE.passiveAspectScanning || WynnExtrasConfig.INSTANCE.automaticAspectScanning;
             }
 
             if (inAspectMenu && passiveScanActive && !AspectScanreq && !nextPage) {
@@ -341,7 +341,7 @@ public class maintracking {
             // Preview chest: scan when title changes (allows switching raids inside the chest)
             if(inPreviewChest){
                 String currentTitle = currScreen.getTitle().getString();
-                if(!currentTitle.equals(lastPreviewChestTitle)){
+                if(!currentTitle.equals(lastPreviewChestTitle) && (WynnExtrasConfig.INSTANCE.passiveAspectScanning || WynnExtrasConfig.INSTANCE.automaticAspectScanning)){
                     System.out.println("[WynnExtras] Preview chest detected, title: " + currentTitle);
                     lastPreviewChestTitle = currentTitle;
                     AspectScanning.scanPreviewChest(screen, currentTitle);

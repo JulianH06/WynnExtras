@@ -181,6 +181,39 @@ public class CommandLoader implements WELoader {
             base = base.then(changelog);
             alias = alias.then(changelog);
 
+            var ignorelist = ClientCommandManager.literal("ignorelist").executes(ctx -> {
+                Set<String> ignored = julianh06.wynnextras.features.raid.PartyIgnoreOnRaid.getTrackedIgnored();
+                if (ignored.isEmpty()) {
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No players tracked as ignored yet. Run /ignore add <player> and the list will populate."));
+                } else {
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Ignored players (" + ignored.size() + "): §f" + String.join(", ", ignored)));
+                }
+                return 1;
+            });
+            base = base.then(ignorelist);
+            alias = alias.then(ignorelist);
+
+            var ems = ClientCommandManager.literal("ems")
+                    .executes(ctx -> {
+                        julianh06.wynnextras.features.misc.EmeraldGiver.start(null, -1);
+                        return 1;
+                    })
+                    .then(ClientCommandManager.argument("player", StringArgumentType.word())
+                            .executes(ctx -> {
+                                julianh06.wynnextras.features.misc.EmeraldGiver.start(
+                                        StringArgumentType.getString(ctx, "player"), -1);
+                                return 1;
+                            })
+                            .then(ClientCommandManager.argument("clicks", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 200))
+                                    .executes(ctx -> {
+                                        julianh06.wynnextras.features.misc.EmeraldGiver.start(
+                                                StringArgumentType.getString(ctx, "player"),
+                                                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "clicks"));
+                                        return 1;
+                                    })));
+            base = base.then(ems);
+            alias = alias.then(ems);
+
             dispatcher.register(base);
             dispatcher.register(baseLowerCase);
             dispatcher.register(alias);

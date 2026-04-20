@@ -37,6 +37,8 @@ public class PlayerHider {
 
     private static SubCommand toggleSubCmd;
 
+    private static SubCommand toggleWarSubCmd;
+
     private static SubCommand addSubCmd;
 
     private static SubCommand removeSubCmd;
@@ -64,6 +66,23 @@ public class PlayerHider {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Playerhider")));
                             } else {
                                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Playerhider")));
+                            }
+                            WynnExtrasConfig.save();
+                            return 1;
+                        },
+                        null,
+                        null
+                );
+
+                toggleWarSubCmd = new SubCommand(
+                        "war",
+                        "",
+                        context -> {
+                            WynnExtrasConfig.INSTANCE.hideAllPlayersInWar = !WynnExtrasConfig.INSTANCE.hideAllPlayersInWar;
+                            if(WynnExtrasConfig.INSTANCE.hideAllPlayersInWar) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("All players will now be hidden in a war.")));
+                            } else {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Other players will now be visible again in wars.")));
                             }
                             WynnExtrasConfig.save();
                             return 1;
@@ -154,6 +173,7 @@ public class PlayerHider {
                                 addSubCmd,
                                 removeSubCmd,
                                 toggleSubCmd,
+                                toggleWarSubCmd,
                                 hideAllSubCmd,
                                 hideAllInWarSubCmd
                         ),

@@ -75,6 +75,8 @@ public class PV {
     @SubscribeEvent
     void onInput(KeyInputEvent event) {
         if(event.getKey() != GLFW.GLFW_KEY_ENTER || event.getAction() != GLFW.GLFW_PRESS) return;
+        // Only process Enter when the PV screen is actually open
+        if (!(MinecraftClient.getInstance().currentScreen instanceof PVScreen)) return;
         if(PVScreen.searchBar != null) {
             open(PVScreen.searchBar.getInput());
         }

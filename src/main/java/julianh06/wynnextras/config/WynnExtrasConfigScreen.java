@@ -124,6 +124,58 @@ public class WynnExtrasConfigScreen extends Screen {
                 }, "Reset"))
             .add(text("", "If you accidentally cicked on of these buttons click on \"cancel\" to get your old settings back.")); //TODO; improve wording here
 
+        // ===== NEW =====
+        category("New", 0xFFff5ea8)
+                .add(text("", "All features added in this update. Toggle any of them on or off."))
+                .add(toggle("Auto-ignore party in raid", "Auto /ignore party members on raid start, /ignore remove on raid end (reduces lag from teammate effects)",
+                        () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
+                .add(toggle("Item broke notifier", "Show 'ITEM BROKE' when one of your items reaches zero durability",
+                        () -> config.itemZeroDurability, v -> config.itemZeroDurability = v))
+                .add(toggle("Raid Session Tracker", "HUD showing raid completion/failure counts and avg time",
+                        () -> config.raidSessionEnabled, v -> config.raidSessionEnabled = v))
+                .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
+                        () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
+                .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
+                        () -> config.quickRepairKey, v -> config.quickRepairKey = v),
+                        () -> config.quickRepairEnabled))
+                .add(toggle("Shift-toggle Guild Raid", "Block Guild Raid clicks by default, hold SHIFT to allow them through",
+                        () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
+                .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
+                        () -> config.isopteraBlue, v -> config.isopteraBlue = v))
+                .add(toggle("Auto /stream", "Automatically send /stream when streamer mode disables (e.g. world swap)",
+                        () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
+                .add(toggle("Auto Skip Dialogue", "Automatically skip 'Press SHIFT to continue' NPC dialogue",
+                        () -> config.autoSkipDialogueEnabled, v -> config.autoSkipDialogueEnabled = v))
+                .add(toggle("Stack Duplicate Messages", "Collapse repeated messages into one with a (N) counter",
+                        () -> config.stackDuplicateMessages, v -> config.stackDuplicateMessages = v))
+                .add(visibleWhen(slider("Stack Window (minutes)", "Only stack messages sent within the last X minutes",
+                        1, 60, () -> config.stackDuplicateWindowMinutes, v -> config.stackDuplicateWindowMinutes = v),
+                        () -> config.stackDuplicateMessages))
+                .add(toggle("Aura Ping", "Flash screen and show countdown when aura procs",
+                        () -> config.auraPingEnabled, v -> config.auraPingEnabled = v))
+                .add(toggle("Weekly War Count", "Show number of wars in last 7 days on HUD",
+                        () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
+                .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
+                        () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
+                .add(toggle("Attack Timer Menu", "Show upcoming attack times from scoreboard",
+                        () -> config.attackTimerMenuEnabled, v -> config.attackTimerMenuEnabled = v))
+                .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
+                        () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),
+                        () -> config.attackTimerMenuEnabled))
+                .add(toggle("War Beacon", "Green beacon beam at the soonest war territory",
+                        () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v))
+                .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
+                        () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
+                .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
+                        () -> config.territoryMenuKey, v -> config.territoryMenuKey = v),
+                        () -> config.territoryMenuKeyEnabled))
+                .add(toggle("Guild Bank Keybind", "Press a key to open /gu manage > Bank directly",
+                        () -> config.guildBankKeyEnabled, v -> config.guildBankKeyEnabled = v))
+                .add(visibleWhen(keybind("Guild Bank Key", "Key to open the guild bank",
+                        () -> config.guildBankKey, v -> config.guildBankKey = v),
+                        () -> config.guildBankKeyEnabled))
+                .add(text("", "Full configuration for each feature lives in its own category (Raiding, Chat, Misc, etc.)."));
+
         // ===== RAIDS =====
         category("Raiding", GOLD_DARK)
                 .add(toggle("Timestamps", "Show timestamps during raids",
@@ -132,13 +184,18 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
                 .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
                         () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
+                .add(toggle("Block Guild Raid (Shift to allow)", "Blocks clicks on 'Guild Raid Available' in party finder unless SHIFT is held",
+                        () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
                 .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
                         () -> config.quickRepairKey, v -> config.quickRepairKey = v),
                         () -> config.quickRepairEnabled))
                 .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
                         () -> config.chiropTimer, v -> config.chiropTimer = v))
-                .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests",
+                .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests by quickly clicking through the rewards",
                         () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
+                .add(visibleWhen(toggle("Passive aspect scanning", "Scan your aspects passively without bothering you",
+                        () -> config.passiveAspectScanning, v -> config.passiveAspectScanning = v),
+                        () -> !config.automaticAspectScanning))
                 .sub("Loot Tracker")
                 .add(toggle("Enable Tracker", "Track raid loot drops",
                         () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
@@ -174,8 +231,26 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(visibleWhen(sliderF("HUD Scale", "Scale of the session tracker HUD", 0.5f, 3.0f, 0.1f,
                         () -> config.raidSessionHudScale, v -> config.raidSessionHudScale = v),
                         () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Show Runs", "Display 'Runs: N' counter",
+                        () -> config.raidSessionShowRuns, v -> config.raidSessionShowRuns = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Show Fails", "Display fail count (e.g. (3 F))",
+                        () -> config.raidSessionShowFails, v -> config.raidSessionShowFails = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Show Runs/hr", "Display runs-per-hour rate",
+                        () -> config.raidSessionShowRate, v -> config.raidSessionShowRate = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Show Elapsed Time", "Display session elapsed time",
+                        () -> config.raidSessionShowTime, v -> config.raidSessionShowTime = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Show Avg Run Time", "Display average raid completion time",
+                        () -> config.raidSessionShowAvgTime, v -> config.raidSessionShowAvgTime = v),
+                        () -> config.raidSessionEnabled))
                 .add(visibleWhen(text("Movable in inventory", "Open inventory to drag the tracker or click [ADD]/[X]/[||] buttons"),
                         () -> config.raidSessionEnabled))
+                .sub("Auto-ignore party in raid")
+                .add(toggle("Auto-ignore party in raid", "On raid start, /ignore add all party members to reduce lag from their effects; /ignore remove them on raid end",
+                        () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
                 .sub("TNA Tree Room Map")
                 .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
                         () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))
@@ -261,8 +336,6 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.bankQuickToggle, v -> config.bankQuickToggle = v))
                 .add(toggle("Dark Mode", "Dark bank theme",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
-                .add(slider("Rarity BG Alpha", "Item rarity background opacity",
-                        0, 255, () -> config.wynntilsItemRarityBackgroundAlpha, v -> config.wynntilsItemRarityBackgroundAlpha = v))
                 .add(slider("Max Rows", "The maximum amount of rows (lower can reduce lag)",
                         2, 24, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
                 .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
@@ -273,9 +346,13 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.bankBagOverlay, v -> config.bankBagOverlay = v))
                 .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
-                        () -> config.showWeight, v -> config.showWeight = v))
-                .add(toggle("Stat Scales", "Show weights for each stat",
-                        () -> config.showScales, v -> config.showScales = v))
+                        () -> config.showWeight, v -> {
+                            config.showWeight = v;
+                            if(!v) config.showScales = true;
+                        }))
+                .add(visibleWhen(toggle("Stat Scales", "Show weights for each stat",
+                        () -> config.showScales, v -> config.showScales = v),
+                        () -> config.showWeight))
                 .sub("Trade Market")
                 .add(toggle("Scale background", "Use mythic scale as item background",
                         () -> config.scaleBackgroundEnabled, v -> config.scaleBackgroundEnabled = v))
@@ -306,7 +383,7 @@ public class WynnExtrasConfigScreen extends Screen {
         category("Chat", 0xFFc80069)
                 .add(stringList("Blocked Words", "Hide messages with these",
                         () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
-                .add(toggle("Quick PV/GV Access", "Click on a players name or guild to open the pv/gv! (EXPERIMENTAL)",
+                .add(toggle("Quick PV/GV Access (EXPERIMENTAL)", "Click on a players name or guild to open the pv/gv!",
                         () -> config.chatClickPV, v -> config.chatClickPV = v))
                 .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs when someone asks about them in chat",
                         () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
@@ -351,7 +428,11 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Lower platform spawned", "Lower platform spawn in NOTG minibosses",
                         () -> config.notgLowerPlatform, v -> config.notgLowerPlatform = v))
                 .add(toggle("Artifacts power restored", "When you can charge again in TWP room 3",
-                        () -> config.artifactRestored, v -> config.artifactRestored = v));
+                        () -> config.artifactRestored, v -> config.artifactRestored = v))
+                .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
+                        () -> config.isopteraBlue, v -> config.isopteraBlue = v))
+                .add(toggle("Item broke (0 durability)", "Show 'ITEM BROKE' when one of your items reaches zero durability",
+                        () -> config.itemZeroDurability, v -> config.itemZeroDurability = v));
 
         // ===== Hiders =====
         category("Hiders", 0xFF673190)
@@ -365,7 +446,7 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.hideAllPlayersInWar, v -> config.hideAllPlayersInWar = v))
                 .add(stringList("Hidden Players", "Always hide these players",
                         () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"))
-            .add(dropdown("Spell Hider Profile", "The default values for the spell hider, this can be changed at will without changing the overrides set with /Wynnextras SpellHider modify",
+            .add(dropdown("Spell Hider Profile (EXPERIMENTAL)", "The default values for the spell hider, this can be changed at will without changing the overrides set with /Wynnextras SpellHider modify",
                     SpellProfiles.getProfileNames(), () -> config.spellProfile, v -> config.spellProfile = v));
 
         // ===== MISC =====
@@ -376,6 +457,10 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.differentGUIScale, v -> config.differentGUIScale = v))
                 .add(slider("GUI Scale", "Custom GUI scale value",
                         1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
+                .add(toggle("Lootpool button in pf menu", "Show a button to quickly access /we lootpool through the pf menu",
+                        () -> config.showLootpoolButtonInPartyFinder, v -> config.showLootpoolButtonInPartyFinder = v))
+                .add(toggle("Redirect Wynntils View Stats", "Changes the Wynntils 'View Player Stats' button to open the pv instead of the wynn website",
+                        () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v))
                 .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
                         () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
                 .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
@@ -432,14 +517,13 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
                     0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
             .sub("Crowd sourcing")
-                .add(toggle("Upload your own Aspects", "Upload your aspect data so you can see your personal lootpool scores",
-                        () -> config.uploadOwnAspects, v -> config.uploadOwnAspects = v))
                 .add(toggle("Lootrun lootpools", "Help gather the current lootrun lootpool so others can see it with /we lootruns",
                         () -> config.crowdSourceLootrunLootpools, v -> config.crowdSourceLootrunLootpools = v))
                 .add(toggle("Raid lootpools", "Help gather the current raid lootpool so others can see it with /we lootpool",
                         () -> config.crowdSourceRaidLootpools, v -> config.crowdSourceRaidLootpools = v))
                 .add(toggle("Gambits", "Help gather the current gambits so others can see them with /we gambits",
                         () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v));
+
     }
 
     // ==================== BUILDER HELPERS ====================

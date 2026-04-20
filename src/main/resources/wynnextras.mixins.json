@@ -1,16 +1,17 @@
 {
-  "required": true,
+  "required": false,
   "package": "julianh06.wynnextras.mixin",
   "plugin": "julianh06.wynnextras.mixin.ModMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   },
   "overwrites": {
     "requireAnnotations": true
   },
   "client": [
     "ChatClickMixin",
+    "ChatHudAddMessageMixin",
     "ClientPacketListenerMixin",
     "GameRendererMixin",
     "GuildMapScreenMixin",
@@ -43,15 +44,17 @@
     "ItemGuessFeatureAccessor",
     "ItemStatInfoFeatureMixin",
     "MessageFilterFeatureMixin",
+    "PartyFinderClickBlockMixin",
     "PressableWidgetMixin",
     "ProfessionXpGainMixin",
     "RaidKindAccessor",
     "ScreenHandlerMixin",
     "TerritoryInfoMixin",
     "TooltipFittingFeatureMixin",
-    "TooltipUtilsMixin",
     "Accessor.BannerBlockEntityAccessor",
+    "Accessor.BossBarHudAccessor",
     "Accessor.ChatHudAccessor",
+    "Accessor.InGameHudAccessor",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
     "Accessor.SlotAccessor",
     "BankOverlay.ContainerScrollFeatureMixin",

@@ -12,6 +12,9 @@ public interface ChatHudAccessor {
     @Accessor("messages")
     List<ChatHudLine> getMessages();
 
+    @Accessor("visibleMessages")
+    List<ChatHudLine.Visible> getVisibleMessages();
+
     @Accessor("scrolledLines")
     int getScrolledLines();
 }
