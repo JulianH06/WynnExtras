@@ -136,16 +136,19 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.toggleRaidLootTracker))
                 .add(visibleWhen(text("The Tracker is movable", "To change its position open your inventory and drag it where you want"),
                         () -> config.toggleRaidLootTracker))
-                .sub("TNA Tree Room Map")
+            .sub("TNA Tree Room Map")
                 .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
                         () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))
-                .add(toggle("Show Tree Map only inside of tree", "Only show the Tree Map while you are the person inside of the tree",
-                        () -> config.showTreeMapOnlyWhileInsideOfTree, v -> config.showTreeMapOnlyWhileInsideOfTree = v))
-                .add(toggle("Show paths on Tree Map", "Show the optimal path to the soul while inside the tree",
-                        () -> config.showPathsOnTreeMap, v -> config.showPathsOnTreeMap = v))
-                .add(toggle("Show Map everywhere", "Enable this if you want to edit the position without going into TNA",
-                        () -> config.showTreeMapEverywhere, v -> config.showTreeMapEverywhere = v))
-                .add(text("The Map is movable", "To change its position open your inventory and drag it where you want"));
+                .add(visibleWhen(toggle("Show Tree Map only inside of tree", "Only show the Tree Map while you are the person inside of the tree",
+                        () -> config.showTreeMapOnlyWhileInsideOfTree, v -> config.showTreeMapOnlyWhileInsideOfTree = v),
+                        () -> config.tnaTreeMap))
+                .add(visibleWhen(toggle("Show paths on Tree Map", "Show the optimal path to the soul while inside the tree",
+                        () -> config.showPathsOnTreeMap, v -> config.showPathsOnTreeMap = v),
+                        () -> config.tnaTreeMap))
+                .add(visibleWhen(toggle("Show Map everywhere", "Enable this if you want to edit the position without going into TNA",
+                        () -> config.showTreeMapEverywhere, v -> config.showTreeMapEverywhere = v),
+                        () -> config.tnaTreeMap))
+                .add(visibleWhen(text("The Map is movable", "To change its position open your inventory and drag it where you want"), () -> config.tnaTreeMap));
 
         // ===== COMBAT =====
         category("Combat", 0xFFfda216)

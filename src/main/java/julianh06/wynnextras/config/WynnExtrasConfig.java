@@ -55,14 +55,14 @@ public class WynnExtrasConfig {
     // ==================== CHAT NOTIFIER PREMADES ====================
 
     public Map<String, Boolean> premades;
-    public boolean lostEye = true;
-    public boolean oneGoo = true;
-    public boolean twoGoo = true;
+    public boolean lostEye = false;
+    public boolean oneGoo = false;
+    public boolean twoGoo = false;
     public boolean soul = true;
-    public boolean voidMatter = true;
+    public boolean voidMatter = false;
     public boolean fourOutOfFiveVoidMatter = true;
-    public boolean oneLightCrystal = true;
-    public boolean twoLightCrystal = true;
+    public boolean oneLightCrystal = false;
+    public boolean twoLightCrystal = false;
     public boolean notgUpperPlatform = true;
     public boolean notgLowerPlatform = true;
     public boolean artifactRestored = true;
@@ -130,7 +130,7 @@ public class WynnExtrasConfig {
     public boolean chiropTimer = false;
     public boolean automaticAspectScanning = false;
     public boolean passiveAspectScanning = true;
-    public boolean tnaTreeMap = true;
+    public boolean tnaTreeMap = false;
     public boolean showTreeMapOnlyWhileInsideOfTree = false;
     public boolean showPathsOnTreeMap = true;
     public boolean showTreeMapEverywhere = false;
