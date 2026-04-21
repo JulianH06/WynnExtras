@@ -86,6 +86,10 @@ public class TreeRoomMinimap {
 
     private static void loadConfig() {
         if (configLoaded) return;
+        syncFromConfig();
+    }
+
+    public static void syncFromConfig() {
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         xPos = config.treeMapX;
         yPos = config.treeMapY;
@@ -425,6 +429,10 @@ public class TreeRoomMinimap {
             xPos = Math.max(0, Math.min(xPos, screenWidth - WIDTH));
             yPos = Math.max(0, Math.min(yPos, screenHeight - 100));
         }
+    }
+
+    public static boolean isDragging() {
+        return isDragging;
     }
 
     public static boolean handleScroll(double mouseX, double mouseY, double verticalAmount) {

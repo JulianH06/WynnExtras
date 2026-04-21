@@ -93,14 +93,14 @@ public class CompassMenuOverlay extends WEHandledScreen {
         float xStart = (int) (((HandledScreenAccessor) screen).getX() * ui.getScaleFactor());
         float yStart = (int) ((((HandledScreenAccessor) screen).getY() + ((HandledScreenAccessor) screen).getBackgroundHeight()) * ui.getScaleFactor());
         float backgroundWidth = ((HandledScreenAccessor) screen).getBackgroundWidth() * ui.getScaleFactorF();
-
+        int buttonWidth = (int) (133 * ui.getScaleFactorF());
 
         int itemWidth = 50;
         int itemHeight = itemWidth;
         float itemXStart = xStart + 23;
         float itemYStart = yStart + 60;
 
-        autoAssignButton.setBounds((int) (xStart - 200 + backgroundWidth / 2f), (int) (itemYStart + (65 / 3f) * ui.getScaleFactor()), 400, 50);
+        autoAssignButton.setBounds((int) (xStart + (backgroundWidth - buttonWidth) / 2f), (int) (itemYStart + (65 / 3f) * ui.getScaleFactor()), buttonWidth, (int) (17 * ui.getScaleFactorF()));
 
         ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("§6Skillpoint helper:"), xStart + backgroundWidth / 2f, yStart + 25, CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF());
         ui.drawCenteredText(Text.of("§7This is an experimental feature, new items"), xStart + backgroundWidth / 2f, (float) (itemYStart + ((selectingWeapon ? 170 : 130) / 3f) * ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF() / 1.5f);
@@ -182,9 +182,9 @@ public class CompassMenuOverlay extends WEHandledScreen {
             if(!(Models.Container.getCurrentContainer() instanceof CharacterInfoContainer)) return;
             ui.drawButton(x, y, width, height, 13, hovered);
             if (selectingWeapon) {
-                ui.drawCenteredText("Skip weapon selection", x + width / 2f, y + height / 2f);
+                ui.drawCenteredText("Skip weapon selection", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF());
             } else {
-                ui.drawCenteredText("Auto assign skill points", x + width / 2f, y + height / 2f);
+                ui.drawCenteredText("Auto assign skill points", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF());
             }
         }
 

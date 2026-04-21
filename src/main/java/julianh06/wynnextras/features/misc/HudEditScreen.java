@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.misc;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.qol.AttackTimerMenu;
 import julianh06.wynnextras.features.raid.RaidSessionTracker;
+import julianh06.wynnextras.features.raid.TreeRoomMinimap;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -128,7 +129,7 @@ public class HudEditScreen extends Screen {
         }
         if (c.tnaTreeMap) {
             HudElement treemap = new HudElement("treemap", "Tree Minimap",
-                    c.treeMapX, c.treeMapY, c.treeMapScale, WynnExtrasConfig.Align.LEFT);
+                    c.treeMapX, c.treeMapY, c.tnaTreeMapScale, WynnExtrasConfig.Align.LEFT);
             treemap.customH = 130;
             treemap.w = 130;
             treemap.fixedSize = true;
@@ -719,7 +720,7 @@ public class HudEditScreen extends Screen {
                     c.notifierX = e.x + e.sw() / 2; c.notifierY = e.y + e.sh() / 2; c.notifierScale = e.scale; c.notifierAlignment = e.alignment;
                 }
                 case "treemap" -> {
-                    c.treeMapX = e.x; c.treeMapY = e.y; c.treeMapScale = e.scale;
+                    c.treeMapX = e.x; c.treeMapY = e.y; c.tnaTreeMapScale = e.scale;
                 }
                 case "weeklyWars" -> {
                     c.weeklyWarCountX = e.x; c.weeklyWarCountY = e.y;
@@ -736,6 +737,7 @@ public class HudEditScreen extends Screen {
             }
         }
         WynnExtrasConfig.save();
+        TreeRoomMinimap.syncFromConfig();
         MinecraftClient.getInstance().setScreen(parent);
     }
 }

@@ -682,7 +682,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         drawEmeraldOverlay(context, xStart - 36, yStart - 14);
         if (WynnExtrasConfig.INSTANCE.bankBagOverlay
-                && (currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER)) {
+                && (currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER || currentOverlayType == BankOverlayType.MISC)) {
             cacheCurrentBankPageIfPossible();
             drawBagOverlay(
                     context,

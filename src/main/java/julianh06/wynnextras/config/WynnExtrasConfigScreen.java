@@ -126,7 +126,7 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // ===== NEW =====
         category("New", 0xFFff5ea8)
-                .add(text("", "All features added in this update. Toggle any of them on or off."))
+            .add(text("", "All features added in this update. Toggle any of them on or off."))
                 .add(toggle("Auto-ignore party in raid", "Auto /ignore party members on raid start, /ignore remove on raid end (reduces lag from teammate effects)",
                         () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
                 .add(toggle("Item broke notifier", "Show 'ITEM BROKE' when one of your items reaches zero durability",

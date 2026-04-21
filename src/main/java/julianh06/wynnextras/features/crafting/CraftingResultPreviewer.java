@@ -214,6 +214,10 @@ public class CraftingResultPreviewer {
 
     }
 
+    public static boolean isDragging() {
+        return isDragging;
+    }
+
     public static void handleMouseMove(double mouseX, double mouseY) {
         if (!isDragging) return;
 

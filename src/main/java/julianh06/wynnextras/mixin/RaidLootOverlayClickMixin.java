@@ -37,10 +37,35 @@ public class RaidLootOverlayClickMixin {
         boolean ctrlHeld = (mods & GLFW.GLFW_MOD_CONTROL) != 0;
         boolean shiftHeld = (mods & GLFW.GLFW_MOD_SHIFT) != 0;
 
-        RaidLootTrackerOverlay.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
-        TradeMarketOverlay.handleClick(mouseX, mouseY, button, action);
-        CraftingResultPreviewer.handleClick(mouseX, mouseY, button, action);
-        TreeRoomMinimap.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
+        if (action == 1) {
+            // On mousedown: short-circuit after first overlay claims the drag
+            boolean dragClaimed = false;
+
+            if (!dragClaimed) {
+                boolean was = RaidLootTrackerOverlay.isDragging();
+                RaidLootTrackerOverlay.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
+                if (!was && RaidLootTrackerOverlay.isDragging()) dragClaimed = true;
+            }
+            if (!dragClaimed) {
+                boolean was = TradeMarketOverlay.isDragging();
+                TradeMarketOverlay.handleClick(mouseX, mouseY, button, action);
+                if (!was && TradeMarketOverlay.isDragging()) dragClaimed = true;
+            }
+            if (!dragClaimed) {
+                boolean was = CraftingResultPreviewer.isDragging();
+                CraftingResultPreviewer.handleClick(mouseX, mouseY, button, action);
+                if (!was && CraftingResultPreviewer.isDragging()) dragClaimed = true;
+            }
+            if (!dragClaimed) {
+                TreeRoomMinimap.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
+            }
+        } else {
+            // On mouseup: all overlays release drag independently
+            RaidLootTrackerOverlay.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
+            TradeMarketOverlay.handleClick(mouseX, mouseY, button, action);
+            CraftingResultPreviewer.handleClick(mouseX, mouseY, button, action);
+            TreeRoomMinimap.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
+        }
     }
 
     @Inject(method = "onCursorPos", at = @At("HEAD"))
