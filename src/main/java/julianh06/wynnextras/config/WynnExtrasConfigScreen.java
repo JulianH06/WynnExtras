@@ -144,8 +144,17 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.quickRepairEnabled))
                 .add(toggle("Shift-toggle Guild Raid", "Block Guild Raid clicks by default, hold SHIFT to allow them through",
                         () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
-                .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
-                        () -> config.isopteraBlue, v -> config.isopteraBlue = v))
+                .sub("Tree Room Grotto Announcements")
+                    .add(toggle("Isoptera in Gray Grotto", "Show 'GRAY' when the Interdimensional Isoptera is in the Gray Grotto",
+                            () -> config.isopteraGray, v -> config.isopteraGray = v))
+                    .add(toggle("Isoptera in Black Grotto", "Show 'BLACK' when the Interdimensional Isoptera is in the Black Grotto",
+                            () -> config.isopteraBlack, v -> config.isopteraBlack = v))
+                    .add(toggle("Isoptera in White Grotto", "Show 'WHITE' when the Interdimensional Isoptera is in the White Grotto",
+                            () -> config.isopteraWhite, v -> config.isopteraWhite = v))
+                    .add(toggle("Isoptera in Orange Grotto", "Show 'ORANGE' when the Interdimensional Isoptera is in the Orange Grotto",
+                            () -> config.isopteraOrange, v -> config.isopteraOrange = v))
+                    .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
+                            () -> config.isopteraBlue, v -> config.isopteraBlue = v))
                 .add(toggle("Auto /stream", "Automatically send /stream when streamer mode disables (e.g. world swap)",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
                 .add(toggle("Auto Skip Dialogue", "Automatically skip 'Press SHIFT to continue' NPC dialogue",
@@ -413,7 +422,7 @@ public class WynnExtrasConfigScreen extends Screen {
                         0, 200, () -> (int)(config.soundPitch), v -> config.soundPitch = v))
                 .add(button("Sound Test", "Click the button to test the sound",
                         v -> McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test"))
-                .sub("Premade Notifications")
+            .sub("Premade Notifications")
                 .add(toggle("Lost Eye", "Lost Eye in TNA light room",
                         () -> config.lostEye, v -> config.lostEye = v))
                 .add(toggle("+1 Goo", "+1 Goo in NOTG Slime Gathering",
@@ -436,10 +445,19 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.notgLowerPlatform, v -> config.notgLowerPlatform = v))
                 .add(toggle("Artifacts power restored", "When you can charge again in TWP room 3",
                         () -> config.artifactRestored, v -> config.artifactRestored = v))
-                .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
-                        () -> config.isopteraBlue, v -> config.isopteraBlue = v))
                 .add(toggle("Item broke (0 durability)", "Show 'ITEM BROKE' when one of your items reaches zero durability",
-                        () -> config.itemZeroDurability, v -> config.itemZeroDurability = v));
+                        () -> config.itemZeroDurability, v -> config.itemZeroDurability = v))
+            .sub("Tree Room Grotto Announcements")
+                .add(toggle("Isoptera in Gray Grotto", "Show 'GRAY' when the Interdimensional Isoptera is in the Gray Grotto",
+                        () -> config.isopteraGray, v -> config.isopteraGray = v))
+                .add(toggle("Isoptera in Black Grotto", "Show 'BLACK' when the Interdimensional Isoptera is in the Black Grotto",
+                        () -> config.isopteraBlack, v -> config.isopteraBlack = v))
+                .add(toggle("Isoptera in White Grotto", "Show 'WHITE' when the Interdimensional Isoptera is in the White Grotto",
+                        () -> config.isopteraWhite, v -> config.isopteraWhite = v))
+                .add(toggle("Isoptera in Orange Grotto", "Show 'ORANGE' when the Interdimensional Isoptera is in the Orange Grotto",
+                        () -> config.isopteraOrange, v -> config.isopteraOrange = v))
+                .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
+                        () -> config.isopteraBlue, v -> config.isopteraBlue = v));
 
         // ===== Hiders =====
         category("Hiders", 0xFF673190)

@@ -74,7 +74,6 @@ public class WynnExtrasConfig {
     public boolean notgUpperPlatform = false;
     public boolean notgLowerPlatform = false;
     public boolean artifactRestored = true;
-    public boolean isopteraBlue = true;
     public boolean itemZeroDurability = true;
 
     public void syncPremades() {
@@ -91,9 +90,23 @@ public class WynnExtrasConfig {
         premades.put("The players on the|UPPER PLATFORM SPAWNED", notgUpperPlatform);
         premades.put("A new platform has|LOWER PLATFORM SPAWNED", notgLowerPlatform);
         premades.put("The Artifact's power has been restored|SPEAR RECHARGED", artifactRestored);
-        premades.put("The Interdimensional Isoptera is in the Blue Grotto|BLUE", isopteraBlue);
         premades.put("One of your items has reached zero durability|ITEM BROKE", itemZeroDurability);
+
+        //Isoptera announcements
+        premades.put("The Interdimensional Isoptera is in the Gray Grotto|GRAY", isopteraGray);
+        premades.put("The Interdimensional Isoptera is in the Black Grotto|BLACK", isopteraBlack);
+        premades.put("The Interdimensional Isoptera is in the White Grotto|WHITE", isopteraWhite);
+        premades.put("The Interdimensional Isoptera is in the Orange Grotto|ORANGE", isopteraOrange);
+        premades.put("The Interdimensional Isoptera is in the Blue Grotto|BLUE", isopteraBlue);
     }
+
+    // ==================== ISOPTERA PREMADE NOTIFICATIONS ====================
+    public boolean isopteraGray = false;
+    public boolean isopteraBlack = false;
+    public boolean isopteraWhite = false;
+    public boolean isopteraOrange = false;
+    public boolean isopteraBlue = false;
+
 
     // ==================== CHAT BLOCKER ====================
     public List<String> blockedWords = new ArrayList<>();
