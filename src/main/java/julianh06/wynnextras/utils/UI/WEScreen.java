@@ -29,11 +29,17 @@ import java.util.function.Supplier;
 public abstract class WEScreen extends Screen {
     protected DrawContext drawContext;
     protected double scaleFactor;
+    protected double matrixScale = 1.0;
     protected int xStart;
     protected int yStart;
     protected int screenWidth;
     protected int screenHeight;
     protected UIUtils ui;
+
+    protected double getTargetScaleFactor() { return -1; }
+    protected int getMinLogicalWidth()  { return 0; }
+    protected int getMinLogicalHeight() { return 0; }
+    protected double actualScale = 1.0;
 
     public final List<Widget> rootWidgets = new ArrayList<>();
     protected final List<WEElement<?>> listElements = new ArrayList<>(); // generisch
@@ -92,15 +98,21 @@ public abstract class WEScreen extends Screen {
         if (ui == null) ui = new UIUtils(context, scaleFactor, xStart, yStart);
         else ui.updateContext(context, scaleFactor, xStart, yStart);
 
+        int mx = (int)(mouseX / matrixScale);
+        int my = (int)(mouseY / matrixScale);
+
+        context.getMatrices().pushMatrix();
+        context.getMatrices().scale((float) matrixScale, (float) matrixScale);
+
         ui.drawBackground();
         updateValues();
         updateVisibleListRange();
         layoutListElements();
-        drawBackground(context, mouseX, mouseY, delta);
-        drawContent(context, mouseX, mouseY, delta);
+        drawBackground(context, mx, my, delta);
+        drawContent(context, mx, my, delta);
 
         for (Widget w : rootWidgets) {
-            w.draw(context, mouseX, mouseY, delta, ui);
+            w.draw(context, mx, my, delta, ui);
         }
 
         // draw only visible range with small buffer for smoothness
@@ -108,9 +120,11 @@ public abstract class WEScreen extends Screen {
         int end = Math.min(listElements.size() - 1, lastVisibleIndex + 1);
         for (int i = start; i <= end; i++) {
             WEElement<?> e = listElements.get(i);
-            e.draw(context, mouseX, mouseY, delta, ui);
+            e.draw(context, mx, my, delta, ui);
         }
-        drawForeground(context, mouseX, mouseY, delta);
+        drawForeground(context, mx, my, delta);
+
+        context.getMatrices().popMatrix();
     }
 
     protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) { /* override */ }
@@ -145,8 +159,8 @@ public abstract class WEScreen extends Screen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubleClick) {
-        double mouseX = click.x();
-        double mouseY = click.y();
+        double mouseX = click.x() / matrixScale;
+        double mouseY = click.y() / matrixScale;
         int button = click.button();
 
         // root widgets (topmost-first)
@@ -180,8 +194,8 @@ public abstract class WEScreen extends Screen {
     }
 
     @Override public boolean mouseReleased(Click click) {
-        double mouseX = click.x();
-        double mouseY = click.y();
+        double mouseX = click.x() / matrixScale;
+        double mouseY = click.y() / matrixScale;
         int button = click.button();
 
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
@@ -193,8 +207,8 @@ public abstract class WEScreen extends Screen {
 
     @Override
     public boolean mouseDragged(Click click, double dx, double dy) {
-        double mouseX = click.x();
-        double mouseY = click.y();
+        double mouseX = click.x() / matrixScale;
+        double mouseY = click.y() / matrixScale;
         int button = click.button();
 
 
@@ -285,9 +299,26 @@ public abstract class WEScreen extends Screen {
         Window w = client.getWindow();
         if (w == null) return;
 
-        this.scaleFactor = Math.max(1.0, w.getScaleFactor());
-        this.screenWidth = w.getScaledWidth();
-        this.screenHeight = w.getScaledHeight();
+        double actualScale = Math.max(1.0, w.getScaleFactor());
+        this.actualScale = actualScale;
+        double target = getTargetScaleFactor();
+        if (target > 1.0 && actualScale > target) {
+            this.matrixScale = target / actualScale;
+            this.scaleFactor = target;
+            this.screenWidth  = (int)(w.getWidth()  / target);
+            this.screenHeight = (int)(w.getHeight() / target);
+        } else {
+            this.matrixScale = 1.0;
+            this.scaleFactor = actualScale;
+            this.screenWidth  = w.getScaledWidth();
+            this.screenHeight = w.getScaledHeight();
+        }
+
+        int minW = getMinLogicalWidth();
+        int minH = getMinLogicalHeight();
+        if (minW > 0) matrixScale = Math.min(matrixScale, w.getScaledWidth()  * scaleFactor / (double) minW);
+        if (minH > 0) matrixScale = Math.min(matrixScale, w.getScaledHeight() * scaleFactor / (double) minH);
+        matrixScale = Math.min(1.0, matrixScale);
 
         this.xStart = 0;
         this.yStart = 0;
@@ -332,16 +363,14 @@ public abstract class WEScreen extends Screen {
         }
     }
 
-    // logical UI width used when laying out elements; override if you use different logical area
     protected int getLogicalWidth() {
-        // default: scaled screen width in logical units (inverse of ui transform)
-        return (int) Math.round(screenWidth * scaleFactor);
+        Window w = MinecraftClient.getInstance().getWindow();
+        return (int) Math.round(w.getWidth() * scaleFactor / (matrixScale * actualScale));
     }
 
-    // logical UI width used when laying out elements; override if you use different logical area
     protected int getLogicalHeight() {
-        // default: scaled screen width in logical units (inverse of ui transform)
-        return (int) Math.round(screenHeight * scaleFactor);
+        Window w = MinecraftClient.getInstance().getWindow();
+        return (int) Math.round(w.getHeight() * scaleFactor / (matrixScale * actualScale));
     }
 
     // Root widget management
@@ -472,6 +501,10 @@ public abstract class WEScreen extends Screen {
 
     public double getScaleFactor() {
         return scaleFactor;
+    }
+
+    public double getMatrixScale() {
+        return matrixScale;
     }
 
     public int getxStart() {

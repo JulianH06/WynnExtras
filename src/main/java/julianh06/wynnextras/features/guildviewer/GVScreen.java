@@ -52,6 +52,9 @@ import java.util.*;
 import static julianh06.wynnextras.utils.UI.UIUtils.*;
 
 public class GVScreen extends WEScreen {
+    @Override protected double getTargetScaleFactor() { return 2.0; }
+    @Override protected int getMinLogicalWidth()  { return 1900; }
+    @Override protected int getMinLogicalHeight() { return 870; }
     static Identifier onlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle_dark.png");
     static Identifier onlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle.png");
 
@@ -126,13 +129,19 @@ public class GVScreen extends WEScreen {
     //im drawing the tab stuff in updateValues so the background has to be rendered first that's why this override exists
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         mouseInMenu = false;
-        PVScreen.mouseX = mouseX;
-        PVScreen.mouseY = mouseY;
 
         this.drawContext = context;
         computeScaleAndOffsets();
         if (ui == null) ui = new UIUtils(context, scaleFactor, xStart, yStart);
         else ui.updateContext(context, scaleFactor, xStart, yStart);
+
+        mouseX = (int)(mouseX / matrixScale);
+        mouseY = (int)(mouseY / matrixScale);
+        PVScreen.mouseX = mouseX;
+        PVScreen.mouseY = mouseY;
+
+        context.getMatrices().pushMatrix();
+        context.getMatrices().scale((float) matrixScale, (float) matrixScale);
 
         ui.drawBackground();
         backgroundImageWidget.draw(context, mouseX, mouseY, delta, ui);
@@ -208,7 +217,7 @@ public class GVScreen extends WEScreen {
         ui.drawCenteredText("Level " + GV.currentGuildData.level, xStart + 285, yStart + 590);
         PVScreen.DarkModeToggleWidget.drawImageWithFade(xpbarbackground_dark, xpbarbackground, xStart + 66, yStart + 540, 435, 30, ui);
 
-        context.enableScissor((int) ui.sx(xStart + 66), (int) ui.sy(yStart + 540), (int) ui.sx(xStart + 66 + 435 * (GV.currentGuildData.xpPercent / 100f)), (int) ui.sy(yStart + 540 + 35));
+        context.enableScissor((int)(ui.sx(xStart + 66) * matrixScale), (int)(ui.sy(yStart + 540) * matrixScale), (int)(ui.sx(xStart + 66 + 435 * (GV.currentGuildData.xpPercent / 100f)) * matrixScale), (int)(ui.sy(yStart + 540 + 35) * matrixScale));
         ui.drawImage(xpbarprogress, xStart + 66, yStart + 540, 435, 30);
         context.disableScissor();
 
@@ -241,10 +250,10 @@ public class GVScreen extends WEScreen {
         if (bannerBlockEntity != null) {
             bannerGuiState = new BannerGuiElementState(
                     new BannerFlagBlockModel(MinecraftClient.getInstance().getLoadedEntityModels().getModelPart(EntityModelLayers.STANDING_BANNER_FLAG)), bannerBlockEntity.getColorForState(), bannerBlockEntity.getPatterns(),
-                    (int) (x1 / scaleFactor), (int) (y1 / scaleFactor),
-                    (int) (x2 / scaleFactor), (int) (y2 / scaleFactor),
+                    (int) (x1 * matrixScale / scaleFactor), (int) (y1 * matrixScale / scaleFactor),
+                    (int) (x2 * matrixScale / scaleFactor), (int) (y2 * matrixScale / scaleFactor),
                     context.scissorStack.peekLast(),
-                    48 * 3 / ui.getScaleFactorF()
+                    (float)(48 * 3 * matrixScale / scaleFactor)
             );
 
             ui.drawImage(
@@ -299,7 +308,7 @@ public class GVScreen extends WEScreen {
 
         int count = 0;
 
-        context.enableScissor(0, (int) ui.sy(yStart + 50), getLogicalWidth(), (int) ui.sy(yStart + 738));
+        context.enableScissor(0, (int)(ui.sy(yStart + 50) * matrixScale), MinecraftClient.getInstance().getWindow().getScaledWidth(), (int)(ui.sy(yStart + 738) * matrixScale));
 
         ui.drawCenteredText("★★★★★ OWNER ★★★★★", textX, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
@@ -429,6 +438,8 @@ public class GVScreen extends WEScreen {
 
         scrollBarWidget.setBounds(xStart + 1820, yStart, 30, 750);
         scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
+
+        context.getMatrices().popMatrix();
     }
 
     @Override
@@ -443,8 +454,8 @@ public class GVScreen extends WEScreen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubleClick) {
-        double mouseX = click.x();
-        double mouseY = click.y();
+        double mouseX = click.x() / matrixScale;
+        double mouseY = click.y() / matrixScale;
         int button = click.button();
 
         if(scrollBarWidget != null) scrollBarWidget.mouseClicked(mouseX, mouseY, button);
@@ -478,8 +489,8 @@ public class GVScreen extends WEScreen {
 
     @Override
     public boolean mouseReleased(Click click) {
-        double mouseX = click.x();
-        double mouseY = click.y();
+        double mouseX = click.x() / matrixScale;
+        double mouseY = click.y() / matrixScale;
         int button = click.button();
 
         if(scrollBarWidget != null) scrollBarWidget.mouseReleased(mouseX, mouseY, button);

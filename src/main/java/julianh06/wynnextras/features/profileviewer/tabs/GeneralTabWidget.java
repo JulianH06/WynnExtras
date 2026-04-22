@@ -248,8 +248,9 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
         int y1 = y + 99;
         int y2 = y1 + 435;
 
-        context.addEntity(state, (int) (215 / scaleFactor), offset, rotation.rotateY(180), null,
-                (int) (x1 / scaleFactor), (int) (y1 / scaleFactor), (int) (x2 / scaleFactor), (int) (y2 / scaleFactor));
+        double m = pvScreen != null ? pvScreen.getMatrixScale() : 1.0;
+        context.addEntity(state, (int) (215 * m / scaleFactor), offset, rotation.rotateY(180), null,
+                (int) (x1 * m / scaleFactor), (int) (y1 * m / scaleFactor), (int) (x2 * m / scaleFactor), (int) (y2 * m / scaleFactor));
     }
 
     @Override

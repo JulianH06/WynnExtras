@@ -210,6 +210,10 @@ public final class UIUtils {
         drawText(text, x, y, color, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, textScale);
     }
 
+    public void drawCenteredText(String text, float x, float y, float textScale) {
+        drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, textScale);
+    }
+
     public void drawCenteredText(String text, float x, float y, CustomColor color) {
         drawText(text, x, y, color, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f);
     }
@@ -220,6 +224,10 @@ public final class UIUtils {
 
     public void drawCenteredText(Text text, float x, float y, CustomColor color, float textScale) {
         drawText(text, x, y, color, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, textScale);
+    }
+
+    public void drawCenteredText(Text text, float x, float y, float textScale) {
+        drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, textScale);
     }
 
     public void drawCenteredText(Text text, float x, float y, CustomColor color) {

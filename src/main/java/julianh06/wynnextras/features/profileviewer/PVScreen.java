@@ -43,6 +43,10 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public class PVScreen extends WEScreen {
+    @Override protected double getTargetScaleFactor() { return 2.0; }
+    @Override protected int getMinLogicalWidth()  { return 2000; }
+    @Override protected int getMinLogicalHeight() { return 870; }
+
     public static int mouseX = 0;
     public static int mouseY = 0;
 
@@ -319,7 +323,7 @@ public class PVScreen extends WEScreen {
             lastViewedPlayersSkins.put(PV.currentPlayerData.getUsername(), dummyTexture);
         }
 
-        int xStart = getLogicalWidth() / 2 - 900 - (getLogicalWidth() - 1800 < 200 ? 50 : 0);
+        int xStart = getLogicalWidth() / 2 - 900;
         int yStart = getLogicalHeight() / 2 - 375;
 
         backgroundImageWidget.setBounds(xStart, yStart, 1800, 750);
@@ -367,13 +371,18 @@ public class PVScreen extends WEScreen {
 
     @Override //im drawing the tab stuff in updateValues so the background has to be rendered first that's why this override exists
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        PVScreen.mouseX = mouseX;
-        PVScreen.mouseY = mouseY;
-
         this.drawContext = context;
         computeScaleAndOffsets();
         if (ui == null) ui = new UIUtils(context, scaleFactor, xStart, yStart);
         else ui.updateContext(context, scaleFactor, xStart, yStart);
+
+        mouseX = (int)(mouseX / matrixScale);
+        mouseY = (int)(mouseY / matrixScale);
+        PVScreen.mouseX = mouseX;
+        PVScreen.mouseY = mouseY;
+
+        context.getMatrices().pushMatrix();
+        context.getMatrices().scale((float) matrixScale, (float) matrixScale);
 
         if(PV.currentPlayerData != null && !addedNewest) {
             if(PV.currentPlayerData.getUsername() != null) {
@@ -472,6 +481,8 @@ public class PVScreen extends WEScreen {
             ui.drawCenteredText("§eThis restriction might be removed, according to nepmia (the dev of the api)", xStart + 900, yStart + 400, CustomColor.fromHexString("FFFF55"), 3f);
             ui.drawCenteredText("§eUse §b/we apikey §efor info on how to set your api key.", xStart + 900, yStart + 450, CustomColor.fromHexString("FFFF55"), 3f);
         }
+
+        context.getMatrices().popMatrix();
     }
 
     @Override

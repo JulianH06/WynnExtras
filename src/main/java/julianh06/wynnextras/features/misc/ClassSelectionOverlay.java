@@ -39,6 +39,8 @@ import java.util.*;;
 
 public class ClassSelectionOverlay extends WEHandledScreen {
 
+    @Override protected double getTargetScaleFactor() { return 2.0; }
+
     public static final String CLASS_SELECTION_TITLE = "\uDAFF\uDFD5\uE01F";
     public static final String CLASS_EDIT_TITLE = "\uDAFF\uDFD0\uE020";
     public static final String ICON_EDIT_TITLE = "\uDAFF\uDFDB\uE023";
@@ -851,6 +853,8 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
+        x /= matrixScale;
+        y /= matrixScale;
         // If nickname input is active, consume all clicks (Escape/Enter to close)
         if (nicknameInputActive) return true;
 
@@ -911,6 +915,8 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     /** Called from mixin on mouseDragged */
     public void onMouseDragged(double x, double y) {
+        x /= matrixScale;
+        y /= matrixScale;
         if (pressedVisIdx >= 0 && mode == ScreenMode.CLASS_SELECTION) {
             double dist = Math.sqrt(Math.pow(x - pressStartX, 2) + Math.pow(y - pressStartY, 2));
             if (dist > DRAG_THRESHOLD) {
@@ -921,6 +927,8 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     /** Called from mixin on mouseReleased */
     public void onMouseReleased(double x, double y, int button) {
+        x /= matrixScale;
+        y /= matrixScale;
         if (pressedVisIdx >= 0 && mode == ScreenMode.CLASS_SELECTION) {
             if (isDragging) {
                 int targetVis = findVisualSlotAt(x, y);

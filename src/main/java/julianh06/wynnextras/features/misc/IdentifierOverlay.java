@@ -6,7 +6,7 @@ import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
-import julianh06.wynnextras.utils.UI.WEHandledScreen;
+import julianh06.wynnextras.utils.UI.WEMenuExtension;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
@@ -14,7 +14,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 
-public class IdentifierOverlay extends WEHandledScreen {
+public class IdentifierOverlay extends WEMenuExtension {
     SourceOfThruthOpenerWidget sourceOfThruthOpenerWidget = null;
 
     @Override
@@ -34,9 +34,9 @@ public class IdentifierOverlay extends WEHandledScreen {
 
         Screen screen = McUtils.screen();
         if (!(screen instanceof HandledScreen<?> containerScreen)) return;
-        int yPos = (int) (((HandledScreenAccessor) containerScreen).getY() - 105 / ui.getScaleFactor());
+        int yPos = ((HandledScreenAccessor) containerScreen).getY() - 35;
 
-        sourceOfThruthOpenerWidget.setBounds((int) ((screenWidth * ui.getScaleFactor()) / 2) - 200, (int) (yPos * ui.getScaleFactor()), 400, 60);
+        sourceOfThruthOpenerWidget.setBounds(screenWidth / 2 - 67, yPos, 133, 20);
     }
 
     @Override
@@ -51,8 +51,8 @@ public class IdentifierOverlay extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawCenteredText("Should i keep gambling?", x + width / 2f, y - 25);
-            ui.drawButton(x, y, width, height, 13, hovered);
+            ui.drawCenteredText("Should i keep gambling?", x + width / 2f, y - 8);
+            ui.drawButton(x, y, width, height, 4, hovered);
             ui.drawCenteredText("Find out here!", x + width / 2f, y + height / 2f);
         }
 

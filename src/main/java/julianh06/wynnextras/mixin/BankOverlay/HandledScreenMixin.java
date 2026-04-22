@@ -152,7 +152,7 @@ public abstract class HandledScreenMixin {
             partyFinderOpenLootpoolOverlay.render(context, mouseX, mouseY, delta);
         }
 
-        if(WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+        if(WynnExtrasConfig.INSTANCE.craftingHelperOverlay) {
             if (craftingHelperOverlay == null) {
                 craftingHelperOverlay = new CraftingHelperOverlay();
             }
@@ -295,7 +295,7 @@ public abstract class HandledScreenMixin {
             }
         }
 
-        if (craftingHelperOverlay != null && Models.Container.getCurrentContainer() instanceof CraftingStationContainer && WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+        if (craftingHelperOverlay != null && Models.Container.getCurrentContainer() instanceof CraftingStationContainer && WynnExtrasConfig.INSTANCE.craftingHelperOverlay) {
             craftingHelperOverlay.mouseClicked(mouseX, mouseY, button);
         }
 
@@ -366,7 +366,7 @@ public abstract class HandledScreenMixin {
             }
         }
 
-        if(craftingHelperOverlay != null && WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+        if(craftingHelperOverlay != null && WynnExtrasConfig.INSTANCE.craftingHelperOverlay) {
             craftingHelperOverlay.mouseReleased(mouseX, mouseY, button);
         }
     }

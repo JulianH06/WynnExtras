@@ -1,23 +1,27 @@
 package julianh06.wynnextras.utils.UI;
 
+import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.util.Window;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class WEHandledScreen {
+/**
+ * Base class for overlays that extend (rather than replace) a vanilla HandledScreen.
+ * Renders proportionally alongside the vanilla GUI — scales naturally with GUI scale.
+ * Use WEHandledScreen for full overlays that replace the vanilla GUI.
+ */
+public abstract class WEMenuExtension {
     protected DrawContext drawContext;
     protected double scaleFactor;
-    protected double matrixScale = 1.0;
     protected int xStart;
     protected int yStart;
     protected int screenWidth;
     protected int screenHeight;
     protected UIUtils ui;
-
-    protected double getTargetScaleFactor() { return -1; }
 
     protected final List<Widget> rootWidgets = new ArrayList<>();
     protected final List<WEElement<?>> listElements = new ArrayList<>();
@@ -30,9 +34,6 @@ public abstract class WEHandledScreen {
     protected int firstVisibleIndex = 0;
     protected int lastVisibleIndex = -1;
 
-    private static long lastScrollTime = 0;
-    private static final long scrollCooldown = 0; // in ms
-
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         this.drawContext = ctx;
         computeScale();
@@ -42,36 +43,53 @@ public abstract class WEHandledScreen {
         else
             ui.updateContext(ctx, scaleFactor, xStart, yStart);
 
-        int mx = (int)(mouseX / matrixScale);
-        int my = (int)(mouseY / matrixScale);
-
-        ctx.getMatrices().pushMatrix();
-        ctx.getMatrices().scale((float) matrixScale, (float) matrixScale);
-
-        drawBackground(ctx, mx, my, delta);
-        drawContent(ctx, mx, my, delta);
+        drawBackground(ctx, mouseX, mouseY, delta);
+        drawContent(ctx, mouseX, mouseY, delta);
 
         for (Widget w : rootWidgets) {
-            w.draw(ctx, mx, my, delta, ui);
+            w.draw(ctx, mouseX, mouseY, delta, ui);
         }
 
         updateVisibleListRange();
         layoutListElements();
 
         for (int i = firstVisibleIndex; i <= lastVisibleIndex; i++) {
-            listElements.get(i).draw(ctx, mx, my, delta, ui);
+            listElements.get(i).draw(ctx, mouseX, mouseY, delta, ui);
         }
 
-        drawForeground(ctx, mx, my, delta);
-
-        ctx.getMatrices().popMatrix();
+        drawForeground(ctx, mouseX, mouseY, delta);
     }
 
+    public void computeScale() {
+        Window w = MinecraftClient.getInstance().getWindow();
+        // scaleFactor = 1.0 so that logical units == GUI units.
+        // GUI unit values from the HandledScreen (getX, getBackgroundWidth, etc.) can
+        // be used directly in setBounds without conversion, and automatically scale
+        // proportionally with the physical pixel size as GUI scale changes.
+        this.scaleFactor  = 1.0;
+        this.screenWidth  = w.getScaledWidth();
+        this.screenHeight = w.getScaledHeight();
+    }
 
+    // --- HandledScreen helpers (logical coords = GUI units * scaleFactor) ---
 
+    protected float hsX(HandledScreen<?> screen) {
+        return ((HandledScreenAccessor) screen).getX() * (float) scaleFactor;
+    }
 
+    protected float hsY(HandledScreen<?> screen) {
+        return ((HandledScreenAccessor) screen).getY() * (float) scaleFactor;
+    }
 
+    protected float hsWidth(HandledScreen<?> screen) {
+        return ((HandledScreenAccessor) screen).getBackgroundWidth() * (float) scaleFactor;
+    }
 
+    protected float hsHeight(HandledScreen<?> screen) {
+        return ((HandledScreenAccessor) screen).getBackgroundHeight() * (float) scaleFactor;
+    }
+
+    // --- List ---
 
     protected void scrollList(float delta) {
         float contentHeight = listElements.size() * (listItemHeight + listSpacing) - listSpacing;
@@ -94,25 +112,16 @@ public abstract class WEHandledScreen {
             lastVisibleIndex = -1;
             return;
         }
-
         float slot = listItemHeight + listSpacing;
         int start = (int) Math.floor(listScrollOffset / slot);
         int visibleCount = (int) Math.ceil(listHeight / slot) + 1;
-
         firstVisibleIndex = Math.max(0, start);
         lastVisibleIndex = Math.min(listElements.size() - 1, start + visibleCount);
     }
 
-
-
-
-
-
-
+    // --- Input ---
 
     public boolean mouseClicked(double x, double y, int button) {
-        x /= matrixScale;
-        y /= matrixScale;
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             if (rootWidgets.get(i).mouseClicked(x, y, button)) {
                 setFocusedWidget(rootWidgets.get(i));
@@ -120,7 +129,6 @@ public abstract class WEHandledScreen {
                 return true;
             }
         }
-
         for (int i = lastVisibleIndex; i >= firstVisibleIndex; i--) {
             WEElement<?> e = listElements.get(i);
             if (e.mouseClicked(x, y, button)) {
@@ -129,57 +137,36 @@ public abstract class WEHandledScreen {
                 return true;
             }
         }
-
         setFocusedElement(null);
         setFocusedWidget(null);
         return false;
     }
 
     public boolean mouseReleased(double x, double y, int button) {
-        x /= matrixScale;
-        y /= matrixScale;
         for (Widget w : rootWidgets)
-            if (w.mouseReleased(x, y, button))
-                return true;
+            if (w.mouseReleased(x, y, button)) return true;
         return false;
     }
 
     public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
-        x /= matrixScale;
-        y /= matrixScale;
         for (Widget w : rootWidgets)
-            if (w.mouseDragged(x, y, button, dx, dy))
-                return true;
+            if (w.mouseDragged(x, y, button, dx, dy)) return true;
         return false;
     }
 
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (focusedWidget != null && focusedWidget.keyPressed(keyCode, scanCode, modifiers))
-            return true;
-
+        if (focusedWidget != null && focusedWidget.keyPressed(keyCode, scanCode, modifiers)) return true;
         for (Widget w : rootWidgets)
-            if (w.keyPressed(keyCode, scanCode, modifiers))
-                return true;
-
+            if (w.keyPressed(keyCode, scanCode, modifiers)) return true;
         return false;
     }
 
     public boolean charTyped(char chr, int mods) {
-        if (focusedWidget != null && focusedWidget.charTyped(chr, mods))
-            return true;
-
+        if (focusedWidget != null && focusedWidget.charTyped(chr, mods)) return true;
         for (Widget w : rootWidgets)
-            if (w.charTyped(chr, mods))
-                return true;
-
+            if (w.charTyped(chr, mods)) return true;
         return false;
     }
-
-
-
-
-
-
 
     protected void setFocusedElement(WEElement<?> e) {
         if (focusedElement != null) focusedElement.setFocused(false);
@@ -192,29 +179,6 @@ public abstract class WEHandledScreen {
         focusedWidget = w;
         if (w != null) w.setFocused(true);
     }
-
-    public void computeScale() {
-        Window w = MinecraftClient.getInstance().getWindow();
-        double actualScale = Math.max(1.0, w.getScaleFactor());
-        double target = getTargetScaleFactor();
-        if (target > 1.0 && actualScale > target) {
-            this.matrixScale = target / actualScale;
-            this.scaleFactor = target;
-            this.screenWidth  = (int)(w.getWidth()  / target);
-            this.screenHeight = (int)(w.getHeight() / target);
-        } else {
-            this.matrixScale = 1.0;
-            this.scaleFactor = actualScale;
-            this.screenWidth  = w.getScaledWidth();
-            this.screenHeight = w.getScaledHeight();
-        }
-    }
-
-
-
-
-
-
 
     protected abstract void drawBackground(DrawContext ctx, int mouseX, int mouseY, float delta);
     protected abstract void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta);
