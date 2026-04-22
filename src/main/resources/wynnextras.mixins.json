@@ -11,6 +11,7 @@
   },
   "client": [
     "ChatClickMixin",
+    "ChatCopyMixin",
     "ChatHudAddMessageMixin",
     "ClientPacketListenerMixin",
     "GameRendererMixin",

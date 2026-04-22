@@ -11,7 +11,10 @@ import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.event.ChatEvent;
+import julianh06.wynnextras.event.api.WEEventBus;
 import julianh06.wynnextras.utils.Pair;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -103,6 +106,8 @@ public class TreeRoomMinimap {
         WynnExtrasConfig.save();
     }
 
+    private static final TreeRoomMinimap CHAT_LISTENER = new TreeRoomMinimap();
+
     public static void register() {
         HudRenderCallback.EVENT.register((context, renderTickCounter) -> {
             MinecraftClient mc = MinecraftClient.getInstance();
@@ -113,6 +118,15 @@ public class TreeRoomMinimap {
 
             TreeRoomMinimap.render(context, renderTickCounter);
         });
+        // Subscribe directly to our ChatEvent so we receive isoptera announcements
+        // even when Wynntils's MessageFilterFeature doesn't dispatch them through us.
+        WEEventBus.registerEventListener(CHAT_LISTENER);
+    }
+
+    @SubscribeEvent
+    public void onChat(ChatEvent event) {
+        String raw = event.message.getString().replaceAll("\u00a7[0-9a-fk-orx]", "");
+        handleMessage(raw);
     }
 
     private static void reset() {

@@ -9,6 +9,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class StackDuplicateMessages {
@@ -42,28 +43,35 @@ public class StackDuplicateMessages {
                 }
             }
 
-            if (matchIdx == -1) {
-                // Fresh message — reset tracker.
+            boolean trackerSaysStack = newMsg.equals(lastStackedText)
+                    && lastStackedTick >= 0
+                    && currentTick - lastStackedTick <= windowTicks;
+
+            if (matchIdx == -1 && !trackerSaysStack) {
+                // Truly first occurrence — reset tracker.
                 lastStackedText = newMsg;
                 lastStackedCount = 1;
                 lastStackedTick = currentTick;
                 return message;
             }
 
-            // Determine the new count from our own tracked state so formatting
-            // quirks in the chat line can't corrupt it.
+            // Determine the new count:
+            //   - If our tracker says we recently stacked this, use tracker+1 (authoritative).
+            //   - Otherwise fall back to parsing the count off the chat line we found.
             int newCount;
-            if (newMsg.equals(lastStackedText) && lastStackedTick >= 0
-                    && currentTick - lastStackedTick <= windowTicks) {
+            if (trackerSaysStack) {
                 newCount = lastStackedCount + 1;
             } else {
-                // State was lost (config reload / first run after restart) —
-                // fall back to whatever count the chat line claims.
-                newCount = 2;
+                newCount = extractCount(messages.get(matchIdx).content().getString()) + 1;
             }
 
-            removeVisibleLinesForMessage(visible, matchIdx);
-            messages.remove(matchIdx);
+            // Remove the existing stacked entry if we can find one in chat. If it was
+            // evicted or the scan didn't find it, we just skip removal — the tracker
+            // keeps the count going so a new stacked entry still gets the right number.
+            if (matchIdx != -1) {
+                removeVisibleLinesForMessage(visible, matchIdx);
+                messages.remove(matchIdx);
+            }
 
             lastStackedText = newMsg;
             lastStackedCount = newCount;
@@ -77,25 +85,49 @@ public class StackDuplicateMessages {
     }
 
     // Removes all wrapped visible lines belonging to messages[matchIdx].
+    // In vanilla ChatHud, each ChatHudLine contributes a contiguous block of Visible
+    // entries: starts with an endOfEntry=true line (the topmost wrapped line) followed
+    // by zero or more endOfEntry=false continuation lines. To locate messages[matchIdx]
+    // we count endOfEntry=true markers; from that marker up to (but not including) the
+    // next one belongs to this message.
     private static void removeVisibleLinesForMessage(List<ChatHudLine.Visible> visible, int matchIdx) {
-        int msgIdx = 0;
-        int i = 0;
-        while (i < visible.size() && msgIdx < matchIdx) {
-            if (visible.get(i).endOfEntry()) msgIdx++;
-            i++;
+        int msgIdx = -1;
+        int start = -1;
+        for (int i = 0; i < visible.size(); i++) {
+            if (visible.get(i).endOfEntry()) {
+                msgIdx++;
+                if (msgIdx == matchIdx) {
+                    start = i;
+                    break;
+                }
+            }
         }
-        // Now i points at the first wrapped line of messages[matchIdx].
-        while (i < visible.size()) {
-            boolean last = visible.get(i).endOfEntry();
-            visible.remove(i);
-            if (last) break;
+        if (start == -1) return;
+
+        // Remove the endOfEntry=true marker itself, then any continuation wraps
+        // belonging to this message (stop as soon as we hit the next endOfEntry=true).
+        visible.remove(start);
+        while (start < visible.size() && !visible.get(start).endOfEntry()) {
+            visible.remove(start);
         }
+    }
+
+    private static int extractCount(String raw) {
+        String stripped = raw.replaceAll("§[0-9a-fk-orx]", "");
+        Matcher m = COUNTER_SUFFIX.matcher(stripped);
+        if (m.find()) {
+            try { return Integer.parseInt(m.group(1)); } catch (NumberFormatException ignored) {}
+        }
+        return 1;
     }
 
     private static String strip(String s) {
         if (s == null) return "";
-        String out = s.replaceAll("§[0-9a-fk-or]", "");
+        // Include 'x' so BungeeCord hex prefix sequences are also stripped.
+        String out = s.replaceAll("§[0-9a-fk-orx]", "");
         out = COUNTER_SUFFIX.matcher(out).replaceAll("");
+        // Normalize whitespace so trailing spaces / inner double spaces don't block a match.
+        out = out.replaceAll("\\s+", " ").trim();
         return out;
     }
 }

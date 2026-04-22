@@ -193,6 +193,7 @@ public class WynnExtras implements ClientModInitializer {
         RaidLootTrackerOverlay.register();
         RaidSessionTracker.register();
         julianh06.wynnextras.features.raid.PartyIgnoreOnRaid.register();
+        julianh06.wynnextras.features.raid.TreeRoomMinimap.register();
         QuickRepair.register();
         julianh06.wynnextras.features.qol.AutoStream.register();
         julianh06.wynnextras.features.qol.AutoSkipDialogue.register();

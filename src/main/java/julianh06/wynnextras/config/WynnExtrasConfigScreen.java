@@ -129,6 +129,10 @@ public class WynnExtrasConfigScreen extends Screen {
             .add(text("", "All features added in this update. Toggle any of them on or off."))
                 .add(toggle("Auto-ignore party in raid", "Auto /ignore party members on raid start, /ignore remove on raid end (reduces lag from teammate effects)",
                         () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
+                .add(toggle("Encounter Selection overlay", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
+                        () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v))
+                .add(toggle("Right-click chat to copy", "Right-click a chat message (while chat is open) to copy it to the clipboard",
+                        () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
                 .add(toggle("Item broke notifier", "Show 'ITEM BROKE' when one of your items reaches zero durability",
                         () -> config.itemZeroDurability, v -> config.itemZeroDurability = v))
                 .add(toggle("Raid Session Tracker", "HUD showing raid completion/failure counts and avg time",

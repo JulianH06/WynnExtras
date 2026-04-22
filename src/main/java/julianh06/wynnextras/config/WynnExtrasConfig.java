@@ -63,7 +63,7 @@ public class WynnExtrasConfig {
     // ==================== CHAT NOTIFIER PREMADES ====================
 
     public Map<String, Boolean> premades;
-    public boolean lostEye = false;
+    public boolean lostEye = true;
     public boolean oneGoo = false;
     public boolean twoGoo = false;
     public boolean soul = true;
@@ -71,8 +71,8 @@ public class WynnExtrasConfig {
     public boolean fourOutOfFiveVoidMatter = true;
     public boolean oneLightCrystal = false;
     public boolean twoLightCrystal = false;
-    public boolean notgUpperPlatform = true;
-    public boolean notgLowerPlatform = true;
+    public boolean notgUpperPlatform = false;
+    public boolean notgLowerPlatform = false;
     public boolean artifactRestored = true;
     public boolean isopteraBlue = true;
     public boolean itemZeroDurability = true;
@@ -112,7 +112,7 @@ public class WynnExtrasConfig {
     public boolean hideTMInfoText = false;
     public boolean hideScaleBackgroundButton = false;
     public boolean craftingHelperOverlay = true;
-    public boolean craftingAutoStart = false;
+    public boolean craftingAutoStart = true;
     public List<String> craftingLastMaterialNames = new ArrayList<>();
     public List<Integer> craftingLastMaterialCounts = new ArrayList<>();
     public List<String> craftingLastIngredientNames = new ArrayList<>();
@@ -142,14 +142,16 @@ public class WynnExtrasConfig {
     public boolean raidLootTrackerBackground = true;
     public RaidLootTrackerOverlay.mode raidLootTrackerMode = RaidLootTrackerOverlay.mode.ALL;
     public boolean autoIgnorePartyInRaid = false;
+    public boolean encounterOverlayEnabled = false;
+    public boolean rightClickToCopyChat = true;
     public boolean raidSessionEnabled = false;
     public boolean raidSessionOnlyInRaid = false;
     public boolean raidSessionOnlyInInventory = false;
-    public boolean raidSessionShowRuns = true;
-    public boolean raidSessionShowFails = true;
-    public boolean raidSessionShowRate = true;
-    public boolean raidSessionShowTime = true;
-    public boolean raidSessionShowAvgTime = true;
+    public boolean raidSessionShowRuns = false;
+    public boolean raidSessionShowFails = false;
+    public boolean raidSessionShowRate = false;
+    public boolean raidSessionShowTime = false;
+    public boolean raidSessionShowAvgTime = false;
     public int raidSessionHudX = 4;
     public int raidSessionHudY = 270;
     public float raidSessionHudScale = 1.0f;
@@ -161,7 +163,7 @@ public class WynnExtrasConfig {
     public int sequoiaFullThresholdPercent = 100;
 
     public boolean autoStreamEnabled = false;
-    public boolean autoSkipDialogueEnabled = false;
+    public boolean autoSkipDialogueEnabled = true;
     public boolean stackDuplicateMessages = false;
     public int stackDuplicateWindowMinutes = 5;
     public boolean auraPingEnabled = false;
@@ -174,14 +176,14 @@ public class WynnExtrasConfig {
     public int warDpsX = 5;
     public int warDpsY = 50;
     public boolean attackTimerMenuEnabled = false;
-    public boolean attackTimerAutoBroadcast = true;
+    public boolean attackTimerAutoBroadcast = false;
     public int attackTimerX = 5;
     public int attackTimerY = 150;
     public boolean warBeaconEnabled = false;
     public HashMap<String, Integer> hudColorOverrides = new HashMap<>();
-    public boolean territoryMenuKeyEnabled = true;
+    public boolean territoryMenuKeyEnabled = false;
     public int territoryMenuKey = org.lwjgl.glfw.GLFW.GLFW_KEY_I;
-    public boolean guildBankKeyEnabled = true;
+    public boolean guildBankKeyEnabled = false;
     public int guildBankKey = org.lwjgl.glfw.GLFW.GLFW_KEY_Y;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
@@ -224,7 +226,7 @@ public class WynnExtrasConfig {
     //WIP, not used currently
 
     // ==================== TOTEM TIMER ====================
-    public boolean totemTimerEnabled = true;
+    public boolean totemTimerEnabled = false;
     public boolean totemTimerOwnOnly = true;
     public boolean totemTimerWarningText = true;
     public boolean totemTimerWarningSound = false;
@@ -255,7 +257,7 @@ public class WynnExtrasConfig {
     public Align bloodSorrowAlignment = Align.CENTER;
 
     // ==================== PROFESSION OVERLAY ====================
-    public boolean professionOverlayEnabled = true;
+    public boolean professionOverlayEnabled = false;
     public int professionOverlayX = 5;
     public int professionOverlayY = 100;
     public float professionOverlayScale = 1.0f;
@@ -264,7 +266,7 @@ public class WynnExtrasConfig {
     public Map<String, Float> professionGoals = new HashMap<>();
 
     // ==================== RADIANT HUD ====================
-    public boolean radiantHudEnabled = false;
+    public boolean radiantHudEnabled = true;
     public int radiantHudX = 5;
     public int radiantHudY = 80;
     public float radiantHudScale = 1.0f;

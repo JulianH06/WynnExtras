@@ -81,6 +81,17 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        // Encounter Selection Overlay (must render FIRST and cancel vanilla render so chest UI is fully hidden)
+        {
+            HandledScreen<?> encSelf = (HandledScreen<?>) (Object) this;
+            if (julianh06.wynnextras.features.qol.EncounterOverlay.isReadyToRender(encSelf)) {
+                julianh06.wynnextras.features.qol.EncounterOverlay.render(context, encSelf, mouseX, mouseY);
+                ci.cancel();
+                return;
+            }
+            // Tick the settle state regardless (for non-ready cases).
+            julianh06.wynnextras.features.qol.EncounterOverlay.tickSettle(encSelf);
+        }
         // Class Selection Overlay
         if (WynnExtrasConfig.INSTANCE.customClassSelectionEnabled && !ClassSelectionOverlay.vanillaMode) {
             HandledScreen<?> self = (HandledScreen<?>) (Object) this;
@@ -243,6 +254,13 @@ public abstract class HandledScreenMixin {
         double mouseY = click.y();
         int button = click.button();
 
+        // Encounter Selection overlay (intercept before anything else so vanilla slots aren't touched)
+        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
+        if (julianh06.wynnextras.features.qol.EncounterOverlay.handleClick(mouseX, mouseY, self)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
         // Bag overlay sort-mode toggle (top-right clickable label)
         if (BankOverlay2.handleSortToggleClick(mouseX, mouseY)) {
             cir.setReturnValue(true);
@@ -250,7 +268,6 @@ public abstract class HandledScreenMixin {
         }
 
         // Vanilla mode toggle click (shown when in vanilla mode on class selection screens)
-        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
         if (ClassSelectionOverlay.handleVanillaToggleClick(mouseX, mouseY, self)) {
             cir.setReturnValue(true);
             return;
