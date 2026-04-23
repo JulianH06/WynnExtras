@@ -55,6 +55,7 @@ import net.minecraft.client.gui.tooltip.TooltipComponent;
 import net.minecraft.client.gui.tooltip.TooltipPositioner;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
@@ -93,6 +94,7 @@ public class BankOverlay2 extends WEHandledScreen {
     public int hoveredInvIndex = -1;
 
     static ItemHighlightFeature itemHighlightFeature;
+    static DurabilityOverlayFeature durabilityOverlayFeature;
 
     public Identifier buttonBackground = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbg.png");
     public Identifier buttonBackgroundShort = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbgshort.png");
@@ -833,14 +835,21 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static void renderDurabilityRing(DrawContext context, ItemStack stack, int x, int y) {
-        Models.Item.asWynnItemProperty(stack, DurableItemProperty.class).ifPresent(durable -> {
-            CappedValue durability = durable.getDurability();
-            float fraction = (float) durability.current() / durability.max();
-            int colorInt = MathHelper.hsvToRgb(Math.max(0.0F, fraction) / 3.0F, 1.0F, 1.0F);
-            CustomColor color = CustomColor.fromInt(colorInt).withAlpha(160);
+        try {
+            if (durabilityOverlayFeature == null)
+                durabilityOverlayFeature = Managers.Feature.getFeatureInstance(DurabilityOverlayFeature.class);
+            if (!durabilityOverlayFeature.isEnabled()) return;
+            if (!((Boolean) durabilityOverlayFeature.getConfigOptionFromString("renderDurabilityOverlayInventories").get().get())) return;
+            if (Models.Item.asWynnItemProperty(stack, DurableItemProperty.class).isEmpty()) return;
 
-            RenderUtils.drawArc(context, color, x, y, fraction, 6, 8);
-        });
+            String mode = ((Enum<?>) durabilityOverlayFeature.getConfigOptionFromString("durabilityRenderMode").get().get()).name();
+            DurabilityOverlayFeatureInvoker invoker = (DurabilityOverlayFeatureInvoker) durabilityOverlayFeature;
+            switch (mode) {
+                case "ARC"        -> invoker.invokeDrawDurabilityArc(context, stack, x, y);
+                case "BAR"        -> invoker.invokeDrawDurabilityBar(context, stack, x, y);
+                case "PERCENTAGE" -> invoker.invokeDrawDurabilityPercentage(context, stack, x, y);
+            }
+        } catch (Exception ignored) {}
     }
 
     private static void renderEmeraldPouchRing(DrawContext context, ItemStack stack, int x, int y) {
@@ -1658,11 +1667,29 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             } catch (Exception ignored) {}
 
-            renderDurabilityRing(ctx, stack, x + 1, y + 1);
             renderEmeraldPouchRing(ctx, stack, x + 1, y + 1);
             renderHighlightOverlay(ctx, stack, x + 1, y + 1);
 
-            ctx.drawItem(stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()));
+            ItemStack renderStack = stack.copy();
+
+            // Suppress vanilla durability bar
+            try {
+                CustomModelDataComponent modelData = renderStack.get(DataComponentTypes.CUSTOM_MODEL_DATA);
+                if (modelData != null && modelData.floats().size() > 1) {
+                    float val = modelData.floats().get(1);
+                    if (val >= 1 && val <= 15) {
+                        List<Float> floats = new ArrayList<>(modelData.floats());
+                        floats.remove(1);
+                        renderStack.set(DataComponentTypes.CUSTOM_MODEL_DATA,
+                            new CustomModelDataComponent(floats, modelData.flags(), modelData.strings(), modelData.colors()));
+                    }
+                }
+            } catch (Exception ignored) {}
+
+            ctx.drawItem(renderStack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()));
+
+            renderDurabilityRing(ctx, stack, x + 1, y + 1);
+
             try {
                 if(stack.getCustomName().getString().contains("Ingredient Pouch")) ctx.drawStackOverlay(MinecraftClient.getInstance().textRenderer, stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()), renderOne ? "1" : stack.getCount() == 1 ? "" : String.valueOf(stack.getCount()));
                 else if(stack.getCount() > 1) ui.drawText(String.valueOf(stack.getCount()), (int) (width + x / ui.getScaleFactor()), (int) (height - 8 + y / ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 1);

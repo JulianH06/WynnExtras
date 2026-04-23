@@ -4,7 +4,6 @@ import com.wynntils.models.character.type.ClassType;
 import com.wynntils.core.components.Models;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.core.WynnExtras;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -77,7 +76,6 @@ public class TotemTimer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if(client.player == null) return;
 
-
             if(client.player.getInventory() != null) {
                 int currentSlot = client.player.getInventory().getSelectedSlot();
                 if (lastSelectedSlot != -1 && currentSlot != lastSelectedSlot) {
@@ -88,7 +86,6 @@ public class TotemTimer {
                     skipEstimatesTicks--;
                 }
                 lastSelectedSlot = currentSlot;
-
             }
 
             boolean skipEstimatesThisTick = skipEstimatesTicks > 0;
@@ -97,7 +94,6 @@ public class TotemTimer {
             warningActive = false;
             if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled) return;
             if (client.world == null || client.player == null) return;
-            if (Models.Character.getClassType() != ClassType.SHAMAN) return;
 
             tickCounter++;
             WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
@@ -122,17 +118,26 @@ public class TotemTimer {
                 if (text == null || (!text.contains("'s Totem") && !text.contains("' Totem"))) continue;
 
                 int idx = text.contains("'s Totem") ? text.indexOf("'s Totem") : text.indexOf("' Totem");
-                String owner = idx > 0 ? text.substring(0, idx).trim() : "?";
+                // Take only the text on the same line as "'s Totem"/"' Totem", Wynntils may prepend
+                // a banner on a separate line before the player name.
+                int lineStart = text.lastIndexOf('\n', idx > 0 ? idx - 1 : 0);
+                String owner = text.substring(lineStart + 1, idx).trim();
+                if (owner.isEmpty()) owner = "?";
 
                 // Own-only filter
                 if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
 
                 String timeText = "";
                 String[] lines = text.split("\n");
-                // NEU
+                // Scan lines starting after the header line so a prepended banner is skipped.
+                boolean pastHeader = false;
                 for (String line : lines) {
                     String l = line.trim();
-                    if (!l.isEmpty() && !l.contains("'s Totem") && !l.contains("' Totem")) {
+                    if (l.contains("'s Totem") || l.contains("' Totem")) {
+                        pastHeader = true;
+                        continue;
+                    }
+                    if (pastHeader && !l.isEmpty()) {
                         String[] tokens = l.split("\\s+");
                         timeText = tokens[tokens.length - 1];
                         break;
@@ -218,7 +223,6 @@ public class TotemTimer {
 
     private static void onSound(String path) {
         if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled || !WynnExtrasConfig.INSTANCE.totemTimerEstimate) return;
-        if (Models.Character.getClassType() != ClassType.SHAMAN) return;
         if (!path.contains("underwater.enter")) return;
 
         estimatedTotems.forEach((k, v) -> {
