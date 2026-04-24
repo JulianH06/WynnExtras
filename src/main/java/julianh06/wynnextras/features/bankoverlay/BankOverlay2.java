@@ -2342,6 +2342,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 lastClickedSlot = new Pair<>(inventoryIndex, index);
             } else if(heldItem.isEmpty()) {
                 List<ItemStack> stacks = BankOverlay.activeInvSlots.stream()
+                        .limit(45)
                         .map(Slot::getStack)
                         .collect(Collectors.toList());
 
@@ -2458,6 +2459,7 @@ public class BankOverlay2 extends WEHandledScreen {
             ScreenHandler currScreenHandler = McUtils.containerMenu();
 
             List<ItemStack> stacks = BankOverlay.activeInvSlots.stream()
+                    .limit(45)
                     .map(Slot::getStack)
                     .collect(Collectors.toList());
 
@@ -2734,6 +2736,7 @@ public class BankOverlay2 extends WEHandledScreen {
             if (slots.isEmpty()) {
                 int i = 0;
                 for (ItemStack itemStack : items) {
+                    if (i >= 45) break;
                     CrossClassSlotWidget slot = new CrossClassSlotWidget(itemStack == null ? null : itemStack.copy(), i);
                     slots.add(slot);
                     addChild(slot);

@@ -473,8 +473,8 @@ public abstract class HandledScreenMixin {
 
             if (Pages != null && activeInv != -1 && !shouldWait) {
                 List<ItemStack> stacks = new ArrayList<>();
-                for (Slot slot : activeInvSlots) {
-                    stacks.add(slot.getStack());
+                for (int j = 0; j < Math.min(45, activeInvSlots.size()); j++) {
+                    stacks.add(activeInvSlots.get(j).getStack());
                 }
                 Pages.BankPages.put(activeInv, stacks);
                 Pages.save();
