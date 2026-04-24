@@ -60,6 +60,7 @@
     "Accessor.SlotAccessor",
     "BankOverlay.ContainerScrollFeatureMixin",
     "BankOverlay.PersonalStorageUtilitiesFeatureMixin",
+    "Invoker.DurabilityOverlayFeatureInvoker",
     "Invoker.InventoryEmeraldCountFeatureInvoker",
     "Invoker.ItemHandlerInvoker",
     "Invoker.ItemHighlightFeatureInvoker",
