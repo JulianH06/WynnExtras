@@ -16,7 +16,7 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 @Mixin(MessageFilterFeature.class)
 public class MessageFilterFeatureMixin {
-    @Inject(method = "onMessage", at = @At("TAIL"), remap = false)
+    @Inject(method = "onMessage", at = @At("HEAD"), remap = false)
     void blockMessage(ChatMessageEvent.Match e, CallbackInfo ci) {
         String raw = e.getMessage().withoutFormatting().getString();
         String msgLower = raw.toLowerCase(Locale.ROOT);

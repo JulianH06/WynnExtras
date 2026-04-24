@@ -62,13 +62,45 @@ public class ChatCopyMixin {
         if (msgIdx < 0 || msgIdx >= messages.size()) return;
 
         String raw = messages.get(msgIdx).content().getString();
-        String clean = raw.replaceAll("\u00a7[0-9a-fk-orx]", "").trim();
+        String clean = stripPuaAndFormatting(raw).trim();
         if (clean.isEmpty()) return;
 
         mc.keyboard.setClipboard(clean);
         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§aCopied to clipboard: §f" + clean)));
 
         cir.setReturnValue(true);
+    }
+
+    /** Strip Minecraft §-format codes and Wynncraft's custom PUA icon codepoints
+     *  (pill prefix, badges, symbols) so the clipboard contains just readable text. */
+    private static String stripPuaAndFormatting(String s) {
+        if (s == null || s.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder(s.length());
+        int i = 0;
+        while (i < s.length()) {
+            int cp = s.codePointAt(i);
+            int step = Character.charCount(cp);
+            // Skip §x formatting pair (legacy color codes).
+            if (cp == '\u00a7' && i + 1 < s.length()) {
+                char next = s.charAt(i + 1);
+                if ("0123456789abcdefABCDEFklmnorxKLMNORX".indexOf(next) >= 0) {
+                    i += 2;
+                    continue;
+                }
+            }
+            // Strip everything the resource pack abuses for custom glyphs: BMP Private-Use
+            // Area plus EVERY supplementary-plane codepoint. Emoji would also be stripped
+            // but they're essentially never in Wynncraft chat anyway, and this guarantees
+            // no stray Wynncraft icon codepoints slip through no matter what plane they
+            // sit in.
+            if ((cp >= 0xE000 && cp <= 0xF8FF) || cp >= 0x10000) {
+                i += step;
+                continue;
+            }
+            sb.appendCodePoint(cp);
+            i += step;
+        }
+        return sb.toString();
     }
 
     private static boolean isInChatArea(double x, double y) {

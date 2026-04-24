@@ -9,12 +9,15 @@ import com.wynntils.utils.mc.McUtils;
 import com.wynntils.core.components.Models;
 import com.wynntils.utils.type.Time;
 import com.wynntils.core.text.StyledText;
+import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.mixin.RaidKindAccessor;
 import julianh06.wynnextras.utils.ChatUtils;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
+import net.neoforged.bus.api.SubscribeEvent;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 
 import java.io.IOException;
@@ -29,6 +32,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@WEModule
 public class RaidChatNotifier {
     public static RaidChatNotifier INSTANCE = new RaidChatNotifier();
     public Map<String, Long> raidPBs = new HashMap<>();
@@ -218,8 +222,27 @@ public class RaidChatNotifier {
         return INSTANCE.raidPBs.get(key);
     }
 
+    // Registered automatically as a WEModule — receives ChatEvent so PB tracking works
+    // even if Wynntils's MessageFilterFeature (which our mixin taps into) is disabled.
+    @SubscribeEvent
+    public void onChatDirect(ChatEvent event) {
+        if (!WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) return;
+        String raw = event.message.getString();
+        if (raw == null || raw.isEmpty()) return;
+        handleMessage(raw);
+    }
+
+    // Dedup so the mixin path and direct ChatEvent path don't double-process the same message.
+    private static String lastHandledMsg = null;
+    private static long lastHandledMs = 0;
+
     public static void handleMessage(String rawMsg) {
         if (!WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) return;
+        if (rawMsg == null) return;
+        long now = System.currentTimeMillis();
+        if (rawMsg.equals(lastHandledMsg) && now - lastHandledMs < 200) return;
+        lastHandledMsg = rawMsg;
+        lastHandledMs = now;
 
         long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
                 ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()

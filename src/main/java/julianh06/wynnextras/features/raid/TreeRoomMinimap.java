@@ -9,10 +9,10 @@ import com.wynntils.utils.render.Texture;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.ChatEvent;
-import julianh06.wynnextras.event.api.WEEventBus;
 import julianh06.wynnextras.utils.Pair;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@WEModule
 public class TreeRoomMinimap {
     private static final int DEFAULT_SIZE = 130;
     private static final Texture mapTexture = Texture.WYNN_MAP_TEXTURES;
@@ -106,8 +107,6 @@ public class TreeRoomMinimap {
         WynnExtrasConfig.save();
     }
 
-    private static final TreeRoomMinimap CHAT_LISTENER = new TreeRoomMinimap();
-
     public static void register() {
         HudRenderCallback.EVENT.register((context, renderTickCounter) -> {
             MinecraftClient mc = MinecraftClient.getInstance();
@@ -118,9 +117,6 @@ public class TreeRoomMinimap {
 
             TreeRoomMinimap.render(context, renderTickCounter);
         });
-        // Subscribe directly to our ChatEvent so we receive isoptera announcements
-        // even when Wynntils's MessageFilterFeature doesn't dispatch them through us.
-        WEEventBus.registerEventListener(CHAT_LISTENER);
     }
 
     @SubscribeEvent

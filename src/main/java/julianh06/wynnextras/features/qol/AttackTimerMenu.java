@@ -78,7 +78,7 @@ public class AttackTimerMenu {
     public void onChat(ChatEvent event) {
         if (!WynnExtrasConfig.INSTANCE.attackTimerMenuEnabled) return;
         try {
-            String raw = event.message.getString().replaceAll("§[0-9a-fk-or]", "").trim();
+            String raw = event.message.getString().replaceAll("§[0-9a-fk-orx]", "").trim();
             if (raw.isEmpty()) return;
 
             // Guildmate defense broadcast
