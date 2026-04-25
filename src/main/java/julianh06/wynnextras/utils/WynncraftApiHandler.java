@@ -231,6 +231,14 @@ public class WynncraftApiHandler {
     }
 
     public static CompletableFuture<PlayerData> fetchPlayerData(String playerName) {
+        return fetchPlayerData(playerName, true);
+    }
+
+    /**
+     * @param fullResult true → requests `?fullResult` (per-character data, requires API key);
+     *                   false → requests the summary (globalData only, no auth needed).
+     */
+    public static CompletableFuture<PlayerData> fetchPlayerData(String playerName, boolean fullResult) {
         return fetchUUID(playerName).thenCompose(rawUUID -> {
             if (rawUUID == null) {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§cPlayername is incorrect or unknown.")));
@@ -238,23 +246,27 @@ public class WynncraftApiHandler {
             }
 
             String formattedUUID = formatUUID(rawUUID);
-            HttpRequest request;
-
-            if (INSTANCE.API_KEY == null) {
-                request = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_URL + formattedUUID + "?fullResult"))
-                    .GET()
-                    .build();
-            } else {
-                request = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_URL + formattedUUID + "?fullResult"))
-                    .header("Authorization", "Bearer " + INSTANCE.API_KEY)
-                    .GET()
-                    .build();
+            String url = BASE_URL + formattedUUID + (fullResult ? "?fullResult" : "");
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET();
+            if (INSTANCE.API_KEY != null) {
+                // Trim — in case a trailing newline/space got into the saved key.
+                builder.header("Authorization", "Bearer " + INSTANCE.API_KEY.trim());
             }
+            HttpRequest request = builder.build();
 
             return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(HttpResponse::body)
+                    .thenApply(response -> {
+                        String body = response.body();
+                        // Log the HTTP status so 401/403/404/etc. is visible.
+                        if (response.statusCode() != 200) {
+                            System.err.println("[WynnExtras] fetchPlayerData(" + playerName + ", full="
+                                    + fullResult + ") returned HTTP " + response.statusCode()
+                                    + ": " + (body != null ? body.substring(0, Math.min(200, body.length())) : "null"));
+                        }
+                        return body;
+                    })
                     .thenApply(WynncraftApiHandler::parsePlayerData);
         });
     }

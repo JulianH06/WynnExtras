@@ -3,6 +3,9 @@ package julianh06.wynnextras.features.raid;
 import com.wynntils.core.components.Models;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.event.RaidEndedEvent;
+import julianh06.wynnextras.event.api.WEEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -145,6 +148,21 @@ public class RaidSessionTracker {
         }
     }
 
+    @SubscribeEvent
+    public void onRaidEnded(RaidEndedEvent event) {
+        if (!WynnExtrasConfig.INSTANCE.raidSessionEnabled) return;
+        if (!(event instanceof RaidEndedEvent.Completed)) return; // fails don't count toward avg
+        if (event.getRaid() == null) return;
+        long runMs = event.getRaid().getTimeInRaid();
+        if (runMs <= 0) return;
+        for (Session s : sessions) {
+            if (!s.manuallyPaused) {
+                s.totalRunTimeMs += runMs;
+                s.timedRunCount++;
+            }
+        }
+    }
+
     public static String getStatsString() {
         Session s = primarySession();
         if (s == null) return null;
@@ -184,35 +202,11 @@ public class RaidSessionTracker {
                     s.lastRaidTime = System.currentTimeMillis();
                 }
             }
-            int teIdx = raw.indexOf("Time Elapsed:");
-            if (teIdx >= 0 && lastRaidCompleted) {
-                String timeStr = raw.substring(teIdx + "Time Elapsed:".length()).trim();
-                int sp = timeStr.indexOf(' ');
-                if (sp >= 0) timeStr = timeStr.substring(0, sp);
-                String[] parts = timeStr.split(":");
-                long runMs = -1;
-                try {
-                    if (parts.length == 2) {
-                        int mm = Integer.parseInt(parts[0]);
-                        int ss = Integer.parseInt(parts[1]);
-                        runMs = (mm * 60L + ss) * 1000L;
-                    } else if (parts.length == 3) {
-                        int hh = Integer.parseInt(parts[0]);
-                        int mm = Integer.parseInt(parts[1]);
-                        int ss = Integer.parseInt(parts[2]);
-                        runMs = (hh * 3600L + mm * 60L + ss) * 1000L;
-                    }
-                } catch (NumberFormatException ignored) {}
-                if (runMs > 0) {
-                    for (Session s : sessions) {
-                        if (!s.manuallyPaused) {
-                            s.totalRunTimeMs += runMs;
-                            s.timedRunCount++;
-                        }
-                    }
-                }
-            }
         });
+
+        // Completion-time tracking via the raid-end event — only fires for actually
+        // completed raids, so fails will never contribute to the average.
+        WEEventBus.registerEventListener(new RaidSessionTracker());
 
         // Detect raid start + auto-start first session + refresh cached stats
         ClientTickEvents.END_CLIENT_TICK.register(client -> {

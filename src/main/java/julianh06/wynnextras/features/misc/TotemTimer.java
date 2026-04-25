@@ -7,7 +7,6 @@ import com.wynntils.core.components.Models;
 import com.wynntils.utils.mc.McUtils;
 import net.minecraft.item.ItemStack;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.core.WynnExtras;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -144,15 +143,25 @@ public class TotemTimer {
                 if (text.contains("Totem of Tales")) continue;
 
                 int idx = text.contains("'s Totem") ? text.indexOf("'s Totem") : text.indexOf("' Totem");
-                String owner = idx > 0 ? text.substring(0, idx).trim() : "?";
+                // Take only the text on the same line as "'s Totem"/"' Totem", Wynntils may prepend
+                // a banner on a separate line before the player name.
+                int lineStart = text.lastIndexOf('\n', idx > 0 ? idx - 1 : 0);
+                String owner = text.substring(lineStart + 1, idx).trim();
+                if (owner.isEmpty()) owner = "?";
 
                 if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
 
                 String timeText = "";
                 String[] lines = text.split("\n");
+                // Scan lines starting after the header line so a prepended banner is skipped.
+                boolean pastHeader = false;
                 for (String line : lines) {
                     String l = line.trim();
-                    if (!l.isEmpty() && !l.contains("'s Totem") && !l.contains("' Totem")) {
+                    if (l.contains("'s Totem") || l.contains("' Totem")) {
+                        pastHeader = true;
+                        continue;
+                    }
+                    if (pastHeader && !l.isEmpty()) {
                         String[] tokens = l.split("\\s+");
                         timeText = tokens[tokens.length - 1];
                         break;

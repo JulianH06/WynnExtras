@@ -35,11 +35,7 @@ public class EncounterOverlay {
             "Thunder", 0xFFFFDD33
     );
 
-    // Settle: don't render until the container has been stable for a few ticks.
-    private static int stableTicks = 0;
-    private static int lastOptionCount = -1;
-    private static String lastTitle = null;
-    private static final int SETTLE_THRESHOLD = 5;
+    // No settle: render as soon as there's ≥1 option, and update live as more slots populate.
 
     public record Option(String element, int slot, String itemName) {}
 
@@ -82,33 +78,16 @@ public class EncounterOverlay {
         return new int[]{x, y, panelW, panelH};
     }
 
-    /** Advances the settle timer. Call every frame even when not ready to render. */
-    public static void tickSettle(Screen screen) {
-        if (!WynnExtrasConfig.INSTANCE.encounterOverlayEnabled) return;
-        if (!isEncounterScreen(screen)) {
-            stableTicks = 0;
-            lastOptionCount = -1;
-            lastTitle = null;
-            return;
-        }
-        String title = screen.getTitle().getString();
-        int count = scanOptions().size();
-        if (!title.equals(lastTitle) || count != lastOptionCount) {
-            lastTitle = title;
-            lastOptionCount = count;
-            stableTicks = 0;
-            return;
-        }
-        stableTicks++;
-    }
+    /** Kept for mixin compatibility — no-op now that there's no settle state. */
+    public static void tickSettle(Screen screen) {}
 
-    /** Returns true if we should take over rendering from the vanilla chest UI. */
+    /** Returns true if we should take over rendering from the vanilla chest UI.
+     *  Wynncraft encounter screens always have at least 2 options; if we only see 1
+     *  then a slot packet is still in-flight — let vanilla render until the 2nd lands. */
     public static boolean isReadyToRender(Screen screen) {
         if (!WynnExtrasConfig.INSTANCE.encounterOverlayEnabled) return false;
         if (!isEncounterScreen(screen)) return false;
-        tickSettle(screen);
-        if (stableTicks < SETTLE_THRESHOLD) return false;
-        return !scanOptions().isEmpty();
+        return scanOptions().size() >= 2;
     }
 
     public static void render(DrawContext ctx, Screen screen, int mouseX, int mouseY) {
@@ -127,7 +106,7 @@ public class EncounterOverlay {
 
         String header = "Encounter Selection";
         int hw = tr.getWidth(header);
-        ctx.drawText(tr, header, screenW / 2 - hw, 24, 0xFFFFFFFF, true);
+        ctx.drawText(tr, header, screenW / 2 - hw / 2, 24, 0xFFFFFFFF, true);
 
         int count = options.size();
         for (int i = 0; i < count; i++) {
@@ -165,7 +144,6 @@ public class EncounterOverlay {
     public static boolean handleClick(double mouseX, double mouseY, Screen screen) {
         if (!WynnExtrasConfig.INSTANCE.encounterOverlayEnabled) return false;
         if (!isEncounterScreen(screen)) return false;
-        if (stableTicks < SETTLE_THRESHOLD) return false;
         List<Option> options = scanOptions();
         if (options.isEmpty()) return false;
 
