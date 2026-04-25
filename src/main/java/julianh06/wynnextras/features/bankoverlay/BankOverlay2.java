@@ -997,17 +997,35 @@ public class BankOverlay2 extends WEHandledScreen {
         ((ItemStackExtension) (Object) stack).setAnnotation(annotation);
     }
 
+    // Cached durability-overlay config so we don't reflect into Wynntils config options
+    // on every slot draw (was 2 lookups × ~1000 slots per frame → ~5fps in bank).
+    private static long durabilityCfgRefreshAt = 0;
+    private static boolean durabilityRenderInInv = false;
+    private static String durabilityMode = "ARC";
+
+    private static void refreshDurabilityCfg() {
+        long now = System.currentTimeMillis();
+        if (now - durabilityCfgRefreshAt < 1000) return; // refresh at most once per second
+        durabilityCfgRefreshAt = now;
+        try {
+            if (durabilityOverlayFeature == null)
+                durabilityOverlayFeature = Managers.Feature.getFeatureInstance(DurabilityOverlayFeature.class);
+            durabilityRenderInInv = (Boolean) durabilityOverlayFeature.getConfigOptionFromString("renderDurabilityOverlayInventories").get().get();
+            durabilityMode = ((Enum<?>) durabilityOverlayFeature.getConfigOptionFromString("durabilityRenderMode").get().get()).name();
+        } catch (Exception ignored) {}
+    }
+
     private static void renderDurabilityRing(DrawContext context, ItemStack stack, int x, int y) {
         try {
             if (durabilityOverlayFeature == null)
                 durabilityOverlayFeature = Managers.Feature.getFeatureInstance(DurabilityOverlayFeature.class);
             if (!durabilityOverlayFeature.isEnabled()) return;
-            if (!((Boolean) durabilityOverlayFeature.getConfigOptionFromString("renderDurabilityOverlayInventories").get().get())) return;
+            refreshDurabilityCfg();
+            if (!durabilityRenderInInv) return;
             if (Models.Item.asWynnItemProperty(stack, DurableItemProperty.class).isEmpty()) return;
 
-            String mode = ((Enum<?>) durabilityOverlayFeature.getConfigOptionFromString("durabilityRenderMode").get().get()).name();
             DurabilityOverlayFeatureInvoker invoker = (DurabilityOverlayFeatureInvoker) durabilityOverlayFeature;
-            switch (mode) {
+            switch (durabilityMode) {
                 case "ARC"        -> invoker.invokeDrawDurabilityArc(context, stack, x, y);
                 case "BAR"        -> invoker.invokeDrawDurabilityBar(context, stack, x, y);
                 case "PERCENTAGE" -> invoker.invokeDrawDurabilityPercentage(context, stack, x, y);

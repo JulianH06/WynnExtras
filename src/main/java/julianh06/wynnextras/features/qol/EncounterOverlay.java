@@ -35,7 +35,11 @@ public class EncounterOverlay {
             "Thunder", 0xFFFFDD33
     );
 
-    // No settle: render as soon as there's ≥1 option, and update live as more slots populate.
+    // Latched options per (slot index → option). Preserved across frames while the
+    // encounter screen is open so transient empty-slot packets from the server don't
+    // shrink the visible panel count.
+    private static final java.util.LinkedHashMap<Integer, Option> latchedOptions = new java.util.LinkedHashMap<>();
+    private static String latchedTitle = null;
 
     public record Option(String element, int slot, String itemName) {}
 
@@ -45,7 +49,8 @@ public class EncounterOverlay {
         return title.contains("Encounter Selection");
     }
 
-    public static List<Option> scanOptions() {
+    /** Live re-scan that doesn't update the latch. */
+    private static List<Option> scanOptionsRaw() {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return List.of();
         ScreenHandler menu = mc.player.currentScreenHandler;
@@ -64,6 +69,33 @@ public class EncounterOverlay {
             }
         }
         return found;
+    }
+
+    /** Returns the current latched options. Updates the latch from the live scan
+     *  (adds new entries, refreshes existing ones) but never drops slots — those
+     *  are only cleared when the screen closes via {@link #resetLatch}. */
+    public static List<Option> scanOptions() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        Screen screen = mc.currentScreen;
+        if (screen == null || !isEncounterScreen(screen)) {
+            resetLatch();
+            return List.of();
+        }
+        String title = screen.getTitle().getString();
+        if (!title.equals(latchedTitle)) {
+            // New screen instance — start fresh.
+            latchedOptions.clear();
+            latchedTitle = title;
+        }
+        for (Option o : scanOptionsRaw()) {
+            latchedOptions.put(o.slot(), o);
+        }
+        return new ArrayList<>(latchedOptions.values());
+    }
+
+    private static void resetLatch() {
+        latchedOptions.clear();
+        latchedTitle = null;
     }
 
     private static int[] panelBounds(int index, int total, int screenW, int screenH) {

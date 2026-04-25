@@ -212,6 +212,7 @@ public class WynnExtras implements ClientModInitializer {
 		RaidListData.load();
 		WaypointData.load();
 		RaidChatNotifier.INSTANCE.load();
+		julianh06.wynnextras.features.chat.WynntilsChatBlocker.register();
 
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {

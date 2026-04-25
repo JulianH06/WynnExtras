@@ -126,8 +126,22 @@ public class StackDuplicateMessages {
         // Include 'x' so BungeeCord hex prefix sequences are also stripped.
         String out = s.replaceAll("§[0-9a-fk-orx]", "");
         out = COUNTER_SUFFIX.matcher(out).replaceAll("");
-        // Normalize whitespace so trailing spaces / inner double spaces don't block a match.
-        out = out.replaceAll("\\s+", " ").trim();
+        // Strip Wynncraft's PUA icon glyphs (rank pills, badges, etc.) so messages with
+        // and without a player rank prefix are recognized as the same text.
+        out = out.replaceAll("[\uE000-\uF8FF]", "");
+        // Drop everything in supplementary planes (where Wynncraft's RP glyphs live).
+        StringBuilder sb = new StringBuilder(out.length());
+        int i = 0;
+        while (i < out.length()) {
+            int cp = out.codePointAt(i);
+            int step = Character.charCount(cp);
+            if (cp < 0x10000) sb.appendCodePoint(cp);
+            i += step;
+        }
+        out = sb.toString();
+        // Normalize all Unicode whitespace (incl. non-breaking spaces) so spacing
+        // differences don't block a duplicate match.
+        out = out.replaceAll("(?U)\\s+", " ").trim();
         return out;
     }
 }

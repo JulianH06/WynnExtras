@@ -259,12 +259,12 @@ public class WynncraftApiHandler {
             return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenApply(response -> {
                         String body = response.body();
-                        // Log the HTTP status so 401/403/404/etc. is visible.
-                        if (response.statusCode() != 200) {
-                            System.err.println("[WynnExtras] fetchPlayerData(" + playerName + ", full="
-                                    + fullResult + ") returned HTTP " + response.statusCode()
-                                    + ": " + (body != null ? body.substring(0, Math.min(200, body.length())) : "null"));
-                        }
+                        int len = body == null ? 0 : body.length();
+                        // Always log status + body length + a snippet so empty/malformed responses are visible.
+                        WynnExtras.LOGGER.info("[fetchPlayerData] {} full={} status={} len={} keyHeader={} snippet={}",
+                                playerName, fullResult, response.statusCode(), len,
+                                INSTANCE.API_KEY != null,
+                                body == null ? "null" : body.substring(0, Math.min(300, len)).replaceAll("[\\r\\n]+", " "));
                         return body;
                     })
                     .thenApply(WynncraftApiHandler::parsePlayerData);
