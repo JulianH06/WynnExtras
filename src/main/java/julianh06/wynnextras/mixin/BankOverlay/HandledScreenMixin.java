@@ -204,45 +204,58 @@ public abstract class HandledScreenMixin {
 
     @Unique
     private void renderCharacterSelectionHighlight(DrawContext context, HandledScreen<?> screen) {
-        // Only render if we have a target character
-        if (julianh06.wynnextras.features.bankoverlay.BankOverlay2.targetCharacterNameForClassMenu == null) return;
-
         // Only in character selection menu
         Container container = Models.Container.getCurrentContainer();
-        if (!(container instanceof CharacterSelectionContainer)) {
-            // Clear target when leaving character selection
-            return;
-        }
+        if (!(container instanceof CharacterSelectionContainer)) return;
 
-        // Search through slots to find matching character
-        ScreenHandler handler = screen.getScreenHandler();
         String targetName = julianh06.wynnextras.features.bankoverlay.BankOverlay2.targetCharacterNameForClassMenu;
+        if (targetName == null || targetName.isEmpty()) return;
 
+        ScreenHandler handler = screen.getScreenHandler();
+
+        // Find exact match (count to ensure uniqueness for auto-click)
+        int matchCount = 0;
+        Slot matchSlot = null;
         for (Slot slot : handler.slots) {
             ItemStack stack = slot.getStack();
             if (stack == null || stack.isEmpty()) continue;
-
-            // Check if this item's name/lore matches our target character
             String itemName = stack.getName().getString().replaceAll("\u00a7[0-9a-fk-or]", "");
-
-            // Characters in /class menu show class name in item name
-            // Match by checking if target name starts with the class name in the item
-            if (targetName.toLowerCase().startsWith(itemName.toLowerCase())) {
-                // Draw highlight around this slot
-                int slotX = slot.x + this.x;
-                int slotY = slot.y + this.y;
-
-                // Draw yellow/gold border
-                context.fill(slotX - 2, slotY - 2, slotX + 18, slotY, 0xFFFFAA00); // top
-                context.fill(slotX - 2, slotY + 16, slotX + 18, slotY + 18, 0xFFFFAA00); // bottom
-                context.fill(slotX - 2, slotY, slotX, slotY + 16, 0xFFFFAA00); // left
-                context.fill(slotX + 16, slotY, slotX + 18, slotY + 16, 0xFFFFAA00); // right
-
-                // Draw label above
-                context.drawText(MinecraftClient.getInstance().textRenderer,
-                        "\u00a7e\u25c0 " + targetName,
-                        slotX - 10, slotY - 12, 0xFFFFAA00, true);
+            if (targetName.equalsIgnoreCase(itemName)) {
+                matchCount++;
+                matchSlot = slot;
             }
+        }
+
+        // Highlight all matches
+        for (Slot slot : handler.slots) {
+            ItemStack stack = slot.getStack();
+            if (stack == null || stack.isEmpty()) continue;
+            String itemName = stack.getName().getString().replaceAll("\u00a7[0-9a-fk-or]", "");
+            if (!targetName.equalsIgnoreCase(itemName)) continue;
+            int slotX = slot.x + this.x;
+            int slotY = slot.y + this.y;
+            context.fill(slotX - 2, slotY - 2, slotX + 18, slotY, 0xFFFFAA00);
+            context.fill(slotX - 2, slotY + 16, slotX + 18, slotY + 18, 0xFFFFAA00);
+            context.fill(slotX - 2, slotY, slotX, slotY + 16, 0xFFFFAA00);
+            context.fill(slotX + 16, slotY, slotX + 18, slotY + 16, 0xFFFFAA00);
+            context.drawText(MinecraftClient.getInstance().textRenderer,
+                    "\u00a7e\u25c0 " + targetName,
+                    slotX - 10, slotY - 12, 0xFFFFAA00, true);
+        }
+
+        // Auto-click if exactly one match \u2014 clear targets first to prevent re-queuing
+        if (matchCount == 1 && matchSlot != null) {
+            julianh06.wynnextras.features.bankoverlay.BankOverlay2.targetCharacterNameForClassMenu = null;
+            julianh06.wynnextras.features.bankoverlay.BankOverlay2.targetCharacterIdForClassMenu = null;
+            julianh06.wynnextras.features.bankoverlay.BankOverlay2.targetCharacterLevelForClassMenu = 0;
+            final int syncId = handler.syncId;
+            final int slotId = matchSlot.id;
+            julianh06.wynnextras.utils.TickScheduler.runAfterTicks(3, () -> {
+                MinecraftClient mc = MinecraftClient.getInstance();
+                if (mc.interactionManager != null && mc.player != null) {
+                    mc.interactionManager.clickSlot(syncId, slotId, 0, net.minecraft.screen.slot.SlotActionType.PICKUP, mc.player);
+                }
+            });
         }
     }
 

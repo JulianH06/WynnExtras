@@ -1225,7 +1225,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     /**
      * Auto-select a character if coming from a cross-class bank page click.
-     * Matches by name + level. Only clicks if there's exactly one match (100% identifiable).
+     * Matches by name + level, or by level alone as fallback. Only clicks if exactly one match.
      */
     private void tryAutoSelectCharacter(List<CharIdentity> charDataList, List<Integer> charSlotIndices, List<ItemStack> stacks) {
         String targetName = BankOverlay2.targetCharacterNameForClassMenu;
@@ -1236,15 +1236,15 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         BankOverlay2.targetCharacterNameForClassMenu = null;
         BankOverlay2.targetCharacterLevelForClassMenu = 0;
 
-        if (targetName == null || targetName.isEmpty()) return;
+        if (targetName == null && targetLevel <= 0) return;
 
-        // Find matching visible cards by name and level
+        // Find matching visible cards
         int matchCount = 0;
         int matchVisIdx = -1;
 
         for (int vis = 0; vis < visibleCardCount; vis++) {
-            int arrayIdx = visOrder[vis];
-            if (arrayIdx >= charSlotIndices.size()) continue;
+            int arrayIdx = visOrder[vis]; // index into CHARACTER_SLOTS (0-14)
+            if (arrayIdx >= CHARACTER_SLOTS.length) continue;
             int origIdx = -1;
             for (int j = 0; j < charSlotIndices.size(); j++) {
                 if (charSlotIndices.get(j) == arrayIdx) {
@@ -1256,13 +1256,17 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
             CharIdentity card = charDataList.get(origIdx);
 
-            // Match: name matches AND (level matches within 5 levels OR level is 0/unknown)
-            boolean nameMatch = targetName.equalsIgnoreCase(card.name)
-                    || targetName.equalsIgnoreCase(card.classType);
-            boolean levelMatch = targetLevel <= 0 || card.level <= 0
-                    || Math.abs(card.level - targetLevel) <= 5;
+            boolean match = false;
+            if (targetName != null && !targetName.isEmpty()) {
+                // Name + level matching
+                boolean nameMatch = targetName.equalsIgnoreCase(card.name)
+                        || targetName.equalsIgnoreCase(card.classType);
+                boolean levelMatch = targetLevel <= 0 || card.level <= 0
+                        || Math.abs(card.level - targetLevel) <= 5;
+                match = nameMatch && levelMatch;
+            }
 
-            if (nameMatch && levelMatch) {
+            if (match) {
                 matchCount++;
                 matchVisIdx = vis;
             }

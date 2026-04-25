@@ -9,4 +9,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface InGameHudAccessor {
     @Accessor("overlayMessage")
     Text getOverlayMessage();
+
+    @Accessor("title")
+    Text getTitle();
 }

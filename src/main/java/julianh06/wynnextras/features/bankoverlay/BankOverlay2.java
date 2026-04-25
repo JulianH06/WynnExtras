@@ -15,12 +15,6 @@ import com.wynntils.models.containers.containers.personal.AccountBankContainer;
 import com.wynntils.models.containers.containers.personal.BookshelfContainer;
 import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
 import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
-import com.wynntils.models.containers.containers.trademarket.TradeMarketBuyContainer;
-import com.wynntils.models.containers.containers.trademarket.TradeMarketContainer;
-import com.wynntils.models.containers.containers.trademarket.TradeMarketFiltersContainer;
-import com.wynntils.models.containers.containers.trademarket.TradeMarketOrderContainer;
-import com.wynntils.models.containers.containers.trademarket.TradeMarketSellContainer;
-import com.wynntils.models.containers.containers.trademarket.TradeMarketTradesContainer;
 import com.wynntils.models.emeralds.type.EmeraldUnits;
 import com.wynntils.models.gear.type.GearTier;
 import com.wynntils.models.items.WynnItem;
@@ -42,7 +36,6 @@ import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.inventory.BankOverlay;
-import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.AccountBankData;
 import julianh06.wynnextras.features.inventory.data.BankData;
@@ -70,6 +63,8 @@ import net.minecraft.client.gui.tooltip.TooltipComponent;
 import net.minecraft.client.gui.tooltip.TooltipPositioner;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.decoration.InteractionEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
@@ -77,11 +72,13 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.tooltip.TooltipType;
+import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -197,6 +194,8 @@ public class BankOverlay2 extends WEHandledScreen {
     private static Pair<Integer, Integer> lastClickedSlot = new Pair<>(-1, -1);
 
     private static boolean wynncraftItemDatabaseInitialized = false;
+
+    private static boolean clickedClassSelectionEntity = false;
 
     public BankOverlay2(CallbackInfo ci, HandledScreen<?> screen) {
         this.ci = ci;
@@ -440,14 +439,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 long elapsed = System.currentTimeMillis() - savedCrossClassSearchTime;
                 if (elapsed < SAVED_SEARCH_EXPIRY_MS) {
                     searchbar2.setInput(savedCrossClassSearch);
-
-                    // Auto-switch to character bank if we're on account bank
-                    if (currentOverlayType == BankOverlayType.ACCOUNT) {
-                        ScreenHandler handler = McUtils.containerMenu();
-                        if (handler != null) {
-                            clickOnSlot(47, handler.syncId, 0, handler.getStacks());
-                        }
-                    }
                 }
                 savedCrossClassSearch = null;
             }
@@ -1868,6 +1859,23 @@ public class BankOverlay2 extends WEHandledScreen {
         return null;
     }
 
+    private static boolean isInCharacterSelectionLobby() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.inGameHud == null) return false;
+        julianh06.wynnextras.mixin.Accessor.InGameHudAccessor hud =
+                (julianh06.wynnextras.mixin.Accessor.InGameHudAccessor) mc.inGameHud;
+        Text overlay = hud.getOverlayMessage();
+        if (overlay == null) return false;
+        String text = overlay.getString();
+        return text.contains("Left-Click to play") && text.contains("Right-Click to switch");
+    }
+
+    private static boolean isLobbyBlackscreenGone() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.inGameHud == null) return true;
+        return ((julianh06.wynnextras.mixin.Accessor.InGameHudAccessor) mc.inGameHud).getTitle() == null;
+    }
+
     private static class BagGroup {
         final String raidAbbrev;
         final GearTier tier;
@@ -2819,10 +2827,14 @@ public class BankOverlay2 extends WEHandledScreen {
                     return true;
                 } else {
                     // Other character - save search, close bank, then run /class with auto-select
-                    targetCharacterIdForClassMenu = characterId;
-                    targetCharacterNameForClassMenu = (characterNickname != null && !characterNickname.isEmpty())
+                    final String snapName = (characterNickname != null && !characterNickname.isEmpty())
                             ? characterNickname : null;
-                    targetCharacterLevelForClassMenu = characterLevel;
+                    final int snapLevel = characterLevel;
+
+                    // Tell ClassSelectionOverlay which character to auto-click
+                    targetCharacterIdForClassMenu = null;
+                    targetCharacterNameForClassMenu = snapName;
+                    targetCharacterLevelForClassMenu = snapLevel;
 
                     // Save current search so it persists after class swap
                     if (searchbar2 != null && searchbar2.getInput() != null && !searchbar2.getInput().isEmpty()) {
@@ -2842,11 +2854,34 @@ public class BankOverlay2 extends WEHandledScreen {
                     crossClassPages.clear();
                     crossClassSearchActive = false;
                     BankOverlay.currentOverlayType = BankOverlayType.NONE;
+                    clickedClassSelectionEntity = false;
 
-                    // Queue /class after a short delay to let the screen close
-                    julianh06.wynnextras.utils.TickScheduler.runAfterTicks(5, () -> {
-                        Handlers.Command.queueCommand("class");
-                    });
+                    // Send initial /class after screen closes
+                    julianh06.wynnextras.utils.TickScheduler.runAfterTicks(5, () -> Handlers.Command.queueCommand("class"));
+
+                    // Step 1: wait until we're in the lobby AND the blackscreen title overlay has cleared
+                    julianh06.wynnextras.utils.TickScheduler.runWhen(
+                        () -> isInCharacterSelectionLobby() && isLobbyBlackscreenGone(),
+                        () -> {
+                            MinecraftClient mc2 = MinecraftClient.getInstance();
+                            julianh06.wynnextras.utils.TickScheduler.runUntil(
+                                () -> clickedClassSelectionEntity,
+                                () -> {
+                                    if(mc2.world == null || mc2.player == null || mc2.getNetworkHandler() == null) return;
+
+                                    for (Entity e : mc2.world.getEntities()) {
+                                        if (e instanceof InteractionEntity && mc2.player.distanceTo(e) < 5) {
+                                            clickedClassSelectionEntity = true;
+                                            mc2.getNetworkHandler().sendPacket(
+                                                    PlayerInteractEntityC2SPacket.interact(e, mc2.player.isSneaking(), Hand.MAIN_HAND)
+                                            );
+                                            break;
+                                        }
+                                    }
+                                }
+                            );
+                        }
+                    );
                     return true;
                 }
             }
