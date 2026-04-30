@@ -130,6 +130,9 @@ public class WynnExtras implements ClientModInitializer {
 
 	public static String latestVersion = null;
 
+	public static boolean usingWynnmod;
+	public static boolean usingWynnventory;
+
 	static {
 		BACKGROUND_STYLE = Style.EMPTY.withFont(new StyleSpriteSource.Font(PILL_FONT)).
 		withColor(Formatting.DARK_GREEN);
@@ -234,6 +237,9 @@ public class WynnExtras implements ClientModInitializer {
 		}
 
 		ResetTimeConfig.INSTANCE.fetchIfNeeded();
+
+		usingWynnmod = FabricLoader.getInstance().isModLoaded("wynnmod");
+		usingWynnventory = FabricLoader.getInstance().isModLoaded("wynnventory");
 	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)

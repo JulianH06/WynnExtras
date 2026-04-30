@@ -52,7 +52,6 @@ import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.SearchQueryParser;
 import julianh06.wynnextras.utils.UI.*;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -112,6 +111,8 @@ public class BankOverlay2 extends WEHandledScreen {
     static UnidentifiedItemIconFeature unidentifiedItemIconFeature;
     static ItemFavoriteFeature itemFavoriteFeature;
     static DurabilityOverlayFeature durabilityOverlayFeature;
+    private static SearchQueryParser.ParsedQuery cachedSearchQuery;
+    private static String cachedSearchQueryInput;
 
     public Identifier buttonBackground = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbg.png");
     public Identifier buttonBackgroundShort = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbgshort.png");
@@ -230,7 +231,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         if (!wynncraftItemDatabaseInitialized) {
             wynncraftItemDatabaseInitialized = true;
-            if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
+            if (WynnExtras.usingWynnmod) {
                 CompletableFuture.runAsync(() -> {
                     try {
                         Class<?> clazz = Class.forName("com.wynnmod.wynncraft.item.map.WynncraftItemDatabase");
@@ -1058,8 +1059,7 @@ public class BankOverlay2 extends WEHandledScreen {
          }
     }
 
-    private static void renderItemOverlays(DrawContext context, ItemStack stack, int x, int y) {
-        Optional<WynnItem> item = asWynnItem(stack);
+    private static void renderItemOverlays(DrawContext context, ItemStack stack, int x, int y, Optional<WynnItem> item) {
         if (item.isPresent()) {
             ItemAnnotation annotation = item.get();
             if (annotation instanceof TeleportScrollItem ||
@@ -1104,8 +1104,12 @@ public class BankOverlay2 extends WEHandledScreen {
             return;
         }
 
-        // Use advanced search parser for matching
-        SearchQueryParser.ParsedQuery query = SearchQueryParser.parse(input);
+        // Use advanced search parser for matching (cached per input string)
+        if (!input.equals(cachedSearchQueryInput)) {
+            cachedSearchQuery = SearchQueryParser.parse(input);
+            cachedSearchQueryInput = input;
+        }
+        SearchQueryParser.ParsedQuery query = cachedSearchQuery;
 
         // Get WynnItem if available
         WynnItem wynnItem = null;
@@ -1140,7 +1144,7 @@ public class BankOverlay2 extends WEHandledScreen {
         if (hoveredSlot.getItem() == Items.AIR) return;
 
         try {
-            if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
+            if (WynnExtras.usingWynnventory) {
                 initWynnventoryReflection();
 
                 if (wynnventoryReady) {
@@ -2225,6 +2229,9 @@ public class BankOverlay2 extends WEHandledScreen {
         int index;
         final boolean isInventorySlot;
         final int inventoryIndex;
+        private Optional<WynnItem> cachedWynnItem = null;
+        private String cachedSearchInput = null;
+        private boolean cachedSearchMatch = false;
 
         public SlotWidget(ItemStack stack, int index, boolean isInventorySlot, int inventoryIndex) {
             super(0, 0, 0, 0);
@@ -2252,7 +2259,8 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             boolean renderOne = false;
-            Optional<WynnItem> item = asWynnItem(stack);
+            if (cachedWynnItem == null) cachedWynnItem = asWynnItem(stack);
+            Optional<WynnItem> item = cachedWynnItem;
             if (item.isPresent()) {
                 ItemAnnotation annotation = item.get();
                 if (annotation instanceof PotionItem potionItem) {
@@ -2282,14 +2290,14 @@ public class BankOverlay2 extends WEHandledScreen {
             renderEmeraldPouchRing(ctx, stack, x + 1, y + 1);
             renderHighlightOverlay(ctx, stack, x + 1, y + 1);
 
-            ItemStack renderStack = stack.copy();
-
-            // Suppress vanilla durability bar
+            // Suppress vanilla durability bar only when needed
+            ItemStack renderStack = stack;
             try {
-                CustomModelDataComponent modelData = renderStack.get(DataComponentTypes.CUSTOM_MODEL_DATA);
+                CustomModelDataComponent modelData = stack.get(DataComponentTypes.CUSTOM_MODEL_DATA);
                 if (modelData != null && modelData.floats().size() > 1) {
                     float val = modelData.floats().get(1);
                     if (val >= 1 && val <= 15) {
+                        renderStack = stack.copy();
                         List<Float> floats = new ArrayList<>(modelData.floats());
                         floats.remove(1);
                         renderStack.set(DataComponentTypes.CUSTOM_MODEL_DATA,
@@ -2307,11 +2315,33 @@ public class BankOverlay2 extends WEHandledScreen {
                 else if(stack.getCount() > 1) ui.drawText(String.valueOf(stack.getCount()), (int) (width + x / ui.getScaleFactor()), (int) (height - 8 + y / ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 1);
             } catch (Exception ignored) {}
 
-            renderItemOverlays(ctx, stack, x + 1, y + 1);
-            renderSearchOverlay(ctx, stack, x + 1, y + 1);
+            renderItemOverlays(ctx, stack, x + 1, y + 1, item);
+
+            // Inline cached search overlay (avoids re-parsing query and re-looking up WynnItem)
+            String rawSearchInput = searchbar2 != null ? searchbar2.getInput() : null;
+            if (rawSearchInput != null && !rawSearchInput.isEmpty()) {
+                String searchKey = rawSearchInput.replace("@", "").trim();
+                if (searchKey.isEmpty()) {
+                    // Just @ with no term - show all, no overlay
+                } else {
+                    if (!searchKey.equals(cachedSearchInput)) {
+                        if (!searchKey.equals(cachedSearchQueryInput)) {
+                            cachedSearchQuery = SearchQueryParser.parse(searchKey);
+                            cachedSearchQueryInput = searchKey;
+                        }
+                        cachedSearchMatch = SearchQueryParser.matches(stack, item.orElse(null), cachedSearchQuery);
+                        cachedSearchInput = searchKey;
+                    }
+                    if (cachedSearchMatch) {
+                        RenderUtils.drawRectBorders(ctx, CustomColor.fromHexString("00FF00"), x + 1, y + 1, x + 17, y + 17, 1);
+                    } else {
+                        RenderUtils.drawRect(ctx, CustomColor.fromHSV(0, 0, 0, 0.75f), x, y, 18, 18);
+                    }
+                }
+            }
 
             try {
-                if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
+                if (WynnExtras.usingWynnmod) {
                     initWynnmodOverlay();
 
                     if (wynnmodReady && itemOverlayInstance != null && stack != null) {
@@ -2322,7 +2352,11 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         public void setStack(ItemStack stack) {
-            this.stack = stack;
+            if (stack != this.stack) {
+                this.stack = stack;
+                this.cachedWynnItem = null;
+                this.cachedSearchInput = null;
+            }
         }
 
         private SlotActionType determineActionType(int mouseButton) {
