@@ -752,7 +752,7 @@ public class RaidChatNotifier {
         String roomName = room.getRoomName();
         long time = room.getRoomTotalTime();
 
-        String pbKey = raidInfo.getRaidKind().getAbbreviation() + "_" + roomName.replaceAll("\\s", "");
+        String pbKey = stableRaidKey(raidInfo.getRaidKind()) + "_" + roomName.replaceAll("\\s", "");
 
         Long pb = getPB(pbKey);
 
@@ -780,9 +780,9 @@ public class RaidChatNotifier {
             String timestamp
     ) {
         String bossName = room.getRoomName();
-        String raidAbbr = raidInfo.getRaidKind().getAbbreviation();
+        String raidKey = stableRaidKey(raidInfo.getRaidKind());
 
-        String pbKey = "boss_" + raidAbbr + "_" + index;
+        String pbKey = "boss_" + raidKey + "_" + index;
         Long pb = getPB(pbKey);
 
         String msg = "§a§l" + bossName + " §r§bdefeated after §c" + timestamp;
@@ -851,5 +851,69 @@ public class RaidChatNotifier {
                 e.printStackTrace();
             }
         }
+
+        if (INSTANCE.migratePBKeys()) INSTANCE.save();
+    }
+
+    /**
+     * Stable PB-key prefix that survives Wynntils renaming the public abbreviation
+     * (e.g. TWP -> WTP between 4.1.8 and 4.1.9). Derived from the RaidKind's class
+     * simple name with the "Raid" suffix stripped.
+     */
+    static String stableRaidKey(RaidKind kind) {
+        if (kind == null) return "?";
+        String simple = kind.getClass().getSimpleName();
+        if (simple.endsWith("Raid")) simple = simple.substring(0, simple.length() - 4);
+        return simple;
+    }
+
+    // Old abbreviation -> stable class-derived key. Both TWP and WTP folded into
+    // TheWartornPalace so old PBs survive the Wynntils 4.1.8 -> 4.1.9 rename.
+    private static final Map<String, String> RAID_KEY_ALIASES = Map.of(
+            "TWP", "TheWartornPalace",
+            "WTP", "TheWartornPalace",
+            "NOG", "NestOfTheGrootslangs",
+            "NOL", "OrphionsNexusOfLight",
+            "TCC", "TheCanyonColossus",
+            "TNA", "TheNamelessAnomaly"
+    );
+
+    /**
+     * Rewrites legacy PB keys ({@code <ABBR>_Room} / {@code boss_<ABBR>_idx}) to use the
+     * stable raid key. When the new key already holds a PB, the better (lower) time wins
+     * so users never lose a PB to a rename. Returns true if any entry was changed.
+     */
+    boolean migratePBKeys() {
+        if (raidPBs == null || raidPBs.isEmpty()) return false;
+        Map<String, Long> migrated = new HashMap<>();
+        boolean changed = false;
+        for (Map.Entry<String, Long> e : raidPBs.entrySet()) {
+            String key = e.getKey();
+            Long val = e.getValue();
+            String rewritten = rewriteLegacyKey(key);
+            if (!rewritten.equals(key)) changed = true;
+            migrated.merge(rewritten, val, Math::min);
+        }
+        if (changed) raidPBs = migrated;
+        return changed;
+    }
+
+    private static String rewriteLegacyKey(String key) {
+        if (key.startsWith("boss_")) {
+            int second = key.indexOf('_', 5);
+            if (second > 5) {
+                String abbr = key.substring(5, second);
+                String stable = RAID_KEY_ALIASES.get(abbr);
+                if (stable != null) return "boss_" + stable + key.substring(second);
+            }
+            return key;
+        }
+        int sep = key.indexOf('_');
+        if (sep > 0) {
+            String abbr = key.substring(0, sep);
+            String stable = RAID_KEY_ALIASES.get(abbr);
+            if (stable != null) return stable + key.substring(sep);
+        }
+        return key;
     }
 }
