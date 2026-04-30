@@ -72,10 +72,21 @@ public class WynnExtrasConfigScreen extends Screen {
     private int selectedCategoryColor = 0;
     private final List<Category> categories = new ArrayList<>();
     private double scrollOffset = 0;
+    private double scrollTarget = 0;
     private double maxScroll = 0;
     private boolean scrollbarDragging = false;
     private double scrollbarDragOffset = 0;
     private int scrollbarY, scrollbarHeight, scrollbarThumbY, scrollbarThumbH;
+
+    // Sidebar scroll state
+    private double sidebarScrollOffset = 0;
+    private double sidebarScrollTarget = 0;
+    private boolean sidebarScrollbarDragging = false;
+    private double sidebarScrollbarDragOffset = 0;
+    private int sidebarScrollbarY, sidebarScrollbarHeight, sidebarScrollbarThumbY, sidebarScrollbarThumbH;
+
+    private static final float SCROLL_SPEED = 0.3f;
+    private static final float SCROLL_SNAP = 0.5f;
 
     // Dropdown state
     private DropdownOption<?> activeDropdown = null;
@@ -651,7 +662,16 @@ public class WynnExtrasConfigScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         updateMaxScroll();
-        scrollOffset = Math.min(scrollOffset, maxScroll);
+        scrollTarget = MathHelper.clamp(scrollTarget, 0, maxScroll);
+        double scrollDiff = scrollTarget - scrollOffset;
+        if (Math.abs(scrollDiff) < SCROLL_SNAP) scrollOffset = scrollTarget;
+        else scrollOffset += scrollDiff * SCROLL_SPEED * delta;
+
+        double sidebarMax = getSidebarMaxScroll();
+        sidebarScrollTarget = MathHelper.clamp(sidebarScrollTarget, 0, sidebarMax);
+        double sidebarDiff = sidebarScrollTarget - sidebarScrollOffset;
+        if (Math.abs(sidebarDiff) < SCROLL_SNAP) sidebarScrollOffset = sidebarScrollTarget;
+        else sidebarScrollOffset += sidebarDiff * SCROLL_SPEED * delta;
 
         ctx.fill(0, 0, width, height, BG_DARK);
 
@@ -674,6 +694,13 @@ public class WynnExtrasConfigScreen extends Screen {
             context.fill(cx - i, cy - size + i, cx + i + 1, cy - size + i + 1, color);
             context.fill(cx - i, cy + size - i, cx + i + 1, cy + size - i + 1, color);
         }
+    }
+
+    private double getSidebarMaxScroll() {
+        int listStartY = 40 + SEARCH_BAR_HEIGHT + 8;
+        int listH = height - 5 - listStartY;
+        long count = categories.stream().filter(c -> searchQuery.isEmpty() || categoryHasMatches(c)).count();
+        return Math.max(0, count * 28 - listH);
     }
 
     private void drawSidebar(DrawContext ctx, int mouseX, int mouseY) {
@@ -707,7 +734,16 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.drawCenteredTextWithShadow(textRenderer, "X", clearX + 10, searchY + 10, TEXT_LIGHT);
         }
 
-        int y = searchY + SEARCH_BAR_HEIGHT + 8;
+        int listStartY = searchY + SEARCH_BAR_HEIGHT + 8;
+        int listEndY = height - 5;
+        int listH = listEndY - listStartY;
+
+        double sidebarMaxScroll = getSidebarMaxScroll();
+        sidebarScrollOffset = MathHelper.clamp(sidebarScrollOffset, 0, sidebarMaxScroll);
+
+        ctx.enableScissor(0, listStartY, SIDEBAR_WIDTH - 2, listEndY);
+
+        int y = listStartY - (int) sidebarScrollOffset;
         for (int i = 0; i < categories.size(); i++) {
             Category cat = categories.get(i);
 
@@ -727,6 +763,19 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.drawTextWithShadow(textRenderer, cat.name, 30, y + 7, selected ? TEXT_LIGHT : TEXT_DIM);
 
             y += 28;
+        }
+
+        ctx.disableScissor();
+
+        if (sidebarMaxScroll > 0) {
+            int sbX = SIDEBAR_WIDTH - 9;
+            sidebarScrollbarY = listStartY;
+            sidebarScrollbarHeight = listH;
+            sidebarScrollbarThumbH = Math.max(16, (int)(listH * listH / (double)(listH + sidebarMaxScroll)));
+            sidebarScrollbarThumbY = sidebarScrollbarY + (int)((listH - sidebarScrollbarThumbH) * (sidebarScrollOffset / sidebarMaxScroll));
+
+            ctx.fill(sbX, sidebarScrollbarY, sbX + 5, sidebarScrollbarY + sidebarScrollbarHeight, BORDER_DARK);
+            ctx.fill(sbX + 1, sidebarScrollbarThumbY, sbX + 4, sidebarScrollbarThumbY + sidebarScrollbarThumbH, GOLD_DARK);
         }
     }
 
@@ -772,11 +821,12 @@ public class WynnExtrasConfigScreen extends Screen {
 
         for (ConfigOption opt : cat.options) {
             if (matchesSearch(opt)) {
-                if (y + OPTION_HEIGHT > listTop && y < listBottom) {
-                    boolean hovered = mouseX >= contentX && mouseX < contentX + contentW && mouseY >= y && mouseY < y + OPTION_HEIGHT - 5;
-                    opt.render(ctx, contentX, y, contentW, OPTION_HEIGHT, mouseX, mouseY, hovered, cat.color);
+                int optH = opt.getHeight(contentW);
+                if (y + optH > listTop && y < listBottom) {
+                    boolean hovered = mouseX >= contentX && mouseX < contentX + contentW && mouseY >= y && mouseY < y + optH - 5;
+                    opt.render(ctx, contentX, y, contentW, optH, mouseX, mouseY, hovered, cat.color);
                 }
-                y += OPTION_HEIGHT + OPTION_SPACING;
+                y += optH + OPTION_SPACING;
             }
         }
 
@@ -810,12 +860,13 @@ public class WynnExtrasConfigScreen extends Screen {
         if (sub.expanded) {
             for (ConfigOption opt : sub.options) {
                 if (matchesSearch(opt)) {
-                    if (y + OPTION_HEIGHT > top && y < bot) {
-                        boolean hovered = mX >= x + 8 && mX < x + w && mY >= y && mY < y + OPTION_HEIGHT - 5;
-                        ctx.fill(x, y, x + 4, y + OPTION_HEIGHT - 5, selectedCategoryColor);
-                        opt.render(ctx, x + 8, y, w - 8, OPTION_HEIGHT, mX, mY, hovered, selectedCategoryColor);
+                    int optH = opt.getHeight(w - 8);
+                    if (y + optH > top && y < bot) {
+                        boolean hovered = mX >= x + 8 && mX < x + w && mY >= y && mY < y + optH - 5;
+                        ctx.fill(x, y, x + 4, y + optH - 5, selectedCategoryColor);
+                        opt.render(ctx, x + 8, y, w - 8, optH, mX, mY, hovered, selectedCategoryColor);
                     }
-                    y += OPTION_HEIGHT + OPTION_SPACING;
+                    y += optH + OPTION_SPACING;
                 }
             }
         }
@@ -986,7 +1037,7 @@ public class WynnExtrasConfigScreen extends Screen {
                 int clearX = SIDEBAR_WIDTH - 28;
                 if (mx >= clearX && mx < clearX + 20) {
                     searchQuery = "";
-                    scrollOffset = 0;
+                    scrollOffset = 0; scrollTarget = 0;
                     updateMaxScroll();
                     autoSelectMatchingCategory();
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
@@ -998,26 +1049,38 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         if (searchFocused && (my < sidebarSearchY || my >= sidebarSearchY + SEARCH_BAR_HEIGHT || mx < 8 || mx >= SIDEBAR_WIDTH - 8)) {
-            if (mx < SIDEBAR_WIDTH) {
-                searchFocused = false;
-            }
+            searchFocused = false;
         }
 
         // Categories in sidebar
         if (mx >= 8 && mx < SIDEBAR_WIDTH - 8) {
-            int y = sidebarSearchY + SEARCH_BAR_HEIGHT + 8;
+            int y = sidebarSearchY + SEARCH_BAR_HEIGHT + 8 - (int) sidebarScrollOffset;
             for (int i = 0; i < categories.size(); i++) {
                 Category cat = categories.get(i);
                 if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) continue;
 
                 if (my >= y && my < y + 24) {
                     selectedCategory = i;
-                    scrollOffset = 0;
+                    scrollOffset = 0; scrollTarget = 0;
                     updateMaxScroll();
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 y += 28;
+            }
+        }
+
+        // Sidebar scrollbar
+        double sidebarMaxScroll = getSidebarMaxScroll();
+        if (sidebarMaxScroll > 0 && mx >= SIDEBAR_WIDTH - 9 && mx < SIDEBAR_WIDTH - 4) {
+            if (my >= sidebarScrollbarThumbY && my < sidebarScrollbarThumbY + sidebarScrollbarThumbH) {
+                sidebarScrollbarDragging = true;
+                sidebarScrollbarDragOffset = my - sidebarScrollbarThumbY;
+                return true;
+            } else if (my >= sidebarScrollbarY && my < sidebarScrollbarY + sidebarScrollbarHeight) {
+                double clickPercent = (my - sidebarScrollbarY - sidebarScrollbarThumbH / 2.0) / (sidebarScrollbarHeight - sidebarScrollbarThumbH);
+                sidebarScrollTarget = MathHelper.clamp(clickPercent * sidebarMaxScroll, 0, sidebarMaxScroll);
+                return true;
             }
         }
 
@@ -1030,7 +1093,7 @@ public class WynnExtrasConfigScreen extends Screen {
                 return true;
             } else if (my >= scrollbarY && my < scrollbarY + scrollbarHeight) {
                 double clickPercent = (my - scrollbarY - scrollbarThumbH / 2.0) / (scrollbarHeight - scrollbarThumbH);
-                scrollOffset = MathHelper.clamp(clickPercent * maxScroll, 0, maxScroll);
+                scrollTarget = MathHelper.clamp(clickPercent * maxScroll, 0, maxScroll);
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
@@ -1058,10 +1121,11 @@ public class WynnExtrasConfigScreen extends Screen {
                     if (sub.expanded) {
                         for (ConfigOption opt : sub.options) {
                             if (matchesSearch(opt)) {
-                                if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + OPTION_HEIGHT)) {
-                                    if (opt.mouseClicked(mx, my, contentX + 8, y, contentW - 8, OPTION_HEIGHT, btn)) return true;
+                                int optH = opt.getHeight(contentW - 8);
+                                if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + optH)) {
+                                    if (opt.mouseClicked(mx, my, contentX + 8, y, contentW - 8, optH, btn)) return true;
                                 }
-                                y += OPTION_HEIGHT + OPTION_SPACING;
+                                y += optH + OPTION_SPACING;
                             }
                         }
                     }
@@ -1070,10 +1134,11 @@ public class WynnExtrasConfigScreen extends Screen {
 
             for (ConfigOption opt : cat.options) {
                 if (matchesSearch(opt)) {
-                    if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + OPTION_HEIGHT)) {
-                        if (opt.mouseClicked(mx, my, contentX, y, contentW, OPTION_HEIGHT, btn)) return true;
+                    int optH = opt.getHeight(contentW);
+                    if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + optH)) {
+                        if (opt.mouseClicked(mx, my, contentX, y, contentW, optH, btn)) return true;
                     }
-                    y += OPTION_HEIGHT + OPTION_SPACING;
+                    y += optH + OPTION_SPACING;
                 }
             }
         }
@@ -1088,6 +1153,7 @@ public class WynnExtrasConfigScreen extends Screen {
         int btn = click.button();
 
         scrollbarDragging = false;
+        sidebarScrollbarDragging = false;
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category cat = categories.get(selectedCategory);
             for (SubCategory sub : cat.subCategories) {
@@ -1104,10 +1170,20 @@ public class WynnExtrasConfigScreen extends Screen {
         double my = click.y();
         int btn = click.button();
 
+        if (sidebarScrollbarDragging) {
+            double sidebarMaxScroll = getSidebarMaxScroll();
+            if (sidebarMaxScroll > 0) {
+                double newThumbY = my - sidebarScrollbarDragOffset;
+                double percent = (newThumbY - sidebarScrollbarY) / (sidebarScrollbarHeight - sidebarScrollbarThumbH);
+                sidebarScrollTarget = MathHelper.clamp(percent * sidebarMaxScroll, 0, sidebarMaxScroll);
+            }
+            return true;
+        }
+
         if (scrollbarDragging && maxScroll > 0) {
             double newThumbY = my - scrollbarDragOffset;
             double percent = (newThumbY - scrollbarY) / (scrollbarHeight - scrollbarThumbH);
-            scrollOffset = MathHelper.clamp(percent * maxScroll, 0, maxScroll);
+            scrollTarget = MathHelper.clamp(percent * maxScroll, 0, maxScroll);
             return true;
         }
 
@@ -1123,8 +1199,9 @@ public class WynnExtrasConfigScreen extends Screen {
                     if (sub.expanded) {
                         for (ConfigOption opt : sub.options) {
                             if (matchesSearch(opt)) {
-                                if (opt.mouseDragged(mx, my, contentX + 8, y, contentW - 8, OPTION_HEIGHT)) return true;
-                                y += OPTION_HEIGHT + OPTION_SPACING;
+                                int optH = opt.getHeight(contentW - 8);
+                                if (opt.mouseDragged(mx, my, contentX + 8, y, contentW - 8, optH)) return true;
+                                y += optH + OPTION_SPACING;
                             }
                         }
                     }
@@ -1133,8 +1210,9 @@ public class WynnExtrasConfigScreen extends Screen {
 
             for (ConfigOption opt : cat.options) {
                 if (matchesSearch(opt)) {
-                    if (opt.mouseDragged(mx, my, contentX, y, contentW, OPTION_HEIGHT)) return true;
-                    y += OPTION_HEIGHT + OPTION_SPACING;
+                    int optH = opt.getHeight(contentW);
+                    if (opt.mouseDragged(mx, my, contentX, y, contentW, optH)) return true;
+                    y += optH + OPTION_SPACING;
                 }
             }
         }
@@ -1152,16 +1230,20 @@ public class WynnExtrasConfigScreen extends Screen {
             return true;
         }
         if (mx > SIDEBAR_WIDTH) {
-            scrollOffset = MathHelper.clamp(scrollOffset - vAmt * 30, 0, maxScroll);
-            return true;
+            scrollTarget = MathHelper.clamp(scrollTarget - vAmt * 30, 0, maxScroll);
+        } else {
+            sidebarScrollTarget = MathHelper.clamp(sidebarScrollTarget - vAmt * 20, 0, getSidebarMaxScroll());
         }
-        return super.mouseScrolled(mx, my, hAmt, vAmt);
+        return true;
     }
 
     @Override
     public boolean keyPressed(KeyInput input) {
         // Relay to any listening KeybindOption
         for (Category cat : categories) {
+            for (ConfigOption opt : cat.options) {
+                if (opt instanceof KeybindOption kb && kb.onKeyPressed(input.key())) return true;
+            }
             for (SubCategory sub : cat.subCategories) {
                 for (ConfigOption opt : sub.options) {
                     if (opt instanceof KeybindOption kb && kb.onKeyPressed(input.key())) return true;
@@ -1181,7 +1263,7 @@ public class WynnExtrasConfigScreen extends Screen {
                 String clipboard = net.minecraft.client.MinecraftClient.getInstance().keyboard.getClipboard();
                 if (clipboard != null && !clipboard.isEmpty()) {
                     searchQuery += clipboard.replaceAll("[\\r\\n\\t]", "");
-                    scrollOffset = 0;
+                    scrollOffset = 0; scrollTarget = 0;
                     updateMaxScroll();
                     autoSelectMatchingCategory();
                 }
@@ -1192,14 +1274,14 @@ public class WynnExtrasConfigScreen extends Screen {
             } else if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_X) {
                 net.minecraft.client.MinecraftClient.getInstance().keyboard.setClipboard(searchQuery);
                 searchQuery = "";
-                scrollOffset = 0;
+                scrollOffset = 0; scrollTarget = 0;
                 updateMaxScroll();
                 autoSelectMatchingCategory();
                 return true;
             } else if (key == 259) { // Backspace
                 if (!searchQuery.isEmpty()) {
                     searchQuery = searchQuery.substring(0, searchQuery.length() - 1);
-                    scrollOffset = 0;
+                    scrollOffset = 0; scrollTarget = 0;
                     updateMaxScroll();
                     autoSelectMatchingCategory();
                 }
@@ -1228,7 +1310,7 @@ public class WynnExtrasConfigScreen extends Screen {
             char c = (char) charInput.codepoint();
             if (c >= 32 && c < 127) {
                 searchQuery += c;
-                scrollOffset = 0;
+                scrollOffset = 0; scrollTarget = 0;
                 updateMaxScroll();
                 autoSelectMatchingCategory();
                 return true;
@@ -1280,6 +1362,7 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         int getTotalHeight() {
+            int contentW = width - SIDEBAR_WIDTH - 40;
             int h = 0;
             for (SubCategory s : subCategories) {
                 if (subHasMatches(s)) {
@@ -1287,7 +1370,7 @@ public class WynnExtrasConfigScreen extends Screen {
                     if (s.expanded) {
                         for (ConfigOption opt : s.options) {
                             if (matchesSearch(opt)) {
-                                h += OPTION_HEIGHT + OPTION_SPACING;
+                                h += opt.getHeight(contentW - 8) + OPTION_SPACING;
                             }
                         }
                     }
@@ -1295,7 +1378,7 @@ public class WynnExtrasConfigScreen extends Screen {
             }
             for (ConfigOption opt : options) {
                 if (matchesSearch(opt)) {
-                    h += OPTION_HEIGHT + OPTION_SPACING;
+                    h += opt.getHeight(contentW) + OPTION_SPACING;
                 }
             }
             return h + 20;
@@ -1329,6 +1412,36 @@ public class WynnExtrasConfigScreen extends Screen {
         boolean isVisible() {
             return visibilityCondition.getAsBoolean();
         }
+
+        int controlWidth() { return 0; }
+
+        int getHeight(int contentW) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            int textW = Math.max(20, contentW - 16 - controlWidth());
+            int nameLines = tr.wrapLines(Text.literal(name), textW).size();
+            int descLines = (desc == null || desc.isEmpty()) ? 0 : tr.wrapLines(Text.literal(desc), textW).size();
+            int extraLines = (nameLines - 1) + Math.max(0, descLines - 1);
+            return OPTION_HEIGHT + extraLines * 10;
+        }
+
+        static void drawWrappedTexts(DrawContext ctx, int x, int y, int w, int controlW, String name, String desc, int nameColor, int descColor) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            int textW = Math.max(20, w - 16 - controlW);
+            var nameLines = tr.wrapLines(Text.literal(name), textW);
+            int ny = y + 8;
+            for (var line : nameLines) {
+                ctx.drawTextWithShadow(tr, line, x + 8, ny, nameColor);
+                ny += 10;
+            }
+            if (desc != null && !desc.isEmpty()) {
+                var descLines = tr.wrapLines(Text.literal(desc), textW);
+                int dy = y + 8 + nameLines.size() * 10 + 4;
+                for (var line : descLines) {
+                    ctx.drawTextWithShadow(tr, line, x + 8, dy, descColor);
+                    dy += 10;
+                }
+            }
+        }
     }
 
     private static class TextOption extends ConfigOption {
@@ -1338,12 +1451,10 @@ public class WynnExtrasConfigScreen extends Screen {
 
         @Override
         void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
-            var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
         }
     }
 
@@ -1374,13 +1485,15 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         @Override
+        int controlWidth() { return 95; }
+
+        @Override
         void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
 
             int bx = x + w - 90, by = y + 10;
             boolean btnHover = mx >= bx && mx < bx + 80 && my >= by && my < by + 24;
@@ -1425,13 +1538,14 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         @Override
+        int controlWidth() { return 60; }
+
+        @Override
         void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
-            var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
 
             int tx = x + w - 55, ty = y + 12;
             boolean val = getter.get();
@@ -1467,13 +1581,15 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         @Override
+        int controlWidth() { return 145; }
+
+        @Override
         void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
 
             sliderX = x + w - 130;
             int sy = y + 15, val = getter.get();
@@ -1488,7 +1604,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(kx, sy - 3, kx + 10, sy + 11, BORDER_DARK);
             ctx.fill(kx + 1, sy - 2, kx + 9, sy + 10, GOLD);
 
-            ctx.drawTextWithShadow(tr, String.valueOf(val), x + w - 135 - MinecraftClient.getInstance().textRenderer.getWidth(String.valueOf(val)), sy, GOLD);
+            ctx.drawTextWithShadow(tr, String.valueOf(val), x + w - 135 - tr.getWidth(String.valueOf(val)), sy, GOLD);
         }
 
         @Override
@@ -1534,13 +1650,15 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         @Override
+        int controlWidth() { return 145; }
+
+        @Override
         void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
 
             sliderX = x + w - 130;
             int sy = y + 15;
@@ -1557,7 +1675,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(kx + 1, sy - 2, kx + 9, sy + 10, GOLD);
 
             String valStr = step >= 1 ? String.valueOf((int)val) : String.format("%.1f", val);
-            ctx.drawTextWithShadow(tr, valStr, x + w - 135 - MinecraftClient.getInstance().textRenderer.getWidth(valStr), sy, GOLD);
+            ctx.drawTextWithShadow(tr, valStr, x + w - 135 - tr.getWidth(valStr), sy, GOLD);
         }
 
         @Override
@@ -1608,13 +1726,15 @@ public class WynnExtrasConfigScreen extends Screen {
 
 
         @Override
+        int controlWidth() { return 140; }
+
+        @Override
         void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
 
             btnX = x + w - 135; btnY = y + 10;
             T val = getter.get();
@@ -1699,13 +1819,15 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         @Override
+        int controlWidth() { return 80; }
+
+        @Override
         void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, getter.get().size() + " " + itemName, x + 8, y + 22, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, getter.get().size() + " " + itemName, TEXT_LIGHT, TEXT_DIM);
 
             int bx = x + w - 75, by = y + 12;
             boolean btnHover = mx >= bx && mx < bx + 65 && my >= by && my < by + 20;
@@ -1738,13 +1860,15 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         @Override
+        int controlWidth() { return 80; }
+
+        @Override
         void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
 
             int bx = x + w - 75, by = y + 12;
             boolean btnHover = mx >= bx && mx < bx + 65 && my >= by && my < by + 20;
