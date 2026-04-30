@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.crafting.calc;
 import com.wynntils.core.components.Models;
 import com.wynntils.models.profession.type.ProfessionType;
 import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.crafting.calc.CraftXpCalculator.MaterialType;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
@@ -416,7 +417,7 @@ public class ProfessionCalculatorScreen extends WEScreen {
         }
 
         // ── Title ──
-        ui.drawCenteredText("\u00a76\u00a7lProfession XP Calculator", centerX, 35 + sy);
+        ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("\u00a76\u00a7lProfession XP Calculator"), centerX, 35 + sy);
 
         // ── Layout ──
         int btnGap = 12;

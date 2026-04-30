@@ -43,6 +43,10 @@ public class AspectScreen extends WEScreen {
     private List<PageSwitchButton> pageSwitchButtons = new ArrayList<>();
     private boolean registeredScroll = false;
 
+    @Override protected double getTargetScaleFactor() { return 2.0; }
+    @Override protected int getMinLogicalWidth()  { return 2000; }
+    @Override protected int getMinLogicalHeight() { return 870; }
+
     public AspectScreen() {
         super(Text.of("WynnExtras Aspects"));
 
@@ -68,20 +72,24 @@ public class AspectScreen extends WEScreen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubleClick) {
+        double mx = click.x() / matrixScale;
+        double my = click.y() / matrixScale;
         for(PageSwitchButton button : pageSwitchButtons) {
-            if(button.mouseClicked(click.x(), click.y(), click.button())) return true;
+            if(button.mouseClicked(mx, my, click.button())) return true;
         }
 
         if(currentWidget == null) return true;
 
-        if(currentWidget.mouseClicked(click.x(), click.y(), click.button())) return true;
+        if(currentWidget.mouseClicked(mx, my, click.button())) return true;
 
         return super.mouseClicked(click, doubleClick);
     }
 
     @Override
     public boolean mouseReleased(Click click) {
-        if(currentWidget != null) currentWidget.mouseReleased(click.x(), click.y(), click.button());
+        double mx = click.x() / matrixScale;
+        double my = click.y() / matrixScale;
+        if(currentWidget != null) currentWidget.mouseReleased(mx, my, click.button());
         return super.mouseReleased(click);
     }
 
@@ -120,8 +128,11 @@ public class AspectScreen extends WEScreen {
         int spacing = 20;
         int totalButtonWidth = (buttonWidth + spacing) * buttonAmount;
 
-        int x = (int) (((width * ui.getScaleFactorF()) - totalButtonWidth + spacing) / 2f);
-        int y = (int) (height * ui.getScaleFactorF() - buttonHeight - spacing);
+        int pw = (int) Math.round(getLogicalWidth() / scaleFactor);
+        int ph = (int) Math.round(getLogicalHeight() / scaleFactor);
+
+        int x = (int) (((pw * ui.getScaleFactorF()) - totalButtonWidth + spacing) / 2f);
+        int y = (int) (ph * ui.getScaleFactorF() - buttonHeight - spacing);
 
         for(PageSwitchButton button : pageSwitchButtons) {
             button.setBounds(x, y, buttonWidth, buttonHeight);
@@ -133,7 +144,7 @@ public class AspectScreen extends WEScreen {
 
         if(currentWidget == null) return;
 
-        currentWidget.setBounds(0, 0, screenWidth, screenHeight);
+        currentWidget.setBounds(0, 0, pw, ph);
         currentWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
 
         if(MinecraftClient.getInstance().currentScreen == null || registeredScroll) return;

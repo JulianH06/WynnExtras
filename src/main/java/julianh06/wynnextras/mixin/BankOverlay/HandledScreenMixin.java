@@ -69,6 +69,8 @@ public abstract class HandledScreenMixin {
 
     @Unique private CompassMenuOverlay compassMenuOverlay;
 
+    @Unique private QuickRepair quickRepairOverlay;
+
     @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
     private void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci){
         if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) {
@@ -199,7 +201,8 @@ public abstract class HandledScreenMixin {
         BankOverlay2.drawVanillaBankBagsOverlay(context, self);
 
         // Quick Repair button in blacksmith
-        QuickRepair.renderButton(context, self, mouseX, mouseY);
+        if (quickRepairOverlay == null) quickRepairOverlay = new QuickRepair();
+        quickRepairOverlay.render(context, mouseX, mouseY, delta);
     }
 
     @Unique
@@ -292,7 +295,7 @@ public abstract class HandledScreenMixin {
             return;
         }
         // Quick Repair button click
-        if (QuickRepair.handleClick(mouseX, mouseY, (HandledScreen<?>) (Object) this)) {
+        if (quickRepairOverlay != null && quickRepairOverlay.mouseClicked(mouseX, mouseY, button)) {
             cir.setReturnValue(true);
             return;
         }

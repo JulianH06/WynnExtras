@@ -5,6 +5,8 @@ import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
+import julianh06.wynnextras.utils.UI.WEMenuExtension;
+import julianh06.wynnextras.utils.UI.Widget;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -13,18 +15,21 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import org.lwjgl.glfw.GLFW;
 
-public class QuickRepair {
+public class QuickRepair extends WEMenuExtension {
 
-    private static final String BLACKSMITH_TITLE = "\uDAFF\uDFF8\uE016";
-    private static final String REPAIR_TITLE = "\uDAFF\uDFF8\uE017";
+    private static final String BLACKSMITH_TITLE = "󏿸";
+    private static final String REPAIR_TITLE = "󏿸";
     private static final int SLOT_REPAIR_ITEMS = 18;
     private static final int SLOT_ITEM = 11;
     private static final int EMPTY_CLOSE_THRESHOLD = 6;
+    private static final int BTN_W = 70, BTN_H = 16;
 
     private static boolean repairing = false;
     private static int spamCooldown = 0;
     private static int emptySlotTicks = 0;
     private static boolean keyWasDown = false;
+
+    private RepairButtonWidget repairButton = null;
 
     public static void startRepair() {
         repairing = true;
@@ -47,7 +52,6 @@ public class QuickRepair {
                 return;
             }
 
-            // Check keybind (manual GLFW poll, not Fabric KeyBinding)
             long window = client.getWindow().getHandle();
             int key = WynnExtrasConfig.INSTANCE.quickRepairKey;
             boolean keyDown = GLFW.glfwGetKey(window, key) == GLFW.GLFW_PRESS;
@@ -101,42 +105,49 @@ public class QuickRepair {
         return mc.currentScreen.getTitle().getString();
     }
 
-    private static final int BTN_W = 70, BTN_H = 16;
+    @Override
+    protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {}
 
-    public static void renderButton(DrawContext ctx, HandledScreen<?> screen, int mouseX, int mouseY) {
+    @Override
+    protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
         if (!WynnExtrasConfig.INSTANCE.quickRepairEnabled) return;
-        String title = screen.getTitle().getString();
-        if (!title.equals(BLACKSMITH_TITLE)) return;
+        if (!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
+        if (!screen.getTitle().getString().equals(BLACKSMITH_TITLE)) return;
+
+        if (repairButton == null) {
+            repairButton = new RepairButtonWidget();
+            rootWidgets.add(repairButton);
+        }
 
         HandledScreenAccessor acc = (HandledScreenAccessor) screen;
-        int bx = acc.getX() + acc.getBackgroundWidth() + 4;
-        int by = acc.getY() + 4;
-
-        MinecraftClient mc = MinecraftClient.getInstance();
-        String keyName = GLFW.glfwGetKeyName(WynnExtrasConfig.INSTANCE.quickRepairKey, 0);
-        if (keyName == null) keyName = "?";
-        String label = "Repair [" + keyName.toUpperCase() + "]";
-
-        boolean hover = mouseX >= bx && mouseX < bx + BTN_W && mouseY >= by && mouseY < by + BTN_H;
-        ctx.fill(bx, by, bx + BTN_W, by + BTN_H, 0xFF2a2a2a);
-        ctx.fill(bx + 1, by + 1, bx + BTN_W - 1, by + BTN_H - 1, hover ? 0xFF4a8c3a : 0xFF3a3a3a);
-        ctx.drawCenteredTextWithShadow(mc.textRenderer, label, bx + BTN_W / 2, by + 4, 0xFFFFFFFF);
+        int bx = acc.getX() + acc.getBackgroundWidth() / 2 - BTN_W / 2;
+        int by = acc.getY() + acc.getBackgroundWidth() - BTN_H / 4;
+        repairButton.setBounds(bx, by, BTN_W, BTN_H);
+        repairButton.setVisible(true);
     }
 
-    public static boolean handleClick(double mouseX, double mouseY, HandledScreen<?> screen) {
-        if (!WynnExtrasConfig.INSTANCE.quickRepairEnabled) return false;
-        String title = screen.getTitle().getString();
-        if (!title.equals(BLACKSMITH_TITLE)) return false;
+    @Override
+    protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        if (repairButton != null && !WynnExtrasConfig.INSTANCE.quickRepairEnabled)
+            repairButton.setVisible(false);
+    }
 
-        HandledScreenAccessor acc = (HandledScreenAccessor) screen;
-        int bx = acc.getX() + acc.getBackgroundWidth() + 4;
-        int by = acc.getY() + 4;
+    private static class RepairButtonWidget extends Widget {
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            String keyName = GLFW.glfwGetKeyName(WynnExtrasConfig.INSTANCE.quickRepairKey, 0);
+            if (keyName == null) keyName = "?";
+            String label = "Repair [" + keyName.toUpperCase() + "]";
 
-        if (mouseX >= bx && mouseX < bx + BTN_W && mouseY >= by && mouseY < by + BTN_H) {
+            ui.drawButton(x, y, width, height, 4, hovered);
+            ui.drawCenteredText(label, x + width / 2f, y + height / 2f, 1f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
             startRepair();
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aRepairing..."));
             return true;
         }
-        return false;
     }
 }

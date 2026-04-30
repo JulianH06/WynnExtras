@@ -462,7 +462,7 @@ public class ProfessionOverlay {
         if (history != null && !history.isEmpty()) {
             int total = history.size();
             float avg10 = getAverage(history, 10);
-            StringBuilder sb = new StringBuilder("Avg: " + formatXp(avg10) + " (10)");
+            StringBuilder sb = new StringBuilder("Avg xp: " + formatXp(avg10) + " (10)");
             if (total >= 100) {
                 avg100 = getAverage(history, 100);
                 sb.append(" | ").append(formatXp(avg100)).append(" (100)");

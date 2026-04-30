@@ -226,6 +226,8 @@ public class BankOverlay2 extends WEHandledScreen {
         scissorx2 = 0;
         scissory2 = 0;
 
+        refreshDurabilityCfg();
+
         if (!wynncraftItemDatabaseInitialized) {
             wynncraftItemDatabaseInitialized = true;
             if (FabricLoader.getInstance().isModLoaded("wynnmod")) {
@@ -655,8 +657,7 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             searchbar2.setTextColor(CustomColor.fromHexString("FFFFFF"));
-            searchbar2.setBackgroundColor(CustomColor.fromHSV(0, 0, 0, 0.5f));
-            searchbar2.setFocusedColor(CustomColor.fromHSV(0, 0, 0.15f, 0.6f));
+            searchbar2.setBackgroundColor(null);
             searchbar2.draw(context, mouseX, mouseY, delta, ui);
 
             if (!allCharactersBrowseMode) {
@@ -999,14 +1000,10 @@ public class BankOverlay2 extends WEHandledScreen {
 
     // Cached durability-overlay config so we don't reflect into Wynntils config options
     // on every slot draw (was 2 lookups × ~1000 slots per frame → ~5fps in bank).
-    private static long durabilityCfgRefreshAt = 0;
     private static boolean durabilityRenderInInv = false;
     private static String durabilityMode = "ARC";
 
     private static void refreshDurabilityCfg() {
-        long now = System.currentTimeMillis();
-        if (now - durabilityCfgRefreshAt < 1000) return; // refresh at most once per second
-        durabilityCfgRefreshAt = now;
         try {
             if (durabilityOverlayFeature == null)
                 durabilityOverlayFeature = Managers.Feature.getFeatureInstance(DurabilityOverlayFeature.class);
@@ -1020,7 +1017,6 @@ public class BankOverlay2 extends WEHandledScreen {
             if (durabilityOverlayFeature == null)
                 durabilityOverlayFeature = Managers.Feature.getFeatureInstance(DurabilityOverlayFeature.class);
             if (!durabilityOverlayFeature.isEnabled()) return;
-            refreshDurabilityCfg();
             if (!durabilityRenderInInv) return;
             if (Models.Item.asWynnItemProperty(stack, DurableItemProperty.class).isEmpty()) return;
 

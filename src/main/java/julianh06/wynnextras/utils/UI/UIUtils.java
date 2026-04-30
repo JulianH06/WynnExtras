@@ -429,11 +429,6 @@ public final class UIUtils {
         if (alpha <= 0.001f) return;
 
         if (hovered) {
-            drawImage(buttontlH, x, y, scale, scale, alpha);
-            drawImage(buttontrH, x + width - scale, y, scale, scale, alpha);
-            drawImage(buttonblH, x, y + height - scale, scale, scale, alpha);
-            drawImage(buttonbrH, x + width - scale, y + height - scale, scale, scale, alpha);
-
             if (width > scale * 2) {
                 drawImage(buttontopH, x + scale - 2, y, width - scale * 2 + 4, scale, alpha);
                 drawImage(buttonbotH, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale, alpha);
@@ -442,20 +437,23 @@ public final class UIUtils {
                 drawImage(buttonleftH, x, y + scale - 2, scale, height - scale * 2 + 4, alpha);
                 drawImage(buttonrightH, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4, alpha);
             }
+            drawImage(buttontlH, x, y, scale, scale, alpha);
+            drawImage(buttontrH, x + width - scale, y, scale, scale, alpha);
+            drawImage(buttonblH, x, y + height - scale, scale, scale, alpha);
+            drawImage(buttonbrH, x + width - scale, y + height - scale, scale, scale, alpha);
         } else {
-            drawImage(buttontl, x, y, scale, scale, alpha);
-            drawImage(buttontr, x + width - scale, y, scale, scale, alpha);
-            drawImage(buttonbl, x, y + height - scale - 1, scale, scale * 1.25f, alpha);
-            drawImage(buttonbr, x + width - scale, y + height - scale - 1, scale, scale * 1.25f, alpha);
-
             if (width > scale * 2) {
                 drawImage(buttontop, x + scale - 2, y, width - scale * 2 + 4, scale, alpha);
-                drawImage(buttonbot, x + scale - 2, y + height - scale - 1, width - scale * 2 + 4, scale * 1.25f, alpha);
+                drawImage(buttonbot, x + scale - 2, y + height - scale - 1, width - scale * 2 + 4, scale + 1, alpha);
             }
             if (height > scale * 2) {
                 drawImage(buttonleft, x, y + scale - 2, scale, height - scale * 2 + 4, alpha);
                 drawImage(buttonright, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4, alpha);
             }
+            drawImage(buttontl, x, y, scale, scale, alpha);
+            drawImage(buttontr, x + width - scale, y, scale, scale, alpha);
+            drawImage(buttonbl, x, y + height - scale - 1, scale, scale + 1, alpha);
+            drawImage(buttonbr, x + width - scale, y + height - scale - 1, scale, scale + 1, alpha);
         }
     }
 
@@ -506,10 +504,6 @@ public final class UIUtils {
             );
         }
 
-        if(tl != null) drawImage(tl, x, y, scale, scale);
-        if(tr != null) drawImage(tr, x + width - scale, y, scale, scale);
-        if(bl != null) drawImage(bl, x, y + height - scale, scale, scale);
-        if(br != null) drawImage(br, x + width - scale, y + height - scale, scale, scale);
         if (width > scale * 2) {
             if(t != null) drawImage(t, x + scale - 2, y, width - scale * 2 + 4, scale);
             if(b != null) drawImage(b, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
@@ -518,6 +512,10 @@ public final class UIUtils {
             if(l != null) drawImage(l, x, y + scale - 2, scale, height - scale * 2 + 4);
             if(r != null) drawImage(r, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
         }
+        if(tl != null) drawImage(tl, x, y, scale, scale);
+        if(tr != null) drawImage(tr, x + width - scale, y, scale, scale);
+        if(bl != null) drawImage(bl, x, y + height - scale, scale, scale);
+        if(br != null) drawImage(br, x + width - scale, y + height - scale, scale, scale);
     }
 
     public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier border, Identifier background, Identifier progressTexture, DrawContext context) {

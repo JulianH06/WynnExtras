@@ -172,8 +172,6 @@ public class WynnExtrasConfig {
     public boolean quickRepairEnabled = true;
     public int quickRepairKey = org.lwjgl.glfw.GLFW.GLFW_KEY_R;
     public boolean shiftDisableGuildRaid = true;
-    public boolean sequoiaBridgeEnabled = true;
-    public int sequoiaFullThresholdPercent = 100;
 
     public boolean autoStreamEnabled = false;
     public boolean autoSkipDialogueEnabled = true;

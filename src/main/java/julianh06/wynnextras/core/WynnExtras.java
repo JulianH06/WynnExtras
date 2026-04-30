@@ -182,7 +182,6 @@ public class WynnExtras implements ClientModInitializer {
 		julianh06.wynnextras.features.misc.RadiantHud.init();
 		julianh06.wynnextras.features.misc.ProfessionOverlay.register();
 		julianh06.wynnextras.features.misc.ClassSelectionPngOverlay.register();
-		julianh06.wynnextras.features.misc.SequoiaBridge.register();
 		julianh06.wynnextras.features.misc.EmeraldGiver.register();
 		ChatNotificator.init();
 		Waypoints.register();
@@ -212,7 +211,6 @@ public class WynnExtras implements ClientModInitializer {
 		RaidListData.load();
 		WaypointData.load();
 		RaidChatNotifier.INSTANCE.load();
-		julianh06.wynnextras.features.chat.WynntilsChatBlocker.register();
 
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {

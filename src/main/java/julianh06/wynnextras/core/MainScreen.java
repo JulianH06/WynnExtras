@@ -26,6 +26,10 @@ public class MainScreen extends WEScreen {
     Identifier logoTexture = Identifier.of("wynnextras", "textures/general/wynnextrasbanner.png");
     public static int listLength = 6;
 
+    @Override protected double getTargetScaleFactor() { return 2.0; }
+    @Override protected int getMinLogicalWidth()  { return 2000; }
+    @Override protected int getMinLogicalHeight() { return 870; }
+
     public MainScreen() {
         super(Text.of("WynnExtras"));
         // Standard-Layoutwerte für die Liste (logical coords)
