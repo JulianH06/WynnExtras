@@ -590,11 +590,9 @@ public class WynnExtrasConfigScreen extends Screen {
     private boolean categoryHasMatches(Category cat) {
         if (searchQuery.isEmpty()) return true;
         if (cat.name.toLowerCase().contains(searchQuery.toLowerCase())) return true;
-        for (ConfigOption opt : cat.options) {
-            if (matchesSearch(opt)) return true;
-        }
-        for (SubCategory sub : cat.subCategories) {
-            if (subHasMatches(sub)) return true;
+        for (Object item : cat.items) {
+            if (item instanceof ConfigOption opt && matchesSearch(opt)) return true;
+            if (item instanceof SubCategory sub && subHasMatches(sub)) return true;
         }
         return false;
     }
@@ -813,14 +811,10 @@ public class WynnExtrasConfigScreen extends Screen {
 
         int y = listTop + 20 - (int)scrollOffset;
 
-        for (SubCategory sub : cat.subCategories) {
-            if (subHasMatches(sub)) {
+        for (Object item : cat.items) {
+            if (item instanceof SubCategory sub && subHasMatches(sub)) {
                 y = renderSubCategory(ctx, sub, contentX, y, contentW, mouseX, mouseY, listTop + 15, listBottom);
-            }
-        }
-
-        for (ConfigOption opt : cat.options) {
-            if (matchesSearch(opt)) {
+            } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
                 int optH = opt.getHeight(contentW);
                 if (y + optH > listTop && y < listBottom) {
                     boolean hovered = mouseX >= contentX && mouseX < contentX + contentW && mouseY >= y && mouseY < y + optH - 5;
@@ -1108,8 +1102,8 @@ public class WynnExtrasConfigScreen extends Screen {
 
             int y = listTop - (int)scrollOffset + 5;
 
-            for (SubCategory sub : cat.subCategories) {
-                if (subHasMatches(sub)) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub && subHasMatches(sub)) {
                     if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + SUBCATEGORY_HEADER_HEIGHT) && mx >= contentX && mx < contentX + contentW) {
                         sub.expanded = !sub.expanded;
                         updateMaxScroll();
@@ -1129,11 +1123,7 @@ public class WynnExtrasConfigScreen extends Screen {
                             }
                         }
                     }
-                }
-            }
-
-            for (ConfigOption opt : cat.options) {
-                if (matchesSearch(opt)) {
+                } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
                     int optH = opt.getHeight(contentW);
                     if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + optH)) {
                         if (opt.mouseClicked(mx, my, contentX, y, contentW, optH, btn)) return true;
@@ -1156,10 +1146,13 @@ public class WynnExtrasConfigScreen extends Screen {
         sidebarScrollbarDragging = false;
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category cat = categories.get(selectedCategory);
-            for (SubCategory sub : cat.subCategories) {
-                for (ConfigOption opt : sub.options) opt.mouseReleased(mx, my, btn);
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub) {
+                    for (ConfigOption opt : sub.options) opt.mouseReleased(mx, my, btn);
+                } else if (item instanceof ConfigOption opt) {
+                    opt.mouseReleased(mx, my, btn);
+                }
             }
-            for (ConfigOption opt : cat.options) opt.mouseReleased(mx, my, btn);
         }
         return super.mouseReleased(click);
     }
@@ -1193,8 +1186,8 @@ public class WynnExtrasConfigScreen extends Screen {
             int contentW = width - SIDEBAR_WIDTH - 50;
             int y = HEADER_HEIGHT + 30 - (int)scrollOffset;
 
-            for (SubCategory sub : cat.subCategories) {
-                if (subHasMatches(sub)) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub && subHasMatches(sub)) {
                     y += SUBCATEGORY_HEADER_HEIGHT + 5;
                     if (sub.expanded) {
                         for (ConfigOption opt : sub.options) {
@@ -1205,11 +1198,7 @@ public class WynnExtrasConfigScreen extends Screen {
                             }
                         }
                     }
-                }
-            }
-
-            for (ConfigOption opt : cat.options) {
-                if (matchesSearch(opt)) {
+                } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
                     int optH = opt.getHeight(contentW);
                     if (opt.mouseDragged(mx, my, contentX, y, contentW, optH)) return true;
                     y += optH + OPTION_SPACING;
@@ -1241,12 +1230,13 @@ public class WynnExtrasConfigScreen extends Screen {
     public boolean keyPressed(KeyInput input) {
         // Relay to any listening KeybindOption
         for (Category cat : categories) {
-            for (ConfigOption opt : cat.options) {
-                if (opt instanceof KeybindOption kb && kb.onKeyPressed(input.key())) return true;
-            }
-            for (SubCategory sub : cat.subCategories) {
-                for (ConfigOption opt : sub.options) {
+            for (Object item : cat.items) {
+                if (item instanceof ConfigOption opt) {
                     if (opt instanceof KeybindOption kb && kb.onKeyPressed(input.key())) return true;
+                } else if (item instanceof SubCategory sub) {
+                    for (ConfigOption opt : sub.options) {
+                        if (opt instanceof KeybindOption kb && kb.onKeyPressed(input.key())) return true;
+                    }
                 }
             }
         }
@@ -1343,41 +1333,40 @@ public class WynnExtrasConfigScreen extends Screen {
     private class Category {
         final String name;
         final int color;
-        final List<ConfigOption> options = new ArrayList<>();
-        final List<SubCategory> subCategories = new ArrayList<>();
+        final List<Object> items = new ArrayList<>(); // ConfigOption or SubCategory, in definition order
         private SubCategory currentSub = null;
 
         Category(String name, int color) { this.name = name; this.color = color; }
 
         Category add(ConfigOption opt) {
             if (currentSub != null) currentSub.options.add(opt);
-            else options.add(opt);
+            else items.add(opt);
             return this;
         }
 
         Category sub(String name) {
             currentSub = new SubCategory(name);
-            subCategories.add(currentSub);
+            items.add(currentSub);
+            return this;
+        }
+
+        Category endSub() {
+            currentSub = null;
             return this;
         }
 
         int getTotalHeight() {
             int contentW = width - SIDEBAR_WIDTH - 40;
             int h = 0;
-            for (SubCategory s : subCategories) {
-                if (subHasMatches(s)) {
+            for (Object item : items) {
+                if (item instanceof SubCategory s && subHasMatches(s)) {
                     h += SUBCATEGORY_HEADER_HEIGHT + 5;
                     if (s.expanded) {
                         for (ConfigOption opt : s.options) {
-                            if (matchesSearch(opt)) {
-                                h += opt.getHeight(contentW - 8) + OPTION_SPACING;
-                            }
+                            if (matchesSearch(opt)) h += opt.getHeight(contentW - 8) + OPTION_SPACING;
                         }
                     }
-                }
-            }
-            for (ConfigOption opt : options) {
-                if (matchesSearch(opt)) {
+                } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
                     h += opt.getHeight(contentW) + OPTION_SPACING;
                 }
             }
@@ -1388,7 +1377,7 @@ public class WynnExtrasConfigScreen extends Screen {
     private static class SubCategory {
         final String name;
         final List<ConfigOption> options = new ArrayList<>();
-        boolean expanded = true;
+        boolean expanded = false;
         SubCategory(String name) { this.name = name; }
     }
 

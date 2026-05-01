@@ -25,6 +25,7 @@ public class HudEditScreen extends Screen {
         int x, y, w;
         int customH = -1; // -1 = use default H
         boolean fixedSize = false; // true = don't allow scaling, don't center-shift in init
+        boolean topLeft = false;  // true = position stored as top-left (not center)
         float scale;
         boolean dragging;
         int dragOffX, dragOffY;
@@ -120,12 +121,16 @@ public class HudEditScreen extends Screen {
                 radiantText = entry.display();
                 radiantColor = entry.color();
             }
-            elements.add(new HudElement("radiant", radiantText,
-                    c.radiantHudX, c.radiantHudY, c.radiantHudScale, WynnExtrasConfig.Align.CENTER, radiantColor));
+            HudElement radiantEl = new HudElement("radiant", radiantText,
+                    c.radiantHudX, c.radiantHudY, c.radiantHudScale, WynnExtrasConfig.Align.CENTER, radiantColor);
+            radiantEl.topLeft = true;
+            elements.add(radiantEl);
         }
         if (c.professionOverlayEnabled) {
-            elements.add(new HudElement("profession", "Mining Lv. 87  1234/5678 (21.7%)",
-                    c.professionOverlayX, c.professionOverlayY, c.professionOverlayScale, WynnExtrasConfig.Align.CENTER, 0xFFFFFF00));
+            HudElement professionEl = new HudElement("profession", "Mining Lv. 87  1234/5678 (21.7%)",
+                    c.professionOverlayX, c.professionOverlayY, c.professionOverlayScale, WynnExtrasConfig.Align.CENTER, 0xFFFFFF00);
+            professionEl.topLeft = true;
+            elements.add(professionEl);
         }
         if (c.tnaTreeMap) {
             HudElement treemap = new HudElement("treemap", "Tree Minimap",
@@ -144,26 +149,34 @@ public class HudEditScreen extends Screen {
                 nx, ny, c.notifierScale, c.notifierAlignment));
 
         if (c.weeklyWarCountEnabled) {
-            elements.add(new HudElement("weeklyWars", "5 wars",
-                    c.weeklyWarCountX, c.weeklyWarCountY, 1.5f, WynnExtrasConfig.Align.LEFT, 0xFFFF55FF));
+            HudElement weeklyWarsEl = new HudElement("weeklyWars", "5 wars",
+                    c.weeklyWarCountX, c.weeklyWarCountY, 1.5f, WynnExtrasConfig.Align.LEFT, 0xFFFF55FF);
+            weeklyWarsEl.topLeft = true;
+            elements.add(weeklyWarsEl);
         }
         if (c.warDpsEnabled) {
-            elements.add(new HudElement("warDps", "War Info: Tower EHP 234K",
-                    c.warDpsX, c.warDpsY, 1.0f, WynnExtrasConfig.Align.LEFT));
+            HudElement warDpsEl = new HudElement("warDps", "War Info: Tower EHP 234K",
+                    c.warDpsX, c.warDpsY, 1.0f, WynnExtrasConfig.Align.LEFT);
+            warDpsEl.topLeft = true;
+            elements.add(warDpsEl);
         }
         if (c.attackTimerMenuEnabled) {
             String attackText = "13:47 Otherworldly Monolith";
             List<String> attacks = AttackTimerMenu.getUpcomingAttacks();
             if (!attacks.isEmpty()) attackText = attacks.get(0);
-            elements.add(new HudElement("attackTimer", attackText,
-                    c.attackTimerX, c.attackTimerY, 1.0f, WynnExtrasConfig.Align.LEFT, 0xFFFFAA00));
+            HudElement attackTimerEl = new HudElement("attackTimer", attackText,
+                    c.attackTimerX, c.attackTimerY, 1.0f, WynnExtrasConfig.Align.LEFT, 0xFFFFAA00);
+            attackTimerEl.topLeft = true;
+            elements.add(attackTimerEl);
         }
         if (c.raidSessionEnabled) {
             String raidText = "Raids: 42 | 8.5/hr | Completed: 40 | Failed: 2";
             String live = RaidSessionTracker.getStatsString();
             if (live != null) raidText = live;
-            elements.add(new HudElement("raidSession", raidText,
-                    c.raidSessionHudX, c.raidSessionHudY, c.raidSessionHudScale, WynnExtrasConfig.Align.LEFT, 0xFFAAFFAA));
+            HudElement raidSessionEl = new HudElement("raidSession", raidText,
+                    c.raidSessionHudX, c.raidSessionHudY, c.raidSessionHudScale, WynnExtrasConfig.Align.LEFT, 0xFFAAFFAA);
+            raidSessionEl.topLeft = true;
+            elements.add(raidSessionEl);
         }
     }
 
@@ -176,8 +189,10 @@ public class HudEditScreen extends Screen {
         for (HudElement e : elements) {
             if (!e.fixedSize) {
                 e.w = textRenderer.getWidth(e.preview) + 6;
-                e.x = e.x - e.sw() / 2;
-                e.y = e.y - e.sh() / 2;
+                if (!e.topLeft) {
+                    e.x = e.x - e.sw() / 2;
+                    e.y = e.y - e.sh() / 2;
+                }
             }
 
             if (e.id.equals("totem") && WynnExtrasConfig.INSTANCE.totemTimerX == -1) {
