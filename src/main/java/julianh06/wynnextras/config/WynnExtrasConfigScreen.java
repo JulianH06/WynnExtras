@@ -95,6 +95,9 @@ public class WynnExtrasConfigScreen extends Screen {
     private static final int DROPDOWN_MAX_HEIGHT = 150;
     private static final int DROPDOWN_ITEM_HEIGHT = 22;
 
+    // Sticky subcategory header state
+    private SubCategory stickySub = null;
+
     // Search state
     private String searchQuery = "";
     private boolean searchFocused = false;
@@ -811,9 +814,14 @@ public class WynnExtrasConfigScreen extends Screen {
 
         int y = listTop + 20 - (int)scrollOffset;
 
+        SubCategory stickyCandidate = null;
         for (Object item : cat.items) {
             if (item instanceof SubCategory sub && subHasMatches(sub)) {
+                int headerY = y;
                 y = renderSubCategory(ctx, sub, contentX, y, contentW, mouseX, mouseY, listTop + 15, listBottom);
+                if (sub.expanded && headerY < listTop + 15 && y > listTop + 15) {
+                    stickyCandidate = sub;
+                }
             } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
                 int optH = opt.getHeight(contentW);
                 if (y + optH > listTop && y < listBottom) {
@@ -823,8 +831,21 @@ public class WynnExtrasConfigScreen extends Screen {
                 y += optH + OPTION_SPACING;
             }
         }
+        stickySub = stickyCandidate;
 
         ctx.disableScissor();
+
+        if (stickySub != null) {
+            int stickyY = listTop + 15;
+            boolean hovered = mouseX >= contentX && mouseX < contentX + contentW
+                           && mouseY >= stickyY && mouseY < stickyY + SUBCATEGORY_HEADER_HEIGHT;
+            ctx.fill(contentX, stickyY, contentX + contentW, stickyY + SUBCATEGORY_HEADER_HEIGHT, hovered ? PARCHMENT_LIGHT : SUBCATEGORY_BG);
+            ctx.fill(contentX, stickyY, contentX + contentW, stickyY + 1, BORDER_LIGHT);
+            ctx.fill(contentX, stickyY + SUBCATEGORY_HEADER_HEIGHT - 1, contentX + contentW, stickyY + SUBCATEGORY_HEADER_HEIGHT, BORDER_DARK);
+            String arrow = stickySub.expanded ? "▼" : "▶";
+            ctx.drawTextWithShadow(textRenderer, arrow, contentX + 8, stickyY + 8, selectedCategoryColor);
+            ctx.drawTextWithShadow(textRenderer, stickySub.name, contentX + 22, stickyY + 8, TEXT_LIGHT);
+        }
 
         if (maxScroll > 0) {
             int sbX = panelX + panelW - 12;
@@ -1088,6 +1109,38 @@ public class WynnExtrasConfigScreen extends Screen {
             } else if (my >= scrollbarY && my < scrollbarY + scrollbarHeight) {
                 double clickPercent = (my - scrollbarY - scrollbarThumbH / 2.0) / (scrollbarHeight - scrollbarThumbH);
                 scrollTarget = MathHelper.clamp(clickPercent * maxScroll, 0, maxScroll);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            }
+        }
+
+        if (stickySub != null) {
+            int stickyY = HEADER_HEIGHT + 30;
+            if (my >= stickyY && my < stickyY + SUBCATEGORY_HEADER_HEIGHT
+                    && mx >= SIDEBAR_WIDTH + 20 && mx < width - 30) {
+                stickySub.expanded = !stickySub.expanded;
+                updateMaxScroll();
+                if (!stickySub.expanded) {
+                    // scroll so the now collapsed header sits at the top of the viewport
+                    int contentW = width - SIDEBAR_WIDTH - 50;
+                    int contentY = 0;
+                    Category cat = categories.get(selectedCategory);
+                    for (Object item : cat.items) {
+                        if (item == stickySub) break;
+                        if (item instanceof SubCategory sub && subHasMatches(sub)) {
+                            contentY += SUBCATEGORY_HEADER_HEIGHT + 5;
+                            if (sub.expanded) {
+                                for (ConfigOption opt : sub.options) {
+                                    if (matchesSearch(opt)) contentY += opt.getHeight(contentW - 8) + OPTION_SPACING;
+                                }
+                            }
+                        } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
+                            contentY += opt.getHeight(contentW) + OPTION_SPACING;
+                        }
+                    }
+                    scrollTarget = MathHelper.clamp(contentY + 5, 0, maxScroll);
+                    scrollOffset = scrollTarget;
+                }
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
