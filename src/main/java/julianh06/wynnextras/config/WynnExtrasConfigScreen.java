@@ -1,9 +1,16 @@
 package julianh06.wynnextras.config;
 
+import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.features.spellhider.SpellProfiles;
 import julianh06.wynnextras.core.CurrentVersionData;
+import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
+import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.tetris.TetrisScreen;
+import julianh06.wynnextras.utils.LinkUtils;
+import julianh06.wynnextras.utils.UI.WEScreen;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -13,6 +20,7 @@ import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -38,6 +46,8 @@ import java.util.function.Supplier;
  * 3. To add subcategories: category.sub("SubcategoryName").add(...)
  */
 public class WynnExtrasConfigScreen extends Screen {
+    private static Identifier logoTexture = Identifier.of("wynnextras", "textures/general/wynnextrasbanner.png");
+
     private final Screen parent;
     private final WynnExtrasConfig config;
 
@@ -115,29 +125,84 @@ public class WynnExtrasConfigScreen extends Screen {
         categories.clear();
 
         // ===== GENERAL =====
-        category("General", 0xFF888888)
-            .add(visibleWhen(button("Disable WynnExtras", "Turn off all features (your settings are preserved)",
-                (x) -> {
-                    config.disableWynnExtras();
-                }, "Disable"), config::isWynnExtrasEnabled))
-            .add(visibleWhen(button("Enable WynnExtras", "Re-enable all features with your previous settings",
-                (x) -> {
-                    config.enableWynnExtras();
-                }, "Enable"), () -> !config.isWynnExtrasEnabled()))
-            .add(button("Config Profiles", "Save and switch between named on/off setting presets",
-                (x) -> {
-                    MinecraftClient.getInstance().setScreen(new ProfilesScreen(MinecraftClient.getInstance().currentScreen));
-                }, "Manage"))
+        category("General", 0xFF81c539)
+            .add(image(logoTexture, 800, 250, 0.4f,
+                    List.of(
+                            line("Welcome to WynnExtras!").center().underline().bold().scale(1.5f).color(TEXT_LIGHT),
+                            emptyLine(0.75f),
+                            line("Our goal is to make your Wynncraft experience as smooth and as customizable as possible!").center(),
+                            emptyLine(0.2f),
+                            line("We have a lot of different features, which help you with all kind of areas this wonderful game has to offer!").center(),
+                            emptyLine(0.2f),
+                            line("We also have a ton of custom commands you can try out with \"/we <...>\"!").center(),
+                            emptyLine(0.2f),
+                            line("If you have any kind of suggestions or bug reports we would appreciate if you'd let us know on our §9Discord!").center(),
+                            emptyLine(0.5f)
+                    )))
+            .sub("Links")
+                .add(button("Discord", "Join the WynnExtras Discord server", (x) -> {
+                    LinkUtils.openLink("https://discord.gg/UbC6vZDaD5");
+                }, "Open"))
+                .add(button("Modrinth", "WynnExtras on Modrinth", (x) -> {
+                    LinkUtils.openLink("https://modrinth.com/mod/wynnextras");
+                }, "Open"))
+                .add(button("GitHub", "WynnExtras source code on GitHub", (x) -> {
+                    LinkUtils.openLink("https://github.com/JulianH06/WynnExtras");
+                }, "Open"))
+//                .add(button("YouTube", "Julian's personal YouTube channel", (x) -> {
+//                    LinkUtils.openLink("https://www.youtube.com/@H06Julian");
+//                }, "Open"))
+            .endSub()
+            .sub("Quick Access")
+                .add(button("Loot Pools", "Open the Loot Pools screen", (x) -> {
+                    WEScreen.open(AspectScreen::new);
+                    AspectScreen.currentPage = AspectScreen.Page.LootPools;
+                }, "Open"))
+                .add(button("Profile Viewer", "View your stats", (x) -> {
+                    PV.open(McUtils.playerName());
+                }, "Open"))
+                .add(button("Waypoints", "Open the Waypoints screen", (x) -> {
+                    MinecraftClient.getInstance().setScreen(null);
+                    if (MinecraftClient.getInstance().player != null) {
+                        MinecraftClient.getInstance().player.networkHandler.sendChatCommand("we waypoints");
+                    }
+                }, "Open"))
+                .add(button("Raid List", "Open the Raid List", (x) -> {
+                    MinecraftClient.getInstance().setScreen(null);
+                    if (MinecraftClient.getInstance().player != null) {
+                        MinecraftClient.getInstance().player.networkHandler.sendChatCommand("we raidlist");
+                    }
+                }, "Open"))
+            .endSub()
+//            .add(visibleWhen(button("Disable WynnExtras", "Turn off all features (your settings are preserved)",
+//                (x) -> {
+//                    config.disableWynnExtras();
+//                }, "Disable"), config::isWynnExtrasEnabled))
+//            .add(visibleWhen(button("Enable WynnExtras", "Re-enable all features with your previous settings",
+//                (x) -> {
+//                    config.enableWynnExtras();
+//                }, "Enable"), () -> !config.isWynnExtrasEnabled()))
+//            .add(button("Config Profiles", "Save and switch between named on/off setting presets",
+//                (x) -> {
+//                    MinecraftClient.getInstance().setScreen(new ProfilesScreen(MinecraftClient.getInstance().currentScreen));
+//                }, "Manage"))
+            .add(button("Reset to defaults", "Reset all settings back to their default values",
+                    (x) -> {
+                        config.resetToDefaults();
+                    }, "Reset"))
             .add(button("Disable everything", "Click this to turn off everything so you can configure it yourself",
                 (x) -> {
                     config.disableAll();
                 }, "Disable"))
-            .add(button("Reset to defaults", "Reset all settings back to their default values",
-                (x) -> {
-                    config.resetToDefaults();
-                }, "Reset"))
-            .add(text("", "If you accidentally cicked on of these buttons click on \"cancel\" to get your old settings back.")); //TODO; improve wording here
-
+            .add(text("", "If you accidentally clicked on one of these buttons click on \"cancel\" to get your old settings back.")) //TODO; improve wording here
+            .sub("Minigames")
+                .add(text("Bored during raid downtime, attack queues or waiting for a friend?", "Then try out these minigames! Have fun!"))
+                .add(button("Tetris", "A fully fledged Integration of the the game everyone knows and loves!",
+                    (x) -> {
+                        TetrisScreen.open();
+                    }, "Play"))
+                .add(text("More to come!", "More minigames are planned to be released in the future!"))
+            .endSub();
         // ===== NEW =====
         category("New", 0xFFff5ea8)
             .add(text("", "All features added in this update. Toggle any of them on or off."))
@@ -640,6 +705,28 @@ public class WynnExtrasConfigScreen extends Screen {
         return new ButtonOption(name, desc, action, buttonText);
     }
 
+    private static DescLine line(String text) { return DescLine.of(text); }
+    
+    private static DescLine emptyLine() { return DescLine.of(" "); }
+
+    private static DescLine emptyLine(float scale) { return DescLine.of(" ").scale(scale); }
+
+    private ConfigOption image(Identifier identifier, int imgW, int imgH) {
+        return new ImageOption(identifier, imgW, imgH, 1.0f, List.of());
+    }
+
+    private ConfigOption image(Identifier identifier, int imgW, int imgH, float widthFraction) {
+        return new ImageOption(identifier, imgW, imgH, widthFraction, List.of());
+    }
+
+    private ConfigOption image(Identifier identifier, int imgW, int imgH, List<DescLine> lines) {
+        return new ImageOption(identifier, imgW, imgH, 1.0f, lines);
+    }
+
+    private ConfigOption image(Identifier identifier, int imgW, int imgH, float widthFraction, List<DescLine> lines) {
+        return new ImageOption(identifier, imgW, imgH, widthFraction, lines);
+    }
+
     private ConfigOption visibleWhen(ConfigOption option, BooleanSupplier condition) {
         option.visibleWhen(condition);
         return option;
@@ -1122,7 +1209,7 @@ public class WynnExtrasConfigScreen extends Screen {
                 updateMaxScroll();
                 if (!stickySub.expanded) {
                     // scroll so the now collapsed header sits at the top of the viewport
-                    int contentW = width - SIDEBAR_WIDTH - 50;
+                    int contentW = width - SIDEBAR_WIDTH - 40;
                     int contentY = 0;
                     Category cat = categories.get(selectedCategory);
                     for (Object item : cat.items) {
@@ -1149,7 +1236,7 @@ public class WynnExtrasConfigScreen extends Screen {
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category cat = categories.get(selectedCategory);
             int contentX = SIDEBAR_WIDTH + 20;
-            int contentW = width - SIDEBAR_WIDTH - 50;
+            int contentW = width - SIDEBAR_WIDTH - 40;
             int listTop = HEADER_HEIGHT + 30;
             int listBot = height - FOOTER_HEIGHT - 10;
 
@@ -1236,8 +1323,8 @@ public class WynnExtrasConfigScreen extends Screen {
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category cat = categories.get(selectedCategory);
             int contentX = SIDEBAR_WIDTH + 20;
-            int contentW = width - SIDEBAR_WIDTH - 50;
-            int y = HEADER_HEIGHT + 30 - (int)scrollOffset;
+            int contentW = width - SIDEBAR_WIDTH - 40;
+            int y = HEADER_HEIGHT + 35 - (int)scrollOffset;
 
             for (Object item : cat.items) {
                 if (item instanceof SubCategory sub && subHasMatches(sub)) {
@@ -1434,9 +1521,45 @@ public class WynnExtrasConfigScreen extends Screen {
         SubCategory(String name) { this.name = name; }
     }
 
+    // ==================== RICH DESC ====================
+    static class DescLine {
+        enum Align { LEFT, CENTER, RIGHT }
+
+        final String text;
+        final Align align;
+        final boolean bold, italic, underline;
+        final float scale;
+        final CustomColor color; // null = use default color
+
+        private DescLine(String text, Align align, boolean bold, boolean italic, boolean underline, float scale, CustomColor color) {
+            this.text = text;
+            this.align = align;
+            this.bold = bold;
+            this.italic = italic;
+            this.underline = underline;
+            this.scale = scale;
+            this.color = color;
+        }
+
+        static DescLine of(String text) {
+            return new DescLine(text, Align.LEFT, false, false, false, 1.0f, null);
+        }
+
+        DescLine left() { return new DescLine(text, Align.LEFT, bold, italic, underline, scale, color); }
+        DescLine center() { return new DescLine(text, Align.CENTER, bold, italic, underline, scale, color); }
+        DescLine right() { return new DescLine(text, Align.RIGHT, bold, italic, underline, scale, color); }
+        DescLine bold() { return new DescLine(text, align, true, italic, underline, scale, color); }
+        DescLine italic() { return new DescLine(text, align, bold, true, underline, scale, color); }
+        DescLine underline() { return new DescLine(text, align, bold, italic, true, scale, color); }
+        DescLine scale(float s) { return new DescLine(text, align, bold, italic, underline, s, color); }
+        DescLine color(CustomColor c) { return new DescLine(text, align, bold, italic, underline, scale, c);     }
+        DescLine color(int c) { return new DescLine(text, align, bold, italic, underline, scale, CustomColor.fromInt(c));     }
+    }
+
     // ==================== CONFIG OPTIONS ====================
     private static abstract class ConfigOption {
         final String name, desc;
+        List<DescLine> richDesc = null;
         private BooleanSupplier visibilityCondition = () -> true;
 
         ConfigOption(String name, String desc) { this.name = name; this.desc = desc; }
@@ -1451,6 +1574,11 @@ public class WynnExtrasConfigScreen extends Screen {
             return this;
         }
 
+        ConfigOption withRichDesc(List<DescLine> lines) {
+            this.richDesc = lines;
+            return this;
+        }
+
         boolean isVisible() {
             return visibilityCondition.getAsBoolean();
         }
@@ -1461,12 +1589,28 @@ public class WynnExtrasConfigScreen extends Screen {
             var tr = MinecraftClient.getInstance().textRenderer;
             int textW = Math.max(20, contentW - 16 - controlWidth());
             int nameLines = tr.wrapLines(Text.literal(name), textW).size();
-            int descLines = (desc == null || desc.isEmpty()) ? 0 : tr.wrapLines(Text.literal(desc), textW).size();
-            int extraLines = (nameLines - 1) + Math.max(0, descLines - 1);
+            if (richDesc != null && !richDesc.isEmpty()) {
+                int richH = calcRichDescHeight(tr, richDesc, textW);
+                return 8 + nameLines * 10 + 4 + richH + 13;
+            }
+            int descLineCount = (desc == null || desc.isEmpty()) ? 0 : tr.wrapLines(Text.literal(desc), textW).size();
+            int extraLines = (nameLines - 1) + Math.max(0, descLineCount - 1);
             return OPTION_HEIGHT + extraLines * 10;
         }
 
-        static void drawWrappedTexts(DrawContext ctx, int x, int y, int w, int controlW, String name, String desc, int nameColor, int descColor) {
+        static int calcRichDescHeight(net.minecraft.client.font.TextRenderer tr, List<DescLine> lines, int availW) {
+            int total = 0;
+            for (DescLine dl : lines) {
+                var txt = Text.literal(dl.text).setStyle(Style.EMPTY
+                    .withBold(dl.bold).withItalic(dl.italic).withUnderline(dl.underline));
+                int wrapW = Math.max(1, (int)(availW / dl.scale));
+                int numWrapped = Math.max(1, tr.wrapLines(txt, wrapW).size());
+                total += (int)(10 * dl.scale) * numWrapped;
+            }
+            return total;
+        }
+
+        static int drawWrappedTexts(DrawContext ctx, int x, int y, int w, int controlW, String name, String desc, List<DescLine> richDesc, int nameColor, int descColor) {
             var tr = MinecraftClient.getInstance().textRenderer;
             int textW = Math.max(20, w - 16 - controlW);
             var nameLines = tr.wrapLines(Text.literal(name), textW);
@@ -1475,14 +1619,50 @@ public class WynnExtrasConfigScreen extends Screen {
                 ctx.drawTextWithShadow(tr, line, x + 8, ny, nameColor);
                 ny += 10;
             }
-            if (desc != null && !desc.isEmpty()) {
+            int dy = ny + 4;
+            if (richDesc != null && !richDesc.isEmpty()) {
+                for (DescLine dl : richDesc) {
+                    dy += renderRichDescLine(ctx, dl, x + 8, dy, textW, descColor);
+                }
+            } else if (desc != null && !desc.isEmpty()) {
                 var descLines = tr.wrapLines(Text.literal(desc), textW);
-                int dy = y + 8 + nameLines.size() * 10 + 4;
                 for (var line : descLines) {
                     ctx.drawTextWithShadow(tr, line, x + 8, dy, descColor);
                     dy += 10;
                 }
             }
+            return dy;
+        }
+
+        static int renderRichDescLine(DrawContext ctx, DescLine dl, int x, int y, int availW, int color) {
+            var tr = MinecraftClient.getInstance().textRenderer;
+            var style = Style.EMPTY.withBold(dl.bold).withItalic(dl.italic).withUnderline(dl.underline);
+            var txt = Text.literal(dl.text).setStyle(style);
+            float s = dl.scale;
+            int lineH = Math.max(1, (int)(10 * s));
+            int wrapW = Math.max(1, (int)(availW / s));
+            int drawColor = dl.color != null ? dl.color.asInt() : color;
+            var wrapped = tr.wrapLines(txt, wrapW);
+            int curY = y;
+            for (var wl : wrapped) {
+                int textPxW = (int)(tr.getWidth(wl) * s);
+                int drawX = switch (dl.align) {
+                    case LEFT   -> x;
+                    case CENTER -> x + (availW - textPxW) / 2;
+                    case RIGHT  -> x + availW - textPxW;
+                };
+                if (s != 1.0f) {
+                    ctx.getMatrices().pushMatrix();
+                    ctx.getMatrices().translate(drawX, curY);
+                    ctx.getMatrices().scale(s, s);
+                    ctx.drawTextWithShadow(tr, wl, 0, 0, drawColor);
+                    ctx.getMatrices().popMatrix();
+                } else {
+                    ctx.drawTextWithShadow(tr, wl, drawX, curY, drawColor);
+                }
+                curY += lineH;
+            }
+            return curY - y;
         }
     }
 
@@ -1496,7 +1676,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, richDesc, TEXT_LIGHT, TEXT_DIM);
         }
     }
 
@@ -1535,7 +1715,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, richDesc, TEXT_LIGHT, TEXT_DIM);
 
             int bx = x + w - 90, by = y + 10;
             boolean btnHover = mx >= bx && mx < bx + 80 && my >= by && my < by + 24;
@@ -1587,7 +1767,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, richDesc, TEXT_LIGHT, TEXT_DIM);
 
             int tx = x + w - 55, ty = y + 12;
             boolean val = getter.get();
@@ -1631,7 +1811,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, richDesc, TEXT_LIGHT, TEXT_DIM);
 
             sliderX = x + w - 130;
             int sy = y + 15, val = getter.get();
@@ -1700,7 +1880,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, richDesc, TEXT_LIGHT, TEXT_DIM);
 
             sliderX = x + w - 130;
             int sy = y + 15;
@@ -1776,7 +1956,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, richDesc, TEXT_LIGHT, TEXT_DIM);
 
             btnX = x + w - 135; btnY = y + 10;
             T val = getter.get();
@@ -1869,7 +2049,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, getter.get().size() + " " + itemName, TEXT_LIGHT, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, getter.get().size() + " " + itemName, richDesc, TEXT_LIGHT, TEXT_DIM);
 
             int bx = x + w - 75, by = y + 12;
             boolean btnHover = mx >= bx && mx < bx + 65 && my >= by && my < by + 20;
@@ -1910,7 +2090,7 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, TEXT_LIGHT, TEXT_DIM);
+            drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, richDesc, TEXT_LIGHT, TEXT_DIM);
 
             int bx = x + w - 75, by = y + 12;
             boolean btnHover = mx >= bx && mx < bx + 65 && my >= by && my < by + 20;
@@ -1928,6 +2108,63 @@ public class WynnExtrasConfigScreen extends Screen {
                 return true;
             }
             return false;
+        }
+    }
+
+    private static class ImageOption extends ConfigOption {
+        final Identifier identifier;
+        final int imgW, imgH;
+        final float widthFraction;
+
+        ImageOption(Identifier identifier, int imgW, int imgH, float widthFraction, List<DescLine> lines) {
+            super("", lines.stream().map(dl -> dl.text).reduce("", (a, b) -> a + " " + b).trim());
+            this.identifier = identifier;
+            this.imgW = imgW;
+            this.imgH = imgH;
+            this.widthFraction = MathHelper.clamp(widthFraction, 0.0f, 1.0f);
+            this.richDesc = lines;
+        }
+
+        private int calcDisplayW(int contentW) {
+            int availW = contentW - 16;
+            return (int) (availW * widthFraction);
+        }
+
+        @Override
+        int getHeight(int contentW) {
+            int displayW = calcDisplayW(contentW);
+            int displayH = (imgW > 0) ? (int) ((float) displayW / imgW * imgH) : imgH;
+            int textW = Math.max(1, contentW - 24);
+            int linesH = (richDesc != null && !richDesc.isEmpty())
+                ? calcRichDescHeight(MinecraftClient.getInstance().textRenderer, richDesc, textW)
+                : 0;
+            return 8 + displayH + (linesH > 0 ? 4 + linesH : 0) + 8;
+        }
+
+        @Override
+        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
+            ctx.fill(x, y, x + w, y + h - 5, PARCHMENT);
+            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
+            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
+
+            int padding = 8;
+            int availW = w - padding * 2;
+
+            int displayW = (int) (availW * widthFraction);
+            int displayH = (imgW > 0 && imgH > 0) ? (int) ((float) displayW / imgW * imgH) : 0;
+            int texW = imgW > 0 ? imgW : displayW;
+            int texH = imgH > 0 ? imgH : displayH;
+
+            int imgX = x + padding + (availW - displayW) / 2;
+            RenderUtils.drawTexturedRect(ctx, identifier, CustomColor.NONE, imgX, y + padding, displayW, displayH, texW, texH);
+
+            if (richDesc != null && !richDesc.isEmpty()) {
+                int textY = y + padding + displayH + 4;
+                int textW = availW - 8;
+                for (DescLine dl : richDesc) {
+                    textY += renderRichDescLine(ctx, dl, x + 8, textY, textW, TEXT_DIM);
+                }
+            }
         }
     }
 

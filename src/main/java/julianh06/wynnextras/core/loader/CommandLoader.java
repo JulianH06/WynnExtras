@@ -10,7 +10,6 @@ import com.wynntils.models.worlds.type.BombInfo;
 import com.wynntils.models.worlds.type.BombType;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.core.MainScreen;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
@@ -35,6 +34,7 @@ import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.tetris.TetrisScreen;
 import julianh06.wynnextras.utils.ItemUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -63,17 +63,20 @@ public class CommandLoader implements WELoader {
             LiteralArgumentBuilder<FabricClientCommandSource> alias = ClientCommandManager.literal("we");
 
             base.executes(commandContext -> {
-                MainScreen.open();
+                Screen configScreen = WynnExtrasConfig.createConfigScreen(null);
+                MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(configScreen));
                 return 1;
             });
 
             baseLowerCase.executes(commandContext -> {
-                MainScreen.open();
+                Screen configScreen = WynnExtrasConfig.createConfigScreen(null);
+                MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(configScreen));
                 return 1;
             });
 
             alias.executes(commandContext -> {
-                MainScreen.open();
+                Screen configScreen = WynnExtrasConfig.createConfigScreen(null);
+                MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(configScreen));
                 return 1;
             });
 
