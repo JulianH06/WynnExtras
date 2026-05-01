@@ -474,14 +474,6 @@ public class PVScreen extends WEScreen {
             e.draw(context, mouseX, mouseY, delta, ui);
         }
 
-        if (WynncraftApiHandler.INSTANCE.API_KEY == null || WynncraftApiHandler.INSTANCE.API_KEY.isEmpty()) {
-            ui.drawRect(xStart + 200, yStart + 100, currentTabWidget.getWidth() - 400, currentTabWidget.getHeight() - 200, CustomColor.fromHexString("808080"));
-            ui.drawCenteredText("§eSince the fruma update, the PV requires an api key.", xStart + 900, yStart + 300, CustomColor.fromHexString("FFFF55"), 3f);
-            ui.drawCenteredText("§eThis is not a decision we made, it is required by the wynncraft api.", xStart + 900, yStart + 350, CustomColor.fromHexString("FFFF55"), 3f);
-            ui.drawCenteredText("§eThis restriction might be removed, according to nepmia (the dev of the api)", xStart + 900, yStart + 400, CustomColor.fromHexString("FFFF55"), 3f);
-            ui.drawCenteredText("§eUse §b/we apikey §efor info on how to set your api key.", xStart + 900, yStart + 450, CustomColor.fromHexString("FFFF55"), 3f);
-        }
-
         context.getMatrices().popMatrix();
     }
 
