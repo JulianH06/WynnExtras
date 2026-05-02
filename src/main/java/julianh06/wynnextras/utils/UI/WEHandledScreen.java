@@ -18,6 +18,8 @@ public abstract class WEHandledScreen {
     protected UIUtils ui;
 
     protected double getTargetScaleFactor() { return -1; }
+    protected int getMinScreenWidth()  { return 0; }
+    protected int getMinScreenHeight() { return 0; }
 
     protected final List<Widget> rootWidgets = new ArrayList<>();
     protected final List<WEElement<?>> listElements = new ArrayList<>();
@@ -207,6 +209,17 @@ public abstract class WEHandledScreen {
             this.scaleFactor = actualScale;
             this.screenWidth  = w.getScaledWidth();
             this.screenHeight = w.getScaledHeight();
+        }
+
+        int minSW = getMinScreenWidth();
+        int minSH = getMinScreenHeight();
+        double extraScale = 1.0;
+        if (minSW > 0 && screenWidth < minSW) extraScale = Math.min(extraScale, (double) screenWidth / minSW);
+        if (minSH > 0 && screenHeight < minSH) extraScale = Math.min(extraScale, (double) screenHeight / minSH);
+        if (extraScale < 1.0) {
+            matrixScale *= extraScale;
+            screenWidth  = (int)(screenWidth  / extraScale);
+            screenHeight = (int)(screenHeight / extraScale);
         }
     }
 

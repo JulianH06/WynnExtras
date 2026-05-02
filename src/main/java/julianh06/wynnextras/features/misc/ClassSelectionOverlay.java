@@ -40,6 +40,8 @@ import java.util.*;;
 public class ClassSelectionOverlay extends WEHandledScreen {
 
     @Override protected double getTargetScaleFactor() { return 2.0; }
+    @Override protected int getMinScreenWidth()  { return 700; }
+    @Override protected int getMinScreenHeight() { return 500; }
 
     public static final String CLASS_SELECTION_TITLE = "\uDAFF\uDFD5\uE01F";
     public static final String CLASS_EDIT_TITLE = "\uDAFF\uDFD0\uE020";
@@ -358,7 +360,14 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             drawDraggedCard(ctx, mouseX, mouseY);
         }
         if (!hoveredTooltip.isEmpty() && !nicknameInputActive) {
-            ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), mouseX, mouseY);
+            // ctx.drawTooltip expects GUI-scale coordinates and clamps against screen.width/height.
+            // mouseX/mouseY here are in logical space (divided by matrixScale), so undo the
+            // matrix transform before calling to prevent boundary clamping going wrong at high GUI scales.
+            ctx.getMatrices().pushMatrix();
+            ctx.getMatrices().scale((float)(1.0 / matrixScale), (float)(1.0 / matrixScale));
+            ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(),
+                    (int)(mouseX * matrixScale), (int)(mouseY * matrixScale));
+            ctx.getMatrices().popMatrix();
         }
         drawNicknameInput(ctx, mouseX, mouseY);
     }

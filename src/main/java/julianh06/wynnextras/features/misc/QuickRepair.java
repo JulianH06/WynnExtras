@@ -22,7 +22,7 @@ public class QuickRepair extends WEMenuExtension {
     private static final int SLOT_REPAIR_ITEMS = 18;
     private static final int SLOT_ITEM = 11;
     private static final int EMPTY_CLOSE_THRESHOLD = 6;
-    private static final int BTN_W = 70, BTN_H = 16;
+    private static final int BTN_W = 90, BTN_H = 16;
 
     private static boolean repairing = false;
     private static int spamCooldown = 0;
@@ -137,7 +137,7 @@ public class QuickRepair extends WEMenuExtension {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             String keyName = GLFW.glfwGetKeyName(WynnExtrasConfig.INSTANCE.quickRepairKey, 0);
             if (keyName == null) keyName = "?";
-            String label = "Repair [" + keyName.toUpperCase() + "]";
+            String label = "Quick Repair [" + keyName.toUpperCase() + "]";
 
             ui.drawButton(x, y, width, height, 4, hovered);
             ui.drawCenteredText(label, x + width / 2f, y + height / 2f, 1f);
