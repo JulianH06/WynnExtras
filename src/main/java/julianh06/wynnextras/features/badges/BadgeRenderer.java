@@ -34,7 +34,7 @@ public class BadgeRenderer {
         // Iterate through all players in the world
         for (PlayerEntity player : mc.world.getPlayers()) {
             if (player == null) continue;
-            if (player == localPlayer) continue; // Don't render badge for self
+            if (player == localPlayer && (!WynnExtrasConfig.INSTANCE.showOwnNametag || mc.options.getPerspective().isFirstPerson())) continue;
 
             // Check if this player is a WynnExtras user
             String uuid = player.getUuid().toString();
