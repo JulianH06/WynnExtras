@@ -296,6 +296,7 @@ public class WynnExtrasConfig {
     // ==================== CUSTOM CLASS SELECTION ====================
     public boolean customClassSelectionEnabled = true;
     public String customClassPngPath = "";
+    public boolean classCardColoredAccents = true; // true = class colors, false = always brown
     public List<String> classCardOrder = new ArrayList<>(); // ordered list of character UUIDs
     public Map<String, String> clientNicknames = new HashMap<>(); // UUID -> nickname
     public Map<String, CharIdentity> charIdentities = new HashMap<>(); // UUID -> identity data

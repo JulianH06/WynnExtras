@@ -83,6 +83,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private int hoveredIconColor = -1;
     private int hoveredIconSub = -1;
     private boolean hoveredToggle = false;
+    private boolean hoveredColorToggle = false;
     private boolean hoveredBack = false;
     private List<Text> hoveredTooltip = new ArrayList<>();
 
@@ -113,6 +114,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     // Toggle/back button bounds (logical)
     private float toggleLX, toggleLY, toggleLW, toggleLH;
+    private float colorToggleLX, colorToggleLY, colorToggleLW, colorToggleLH;
     private float backLX, backLY, backLW, backLH;
 
     // Custom background from config/wynnextras/customscreen/
@@ -342,6 +344,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         hoveredIconColor = -1;
         hoveredIconSub = -1;
         hoveredToggle = false;
+        hoveredColorToggle = false;
         hoveredBack = false;
         hoveredTooltip = new ArrayList<>();
 
@@ -467,6 +470,18 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         ui.drawButton(toggleLX, toggleLY, toggleLW, toggleLH, 5, hoveredToggle);
         ui.drawCenteredText("Vanilla", toggleLX + toggleLW / 2f, toggleLY + toggleLH / 2f,
                 CustomColor.fromHexString("AAAAAA"), 2f);
+
+        // Color toggle button (class colors vs. brown)
+        float ctWPx = 60, ctHPx = 16;
+        float ctXPx = tbXPx - ctWPx - 6;
+        float ctYPx = tbYPx;
+        colorToggleLX = px(ctXPx); colorToggleLY = px(ctYPx); colorToggleLW = px(ctWPx); colorToggleLH = px(ctHPx);
+        hoveredColorToggle = isInBounds(mouseX, mouseY, colorToggleLX, colorToggleLY, colorToggleLW, colorToggleLH);
+        ui.drawButton(colorToggleLX, colorToggleLY, colorToggleLW, colorToggleLH, 5, hoveredColorToggle);
+        boolean colored = WynnExtrasConfig.INSTANCE.classCardColoredAccents;
+        ui.drawCenteredText(colored ? "§aColored" : "§7Brown",
+                colorToggleLX + colorToggleLW / 2f, colorToggleLY + colorToggleLH / 2f,
+                colored ? CustomColor.fromHexString("55FF55") : CustomColor.fromHexString("5d4736"), 2f);
 
         // Separator
         float sepYPx = titleYPx + titleHPx + 4;
@@ -870,6 +885,13 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         // Vanilla toggle
         if (mode == ScreenMode.CLASS_SELECTION && hoveredToggle) {
             vanillaMode = true;
+            return true;
+        }
+
+        // Color/brown toggle
+        if (mode == ScreenMode.CLASS_SELECTION && hoveredColorToggle) {
+            WynnExtrasConfig.INSTANCE.classCardColoredAccents = !WynnExtrasConfig.INSTANCE.classCardColoredAccents;
+            WynnExtrasConfig.save();
             return true;
         }
 
@@ -1329,18 +1351,19 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private String extractClassInfo(ItemStack stack) {
         for (Text line : getTooltipLines(stack)) {
             String str = line.getString().replaceAll("\u00A7[0-9a-fk-or]", "").trim();
-            if (str.contains("Lv") || str.contains("Level") || str.contains("Combat")) return str;
+            if (str.contains("Class")) return str;
         }
         return "";
     }
 
     private CustomColor getClassColor(String classInfo) {
+        if (!WynnExtrasConfig.INSTANCE.classCardColoredAccents) return CustomColor.fromHexString("5d4736");
         String l = classInfo.toLowerCase();
         if (l.contains("warrior") || l.contains("knight")) return CustomColor.fromHexString("CC4444");
         if (l.contains("mage") || l.contains("dark wizard")) return CustomColor.fromHexString("55BBFF");
         if (l.contains("assassin") || l.contains("ninja")) return CustomColor.fromHexString("FF55FF");
         if (l.contains("archer") || l.contains("hunter")) return CustomColor.fromHexString("55FF55");
         if (l.contains("shaman") || l.contains("skyseer")) return CustomColor.fromHexString("FFFF55");
-        return CustomColor.fromHexString("AAAAAA");
+        return CustomColor.fromHexString("5d4736");
     }
 }
