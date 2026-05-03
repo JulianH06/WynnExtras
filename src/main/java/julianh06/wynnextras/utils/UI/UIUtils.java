@@ -9,6 +9,7 @@ import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -373,19 +374,10 @@ public final class UIUtils {
     }
 
     public void drawButton(float x, float y, float width, float height, int scale, boolean hovered, boolean darkMode) {
-        if(width > scale * 2 || height > scale * 2) {
-            RenderUtils.drawRect(
-                    drawContext,
-                    darkMode ? CustomColor.fromHexString("2c2d2f") : CustomColor.fromHexString("82654C"),
-                    sx(x + scale) - 1, sy(y + scale) - 1,
-                    sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
-            );
-        }
-        if(darkMode) {
-            drawButtonTextures(x, y, width, height, scale, hovered, buttontlHd, buttontrHd, buttonblHd, buttonbrHd, buttontopHd, buttonbotHd, buttonleftHd, buttonrightHd, buttontld, buttontrd, buttonbld, buttonbrd, buttontopd, buttonbotd, buttonleftd, buttonrightd, 1);
-        } else {
-            drawButtonTextures(x, y, width, height, scale, hovered, buttontlH, buttontrH, buttonblH, buttonbrH, buttontopH, buttonbotH, buttonleftH, buttonrightH, buttontl, buttontr, buttonbl, buttonbr, buttontop, buttonbot, buttonleft, buttonright, 1);
-        }
+        Identifier sprite = hovered
+                ? Identifier.ofVanilla("widget/button_highlighted")
+                : Identifier.ofVanilla("widget/button");
+        drawContext.drawGuiTexture(RenderPipelines.GUI_TEXTURED, sprite, (int) sx(x), (int) sy(y), sw(width), sh(height));
     }
 
     public void drawButtonFade(
@@ -482,16 +474,7 @@ public final class UIUtils {
 
 
     public void drawSliderBackground(float x, float y, float width, float height, int scale, boolean darkMode) {
-        if(width > scale * 2 || height > scale * 2) {
-            RenderUtils.drawRect(
-                    drawContext,
-                    darkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("50352d"),
-                    sx(x + scale) - 1, sy(y + scale) - 1,
-                    sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
-            );
-        }
-
-        drawButtonTextures(x, y, width, height, scale, darkMode, sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark, sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark, sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr, sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright, 1);
+        drawContext.drawGuiTexture(RenderPipelines.GUI_TEXTURED, Identifier.ofVanilla("widget/slider"), (int) sx(x), (int) sy(y), sw(width), sh(height));
     }
 
     public void drawNineSlice(float x, float y, float width, float height, int scale, Identifier l, Identifier r, Identifier t, Identifier b, Identifier tl, Identifier tr, Identifier bl, Identifier br, CustomColor fillColor) {
