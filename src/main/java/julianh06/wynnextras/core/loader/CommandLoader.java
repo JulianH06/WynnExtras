@@ -786,3 +786,5 @@ public class CommandLoader implements WELoader {
     }
 
 }
+
+//TODO: clean up this mess

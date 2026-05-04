@@ -101,10 +101,10 @@ public abstract class WEScreen extends Screen {
         int mx = (int)(mouseX / matrixScale);
         int my = (int)(mouseY / matrixScale);
 
+        ui.drawBackground();
+
         context.getMatrices().pushMatrix();
         context.getMatrices().scale((float) matrixScale, (float) matrixScale);
-
-        ui.drawBackground();
         updateValues();
         updateVisibleListRange();
         layoutListElements();
