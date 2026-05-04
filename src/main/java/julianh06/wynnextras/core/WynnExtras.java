@@ -186,6 +186,7 @@ public class WynnExtras implements ClientModInitializer {
 		julianh06.wynnextras.features.misc.ProfessionOverlay.register();
 		julianh06.wynnextras.features.misc.ClassSelectionPngOverlay.register();
 		julianh06.wynnextras.features.misc.EmeraldGiver.register();
+		julianh06.wynnextras.features.bankoverlay.BankOverlay2.registerScreenHooks();
 		ChatNotificator.init();
 		Waypoints.register();
 		FastRequeue.registerFastRequeue();
