@@ -228,6 +228,7 @@ public class BankOverlay2 extends WEHandledScreen {
         scissory2 = 0;
 
         refreshDurabilityCfg();
+        refreshHighlightCfg();
 
         if (!wynncraftItemDatabaseInitialized) {
             wynncraftItemDatabaseInitialized = true;
@@ -679,12 +680,30 @@ public class BankOverlay2 extends WEHandledScreen {
         if (WynnExtrasConfig.INSTANCE.bankBagOverlay
                 && (currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER || currentOverlayType == BankOverlayType.MISC)) {
             cacheCurrentBankPageIfPossible();
+
+            // Top section: bank bags. Header is drawn top-right of the screen, grid sits in
+            // the left margin alongside the bank pages.
+            int bankGridX = xStart - 36 - 56;
+            int bankGridY = yStart - 14 + 4 * 28;
             drawBagOverlay(
                     context,
-                    xStart - 36 - 56,
-                    yStart - 14 + 4 * 28,
+                    bankGridX,
+                    bankGridY,
                     getCurrentPageStacks(),
                     collectAccountAndCharacterBagCounts());
+
+            // Bottom section: bags currently in player inventory, in the same column directly
+            // below the bank grid with a gap so the two read as separate sections. Reserve
+            // BAG_RAID_ORDER.length rows worth of space so the inventory grid never collides
+            // with the bank grid even when every raid is populated.
+            if (BankOverlay.playerInvSlots != null && !BankOverlay.playerInvSlots.isEmpty()) {
+                List<ItemStack> invStacks = new ArrayList<>(BankOverlay.playerInvSlots.size());
+                for (net.minecraft.screen.slot.Slot s : BankOverlay.playerInvSlots) {
+                    invStacks.add(s.getStack());
+                }
+                int invBagY = bankGridY + BAG_RAID_ORDER.length * 28 + 18;
+                drawBagGrid(context, bankGridX, invBagY, invStacks);
+            }
         }
 
         renderHoveredSlotHighlight(context,  screen);
@@ -1013,13 +1032,25 @@ public class BankOverlay2 extends WEHandledScreen {
         } catch (Exception ignored) {}
     }
 
-    private static void renderDurabilityRing(DrawContext context, ItemStack stack, int x, int y) {
+    // Cached highlight-texture config so we don't reflect into Wynntils config options
+    // on every slot draw (was 1 lookup per highlighted slot per frame).
+    private static int highlightTextureOrdinal = 0;
+
+    private static void refreshHighlightCfg() {
+        try {
+            if (itemHighlightFeature == null)
+                itemHighlightFeature = Managers.Feature.getFeatureInstance(ItemHighlightFeature.class);
+            highlightTextureOrdinal = ((ItemHighlightFeature.HighlightTexture) itemHighlightFeature.getConfigOptionFromString("highlightTexture").get().get()).ordinal();
+        } catch (Exception ignored) {}
+    }
+
+    private static void renderDurabilityRing(DrawContext context, ItemStack stack, WynnItem cachedItem, int x, int y) {
         try {
             if (durabilityOverlayFeature == null)
                 durabilityOverlayFeature = Managers.Feature.getFeatureInstance(DurabilityOverlayFeature.class);
             if (!durabilityOverlayFeature.isEnabled()) return;
             if (!durabilityRenderInInv) return;
-            if (Models.Item.asWynnItemProperty(stack, DurableItemProperty.class).isEmpty()) return;
+            if (!(cachedItem instanceof DurableItemProperty)) return;
 
             DurabilityOverlayFeatureInvoker invoker = (DurabilityOverlayFeatureInvoker) durabilityOverlayFeature;
             switch (durabilityMode) {
@@ -1030,15 +1061,14 @@ public class BankOverlay2 extends WEHandledScreen {
         } catch (Exception ignored) {}
     }
 
-    private static void renderEmeraldPouchRing(DrawContext context, ItemStack stack, int x, int y) {
-        Models.Item.asWynnItem(stack, EmeraldPouchItem.class).ifPresent(pouch -> {
-            CappedValue capacity = new CappedValue(pouch.getValue(), pouch.getCapacity());
-            float fraction = (float) capacity.current() / capacity.max();
-            int colorInt = MathHelper.hsvToRgb((1.0F - fraction) / 3.0F, 1.0F, 1.0F);
-            CustomColor color = CustomColor.fromInt(colorInt).withAlpha(160);
+    private static void renderEmeraldPouchRing(DrawContext context, WynnItem cachedItem, int x, int y) {
+        if (!(cachedItem instanceof EmeraldPouchItem pouch)) return;
+        CappedValue capacity = new CappedValue(pouch.getValue(), pouch.getCapacity());
+        float fraction = (float) capacity.current() / capacity.max();
+        int colorInt = MathHelper.hsvToRgb((1.0F - fraction) / 3.0F, 1.0F, 1.0F);
+        CustomColor color = CustomColor.fromInt(colorInt).withAlpha(160);
 
-            RenderUtils.drawArc(context, color, x - 2, y - 2, Math.min(1.0F, fraction), 8, 10);
-        });
+        RenderUtils.drawArc(context, color, x - 2, y - 2, Math.min(1.0F, fraction), 8, 10);
     }
 
     private static void renderHighlightOverlay(DrawContext context, ItemStack stack, int x, int y) {
@@ -1051,7 +1081,7 @@ public class BankOverlay2 extends WEHandledScreen {
                      context,
                      Texture.HIGHLIGHT.identifier(),
                      color, (float)(x - 1), (float)(y - 1), 18.0F, 18.0F,
-                     ((ItemHighlightFeature.HighlightTexture) itemHighlightFeature.getConfigOptionFromString("highlightTexture").get().get()).ordinal() * 18,
+                     highlightTextureOrdinal * 18,
                      0.0F, 18.0F, 18.0F,
                      Texture.HIGHLIGHT.width(),
                      Texture.HIGHLIGHT.height());
@@ -1091,7 +1121,7 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 
-    private static void renderSearchOverlay(DrawContext context, ItemStack stack, int x, int y) {
+    private static void renderSearchOverlay(DrawContext context, ItemStack stack, WynnItem cachedItem, int x, int y) {
         String rawInput = searchbar2.getInput();
         if (rawInput == null || rawInput.isEmpty()) return;
 
@@ -1111,14 +1141,7 @@ public class BankOverlay2 extends WEHandledScreen {
         }
         SearchQueryParser.ParsedQuery query = cachedSearchQuery;
 
-        // Get WynnItem if available
-        WynnItem wynnItem = null;
-        Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(stack);
-        if (optWynnItem.isPresent()) {
-            wynnItem = optWynnItem.get();
-        }
-
-        if (SearchQueryParser.matches(stack, wynnItem, query)) {
+        if (SearchQueryParser.matches(stack, cachedItem, query)) {
             // Item matches - draw green border
             RenderUtils.drawRectBorders(context, CustomColor.fromHexString("00FF00"), x, y, x + 16, y + 16, 1);
         } else {
@@ -1485,7 +1508,7 @@ public class BankOverlay2 extends WEHandledScreen {
     // Hardcoded layout for the total-bags grid: all known raids × the three crafter-bag tiers.
     // Bags that don't match one of these combos still get counted into the header total, but
     // their own row won't be shown (we also don't have icons for combinations that never occur).
-    private static final String[] BAG_RAID_ORDER = {"NOG", "NOL", "TCC", "TNA", "TWP"};
+    private static final String[] BAG_RAID_ORDER = {"NOG", "NOL", "TCC", "TNA", "WTP"};
     private static final GearTier[] BAG_TIER_ORDER = {GearTier.LEGENDARY, GearTier.RARE, GearTier.UNIQUE};
 
     /** Sort mode for the top-right bag breakdown. Click the "[By Type]"/"[By Count]" label to toggle. */
@@ -1596,7 +1619,28 @@ public class BankOverlay2 extends WEHandledScreen {
      * entirely, and if no bags exist in the scoped data the grid isn't drawn at all.
      */
     private static void drawBagGrid(DrawContext context, int x, int y, List<ItemStack> stacks) {
-        Map<String, BagGroup> groups = groupBagsFromStacks(stacks);
+        drawBagGridFromGroups(context, x, y, groupBagsFromStacks(stacks));
+    }
+
+    /** Builds groups directly from the cached (raid|tier → count) totals — no live stacks needed,
+     *  so it works on screens where the Wynncraft container doesn't expose bag items
+     *  (player inventory, trade market). Icons end up empty; cell still shows raid abbrev + count. */
+    private static void drawBagGridFromCounts(DrawContext context, int x, int y, Map<String, Integer> totals) {
+        Map<String, BagGroup> groups = new java.util.LinkedHashMap<>();
+        for (String raid : BAG_RAID_ORDER) {
+            for (GearTier tier : BAG_TIER_ORDER) {
+                String key = raid + "|" + tier.name();
+                int count = totals.getOrDefault(key, 0);
+                if (count <= 0) continue;
+                BagGroup g = new BagGroup(raid, tier, ItemStack.EMPTY);
+                g.count = count;
+                groups.put(key, g);
+            }
+        }
+        drawBagGridFromGroups(context, x, y, groups);
+    }
+
+    private static void drawBagGridFromGroups(DrawContext context, int x, int y, Map<String, BagGroup> groups) {
         if (groups.isEmpty()) return;
 
         // Only render raids where at least one tier has a bag in the scoped data
@@ -1659,12 +1703,14 @@ public class BankOverlay2 extends WEHandledScreen {
                                 VerticalAlignment.TOP,
                                 TextShadow.OUTLINE);
 
-                // Count in bottom-right (dimmed when zero, compacted for large counts so "1200" fits)
+                // Count in bottom-right (dimmed when zero, compacted for large counts so "1200" fits;
+                // hold Shift to override the compact format and see the exact number).
                 CustomColor countColor = count > 0 ? CommonColors.WHITE : CustomColor.fromInt(0xFF808080);
+                String countLabel = isShiftHeld() ? String.valueOf(count) : formatCompactCount(count);
                 FontRenderer.getInstance()
                         .renderAlignedTextInBox(
                                 context,
-                                StyledText.fromString(formatCompactCount(count)),
+                                StyledText.fromString(countLabel),
                                 cellX,
                                 cellX + 28 - 2,
                                 cellY,
@@ -1677,6 +1723,12 @@ public class BankOverlay2 extends WEHandledScreen {
             }
             row++;
         }
+    }
+
+    private static boolean isShiftHeld() {
+        long w = MinecraftClient.getInstance().getWindow().getHandle();
+        return org.lwjgl.glfw.GLFW.glfwGetKey(w, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS
+                || org.lwjgl.glfw.GLFW.glfwGetKey(w, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
     }
 
     /** Compact-format a count so it fits in a 28px-wide box. 1420 -> "1.42k", 12345 -> "12.3k". */
@@ -1701,21 +1753,72 @@ public class BankOverlay2 extends WEHandledScreen {
      * Positions the boxes to the right of the vanilla container; the "Total Bags: N"
      * header is drawn by drawBagOverlay in the top-right of the screen.
      */
+    /** Returns the live ItemStacks from a ScreenHandler that belong to the player's inventory
+     *  (i.e. the slots whose source is the player Inventory, not the chest container). */
+    private static List<ItemStack> collectPlayerInventoryStacks(net.minecraft.screen.ScreenHandler menu) {
+        List<ItemStack> stacks = new ArrayList<>();
+        if (menu == null) return stacks;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player == null) return stacks;
+        Inventory playerInv = mc.player.getInventory();
+        for (net.minecraft.screen.slot.Slot slot : menu.slots) {
+            if (slot.inventory == playerInv) stacks.add(slot.getStack());
+        }
+        return stacks;
+    }
+
+    /** Registers an AFTER_RENDER listener for InventoryScreen — the HandledScreen.render mixin
+     *  doesn't fire on it (verified via debug logging), so we hook through Fabric ScreenEvents instead. */
+    public static void registerScreenHooks() {
+        net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+            if (!(screen instanceof net.minecraft.client.gui.screen.ingame.InventoryScreen inv)) return;
+            net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterRender(screen).register((s, ctx, mx, my, td) -> {
+                drawVanillaBankBagsOverlay(ctx, inv);
+            });
+        });
+    }
+
     public static void drawVanillaBankBagsOverlay(DrawContext context, HandledScreen<?> screen) {
         if (!WynnExtrasConfig.INSTANCE.bankBagOverlay) return;
+        // Bank's own custom overlay already draws this — don't double-paint.
         if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) return;
 
-        // Only show in account bank or character bank
         Container container = Models.Container.getCurrentContainer();
-        if (!(container instanceof AccountBankContainer) && !(container instanceof CharacterBankContainer)) return;
+        boolean isBank = container instanceof AccountBankContainer || container instanceof CharacterBankContainer;
+        boolean isInventory = screen instanceof net.minecraft.client.gui.screen.ingame.InventoryScreen;
 
-        cacheCurrentBankPageIfPossible();
+        if (isBank) cacheCurrentBankPageIfPossible();
 
         HandledScreenAccessor accessor = (HandledScreenAccessor) screen;
         int x = accessor.getX() + accessor.getBackgroundWidth() + 4;
         int y = accessor.getY() + 14;
 
-        drawBagOverlay(context, x, y, getCurrentPageStacks(), collectAccountAndCharacterBagCounts());
+        if (isBank) {
+            // Bank: top-right header (cumulative totals across pages) + grid for the current page.
+            drawBagTopRightHeader(context, collectAccountAndCharacterBagCounts());
+            drawBagGrid(context, x, y, getCurrentPageStacks());
+
+            // Inventory grid stacked below the bank grid in the same column. Reserve
+            // BAG_RAID_ORDER.length rows worth of space so the two grids never collide.
+            List<ItemStack> invStacks = collectPlayerInventoryStacks(screen.getScreenHandler());
+            if (!invStacks.isEmpty()) {
+                int invY = y + BAG_RAID_ORDER.length * 28 + 18;
+                drawBagGrid(context, x, invY, invStacks);
+            }
+        } else if (isInventory) {
+            // Inventory: scan EVERY slot of the player handler (PlayerScreenHandler includes
+            // crafting+armor+main+hotbar+offhand). getCurrentPageStacks would skip the player
+            // inventory entirely and return empty.
+            List<ItemStack> stacks = new ArrayList<>();
+            for (net.minecraft.screen.slot.Slot s : screen.getScreenHandler().slots) {
+                stacks.add(s.getStack());
+            }
+            drawBagGrid(context, x, y, stacks);
+        } else {
+            // Trade menus / any other container — only bags visible in the container's own slots,
+            // no top-right total. getCurrentPageStacks already excludes player-inventory slots.
+            drawBagGrid(context, x, y, getCurrentPageStacks());
+        }
     }
 
     // Debounce for the auto-save that runs while the bag overlay is caching pages.
@@ -1806,7 +1909,11 @@ public class BankOverlay2 extends WEHandledScreen {
             for (Map<String, Integer> pageCounts : data.bagCounts.values()) {
                 if (pageCounts == null) continue;
                 for (Map.Entry<String, Integer> e : pageCounts.entrySet()) {
-                    totals.merge(e.getKey(), e.getValue(), Integer::sum);
+                    // Old caches were written with "TWP|..." keys before Wynntils renamed
+                    // the abbreviation to WTP. Fold them so they're not stranded.
+                    String key = e.getKey();
+                    if (key.startsWith("TWP|")) key = "WTP|" + key.substring(4);
+                    totals.merge(key, e.getValue(), Integer::sum);
                 }
             }
         }
@@ -1822,7 +1929,11 @@ public class BankOverlay2 extends WEHandledScreen {
 
             RaidKind raidKind = bag.getRaidKind();
             GearTier tier = bag.getGearTier();
+            // Wynntils renamed The Wartorn Palace from "TWP" to "WTP" between 4.1.8 and 4.1.9.
+            // Fold the legacy abbreviation onto the new one so groups merge regardless of which
+            // Wynntils version is annotating the stack.
             String raidAbbrev = raidKind != null ? raidKind.getAbbreviation() : "?";
+            if ("TWP".equals(raidAbbrev)) raidAbbrev = "WTP";
             String key = raidAbbrev + "|" + (tier != null ? tier.name() : "?");
 
             BagGroup group = groups.get(key);
@@ -2250,7 +2361,7 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             if(stack == null) {
-                renderSearchOverlay(ctx, stack, x + 1, y + 1);
+                renderSearchOverlay(ctx, stack, null, x + 1, y + 1);
                 return;
             }
 
@@ -2276,9 +2387,12 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             }
 
+            Text customName = stack.getCustomName();
+            String customNameStr = customName != null ? customName.getString() : null;
+
             try {
-                if (stack.getCustomName() != null && stack.getCustomName().getString().contains("Potions")) {
-                    Matcher matcher = POTIONS_USES_PATTERN.matcher(stack.getCustomName().getString());
+                if (customNameStr != null && customNameStr.contains("Potions")) {
+                    Matcher matcher = POTIONS_USES_PATTERN.matcher(customNameStr);
 
                     if (matcher.find()) {
                         int remainingUses = Integer.parseInt(matcher.group(1));
@@ -2287,7 +2401,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             } catch (Exception ignored) {}
 
-            renderEmeraldPouchRing(ctx, stack, x + 1, y + 1);
+            renderEmeraldPouchRing(ctx, item.orElse(null), x + 1, y + 1);
             renderHighlightOverlay(ctx, stack, x + 1, y + 1);
 
             // Suppress vanilla durability bar only when needed
@@ -2300,6 +2414,7 @@ public class BankOverlay2 extends WEHandledScreen {
                         renderStack = stack.copy();
                         List<Float> floats = new ArrayList<>(modelData.floats());
                         floats.remove(1);
+                        renderStack = stack.copy();
                         renderStack.set(DataComponentTypes.CUSTOM_MODEL_DATA,
                             new CustomModelDataComponent(floats, modelData.flags(), modelData.strings(), modelData.colors()));
                     }
@@ -2308,10 +2423,10 @@ public class BankOverlay2 extends WEHandledScreen {
 
             ctx.drawItem(renderStack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()));
 
-            renderDurabilityRing(ctx, stack, x + 1, y + 1);
+            renderDurabilityRing(ctx, stack, item.orElse(null), x + 1, y + 1);
 
             try {
-                if(stack.getCustomName() != null && stack.getCustomName().getString().contains("Ingredient Pouch")) ctx.drawStackOverlay(MinecraftClient.getInstance().textRenderer, stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()), renderOne ? "1" : stack.getCount() == 1 ? "" : String.valueOf(stack.getCount()));
+                if(customNameStr != null && customNameStr.contains("Ingredient Pouch")) ctx.drawStackOverlay(MinecraftClient.getInstance().textRenderer, stack, (int) (1 + x / ui.getScaleFactor()), (int) (1 + y / ui.getScaleFactor()), renderOne ? "1" : stack.getCount() == 1 ? "" : String.valueOf(stack.getCount()));
                 else if(stack.getCount() > 1) ui.drawText(String.valueOf(stack.getCount()), (int) (width + x / ui.getScaleFactor()), (int) (height - 8 + y / ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 1);
             } catch (Exception ignored) {}
 

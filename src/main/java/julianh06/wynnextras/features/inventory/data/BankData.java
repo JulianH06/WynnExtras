@@ -72,11 +72,14 @@ public abstract class BankData {
                 e.printStackTrace();
             }
         } else {
+            // No file for this UUID/character yet — clear EVERYTHING so we don't leak the
+            // previous character's pages/bag counts into the new in-memory INSTANCE.
             this.BankPages = new HashMap<>();
             this.lastPage = 1;
             this.BankPageNames = new HashMap<>();
             this.characterNickname = null;
             this.characterLevel = 0;
+            this.bagCounts = new HashMap<>();
         }
     }
 
