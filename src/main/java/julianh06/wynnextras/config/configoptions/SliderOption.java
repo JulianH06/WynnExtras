@@ -52,8 +52,8 @@ public class SliderOption extends ConfigOption {
 
     @Override
     public boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
-        int sy = y + 10;
-        if (mx >= sliderX - 5 && mx < sliderX + sliderW + 10 && my >= sy && my < sy + 20) {
+        int sy = y + 12;
+        if (mx >= sliderX - 5 && mx < sliderX + sliderW + 10 && my >= sy && my < sy + 18) {
             dragging = true;
             updateValue(mx);
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());

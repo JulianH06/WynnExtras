@@ -40,7 +40,7 @@ public class BooleanOption extends ConfigOption {
 
     @Override
     public boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
-        int tx = x + w - 45, ty = y + 12;
+        int tx = x + w - 55, ty = y + 12;
         if (mx >= tx && mx < tx + 44 && my >= ty && my < ty + 20) {
             setter.accept(!getter.get());
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());

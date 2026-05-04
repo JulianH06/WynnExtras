@@ -1166,16 +1166,18 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             if (my >= sidebarScrollbarThumbY && my < sidebarScrollbarThumbY + sidebarScrollbarThumbH) {
                 sidebarScrollbarDragging = true;
                 sidebarScrollbarDragOffset = my - sidebarScrollbarThumbY;
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             } else if (my >= sidebarScrollbarY && my < sidebarScrollbarY + sidebarScrollbarHeight) {
                 double clickPercent = (my - sidebarScrollbarY - sidebarScrollbarThumbH / 2.0) / (sidebarScrollbarHeight - sidebarScrollbarThumbH);
                 sidebarScrollTarget = MathHelper.clamp(clickPercent * sidebarMaxScroll, 0, sidebarMaxScroll);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
 
         // Scrollbar
-        if (maxScroll > 0 && mx >= width - 17 && mx < width - 5) {
+        if (maxScroll > 0 && mx >= width - 17 && mx < width - 11) {
             if (my >= scrollbarThumbY && my < scrollbarThumbY + scrollbarThumbH) {
                 scrollbarDragging = true;
                 scrollbarDragOffset = my - scrollbarThumbY;
