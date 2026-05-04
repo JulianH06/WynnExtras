@@ -3,8 +3,10 @@ package julianh06.wynnextras.mixin;
 import com.wynntils.core.components.Models;
 import com.wynntils.models.character.CharacterModel;
 import com.wynntils.models.worlds.event.WorldStateEvent;
+import com.wynntils.models.worlds.type.WorldState;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.features.inventory.BankOverlay;
+import julianh06.wynnextras.features.misc.HuntedModeTracker;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.CharacterBankData;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
@@ -26,6 +28,13 @@ public class CharacterModelMixin {
 
     @Shadow
     private int level;
+
+    @Inject(method = "onWorldStateChanged", at = @At("HEAD"))
+    private void resetHuntedOnStateChange(WorldStateEvent e, CallbackInfo ci) {
+        if (e.getNewState() == WorldState.CHARACTER_SELECTION) {
+            HuntedModeTracker.huntedMode = false;
+        }
+    }
 
     @Inject(
             method = "onWorldStateChanged",

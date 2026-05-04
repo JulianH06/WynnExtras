@@ -2574,7 +2574,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 3, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawButtonCustom(x, y, width, height, 3, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
             String text = allCharactersBrowseMode ? "Back" : "All Characters";
             ui.drawCenteredText(text, x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 0.85f);
         }
@@ -2610,7 +2610,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 3, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawButtonCustom(x, y, width, height, 3, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
             String text;
             if (isReloading) {
                 text = "Reloading " + (reloadCurrentPage + 1) + "/" + reloadTotalPages;
@@ -2664,7 +2664,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 5, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+            ui.drawButtonCustom(x, y, width, height, 5, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
             ui.drawCenteredText("Click to " + (WynnExtrasConfig.INSTANCE.toggleBankOverlay ? "disable" : "enable") + " the Bank Overlay", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 0.75f);
         }
 
@@ -2749,7 +2749,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 5, hovered || isHold, WynnExtrasConfig.INSTANCE.darkmodeToggle);
+                ui.drawButtonCustom(x, y, width, height, 5, hovered || isHold, WynnExtrasConfig.INSTANCE.darkmodeToggle);
             }
 
             @Override

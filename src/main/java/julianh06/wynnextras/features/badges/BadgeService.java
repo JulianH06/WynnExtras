@@ -44,14 +44,14 @@ public class BadgeService {
     private static int tickCounter = 0;
     private static boolean initialSyncDone = false;
 
-    private Command sendHeartbeat = new Command(
-            "heartbeat",
-            "",
-            context -> {
-                syncWithServer();
-                return 1;
-            }, null, null
-    );
+//    private Command sendHeartbeat = new Command(
+//            "heartbeat",
+//            "",
+//            context -> {
+//                syncWithServer();
+//                return 1;
+//            }, null, null
+//    );
 
     /**
      * Check if a player UUID is a WynnExtras user

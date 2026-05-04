@@ -285,7 +285,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
     public static class TypeSwitcher extends Widget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.pvDarkmodeToggle);
+            ui.drawButtonCustom(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.pvDarkmodeToggle);
 
             String text = "";
             switch (currentStatus) {

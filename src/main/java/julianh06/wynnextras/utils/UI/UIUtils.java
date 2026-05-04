@@ -380,6 +380,22 @@ public final class UIUtils {
         drawContext.drawGuiTexture(RenderPipelines.GUI_TEXTURED, sprite, (int) sx(x), (int) sy(y), sw(width), sh(height));
     }
 
+    public void drawButtonCustom(float x, float y, float width, float height, int scale, boolean hovered, boolean darkMode) {
+        if(width > scale * 2 || height > scale * 2) {
+            RenderUtils.drawRect(
+                    drawContext,
+                    darkMode ? CustomColor.fromHexString("2c2d2f") : CustomColor.fromHexString("82654C"),
+                    sx(x + scale) - 1, sy(y + scale) - 1,
+                    sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
+            );
+        }
+        if(darkMode) {
+            drawButtonTextures(x, y, width, height, scale, hovered, buttontlHd, buttontrHd, buttonblHd, buttonbrHd, buttontopHd, buttonbotHd, buttonleftHd, buttonrightHd, buttontld, buttontrd, buttonbld, buttonbrd, buttontopd, buttonbotd, buttonleftd, buttonrightd, 1);
+        } else {
+            drawButtonTextures(x, y, width, height, scale, hovered, buttontlH, buttontrH, buttonblH, buttonbrH, buttontopH, buttonbotH, buttonleftH, buttonrightH, buttontl, buttontr, buttonbl, buttonbr, buttontop, buttonbot, buttonleft, buttonright, 1);
+        }
+    }
+
     public void drawButtonFade(
             float x, float y, float width, float height,
             int scale, boolean hovered

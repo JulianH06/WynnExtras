@@ -50,10 +50,8 @@ public class SpellHiderMappings {
 
     public SpellNamespace getSpellMapping(Identifier id) {
         SpellData fromPath = SpellHider.getFromPath(id.getPath());
-        if (fromPath == null) {
-            WynnExtras.LOGGER.warn("the return value of \"julianh06.wynnextras.features.spellhider.SpellHider.getFromPath(String)\" is null");
-            return null;
-        }
+        if (fromPath == null) return null;
+
         return idMappings.get(fromPath.getHash());
     }
 
