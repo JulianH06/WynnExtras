@@ -174,7 +174,7 @@ public class WynncraftApiHandler {
                     return null;
                 }
                 String body = response.body();
-                if (body == null || !body.trim().startsWith("{")) {
+                if (body == null || !body.trim().startsWith("[{")) {
                     System.err.println("Invalid API response for " + className + ": " + body);
                     return null;
                 }
@@ -1040,10 +1040,10 @@ public class WynncraftApiHandler {
                 .registerTypeAdapter(ApiAspect.Icon.class, new ApiAspect.IconDeserializer())
                 .create();
 
-        Type mapType = new TypeToken<Map<String, ApiAspect>>() {}.getType();
-        Map<String, ApiAspect> aspectMap = gson.fromJson(json, mapType);
+        Type mapType = new TypeToken<List<ApiAspect>>() {}.getType();
+        List<ApiAspect> aspectList = gson.fromJson(json, mapType);
 
-        return new ArrayList<>(aspectMap.values());
+        return aspectList;
     }
 
     private static AbilityMapData parseAbilityMapData(String json) {
