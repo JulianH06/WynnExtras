@@ -25,7 +25,9 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -50,6 +52,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
     private final WynnExtrasConfig config;
 
     // ==================== STATE ====================
+    private static int lastSelectedCategory = 0;
+    private static double lastScrollTarget = 0;
+    private static final Map<String, Boolean> lastExpandedSubs = new HashMap<>();
+
     private int selectedCategory = 0;
     private int selectedCategoryColor = 0;
     private final List<Category> categories = new ArrayList<>();
@@ -723,7 +729,18 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
     // ==================== SCREEN LIFECYCLE ====================
     @Override
     protected void init() {
+        selectedCategory = MathHelper.clamp(lastSelectedCategory, 0, categories.size() - 1);
+        for (Category cat : categories) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub) {
+                    Boolean saved = lastExpandedSubs.get(cat.name + "/" + sub.name);
+                    if (saved != null) sub.expanded = saved;
+                }
+            }
+        }
         updateMaxScroll();
+        scrollTarget = MathHelper.clamp(lastScrollTarget, 0, maxScroll);
+        scrollOffset = scrollTarget;
     }
 
     private void updateMaxScroll() {
@@ -1456,6 +1473,15 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     @Override
     public void close() {
+        lastSelectedCategory = selectedCategory;
+        lastScrollTarget = scrollTarget;
+        for (Category cat : categories) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub) {
+                    lastExpandedSubs.put(cat.name + "/" + sub.name, sub.expanded);
+                }
+            }
+        }
         client.setScreen(parent);
     }
 }
