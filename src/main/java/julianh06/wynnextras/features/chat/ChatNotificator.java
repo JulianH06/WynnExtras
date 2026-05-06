@@ -53,7 +53,7 @@ public class ChatNotificator {
     private static final String[] BOMB_EXCLUDE = {
             "shout", "combat level", "storm", "wynnextras",
             // Cosmetic / non-server-bomb references that mention "bomb" but aren't an actual bomb-active announcement.
-            "item bomb", "love bomb", "smoke bomb", "party bomb", "confetti", "glitter", "arrow bomb"
+            "item bomb", "love bomb", "smoke bomb", "party bomb", "confetti", "glitter", "arrow bomb", "dxp weekend", "dxp month"
     };
 
     private static void notify(Text message) {

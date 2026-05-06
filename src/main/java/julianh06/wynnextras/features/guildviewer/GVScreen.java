@@ -140,10 +140,11 @@ public class GVScreen extends WEScreen {
         PVScreen.mouseX = mouseX;
         PVScreen.mouseY = mouseY;
 
+        ui.drawBackground();
+
         context.getMatrices().pushMatrix();
         context.getMatrices().scale((float) matrixScale, (float) matrixScale);
 
-        ui.drawBackground();
         backgroundImageWidget.draw(context, mouseX, mouseY, delta, ui);
         updateValues();
         updateVisibleListRange();
@@ -217,8 +218,7 @@ public class GVScreen extends WEScreen {
         ui.drawCenteredText("Level " + GV.currentGuildData.level, xStart + 285, yStart + 590);
         PVScreen.DarkModeToggleWidget.drawImageWithFade(xpbarbackground_dark, xpbarbackground, xStart + 66, yStart + 540, 435, 30, ui);
 
-        context.enableScissor((int)(ui.sx(xStart + 66) * matrixScale), (int)(ui.sy(yStart + 540) * matrixScale), (int)(ui.sx(xStart + 66 + 435 * (GV.currentGuildData.xpPercent / 100f)) * matrixScale), (int)(ui.sy(yStart + 540 + 35) * matrixScale));
-        ui.drawImage(xpbarprogress, xStart + 66, yStart + 540, 435, 30);
+        context.enableScissor((int) ui.sx(xStart + 66), (int) ui.sy(yStart + 540), (int) ui.sx(xStart + 66 + 435 * (GV.currentGuildData.xpPercent / 100f)), (int) ui.sy(yStart + 540 + 35));ui.drawImage(xpbarprogress, xStart + 66, yStart + 540, 435, 30);
         context.disableScissor();
 
         PVScreen.DarkModeToggleWidget.drawImageWithFade(xpbarborder_dark, xpbarborder, xStart + 66, yStart + 540, 435, 30, ui);
@@ -308,7 +308,7 @@ public class GVScreen extends WEScreen {
 
         int count = 0;
 
-        context.enableScissor(0, (int)(ui.sy(yStart + 50) * matrixScale), MinecraftClient.getInstance().getWindow().getScaledWidth(), (int)(ui.sy(yStart + 738) * matrixScale));
+        context.enableScissor(0, (int) ui.sy(yStart + 50), getLogicalWidth(), (int) ui.sy(yStart + 738));
 
         ui.drawCenteredText("★★★★★ OWNER ★★★★★", textX, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;

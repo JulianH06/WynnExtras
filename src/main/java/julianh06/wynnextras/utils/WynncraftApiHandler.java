@@ -3,6 +3,7 @@ package julianh06.wynnextras.utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
@@ -967,9 +968,21 @@ public class WynncraftApiHandler {
     }
 
     private static Map<String, JsonObject> parseItemDatabase(String json) {
+        JsonElement root = JsonParser.parseString(json);
+        if (root.isJsonArray()) {
+            Map<String, JsonObject> result = new HashMap<>();
+            for (JsonElement el : root.getAsJsonArray()) {
+                JsonObject obj = el.getAsJsonObject();
+                String name = obj.has("internalName") ? obj.get("internalName").getAsString()
+                            : obj.has("displayName")  ? obj.get("displayName").getAsString()
+                            : null;
+                if (name != null) result.put(name, obj);
+            }
+            return result;
+        }
         Gson gson = new Gson();
         Type mapType = new TypeToken<Map<String, JsonObject>>() {}.getType();
-        return gson.fromJson(json, mapType);
+        return gson.fromJson(root, mapType);
     }
 
     public static CompletableFuture<AbilityMapData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {

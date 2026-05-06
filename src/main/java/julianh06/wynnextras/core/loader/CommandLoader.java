@@ -287,19 +287,19 @@ public class CommandLoader implements WELoader {
                             )
             );
 
-            dispatcher.register(
-                    ClientCommandManager.literal("ri")
-                            .executes(ctx -> { sendRaidInfo(McUtils.playerName()); return 1; })
-                            .then(ClientCommandManager.argument("player", StringArgumentType.word())
-                                    .executes(ctx -> { sendRaidInfo(StringArgumentType.getString(ctx, "player")); return 1; }))
-            );
-
-            dispatcher.register(
-                    ClientCommandManager.literal("stats")
-                            .executes(ctx -> { sendStats(McUtils.playerName()); return 1; })
-                            .then(ClientCommandManager.argument("player", StringArgumentType.word())
-                                    .executes(ctx -> { sendStats(StringArgumentType.getString(ctx, "player")); return 1; }))
-            );
+//            dispatcher.register(
+//                    ClientCommandManager.literal("ri")
+//                            .executes(ctx -> { sendRaidInfo(McUtils.playerName()); return 1; })
+//                            .then(ClientCommandManager.argument("player", StringArgumentType.word())
+//                                    .executes(ctx -> { sendRaidInfo(StringArgumentType.getString(ctx, "player")); return 1; }))
+//            );
+//
+//            dispatcher.register(
+//                    ClientCommandManager.literal("stats")
+//                            .executes(ctx -> { sendStats(McUtils.playerName()); return 1; })
+//                            .then(ClientCommandManager.argument("player", StringArgumentType.word())
+//                                    .executes(ctx -> { sendStats(StringArgumentType.getString(ctx, "player")); return 1; }))
+//            );
 
             dispatcher.register(
                     ClientCommandManager.literal("gv")
@@ -658,127 +658,127 @@ public class CommandLoader implements WELoader {
         }
     }
 
-    private static void sendRaidInfo(String playerName) {
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Fetching raid info for §e" + playerName + "§7..."));
-        MinecraftClient mc = MinecraftClient.getInstance();
-        // Prefer the fullResult endpoint when we have an API key so we get the richest data;
-        // fall back to the basic endpoint which returns globalData without authentication.
-        boolean useFull = WynncraftApiHandler.INSTANCE.API_KEY != null;
-        WynncraftApiHandler.fetchPlayerData(playerName, useFull).thenAccept(data -> mc.execute(() -> {
-            if (data == null || data.getUsername() == null) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo data found for " + playerName + " (API returned empty or error)."));
-                return;
-            }
-            Raids raids = (data.getGlobalData() != null) ? data.getGlobalData().getRaids() : null;
-            Map<String, Integer> list;
-            int total;
-            if (raids != null && raids.getList() != null) {
-                list = raids.getList();
-                total = raids.getTotal();
-            } else {
-                // Fallback: aggregate raid completions from per-character data.
-                list = new HashMap<>();
-                total = 0;
-                if (data.getCharacters() != null) {
-                    for (CharacterData ch : data.getCharacters().values()) {
-                        if (ch.getRaids() == null) continue;
-                        total += ch.getRaids().getTotal();
-                        if (ch.getRaids().getList() != null) {
-                            for (Map.Entry<String, Integer> e : ch.getRaids().getList().entrySet()) {
-                                list.merge(e.getKey(), e.getValue(), Integer::sum);
-                            }
-                        }
-                    }
-                }
-            }
-            if (list.isEmpty() && total == 0) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                        "§cNo raid data returned by the API. Run §e/we apikey§c for info on setting an API key."));
-                return;
-            }
-            int twp = list.getOrDefault("The Wartorn Palace", 0);
-            if (twp == 0) twp = list.getOrDefault("unknown", 0);
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("§6§l").append(data.getUsername()).append("§r §7— §eTotal: §f").append(total).append("\n");
-            sb.append("§7NOTG: §f").append(list.getOrDefault("Nest of the Grootslangs", 0));
-            sb.append(" §7| NOL: §f").append(list.getOrDefault("Orphion's Nexus of Light", 0));
-            sb.append(" §7| TCC: §f").append(list.getOrDefault("The Canyon Colossus", 0));
-            sb.append("\n§7TNA: §f").append(list.getOrDefault("The Nameless Anomaly", 0));
-            sb.append(" §7| TWP: §f").append(twp);
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
-        })).exceptionally(ex -> {
-            mc.execute(() -> McUtils.sendMessageToClient(
-                    WynnExtras.addWynnExtrasPrefix("§cError fetching data: " + ex.getMessage())));
-            return null;
-        });
-    }
-
-    private static void sendStats(String playerName) {
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Fetching stats for §e" + playerName + "§7..."));
-        MinecraftClient mc = MinecraftClient.getInstance();
-        WynncraftApiHandler.fetchPlayerData(playerName).thenAccept(data -> mc.execute(() -> {
-            if (data == null || data.getUsername() == null) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                        "§cNo data for " + playerName + ". If this is an authenticated request (fullResult), your API key may be missing/invalid. Run §e/we apikey§c for info."));
-                return;
-            }
-            StringBuilder sb = new StringBuilder();
-            int charCount = data.getCharacters() != null ? data.getCharacters().size() : 0;
-            sb.append("§6§l").append(data.getUsername()).append("§r §7— ").append(charCount).append(" characters");
-            if (data.getGlobalData() != null && data.getGlobalData().getRaids() != null) {
-                sb.append(" §7| Raids: §f").append(data.getGlobalData().getRaids().getTotal());
-            }
-            sb.append("\n");
-
-            if (data.getCharacters() == null || data.getCharacters().isEmpty()) {
-                sb.append("§7(per-character data not in response — run §e/we apikey§7 for info on setting an API key)");
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
-                return;
-            }
-
-            List<Map.Entry<String, CharacterData>> sorted = new ArrayList<>(data.getCharacters().entrySet());
-            sorted.sort((a, b) -> Integer.compare(b.getValue().getLevel(), a.getValue().getLevel()));
-
-            int i = 0;
-            for (Map.Entry<String, CharacterData> e : sorted) {
-                CharacterData ch = e.getValue();
-                String uuid = e.getKey();
-                String className = ch.getType() != null ? formatClassName(ch.getType()) : "?";
-
-                sb.append("§e").append(className).append(" §7Lv§f").append(ch.getLevel())
-                  .append(" §7(Total §f").append(ch.getTotalLevel()).append("§7)");
-
-                // Raids completed
-                if (ch.getRaids() != null) {
-                    sb.append(" §7Raids:§f").append(ch.getRaids().getTotal());
-                }
-
-                // Profession summary - show highest 3
-                if (ch.getProfessions() != null && !ch.getProfessions().isEmpty()) {
-                    List<Map.Entry<String, Profession>> profs = new ArrayList<>(ch.getProfessions().entrySet());
-                    profs.sort((a, b) -> Integer.compare(b.getValue().getLevel(), a.getValue().getLevel()));
-                    sb.append(" §7Profs: ");
-                    int shown = 0;
-                    for (Map.Entry<String, Profession> p : profs) {
-                        if (shown >= 3) break;
-                        if (p.getValue().getLevel() <= 0) continue;
-                        if (shown > 0) sb.append("§7,");
-                        sb.append("§f").append(p.getKey(), 0, Math.min(4, p.getKey().length()))
-                          .append(" §f").append(p.getValue().getLevel());
-                        shown++;
-                    }
-                }
-                sb.append("\n");
-                if (++i >= 10) break; // cap at 10 chars so chat doesn't explode
-            }
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
-        })).exceptionally(ex -> {
-            mc.execute(() -> McUtils.sendMessageToClient(
-                    WynnExtras.addWynnExtrasPrefix("§cError fetching data: " + ex.getMessage())));
-            return null;
-        });
-    }
+//    private static void sendRaidInfo(String playerName) {
+//        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Fetching raid info for §e" + playerName + "§7..."));
+//        MinecraftClient mc = MinecraftClient.getInstance();
+//        // Prefer the fullResult endpoint when we have an API key so we get the richest data;
+//        // fall back to the basic endpoint which returns globalData without authentication.
+//        boolean useFull = WynncraftApiHandler.INSTANCE.API_KEY != null;
+//        WynncraftApiHandler.fetchPlayerData(playerName, useFull).thenAccept(data -> mc.execute(() -> {
+//            if (data == null || data.getUsername() == null) {
+//                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo data found for " + playerName + " (API returned empty or error)."));
+//                return;
+//            }
+//            Raids raids = (data.getGlobalData() != null) ? data.getGlobalData().getRaids() : null;
+//            Map<String, Integer> list;
+//            int total;
+//            if (raids != null && raids.getList() != null) {
+//                list = raids.getList();
+//                total = raids.getTotal();
+//            } else {
+//                // Fallback: aggregate raid completions from per-character data.
+//                list = new HashMap<>();
+//                total = 0;
+//                if (data.getCharacters() != null) {
+//                    for (CharacterData ch : data.getCharacters().values()) {
+//                        if (ch.getRaids() == null) continue;
+//                        total += ch.getRaids().getTotal();
+//                        if (ch.getRaids().getList() != null) {
+//                            for (Map.Entry<String, Integer> e : ch.getRaids().getList().entrySet()) {
+//                                list.merge(e.getKey(), e.getValue(), Integer::sum);
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//            if (list.isEmpty() && total == 0) {
+//                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+//                        "§cNo raid data returned by the API. Run §e/we apikey§c for info on setting an API key."));
+//                return;
+//            }
+//            int twp = list.getOrDefault("The Wartorn Palace", 0);
+//            if (twp == 0) twp = list.getOrDefault("unknown", 0);
+//
+//            StringBuilder sb = new StringBuilder();
+//            sb.append("§6§l").append(data.getUsername()).append("§r §7— §eTotal: §f").append(total).append("\n");
+//            sb.append("§7NOTG: §f").append(list.getOrDefault("Nest of the Grootslangs", 0));
+//            sb.append(" §7| NOL: §f").append(list.getOrDefault("Orphion's Nexus of Light", 0));
+//            sb.append(" §7| TCC: §f").append(list.getOrDefault("The Canyon Colossus", 0));
+//            sb.append("\n§7TNA: §f").append(list.getOrDefault("The Nameless Anomaly", 0));
+//            sb.append(" §7| TWP: §f").append(twp);
+//            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
+//        })).exceptionally(ex -> {
+//            mc.execute(() -> McUtils.sendMessageToClient(
+//                    WynnExtras.addWynnExtrasPrefix("§cError fetching data: " + ex.getMessage())));
+//            return null;
+//        });
+//    }
+//
+//    private static void sendStats(String playerName) {
+//        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Fetching stats for §e" + playerName + "§7..."));
+//        MinecraftClient mc = MinecraftClient.getInstance();
+//        WynncraftApiHandler.fetchPlayerData(playerName).thenAccept(data -> mc.execute(() -> {
+//            if (data == null || data.getUsername() == null) {
+//                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+//                        "§cNo data for " + playerName + ". If this is an authenticated request (fullResult), your API key may be missing/invalid. Run §e/we apikey§c for info."));
+//                return;
+//            }
+//            StringBuilder sb = new StringBuilder();
+//            int charCount = data.getCharacters() != null ? data.getCharacters().size() : 0;
+//            sb.append("§6§l").append(data.getUsername()).append("§r §7— ").append(charCount).append(" characters");
+//            if (data.getGlobalData() != null && data.getGlobalData().getRaids() != null) {
+//                sb.append(" §7| Raids: §f").append(data.getGlobalData().getRaids().getTotal());
+//            }
+//            sb.append("\n");
+//
+//            if (data.getCharacters() == null || data.getCharacters().isEmpty()) {
+//                sb.append("§7(per-character data not in response — run §e/we apikey§7 for info on setting an API key)");
+//                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
+//                return;
+//            }
+//
+//            List<Map.Entry<String, CharacterData>> sorted = new ArrayList<>(data.getCharacters().entrySet());
+//            sorted.sort((a, b) -> Integer.compare(b.getValue().getLevel(), a.getValue().getLevel()));
+//
+//            int i = 0;
+//            for (Map.Entry<String, CharacterData> e : sorted) {
+//                CharacterData ch = e.getValue();
+//                String uuid = e.getKey();
+//                String className = ch.getType() != null ? formatClassName(ch.getType()) : "?";
+//
+//                sb.append("§e").append(className).append(" §7Lv§f").append(ch.getLevel())
+//                  .append(" §7(Total §f").append(ch.getTotalLevel()).append("§7)");
+//
+//                // Raids completed
+//                if (ch.getRaids() != null) {
+//                    sb.append(" §7Raids:§f").append(ch.getRaids().getTotal());
+//                }
+//
+//                // Profession summary - show highest 3
+//                if (ch.getProfessions() != null && !ch.getProfessions().isEmpty()) {
+//                    List<Map.Entry<String, Profession>> profs = new ArrayList<>(ch.getProfessions().entrySet());
+//                    profs.sort((a, b) -> Integer.compare(b.getValue().getLevel(), a.getValue().getLevel()));
+//                    sb.append(" §7Profs: ");
+//                    int shown = 0;
+//                    for (Map.Entry<String, Profession> p : profs) {
+//                        if (shown >= 3) break;
+//                        if (p.getValue().getLevel() <= 0) continue;
+//                        if (shown > 0) sb.append("§7,");
+//                        sb.append("§f").append(p.getKey(), 0, Math.min(4, p.getKey().length()))
+//                          .append(" §f").append(p.getValue().getLevel());
+//                        shown++;
+//                    }
+//                }
+//                sb.append("\n");
+//                if (++i >= 10) break; // cap at 10 chars so chat doesn't explode
+//            }
+//            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
+//        })).exceptionally(ex -> {
+//            mc.execute(() -> McUtils.sendMessageToClient(
+//                    WynnExtras.addWynnExtrasPrefix("§cError fetching data: " + ex.getMessage())));
+//            return null;
+//        });
+//    }
 
     private static String formatClassName(String type) {
         if (type == null || type.isEmpty()) return "?";
