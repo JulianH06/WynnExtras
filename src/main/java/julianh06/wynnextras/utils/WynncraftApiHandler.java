@@ -174,8 +174,7 @@ public class WynncraftApiHandler {
                     return null;
                 }
                 String body = response.body();
-                String trimmed = body == null ? "" : body.trim();
-                if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+                if (body == null || !body.trim().startsWith("[{")) {
                     System.err.println("Invalid API response for " + className + ": " + body);
                     return null;
                 }
@@ -232,14 +231,6 @@ public class WynncraftApiHandler {
     }
 
     public static CompletableFuture<PlayerData> fetchPlayerData(String playerName) {
-        return fetchPlayerData(playerName, true);
-    }
-
-    /**
-     * @param fullResult true → requests `?fullResult` (per-character data, requires API key);
-     *                   false → requests the summary (globalData only, no auth needed).
-     */
-    public static CompletableFuture<PlayerData> fetchPlayerData(String playerName, boolean fullResult) {
         return fetchUUID(playerName).thenCompose(rawUUID -> {
             if (rawUUID == null) {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§cPlayername is incorrect or unknown.")));
@@ -247,27 +238,23 @@ public class WynncraftApiHandler {
             }
 
             String formattedUUID = formatUUID(rawUUID);
-            String url = BASE_URL + formattedUUID + (fullResult ? "?fullResult" : "");
-            HttpRequest.Builder builder = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .GET();
-            if (INSTANCE.API_KEY != null) {
-                // Trim — in case a trailing newline/space got into the saved key.
-                builder.header("Authorization", "Bearer " + INSTANCE.API_KEY.trim());
+            HttpRequest request;
+
+            if (INSTANCE.API_KEY == null) {
+                request = HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL + formattedUUID + "?fullResult"))
+                    .GET()
+                    .build();
+            } else {
+                request = HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_URL + formattedUUID + "?fullResult"))
+                    .header("Authorization", "Bearer " + INSTANCE.API_KEY)
+                    .GET()
+                    .build();
             }
-            HttpRequest request = builder.build();
 
             return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(response -> {
-                        String body = response.body();
-                        int len = body == null ? 0 : body.length();
-                        // Always log status + body length + a snippet so empty/malformed responses are visible.
-                        WynnExtras.LOGGER.info("[fetchPlayerData] {} full={} status={} len={} keyHeader={} snippet={}",
-                                playerName, fullResult, response.statusCode(), len,
-                                INSTANCE.API_KEY != null,
-                                body == null ? "null" : body.substring(0, Math.min(300, len)).replaceAll("[\\r\\n]+", " "));
-                        return body;
-                    })
+                    .thenApply(HttpResponse::body)
                     .thenApply(WynncraftApiHandler::parsePlayerData);
         });
     }
@@ -1053,15 +1040,10 @@ public class WynncraftApiHandler {
                 .registerTypeAdapter(ApiAspect.Icon.class, new ApiAspect.IconDeserializer())
                 .create();
 
-        String trimmed = json.trim();
-        if (trimmed.startsWith("[")) {
-            Type listType = new TypeToken<List<ApiAspect>>() {}.getType();
-            return gson.fromJson(json, listType);
-        } else {
-            Type mapType = new TypeToken<Map<String, ApiAspect>>() {}.getType();
-            Map<String, ApiAspect> aspectMap = gson.fromJson(json, mapType);
-            return new ArrayList<>(aspectMap.values());
-        }
+        Type mapType = new TypeToken<List<ApiAspect>>() {}.getType();
+        List<ApiAspect> aspectList = gson.fromJson(json, mapType);
+
+        return aspectList;
     }
 
     private static AbilityMapData parseAbilityMapData(String json) {
