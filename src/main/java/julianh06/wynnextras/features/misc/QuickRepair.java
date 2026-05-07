@@ -139,7 +139,7 @@ public class QuickRepair extends WEMenuExtension {
             if (keyName == null) keyName = "?";
             String label = "Quick Repair [" + keyName.toUpperCase() + "]";
 
-            ui.drawButton(x, y, width, height, 4, hovered);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText(label, x + width / 2f, y + height / 2f, 1f);
         }
 

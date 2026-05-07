@@ -194,19 +194,22 @@ public class GambitsPage extends PageWidget{
     private void drawGambitPanel(int x, int y, int panelWidth, int panelHeight, GambitData.GambitEntry gambit) {
         int topHeight = 60;
 
-        if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
-            ui.drawNineSlice(x, y, panelWidth,
-                    topHeight, 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
+//        if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
+//            ui.drawNineSlice(x, y, panelWidth,
+//                    topHeight, 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
+//
+//            ui.drawNineSlice(x, y + topHeight, panelWidth,
+//                    panelHeight - topHeight, 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
+//        } else {
+//            ui.drawNineSlice(x, y, panelWidth,
+//                    topHeight, 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
+//
+//            ui.drawNineSlice(x, y + topHeight, panelWidth,
+//                    panelHeight - topHeight, 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
+//
+//        }
 
-            ui.drawNineSlice(x, y + topHeight, panelWidth,
-                    panelHeight - topHeight, 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
-        } else {
-            ui.drawNineSlice(x, y, panelWidth,
-                    topHeight, 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
-
-            ui.drawNineSlice(x, y + topHeight, panelWidth,
-                    panelHeight - topHeight, 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
-        }
+        ui.drawVanillaPanel(x, y, panelWidth, panelHeight, 18, 55);
 
         // Name
         String truncatedName = gambit.name;
@@ -306,7 +309,7 @@ public class GambitsPage extends PageWidget{
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Reload gambits", x + width / 2f, y + height / 2f);
         }
 

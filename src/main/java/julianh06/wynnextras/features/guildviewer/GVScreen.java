@@ -759,7 +759,7 @@ public class GVScreen extends WEScreen {
 
             int scale = 5;
 
-            ui.drawSliderBackground(x, y, width, height, scale, false);
+            ui.drawSliderBackground(x, y, width, height);
 
             if (PVScreen.DarkModeToggleWidget.fade > 0.001f) {
                 RenderUtils.drawRect(

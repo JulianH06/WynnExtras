@@ -738,7 +738,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Reload lootpools", x + width / 2f, y + height / 2f);
         }
 
@@ -801,7 +801,7 @@ public class LootrunLootPoolPage extends PageWidget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseX = mouseX;
-            ui.drawSliderBackground(x, y, width, height, 5, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawSliderBackground(x, y, width, height);
 
             float maxOffset = getMax.get();
             int buttonWidth = maxOffset == 0 ? width : 750;
@@ -844,7 +844,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 5, hovered || isHold, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+                ui.drawButton(x, y, width, height, hovered || isHold);
             }
 
             @Override

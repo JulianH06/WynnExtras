@@ -200,7 +200,7 @@ public class AspectScreen extends WEScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 12, hovered || currentPage == page);
+            ui.drawButton(x, y, width, height, hovered || currentPage == page);
             String name = page.name();
             if(page == Page.LootPools) name = "Loot Pools";
             if(page == Page.Lootruns) name = "Lootruns";

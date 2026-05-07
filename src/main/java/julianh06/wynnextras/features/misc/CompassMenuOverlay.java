@@ -180,7 +180,7 @@ public class CompassMenuOverlay extends WEMenuExtension {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(!(Models.Container.getCurrentContainer() instanceof CharacterInfoContainer)) return;
-            ui.drawButton(x, y, width, height, 4, hovered);
+            ui.drawButton(x, y, width, height, hovered);
             if (selectingWeapon) {
                 ui.drawCenteredText("Skip weapon selection", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 1f);
             } else {

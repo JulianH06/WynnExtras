@@ -638,7 +638,7 @@ public class AspectsPage extends PageWidget {
             if(mythicAndFabledWidget.mouseClicked(mx, my, button)) return true;
             if(legendaryWidget.mouseClicked(mx, my, button)) return true;
         }
-        
+
         for(TabSwitchButton tabSwitchButton : tabSwitchButtons) {
             if(tabSwitchButton.mouseClicked(mx, my, button)) return true;
         }
@@ -810,7 +810,7 @@ public class AspectsPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
 
             CustomColor textColor = CustomColor.fromHexString("FFFFFF");
             if(currentTab == tab) textColor = CustomColor.fromHexString("fca800");
@@ -829,7 +829,7 @@ public class AspectsPage extends PageWidget {
     private static class ProgressBarShowMaxWidget extends Widget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
 
             String modeText = progressBarShowMax ? "§a§lMax" : "§e§lUnlocked";
             ui.drawCenteredText(modeText, x + width / 2f, y + height / 2f);
@@ -847,7 +847,7 @@ public class AspectsPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Back to My Aspects", x + width / 2f, y + height / 2f);
         }
 
@@ -1082,7 +1082,7 @@ public class AspectsPage extends PageWidget {
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 currentMouseY = mouseY;
-                ui.drawSliderBackground(x, y, width, height, 5, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+                ui.drawSliderBackground(x, y, width, height);
 
                 int buttonHeight = 75;
                 int scrollAreaHeight = height - buttonHeight;
@@ -1124,7 +1124,7 @@ public class AspectsPage extends PageWidget {
 
                 @Override
                 protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                    ui.drawButton(x, y, width, height, 5, hovered || isHold, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+                    ui.drawButton(x, y, width, height, hovered || isHold);
                 }
 
                 @Override
@@ -1242,7 +1242,7 @@ public class AspectsPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Reload aspects", x + width / 2f, y + height / 2f);
         }
 

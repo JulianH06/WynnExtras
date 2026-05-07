@@ -54,7 +54,6 @@ import net.minecraft.item.Items;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -64,7 +63,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public class CraftingHelperOverlay extends WEMenuExtension {
-    private static final boolean registeredScroll = false;
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 50; // in ms
     public static float targetOffset = 0;
@@ -141,25 +139,6 @@ public class CraftingHelperOverlay extends WEMenuExtension {
     private static int currentScreenH = 0;
     private static int currentXStart = 0;
     private static int currentWidgetWidth = 200;
-
-    Identifier l = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/l.png");
-    Identifier r = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/r.png");
-    Identifier t = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/t.png");
-    Identifier b = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/b.png");
-    Identifier tl = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/tl.png");
-    Identifier tr = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/tr.png");
-    Identifier bl = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/bl.png");
-    Identifier br = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/br.png");
-
-    Identifier ld = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/l.png");
-    Identifier rd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/r.png");
-    Identifier td = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/t.png");
-    Identifier bd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/b.png");
-    Identifier tld = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/tl.png");
-    Identifier trd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/tr.png");
-    Identifier bld = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/bl.png");
-    Identifier brd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/br.png");
-
 
     ProfBombWidget profSpeedBombWidget;
     ProfBombWidget profXpBombWidget;
@@ -687,6 +666,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             for (Slot slot : McUtils.containerMenu().slots) {
                 try {
                     if (!(slot.inventory instanceof PlayerInventory)) continue;
+                    if (slot.getStack().getCustomName() == null) continue;
                     String slotName = slot.getStack().getCustomName().getString();
                     if (slotName.contains(matName)) {
                         for (int i = 0; i < amount; i++) {
@@ -719,6 +699,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             for (Slot slot : McUtils.containerMenu().slots) {
                 try {
                     if (!(slot.inventory instanceof PlayerInventory)) continue;
+                    if (slot.getStack().getCustomName() == null) continue;
                     String slotName = slot.getStack().getCustomName().getString();
                     if (slotName.contains(ingName)) {
                         WB_CLICK_QUEUE.add(slot.id);
@@ -793,35 +774,6 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         ContainerUtils.clickOnSlot(next, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
         wbLastClick = now;
         wbClicksDone++;
-    }
-
-    private static boolean isProfSpeedBombActive() {
-        try {
-            String currentWorld = Models.WorldState.getCurrentWorldName();
-            for (BombInfo bomb : Models.Bomb.getBombBells()) {
-                if (bomb.bomb() == BombType.PROFESSION_SPEED && bomb.isActive() && bomb.server().equals(currentWorld)) {
-                    return true;
-                }
-            }
-        } catch (Exception ignored) {}
-        return false;
-    }
-
-    private static String formatMissing(List<String> missingItems) {
-        if (missingItems.isEmpty()) return "";
-        Map<String, Integer> counts = new LinkedHashMap<>();
-        for (String item : missingItems) {
-            counts.merge(item, 1, Integer::sum);
-        }
-        StringBuilder sb = new StringBuilder("Missing: ");
-        boolean first = true;
-        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
-            if (!first) sb.append(", ");
-            if (entry.getValue() > 1) sb.append(entry.getValue()).append("x ");
-            sb.append(entry.getKey());
-            first = false;
-        }
-        return sb.toString();
     }
 
     private static void saveLastCraft(List<String> matNames, List<Integer> matCounts, List<String> ingNames) {
@@ -922,6 +874,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             for (Slot slot : McUtils.containerMenu().slots) {
                 try {
                     if (!(slot.inventory instanceof PlayerInventory)) continue;
+                    if(slot.getStack().getCustomName() == null) continue;
                     if (slot.getStack().getCustomName().getString().contains(matName)) {
                         for (int i = 0; i < amount; i++) {
                             WB_CLICK_QUEUE.add(slot.id);
@@ -937,19 +890,16 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             String ingName = lastIngredientNames.get(i);
             if (ingName == null) continue;
 
-            boolean found = false;
             for (Slot slot : McUtils.containerMenu().slots) {
                 try {
                     if (!(slot.inventory instanceof PlayerInventory)) continue;
+                    if (slot.getStack().getCustomName() == null) continue;
                     String slotName = slot.getStack().getCustomName().getString();
                     if (slotName.contains(ingName)) {
                         WB_CLICK_QUEUE.add(slot.id);
-                        found = true;
                         break;
                     }
                 } catch (Exception ignored) {}
-            }
-            if (!found) {
             }
         }
 
@@ -1020,8 +970,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         };
     }
 
-    private static void drawRecipe(DrawContext ctx, int x, int y, int width, int height, int level,
-                                   IRecipeData recipe, boolean hovered, UIUtils ui) {
+    private static void drawRecipe(DrawContext ctx, int x, int y, int height, int level,
+                                   IRecipeData recipe, UIUtils ui) {
         if (recipe == null) return;
 
         List<Pair<IMaterial, Integer>> materials = recipe.getMaterials(level);
@@ -1040,7 +990,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
     private static void drawMaterialIcon(DrawContext ctx, UIUtils ui, IMaterial material, float x, float y, float size) {
         ItemStack stack = buildMaterialStack(material);
         if (shouldUseVcit(stack)) {
-            drawItemScaled(ctx, ui, stack, x, y, size);
+            drawItemScaled(ctx, ui, stack, size);
             return;
         }
         ui.drawImage(material.getTexture(), x, y, size, size);
@@ -1087,12 +1037,9 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         return VcitCompat.hasModel(stack);
     }
 
-    private static void drawItemScaled(DrawContext ctx, UIUtils ui, ItemStack stack, float x, float y, float size) {
-        float px = ui.sx(x);
-        float py = ui.sy(y);
+    private static void drawItemScaled(DrawContext ctx, UIUtils ui, ItemStack stack, float size) {
         float scale = (float) ui.sw(size) / 16.0f;
         ctx.getMatrices().pushMatrix();
-        //ctx.getMatrices().translate(px, py, 100.0f);
         ctx.getMatrices().scale(scale, scale);
         ctx.drawItem(stack, 0, 0);
         ctx.getMatrices().popMatrix();
@@ -1164,7 +1111,6 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             int widgetHeight = 34;
             int widgetAmount = 14;
 
-            boolean big = type == ProfessionType.ALCHEMISM || type == ProfessionType.COOKING || type == ProfessionType.SCRIBING;
             targetOffset = ui == null ? 0 : Math.clamp(targetOffset, 0, maxOffset);
 
             float speed = 0.3f;
@@ -1247,9 +1193,9 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 //ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromHexString("FFFFFF"));
-                ui.drawButton(x, y, width, height, 6, hovered && helperWidget.hovered, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
-                drawRecipe(ctx, x, y, width, height, level, recipeData, hovered, ui);
-                ui.drawLine(x + width * 0.8f, y + 2, x + width * 0.8f, y + height - 3, 1f, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode ? hovered ? CustomColor.fromHexString("6a6a71") : CustomColor.fromHexString("444448") : hovered ? CustomColor.fromHexString("c5b490") : CustomColor.fromHexString("a68a73"));
+                ui.drawButton(x, y, width, height, hovered && helperWidget.hovered);
+                drawRecipe(ctx, x, y, height, level, recipeData, ui);
+                ui.drawLine(x + width * 0.8f, y + 2, x + width * 0.8f, y + height - 3, 1f, UIUtils.getVanillaSeparatorColor(hovered && helperWidget.hovered));
                 if (level < 100) {
                     ui.drawCenteredText(String.valueOf(Math.max(1, level)), x + width * 0.9f, y + height / 4f + 1, 0.85f);
                     ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f, 0.85f);
@@ -1260,9 +1206,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
                     ui.drawCenteredText(String.valueOf(level + 4), x + width * 0.9f, y + 3 * height / 4f - 1, 0.85f);
                 }
 
-                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
-
-                ProfessionType profession = container.getProfessionType();
+                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
 
                 checkClick();
             }
@@ -1271,12 +1215,10 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             protected boolean onClick(int button) {
                 if (!helperWidget.hovered) return false;
 
-                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container))
+                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer))
                     return false;
 
                 statusMessage = "";
-
-                ProfessionType profession = container.getProfessionType();
 
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 
@@ -1284,8 +1226,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
                 if (materials.isEmpty() || materials.size() < 2) return true;
 
-                clickMaterial(materials.getFirst(), true);
-                clickMaterial(materials.get(1), false);
+                clickMaterial(materials.getFirst());
+                clickMaterial(materials.get(1));
 
                 // Save for "Reuse Last" (recipe clicks only place materials, no ingredients)
                 List<String> matNames = new ArrayList<>();
@@ -1299,7 +1241,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
                 return true;
             }
 
-            private void clickMaterial(Pair<IMaterial, Integer> material, boolean isFirstMaterial) {
+            private void clickMaterial(Pair<IMaterial, Integer> material) {
                 int materialAmount = material.getSecond();
 
                 List<Slot> slots = McUtils.containerMenu().slots;
@@ -1309,7 +1251,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
                 for (Slot slot : slots) {
                     try {
                         if (!(slot.inventory instanceof PlayerInventory)) continue;
-
+                        if(slot.getStack().getCustomName() == null) continue;
                         if (slot.getStack().getCustomName().getString().contains(material.getFirst().getName())) {
                             canClick = true;
                             for (int i = 0; i < materialAmount; i++) {
@@ -1329,14 +1271,18 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             }
 
             private void checkClick() {
-                if (McUtils.containerMenu().getSlot(0).getStack().getCustomName() == null ||
-                        McUtils.containerMenu().getSlot(9).getStack().getCustomName() == null) return;
+                if(McUtils.containerMenu().getSlot(0) == null) return;
+                if(McUtils.containerMenu().getSlot(9) == null) return;
 
-                if (McUtils.containerMenu().getSlot(0).getStack().getCustomName().getString() == null ||
-                        McUtils.containerMenu().getSlot(9).getStack().getCustomName().getString() == null) return;
+                ItemStack stackSlot0 = McUtils.containerMenu().getSlot(0).getStack();
+                ItemStack stackSlot9 = McUtils.containerMenu().getSlot(9).getStack();
 
-                if ((!McUtils.containerMenu().getSlot(0).getStack().getCustomName().getString().contains("Material Slot")
-                        || !McUtils.containerMenu().getSlot(9).getStack().getCustomName().getString().contains("Material Slot")) && !isClicking)
+                if (stackSlot0.getCustomName() == null) return;
+                if (stackSlot9.getCustomName() == null) return;
+
+                if (stackSlot0.getCustomName().getString() == null || stackSlot9.getCustomName().getString() == null) return;
+
+                if ((!stackSlot0.getCustomName().getString().contains("Material Slot") || !stackSlot9.getCustomName().getString().contains("Material Slot")) && !isClicking)
                     return;
 
                 isClicking = true;
@@ -1379,7 +1325,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if (state == null) return;
-            ui.drawButton(x, y - 2, width + 2, height + 3, 4, hovered, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
+            ui.drawButton(x, y - 2, width + 2, height + 3, hovered);
             if (index == state.ordinal() - 1)
                 ui.drawRectBorders(x + 2, y - 1, x + width, y + height - 1, CustomColor.fromHexString("FFFF00"));
             ui.drawCenteredText(text, x + width / 2f, y + height / 2f, 1f);
@@ -1443,7 +1389,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         private void setOffset(int mouseY, int maxOffset, int scrollAreaHeight) {
             float relativeY = mouseY - y - scrollBarButtonWidget.getHeight() / 2f;
-            relativeY = Math.max(-1.15f, Math.min(relativeY, scrollAreaHeight));
+            relativeY = Math.clamp(relativeY, -1.15f, scrollAreaHeight);
 
             float scrollPercent = relativeY / scrollAreaHeight;
 
@@ -1453,7 +1399,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-            ui.drawSliderBackground(x, y, width, height, 2, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
+            ui.drawSliderBackground(x, y, width, height);
 
             int buttonHeight = 17;
             int scrollAreaHeight = height - buttonHeight;
@@ -1498,7 +1444,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 2, hovered || isHeld, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
+                ui.drawButton(x, y, width, height, hovered || isHeld);
             }
 
             @Override
@@ -1526,8 +1472,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            boolean dark = WynnExtrasConfig.INSTANCE.craftingHelperDarkMode;
-            ui.drawButton(x, y, width, height, 3, hovered && !isDisabled && !isFilling, dark);
+            ui.drawButton(x, y, width, height, hovered && !isDisabled && !isFilling);
             if (isFilling) {
                 int progress = fillTotal > 0 ? fillDone * width / fillTotal : 0;
                 ui.drawRect(x, y, progress, height, CustomColor.fromHexString("2a7a2a").withAlpha(0.5f));

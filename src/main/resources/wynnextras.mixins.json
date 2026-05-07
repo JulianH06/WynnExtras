@@ -35,7 +35,8 @@
     "BankOverlay.DrawContextMixin",
     "BankOverlay.HandledScreenMixin",
     "Invoker.GetTransformationInvoker",
-    "Invoker.HandledScreenInvoker"
+    "Invoker.HandledScreenInvoker",
+    "Invoker.NativeImageInvoker"
   ],
   "mixins": [
     "CharacterModelMixin",

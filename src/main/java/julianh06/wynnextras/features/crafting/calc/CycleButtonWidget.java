@@ -36,7 +36,7 @@ public class CycleButtonWidget extends Widget {
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if (ui == null) return;
-        ui.drawButton(x, y, width, height, 12, hovered);
+        ui.drawButton(x, y, width, height, hovered);
 
         String display = "§7" + label + ": §f" + options[selectedIndex];
         ui.drawCenteredText(display, x + width / 2f, y + height / 2f,

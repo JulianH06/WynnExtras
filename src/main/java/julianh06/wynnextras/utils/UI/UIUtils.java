@@ -8,9 +8,11 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.mixin.Invoker.NativeImageInvoker;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.texture.NativeImage;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -369,11 +371,7 @@ public final class UIUtils {
         drawImage(texture, x, y, width, height, 1.0f);
     }
 
-    public void drawButton(float x, float y, float width, float height, int scale, boolean hovered) {
-        drawButton(x, y, width, height, scale, hovered, false);
-    }
-
-    public void drawButton(float x, float y, float width, float height, int scale, boolean hovered, boolean darkMode) {
+    public void drawButton(float x, float y, float width, float height, boolean hovered) {
         Identifier sprite = hovered
                 ? Identifier.ofVanilla("widget/button_highlighted")
                 : Identifier.ofVanilla("widget/button");
@@ -489,7 +487,7 @@ public final class UIUtils {
     }
 
 
-    public void drawSliderBackground(float x, float y, float width, float height, int scale, boolean darkMode) {
+    public void drawSliderBackground(float x, float y, float width, float height) {
         drawContext.drawGuiTexture(RenderPipelines.GUI_TEXTURED, Identifier.ofVanilla("widget/slider"), (int) sx(x), (int) sy(y), sw(width), sh(height));
     }
 
@@ -619,6 +617,59 @@ public final class UIUtils {
 
         int rgb = Color.HSBtoRGB(hue, 1.0f, 0.75f);
         return CustomColor.fromInt(rgb & 0xFFFFFF);
+    }
+
+    private static final Identifier BUTTON_TEX = Identifier.ofVanilla("textures/gui/sprites/widget/button.png");
+    private static final Identifier BUTTON_HIGHLIGHTED_TEX = Identifier.ofVanilla("textures/gui/sprites/widget/button_highlighted.png");
+
+    private static CustomColor cachedSepNormal = null;
+    private static CustomColor cachedSepHovered = null;
+
+    public static void clearSeparatorCache() {
+        cachedSepNormal = null;
+        cachedSepHovered = null;
+    }
+
+    /**
+     * Returns the separator line color derived from the resource pack's button sprites
+     * so it harmonises with drawButton on any texture pack.
+     * Normal: center of widget/button.png darkened slightly.
+     * Hovered: center of widget/button_highlighted.png darkened slightly.
+     */
+    public static CustomColor getVanillaSeparatorColor(boolean hovered) {
+        if (cachedSepNormal == null || cachedSepHovered == null) {
+            int[] normal = sampleSpriteCenter(BUTTON_TEX);
+            int[] highlighted = sampleSpriteCenter(BUTTON_HIGHLIGHTED_TEX);
+            if (normal == null) normal = new int[]{166, 138, 115};       // #a68a73 fallback
+            if (highlighted == null) highlighted = normal;
+            cachedSepNormal = toColor(normal, 1f);
+            cachedSepHovered = toColor(highlighted, 1f);
+        }
+        return hovered ? cachedSepHovered : cachedSepNormal;
+    }
+
+    private static CustomColor toColor(int[] rgb, float factor) {
+        return CustomColor.fromHexString(String.format("%02X%02X%02X",
+                Math.min(255, (int)(rgb[0] * factor)),
+                Math.min(255, (int)(rgb[1] * factor)),
+                Math.min(255, (int)(rgb[2] * factor))));
+    }
+
+    // Reads the second-outermost pixel from the left edge of a GUI sprite using NativeImage.
+    // Returns [R, G, B] (0-255) or null on failure.
+    private static int[] sampleSpriteCenter(Identifier id) {
+        try {
+            var res = MinecraftClient.getInstance().getResourceManager().getResource(id);
+            if (res.isEmpty()) return null;
+            try (var is = res.get().getInputStream();
+                 NativeImage img = NativeImage.read(is)) {
+                // NativeImage.getColor is private; accessed via @Invoker mixin.
+                // Pixel format is ABGR (little-endian RGBA): lowest byte = R.
+                int c = ((NativeImageInvoker) (Object) img).invokeGetColor(1, img.getHeight() / 2);
+                return new int[]{c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF};
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 
 }

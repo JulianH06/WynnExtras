@@ -467,7 +467,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         float tbYPx = titleYPx + (titleHPx - tbHPx) / 2f;
         toggleLX = px(tbXPx); toggleLY = px(tbYPx); toggleLW = px(tbWPx); toggleLH = px(tbHPx);
         hoveredToggle = isInBounds(mouseX, mouseY, toggleLX, toggleLY, toggleLW, toggleLH);
-        ui.drawButton(toggleLX, toggleLY, toggleLW, toggleLH, 5, hoveredToggle);
+        ui.drawButton(toggleLX, toggleLY, toggleLW, toggleLH, hoveredToggle);
         ui.drawCenteredText("Vanilla", toggleLX + toggleLW / 2f, toggleLY + toggleLH / 2f,
                 CustomColor.fromHexString("AAAAAA"), 2f);
 
@@ -477,7 +477,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         float ctYPx = tbYPx;
         colorToggleLX = px(ctXPx); colorToggleLY = px(ctYPx); colorToggleLW = px(ctWPx); colorToggleLH = px(ctHPx);
         hoveredColorToggle = isInBounds(mouseX, mouseY, colorToggleLX, colorToggleLY, colorToggleLW, colorToggleLH);
-        ui.drawButton(colorToggleLX, colorToggleLY, colorToggleLW, colorToggleLH, 5, hoveredColorToggle);
+        ui.drawButton(colorToggleLX, colorToggleLY, colorToggleLW, colorToggleLH, hoveredColorToggle);
         boolean colored = WynnExtrasConfig.INSTANCE.classCardColoredAccents;
         ui.drawCenteredText(colored ? "§aColored" : "§7Brown",
                 colorToggleLX + colorToggleLW / 2f, colorToggleLY + colorToggleLH / 2f,
@@ -615,7 +615,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 hoveredSettingSlot = slots[i];
                 hoveredTooltip = getTooltipLines(stack);
             }
-            ui.drawButton(bx, by, bw, bh, 5, hovered);
+            ui.drawButton(bx, by, bw, bh, hovered);
             String label = truncate(cleanName(stack.getName().getString()), 14);
             ui.drawCenteredText(label, bx + bw / 2f, by + bh / 2f,
                     CustomColor.fromHexString("FFFFFF"), 1.7f);
@@ -678,7 +678,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 hoveredTooltip = getTooltipLines(stack);
             }
 
-            ui.drawButton(bx, by, bw, bh, 7, hovered);
+            ui.drawButton(bx, by, bw, bh, hovered);
 
             // Item icon
             ctx.getMatrices().pushMatrix();
@@ -702,7 +702,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         float backYPx = btnStartYPx + idx * (btnHPx + gapPx) + 8;
         backLX = px(backXPx); backLY = px(backYPx); backLW = px(backWPx); backLH = px(backHPx);
         hoveredBack = isInBounds(mouseX, mouseY, backLX, backLY, backLW, backLH);
-        ui.drawButton(backLX, backLY, backLW, backLH, 6, hoveredBack);
+        ui.drawButton(backLX, backLY, backLW, backLH, hoveredBack);
         ui.drawCenteredText("\u00A7c\u2190 Back", backLX + backLW / 2f, backLY + backLH / 2f,
                 CustomColor.fromHexString("FF6666"), 2.5f);
     }
@@ -769,7 +769,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 hoveredTooltip = getTooltipLines(stack);
             }
 
-            ui.drawButton(bx, by, bw, bh, 6, hovered);
+            ui.drawButton(bx, by, bw, bh, hovered);
 
             if (!empty) {
                 // Item icon centered in button
@@ -831,7 +831,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                     hoveredTooltip = getTooltipLines(stack);
                 }
 
-                ui.drawButton(bx, by, bw, bh, 5, hovered);
+                ui.drawButton(bx, by, bw, bh, hovered);
 
                 // Item icon centered
                 float iSc = (subBtnPx - 18) / 16f;
@@ -859,7 +859,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         float backYPx = gridStartYPx + backYOffset;
         backLX = px(backXPx); backLY = px(backYPx); backLW = px(backWPx); backLH = px(backHPx);
         hoveredBack = isInBounds(mouseX, mouseY, backLX, backLY, backLW, backLH);
-        ui.drawButton(backLX, backLY, backLW, backLH, 6, hoveredBack);
+        ui.drawButton(backLX, backLY, backLW, backLH, hoveredBack);
         ui.drawCenteredText("\u00A7c\u2190 Back", backLX + backLW / 2f, backLY + backLH / 2f,
                 CustomColor.fromHexString("FF6666"), 2.5f);
     }
