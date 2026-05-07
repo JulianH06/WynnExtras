@@ -661,10 +661,7 @@ public class CommandLoader implements WELoader {
     private static void sendRaidInfo(String playerName) {
         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Fetching raid info for §e" + playerName + "§7..."));
         MinecraftClient mc = MinecraftClient.getInstance();
-        // Prefer the fullResult endpoint when we have an API key so we get the richest data;
-        // fall back to the basic endpoint which returns globalData without authentication.
-        boolean useFull = WynncraftApiHandler.INSTANCE.API_KEY != null;
-        WynncraftApiHandler.fetchPlayerData(playerName, useFull).thenAccept(data -> mc.execute(() -> {
+        WynncraftApiHandler.fetchPlayerData(playerName).thenAccept(data -> mc.execute(() -> {
             if (data == null || data.getUsername() == null) {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo data found for " + playerName + " (API returned empty or error)."));
                 return;

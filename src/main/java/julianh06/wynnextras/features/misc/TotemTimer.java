@@ -257,7 +257,10 @@ public class TotemTimer {
                         : (c.totemTimerOwnOnly ? ("Totem: " + timeDisplay)
                         : (t.owner() + "'s Totem: " + timeDisplay));
 
-                int color = t.estimated() ? 0xFFAAAAAA : timeColor(t.timeText());
+                Integer override = WynnExtrasConfig.INSTANCE.hudColorOverrides.get("totem");
+                boolean useSolid = c.totemTimerSolidColor && override != null;
+                int color = t.estimated() ? 0xFFAAAAAA
+                        : (useSolid ? (override | 0xFF000000) : timeColor(t.timeText()));
 
                 int tw = mc.textRenderer.getWidth(line);
                 int th = mc.textRenderer.fontHeight;
