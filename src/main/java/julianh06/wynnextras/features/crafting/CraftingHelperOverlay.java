@@ -341,7 +341,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             }
         }
 
-        ui.drawVanillaPanel(xStart + 1.7f, yStart, widgetWidth, widgetHeight);
+        ui.drawVanillaPanel(xStart + 1.7f, yStart, widgetWidth, widgetHeight, 7, 9);
 
         int step = 38;
         int recipeWidgetAmount = 14;

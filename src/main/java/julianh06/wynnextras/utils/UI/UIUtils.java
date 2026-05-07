@@ -508,39 +508,57 @@ public final class UIUtils {
     private static final int VCP_BOTTOM = 214; // = 222 - VCP_BB
 
     public void drawVanillaPanel(float x, float y, float width, float height) {
+        drawVanillaPanel(x, y, width, height, VCP_BL, VCP_BR, VCP_BT, VCP_BB);
+    }
+
+    // bL/bR/bB: outer border thickness on left/right/bottom; bT: top (title area) thickness
+    public void drawVanillaPanel(float x, float y, float width, float height, int border) {
+        drawVanillaPanel(x, y, width, height, border, border, border, border);
+    }
+
+    public void drawVanillaPanel(float x, float y, float width, float height, int border, int topBorder) {
+        drawVanillaPanel(x, y, width, height, border, border, topBorder, border);
+    }
+
+    private void drawVanillaPanel(float x, float y, float width, float height, int bL, int bR, int bT, int bB) {
         int tw = VCP_TEX_W, th = VCP_TEX_H;
-        int bL = VCP_BL, bR = VCP_BR, bT = VCP_BT, bB = VCP_BB;
         int rX = VCP_RIGHT, bY = VCP_BOTTOM;
+        // Source sizes are fixed to the actual texture corner dimensions
+        int sBL = VCP_BL, sBR = VCP_BR, sBT = VCP_BT, sBB = VCP_BB;
 
         // Fill
         drawImage(VANILLA_CONTAINER_TEX, x+bL, y+bT, width-bL-bR, height-bT-bB, 40, 40, 1, 1, tw, th);
 
         // Corners — each split into 2 draws to skip the outermost 1×1 corner pixel (rounded outer corners)
-        drawImage(VANILLA_CONTAINER_TEX, x+1,         y,           bL-1, 1,    1,  0,  bL-1, 1,    tw, th); // TL top row (no corner px)
-        drawImage(VANILLA_CONTAINER_TEX, x,           y+1,         bL,   bT-1, 0,  1,  bL,   bT-1, tw, th); // TL rest
-        drawImage(VANILLA_CONTAINER_TEX, x+width-bR,  y,           bR-1, 1,    rX, 0,  bR-1, 1,    tw, th); // TR top row (no corner px)
-        drawImage(VANILLA_CONTAINER_TEX, x+width-bR,  y+1,         bR,   bT-1, rX, 1,  bR,   bT-1, tw, th); // TR rest
-        drawImage(VANILLA_CONTAINER_TEX, x+1,         y+height-1,  bL-1, 1,    1,  bY+bB-1, bL-1, 1, tw, th); // BL bottom row (no corner px)
-        drawImage(VANILLA_CONTAINER_TEX, x,           y+height-bB, bL,   bB-1, 0,  bY,      bL,   bB-1, tw, th); // BL rest
-        drawImage(VANILLA_CONTAINER_TEX, x+width-bR,  y+height-1,  bR-1, 1,    rX, bY+bB-1, bR-1, 1, tw, th); // BR bottom row (no corner px)
-        drawImage(VANILLA_CONTAINER_TEX, x+width-bR,  y+height-bB, bR,   bB-1, rX, bY,      bR,   bB-1, tw, th); // BR rest
+        // TL/TR corners are further split: outer dark frame (fixed) + title area (stretched separately)
+        drawImage(VANILLA_CONTAINER_TEX, x+1,         y,           bL-1, 1,      1,  0,   sBL-1, 1,       tw, th); // TL top row (no corner px)
+        drawImage(VANILLA_CONTAINER_TEX, x,           y+1,         bL,   sBL-1,  0,  1,   sBL,   sBL-1,   tw, th); // TL outer dark (fixed)
+        drawImage(VANILLA_CONTAINER_TEX, x,           y+sBL,       bL,   bT-sBL, 0,  sBL, sBL,   sBT-sBL, tw, th); // TL title area (stretched)
+        drawImage(VANILLA_CONTAINER_TEX, x+width-bR,  y,           bR-1, 1,      rX, 0,   sBR-1, 1,       tw, th); // TR top row (no corner px)
+        drawImage(VANILLA_CONTAINER_TEX, x+width-bR,  y+1,         bR,   sBR-1,  rX, 1,   sBR,   sBR-1,   tw, th); // TR outer dark (fixed)
+        drawImage(VANILLA_CONTAINER_TEX, x+width-bR,  y+sBL,       bR,   bT-sBL, rX, sBL, sBR,   sBT-sBL, tw, th); // TR title area (stretched)
+        drawImage(VANILLA_CONTAINER_TEX, x+1,         y+height-1,  bL-1, 1,    1,  bY+sBB-1, sBL-1, 1, tw, th); // BL bottom row (no corner px)
+        drawImage(VANILLA_CONTAINER_TEX, x,           y+height-bB, bL,   bB-1, 0,  bY,       sBL,   sBB-1, tw, th); // BL rest
+        drawImage(VANILLA_CONTAINER_TEX, x+width-bR,  y+height-1,  bR-1, 1,    rX, bY+sBB-1, sBR-1, 1, tw, th); // BR bottom row (no corner px)
+        drawImage(VANILLA_CONTAINER_TEX, x+width-bR,  y+height-bB, bR,   bB-1, rX, bY,       sBR,   sBB-1, tw, th); // BR rest
 
         // Outer frame edges (1px sample from uniform middle, excludes inner border strip)
-        drawImage(VANILLA_CONTAINER_TEX, x+bL,         y,              width-bL-bR, bT-3, 30,    0,     1, bT-3, tw, th); // top outer
-        drawImage(VANILLA_CONTAINER_TEX, x+bL,         y+height-bB+1,  width-bL-bR, bB-1, 30,    bY+1,  1, bB-1, tw, th); // bottom outer
-        drawImage(VANILLA_CONTAINER_TEX, x,            y+bT,           bL-1, height-bT-bB, 0,    30,    bL-1, 1, tw, th); // left outer
-        drawImage(VANILLA_CONTAINER_TEX, x+width-bR+1, y+bT,           bR-1, height-bT-bB, rX+1, 30,    bR-1, 1, tw, th); // right outer
+        drawImage(VANILLA_CONTAINER_TEX, x+bL,         y,              width-bL-bR, sBL,        30, 0,   1, sBL,       tw, th); // top outer dark (fixed)
+        drawImage(VANILLA_CONTAINER_TEX, x+bL,         y+sBL,          width-bL-bR, bT-3-sBL,   30, sBL, 1, sBT-3-sBL, tw, th); // top outer title (stretched)
+        drawImage(VANILLA_CONTAINER_TEX, x+bL,         y+height-bB+1,  width-bL-bR, bB-1,       30,    bY+1,  1, sBB-1, tw, th); // bottom outer
+        drawImage(VANILLA_CONTAINER_TEX, x,            y+bT,           bL-1, height-bT-bB,       0,    30,    sBL-1, 1, tw, th); // left outer
+        drawImage(VANILLA_CONTAINER_TEX, x+width-bR+1, y+bT,           bR-1, height-bT-bB,       rX+1, 30,    sBR-1, 1, tw, th); // right outer
 
         // Inner border lines (separate draws for easy adjustment)
-        drawImage(VANILLA_CONTAINER_TEX, x+bL+1, y+bT-3, width-bL-bR-2, 3, 30, bT-3, 1, 3, tw, th); // top inner border (1px shorter each side; ends covered by TL/TR inner)
-        drawImage(VANILLA_CONTAINER_TEX, x+bL,         y+height-bB,   width-bL-bR, 1, 30,   bY,   1, 1, tw, th); // bottom inner border
-        drawImage(VANILLA_CONTAINER_TEX, x+bL-1,       y+bT,          1, height-bT-bB, bL-1, 30,   1, 1, tw, th); // left inner border
+        drawImage(VANILLA_CONTAINER_TEX, x+bL+1, y+bT-3, width-bL-bR-2, 3, 30, sBT-3, 1, 3, tw, th); // top inner border (1px shorter each side; ends covered by TL/TR inner)
+        drawImage(VANILLA_CONTAINER_TEX, x+bL,         y+height-bB,   width-bL-bR, 1, 30,    bY,    1, 1, tw, th); // bottom inner border
+        drawImage(VANILLA_CONTAINER_TEX, x+bL-1,       y+bT,          1, height-bT-bB, sBL-1, 30,   1, 1, tw, th); // left inner border
         drawImage(VANILLA_CONTAINER_TEX, x+width-bR,   y+bT,          1, height-bT-bB-1, rX,   30,   1, 1, tw, th); // right inner border (1px shorter; last pixel covered by BR inner)
 
         // Inner corner rounding (TL/TR start at y+bT-3 to include the diagonal #4F342C pixel at x=8/167, y=16)
-        drawImage(VANILLA_CONTAINER_TEX, x+bL,          y+bT-3, 5, 7, bL,   bT-3, 5, 7, tw, th); // TL inner
-        drawImage(VANILLA_CONTAINER_TEX, x+width-bR-5,  y+bT-3, 5, 7, rX-5, bT-3, 5, 7, tw, th); // TR inner
-        drawImage(VANILLA_CONTAINER_TEX, x+bL-1,        y+height-bB-1, 5, 2, bL-1,  bY-1, 5, 2, tw, th); // BL inner
+        drawImage(VANILLA_CONTAINER_TEX, x+bL,          y+bT-3, 5, 7, sBL,   sBT-3, 5, 7, tw, th); // TL inner
+        drawImage(VANILLA_CONTAINER_TEX, x+width-bR-5,  y+bT-3, 5, 7, rX-5,  sBT-3, 5, 7, tw, th); // TR inner
+        drawImage(VANILLA_CONTAINER_TEX, x+bL-1,        y+height-bB-1, 5, 2, sBL-1,  bY-1, 5, 2, tw, th); // BL inner
         drawImage(VANILLA_CONTAINER_TEX, x+width-bR-5,  y+height-bB-1, 6, 2, rX-42,  bY-1, 6, 2, tw, th); // BR inner (width 6 covers rX col = right inner border last pixel)
     }
 
