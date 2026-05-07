@@ -341,13 +341,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             }
         }
 
-        if (WynnExtrasConfig.INSTANCE.craftingHelperDarkMode) {
-            ui.drawNineSlice(xStart + 1.7f, yStart, widgetWidth,
-                    widgetHeight, 11, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
-        } else {
-            ui.drawNineSlice(xStart + 1.7f, yStart, widgetWidth,
-                    widgetHeight, 11, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
-        }
+        ui.drawVanillaPanel(xStart + 1.7f, yStart, widgetWidth, widgetHeight);
 
         int step = 38;
         int recipeWidgetAmount = 14;
@@ -576,7 +570,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             int bTop = currentBlockTop;
             int bBottom = bTop + currentActualBlockH;
             if (x >= currentXStart && x <= currentXStart + currentWidgetWidth) {
-                if (y > bBottom - 6 && y <= bBottom) {
+                if (y >= bBottom - 6 && y <= bBottom + 3) {
                     resizingBottom = true;
                     resizeDragStartY = y;
                     resizeDragStartBlockHeight = currentActualBlockH;
