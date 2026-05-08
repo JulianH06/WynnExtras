@@ -358,6 +358,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(toggle("Estimate Out-of-Range", "Continue countdown when totem leaves render distance",
                                 () -> config.totemTimerEstimate, v -> config.totemTimerEstimate = v),
                         () -> config.totemTimerEnabled))
+                .add(visibleWhen(toggle("Solid Color", "Use the color set in /we gui instead of the time-based green→red gradient",
+                                () -> config.totemTimerSolidColor, v -> config.totemTimerSolidColor = v),
+                        () -> config.totemTimerEnabled))
                 .sub("Shaman Blood Sorrow Timer")
                 .add(toggle("Blood Sorrow Timer", "Show Blood Sorrow cooldown on HUD",
                         () -> config.bloodSorrowTimerEnabled, v -> config.bloodSorrowTimerEnabled = v))
