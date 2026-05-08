@@ -279,7 +279,7 @@ public class RaidChatNotifier {
         return formatTime(Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime());
     }
 
-    private static String formatTime(long millis) {
+    public static String formatTime(long millis) {
         long minutes = (millis / 1000) / 60;
         long seconds = (millis / 1000) % 60;
         long ms = millis % 1000;
@@ -641,6 +641,43 @@ public class RaidChatNotifier {
 
 
 
+    /** Like SingleOccurrenceDetector but only fires once per raid — subsequent matches in the
+     *  same raid are silently ignored. Resets on raid start via {@link #resetCounters()}. */
+    private static class FirstPerRaidDetector implements RaidMessageDetector {
+        private final Pattern pattern;
+        private final String formattedMessage;
+        private final String pbKey;
+        private boolean fired = false;
+
+        public FirstPerRaidDetector(String regex, String formattedMessage, String pbKey) {
+            this.pattern = Pattern.compile(Pattern.quote(regex), Pattern.CASE_INSENSITIVE);
+            this.formattedMessage = formattedMessage;
+            this.pbKey = pbKey;
+        }
+
+        public void resetForNewRaid() { fired = false; }
+
+        @Override public boolean matches(String msg) { return !fired && pattern.matcher(msg).find(); }
+        @Override public String extractProgress(String msg) { return null; }
+
+        @Override
+        public String getFormattedMessage(String progress, String timestamp) {
+            fired = true;
+            String message = formattedMessage + timestamp;
+            if (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null) {
+                long currentTime = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
+                Long pb = getPB(pbKey);
+                if (pb == null || currentTime < pb) {
+                    savePB(pbKey, currentTime);
+                    message += (pb == null ? " §e[First PB]" : " §e[New PB! Old: " + formatTime(pb) + "]");
+                } else {
+                    message += " §7[PB: " + formatTime(pb) + "]";
+                }
+            }
+            return message;
+        }
+    }
+
     private static class MultiOccurrenceDetector implements RaidMessageDetector {
         private final Pattern pattern;
         private final String baseMessage;
@@ -724,7 +761,11 @@ public class RaidChatNotifier {
             else if (detector instanceof WatchPhaseDetector w) {
                 w.resetForNewRaid();
             }
+            else if (detector instanceof FirstPerRaidDetector f) {
+                f.resetForNewRaid();
+            }
         }
+        julianh06.wynnextras.features.chat.ChainsAttachedTracker.resetForNewRaid();
     }
 
     public static void onRoomCompleted(RaidInfo raidInfo) {

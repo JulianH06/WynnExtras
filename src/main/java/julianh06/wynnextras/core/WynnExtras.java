@@ -200,6 +200,8 @@ public class WynnExtras implements ClientModInitializer {
         QuickRepair.register();
         julianh06.wynnextras.features.qol.AutoStream.register();
         julianh06.wynnextras.features.qol.AutoSkipDialogue.register();
+        julianh06.wynnextras.features.qol.AutoSkipCutscenes.register();
+        julianh06.wynnextras.features.chat.ChainsAttachedTracker.register();
         julianh06.wynnextras.features.qol.AuraPing.register();
         julianh06.wynnextras.features.qol.WeeklyWarCount.register();
         julianh06.wynnextras.features.qol.WarDPS.register();

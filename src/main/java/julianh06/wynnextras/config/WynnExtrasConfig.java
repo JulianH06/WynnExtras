@@ -176,6 +176,7 @@ public class WynnExtrasConfig {
 
     public boolean autoStreamEnabled = false;
     public boolean autoSkipDialogueEnabled = true;
+    public boolean autoSkipCutscenesEnabled = true;
     public boolean stackDuplicateMessages = false;
     public int stackDuplicateWindowMinutes = 5;
     public boolean auraPingEnabled = false;

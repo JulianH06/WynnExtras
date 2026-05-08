@@ -214,6 +214,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
                 .add(toggle("Auto Skip Dialogue", "Automatically skip 'Press SHIFT to continue' NPC dialogue",
                         () -> config.autoSkipDialogueEnabled, v -> config.autoSkipDialogueEnabled = v))
+                .add(toggle("Auto Skip Cutscenes", "Automatically swap-hand-skip cutscenes that show 'Swap Hands to skip'",
+                        () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
                 .add(toggle("Stack Duplicate Messages", "Collapse repeated messages into one with a (N) counter",
                         () -> config.stackDuplicateMessages, v -> config.stackDuplicateMessages = v))
                 .add(visibleWhen(slider("Stack Window (minutes)", "Only stack messages sent within the last X minutes",
