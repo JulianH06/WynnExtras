@@ -386,25 +386,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            int topHeight = 202;
-
-            if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
-                ui.drawNineSlice((int) (x),
-                        (int) (y), width,
-                        (int) (topHeight + 1), 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
-
-                ui.drawNineSlice((int) (x),
-                        (int) (y + topHeight), width,
-                        (int) (height - topHeight), 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
-            } else {
-                ui.drawNineSlice((int) (x),
-                        (int) (y), width,
-                        (int) (topHeight + 1), 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
-
-                ui.drawNineSlice((int) (x),
-                        (int) (y + topHeight), width,
-                        (int) (height - topHeight), 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
-            }
+            ui.drawVanillaPanel(x, y, width, height, 12, 15, 15, 192, 21);
 
             Identifier raidIcon = getTextureForRaid(raid);
             if(raidIcon != null) ui.drawImage(raidIcon, x + (width - textureWidth) / 2f, y - textureWidth / 4f, textureWidth, textureWidth);

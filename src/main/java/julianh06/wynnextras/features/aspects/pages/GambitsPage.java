@@ -209,7 +209,7 @@ public class GambitsPage extends PageWidget{
 //
 //        }
 
-        ui.drawVanillaPanel(x, y, panelWidth, panelHeight, 18, 55);
+        ui.drawVanillaPanel(x, y, panelWidth, panelHeight, 12, 15, 15, 50, 20);
 
         // Name
         String truncatedName = gambit.name;
