@@ -8,6 +8,7 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.*;
+import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -250,7 +251,9 @@ public class LootPoolPage extends PageWidget {
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(hoveredTooltip.isEmpty()) return;
-        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), mouseX - 5, mouseY + 20);
+        int absX = (int)(mouseX * parent.getMatrixScale());
+        int absY = (int)(mouseY * parent.getMatrixScale());
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), absX, absY + 20);
     }
 
     @Override
@@ -386,7 +389,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawVanillaPanel(x, y, width, height, 12, 15, 15, 192, 21);
+            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 192, 21);
 
             Identifier raidIcon = getTextureForRaid(raid);
             if(raidIcon != null) ui.drawImage(raidIcon, x + (width - textureWidth) / 2f, y - textureWidth / 4f, textureWidth, textureWidth);
@@ -498,9 +501,7 @@ public class LootPoolPage extends PageWidget {
                         x + width - 20,
                         aspectY - spacing * 2,
                         3,
-                        WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode
-                            ? CustomColor.fromHexString("1b1b1c")
-                            : CustomColor.fromHexString("5d4736")
+                        UIUtils.getVanillaDarkSeparatorColor(false)
                     );
                 }
             }
@@ -752,7 +753,7 @@ public class LootPoolPage extends PageWidget {
 
                 @Override
                 protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                    ui.drawRect(x, y, width, height, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromInt(0xFF707070) : CustomColor.fromInt(0xFF674439));
+                    ui.drawRect(x, y, width, height, UIUtils.getVanillaSeparatorColor(hovered || isHold));
                 }
 
                 @Override

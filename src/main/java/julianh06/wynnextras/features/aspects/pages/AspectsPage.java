@@ -9,6 +9,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.aspects.FavoriteAspectsData;
+import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.features.profileviewer.data.Aspect;
@@ -371,7 +372,9 @@ public class AspectsPage extends PageWidget {
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(hoveredTooltip.isEmpty()) return;
-        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), mouseX - 5, mouseY + 20);
+        int absX = (int)(mouseX * parent.getMatrixScale());
+        int absY = (int)(mouseY * parent.getMatrixScale());
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), absX, absY + 20);
     }
 
     @Override
@@ -915,19 +918,7 @@ public class AspectsPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            int topHeight = 80;
-
-            if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
-                ui.drawNineSlice(x, y, width, topHeight, 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
-
-                ui.drawNineSlice(x,y + topHeight, width, height - topHeight, 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
-            } else {
-                ui.drawNineSlice(x,
-                        y, width,
-                        topHeight, 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
-
-                ui.drawNineSlice(x,y + topHeight, width, height - topHeight, 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
-            }
+            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 65, 21);
 
             List<Aspect> mythicAspects = aspectEntries.stream().filter(a -> a.getRarity().equalsIgnoreCase("mythic")).toList();
             List<Aspect> fabledAspects = aspectEntries.stream().filter(a -> a.getRarity().equalsIgnoreCase("fabled")).toList();
@@ -994,9 +985,7 @@ public class AspectsPage extends PageWidget {
                             x + width - 20,
                             aspectY - spacing * 2,
                             3,
-                            WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode
-                                    ? CustomColor.fromHexString("1b1b1c")
-                                    : CustomColor.fromHexString("5d4736")
+                            UIUtils.getVanillaDarkSeparatorColor(false)
                     );
                 }
             }

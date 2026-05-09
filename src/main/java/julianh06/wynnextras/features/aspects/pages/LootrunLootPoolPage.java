@@ -9,6 +9,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.LootrunLootPoolData;
+import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
@@ -199,7 +200,9 @@ public class LootrunLootPoolPage extends PageWidget {
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(hoveredTooltip.isEmpty()) return;
-        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), mouseX - 5, mouseY + 20);
+        int absX = (int)(mouseX * parent.getMatrixScale());
+        int absY = (int)(mouseY * parent.getMatrixScale());
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), absX, absY + 20);
     }
 
     @Override
@@ -306,23 +309,7 @@ public class LootrunLootPoolPage extends PageWidget {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             int topHeight = 94;
 
-            if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
-                ui.drawNineSlice((int) (x),
-                        (int) (y), width,
-                        (int) (topHeight + 1), 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
-
-                ui.drawNineSlice((int) (x),
-                        (int) (y + topHeight), width,
-                        (int) (height - topHeight), 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
-            } else {
-                ui.drawNineSlice((int) (x),
-                        (int) (y), width,
-                        (int) (topHeight + 1), 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
-
-                ui.drawNineSlice((int) (x),
-                        (int) (y + topHeight), width,
-                        (int) (height - topHeight), 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
-            }
+            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 80, 21);
 
             ui.drawCenteredText(campNames[camp.ordinal()], x + width / 2f, y + 45, CustomColor.fromHexString("FFFFFF"));
 
@@ -364,21 +351,21 @@ public class LootrunLootPoolPage extends PageWidget {
                 float textY = contentStartTextY - actualOffset;
                 float textX = x + 15;
                 textY = drawShinyItems(ctx, textX, textY, items, width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, UIUtils.getVanillaDarkSeparatorColor(false));
                 textY = drawMythicItems(ctx, textX, textY, items, width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, UIUtils.getVanillaDarkSeparatorColor(false));
                 textY = drawTomeItems(ctx, textX, textY, items, width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, UIUtils.getVanillaDarkSeparatorColor(false));
                 textY = drawWardItems(ctx, textX, textY, items, width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, UIUtils.getVanillaDarkSeparatorColor(false));
                 textY = drawItemsByRarity(ctx, textX, textY, items, "Fabled", width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, UIUtils.getVanillaDarkSeparatorColor(false));
                 textY = drawItemsByRarity(ctx, textX, textY, items, "Legendary", width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, UIUtils.getVanillaDarkSeparatorColor(false));
                 textY = drawItemsByRarity(ctx, textX, textY, items, "Rare", width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, UIUtils.getVanillaDarkSeparatorColor(false));
                 textY = drawItemsByRarity(ctx, textX, textY, items, "Set", width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
-                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("5d4736"));
+                ui.drawLine(x + 20, textY - 15, x + width - 20, textY - 15, 3, UIUtils.getVanillaDarkSeparatorColor(false));
                 textY = drawItemsByRarity(ctx, textX, textY, items, "Unique", width - 15, mouseX, mouseY, contentStartY, contentHeight, actualOffset);
 
                 float contentEndY = textY + actualOffset;
@@ -712,7 +699,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
                 @Override
                 protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                    ui.drawRect(x, y, width, height, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromInt(0xFF707070) : CustomColor.fromInt(0xFF674439));
+                    ui.drawRect(x, y, width, height, UIUtils.getVanillaSeparatorColor(hovered || isHold));
                 }
 
                 @Override

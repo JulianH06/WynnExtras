@@ -83,6 +83,7 @@ public final class UIUtils {
         this.scaleFactor = scaleFactor;
         this.xStart = xStart;
         this.yStart = yStart;
+        clearSeparatorCache();
     }
 
     // --- Kontext aktualisieren (bei jedem Render) ---
@@ -498,45 +499,47 @@ public final class UIUtils {
     public void drawVanillaPanel(float x, float y, float width, float height, int scale, int leftOffset, int rightOffset, int topOffset, int botOffset) {
         int tw = GENERIC_W, th = GENERIC_H;
 
+        int uvWH = 4;
+
         /*
          * OUTER
          * */
         // corners
-        drawImage(GENERIC_CONTAINER_TEX, x, y, scale, scale, 0, 0, 4, 4, tw, th); // TL
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale, y, scale, scale, 172, 0, 4, 4, tw, th); // TR
-        drawImage(GENERIC_CONTAINER_TEX, x, y + height - scale, scale, scale, 0, 218, 4, 4, tw, th); // BL
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale, y + height - scale, scale, scale, 172, 218, 4, 4, tw, th); // BR
+        drawImage(GENERIC_CONTAINER_TEX, x, y, scale, scale, 0, 0, uvWH, uvWH, tw, th); // TL
+        drawImage(GENERIC_CONTAINER_TEX, x + width - scale, y, scale, scale, 172, 0, uvWH, uvWH, tw, th); // TR
+        drawImage(GENERIC_CONTAINER_TEX, x, y + height - scale, scale, scale, 0, 218, uvWH, uvWH, tw, th); // BL
+        drawImage(GENERIC_CONTAINER_TEX, x + width - scale, y + height - scale, scale, scale, 172, 218, uvWH, uvWH, tw, th); // BR
 
         // fill
         drawImage(GENERIC_CONTAINER_TEX, x + scale - 1, y + scale - 1, width - 2 * scale + 2, height - 2 * scale + 2, 4, 4, 1, 1, tw, th);
 
         // top/bot edges
-        drawImage(GENERIC_CONTAINER_TEX, x + scale - 2, y, width- 2 * scale + 4, scale, 4, 0, 1, 4, tw, th);
-        drawImage(GENERIC_CONTAINER_TEX, x + scale - 2, y + height - scale, width - 2 * scale + 4, scale, 4, 218,  1, 4, tw, th);
+        drawImage(GENERIC_CONTAINER_TEX, x + scale - 2, y, width- 2 * scale + 4, scale, 4, 0, 1, uvWH, tw, th);
+        drawImage(GENERIC_CONTAINER_TEX, x + scale - 2, y + height - scale, width - 2 * scale + 4, scale, 4, 218,  1, uvWH, tw, th);
 
         // left/right edges
-        drawImage(GENERIC_CONTAINER_TEX, x, y + scale - 2, scale, height - 2 * scale + 4, 0, 4, 4, 1, tw, th);
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale, y + scale - 2, scale, height - 2 * scale + 4, 172, 4, 4, 1, tw, th);
+        drawImage(GENERIC_CONTAINER_TEX, x, y + scale - 2, scale, height - 2 * scale + 4, 0, 4, uvWH, 1, tw, th);
+        drawImage(GENERIC_CONTAINER_TEX, x + width - scale, y + scale - 2, scale, height - 2 * scale + 4, 172, 4, uvWH, 1, tw, th);
         
         /*
         * INNER
         * */
         // corners
-        drawImage(GENERIC_CONTAINER_TEX, x + leftOffset, y + topOffset, scale, scale, 7, 15, 4, 4, tw, th); // TL
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + topOffset, scale, scale, 165, 15, 4, 4, tw, th); // TR
-        drawImage(GENERIC_CONTAINER_TEX, x + leftOffset, y + height - scale - botOffset, scale, scale, 7, 124, 4, 4, tw, th); // BL
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + height - scale - botOffset, scale, scale, 165, 124, 4, 4, tw, th); // BR
+        drawImage(GENERIC_CONTAINER_TEX, x + leftOffset, y + topOffset, scale, scale, 7, 15, uvWH, uvWH, tw, th); // TL
+        drawImage(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + topOffset, scale, scale, 165, 15, uvWH, uvWH, tw, th); // TR
+        drawImage(GENERIC_CONTAINER_TEX, x + leftOffset, y + height - scale - botOffset, scale, scale, 7, 124, uvWH, uvWH, tw, th); // BL
+        drawImage(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + height - scale - botOffset, scale, scale, 165, 124, uvWH, uvWH, tw, th); // BR
 
         // fill
         drawImage(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + scale + topOffset, width - leftOffset - rightOffset - scale * 2, height - topOffset - botOffset - scale * 2, 16, 20, 1, 1, tw, th);
 
         // top/bot edges
-        drawImage(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + topOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 16, 1, 4, tw, th);
-        drawImage(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + height - scale - botOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 123,  1, 4, tw, th);
+        drawImage(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + topOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 16, 1, uvWH, tw, th);
+        drawImage(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + height - scale - botOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 123,  1, uvWH, tw, th);
 
         // left/right edges
-        drawImage(GENERIC_CONTAINER_TEX, x + leftOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 7, 21, 4, 1, tw, th);
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 165, 120, 4, 1, tw, th);
+        drawImage(GENERIC_CONTAINER_TEX, x + leftOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 7, 21, uvWH, 1, tw, th);
+        drawImage(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 165, 120, uvWH, 1, tw, th);
     }
 
     public void drawNineSlice(float x, float y, float width, float height, int scale, Identifier l, Identifier r, Identifier t, Identifier b, Identifier tl, Identifier tr, Identifier bl, Identifier br, CustomColor fillColor) {
@@ -603,10 +606,14 @@ public final class UIUtils {
 
     private static CustomColor cachedSepNormal = null;
     private static CustomColor cachedSepHovered = null;
+    private static CustomColor cachedSepNormalDark = null;
+    private static CustomColor cachedSepHoveredDark = null;
 
     public static void clearSeparatorCache() {
         cachedSepNormal = null;
         cachedSepHovered = null;
+        cachedSepNormalDark = null;
+        cachedSepHoveredDark = null;
     }
 
     /**
@@ -619,12 +626,24 @@ public final class UIUtils {
         if (cachedSepNormal == null || cachedSepHovered == null) {
             int[] normal = sampleSpriteCenter(BUTTON_TEX);
             int[] highlighted = sampleSpriteCenter(BUTTON_HIGHLIGHTED_TEX);
-            if (normal == null) normal = new int[]{166, 138, 115};       // #a68a73 fallback
+            if (normal == null) normal = new int[]{166, 138, 115};
             if (highlighted == null) highlighted = normal;
             cachedSepNormal = toColor(normal, 1f);
             cachedSepHovered = toColor(highlighted, 1f);
         }
         return hovered ? cachedSepHovered : cachedSepNormal;
+    }
+
+    public static CustomColor getVanillaDarkSeparatorColor(boolean hovered) {
+        if (cachedSepNormalDark == null || cachedSepHoveredDark == null) {
+            int[] normal = sampleSpriteNotCenterButAtThePositionForTheDarkerColor(BUTTON_TEX);
+            int[] highlighted = sampleSpriteNotCenterButAtThePositionForTheDarkerColor(BUTTON_HIGHLIGHTED_TEX);
+            if (normal == null) normal = new int[]{166, 138, 115};
+            if (highlighted == null) highlighted = normal;
+            cachedSepNormalDark = toColor(normal, 1f);
+            cachedSepHoveredDark = toColor(highlighted, 1f);
+        }
+        return hovered ? cachedSepHoveredDark : cachedSepNormalDark;
     }
 
     private static CustomColor toColor(int[] rgb, float factor) {
@@ -645,6 +664,21 @@ public final class UIUtils {
                 // NativeImage.getColor is private; accessed via @Invoker mixin.
                 // Pixel format is ABGR (little-endian RGBA): lowest byte = R.
                 int c = ((NativeImageInvoker) (Object) img).invokeGetColor(1, img.getHeight() / 2);
+                return new int[]{c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF};
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private static int[] sampleSpriteNotCenterButAtThePositionForTheDarkerColor(Identifier id) {
+        try {
+            var res = MinecraftClient.getInstance().getResourceManager().getResource(id);
+            if (res.isEmpty()) return null;
+            try (var is = res.get().getInputStream();
+                 NativeImage img = NativeImage.read(is)) {
+                // NativeImage.getColor is private; accessed via @Invoker mixin.
+                // Pixel format is ABGR (little-endian RGBA): lowest byte = R.
+                int c = ((NativeImageInvoker) (Object) img).invokeGetColor(2, 2);
                 return new int[]{c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF};
             }
         } catch (Exception ignored) {}
