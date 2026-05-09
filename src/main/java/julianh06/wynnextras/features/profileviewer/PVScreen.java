@@ -49,6 +49,7 @@ public class PVScreen extends WEScreen {
 
     public static int mouseX = 0;
     public static int mouseY = 0;
+    public static double currentMatrixScale = 1.0;
 
     public enum Rank {NONE, VIP, VIPPLUS, HERO, HEROPLUS, CHAMPION, MEDIA, WYNN, MOD, ADMIN}
 
@@ -309,6 +310,7 @@ public class PVScreen extends WEScreen {
         mouseY = (int)(mouseY / matrixScale);
         PVScreen.mouseX = mouseX;
         PVScreen.mouseY = mouseY;
+        PVScreen.currentMatrixScale = matrixScale;
 
         ui.drawBackground();
 
