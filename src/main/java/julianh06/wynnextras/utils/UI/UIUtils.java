@@ -566,6 +566,32 @@ public final class UIUtils {
         if(br != null) drawImage(br, x + width - scale, y + height - scale, scale, scale);
     }
 
+    public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier progressTexture, DrawContext context) {
+        drawProgressBar(x, y, width, height, textScale, progress, progressTexture, context, false);
+    }
+
+    public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier progressTexture, DrawContext context, boolean chroma) {
+        drawRect(x, y, width, height, getVanillaPanelBgColor());
+
+        context.enableScissor((int) sx(x), (int) sy(y), (int) sx(x + width * (progress)), (int) sy(y + height));
+        if(chroma) {
+            RenderUtils.drawTexturedRect(
+                    drawContext,
+                    progressTexture,
+                    getRainbowColor(7f, 0),
+                    sx(x), sy(y),
+                    sw(width), sh(height),
+                    0, 0,
+                    sw(width), sh(height),
+                    sw(width), sh(height)
+            );
+        } else drawImage(progressTexture, x, y, width, height);
+        context.disableScissor();
+
+        drawRectBorders(x, y, width, height, getVanillaPanelBorderColor());
+        drawCenteredText(String.format("%.2f%%", progress * 100), x + width / 2f, y + height / 2f + 2, CustomColor.fromHexString("FFFFFF"), textScale);
+    }
+
     public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier border, Identifier background, Identifier progressTexture, DrawContext context) {
         drawProgressBar(x, y, width, height, textScale, progress, border, background, progressTexture, context, false);
     }
@@ -608,12 +634,16 @@ public final class UIUtils {
     private static CustomColor cachedSepHovered = null;
     private static CustomColor cachedSepNormalDark = null;
     private static CustomColor cachedSepHoveredDark = null;
+    private static CustomColor cachedPanelBg = null;
+    private static CustomColor cachedPanelBorder = null;
 
     public static void clearSeparatorCache() {
         cachedSepNormal = null;
         cachedSepHovered = null;
         cachedSepNormalDark = null;
         cachedSepHoveredDark = null;
+        cachedPanelBg = null;
+        cachedPanelBorder = null;
     }
 
     /**
@@ -683,6 +713,41 @@ public final class UIUtils {
             }
         } catch (Exception ignored) {}
         return null;
+    }
+
+    private static int[] sampleSpriteAt(Identifier id, int u, int v) {
+        try {
+            var res = MinecraftClient.getInstance().getResourceManager().getResource(id);
+            if (res.isEmpty()) return null;
+            try (var is = res.get().getInputStream();
+                 NativeImage img = NativeImage.read(is)) {
+                int c = ((NativeImageInvoker) (Object) img).invokeGetColor(u, v);
+                return new int[]{c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF};
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    public static CustomColor getVanillaPanelBgColor() {
+        if (cachedPanelBg == null) {
+            int[] px = sampleSpriteAt(GENERIC_CONTAINER_TEX, 16, 20);
+            if (px == null) px = new int[]{198, 198, 198};
+            cachedPanelBg = toColor(px, 1f);
+            cachedPanelBorder = toColor(px, 0.6f);
+        }
+        return cachedPanelBg;
+    }
+
+    public static CustomColor getVanillaPanelBorderColor() {
+        getVanillaPanelBgColor();
+        return cachedPanelBorder;
+    }
+
+    public static boolean isVanillaPanelDark() {
+        int[] px = sampleSpriteAt(GENERIC_CONTAINER_TEX, 16, 20);
+        if (px == null) return false;
+        float lum = 0.299f * px[0] + 0.587f * px[1] + 0.114f * px[2];
+        return lum < 100f;
     }
 
 }

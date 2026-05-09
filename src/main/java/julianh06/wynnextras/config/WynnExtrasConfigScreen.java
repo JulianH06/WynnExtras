@@ -548,8 +548,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
                 .add(toggle("Profile Viewer", "Dark mode for the Profile viewer",
                         () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
-                .add(toggle("Lootpool & Aspect pages", "Dark mode for the Lootpool & Aspect pages",
-                        () -> config.lootPoolPagesDarkMode, v -> config.lootPoolPagesDarkMode = v))
                 .add(toggle("Crafting helper", "Dark mode for the Crafting helper",
                         () -> config.craftingHelperDarkMode, v -> config.craftingHelperDarkMode = v))
                 .add(toggle("Main menu", "Dark mode for the WynnExtras main menu (/we)",
@@ -558,14 +556,12 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         v -> {
                             config.darkmodeToggle = true;
                             config.pvDarkmodeToggle = true;
-                            config.lootPoolPagesDarkMode = true;
                             config.craftingHelperDarkMode = true;
                             config.mainMenuDarkMode = true; }, "Enable"))
                 .add(button("Disable for all", "Disable the Dark mode for all options above",
                         v -> {
                             config.darkmodeToggle = false;
                             config.pvDarkmodeToggle = false;
-                            config.lootPoolPagesDarkMode = false;
                             config.craftingHelperDarkMode = false;
                             config.mainMenuDarkMode = false; }, "Disable"))
             .sub("Tetris")
