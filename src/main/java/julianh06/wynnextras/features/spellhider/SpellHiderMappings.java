@@ -161,7 +161,7 @@ public class SpellHiderMappings {
                 }
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Failed to load spell mappings: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load spell mappings: " + e.getMessage());
             INSTANCE = new SpellHiderMappings();
         }
     }
@@ -171,7 +171,7 @@ public class SpellHiderMappings {
             Files.createDirectories(MAPPINGS_PATH.getParent());
             Files.writeString(MAPPINGS_PATH, GSON.toJson(new SaveFormat(INSTANCE)));
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Failed to save spell mappings: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to save spell mappings: " + e.getMessage());
         }
     }
 }

@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.guildviewer;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
@@ -582,7 +583,7 @@ public class GVScreen extends WEScreen {
             case "TRIANGLES_BOTTOM" -> lookup.getOrThrow(BannerPatterns.TRIANGLES_BOTTOM);
             case "TRIANGLES_TOP" -> lookup.getOrThrow(BannerPatterns.TRIANGLES_TOP);
             default -> {
-                System.err.println("[WynnExtras] Unknown banner pattern: " + patternName);
+                WynnExtras.LOGGER.error("[WynnExtras] Unknown banner pattern: " + patternName);
                 yield null;
             }
         };

@@ -34,8 +34,8 @@ import java.util.regex.Pattern;
 
 @WEModule
 public class RaidChatNotifier {
-    public static RaidChatNotifier INSTANCE = new RaidChatNotifier();
-    public Map<String, Long> raidPBs = new HashMap<>();
+    private static RaidChatNotifier INSTANCE = new RaidChatNotifier();
+    private Map<String, Long> raidPBs = new HashMap<>();
 
     public static long disableChiropUntil = 0;
 
@@ -209,7 +209,7 @@ public class RaidChatNotifier {
             )
     );
 
-    private static void savePB(String key, long time) {
+    static void savePB(String key, long time) {
         Long old = INSTANCE.raidPBs.get(key);
 
         if (old == null || time < old) {
@@ -218,7 +218,7 @@ public class RaidChatNotifier {
         }
     }
 
-    private static Long getPB(String key) {
+    static Long getPB(String key) {
         return INSTANCE.raidPBs.get(key);
     }
 
@@ -865,30 +865,30 @@ public class RaidChatNotifier {
                 gson.toJson(INSTANCE, writer);
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't write PB data:");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't write PB data:");
             e.printStackTrace();
         }
     }
 
-    public void load() {
+    public static void load() {
         Path path = FabricLoader.getInstance().getConfigDir().resolve("wynnextras/raidPBs.json");
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
         try {
             Files.createDirectories(path.getParent());
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't create config directory:");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't create config directory:");
             e.printStackTrace();
         }
 
         if (Files.exists(path)) {
             try (Reader reader = Files.newBufferedReader(path)) {
-                RaidChatNotifier loaded = gson.fromJson(reader, this.getClass());
+                RaidChatNotifier loaded = gson.fromJson(reader, RaidChatNotifier.class);
                 if (loaded != null) {
                     INSTANCE = loaded;
                 }
             } catch (IOException e) {
-                System.err.println("[WynnExtras] Couldn't read PB data:");
+                WynnExtras.LOGGER.error("[WynnExtras] Couldn't read PB data:");
                 e.printStackTrace();
             }
         }

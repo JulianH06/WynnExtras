@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.waypoints;
 
+import julianh06.wynnextras.core.WynnExtras;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -24,7 +25,7 @@ public class WaypointPackage {
         try (Writer writer = Files.newBufferedWriter(path)) {
             WaypointData.gson.toJson(this, writer);
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't save package: " + name);
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't save package: " + name);
             e.printStackTrace();
         }
     }
@@ -48,7 +49,7 @@ public class WaypointPackage {
 
             return pkg;
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't load package: " + file.getFileName());
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't load package: " + file.getFileName());
             e.printStackTrace();
             return null;
         }

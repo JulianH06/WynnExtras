@@ -20,10 +20,10 @@ import java.util.List;
 public class LineDrawer {
     private final List<QueuedLine> queuedLines = new ArrayList<>();
 
-    public static class QueuedLine {
-        public WEVec p1;
-        public WEVec p2;
-        public Color color;
+    private static class QueuedLine {
+        private final WEVec p1;
+        private final WEVec p2;
+        private final Color color;
 
         public QueuedLine(WEVec p1, WEVec p2, Color color) {
             this.p1 = p1;

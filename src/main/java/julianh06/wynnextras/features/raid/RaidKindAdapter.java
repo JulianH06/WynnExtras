@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.raid;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.*;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
@@ -37,7 +38,7 @@ public class RaidKindAdapter extends TypeAdapter<RaidKind> {
             case "NOG" -> gson.fromJson(obj, NestOfTheGrootslangsRaid.class);
             case "TWP" -> gson.fromJson(obj, TheWartornPalaceRaid.class);
             default -> {
-                System.err.println("Unknown raid: " + abbreviation);
+                WynnExtras.LOGGER.error("Unknown raid: " + abbreviation);
                 yield null;
             }
         };

@@ -23,7 +23,7 @@ import static julianh06.wynnextras.features.waypoints.WaypointScreen.categoryDro
 import static julianh06.wynnextras.features.waypoints.WaypointScreen.scaleFactor;
 
 public class EasyDropdown extends EasyElement{
-    public boolean isExpanded = false;
+    private boolean expanded = false;
     int mouseX = 0;
     int mouseY = 0;
 
@@ -41,7 +41,7 @@ public class EasyDropdown extends EasyElement{
     @Override
     public void draw(DrawContext context) {
         categories = WaypointData.INSTANCE.activePackage.categories;
-        if (isExpanded) {
+        if (expanded) {
             if(categories.size() <= 1) {
                 RenderUtils.drawTexturedRect(context, categorySingleTexture, CustomColor.NONE, x, y + height, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
                 if(categories.isEmpty()) {
@@ -71,15 +71,27 @@ public class EasyDropdown extends EasyElement{
     }
 
     public WaypointCategory clickAndGetCategory() {
-        if(!isExpanded) {
-            isExpanded = true;
+        if(!expanded) {
+            expanded = true;
             return null;
         } else {
             int ySection = Math.floorDiv(mouseY - y, (39 / scaleFactor));
-            isExpanded = false;
+            expanded = false;
             if(ySection < 1) return null;
             return categories.get(ySection - 1);
         }
+    }
+
+    public boolean isExpanded() {
+        return expanded;
+    }
+
+    public void setExpanded(boolean expanded) {
+        this.expanded = expanded;
+    }
+
+    public void collapse() {
+        expanded = false;
     }
 
     @Override
@@ -89,8 +101,8 @@ public class EasyDropdown extends EasyElement{
         if(x < this.x) return false;
         if(y < this.y) return false;
         if(x > this.x + width) return false;
-        if(isExpanded) WaypointScreen.clickWhileExpanded = true;
-        if(isExpanded && categories != null) {
+        if(expanded) WaypointScreen.clickWhileExpanded = true;
+        if(expanded && categories != null) {
             if(y > this.y + height + categories.size() * (39f / scaleFactor)) return false;
         } else {
             if(y > this.y + height) return false;

@@ -1,5 +1,6 @@
 package julianh06.wynnextras.event;
 
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.api.WEEvent;
 
 public class CharInputEvent extends WEEvent {
@@ -16,7 +17,7 @@ public class CharInputEvent extends WEEvent {
     // Falls du ein init‐Flag oder Registrierung brauchst:
     public static boolean initialized = false;
     public static void init() {
-        System.out.println("Initialized WynnExtras CharInputEvent");
+        WynnExtras.LOGGER.info("Initialized WynnExtras CharInputEvent");
         initialized = true;
     }
 }

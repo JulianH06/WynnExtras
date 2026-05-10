@@ -6,11 +6,10 @@ import net.minecraft.client.MinecraftClient;
 import java.nio.file.Path;
 
 public class MiscBucketData extends BankData {
-    public static MiscBucketData INSTANCE = new MiscBucketData();
+    public static final MiscBucketData INSTANCE = new MiscBucketData();
 
     @Override
     public Path getConfigPath() {
         return FabricLoader.getInstance().getConfigDir().resolve("wynnextras/" + MinecraftClient.getInstance().player.getUuid().toString() + "/miscbucket.json");
     }
 }
-

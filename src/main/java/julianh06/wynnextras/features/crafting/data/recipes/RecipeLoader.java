@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.crafting.data.recipes;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.*;
 import com.wynntils.models.profession.type.ProfessionType;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
@@ -25,7 +26,7 @@ public class RecipeLoader {
     public static RecipeData getRecipe(CraftableType type, Vector2i lvl) {
         Map<Vector2i, RecipeData> allTypeDataMap = recipes.get(type);
         if (allTypeDataMap == null) {
-            System.err.println("No recipe data found for type " + type);
+            WynnExtras.LOGGER.error("No recipe data found for type " + type);
             return null;
         }
         return allTypeDataMap.get(lvl);
@@ -134,9 +135,9 @@ public class RecipeLoader {
             reader.close();
 
             double remoteVersion = getRemoteVersion();
-            if (remoteVersion == -1) System.err.println("failed to get remote version");
+            if (remoteVersion == -1) WynnExtras.LOGGER.error("failed to get remote version");
             else if (jsonRecipes.version < remoteVersion)
-                System.err.println("new recipe version available current " + jsonRecipes.version + " remote " + remoteVersion);
+                WynnExtras.LOGGER.error("new recipe version available current " + jsonRecipes.version + " remote " + remoteVersion);
 
             for (RecipeData jsonRecipe : jsonRecipes.recipes) {
                 Map<Vector2i, RecipeData> levelMap = recipes.computeIfAbsent(jsonRecipe.type, k -> new HashMap<>());
@@ -144,7 +145,7 @@ public class RecipeLoader {
                 recipesById.put(jsonRecipe.id, jsonRecipe);
             }
 
-            System.out.println("Loaded " + recipes.values().stream().mapToInt(Map::size).sum() + " recipes from file");
+            WynnExtras.LOGGER.info("Loaded " + recipes.values().stream().mapToInt(Map::size).sum() + " recipes from file");
 
         } catch (Exception e) {
             e.printStackTrace();

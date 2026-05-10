@@ -12,7 +12,7 @@ import static julianh06.wynnextras.config.ConfigTheme.*;
 
 public abstract class ConfigOption {
     public final String name, desc;
-    public List<DescLine> richDesc = null;
+    protected List<DescLine> richDesc = null;
     private BooleanSupplier visibilityCondition = () -> true;
 
     protected ConfigOption(String name, String desc) { this.name = name; this.desc = desc; }

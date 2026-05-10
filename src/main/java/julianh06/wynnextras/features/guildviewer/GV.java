@@ -110,7 +110,7 @@ public class GV {
             ((BannerBlockEntityAccessor) GVScreen.bannerBlockEntity)
                     .setPatterns(builder.build());
         }).exceptionally(ex -> {
-            System.err.println("Error while getting the data: " + ex.getMessage());
+            WynnExtras.LOGGER.error("Error while getting the data: " + ex.getMessage());
             return null;
         });
 
@@ -136,7 +136,7 @@ public class GV {
             open(guild.getPrefix());
         }).exceptionally(ex -> {
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Could not determine your guild. Usage: /gv [guild prefix]"));
-            System.err.println("Error while getting own guild data: " + ex.getMessage());
+            WynnExtras.LOGGER.error("Error while getting own guild data: " + ex.getMessage());
             return null;
         });
     }

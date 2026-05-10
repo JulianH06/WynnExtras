@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects.pages;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.wynntils.utils.colors.CustomColor;
@@ -94,7 +95,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
             fetchRunning.put(camp, true);
 
-            System.out.println("starting fetch for " + camp);
+            WynnExtras.LOGGER.info("starting fetch for " + camp);
             lastCrowdsourceFetch.put(camp, now);
             WynncraftApiHandler.fetchCrowdsourcedLootrunLootPool(camp.name()).thenAccept(result -> {
                 fetchRunning.put(camp, false);
@@ -105,12 +106,12 @@ public class LootrunLootPoolPage extends PageWidget {
 
                 lastCrowdsourceFetch.put(camp, now);
                 if (isSamePool(oldItems, result)) {
-                    System.out.println("still old pool, retry in 30s");
+                    WynnExtras.LOGGER.info("still old pool, retry in 30s");
                     hasOldLootpool.put(camp, true);
                     return;
                 }
 
-                System.out.println("NEW POOL for " + camp);
+                WynnExtras.LOGGER.info("NEW POOL for " + camp);
 
                 crowdsourcedLootPools.put(camp.name(), result);
                 hasOldLootpool.put(camp, false);
@@ -500,8 +501,8 @@ public class LootrunLootPoolPage extends PageWidget {
                     ui.drawText("§7" + item.shinyStat.replace(": §f0", ""), x + 20, textY + 45, CustomColor.fromInt(0xFFFFFF), 2.2f);
                 }
 
-                if (hovering && WynncraftApiHandler.cachedItemDatabase != null && mouseY * ui.getScaleFactorF() > y + 80) {
-                    JsonObject jsonItem = WynncraftApiHandler.cachedItemDatabase.get(item.name.replace("Unidentified ", "").replace("⬡ ", "").replace("Shiny ", ""));
+                if (hovering && WynncraftApiHandler.getCachedItemDatabase() != null && mouseY * ui.getScaleFactorF() > y + 80) {
+                    JsonObject jsonItem = WynncraftApiHandler.getCachedItemDatabase().get(item.name.replace("Unidentified ", "").replace("⬡ ", "").replace("Shiny ", ""));
                     List<Text> tooltip = new ArrayList<>();
                     if(rarityColor.startsWith("§#")) {
                         String hex = rarityColor.substring(2); // "12345678"

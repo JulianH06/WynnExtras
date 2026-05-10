@@ -4,37 +4,37 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class WELogger {
-    public Logger LOGGER;
+    private final Logger logger;
 
     public WELogger(String modId) {
-        this.LOGGER = LoggerFactory.getLogger(modId);
+        this.logger = LoggerFactory.getLogger(modId);
     }
 
     public void logInfo(String msg) {
-        LOGGER.info(msg);
+        logger.info(msg);
     }
 
     public void logInfo(String msg, Object... args) {
-        LOGGER.info(msg, args);
+        logger.info(msg, args);
     }
 
     public void logWarn(String msg) {
-        LOGGER.warn(msg);
+        logger.warn(msg);
     }
 
     public void logDebug(String msg) {
-        LOGGER.debug(msg);
+        logger.debug(msg);
     }
 
     public void logError(String msg) {
-        LOGGER.error(msg);
+        logger.error(msg);
     }
 
     public void logError(String msg, Object... args) {
-        LOGGER.error(msg, args);
+        logger.error(msg, args);
     }
 
     public void logError(String msg, Throwable t) {
-        LOGGER.error(msg, t);
+        logger.error(msg, t);
     }
 }

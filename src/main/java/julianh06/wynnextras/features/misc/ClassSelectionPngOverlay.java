@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.misc;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.render.RenderUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -88,7 +89,7 @@ public class ClassSelectionPngOverlay {
             MinecraftClient.getInstance().getTextureManager().registerTexture(cachedTexture, texture);
             cachedPath = path;
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Failed to load custom class PNG: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load custom class PNG: " + e.getMessage());
             cachedTexture = null;
             cachedPath = path; // Don't retry the same broken path every frame
         }

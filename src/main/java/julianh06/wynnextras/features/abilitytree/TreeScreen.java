@@ -356,7 +356,7 @@ public class TreeScreen extends WEScreen {
                 if(element.nameInput == null) continue;
 
                 element.nameInput.setFocused(false);
-                element.nameInput.blinkToggle = false;
+                element.nameInput.setBlinkToggle(false);
             }
             return super.mouseClicked(mx, my, button);
         }

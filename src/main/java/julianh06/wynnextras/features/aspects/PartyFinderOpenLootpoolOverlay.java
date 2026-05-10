@@ -23,7 +23,7 @@ public class PartyFinderOpenLootpoolOverlay extends WEHandledScreen {
 
         //" \uDAFF\uDFE4\uE03F"
         //" \uDAFF\uDFE1\uE00C" NOTG
-        //System.out.println(MinecraftClient.getInstance().currentScreen.getTitle().getString());
+        //WynnExtras.LOGGER.info(MinecraftClient.getInstance().currentScreen.getTitle().getString());
 
         if(lootPoolOpenButton == null) {
             lootPoolOpenButton = new LootPoolOpenButton(0, 0, 0, 0);

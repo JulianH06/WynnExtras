@@ -11,7 +11,6 @@ import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.tetris.TetrisScreen;
 import julianh06.wynnextras.utils.LinkUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -447,11 +446,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Skill point helper (experimental)", "Show you your armor in the compass menu and a button to automatically assign skill points",
                         () -> config.skillpointHelper, v -> config.skillpointHelper = v));
 
-        if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
-            invCategory.add(toggle("Wynnventory price overlay in bank", "Enable the Wynnventory price overlay in the bank overlay",
-                    () -> config.wynnventoryOverlay, v -> config.wynnventoryOverlay = v));
-        }
-
         // ===== CHAT =====
         category("Chat", 0xFFc80069)
             .sub("Notifications")
@@ -739,7 +733,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             for (Object item : cat.items) {
                 if (item instanceof SubCategory sub) {
                     Boolean saved = lastExpandedSubs.get(cat.name + "/" + sub.name);
-                    if (saved != null) sub.expanded = saved;
+                    if (saved != null) sub.setExpanded(saved);
                 }
             }
         }
@@ -916,7 +910,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             if (item instanceof SubCategory sub && subHasMatches(sub)) {
                 int headerY = y;
                 y = renderSubCategory(ctx, sub, contentX, y, contentW, mouseX, mouseY, listTop + 15, listBottom);
-                if (sub.expanded && headerY < listTop + 15 && y > listTop + 15) {
+                if (sub.isExpanded() && headerY < listTop + 15 && y > listTop + 15) {
                     stickyCandidate = sub;
                 }
             } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
@@ -939,7 +933,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             ctx.fill(contentX, stickyY, contentX + contentW, stickyY + SUBCATEGORY_HEADER_HEIGHT, hovered ? PARCHMENT_LIGHT : SUBCATEGORY_BG);
             ctx.fill(contentX, stickyY, contentX + contentW, stickyY + 1, BORDER_LIGHT);
             ctx.fill(contentX, stickyY + SUBCATEGORY_HEADER_HEIGHT - 1, contentX + contentW, stickyY + SUBCATEGORY_HEADER_HEIGHT, BORDER_DARK);
-            String arrow = stickySub.expanded ? "▼" : "▶";
+            String arrow = stickySub.isExpanded() ? "▼" : "▶";
             ctx.drawTextWithShadow(textRenderer, arrow, contentX + 8, stickyY + 8, selectedCategoryColor);
             ctx.drawTextWithShadow(textRenderer, stickySub.name, contentX + 22, stickyY + 8, TEXT_LIGHT);
         }
@@ -963,13 +957,13 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + SUBCATEGORY_HEADER_HEIGHT - 1, x + w, y + SUBCATEGORY_HEADER_HEIGHT, BORDER_DARK);
 
-            String arrow = sub.expanded ? "\u25BC" : "\u25B6";
+            String arrow = sub.isExpanded() ? "\u25BC" : "\u25B6";
             ctx.drawTextWithShadow(textRenderer, arrow, x + 8, y + 8, selectedCategoryColor);
             ctx.drawTextWithShadow(textRenderer, sub.name, x + 22, y + 8, TEXT_LIGHT);
         }
         y += SUBCATEGORY_HEADER_HEIGHT + 5;
 
-        if (sub.expanded) {
+        if (sub.isExpanded()) {
             for (ConfigOption opt : sub.options) {
                 if (matchesSearch(opt)) {
                     int optH = opt.getHeight(w - 8);
@@ -1217,9 +1211,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             int stickyY = HEADER_HEIGHT + 30;
             if (my >= stickyY && my < stickyY + SUBCATEGORY_HEADER_HEIGHT
                     && mx >= SIDEBAR_WIDTH + 20 && mx < width - 30) {
-                stickySub.expanded = !stickySub.expanded;
+                stickySub.toggleExpanded();
                 updateMaxScroll();
-                if (!stickySub.expanded) {
+                if (!stickySub.isExpanded()) {
                     // scroll so the now collapsed header sits at the top of the viewport
                     int contentW = width - SIDEBAR_WIDTH - 40;
                     int contentY = 0;
@@ -1228,7 +1222,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         if (item == stickySub) break;
                         if (item instanceof SubCategory sub && subHasMatches(sub)) {
                             contentY += SUBCATEGORY_HEADER_HEIGHT + 5;
-                            if (sub.expanded) {
+                            if (sub.isExpanded()) {
                                 for (ConfigOption opt : sub.options) {
                                     if (matchesSearch(opt)) contentY += opt.getHeight(contentW - 8) + OPTION_SPACING;
                                 }
@@ -1257,14 +1251,14 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             for (Object item : cat.items) {
                 if (item instanceof SubCategory sub && subHasMatches(sub)) {
                     if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + SUBCATEGORY_HEADER_HEIGHT) && mx >= contentX && mx < contentX + contentW) {
-                        sub.expanded = !sub.expanded;
+                        sub.toggleExpanded();
                         updateMaxScroll();
                         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }
                     y += SUBCATEGORY_HEADER_HEIGHT + 5;
 
-                    if (sub.expanded) {
+                    if (sub.isExpanded()) {
                         for (ConfigOption opt : sub.options) {
                             if (matchesSearch(opt)) {
                                 int optH = opt.getHeight(contentW - 8);
@@ -1341,7 +1335,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             for (Object item : cat.items) {
                 if (item instanceof SubCategory sub && subHasMatches(sub)) {
                     y += SUBCATEGORY_HEADER_HEIGHT + 5;
-                    if (sub.expanded) {
+                    if (sub.isExpanded()) {
                         for (ConfigOption opt : sub.options) {
                             if (matchesSearch(opt)) {
                                 int optH = opt.getHeight(contentW - 8);
@@ -1478,15 +1472,19 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     @Override
     public void close() {
+        saveLastScreenState(selectedCategory, scrollTarget, categories);
+        client.setScreen(parent);
+    }
+
+    private static void saveLastScreenState(int selectedCategory, double scrollTarget, List<Category> categories) {
         lastSelectedCategory = selectedCategory;
         lastScrollTarget = scrollTarget;
         for (Category cat : categories) {
             for (Object item : cat.items) {
                 if (item instanceof SubCategory sub) {
-                    lastExpandedSubs.put(cat.name + "/" + sub.name, sub.expanded);
+                    lastExpandedSubs.put(cat.name + "/" + sub.name, sub.isExpanded());
                 }
             }
         }
-        client.setScreen(parent);
     }
 }

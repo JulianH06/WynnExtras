@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.profileviewer.data;
 
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 
@@ -23,7 +24,7 @@ public class AbilityTreeCache {
             classMaps.put(className, tree);
             loading.remove(className);
         }).exceptionally(ex -> {
-            System.err.println("Failed to load ability tree for " + className + ": " + ex.getMessage());
+            WynnExtras.LOGGER.error("Failed to load ability tree for " + className + ": " + ex.getMessage());
             loading.remove(className);
             return null;
         });
@@ -32,7 +33,7 @@ public class AbilityTreeCache {
             classTrees.put(className, tree);
             loading.remove(className + "tree");
         }).exceptionally(ex -> {
-            System.err.println("Failed to load ability tree for " + className + ": " + ex.getMessage());
+            WynnExtras.LOGGER.error("Failed to load ability tree for " + className + ": " + ex.getMessage());
             loading.remove(className + "tree");
             return null;
         });
@@ -46,7 +47,7 @@ public class AbilityTreeCache {
             playerTrees.put(characterUUID, tree);
             loading.remove(characterUUID);
         }).exceptionally(ex -> {
-            System.err.println("Failed to load ability tree for " + characterUUID + ": " + ex.getMessage());
+            WynnExtras.LOGGER.error("Failed to load ability tree for " + characterUUID + ": " + ex.getMessage());
             loading.remove(characterUUID);
             return null;
         });

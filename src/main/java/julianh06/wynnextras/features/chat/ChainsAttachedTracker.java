@@ -68,10 +68,9 @@ public class ChainsAttachedTracker {
         String message = "§b" + label + " §c@ " + timestamp;
 
         if (currentTime > 0 && Models.Raid.getCurrentRaid() != null) {
-            Long pb = RaidChatNotifier.INSTANCE.raidPBs.get(pbKey);
+            Long pb = RaidChatNotifier.getPB(pbKey);
             if (pb == null || currentTime < pb) {
-                RaidChatNotifier.INSTANCE.raidPBs.put(pbKey, currentTime);
-                RaidChatNotifier.INSTANCE.save();
+                RaidChatNotifier.savePB(pbKey, currentTime);
                 message += (pb == null ? " §e[First PB]" : " §e[New PB! Old: " + RaidChatNotifier.formatTime(pb) + "]");
             } else {
                 message += " §7[PB: " + RaidChatNotifier.formatTime(pb) + "]";

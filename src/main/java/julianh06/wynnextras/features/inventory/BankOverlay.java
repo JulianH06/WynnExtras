@@ -16,6 +16,7 @@ import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
+import julianh06.wynnextras.features.bankoverlay.BankOverlaySlotBridge;
 import julianh06.wynnextras.features.inventory.data.*;
 import julianh06.wynnextras.features.misc.ClassSelectionOverlay;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
@@ -31,17 +32,15 @@ import net.minecraft.util.collection.DefaultedList;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @WEModule
 public class BankOverlay {
-    public static DefaultedList<Slot> playerInvSlots = DefaultedList.of();
-    public static DefaultedList<Slot> activeInvSlots = DefaultedList.of();
-    public static int bankSyncid;
-    public static PersonalStorageUtilitiesFeature PersonalStorageUtils;
+    public static final DefaultedList<Slot> playerInvSlots = DefaultedList.of();
+    public static final DefaultedList<Slot> activeInvSlots = DefaultedList.of();
+    private static PersonalStorageUtilitiesFeature personalStorageUtils;
 
     public static BankData Pages;
 
@@ -49,43 +48,49 @@ public class BankOverlay {
 
     public static ItemStack heldItem = Items.AIR.getDefaultStack();
 
-    public static Map<Integer, List<ItemAnnotation>> annotationCache = new HashMap<>();
-
-    public static int xFitAmount;
-    public static int yFitAmount;
+    public static final Map<Integer, List<ItemAnnotation>> annotationCache = new HashMap<>();
 
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 50; // in ms
 
-    public static boolean canScrollFurther = true;
+    private static EasyTextInput activeTextInput;
 
-    public static EasyTextInput activeTextInput;
-
-    public volatile static BankOverlayType currentOverlayType = BankOverlayType.NONE;
-    public volatile static BankOverlayType expectedOverlayType = BankOverlayType.NONE;
+    public static volatile BankOverlayType currentOverlayType = BankOverlayType.NONE;
+    public static volatile BankOverlayType expectedOverlayType = BankOverlayType.NONE;
     public static BankData currentData;
     public static String currentCharacterID;
-    public static int currentMaxPages;
+    private static int currentMaxPages;
 
     public static boolean shouldWait = false;
     public static long shouldWaitSince = 0L;
 
-    public static EnumMap<BankOverlayType, HashMap<Integer, EasyTextInput>> BankPageNameInputsByType = new EnumMap<>(BankOverlayType.class);
+    private static boolean registeredScroll = false;
 
-    public static float pageBuyCustomModelData = 0;
+    public static PersonalStorageUtilitiesFeature getPersonalStorageUtils() {
+        return personalStorageUtils;
+    }
 
-    public static boolean registeredScroll = false;
+    public static void setPersonalStorageUtils(PersonalStorageUtilitiesFeature feature) {
+        personalStorageUtils = feature;
+    }
+
+    public static void setActiveTextInput(EasyTextInput textInput) {
+        activeTextInput = textInput;
+    }
+
+    public static void resetScrollRegistration() {
+        registeredScroll = false;
+    }
+
+    public static int getCurrentMaxPages() {
+        return currentMaxPages;
+    }
 
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
         if (ClassSelectionOverlay.handleKeyInput(event)) return;
-        if(BankOverlay2.searchbar2 != null && (event.getAction() == GLFW.GLFW_PRESS || event.getAction() == GLFW.GLFW_REPEAT)) {
-            BankOverlay2.searchbar2.keyPressed(event.getKey(), event.getScanCode(), event.getModifiers());
-        }
-        for(BankOverlay2.PageWidget page : BankOverlay2.pages) {
-            if((event.getAction() == GLFW.GLFW_PRESS || event.getAction() == GLFW.GLFW_REPEAT)) {
-                page.keyPressed(event.getKey(), event.getScanCode(), event.getModifiers());
-            }
+        if(event.getAction() == GLFW.GLFW_PRESS || event.getAction() == GLFW.GLFW_REPEAT) {
+            BankOverlay2.handleKeyPressed(event.getKey(), event.getScanCode(), event.getModifiers());
         }
         if(activeTextInput != null) {
             activeTextInput.onInput(event);
@@ -95,22 +100,14 @@ public class BankOverlay {
     @SubscribeEvent
     public void onChar(CharInputEvent event) {
         if (ClassSelectionOverlay.handleCharInput(event)) return;
-        if(BankOverlay2.searchbar2 != null) {
-            // Don't insert character if Ctrl is held (it's a shortcut like Ctrl+V)
-            if (!isCtrlHeld()) {
-                BankOverlay2.searchbar2.charTyped(event.getCharacter(), 0);
-            }
+        // Don't insert character if Ctrl is held (it's a shortcut like Ctrl+V)
+        if (!isCtrlHeld()) {
+            BankOverlay2.handleCharTyped(event.getCharacter());
         }
-        for(BankOverlay2.PageWidget page : BankOverlay2.pages) {
-            if (!isCtrlHeld()) {
-                page.charTyped(event.getCharacter(), 0);
-            }
-        }
-        if(activeTextInput != null) {
-            if (!isCtrlHeld()) {
+        if(activeTextInput != null && !isCtrlHeld()) {
                 activeTextInput.onCharInput(event);
             }
-        }
+
     }
 
     private static boolean isCtrlHeld() {
@@ -177,9 +174,8 @@ public class BankOverlay {
             }
 
             if(registeredScroll) return;
-            if(expectedOverlayType != BankOverlayType.NONE) {
-                if (expectedOverlayType != currentOverlayType) return;
-            }
+            if(expectedOverlayType != BankOverlayType.NONE && expectedOverlayType != currentOverlayType) return;
+
             String InventoryTitle = currScreen.getTitle().getString();
             if(InventoryTitle == null) { return; }
 
@@ -201,15 +197,15 @@ public class BankOverlay {
 
                     if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
                         if (verticalAmount > 0) {
-                            BankOverlay2.targetOffset -= 104f;
-                        } else if(canScrollFurther) {
-                            BankOverlay2.targetOffset += 104f;
+                            BankOverlay2.adjustTargetOffset(-104f);
+                        } else {
+                            BankOverlay2.adjustTargetOffset(104f);
                         }
                     }
                     return true;
                 });
             }
-            bankSyncid = currScreenHandler.syncId;
+            BankOverlay2.setBankSyncId(currScreenHandler.syncId);
 
             //most (almost all) of the functionality is in HandledScreenMixin
         });
@@ -226,5 +222,6 @@ public class BankOverlay {
         annotationCache.clear();
         heldItem = Items.AIR.getDefaultStack();
         registeredScroll = false;
+        BankOverlaySlotBridge.restoreAll();
     }
 }

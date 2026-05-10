@@ -26,12 +26,16 @@ public class SourceOfThruth extends WEScreen {
     );
 
     SourceOfTruthWidget sourceOfTruthWidget = null;
-    public static List<SoundEvent> sounds = new ArrayList<>();
+    private static final List<SoundEvent> sounds = new ArrayList<>();
     static String answer = "";
 
     protected SourceOfThruth() {
         super(Text.of("Source of truth"));
         answer = "";
+    }
+
+    public static void addSound(SoundEvent sound) {
+        sounds.add(sound);
     }
 
     @Override
@@ -45,7 +49,7 @@ public class SourceOfThruth extends WEScreen {
     }
 
     private static class SourceOfTruthWidget extends Widget {
-        public static Identifier shellTexture = Identifier.of("wynnextras", "textures/gui/misc/sourceoftruth.png");
+        public static final Identifier shellTexture = Identifier.of("wynnextras", "textures/gui/misc/sourceoftruth.png");
         PullThingWidget pullThingWidget = null;
 
         public SourceOfTruthWidget(int x, int y, int width, int height) {

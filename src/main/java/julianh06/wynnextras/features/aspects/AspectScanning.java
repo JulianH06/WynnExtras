@@ -481,7 +481,7 @@ public class AspectScanning {
      */
     public static void resetRewardAspects() {
         if (!collectedRewardAspects.isEmpty()) {
-            System.out.println("[WynnExtras] Clearing " + collectedRewardAspects.size() + " collected reward aspects");
+            WynnExtras.LOGGER.info("[WynnExtras] Clearing " + collectedRewardAspects.size() + " collected reward aspects");
             collectedRewardAspects.clear();
         }
     }
@@ -506,7 +506,7 @@ public class AspectScanning {
     }
 
     private static void dummyfunction(HandledScreen<?> screen) {
-        //System.out.println("dummyfunction called after 18 slots read");
+        //WynnExtras.LOGGER.info("dummyfunction called after 18 slots read");
         SearchedPages++;
         TreeLoader.clickOnNameInInventory("Next Page",screen,MinecraftClient.getInstance());
         if(SearchedPages<=6){
@@ -525,13 +525,13 @@ public class AspectScanning {
         }
     }
     private static void NextPageRaid(HandledScreen<?> screen) {
-        System.out.println("[WynnExtras] Clicking next page in reward chest");
+        WynnExtras.LOGGER.info("[WynnExtras] Clicking next page in reward chest");
         TreeLoader.clickOnNameInInventory("Next Page",screen,MinecraftClient.getInstance());
         maintracking.GuiSettleTicks = 0;
     }
 
     public static void PrevPageRaid(HandledScreen<?> screen) {
-        System.out.println("[WynnExtras] Clicking previous page in reward chest");
+        WynnExtras.LOGGER.info("[WynnExtras] Clicking previous page in reward chest");
         TreeLoader.clickOnNameInInventory("Previous Page",screen,MinecraftClient.getInstance());
         maintracking.GuiSettleTicks = 0;
     }
@@ -630,7 +630,7 @@ public class AspectScanning {
     public static void scanPreviewChest(HandledScreen<?> screen, String screenTitle) {
         if (screen == null) return;
 
-        System.out.println("[WynnExtras] scanPreviewChest called with title: " + screenTitle);
+        WynnExtras.LOGGER.info("[WynnExtras] scanPreviewChest called with title: " + screenTitle);
 
         try {
             // Detect raid from the last character of the title
@@ -735,15 +735,15 @@ public class AspectScanning {
             // Upload aspects
             if (!foundAspects.isEmpty() && !selectedRaid.equals("Unknown")) {
                 if (canUploadPersonal(selectedRaid)) {
-                    System.out.println("[WynnExtras] Uploading personal aspect progress (" + foundAspects.size() + ")");
+                    WynnExtras.LOGGER.info("[WynnExtras] Uploading personal aspect progress (" + foundAspects.size() + ")");
                     WynncraftApiHandler.processAspects(foundAspects);
                     lastPersonalUploadTime.put(selectedRaid, System.currentTimeMillis());
                 } else {
-                    System.out.println("[WynnExtras] Personal progress upload skipped (cooldown)");
+                    WynnExtras.LOGGER.info("[WynnExtras] Personal progress upload skipped (cooldown)");
                 }
 
                 if (!lootPoolDataFull.isEmpty() && canUploadLootpool(selectedRaid)) {
-                    System.out.println("[WynnExtras] Uploading loot pool for " + selectedRaid);
+                    WynnExtras.LOGGER.info("[WynnExtras] Uploading loot pool for " + selectedRaid);
 
                     WynncraftApiHandler.uploadLootPool(selectedRaid, lootPoolDataFull);
 
@@ -753,7 +753,7 @@ public class AspectScanning {
                             ResetTimeConfig.INSTANCE.getCurrentLootpoolReset()
                     );
                 } else {
-                    System.out.println("[WynnExtras] Loot pool already uploaded for this reset (" + selectedRaid + ")");
+                    WynnExtras.LOGGER.info("[WynnExtras] Loot pool already uploaded for this reset (" + selectedRaid + ")");
                 }
             }
         } catch (Exception e) {

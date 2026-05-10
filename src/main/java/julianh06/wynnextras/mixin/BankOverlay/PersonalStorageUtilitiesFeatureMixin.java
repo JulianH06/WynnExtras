@@ -11,6 +11,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class PersonalStorageUtilitiesFeatureMixin {
     @Inject(method = "<init>", at = @At("TAIL"), remap = false)
     void onInit(CallbackInfo ci) {
-        BankOverlay.PersonalStorageUtils = (PersonalStorageUtilitiesFeature) (Object) this;
+        BankOverlay.setPersonalStorageUtils((PersonalStorageUtilitiesFeature) (Object) this);
     }
 }

@@ -6,7 +6,19 @@ import java.util.List;
 public class SubCategory {
     public final String name;
     public final List<ConfigOption> options = new ArrayList<>();
-    public boolean expanded = false;
+    private boolean expanded = false;
 
     public SubCategory(String name) { this.name = name; }
+
+    public boolean isExpanded() {
+        return expanded;
+    }
+
+    public void setExpanded(boolean expanded) {
+        this.expanded = expanded;
+    }
+
+    public void toggleExpanded() {
+        expanded = !expanded;
+    }
 }

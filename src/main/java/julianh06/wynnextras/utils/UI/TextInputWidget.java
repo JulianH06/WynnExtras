@@ -14,7 +14,7 @@ public class TextInputWidget extends Widget {
     protected String placeholder = "Search...";
     protected int cursorPos = 0;
 
-    public boolean blinkToggle = true;
+    protected boolean blinkToggle = true;
     protected long lastBlink = 0;
 
     protected CustomColor backgroundColor = CustomColor.fromHexString("FFFFFF");
@@ -123,6 +123,10 @@ public class TextInputWidget extends Widget {
         this.cursorPos = Math.min(input.length(), cursorPos);
     }
 
+    public void setBlinkToggle(boolean blinkToggle) {
+        this.blinkToggle = blinkToggle;
+    }
+
 
     public CustomColor getBackgroundColor() {
         return backgroundColor;
@@ -151,4 +155,3 @@ public class TextInputWidget extends Widget {
     public void setPlaceholder(String placeholder) { this.placeholder = placeholder; }
     public void setPlaceholderColor(CustomColor placeholderColor) { this.placeholderColor = placeholderColor; }
 }
-

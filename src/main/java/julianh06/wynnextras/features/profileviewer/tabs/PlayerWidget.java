@@ -32,7 +32,7 @@ public class PlayerWidget extends Widget {
     }
 
     public void draw(DrawContext ctx, int x, int y) {
-        //System.out.println(hovered);
+        //WynnExtras.LOGGER.info(hovered);
         if(this.ui == null) return;
         setBounds(x, y, 100, 80);
         //ui.drawText(lastViewedPlayers.get(index), x, y);

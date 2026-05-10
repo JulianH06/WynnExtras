@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import julianh06.wynnextras.features.aspects.pages.LootrunLootPoolPage;
@@ -166,7 +167,7 @@ public class LootrunLootPoolData {
                 GSON.toJson(this, writer);
             }
         } catch (Exception e) {
-            System.err.println("Failed to save lootrun loot pool data: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to save lootrun loot pool data: " + e.getMessage());
         }
     }
 
@@ -190,7 +191,7 @@ public class LootrunLootPoolData {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to load lootrun loot pool data: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to load lootrun loot pool data: " + e.getMessage());
         }
     }
 

@@ -230,7 +230,7 @@ public class TradeMarketComparisonPanel {
             processedTooltip = getFallbackTooltip(stack, mc);
         }
 
-        WeightDisplay.currentHoveredStack = stack;
+        WeightDisplay.setCurrentHoveredStack(stack);
 
         if (WeightDisplay.isTrackedMythic(stack) && !WeightDisplay.isUnidentified(stack)) {
             processedTooltip = WeightDisplay.modifyTooltip(processedTooltip, stack);

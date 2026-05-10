@@ -217,12 +217,12 @@ public class WaypointScreen extends Screen {
         categoryDropdown = new EasyDropdown(0, 0, -1, -1)  {
             @Override
             public void click() {
-                if(!isExpanded) {
-                    isExpanded = true;
+                if(!isExpanded()) {
+                    setExpanded(true);
                 } else {
                     int ySection = Math.floorDiv(mouseY - 60 / scaleFactor, (39 / scaleFactor));
                     if(ySection < 1 || ySection > WaypointData.INSTANCE.activePackage.categories.size()) {
-                        isExpanded = false;
+                        collapse();
                         return;
                     }
 
@@ -245,7 +245,7 @@ public class WaypointScreen extends Screen {
                 FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("Category filter")), 8f / scaleFactor, 68f / scaleFactor, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2.75f / scaleFactor);
 
 
-                if (isExpanded) {
+                if (isExpanded()) {
                     if(categories.size() <= 1) {
                         RenderUtils.drawTexturedRect(context, categorySingleTexture, CustomColor.NONE, x, y + height, width, 39f / scaleFactor, (int) width, 39 / scaleFactor);
                         if(categories.isEmpty()) {
@@ -276,8 +276,8 @@ public class WaypointScreen extends Screen {
                 if(x < this.x) return false;
                 if(y < this.y) return false;
                 if(x > this.x + width) return false;
-                if(isExpanded) WaypointScreen.clickWhileExpanded = true;
-                if(isExpanded && WaypointData.INSTANCE.activePackage.categories != null) {
+                if(isExpanded()) WaypointScreen.clickWhileExpanded = true;
+                if(isExpanded() && WaypointData.INSTANCE.activePackage.categories != null) {
                     if(y > this.y + height + WaypointData.INSTANCE.activePackage.categories.size() * (39f / scaleFactor)) return false;
                 } else {
                     if(y > this.y + height) return false;
@@ -422,7 +422,7 @@ public class WaypointScreen extends Screen {
         FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(editCategoriesText)), editCategoriesButton.getX() + 150f / scaleFactor, editCategoriesButton.getY() + 30f / scaleFactor, CustomColor.fromHexString("ffffff"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f / scaleFactor);
 
         for(WaypointElement element : elements) {
-            if(element.categoryDropdown.isExpanded) {
+            if(element.categoryDropdown.isExpanded()) {
                 element.categoryDropdown.draw(context);
             }
         }
@@ -566,7 +566,7 @@ public class WaypointScreen extends Screen {
             if(categoryDropdown.isClickInBounds(mouseX, mouseY)) {
                 categoryDropdown.click();
             } else {
-                categoryDropdown.isExpanded = false;
+                categoryDropdown.collapse();
             }
         } else {
             for(CategoryElement element : categories) {

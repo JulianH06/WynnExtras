@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.core.persisted.config.Config;
 import com.wynntils.features.inventory.ItemHighlightFeature;
 import com.wynntils.handlers.item.ItemAnnotation;
@@ -92,7 +93,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                         }
                     })
                     .exceptionally(ex -> {
-                        System.err.println("Unexpected error: " + ex.getMessage());
+                        WynnExtras.LOGGER.error("Unexpected error: " + ex.getMessage());
                         return null;
                     });
         }

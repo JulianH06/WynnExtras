@@ -72,10 +72,9 @@ public abstract class WEScreen extends Screen {
                 consumed
         ) -> {
             long now = System.currentTimeMillis();
-            if (now - lastScrollTime < scrollCooldown) {
+            if (isScrollOnCooldown(now)) {
                 return true;
             }
-            lastScrollTime = now;
 
             if (verticalAmount > 0) {
                 scrollList(30); //Scroll up
@@ -84,6 +83,15 @@ public abstract class WEScreen extends Screen {
             }
             return true;
         });
+    }
+
+    private static boolean isScrollOnCooldown(long now) {
+        if (now - lastScrollTime < scrollCooldown) {
+            return true;
+        }
+
+        lastScrollTime = now;
+        return false;
     }
 
     @Override

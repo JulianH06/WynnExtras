@@ -49,7 +49,7 @@ public class BadgeRenderer {
                     player.getLerpedPos(tickDelta).z
             );
 
-            //System.out.println("reder at " + player.getLerpedPos(tickDelta).x + " " + player.getLerpedPos(tickDelta).y + " " + player.getLerpedPos(tickDelta).z);
+            //WynnExtras.LOGGER.info("reder at " + player.getLerpedPos(tickDelta).x + " " + player.getLerpedPos(tickDelta).y + " " + player.getLerpedPos(tickDelta).z);
 
             // Render the star badge
             //u2618

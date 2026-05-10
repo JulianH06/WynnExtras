@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.misc;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
@@ -403,7 +404,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 if (!charDataDebugLogged) {
                     charDataDebugLogged = true;
                     for (CharIdentity cd : charDataList) {
-                        System.out.println("[WynnExtras] Char: name=" + cd.name + " class=" + cd.classType
+                        WynnExtras.LOGGER.info("[WynnExtras] Char: name=" + cd.name + " class=" + cd.classType
                                 + " color=" + cd.color + " time=" + cd.timePlayed + " lv=" + cd.level + " xp=" + cd.xpPercent + "%");
                     }
                 }
@@ -1207,7 +1208,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 }
             }
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Failed to scan custom backgrounds: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to scan custom backgrounds: " + e.getMessage());
         }
     }
 
@@ -1233,7 +1234,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             bgTexture = Identifier.of("wynnextras", "class_bg_" + System.currentTimeMillis());
             MinecraftClient.getInstance().getTextureManager().registerTexture(bgTexture, texture);
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Failed to load custom background: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load custom background: " + e.getMessage());
         }
     }
 
@@ -1259,13 +1260,11 @@ public class ClassSelectionOverlay extends WEHandledScreen {
      * Matches by name + level, or by level alone as fallback. Only clicks if exactly one match.
      */
     private void tryAutoSelectCharacter(List<CharIdentity> charDataList, List<Integer> charSlotIndices, List<ItemStack> stacks) {
-        String targetName = BankOverlay2.targetCharacterNameForClassMenu;
-        int targetLevel = BankOverlay2.targetCharacterLevelForClassMenu;
+        String targetName = BankOverlay2.getTargetCharacterNameForClassMenu();
+        int targetLevel = BankOverlay2.getTargetCharacterLevelForClassMenu();
 
         // Clear the target so it doesn't trigger again
-        BankOverlay2.targetCharacterIdForClassMenu = null;
-        BankOverlay2.targetCharacterNameForClassMenu = null;
-        BankOverlay2.targetCharacterLevelForClassMenu = 0;
+        BankOverlay2.clearTargetCharacterForClassMenu();
 
         if (targetName == null && targetLevel <= 0) return;
 
