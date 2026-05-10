@@ -26,8 +26,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import static julianh06.wynnextras.core.WynnExtras.normalGUIScale;
-
 @Mixin(Screen.class)
 public class InventoryScreenMixin {
     @Inject(method = "renderInGameBackground", at = @At("HEAD"), cancellable = true)
@@ -49,8 +47,8 @@ public class InventoryScreenMixin {
         }
 
         if(WynnExtrasConfig.INSTANCE.differentGUIScale) {
-            if(normalGUIScale == -1) {
-                normalGUIScale = MinecraftClient.getInstance().options.getGuiScale().getValue();
+            if(!WynnExtras.hasStoredNormalGuiScale()) {
+                WynnExtras.storeNormalGuiScale(MinecraftClient.getInstance().options.getGuiScale().getValue());
                 MinecraftClient.getInstance().options.getGuiScale().setValue(WynnExtrasConfig.INSTANCE.customGUIScale);
             }
         }
@@ -90,8 +88,7 @@ public class InventoryScreenMixin {
                 }
             }
 
-            WynnExtras.testInv = currScreenHandler.slots;
-            WynnExtras.testInvSize = currScreenHandler.slots.size() - 36;
+            WynnExtras.updateTestInventory(currScreenHandler.slots);
         }
     }
 }

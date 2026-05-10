@@ -17,4 +17,7 @@ public interface HandledScreenInvoker {
 
     @Invoker("drawSlotHighlightFront")
     void invokeDrawSlotHighlightFront(DrawContext context);
+
+    @Invoker("drawMouseoverTooltip")
+    void invokeDrawMouseoverTooltip(DrawContext context, int mouseX, int mouseY);
 }

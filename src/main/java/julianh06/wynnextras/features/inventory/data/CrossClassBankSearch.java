@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.inventory.data;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.wynntils.core.components.Models;
 import com.wynntils.models.items.WynnItem;
@@ -77,7 +78,7 @@ public class CrossClassBankSearch {
                      results.addAll(characterResults);
                  });
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Error listing character bank files: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error listing character bank files: " + e.getMessage());
         }
 
         return results;
@@ -91,12 +92,12 @@ public class CrossClassBankSearch {
 
         try (Reader reader = Files.newBufferedReader(file)) {
             BankData data = BankData.getGson().fromJson(reader, CharacterBankData.class);
-            if (data == null || data.BankPages == null) return results;
+            if (data == null || data.getBankPages() == null) return results;
 
-            String nickname = data.characterNickname;
-            int level = data.characterLevel;
+            String nickname = data.getCharacterNickname();
+            int level = data.getCharacterLevel();
 
-            for (Map.Entry<Integer, List<ItemStack>> entry : data.BankPages.entrySet()) {
+            for (Map.Entry<Integer, List<ItemStack>> entry : data.getBankPages().entrySet()) {
                 int pageNum = entry.getKey();
                 List<ItemStack> pageItems = entry.getValue();
 
@@ -124,9 +125,9 @@ public class CrossClassBankSearch {
                 }
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Error parsing character bank file " + file + ": " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error parsing character bank file " + file + ": " + e.getMessage());
         }
 
         return results;
@@ -154,7 +155,7 @@ public class CrossClassBankSearch {
                      ids.add(characterId);
                  });
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Error listing character bank files: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error listing character bank files: " + e.getMessage());
         }
 
         return ids;
@@ -172,12 +173,12 @@ public class CrossClassBankSearch {
                 .resolve("wynnextras/" + McUtils.player().getUuid().toString());
 
         if (!Files.exists(configDir)) {
-            System.out.println("[WynnExtras] Config dir doesn't exist: " + configDir);
+            WynnExtras.LOGGER.info("[WynnExtras] Config dir doesn't exist: " + configDir);
             return results;
         }
 
         String currentCharacterId = BankOverlay.currentCharacterID;
-        System.out.println("[WynnExtras] Current character ID: " + currentCharacterId);
+        WynnExtras.LOGGER.info("[WynnExtras] Current character ID: " + currentCharacterId);
 
         try (Stream<Path> files = Files.list(configDir)) {
             List<Path> bankFiles = files
@@ -185,7 +186,7 @@ public class CrossClassBankSearch {
                     .filter(p -> p.getFileName().toString().endsWith(".json"))
                     .toList();
 
-            System.out.println("[WynnExtras] Found " + bankFiles.size() + " character bank files");
+            WynnExtras.LOGGER.info("[WynnExtras] Found " + bankFiles.size() + " character bank files");
 
             for (Path file : bankFiles) {
                 String fileName = file.getFileName().toString();
@@ -193,21 +194,21 @@ public class CrossClassBankSearch {
 
                 // Skip current character
                 if (characterId.equals(currentCharacterId)) {
-                    System.out.println("[WynnExtras] Skipping current character: " + characterId);
+                    WynnExtras.LOGGER.info("[WynnExtras] Skipping current character: " + characterId);
                     continue;
                 }
 
-                System.out.println("[WynnExtras] Loading pages from character: " + characterId);
+                WynnExtras.LOGGER.info("[WynnExtras] Loading pages from character: " + characterId);
 
                 // Load all pages from this character
                 List<SearchResult> characterPages = loadAllPagesFromCharacter(file, characterId);
                 results.addAll(characterPages);
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Error listing character bank files: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error listing character bank files: " + e.getMessage());
         }
 
-        System.out.println("[WynnExtras] Total cross-class pages: " + results.size());
+        WynnExtras.LOGGER.info("[WynnExtras] Total cross-class pages: " + results.size());
         return results;
     }
 
@@ -241,7 +242,7 @@ public class CrossClassBankSearch {
                 results.addAll(characterPages);
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Error listing character bank files: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error listing character bank files: " + e.getMessage());
         }
 
         return results;
@@ -275,7 +276,7 @@ public class CrossClassBankSearch {
                      results.addAll(characterResults);
                  });
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Error listing character bank files: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error listing character bank files: " + e.getMessage());
         }
 
         return results;
@@ -288,9 +289,9 @@ public class CrossClassBankSearch {
         List<SearchResult> results = new ArrayList<>();
         try {
             AccountBankData data = AccountBankData.INSTANCE;
-            if (data == null || data.BankPages == null) return results;
+            if (data == null || data.getBankPages() == null) return results;
 
-            for (Map.Entry<Integer, List<ItemStack>> entry : data.BankPages.entrySet()) {
+            for (Map.Entry<Integer, List<ItemStack>> entry : data.getBankPages().entrySet()) {
                 int pageNum = entry.getKey();
                 List<ItemStack> pageItems = entry.getValue();
                 if (pageItems == null || pageItems.isEmpty()) continue;
@@ -300,7 +301,7 @@ public class CrossClassBankSearch {
                 }
             }
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Error loading account bank pages: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error loading account bank pages: " + e.getMessage());
         }
         return results;
     }
@@ -312,9 +313,9 @@ public class CrossClassBankSearch {
         List<SearchResult> results = new ArrayList<>();
         try {
             AccountBankData data = AccountBankData.INSTANCE;
-            if (data == null || data.BankPages == null) return results;
+            if (data == null || data.getBankPages() == null) return results;
 
-            for (Map.Entry<Integer, List<ItemStack>> entry : data.BankPages.entrySet()) {
+            for (Map.Entry<Integer, List<ItemStack>> entry : data.getBankPages().entrySet()) {
                 int pageNum = entry.getKey();
                 List<ItemStack> pageItems = entry.getValue();
                 if (pageItems == null) continue;
@@ -334,7 +335,7 @@ public class CrossClassBankSearch {
                 }
             }
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Error searching account bank: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error searching account bank: " + e.getMessage());
         }
         return results;
     }
@@ -347,16 +348,16 @@ public class CrossClassBankSearch {
 
         try (Reader reader = Files.newBufferedReader(file)) {
             BankData data = BankData.getGson().fromJson(reader, CharacterBankData.class);
-            if (data == null || data.BankPages == null) {
-                System.out.println("[WynnExtras] No bank data for character: " + characterId);
+            if (data == null || data.getBankPages() == null) {
+                WynnExtras.LOGGER.info("[WynnExtras] No bank data for character: " + characterId);
                 return results;
             }
 
-            String nickname = data.characterNickname;
-            int level = data.characterLevel;
-            System.out.println("[WynnExtras] Character " + characterId + " (" + nickname + " Lv." + level + ") has " + data.BankPages.size() + " pages");
+            String nickname = data.getCharacterNickname();
+            int level = data.getCharacterLevel();
+            WynnExtras.LOGGER.info("[WynnExtras] Character " + characterId + " (" + nickname + " Lv." + level + ") has " + data.getBankPages().size() + " pages");
 
-            for (Map.Entry<Integer, List<ItemStack>> entry : data.BankPages.entrySet()) {
+            for (Map.Entry<Integer, List<ItemStack>> entry : data.getBankPages().entrySet()) {
                 int pageNum = entry.getKey();
                 List<ItemStack> pageItems = entry.getValue();
 
@@ -369,9 +370,9 @@ public class CrossClassBankSearch {
                 }
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Error parsing character bank file " + file + ": " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error parsing character bank file " + file + ": " + e.getMessage());
             e.printStackTrace();
         }
 

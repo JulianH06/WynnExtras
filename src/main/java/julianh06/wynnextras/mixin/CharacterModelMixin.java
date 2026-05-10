@@ -1,5 +1,6 @@
 package julianh06.wynnextras.mixin;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.core.components.Models;
 import com.wynntils.models.character.CharacterModel;
 import com.wynntils.models.worlds.event.WorldStateEvent;
@@ -76,23 +77,22 @@ public class CharacterModelMixin {
             String actualName = Models.Character.getActualName();
             int combatLevel = this.level;
 
-            System.out.println("[WynnExtras] Wynntils data - Name: " + actualName + ", Level: " + combatLevel);
+            WynnExtras.LOGGER.info("[WynnExtras] Wynntils data - Name: " + actualName + ", Level: " + combatLevel);
 
             // If level is 0 or name is basic, try Wynncraft API for better data
             if (combatLevel == 0 || actualName == null || actualName.isEmpty()) {
                 fetchCharacterFromApi(characterId);
             } else {
                 // Save Wynntils data
-                CharacterBankData.INSTANCE.characterNickname = actualName;
-                CharacterBankData.INSTANCE.characterLevel = combatLevel;
+                CharacterBankData.INSTANCE.setCharacterInfo(actualName, combatLevel);
                 CharacterBankData.INSTANCE.save();
-                System.out.println("[WynnExtras] Saved character: " + actualName + " Lv." + combatLevel + " for ID: " + characterId);
+                WynnExtras.LOGGER.info("[WynnExtras] Saved character: " + actualName + " Lv." + combatLevel + " for ID: " + characterId);
 
                 // Also try API to get Champion nickname if available
                 fetchCharacterFromApi(characterId);
             }
         } catch (Exception ex) {
-            System.err.println("[WynnExtras] Failed to get character info: " + ex.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to get character info: " + ex.getMessage());
         }
     }
 
@@ -131,10 +131,9 @@ public class CharacterModelMixin {
                     int apiLevel = charData.getLevel();
 
                     if (displayName != null && !displayName.isEmpty()) {
-                        CharacterBankData.INSTANCE.characterNickname = displayName;
-                        CharacterBankData.INSTANCE.characterLevel = apiLevel;
+                        CharacterBankData.INSTANCE.setCharacterInfo(displayName, apiLevel);
                         CharacterBankData.INSTANCE.save();
-                        System.out.println("[WynnExtras] API updated character: " + displayName + " Lv." + apiLevel + " for ID: " + characterId);
+                        WynnExtras.LOGGER.info("[WynnExtras] API updated character: " + displayName + " Lv." + apiLevel + " for ID: " + characterId);
                     }
 
                     // Initialize profession overflow XP from API

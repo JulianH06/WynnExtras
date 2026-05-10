@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.waypoints;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.wynntils.core.text.StyledText;
@@ -47,7 +48,7 @@ public class WaypointData {
                 }
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't load packages:");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't load packages:");
             e.printStackTrace();
         }
 
@@ -69,7 +70,7 @@ public class WaypointData {
                 pkg.saveToFile(PACKAGE_FOLDER);
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't save packages:");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't save packages:");
             e.printStackTrace();
         }
     }
@@ -79,7 +80,7 @@ public class WaypointData {
         try {
             Files.deleteIfExists(PACKAGE_FOLDER.resolve(name + ".json"));
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't delete package file: " + name);
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't delete package file: " + name);
             e.printStackTrace();
         }
     }

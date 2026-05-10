@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.raid;
 
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.*;
@@ -35,10 +36,10 @@ public class RaidList {
         long raidEndTime = System.currentTimeMillis();
 
         // Debug logging
-        System.out.println("[WynnExtras] Raid ended - type: " + event.getRaid().getRaidKind().getRaidName());
-        System.out.println("[WynnExtras] Raid end time: " + raidEndTime);
-        System.out.println("[WynnExtras] Raid start time from event: " + event.getRaid().getRaidStartTime());
-        System.out.println("[WynnExtras] Time in raid (ms): " + event.getRaid().getTimeInRaid());
+        WynnExtras.LOGGER.info("[WynnExtras] Raid ended - type: " + event.getRaid().getRaidKind().getRaidName());
+        WynnExtras.LOGGER.info("[WynnExtras] Raid end time: " + raidEndTime);
+        WynnExtras.LOGGER.info("[WynnExtras] Raid start time from event: " + event.getRaid().getRaidStartTime());
+        WynnExtras.LOGGER.info("[WynnExtras] Time in raid (ms): " + event.getRaid().getTimeInRaid());
 
         if(event instanceof RaidEndedEvent.Completed) {
             INSTANCE.raids.add(new RaidData(event.getRaid(), members, raidEndTime, true));

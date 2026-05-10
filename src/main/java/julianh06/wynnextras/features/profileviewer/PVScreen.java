@@ -285,7 +285,7 @@ public class PVScreen extends WEScreen {
         for(PlayerWidget playerWidget : lastViewedPlayersWidget) {
             playerWidget.draw(super.drawContext, xStart + currentTabWidget.getWidth(), yStart + 100 * playerWidget.index + 30);
         }
-        //System.out.println(rootWidgets);
+        //WynnExtras.LOGGER.info(rootWidgets);
 //        for(int i = 0; i < lastViewedPlayers.size(); i++) {
 //            ui.drawText(lastViewedPlayers.get(i),  + 110, yStart + 100 * i + 55);
 //

@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects.pages;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
@@ -145,7 +146,7 @@ public class AspectsPage extends PageWidget {
                         .exceptionally(ex -> {
                             // Only log if this is still the current request
                             if (fetchGen == myAspectsFetchGeneration) {
-                                System.err.println("Failed to fetch aspects: " + ex.getMessage());
+                                WynnExtras.LOGGER.error("Failed to fetch aspects: " + ex.getMessage());
                             }
                             return null;
                         });
@@ -688,7 +689,7 @@ public class AspectsPage extends PageWidget {
         }).exceptionally(ex -> {
             // Only log/update if we're still searching for the same player
             if (expectedPlayer.equals(searchedPlayer)) {
-                System.err.println("[WynnExtras] Error fetching aspects for " + playerName + ": " + ex.getMessage());
+                WynnExtras.LOGGER.error("[WynnExtras] Error fetching aspects for " + playerName + ": " + ex.getMessage());
                 searchedPlayerStatus = WynncraftApiHandler.FetchStatus.UNKNOWN_ERROR;
             }
             return null;

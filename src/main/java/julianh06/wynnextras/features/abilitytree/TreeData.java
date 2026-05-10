@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.abilitytree;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.*;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
@@ -35,7 +36,7 @@ public class TreeData {
             reader.reset();
             return gson.fromJson(reader, TreeData.class);
         } catch (IOException | JsonParseException e) {
-            System.err.println("[TreeData] Failed to load " + pathToFile + ":");
+            WynnExtras.LOGGER.error("[TreeData] Failed to load " + pathToFile + ":");
             e.printStackTrace();
             return null;
         }
@@ -52,11 +53,11 @@ public class TreeData {
                 TreeData t = safeLoadTree(file);
                 if (t != null && t.name != null) {
                     trees.put(t.name, t);
-                    System.out.println("[TreeData] Loaded ability tree: " + t.name);
+                    WynnExtras.LOGGER.info("[TreeData] Loaded ability tree: " + t.name);
                 }
             }
         } catch (IOException e) {
-            System.err.println("[TreeData] Failed to scan directory: " + treesDir);
+            WynnExtras.LOGGER.error("[TreeData] Failed to scan directory: " + treesDir);
         }
     }
 
@@ -72,7 +73,7 @@ public class TreeData {
                 String json = gson.toJson(tree);
                 Files.writeString(file, json, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             } catch (IOException e) {
-                System.err.println("[TreeData] Failed to save tree: " + tree.name);
+                WynnExtras.LOGGER.error("[TreeData] Failed to save tree: " + tree.name);
             }
         }
     }

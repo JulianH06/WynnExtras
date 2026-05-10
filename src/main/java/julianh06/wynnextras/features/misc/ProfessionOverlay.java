@@ -144,7 +144,7 @@ public class ProfessionOverlay {
             float existing = c.professionOverflowXp.getOrDefault(key, 0f);
             if (apiOverflow > existing) {
                 c.professionOverflowXp.put(key, apiOverflow);
-                System.out.println("[WynnExtras] Initialized " + profType.getDisplayName() + " overflow from API: " + formatXp(apiOverflow) + " (xpPercent=" + prof.getXpPercent() + ")");
+                WynnExtras.LOGGER.info("[WynnExtras] Initialized " + profType.getDisplayName() + " overflow from API: " + formatXp(apiOverflow) + " (xpPercent=" + prof.getXpPercent() + ")");
             }
         }
         WynnExtrasConfig.save();
@@ -262,7 +262,7 @@ public class ProfessionOverlay {
                         .build();
                 HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
-                    System.err.println("[WynnExtras] Leaderboard fetch failed for " + profName + ": HTTP " + response.statusCode());
+                    WynnExtras.LOGGER.error("[WynnExtras] Leaderboard fetch failed for " + profName + ": HTTP " + response.statusCode());
                     return;
                 }
 
@@ -314,14 +314,14 @@ public class ProfessionOverlay {
 
                 if (playerRank > 0) {
                     leaderboardData.put(key, new LeaderboardEntry(playerRank, playerXp, nextPlayerXp));
-                    System.out.println("[WynnExtras] Leaderboard " + profName + ": #" + playerRank + " (XP: " + playerXp + ", next: " + nextPlayerXp + ")");
+                    WynnExtras.LOGGER.info("[WynnExtras] Leaderboard " + profName + ": #" + playerRank + " (XP: " + playerXp + ", next: " + nextPlayerXp + ")");
                 } else {
                     // Not on leaderboard - store with rank -1
                     leaderboardData.put(key, new LeaderboardEntry(-1, 0, 0));
-                    System.out.println("[WynnExtras] Leaderboard " + profName + ": Unranked");
+                    WynnExtras.LOGGER.info("[WynnExtras] Leaderboard " + profName + ": Unranked");
                 }
             } catch (Exception e) {
-                System.err.println("[WynnExtras] Leaderboard fetch error for " + profName + ": " + e.getMessage());
+                WynnExtras.LOGGER.error("[WynnExtras] Leaderboard fetch error for " + profName + ": " + e.getMessage());
             }
         });
     }

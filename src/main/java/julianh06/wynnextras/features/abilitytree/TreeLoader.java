@@ -882,12 +882,12 @@ public class TreeLoader {
                 TreeData.loadAll();
                 return;
             } catch (IOException e) {
-                System.err.println("[WynnExtras] Couldn't write ability tree file:");
+                WynnExtras.LOGGER.error("[WynnExtras] Couldn't write ability tree file:");
                 e.printStackTrace();
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Failed to save ability tree file")));
             }
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Error fetching ability tree:");
+            WynnExtras.LOGGER.error("[WynnExtras] Error fetching ability tree:");
             e.printStackTrace();
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Error fetching ability tree")));
         }
@@ -913,7 +913,7 @@ public class TreeLoader {
                 );
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't delete ability tree file:");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't delete ability tree file:");
             e.printStackTrace();
             McUtils.sendMessageToClient(
                     WynnExtras.addWynnExtrasPrefix(Text.of("Failed to delete ability tree file"))
@@ -950,11 +950,11 @@ public class TreeLoader {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("HTTP Request failed: 401")));
                 return null;
             } else {
-                System.err.println("[WynnExtras] HTTP Error: " + responseCode);
+                WynnExtras.LOGGER.error("[WynnExtras] HTTP Error: " + responseCode);
                 return null;
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Network error:");
+            WynnExtras.LOGGER.error("[WynnExtras] Network error:");
             e.printStackTrace();
             return null;
         }

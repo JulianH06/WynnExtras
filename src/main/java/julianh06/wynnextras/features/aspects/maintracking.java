@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
@@ -342,7 +343,7 @@ public class maintracking {
             if(inPreviewChest){
                 String currentTitle = currScreen.getTitle().getString();
                 if(!currentTitle.equals(lastPreviewChestTitle) && (WynnExtrasConfig.INSTANCE.passiveAspectScanning || WynnExtrasConfig.INSTANCE.automaticAspectScanning)){
-                    System.out.println("[WynnExtras] Preview chest detected, title: " + currentTitle);
+                    WynnExtras.LOGGER.info("[WynnExtras] Preview chest detected, title: " + currentTitle);
                     lastPreviewChestTitle = currentTitle;
                     AspectScanning.scanPreviewChest(screen, currentTitle);
                 }
@@ -360,7 +361,7 @@ public class maintracking {
                 try {
                     AspectScanning.AspectsInRaidChest();
                 } catch (Exception e) {
-                    System.err.println("[WynnExtras] Error scanning raid chest: " + e.getMessage());
+                    WynnExtras.LOGGER.error("[WynnExtras] Error scanning raid chest: " + e.getMessage());
                     e.printStackTrace();
                 }
                 return;

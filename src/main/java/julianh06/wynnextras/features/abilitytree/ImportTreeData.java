@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.abilitytree;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.*;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -25,7 +26,7 @@ public class ImportTreeData {
             reader.reset();
             return gson.fromJson(reader, ImportTreeData.class);
         } catch (IOException | JsonParseException e) {
-            System.err.println("[ImportTreeData] Failed to load " + pathToFile + ":");
+            WynnExtras.LOGGER.error("[ImportTreeData] Failed to load " + pathToFile + ":");
             e.printStackTrace();
             return null;
         }
@@ -43,11 +44,11 @@ public class ImportTreeData {
                 ImportTreeData t = safeLoadTree(file);
                 if (t != null && t.name != null) {
                     trees.put(t.name, t);
-                    System.out.println("[ImportTreeData] Loaded ability tree: " + t.name);
+                    WynnExtras.LOGGER.info("[ImportTreeData] Loaded ability tree: " + t.name);
                 }
             }
         } catch (IOException e) {
-            System.err.println("[ImportTreeData] Failed to scan directory: " + treesDir);
+            WynnExtras.LOGGER.error("[ImportTreeData] Failed to scan directory: " + treesDir);
         }
     }
 

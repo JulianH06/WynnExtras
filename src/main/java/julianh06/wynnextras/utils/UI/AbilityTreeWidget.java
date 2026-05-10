@@ -20,95 +20,95 @@ public class AbilityTreeWidget extends Widget {
 
     static Identifier borderTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/treetabbackgroundborders.png");
     static Identifier borderTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/treetabbackgroundborders_dark.png");
-    public static Identifier pageLineTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/pageline.png");
+    public static final Identifier pageLineTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/pageline.png");
 
-    public static Identifier strengthTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/strength.png");
-    public static Identifier dexterityTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/dexterity.png");
-    public static Identifier intelligenceTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/intelligence.png");
-    public static Identifier defenceTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/defence.png");
-    public static Identifier agilityTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/agility.png");
+    public static final Identifier strengthTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/strength.png");
+    public static final Identifier dexterityTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/dexterity.png");
+    public static final Identifier intelligenceTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/intelligence.png");
+    public static final Identifier defenceTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/defence.png");
+    public static final Identifier agilityTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/agility.png");
 
-    public static Identifier warrior = Identifier.of("wynnextras", "textures/gui/profileviewer/node/warrior.png");
-    public static Identifier warriorActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/warrior_active.png");
+    public static final Identifier warrior = Identifier.of("wynnextras", "textures/gui/profileviewer/node/warrior.png");
+    public static final Identifier warriorActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/warrior_active.png");
 
-    public static Identifier shaman = Identifier.of("wynnextras", "textures/gui/profileviewer/node/shaman.png");
-    public static Identifier shamanActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/shaman_active.png");
+    public static final Identifier shaman = Identifier.of("wynnextras", "textures/gui/profileviewer/node/shaman.png");
+    public static final Identifier shamanActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/shaman_active.png");
 
-    public static Identifier archer = Identifier.of("wynnextras", "textures/gui/profileviewer/node/archer.png");
-    public static Identifier archerActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/archer_active.png");
+    public static final Identifier archer = Identifier.of("wynnextras", "textures/gui/profileviewer/node/archer.png");
+    public static final Identifier archerActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/archer_active.png");
 
-    public static Identifier mage = Identifier.of("wynnextras", "textures/gui/profileviewer/node/mage.png");
-    public static Identifier mageActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/mage_active.png");
+    public static final Identifier mage = Identifier.of("wynnextras", "textures/gui/profileviewer/node/mage.png");
+    public static final Identifier mageActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/mage_active.png");
 
-    public static Identifier assassin = Identifier.of("wynnextras", "textures/gui/profileviewer/node/assassin.png");
-    public static Identifier assassinActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/assassin_active.png");
+    public static final Identifier assassin = Identifier.of("wynnextras", "textures/gui/profileviewer/node/assassin.png");
+    public static final Identifier assassinActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/assassin_active.png");
 
-    public static Identifier white = Identifier.of("wynnextras", "textures/gui/profileviewer/node/white.png");
-    public static Identifier whiteActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/white_active.png");
+    public static final Identifier white = Identifier.of("wynnextras", "textures/gui/profileviewer/node/white.png");
+    public static final Identifier whiteActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/white_active.png");
 
-    public static Identifier ultimateNodeBase = Identifier.of("wynnextras", "textures/gui/profileviewer/node/node.png");
-    public static Identifier ultimateNodeSelected = Identifier.of("wynnextras", "textures/gui/profileviewer/node/selected.png");
+    public static final Identifier ultimateNodeBase = Identifier.of("wynnextras", "textures/gui/profileviewer/node/node.png");
+    public static final Identifier ultimateNodeSelected = Identifier.of("wynnextras", "textures/gui/profileviewer/node/selected.png");
 
-    public static Identifier yellow = Identifier.of("wynnextras", "textures/gui/profileviewer/node/yellow.png");
-    public static Identifier yellowActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/yellow_active.png");
+    public static final Identifier yellow = Identifier.of("wynnextras", "textures/gui/profileviewer/node/yellow.png");
+    public static final Identifier yellowActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/yellow_active.png");
 
-    public static Identifier blue = Identifier.of("wynnextras", "textures/gui/profileviewer/node/blue.png");
-    public static Identifier blueActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/blue_active.png");
+    public static final Identifier blue = Identifier.of("wynnextras", "textures/gui/profileviewer/node/blue.png");
+    public static final Identifier blueActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/blue_active.png");
 
-    public static Identifier purple = Identifier.of("wynnextras", "textures/gui/profileviewer/node/purple.png");
-    public static Identifier purpleActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/purple_active.png");
+    public static final Identifier purple = Identifier.of("wynnextras", "textures/gui/profileviewer/node/purple.png");
+    public static final Identifier purpleActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/purple_active.png");
 
-    public static Identifier red = Identifier.of("wynnextras", "textures/gui/profileviewer/node/red.png");
-    public static Identifier redActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/red_active.png");
+    public static final Identifier red = Identifier.of("wynnextras", "textures/gui/profileviewer/node/red.png");
+    public static final Identifier redActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/red_active.png");
 
-    public static Identifier vertical = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/vertical.png");
-    public static Identifier verticalActive = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/vertical_active.png");
+    public static final Identifier vertical = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/vertical.png");
+    public static final Identifier verticalActive = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/vertical_active.png");
 
-    public static Identifier horizontal = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/horizontal.png");
-    public static Identifier horizontalActive = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/horizontal_active.png");
+    public static final Identifier horizontal = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/horizontal.png");
+    public static final Identifier horizontalActive = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/horizontal_active.png");
 
-    public static Identifier down_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/down_left.png");
-    public static Identifier down_leftActive = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/down_left_active.png");
+    public static final Identifier down_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/down_left.png");
+    public static final Identifier down_leftActive = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/down_left_active.png");
 
-    public static Identifier right_down = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down.png");
-    public static Identifier right_downActive = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_active.png");
+    public static final Identifier right_down = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down.png");
+    public static final Identifier right_downActive = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_active.png");
 
-    public static Identifier right_down_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_left.png");
-    public static Identifier RIGHT_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_left_active.png");
-    public static Identifier right_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_left_active1.png");
-    public static Identifier RIGHT_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_left_active2.png");
-    public static Identifier RIGHT_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_left_active3.png");
+    public static final Identifier right_down_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_left.png");
+    public static final Identifier RIGHT_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_left_active.png");
+    public static final Identifier right_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_left_active1.png");
+    public static final Identifier RIGHT_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_left_active2.png");
+    public static final Identifier RIGHT_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/right_down_left_active3.png");
 
-    public static Identifier up_right_down = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down.png");
-    public static Identifier UP_RIGHT_DOWN = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_active.png");
-    public static Identifier UP_RIGHT_down = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_active1.png");
-    public static Identifier up_RIGHT_DOWN = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_active2.png");
-    public static Identifier UP_right_DOWN = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_active3.png");
+    public static final Identifier up_right_down = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down.png");
+    public static final Identifier UP_RIGHT_DOWN = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_active.png");
+    public static final Identifier UP_RIGHT_down = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_active1.png");
+    public static final Identifier up_RIGHT_DOWN = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_active2.png");
+    public static final Identifier UP_right_DOWN = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_active3.png");
 
-    public static Identifier up_down_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_down_left.png");
-    public static Identifier UP_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_down_left_active.png");
-    public static Identifier UP_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_down_left_active1.png");
-    public static Identifier up_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_down_left_active2.png");
-    public static Identifier UP_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_down_left_active3.png");
+    public static final Identifier up_down_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_down_left.png");
+    public static final Identifier UP_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_down_left_active.png");
+    public static final Identifier UP_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_down_left_active1.png");
+    public static final Identifier up_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_down_left_active2.png");
+    public static final Identifier UP_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_down_left_active3.png");
 
-    public static Identifier up_right_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left.png");
-    public static Identifier UP_RIGHT_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left_active.png");
-    public static Identifier UP_right_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left_active1.png");
-    public static Identifier UP_RIGHT_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left_active2.png");
-    public static Identifier up_RIGHT_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left_active3.png");
+    public static final Identifier up_right_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left.png");
+    public static final Identifier UP_RIGHT_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left_active.png");
+    public static final Identifier UP_right_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left_active1.png");
+    public static final Identifier UP_RIGHT_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left_active2.png");
+    public static final Identifier up_RIGHT_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_left_active3.png");
 
-    public static Identifier up_right_down_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left.png");
-    public static Identifier UP_RIGHT_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active.png");
-    public static Identifier UP_RIGHT_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active1.png");
-    public static Identifier UP_RIGHT_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active2.png");
-    public static Identifier up_RIGHT_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active3.png");
-    public static Identifier UP_right_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active4.png");
-    public static Identifier UP_right_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active5.png");
-    public static Identifier UP_RIGHT_down_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active6.png");
-    public static Identifier up_RIGHT_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active7.png");
-    public static Identifier up_right_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active8.png");
-    public static Identifier UP_right_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active9.png");
-    public static Identifier up_RIGHT_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active10.png");
+    public static final Identifier up_right_down_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left.png");
+    public static final Identifier UP_RIGHT_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active.png");
+    public static final Identifier UP_RIGHT_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active1.png");
+    public static final Identifier UP_RIGHT_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active2.png");
+    public static final Identifier up_RIGHT_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active3.png");
+    public static final Identifier UP_right_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active4.png");
+    public static final Identifier UP_right_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active5.png");
+    public static final Identifier UP_RIGHT_down_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active6.png");
+    public static final Identifier up_RIGHT_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active7.png");
+    public static final Identifier up_right_DOWN_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active8.png");
+    public static final Identifier UP_right_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active9.png");
+    public static final Identifier up_RIGHT_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active10.png");
 
     public final String className;
 
@@ -212,8 +212,6 @@ public class AbilityTreeWidget extends Widget {
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if (!loaded || state.classTree == null) return;
 
-        //System.out.println(nodeWidgets);
-
         for (AbilityMapData.Node node : state.connectors) {
             int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
             Identifier tex = connectorTextureFor(node);
@@ -297,7 +295,6 @@ public class AbilityTreeWidget extends Widget {
                     }
 
                     if(leftNeighbour == null || rightNeighbour == null || downNeighbour == null) {
-                        //System.out.println(node.meta.page);
                         yield RIGHT_DOWN_LEFT;
                     }
                     if(leftNeighbour.unlocked && rightNeighbour.unlocked && downNeighbour.unlocked) yield RIGHT_DOWN_LEFT;

@@ -134,7 +134,7 @@ public class EasyTextInput extends EasyElement{
     public void click() {
         if(!isActive) {
             isActive = true;
-            BankOverlay.activeTextInput = this;
+            BankOverlay.setActiveTextInput(this);
             cursorPos = input.length();
             color = CustomColor.fromHexString("FFEA00");
             return;

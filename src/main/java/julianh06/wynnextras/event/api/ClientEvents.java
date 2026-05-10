@@ -24,8 +24,7 @@ public class ClientEvents {
             if (!MinecraftUtils.localPlayerExists()) return;
             if (!MinecraftUtils.localWorldExists()) return;
 
-            totalTicks++;
-            new TickEvent(totalTicks).post();
+            new TickEvent(nextTick()).post();
         });
 
         ClientPlayConnectionEvents.DISCONNECT.register(((handler, client) -> {
@@ -35,5 +34,10 @@ public class ClientEvents {
         ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> {
             new WorldChangeEvent().post();
         });
+    }
+
+    private static int nextTick() {
+        totalTicks++;
+        return totalTicks;
     }
 }

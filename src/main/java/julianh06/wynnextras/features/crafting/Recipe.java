@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.crafting;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.models.character.type.ClassType;
 import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.gear.type.GearAttackSpeed;
@@ -120,7 +121,7 @@ public class Recipe {
         this.level = level;
         RecipeLoader.RecipeData ranges = RecipeLoader.getRecipe(type, level);
         if (ranges == null) {
-            System.err.println("cannot set recipe to lvl " + this.level + " no constant found");
+            WynnExtras.LOGGER.error("cannot set recipe to lvl " + this.level + " no constant found");
             return;
         }
         this.dura = ranges.durability();
@@ -237,17 +238,17 @@ public class Recipe {
 
     private boolean checkValidity() {
         if (this.materials == null) {
-            System.out.println("Invalid material tier");
+            WynnExtras.LOGGER.info("Invalid material tier");
             return false;
         }
 
         if (dura == null) {
-            System.out.println("Invalid dura");
+            WynnExtras.LOGGER.info("Invalid dura");
             return false;
         }
 
         if (ingredients.length != 6) {
-            System.err.println("cannot create recipe without 6 ingredients");
+            WynnExtras.LOGGER.error("cannot create recipe without 6 ingredients");
             return false;
         }
         for (IngredientInfo ing : ingredients) {
@@ -256,13 +257,13 @@ public class Recipe {
             }
 
             if (!ing.professions().contains(getType().getStation())) {
-                System.out.println("cannot use " + ing.name() + " for " + getType().getStation());
+                WynnExtras.LOGGER.info("cannot use " + ing.name() + " for " + getType().getStation());
                 return false;
             }
 
             int levelReq = ing.level();
             if (levelReq > getLevel().y) {
-                System.out.println("cannot use ingredient " + ing.name() + " for lvl range "
+                WynnExtras.LOGGER.info("cannot use ingredient " + ing.name() + " for lvl range "
                         + getLevel().x + "-" + getLevel().y
                         + " requires lvl " + levelReq);
                 return false;

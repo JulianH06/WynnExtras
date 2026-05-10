@@ -41,7 +41,7 @@ public class Category {
         for (Object item : items) {
             if (item instanceof SubCategory s && ctx.subHasMatches(s)) {
                 h += SUBCATEGORY_HEADER_HEIGHT + 5;
-                if (s.expanded) {
+                if (s.isExpanded()) {
                     for (ConfigOption opt : s.options) {
                         if (ctx.matchesSearch(opt)) h += opt.getHeight(contentW - 8) + OPTION_SPACING;
                     }

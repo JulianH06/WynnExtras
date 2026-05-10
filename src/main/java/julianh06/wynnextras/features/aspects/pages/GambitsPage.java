@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects.pages;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -109,7 +110,7 @@ public class GambitsPage extends PageWidget{
 
                     lastCrowdsourceFetch = now;
                     if(isSamePool(oldGambits, result)) {
-                        System.out.println("still old pool, retry in 30s");
+                        WynnExtras.LOGGER.info("still old pool, retry in 30s");
                         hasOldData = true;
                     } else {
                         hasOldData = false;

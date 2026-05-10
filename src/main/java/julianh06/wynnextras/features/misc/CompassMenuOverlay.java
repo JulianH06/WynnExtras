@@ -331,14 +331,14 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     private static void logBestOrder(List<SolvableItem> order, SolvableItem weapon, int[] assigned) {
         String[] skillNames = {"STR", "DEX", "INT", "DEF", "AGI"};
-        System.out.println("[WE-BEST] === Best order found ===");
+        WynnExtras.LOGGER.info("[WE-BEST] === Best order found ===");
         for (SolvableItem si : order) {
-            System.out.println("[WE-BEST]   " + si.name
+            WynnExtras.LOGGER.info("[WE-BEST]   " + si.name
                     + " reqs=" + Arrays.toString(si.reqs)
                     + " bonuses=" + Arrays.toString(si.bonuses));
         }
-        if (weapon != null) System.out.println("[WE-BEST]   WEAPON " + weapon.name);
-        System.out.println("[WE-BEST]   result=" + Arrays.toString(assigned)
+        if (weapon != null) WynnExtras.LOGGER.info("[WE-BEST]   WEAPON " + weapon.name);
+        WynnExtras.LOGGER.info("[WE-BEST]   result=" + Arrays.toString(assigned)
                 + " total=" + (assigned[0]+assigned[1]+assigned[2]+assigned[3]+assigned[4]));
     }
 
@@ -410,13 +410,13 @@ public class CompassMenuOverlay extends WEMenuExtension {
         } else if (wynnItem instanceof CraftedGearItem craftedItem) {
             if (craftedItem.getRequirements() == null) return null;
 
-            System.out.println("[WE-CRAFT] class=" + craftedItem.getClass().getName());
+            WynnExtras.LOGGER.info("[WE-CRAFT] class=" + craftedItem.getClass().getName());
             for (var method : craftedItem.getClass().getMethods()) {
                 if (method.getName().toLowerCase().contains("req") ||
                         method.getName().toLowerCase().contains("skill") ||
                         method.getName().toLowerCase().contains("stat") ||
                         method.getName().toLowerCase().contains("info")) {
-                    System.out.println("[WE-CRAFT] method: " + method.getName()
+                    WynnExtras.LOGGER.info("[WE-CRAFT] method: " + method.getName()
                             + " → " + method.getReturnType().getSimpleName());
                 }
             }

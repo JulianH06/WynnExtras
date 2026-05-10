@@ -15,7 +15,7 @@ import static julianh06.wynnextras.config.ConfigTheme.*;
 public class KeybindOption extends ConfigOption {
     final Supplier<Integer> getter;
     final Consumer<Integer> setter;
-    public boolean listening = false;
+    private boolean listening = false;
 
     public KeybindOption(String name, String desc, Supplier<Integer> get, Consumer<Integer> set) {
         super(name, desc);

@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.raid;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.fabricmc.loader.api.FabricLoader;
@@ -30,9 +31,9 @@ public class RaidLootConfig {
             try (Writer writer = Files.newBufferedWriter(path)) {
                 gson.toJson(this, writer);
             }
-            System.out.println("[WynnExtras] Saved RaidLootTracker data to " + path);
+            WynnExtras.LOGGER.info("[WynnExtras] Saved RaidLootTracker data to " + path);
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Couldn't save RaidLootTracker");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't save RaidLootTracker");
             e.printStackTrace();
         }
     }
@@ -53,10 +54,10 @@ public class RaidLootConfig {
                 if (this.data.perRaidData == null) {
                     this.data.perRaidData = new HashMap<>();
                 }
-                System.out.println("[WynnExtras] Loaded RaidLootTracker data successfully");
+                WynnExtras.LOGGER.info("[WynnExtras] Loaded RaidLootTracker data successfully");
             }
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Couldn't load RaidLootTracker");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't load RaidLootTracker");
             e.printStackTrace();
         }
     }

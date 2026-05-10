@@ -17,7 +17,7 @@ public class ChatManager implements WELoader {
 
     public enum ChatChannel { ALL, PARTY, GUILD }
 
-    public static ChatChannel currentChannel = ChatChannel.ALL;
+    private static ChatChannel currentChannel = ChatChannel.ALL;
     private static boolean awaitingRawInput = false;
 
     public static ChatChannel getCurrentChannel() { return currentChannel; }
@@ -41,6 +41,10 @@ public class ChatManager implements WELoader {
 
     @SubscribeEvent
     public void onChatMessage(ChatEvent event) {
+       handleChatMessage(event);
+    }
+
+    private static void handleChatMessage(ChatEvent event) {
        String msg = event.message.getString().toLowerCase();
 
        boolean containsCancel = msg.contains("cancel") || msg.contains("clear");
@@ -52,6 +56,10 @@ public class ChatManager implements WELoader {
 
     @SubscribeEvent
     public void onEscape(KeyInputEvent event) {
+        handleEscape(event);
+    }
+
+    private static void handleEscape(KeyInputEvent event) {
         if (event.getKey() == GLFW.GLFW_KEY_ESCAPE && event.getAction() == GLFW.GLFW_PRESS) {
             awaitingRawInput = false;
         }

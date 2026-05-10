@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.profileviewer;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
@@ -87,7 +88,7 @@ public class PV {
         WynncraftApiHandler.fetchPlayerData(player).thenAccept(playerData -> {
             currentPlayerData = playerData;
         }).exceptionally(ex -> {
-            System.err.println("Error while getting the data: " + ex.getMessage());
+            WynnExtras.LOGGER.error("Error while getting the data: " + ex.getMessage());
             return null;
         });
 

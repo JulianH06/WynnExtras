@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.*;
 import com.wynntils.utils.mc.McUtils;
 import net.fabricmc.loader.api.FabricLoader;
@@ -22,7 +23,7 @@ public class LocalAspectStorage {
         String uuid = McUtils.player().getUuidAsString();
         Path dir = FabricLoader.getInstance().getConfigDir().resolve("wynnextras").resolve("aspects").resolve(uuid);
         try { Files.createDirectories(dir); } catch (IOException e) {
-            System.err.println("Failed to create aspects directory: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to create aspects directory: " + e.getMessage());
         }
         return dir;
     }
@@ -59,21 +60,21 @@ public class LocalAspectStorage {
                 obj.addProperty("amount", parseAspectAmount(entry.getValue()));
                 existing.put(entry.getKey(), obj);
             } catch (Exception e) {
-                System.err.println("Failed to serialize aspect " + entry.getKey() + ": " + e.getMessage());
+                WynnExtras.LOGGER.error("Failed to serialize aspect " + entry.getKey() + ": " + e.getMessage());
             }
         }
 
         JsonArray merged = new JsonArray();
         existing.values().forEach(merged::add);
         try { Files.writeString(file, GSON.toJson(merged)); }
-        catch (IOException e) { System.err.println("Failed to save aspects: " + e.getMessage()); }
+        catch (IOException e) { WynnExtras.LOGGER.error("Failed to save aspects: " + e.getMessage()); }
     }
 
     public static JsonArray load() {
         Path file = getDataFile();
         if (file == null || !Files.exists(file)) return null;
         try { return JsonParser.parseString(Files.readString(file)).getAsJsonArray(); }
-        catch (Exception e) { System.err.println("Failed to load aspects: " + e.getMessage()); return null; }
+        catch (Exception e) { WynnExtras.LOGGER.error("Failed to load aspects: " + e.getMessage()); return null; }
     }
 
     public static void saveActiveAspects(String classId, Map<String, String> activeAspects) {
@@ -85,7 +86,7 @@ public class LocalAspectStorage {
             obj.addProperty(e.getKey(), e.getValue());
         }
         try { Files.writeString(file, GSON.toJson(obj)); }
-        catch (IOException e) { System.err.println("Failed to save active aspects: " + e.getMessage()); }
+        catch (IOException e) { WynnExtras.LOGGER.error("Failed to save active aspects: " + e.getMessage()); }
     }
 
     public static Map<String, String> loadActiveAspects(String classId) {
@@ -97,7 +98,7 @@ public class LocalAspectStorage {
             for (Map.Entry<String, JsonElement> e : obj.entrySet()) {
                 result.put(e.getKey(), e.getValue().getAsString());
             }
-        } catch (Exception e) { System.err.println("Failed to load active aspects: " + e.getMessage()); }
+        } catch (Exception e) { WynnExtras.LOGGER.error("Failed to load active aspects: " + e.getMessage()); }
         return result;
     }
 }

@@ -239,7 +239,7 @@ public class SpellHider {
                 modifiersMap.putAll(modifiers);
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Failed to load spell modifiers: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load spell modifiers: " + e.getMessage());
         }
     }
 
@@ -258,7 +258,7 @@ public class SpellHider {
             Files.createDirectories(MODIFIERS_PATH.getParent());
             Files.writeString(MODIFIERS_PATH, GSON.toJson(SpellHider.modifiersMap));
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Failed to save spell modifiers: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to save spell modifiers: " + e.getMessage());
         }
     }
 }

@@ -16,6 +16,7 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.InventoryKeyPressEvent;
 import julianh06.wynnextras.features.aspects.PartyFinderOpenLootpoolOverlay;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
+import julianh06.wynnextras.features.bankoverlay.BankOverlaySlotBridge;
 import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.misc.ClassSelectionOverlay;
@@ -127,7 +128,7 @@ public abstract class HandledScreenMixin {
         }
 
         // Only create BankOverlay2 for bank-type containers to avoid expensive
-        // initialization (WynncraftItemDatabase.initialize()) on every GUI open
+        // initialization on every GUI open
         if (isBankScreen == null) {
             Container container = Models.Container.getCurrentContainer();
             if (container != null) {
@@ -140,12 +141,10 @@ public abstract class HandledScreenMixin {
 
         if (Boolean.TRUE.equals(isBankScreen) || currentOverlayType != BankOverlayType.NONE) {
             if (bankOverlay == null) bankOverlay = new BankOverlay2(ci, (HandledScreen<?>) (Object) this);
-            bankOverlay.ci = ci;
-            bankOverlay.screen = (HandledScreen<?>) (Object) this;
-            bankOverlay.close = close -> {
+            bankOverlay.updateRenderContext(ci, (HandledScreen<?>) (Object) this, close -> {
                 close();
                 return null;
-            };
+            });
             bankOverlay.render(context, mouseX, mouseY, delta);
         }
 
@@ -211,7 +210,7 @@ public abstract class HandledScreenMixin {
         Container container = Models.Container.getCurrentContainer();
         if (!(container instanceof CharacterSelectionContainer)) return;
 
-        String targetName = julianh06.wynnextras.features.bankoverlay.BankOverlay2.targetCharacterNameForClassMenu;
+        String targetName = julianh06.wynnextras.features.bankoverlay.BankOverlay2.getTargetCharacterNameForClassMenu();
         if (targetName == null || targetName.isEmpty()) return;
 
         ScreenHandler handler = screen.getScreenHandler();
@@ -248,9 +247,7 @@ public abstract class HandledScreenMixin {
 
         // Auto-click if exactly one match \u2014 clear targets first to prevent re-queuing
         if (matchCount == 1 && matchSlot != null) {
-            julianh06.wynnextras.features.bankoverlay.BankOverlay2.targetCharacterNameForClassMenu = null;
-            julianh06.wynnextras.features.bankoverlay.BankOverlay2.targetCharacterIdForClassMenu = null;
-            julianh06.wynnextras.features.bankoverlay.BankOverlay2.targetCharacterLevelForClassMenu = 0;
+            julianh06.wynnextras.features.bankoverlay.BankOverlay2.clearTargetCharacterForClassMenu();
             final int syncId = handler.syncId;
             final int slotId = matchSlot.id;
             julianh06.wynnextras.utils.TickScheduler.runAfterTicks(3, () -> {
@@ -446,10 +443,12 @@ public abstract class HandledScreenMixin {
         heldItem = Items.AIR.getDefaultStack();
         craftingHelperOverlay = null;
         classSelectionOverlay = null;
+        BankOverlaySlotBridge.restoreAll();
     }
 
     @Inject(method = "close", at = @At("HEAD"))
     public void onClose(CallbackInfo ci) {
+        BankOverlaySlotBridge.restoreAll();
         craftingHelperOverlay = null;
         classSelectionOverlay = null;
 
@@ -457,7 +456,7 @@ public abstract class HandledScreenMixin {
         TradeMarketComparisonPanel.clearAllPanels();
 
         // Vanilla-mode bank cache persistence: in vanilla mode the drawVanillaBankBagsOverlay
-        // hook has been live-updating BankData.BankPages for the current page while the bank
+        // hook has been live-updating cached bank pages for the current page while the bank
         // was open. Flush those updates to disk now (the custom-mode branch below already
         // does its own save).
         if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
@@ -492,7 +491,7 @@ public abstract class HandledScreenMixin {
                 for (int j = 0; j < Math.min(45, activeInvSlots.size()); j++) {
                     stacks.add(activeInvSlots.get(j).getStack());
                 }
-                Pages.BankPages.put(activeInv, stacks);
+                Pages.getBankPages().put(activeInv, stacks);
                 Pages.save();
             }
 
@@ -537,12 +536,13 @@ public abstract class HandledScreenMixin {
         if(bankOverlay != null) {
             if (WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
                 // Offhand swap (F key) in custom bank overlay
-                if (bankOverlay.touchHoveredSlot != null) {
+                Slot touchHoveredSlot = bankOverlay.getTouchHoveredSlot();
+                if (touchHoveredSlot != null) {
                     MinecraftClient mc = MinecraftClient.getInstance();
                     if (((julianh06.wynnextras.mixin.Accessor.KeybindingAccessor) mc.options.swapHandsKey).getBoundKey().getCode() == keyCode) {
                         ScreenHandler handler = McUtils.containerMenu();
                         if (handler != null) {
-                            int slotIndex = bankOverlay.touchHoveredSlot.id;
+                            int slotIndex = touchHoveredSlot.id;
                             mc.interactionManager.clickSlot(handler.syncId, slotIndex, 40, net.minecraft.screen.slot.SlotActionType.SWAP, mc.player);
                             cir.setReturnValue(true);
                             cir.cancel();
@@ -551,7 +551,7 @@ public abstract class HandledScreenMixin {
                     }
                 }
 
-                InventoryKeyPressEvent event = new InventoryKeyPressEvent(keyCode, scanCode, modifiers, bankOverlay.touchHoveredSlot);
+                InventoryKeyPressEvent event = new InventoryKeyPressEvent(keyCode, scanCode, modifiers, touchHoveredSlot);
                 event.post();
 
                 if (event.isCanceled()) {

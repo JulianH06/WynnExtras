@@ -1,5 +1,6 @@
 package julianh06.wynnextras.config;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
@@ -136,7 +137,6 @@ public class WynnExtrasConfig {
     public boolean craftingDynamicTextures = true;
     public float craftingHelperHeightPercent = 0.6f;
     public boolean skillpointHelper = true;
-    public boolean wynnventoryOverlay = true;
     public boolean tradeMarketOverlay = true;
     public int tradeMarketOverlayX = 10;
     public int tradeMarketOverlayY = 10;
@@ -176,6 +176,7 @@ public class WynnExtrasConfig {
 
     public boolean autoStreamEnabled = false;
     public boolean autoSkipDialogueEnabled = true;
+    public boolean autoSkipCutscenesEnabled = true;
     public boolean stackDuplicateMessages = false;
     public int stackDuplicateWindowMinutes = 5;
     public boolean auraPingEnabled = false;
@@ -507,7 +508,7 @@ public class WynnExtrasConfig {
                 if (INSTANCE.hudColorOverrides == null) INSTANCE.hudColorOverrides = new HashMap<>();
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Failed to load config: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load config: " + e.getMessage());
             INSTANCE = new WynnExtrasConfig();
         }
     }
@@ -520,7 +521,7 @@ public class WynnExtrasConfig {
                 listener.accept(INSTANCE);
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Failed to save config: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to save config: " + e.getMessage());
         }
     }
 

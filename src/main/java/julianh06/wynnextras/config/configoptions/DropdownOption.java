@@ -13,7 +13,7 @@ import static julianh06.wynnextras.config.ConfigTheme.*;
 public abstract class DropdownOption<T> extends ConfigOption {
     public final Supplier<T> getter;
     final Consumer<T> setter;
-    public int btnX, btnY, btnW = 125, btnH = 22;
+    private int btnX, btnY, btnW = 125, btnH = 22;
     protected final ConfigScreenContext ctx;
 
     protected DropdownOption(String name, String desc, Supplier<T> get, Consumer<T> set, ConfigScreenContext ctx) {

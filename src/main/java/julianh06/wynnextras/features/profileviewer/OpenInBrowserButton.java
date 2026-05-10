@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.profileviewer;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.FontRenderer;
@@ -32,7 +33,7 @@ public class OpenInBrowserButton extends EasyButton {
             if (Desktop.isDesktopSupported()) {
                 LinkUtils.openLink(url);
             } else {
-                System.err.println("Error while opening the link");
+                WynnExtras.LOGGER.error("Error while opening the link");
             }
         } catch (Exception e) {
             e.printStackTrace();

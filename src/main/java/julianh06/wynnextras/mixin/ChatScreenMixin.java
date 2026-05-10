@@ -14,7 +14,7 @@ public class ChatScreenMixin {
 
     @Inject(method = "sendMessage", at = @At("HEAD"), cancellable = true)
     private void onSendMessage(String message, boolean addToHistory, CallbackInfo ci) {
-        if (message == null || message.isEmpty() || ChatManager.currentChannel == ChatManager.ChatChannel.ALL) return;
+        if (message == null || message.isEmpty() || ChatManager.getCurrentChannel() == ChatManager.ChatChannel.ALL) return;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         ClientPlayerEntity player = mc.player;

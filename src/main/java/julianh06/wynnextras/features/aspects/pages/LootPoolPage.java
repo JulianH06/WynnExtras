@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects.pages;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
@@ -113,7 +114,7 @@ public class LootPoolPage extends PageWidget {
 
             fetchRunning.put(raidType, true);
 
-            System.out.println("starting fetch for " + raidType);
+            WynnExtras.LOGGER.info("starting fetch for " + raidType);
             lastCrowdsourceFetch.put(raidType, now);
             WynncraftApiHandler.fetchCrowdsourcedLootPool(raidType.name()).thenAccept(result -> {
                 fetchRunning.put(raidType, false);
@@ -124,12 +125,12 @@ public class LootPoolPage extends PageWidget {
 
                 lastCrowdsourceFetch.put(raidType, now);
                 if (isSamePool(oldItems, result)) {
-                    System.out.println("still old pool, retry in 30s");
+                    WynnExtras.LOGGER.info("still old pool, retry in 30s");
                     hasOldLootpool.put(raidType, true);
                     return;
                 }
 
-                System.out.println("NEW POOL for " + raidType);
+                WynnExtras.LOGGER.info("NEW POOL for " + raidType);
                 crowdsourcedLootPools.put(raidType.name(), result);
                 hasOldLootpool.put(raidType, false);
 
