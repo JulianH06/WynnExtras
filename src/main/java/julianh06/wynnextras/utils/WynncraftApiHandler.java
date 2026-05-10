@@ -52,7 +52,9 @@ public class WynncraftApiHandler {
     public transient final AtomicBoolean isFetchingAspects = new AtomicBoolean(false);
 
     // Reuse HttpClient instance instead of creating new ones
-    private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     // Use synchronized list to prevent concurrent modification
     public transient List<ApiAspect> aspectList = java.util.Collections.synchronizedList(new ArrayList<>());
@@ -109,17 +111,29 @@ public class WynncraftApiHandler {
     public static CompletableFuture<String> fetchUUID(String playerName) {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.mojang.com/users/profiles/minecraft/" + playerName))
+                .timeout(Duration.ofSeconds(8))
                 .GET()
                 .build();
 
         return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenApply(HttpResponse::body)
-                .thenApply(body -> {
+                .thenApply(response -> {
+                    int status = response.statusCode();
+                    if (status == 404) return null;
+                    if (status == 429) {
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                Text.of("§cMojang API rate limit reached. Please wait a moment.")));
+                        return null;
+                    }
+                    if (status != 200) {
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                Text.of("§cMojang API error (" + status + "). Please try again.")));
+                        return null;
+                    }
                     try {
-                        JsonObject json = JsonParser.parseString(body).getAsJsonObject();
-                        return json.get("id").getAsString(); // UUID ohne Bindestriche
+                        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                        return json.get("id").getAsString();
                     } catch (Exception e) {
-                        return null; // Spieler existiert nicht
+                        return null;
                     }
                 });
     }
