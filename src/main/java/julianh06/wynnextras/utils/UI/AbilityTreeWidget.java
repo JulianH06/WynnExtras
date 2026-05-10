@@ -1,6 +1,7 @@
 package julianh06.wynnextras.utils.UI;
 
 import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
@@ -44,6 +45,9 @@ public class AbilityTreeWidget extends Widget {
 
     public static Identifier white = Identifier.of("wynnextras", "textures/gui/profileviewer/node/white.png");
     public static Identifier whiteActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/white_active.png");
+
+    public static Identifier ultimateNodeBase = Identifier.of("wynnextras", "textures/gui/profileviewer/node/node.png");
+    public static Identifier ultimateNodeSelected = Identifier.of("wynnextras", "textures/gui/profileviewer/node/selected.png");
 
     public static Identifier yellow = Identifier.of("wynnextras", "textures/gui/profileviewer/node/yellow.png");
     public static Identifier yellowActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/yellow_active.png");
@@ -264,8 +268,10 @@ public class AbilityTreeWidget extends Widget {
                 if (ability != null && ability.description != null && ability.name != null) {
                     List<String> description = new ArrayList<>(ability.description);
                     description.add(0, ability.name);
+                    int tx = (int)(mouseX * PVScreen.currentMatrixScale);
+                    int ty = (int)(mouseY * PVScreen.currentMatrixScale);
                     ctx.drawTooltip(MinecraftClient.getInstance().textRenderer,
-                            parseStyledHtml(description), mouseX, mouseY);
+                            parseStyledHtml(description), tx, ty);
                 }
             }
         }
@@ -468,7 +474,7 @@ public class AbilityTreeWidget extends Widget {
                 }
                 i++;
                 if(ui == null) return;
-                if(i != 7 && yStart + 75 > y && yStart + 75 < y + botLimit) {
+                if(yStart + 75 > y && yStart + 75 < y + botLimit) {
                     ui.drawImage(pageLineTexture, x + 1000, yStart + 75, 730, 32);
                     if(i == 1 && yStart - 400 > y && yStart - 400 < y + botLimit) {
                         ui.drawText(String.valueOf(i), x + 1000, yStart - 400, CustomColor.fromHexString("434654"));
@@ -503,7 +509,9 @@ public class AbilityTreeWidget extends Widget {
             setBounds(xStart + 25, yStart, 75, 75);
 
             Identifier texture = null;
-            switch (((AbilityMapData.Icon.IconValue) ((AbilityMapData.Icon) node.meta.icon).value).name) {
+            Identifier overlay = null;
+            String iconName = ((AbilityMapData.Icon.IconValue) ((AbilityMapData.Icon) node.meta.icon).value).name;
+            switch (iconName) {
                 case "abilityTree.nodeWarrior" -> texture = node.unlocked ? warriorActive : warrior;
                 case "abilityTree.nodeShaman" -> texture = node.unlocked ? shamanActive : shaman;
                 case "abilityTree.nodeArcher" -> texture = node.unlocked ? archerActive : archer;
@@ -514,9 +522,24 @@ public class AbilityTreeWidget extends Widget {
                 case "abilityTree.nodeBlue" -> texture = node.unlocked ? blueActive : blue;
                 case "abilityTree.nodePurple" -> texture = node.unlocked ? purpleActive : purple;
                 case "abilityTree.nodeRed" -> texture = node.unlocked ? redActive : red;
+                default -> {
+                    if (iconName.startsWith("abilityTree.ultimate")) {
+                        String suffix = iconName.substring("abilityTree.ultimate".length());
+                        String snakeName = suffix.replaceAll("([A-Z])", "_$1").toLowerCase().replaceFirst("^_", "");
+                        String cn = parent instanceof AbilityTreeWidget atw ? atw.className.toLowerCase() : "";
+                        texture = node.unlocked ? ultimateNodeSelected : ultimateNodeBase;
+                        String overlayFile = node.unlocked ? snakeName + "_selected" : snakeName;
+                        overlay = Identifier.of("wynnextras", "textures/gui/profileviewer/node/" + cn + "/" + overlayFile + ".png");
+                    } else {
+                        System.out.println("[WynnExtras] Unknown ability node icon: " + iconName);
+                    }
+                }
             }
             if(texture != null && yStart - 25 > y && yStart - 25 < y + botLimit) {
                 ui.drawImage(texture, xStart, yStart - 25, 125, 125);
+                if(overlay != null) {
+                    ui.drawImage(overlay, xStart, yStart - 25, 125, 125);
+                }
                 if(contains(mouseX, mouseY) && mouseY < ui.sy(y + botLimit + 25) && mouseY > ui.sy(y + 100)) {
                     currentHoveredNode = node;
                 }

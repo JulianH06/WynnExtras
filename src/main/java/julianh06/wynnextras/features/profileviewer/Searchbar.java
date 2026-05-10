@@ -71,8 +71,11 @@ public class Searchbar extends EasyTextInput {
 
     @Override
     public void drawWithoutBackground(DrawContext context, CustomColor color) {
+        drawWithoutBackground(context, color, (float) MinecraftClient.getInstance().getWindow().getScaleFactor());
+    }
+
+    public void drawWithoutBackground(DrawContext context, CustomColor color, float scaleFactor) {
         if(input == null) return;
-        scaleFactor = (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
         long now = System.currentTimeMillis();
         if(input.isEmpty() && !isActive) {
             //context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 3, y + 1, CustomColor.fromHexString("FFFFFF").asInt());

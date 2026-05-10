@@ -104,6 +104,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
     public static boolean loaded = false;
 
     private final AbilityTreeWidget abilityWidget;
+    private final PVScreen.PVScrollBarWidget pvScrollBar;
 
     public TreeTabWidget() {
         super(0, 0, 0, 0);
@@ -115,6 +116,9 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         } else {
             this.abilityWidget = null;
         }
+        pvScrollBar = new PVScreen.PVScrollBarWidget();
+        pvScrollBar.setVisible(false);
+        addChild(pvScrollBar);
     }
 
     @Override
@@ -222,11 +226,21 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         treeSearchBar.setY((int) ((y + height + 7 * 3) / ui.getScaleFactor()));
         treeSearchBar.setWidth((int) (350 * 3 / ui.getScaleFactor()));
         treeSearchBar.setHeight((int) (14 * 3 / ui.getScaleFactor()));
-        treeSearchBar.drawWithoutBackgroundButWithSearchtext(ctx, CustomColor.fromHexString("FFFFFF"));
+        treeSearchBar.drawWithoutBackgroundButWithSearchtext(ctx, CustomColor.fromHexString("FFFFFF"), (float) ui.getScaleFactor());
 
         loaded = true;
 
-        scrollOffset = Math.min(2700, scrollOffset);
+        int maxCoordY = 0;
+        for (List<AbilityMapData.Node> nodes : tree.pages.values()) {
+            for (AbilityMapData.Node node : nodes) {
+                maxCoordY = Math.max(maxCoordY, node.coordinates.y);
+            }
+        }
+        PVScreen.maxScrollOffset = Math.max(0, maxCoordY * 75 - 480);
+        scrollOffset = Math.min((int) PVScreen.maxScrollOffset, scrollOffset);
+
+        pvScrollBar.setVisible(true);
+        pvScrollBar.setBounds(x + 1910, y, 30, 750);
 
         Set<String> unlockedIds = new HashSet<>();
         Set<Pair<Integer, Integer>> connectorCoordinates = new HashSet<>();

@@ -87,8 +87,11 @@ public class EasyTextInput extends EasyElement{
     }
 
     public void drawWithoutBackgroundButWithSearchtext(DrawContext context, CustomColor color) {
+        drawWithoutBackgroundButWithSearchtext(context, color, (float) MinecraftClient.getInstance().getWindow().getScaleFactor());
+    }
+
+    public void drawWithoutBackgroundButWithSearchtext(DrawContext context, CustomColor color, float scaleFactor) {
         if(input == null) return;
-        scaleFactor = (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
 
         long now = System.currentTimeMillis();
         if(input.isEmpty() && !isActive) {

@@ -492,6 +492,30 @@ public final class UIUtils {
         drawContext.drawGuiTexture(RenderPipelines.GUI_TEXTURED, Identifier.ofVanilla("widget/slider"), (int) sx(x), (int) sy(y), sw(width), sh(height));
     }
 
+    public void drawSliderFade(float x, float y, float width, float height, int scale) {
+        float fade = PVScreen.DarkModeToggleWidget.fade;
+        if (width > scale * 2 || height > scale * 2) {
+            RenderUtils.drawRect(drawContext,
+                    CustomColor.fromHexString("50352d").withAlpha(1f - fade),
+                    sx(x + scale) - 1, sy(y + scale) - 1,
+                    sw(width - scale * 2) + 2, sh(height - scale * 2) + 2);
+            RenderUtils.drawRect(drawContext,
+                    CustomColor.fromHexString("1b1b1c").withAlpha(fade),
+                    sx(x + scale) - 1, sy(y + scale) - 1,
+                    sw(width - scale * 2) + 2, sh(height - scale * 2) + 2);
+        }
+        drawButtonTextures(x, y, width, height, scale, false,
+                sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr,
+                sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright,
+                sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr,
+                sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright, 1f - fade);
+        drawButtonTextures(x, y, width, height, scale, false,
+                sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark,
+                sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark,
+                sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark,
+                sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark, fade);
+    }
+
     private static final Identifier GENERIC_CONTAINER_TEX = Identifier.ofVanilla("textures/gui/container/generic_54.png");
     private static final int GENERIC_W  = 256;
     private static final int GENERIC_H  = 256;

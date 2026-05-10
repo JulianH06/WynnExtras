@@ -44,7 +44,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class PVScreen extends WEScreen {
     @Override protected double getTargetScaleFactor() { return 2.0; }
-    @Override protected int getMinLogicalWidth()  { return 2000; }
+    @Override protected int getMinLogicalWidth()  { return 2100; }
     @Override protected int getMinLogicalHeight() { return 870; }
 
     public static int mouseX = 0;
@@ -126,6 +126,10 @@ public class PVScreen extends WEScreen {
     public static CharacterData selectedCharacter;
 
     public static int scrollOffset = 0;
+    public static float targetScrollOffset = 0;
+    public static float actualScrollOffset = 0;
+    public static float maxScrollOffset = 0;
+    public static boolean scrollbarHeld = false;
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 0; // in ms
 
@@ -242,8 +246,8 @@ public class PVScreen extends WEScreen {
 
     @Override
     protected void scrollList(float delta) {
-        scrollOffset -= (int) (delta);
-        if(scrollOffset < 0) scrollOffset = 0;
+        targetScrollOffset -= (int) (delta);
+        if(targetScrollOffset < 0) targetScrollOffset = 0;
     }
 
     @Override
@@ -349,7 +353,17 @@ public class PVScreen extends WEScreen {
         updateVisibleListRange();
         layoutListElements();
 
-
+        targetScrollOffset = Math.min(targetScrollOffset, maxScrollOffset);
+        float snapValue = 0.5f;
+        float speed = 0.3f;
+        float diff = targetScrollOffset - actualScrollOffset;
+        if (Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle || scrollbarHeld) {
+            actualScrollOffset = targetScrollOffset;
+        } else {
+            actualScrollOffset += diff * speed * delta;
+        }
+        if (actualScrollOffset < 0) actualScrollOffset = 0;
+        scrollOffset = (int) actualScrollOffset;
 
         //this still uses the old system, needs to be updated some day
 
@@ -384,7 +398,7 @@ public class PVScreen extends WEScreen {
         if (searchBar != null) {
             searchBar.setX((int) ((xStart + 89 * 3) / ui.getScaleFactor()));
             searchBar.setY((int) ((yStart + currentTabWidget.getHeight() + 8 * 3) / ui.getScaleFactor()));
-            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"));
+            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"), (float) ui.getScaleFactor());
             //searchBar.draw(context);
         }
 
@@ -503,6 +517,9 @@ public class PVScreen extends WEScreen {
         searchBar = null;
         questSearchBar = null;
         treeSearchBar = null;
+        scrollOffset = 0;
+        targetScrollOffset = 0;
+        actualScrollOffset = 0;
         super.close();
     }
 
@@ -633,6 +650,94 @@ public class PVScreen extends WEScreen {
         };
     }
 
+    public static class PVScrollBarWidget extends Widget {
+        private final ScrollThumbWidget thumbWidget;
+        int currentMouseY = 0;
+
+        public PVScrollBarWidget() {
+            super(0, 0, 0, 0);
+            thumbWidget = new ScrollThumbWidget();
+            addChild(thumbWidget);
+        }
+
+        private void setOffset(int mouseY, int scrollAreaHeight) {
+            float relativeY = mouseY * ui.getScaleFactorF() - y - thumbWidget.getHeight() / 2f;
+            relativeY = Math.max(0, Math.min(relativeY, scrollAreaHeight));
+            float scrollPercent = relativeY / scrollAreaHeight;
+            targetScrollOffset = scrollPercent * maxScrollOffset;
+            targetScrollOffset = Math.max(0, Math.min(targetScrollOffset, maxScrollOffset));
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            currentMouseY = mouseY;
+            ui.drawSliderFade(x, y, width, height, 5);
+            updateThumb(mouseY);
+        }
+
+        private void updateThumb(int mouseY) {
+            int thumbHeight = 50;
+            int scrollAreaHeight = height - thumbHeight;
+            if (scrollAreaHeight <= 0) return;
+
+            if (thumbWidget.isHeld) {
+                setOffset(mouseY, scrollAreaHeight);
+                actualScrollOffset = targetScrollOffset;
+                scrollbarHeld = true;
+            } else {
+                scrollbarHeld = false;
+            }
+
+            float percent = maxScrollOffset == 0 ? 0 : actualScrollOffset / maxScrollOffset;
+            percent = Math.clamp(percent, 0f, 1f);
+            int yPos = y + (int) (scrollAreaHeight * percent);
+            thumbWidget.setBounds(x, yPos, width, thumbHeight);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            int thumbHeight = 30;
+            int scrollAreaHeight = height - thumbHeight;
+            if (scrollAreaHeight > 0) setOffset(currentMouseY, scrollAreaHeight);
+            return false;
+        }
+
+        @Override
+        public boolean mouseReleased(double mx, double my, int button) {
+            thumbWidget.mouseReleased(mx, my, button);
+            scrollbarHeld = false;
+            return true;
+        }
+
+        private static class ScrollThumbWidget extends Widget {
+            public boolean isHeld;
+
+            public ScrollThumbWidget() {
+                super(0, 0, 0, 0);
+                isHeld = false;
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                ui.drawButtonFade(x, y, width, height, 5, hovered || isHeld);
+            }
+
+            @Override
+            protected boolean onClick(int button) {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                isHeld = true;
+                return true;
+            }
+
+            @Override
+            public boolean mouseReleased(double mx, double my, int button) {
+                isHeld = false;
+                return true;
+            }
+        }
+    }
+
     public static void onClick() {
         if(openInBrowserButton == null || searchBar == null || (currentTab == Tab.Quests && questSearchBar == null) || (currentTab == Tab.Tree && treeSearchBar == null)) return;
         if(openInBrowserButton.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
@@ -739,6 +844,8 @@ public class PVScreen extends WEScreen {
                     parent.removeRootWidget(currentTabWidget);
                     currentTabWidget = tabWidget;
                     scrollOffset = 0;
+                    targetScrollOffset = 0;
+                    actualScrollOffset = 0;
                     if (!parent.rootWidgets.contains(tabWidget)) {
                         parent.addRootWidget(tabWidget);
                     }

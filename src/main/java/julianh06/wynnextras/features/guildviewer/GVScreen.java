@@ -194,7 +194,7 @@ public class GVScreen extends WEScreen {
         if (searchBar != null) {
             searchBar.setX((int) ((xStart + 89 * 3) / ui.getScaleFactor()));
             searchBar.setY((int) ((yStart + backgroundImageWidget.getHeight() + 20) / scaleFactor) + 1);
-            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"));
+            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"), (float) ui.getScaleFactor());
         }
 
         if (GV.currentGuildData == null) return;
@@ -756,31 +756,7 @@ public class GVScreen extends WEScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-
-            int scale = 5;
-
-            ui.drawSliderBackground(x, y, width, height);
-
-            if (PVScreen.DarkModeToggleWidget.fade > 0.001f) {
-                RenderUtils.drawRect(
-                        ctx,
-                        CustomColor.fromHexString("1b1b1c").withAlpha(PVScreen.DarkModeToggleWidget.fade),
-                        ui.sx(x + scale) - 1,
-                        ui.sy(y + scale) - 1,
-                        ui.sw(width - scale * 2) + 2,
-                        ui.sh(height - scale * 2) + 2
-                );
-            }
-
-            ui.drawButtonTextures(
-                    x, y, width, height, scale,
-                    WynnExtrasConfig.INSTANCE.pvDarkmodeToggle,
-                    sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark,
-                    sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark,
-                    sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr,
-                    sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright, 1
-            );
-
+            ui.drawSliderFade(x, y, width, height, 5);
             updateScrollButton(mouseY);
         }
 
