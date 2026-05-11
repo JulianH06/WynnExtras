@@ -334,6 +334,7 @@ public class LootPoolPage extends PageWidget {
         static Identifier NOLTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/nol.png");
         static Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tcc.png");
         static Identifier TNATexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tna.png");
+        static Identifier TWPTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/twp.png");
 
         Identifier ltop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/ltop.png");
         Identifier rtop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/rtop.png");
@@ -572,6 +573,7 @@ public class LootPoolPage extends PageWidget {
                 case NOL -> NOLTexture;
                 case TCC -> TCCTexture;
                 case TNA -> TNATexture;
+                case TWP -> TWPTexture;
                 case null, default -> null;
             };
         }

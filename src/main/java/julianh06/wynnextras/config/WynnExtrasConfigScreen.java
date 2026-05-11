@@ -209,13 +209,14 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                             () -> config.isopteraOrange, v -> config.isopteraOrange = v))
                     .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
                             () -> config.isopteraBlue, v -> config.isopteraBlue = v))
+                .endSub()
                 .add(toggle("Auto /stream", "Automatically send /stream when streamer mode disables (e.g. world swap)",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
                 .add(toggle("Auto Skip Dialogue", "Automatically skip 'Press SHIFT to continue' NPC dialogue",
                         () -> config.autoSkipDialogueEnabled, v -> config.autoSkipDialogueEnabled = v))
                 .add(toggle("Auto Skip Cutscenes", "Automatically swap-hand-skip cutscenes that show 'Swap Hands to skip'",
                         () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
-                .add(toggle("Stack Duplicate Messages", "Collapse repeated messages into one with a (N) counter",
+                .add(toggle("Stack Duplicate Messages (EXPERIMENTAL)", "Collapse repeated messages into one with a (N) counter (Experimental, might break your chat)",
                         () -> config.stackDuplicateMessages, v -> config.stackDuplicateMessages = v))
                 .add(visibleWhen(slider("Stack Window (minutes)", "Only stack messages sent within the last X minutes",
                         1, 60, () -> config.stackDuplicateWindowMinutes, v -> config.stackDuplicateWindowMinutes = v),
@@ -508,7 +509,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
             .add(toggle("Quick PV/GV Access (EXPERIMENTAL)", "Click on a players name or guild to open the pv/gv!",
                     () -> config.chatClickPV, v -> config.chatClickPV = v))
-            .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs when someone asks about them in chat",
+            .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs with your guild when someone asks about them in chat",
                     () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v));
 
         // ===== Hiders =====

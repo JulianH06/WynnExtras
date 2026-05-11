@@ -27,10 +27,15 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
     static Identifier raidBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/raid/background.png");
     static Identifier raidBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/raid/background_dark.png");
 
+    static Identifier raidBackgroundTextureLong = Identifier.of("wynnextras", "textures/gui/profileviewer/raid/background_long.png");
+    static Identifier raidBackgroundTextureDarkLong = Identifier.of("wynnextras", "textures/gui/profileviewer/raid/background_long_dark.png");
+
+
     static Identifier NOTGTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/notg.png");
     static Identifier NOLTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/nol.png");
     static Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tcc.png");
     static Identifier TNATexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tna.png");
+    static Identifier TWPTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/twp.png");
 
     public RaidsTabWidget() {
         super(0, 0, 0, 0);
@@ -85,7 +90,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
         PVScreen.DarkModeToggleWidget.drawImageWithFade(raidBackgroundTextureDark, raidBackgroundTexture, x + 30, y + 307, 825, 195, ui);
         PVScreen.DarkModeToggleWidget.drawImageWithFade(raidBackgroundTextureDark, raidBackgroundTexture, x + 945, y + 307, 825, 195, ui);
 
-        PVScreen.DarkModeToggleWidget.drawImageWithFade(raidBackgroundTextureDark, raidBackgroundTexture, x + 475, y + 525, 825, 195, ui);
+        PVScreen.DarkModeToggleWidget.drawImageWithFade(raidBackgroundTextureDarkLong, raidBackgroundTextureLong, x + 325, y + 525, 1125, 195, ui);
 
         //PVScreen.DarkModeToggleWidget.drawImageWithFade(raidBackgroundTextureDark, raidBackgroundTexture, x + 945, y + 420, 825, 300, ui);
 
@@ -93,6 +98,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
         ui.drawImage(TCCTexture, x + 1575, y + 90, 195, 195);
         ui.drawImage(NOLTexture, x + 30, y + 315, 195, 195);
         ui.drawImage(TNATexture, x + 1575, y + 315, 195, 195);
+        ui.drawImage(TWPTexture, x + 803, y + 532, 195, 195);
 
         Map<String, Long> ranking = null;
 
@@ -168,7 +174,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 ui.drawText("Completion Rank #" + formatter.format(TNARank), x + 1565f, y + 415f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
             }
             if(TWPRank != -1) {
-                ui.drawCenteredText("Completion Rank #" + formatter.format(TWPRank), x + 900f, y + 645f, twpColor, 3f);
+                ui.drawText("Completion Rank #" + formatter.format(TWPRank), x + 1010f, y + 575f, twpColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
             }
 
             if(NOTGSRRank != -1) {
@@ -184,7 +190,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 ui.drawText("SR Rank #" + formatter.format(TNASRRank), x + 1565f, y + 455f, tnaSRColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
             }
             if(TWPSRRank != -1) {
-                ui.drawCenteredText("SR Rank #" + formatter.format(TWPSRRank), x + 900f, y + 680f, twpSRColor, 3f);
+                ui.drawText("SR Rank #" + formatter.format(TWPSRRank), x + 1010f, y + 620f, twpSRColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
             }
 
             //TODO: aspect and lootrun pages updaten
@@ -206,7 +212,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
         ui.drawText("Orphion's Nexus of Light", x + 240f, y + 345f, nolColor, 3f);
         ui.drawText("The Canyon Colossus", x + 1565f, y + 125f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
         ui.drawText("The Nameless Anomaly", x + 1565f, y + 345f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-        ui.drawCenteredText("The Wartorn Palace", x + 900, y + 575f, twpColor, 3f);
+        ui.drawText("The Wartorn Palace", x + 800, y + 575f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 3f);
 
         if(selectedCharacter != null) {
             currentStatus = Status.ALL;
@@ -228,7 +234,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 ui.drawText(formatter.format(NOLComps) + " Completions", x + 240f, y + 380f, nolColor, 3f);
                 ui.drawText(formatter.format(TCCComps) + " Completions", x + 1565f, y + 160f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
                 ui.drawText(formatter.format(TNAComps) + " Completions", x + 1565f, y + 380f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-                ui.drawCenteredText(formatter.format(TWPComps) + " Completions", x + 900f, y + 610f, twpColor, 3f);
+                ui.drawText(formatter.format(TWPComps) + " Completions", x + 800f, y + 620f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 3f);
 
                 ui.drawCenteredText("Total Completions" + characterNameString + formatter.format(TotalComps), x + 900f, y + 48f, CustomColor.fromHexString("FFFFFF"), 3.9f);
             }}
@@ -237,14 +243,14 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 long NOLComps = guildRaids.getList().getOrDefault("Orphion's Nexus of Light", 0);
                 long TCCComps = guildRaids.getList().getOrDefault("The Canyon Colossus", 0);
                 long TNAComps = guildRaids.getList().getOrDefault("The Nameless Anomaly", 0);
-                long TWPComps = twpComps(guildRaids.getList());
+                long TWPComps = guildRaids.getList().getOrDefault("The Wartorn Palace", 0);
                 long TotalComps = guildRaids.getTotal();
 
                 ui.drawText(formatter.format(NOTGComps) + " Completions", x + 240f, y + 160f, notgColor, 3f);
                 ui.drawText(formatter.format(NOLComps) + " Completions", x + 240f, y + 380f, nolColor, 3f);
                 ui.drawText(formatter.format(TCCComps) + " Completions", x + 1565f, y + 160f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
                 ui.drawText(formatter.format(TNAComps) + " Completions", x + 1565f, y + 380f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-                ui.drawCenteredText(formatter.format(TWPComps) + " Completions", x + 900f, y + 610f, twpColor, 3f);
+                ui.drawText(formatter.format(TWPComps) + " Completions", x + 800f, y + 620f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 3f);
 
                 ui.drawCenteredText("Total Guild Raid Completions" + characterNameString + formatter.format(TotalComps), x + 900f, y + 48f, CustomColor.fromHexString("FFFFFF"), 3.9f);
             }}
@@ -267,7 +273,7 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 ui.drawText(formatter.format(NOLComps - NOLGraidComps) + " Completions", x + 240f, y + 380f, nolColor, 3f);
                 ui.drawText(formatter.format(TCCComps - TCCGraidComps) + " Completions", x + 1565f, y + 160f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
                 ui.drawText(formatter.format(TNAComps - TNAGraidComps) + " Completions", x + 1565f, y + 380f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-                ui.drawCenteredText(formatter.format(TWPComps - TWPGraidComps) + " Completions", x + 900f, y + 610f, twpColor, 3f);
+                ui.drawText(formatter.format(TWPComps - TWPGraidComps) + " Completions", x + 800f, y + 620f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 3f);
 
                 ui.drawCenteredText("Total Non Guild Raid Completions" + characterNameString + formatter.format(TotalComps - TotalGraidComps), x + 900f, y + 48f, CustomColor.fromHexString("FFFFFF"), 3.9f);
             }}

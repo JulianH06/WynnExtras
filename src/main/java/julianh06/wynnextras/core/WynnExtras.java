@@ -154,6 +154,14 @@ public class WynnExtras implements ClientModInitializer {
 		return addWynnExtrasPrefix(Text.of(text));
 	}
 
+	public static void sendMessageToClient(Text text) {
+		McUtils.sendMessageToClient(addWynnExtrasPrefix(text));
+	}
+
+	public static void sendMessageToClient(String text) {
+		McUtils.sendMessageToClient(addWynnExtrasPrefix(text));
+	}
+
 
 	@Override
 	public void onInitializeClient() {
@@ -191,7 +199,6 @@ public class WynnExtras implements ClientModInitializer {
         julianh06.wynnextras.features.raid.PartyIgnoreOnRaid.register();
         julianh06.wynnextras.features.raid.TreeRoomMinimap.register();
         QuickRepair.register();
-        julianh06.wynnextras.features.qol.AutoStream.register();
         julianh06.wynnextras.features.qol.AutoSkipDialogue.register();
         julianh06.wynnextras.features.qol.AutoSkipCutscenes.register();
         julianh06.wynnextras.features.chat.ChainsAttachedTracker.register();

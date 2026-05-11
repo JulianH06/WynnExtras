@@ -337,8 +337,8 @@ public class WaypointScreen extends Screen {
             return;
         }
 
-        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("I know that this menu is ugly,")), 5, 25, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f / scaleFactor);
-        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("it will be reworked in the future")), 5, 35, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("I know that this menu is ugly,")), 5, 45, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f / scaleFactor);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of("it will be reworked in the future")), 5, 55, CustomColor.fromHexString("ffffff"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 2f / scaleFactor);
 
         if(inMainScreen) {
             for (WaypointElement element : elements) {

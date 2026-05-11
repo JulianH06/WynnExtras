@@ -120,13 +120,13 @@ public class WynnExtrasConfig {
     public int bankOverlayMaxColumns = 3;
     public boolean bankOverlayHideEmptyRows = false;
     public boolean bankBagOverlay = false;
-    public boolean showWeight = true;
-    public boolean showScales = true;
-    public boolean scaleBackgroundEnabled = true;
+    public boolean showWeight = false;
+    public boolean showScales = false;
+    public boolean scaleBackgroundEnabled = false;
     public boolean hideTMInfoText = false;
     public boolean hideScaleBackgroundButton = false;
     public boolean craftingHelperOverlay = true;
-    public boolean craftingAutoStart = true;
+    public boolean craftingAutoStart = false;
     public List<String> craftingLastMaterialNames = new ArrayList<>();
     public List<Integer> craftingLastMaterialCounts = new ArrayList<>();
     public List<String> craftingLastIngredientNames = new ArrayList<>();
@@ -157,7 +157,7 @@ public class WynnExtrasConfig {
     public RaidLootTrackerOverlay.mode raidLootTrackerMode = RaidLootTrackerOverlay.mode.ALL;
     public boolean autoIgnorePartyInRaid = false;
     public boolean encounterOverlayEnabled = false;
-    public boolean rightClickToCopyChat = true;
+    public boolean rightClickToCopyChat = false;
     public boolean raidSessionEnabled = false;
     public boolean raidSessionOnlyInRaid = false;
     public boolean raidSessionOnlyInInventory = false;
@@ -169,14 +169,14 @@ public class WynnExtrasConfig {
     public int raidSessionHudX = 4;
     public int raidSessionHudY = 270;
     public float raidSessionHudScale = 1.0f;
-    public boolean toggleFastRequeue = true;
+    public boolean toggleFastRequeue = false;
     public boolean quickRepairEnabled = true;
     public int quickRepairKey = org.lwjgl.glfw.GLFW.GLFW_KEY_R;
-    public boolean shiftDisableGuildRaid = true;
+    public boolean shiftDisableGuildRaid = false;
 
     public boolean autoStreamEnabled = false;
-    public boolean autoSkipDialogueEnabled = true;
-    public boolean autoSkipCutscenesEnabled = true;
+    public boolean autoSkipDialogueEnabled = false;
+    public boolean autoSkipCutscenesEnabled = false;
     public boolean stackDuplicateMessages = false;
     public int stackDuplicateWindowMinutes = 5;
     public boolean auraPingEnabled = false;
@@ -214,7 +214,7 @@ public class WynnExtrasConfig {
 
     // ==================== CHAT CLICK ====================
     public boolean chatClickPV = false;
-    public boolean bombShareSuggestion = true;
+    public boolean bombShareSuggestion = false;
 
     // ==================== Crowd Sourcing ================
     public boolean crowdSourceRaidLootpools = true;
@@ -229,7 +229,7 @@ public class WynnExtrasConfig {
 
     public boolean showOwnNametag = false;
     // The code for this is in LivingEntityRendererMixin
-    public boolean badgesEnabled = true;
+    public boolean badgesEnabled = false;
 
     // ==================== CHAT PEEK ====================
     public boolean chatPeekEnabled = false;
@@ -280,7 +280,7 @@ public class WynnExtrasConfig {
     public Map<String, Float> professionGoals = new HashMap<>();
 
     // ==================== RADIANT HUD ====================
-    public boolean radiantHudEnabled = true;
+    public boolean radiantHudEnabled = false;
     public int radiantHudX = 5;
     public int radiantHudY = 80;
     public float radiantHudScale = 1.0f;

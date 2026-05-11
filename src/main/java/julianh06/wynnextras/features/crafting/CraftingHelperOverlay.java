@@ -74,6 +74,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
     SelectionWidget selectionWidget2;
     SelectionWidget selectionWidget3;
 
+    static final MinecraftClient mc = MinecraftClient.getInstance();
 
     private static final Queue<Integer> WB_CLICK_QUEUE = new ArrayDeque<>();
     private static long wbLastClick = 0;
@@ -162,15 +163,15 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         profXpBombWidget = null;
         actualOffset = 0;
 
-        loadClipboardBtn = new ActionButtonWidget();
+        loadClipboardBtn = new ActionButtonWidget(List.of(Text.of("Copy a WynnBuilder link and"), Text.of("click here to paste it!")));
         loadClipboardBtn.setOnClick(w -> loadFromWynnBuilder(MinecraftClient.getInstance().keyboard.getClipboard()));
         rootWidgets.add(loadClipboardBtn);
 
-        reuseLastBtn = new ActionButtonWidget();
+        reuseLastBtn = new ActionButtonWidget(List.of(Text.of("Paste the same recipe you"), Text.of("used for your last craft")));
         reuseLastBtn.setOnClick(w -> reuseLast());
         rootWidgets.add(reuseLastBtn);
 
-        autoStartBtn = new ActionButtonWidget();
+        autoStartBtn = new ActionButtonWidget(List.of(Text.of("Automatically start crafting when"), Text.of("using one of the buttons above")));
         autoStartBtn.setOnClick(w -> {
             WynnExtrasConfig.INSTANCE.craftingAutoStart = !WynnExtrasConfig.INSTANCE.craftingAutoStart;
             WynnExtrasConfig.save();
@@ -1467,8 +1468,12 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         boolean isDisabled = false;
         boolean isFilling = false;
         int fillDone = 0, fillTotal = 0;
+        final List<Text> tooltipText;
 
-        ActionButtonWidget() { super(0, 0, 0, 0); }
+        ActionButtonWidget(List<Text> tooltipText) {
+            super(0, 0, 0, 0);
+            this.tooltipText = tooltipText;
+        }
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
@@ -1480,6 +1485,10 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             } else {
                 CustomColor color = isDisabled ? CustomColor.fromHexString("666666") : CustomColor.fromHexString("FFFFFF");
                 ui.drawCenteredText(label, x + width / 2f, y + height / 2f, color, 1f);
+            }
+
+            if (hovered && tooltipText != null && !tooltipText.isEmpty()) {
+                ctx.drawTooltip(mc.textRenderer, tooltipText, mouseX, mouseY);
             }
         }
 
