@@ -201,6 +201,7 @@ public class SpellHiderCommands {
                     boolean modify = data.getLeft().modify(data.getMiddle(), data.getRight());
                     if (modify) {
                         ChatUtils.sendMessage("set " + data.getLeft().getFQName() + "'s " + data.getMiddle().name() + " to " + data.getRight() + "  (Warning: this feature is experimental!)");
+                        SpellHider.saveModifiers();
                         return 1;
                     } else {
                         ChatUtils.sendMessage("Somehow parsed to wrong class (my fault not yours)");
