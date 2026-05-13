@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.misc;
 
 import com.wynntils.models.gear.type.GearType;
 import com.wynntils.models.items.WynnItem;
+import com.wynntils.models.items.items.game.CraftedGearItem;
 import com.wynntils.models.items.items.game.GearItem;
 import com.wynntils.core.components.Models;
 import com.wynntils.utils.mc.McUtils;
@@ -30,10 +31,17 @@ public class TotemTimer {
 
     public record TotemInfo(String owner, String timeText, boolean estimated) {}
 
+    /** True if the stack is a relik — including crafted reliks, which are CraftedGearItem
+     *  not GearItem and were previously ignored, leaving the timer stuck on stale data
+     *  when switching to/from a crafted relik. */
     private static boolean isRelik(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         Optional<WynnItem> opt = Models.Item.getWynnItem(stack);
-        return opt.isPresent() && opt.get() instanceof GearItem gear && gear.getGearType() == GearType.RELIK;
+        if (opt.isEmpty()) return false;
+        WynnItem item = opt.get();
+        if (item instanceof GearItem gear) return gear.getGearType() == GearType.RELIK;
+        if (item instanceof CraftedGearItem crafted) return crafted.getGearType() == GearType.RELIK;
+        return false;
     }
 
     private static float parseSeconds(String timeText) {

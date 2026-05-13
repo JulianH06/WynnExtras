@@ -301,12 +301,14 @@ public class RaidListScreen extends Screen {
     }
 
     public Identifier getTexture(RaidKind raidKind) {
+        // Wynntils 4.1.9 renamed The Wartorn Palace abbreviation from "TWP" to "WTP".
+        // Accept both so the texture lookup works on either Wynntils version.
         return switch (raidKind.getAbbreviation()) {
             case "NOG" -> NOTGTexture;
             case "TNA" -> TNATexture;
             case "NOL" -> NOLTexture;
             case "TCC" -> TCCTexture;
-            case "TWP" -> TWPTexture;
+            case "TWP", "WTP" -> TWPTexture;
             default -> null;
         };
     }

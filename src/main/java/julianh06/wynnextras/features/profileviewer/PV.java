@@ -85,7 +85,14 @@ public class PV {
 
     public static void open(String player) {
         currentPlayerData = null;
-        WynncraftApiHandler.fetchPlayerData(player).thenAccept(playerData -> {
+        currentPlayer = player;
+
+        // Capture the player this fetch is for. If a later /pv supersedes us,
+        // currentPlayer will have changed and we must drop our (stale) result so it
+        // doesn't overwrite the newer fetch's data.
+        final String requestedFor = player;
+        WynncraftApiHandler.fetchPlayerData(player, true).thenAccept(playerData -> {
+            if (!requestedFor.equalsIgnoreCase(currentPlayer)) return;
             currentPlayerData = playerData;
         }).exceptionally(ex -> {
             WynnExtras.LOGGER.error("Error while getting the data: " + ex.getMessage());
@@ -94,7 +101,6 @@ public class PV {
 
         MinecraftClient client = MinecraftClient.getInstance();
         client.send(() -> client.setScreen(null));
-        currentPlayer = player;
         openedAspectPage = false;
         AspectsTabWidget.currentPlayerAspectData = null;
         AspectsTabWidget.fetchStatus = null;
