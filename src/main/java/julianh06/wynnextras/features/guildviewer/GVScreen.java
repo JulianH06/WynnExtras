@@ -757,7 +757,7 @@ public class GVScreen extends WEScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-            ui.drawSliderFade(x, y, width, height, 5);
+            ui.drawSliderFade(x, y, width, height, 5, PVScreen.DarkModeToggleWidget.fade);
             updateScrollButton(mouseY);
         }
 

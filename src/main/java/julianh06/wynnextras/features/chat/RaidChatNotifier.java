@@ -225,7 +225,7 @@ public class RaidChatNotifier {
     // Registered automatically as a WEModule — receives ChatEvent so PB tracking works
     // even if Wynntils's MessageFilterFeature (which our mixin taps into) is disabled.
     @SubscribeEvent
-    public void onChatDirect(ChatEvent event) {
+    public void onChat(ChatEvent event) {
         if (!WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) return;
         String raw = event.message.getString();
         if (raw == null || raw.isEmpty()) return;

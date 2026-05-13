@@ -671,7 +671,7 @@ public class PVScreen extends WEScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-            ui.drawSliderFade(x, y, width, height, 5);
+            ui.drawSliderFade(x, y, width, height, 5, DarkModeToggleWidget.fade);
             updateThumb(mouseY);
         }
 
