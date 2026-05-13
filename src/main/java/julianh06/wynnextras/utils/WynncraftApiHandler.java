@@ -253,10 +253,19 @@ public class WynncraftApiHandler {
         return aspectList;
     }
 
+    /** Default: silent on lookup failure. Auto-fetchers (GV/ProfessionOverlay/CharacterModelMixin etc.)
+     *  fire constantly with possibly-missing names — they shouldn't spam chat. Explicit user
+     *  commands like /pv should call {@link #fetchPlayerData(String, boolean)} with verbose=true. */
     public static CompletableFuture<PlayerData> fetchPlayerData(String playerName) {
+        return fetchPlayerData(playerName, false);
+    }
+
+    public static CompletableFuture<PlayerData> fetchPlayerData(String playerName, boolean verbose) {
         return fetchUUID(playerName).thenCompose(rawUUID -> {
             if (rawUUID == null) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§cPlayername is incorrect or unknown.")));
+                if (verbose) {
+                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§cPlayername is incorrect or unknown.")));
+                }
                 return CompletableFuture.completedFuture(null);
             }
 
