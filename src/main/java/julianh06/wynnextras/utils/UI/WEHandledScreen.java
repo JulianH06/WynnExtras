@@ -202,14 +202,12 @@ public abstract class WEHandledScreen {
         if (target > 1.0 && actualScale > target) {
             this.matrixScale = target / actualScale;
             this.scaleFactor = target;
-            this.screenWidth  = (int)(w.getWidth()  / target);
-            this.screenHeight = (int)(w.getHeight() / target);
         } else {
             this.matrixScale = 1.0;
             this.scaleFactor = actualScale;
-            this.screenWidth  = w.getScaledWidth();
-            this.screenHeight = w.getScaledHeight();
         }
+        this.screenWidth = (int) Math.round(w.getScaledWidth() / matrixScale);
+        this.screenHeight = (int) Math.round(w.getScaledHeight() / matrixScale);
 
         int minSW = getMinScreenWidth();
         int minSH = getMinScreenHeight();
@@ -218,8 +216,8 @@ public abstract class WEHandledScreen {
         if (minSH > 0 && screenHeight < minSH) extraScale = Math.min(extraScale, (double) screenHeight / minSH);
         if (extraScale < 1.0) {
             matrixScale *= extraScale;
-            screenWidth  = (int)(screenWidth  / extraScale);
-            screenHeight = (int)(screenHeight / extraScale);
+            screenWidth = (int) Math.round(w.getScaledWidth() / matrixScale);
+            screenHeight = (int) Math.round(w.getScaledHeight() / matrixScale);
         }
     }
 

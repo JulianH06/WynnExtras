@@ -53,7 +53,7 @@ import java.util.*;
 import static julianh06.wynnextras.utils.UI.UIUtils.*;
 
 public class GVScreen extends WEScreen {
-    @Override protected double getTargetScaleFactor() { return 2.0; }
+    @Override protected double getTargetScaleFactor() { return 2.5; }
     @Override protected int getMinLogicalWidth()  { return 1900; }
     @Override protected int getMinLogicalHeight() { return 870; }
     static Identifier onlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle_dark.png");
@@ -822,4 +822,3 @@ public class GVScreen extends WEScreen {
         }
     }
 }
-
