@@ -42,6 +42,7 @@
     "CharacterModelMixin",
     "ChatPacketRecievedEventMixin",
     "ChatScreenMixin",
+    "Accessor.EventAccessor",
     "ItemFavoriteFeatureAccessor",
     "ItemGuessFeatureAccessor",
     "ItemStatInfoFeatureMixin",

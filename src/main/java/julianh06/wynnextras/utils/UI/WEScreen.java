@@ -313,13 +313,9 @@ public abstract class WEScreen extends Screen {
         if (target > 1.0 && actualScale > target) {
             this.matrixScale = target / actualScale;
             this.scaleFactor = target;
-            this.screenWidth  = (int)(w.getWidth()  / target);
-            this.screenHeight = (int)(w.getHeight() / target);
         } else {
             this.matrixScale = 1.0;
             this.scaleFactor = actualScale;
-            this.screenWidth  = w.getScaledWidth();
-            this.screenHeight = w.getScaledHeight();
         }
 
         int minW = getMinLogicalWidth();
@@ -327,6 +323,8 @@ public abstract class WEScreen extends Screen {
         if (minW > 0) matrixScale = Math.min(matrixScale, w.getScaledWidth()  * scaleFactor / (double) minW);
         if (minH > 0) matrixScale = Math.min(matrixScale, w.getScaledHeight() * scaleFactor / (double) minH);
         matrixScale = Math.min(1.0, matrixScale);
+        this.screenWidth = (int) Math.round(w.getScaledWidth() / matrixScale);
+        this.screenHeight = (int) Math.round(w.getScaledHeight() / matrixScale);
 
         this.xStart = 0;
         this.yStart = 0;
@@ -373,12 +371,12 @@ public abstract class WEScreen extends Screen {
 
     protected int getLogicalWidth() {
         Window w = MinecraftClient.getInstance().getWindow();
-        return (int) Math.round(w.getWidth() * scaleFactor / (matrixScale * actualScale));
+        return (int) Math.round(w.getScaledWidth() * scaleFactor / matrixScale);
     }
 
     protected int getLogicalHeight() {
         Window w = MinecraftClient.getInstance().getWindow();
-        return (int) Math.round(w.getHeight() * scaleFactor / (matrixScale * actualScale));
+        return (int) Math.round(w.getScaledHeight() * scaleFactor / matrixScale);
     }
 
     // Root widget management

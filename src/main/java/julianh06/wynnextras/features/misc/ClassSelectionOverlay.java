@@ -40,7 +40,7 @@ import java.util.*;;
 
 public class ClassSelectionOverlay extends WEHandledScreen {
 
-    @Override protected double getTargetScaleFactor() { return 2.0; }
+    @Override protected double getTargetScaleFactor() { return 2.5; }
     @Override protected int getMinScreenWidth() { return 700; }
     @Override protected int getMinScreenHeight() { return 500; }
 

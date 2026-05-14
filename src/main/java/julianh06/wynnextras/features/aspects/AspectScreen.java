@@ -43,7 +43,7 @@ public class AspectScreen extends WEScreen {
     private List<PageSwitchButton> pageSwitchButtons = new ArrayList<>();
     private boolean registeredScroll = false;
 
-    @Override protected double getTargetScaleFactor() { return 2.0; }
+    @Override protected double getTargetScaleFactor() { return 2.5; }
     @Override protected int getMinLogicalWidth()  { return 2000; }
     @Override protected int getMinLogicalHeight() { return 870; }
 

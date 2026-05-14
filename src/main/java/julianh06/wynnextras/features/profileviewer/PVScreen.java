@@ -43,7 +43,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public class PVScreen extends WEScreen {
-    @Override protected double getTargetScaleFactor() { return 2.0; }
+    @Override protected double getTargetScaleFactor() { return 2.5; }
     @Override protected int getMinLogicalWidth()  { return 2100; }
     @Override protected int getMinLogicalHeight() { return 870; }
 
@@ -671,7 +671,7 @@ public class PVScreen extends WEScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-            ui.drawSliderFade(x, y, width, height, 5);
+            ui.drawSliderFade(x, y, width, height, 5, DarkModeToggleWidget.fade);
             updateThumb(mouseY);
         }
 

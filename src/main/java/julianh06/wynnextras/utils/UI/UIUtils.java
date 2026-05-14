@@ -492,8 +492,7 @@ public final class UIUtils {
         drawContext.drawGuiTexture(RenderPipelines.GUI_TEXTURED, Identifier.ofVanilla("widget/slider"), (int) sx(x), (int) sy(y), sw(width), sh(height));
     }
 
-    public void drawSliderFade(float x, float y, float width, float height, int scale) {
-        float fade = PVScreen.DarkModeToggleWidget.fade;
+    public void drawSliderFade(float x, float y, float width, float height, int scale, float fade) {
         if (width > scale * 2 || height > scale * 2) {
             RenderUtils.drawRect(drawContext,
                     CustomColor.fromHexString("50352d").withAlpha(1f - fade),

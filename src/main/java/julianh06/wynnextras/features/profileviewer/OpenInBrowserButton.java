@@ -47,6 +47,6 @@ public class OpenInBrowserButton extends EasyButton {
             return;
         }
         scaleFactor = (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
-        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(buttonText)), (float) (x + 65), y + (float) 12, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1.4f);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(buttonText)), (float) (x + 53), y + (float) 10, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1.2f);
     }
 }
