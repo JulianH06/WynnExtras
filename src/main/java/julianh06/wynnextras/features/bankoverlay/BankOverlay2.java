@@ -2497,6 +2497,13 @@ public class BankOverlay2 extends WEHandledScreen {
 
             ui.drawImage(WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankTextureDark : bankTexture, x, y, width, height);
 
+            if(sign == null) {
+                sign = new NameSignWidget(index);
+                addChild(sign);
+            }
+
+            sign.setBounds(x, y - 10, width, 10);
+
             if(items.isEmpty()) {
                 setSlotsVisible(false);
                 return;
@@ -2692,7 +2699,9 @@ public class BankOverlay2 extends WEHandledScreen {
         protected boolean onClick(int button) {
             if(!isMouseInOverlay) return true;
 
-            if(activeInv == currentData.getLastPage() - 1 && index == currentData.getLastPage()) {
+            if(index < currentData.getLastPage() && index != activeInv && (heldItem == null || heldItem.isEmpty())) {
+                jumpToPage(index);
+            } else if(activeInv == currentData.getLastPage() - 1 && index == currentData.getLastPage()) {
                 ScreenHandler currScreenHandler = McUtils.containerMenu();
                 if (currScreenHandler == null) {
                     return true;
@@ -2700,20 +2709,32 @@ public class BankOverlay2 extends WEHandledScreen {
                 ContainerUtils.clickOnSlot(52, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
                 return true;
             } else if(index == currentData.getLastPage()) {
-                if(BankOverlay.getPersonalStorageUtils() == null) return true;
-
-                activeInv = currentData.getLastPage() - 1;
-                try {
-                    BankOverlay.getPersonalStorageUtils().jumpToDestination(activeInv + 1);
-                } catch (Exception e) {
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils. Please create a bug report on discord if this still appears after you have enabled."));
-                    return true;
-                }
-                clearAnnotationCache(activeInv);
-                retryLoad();
+                jumpToPage(currentData.getLastPage() - 1);
             }
 
             return true;
+        }
+
+        private static void jumpToPage(int pageIndex) {
+            if(BankOverlay.getPersonalStorageUtils() == null) return;
+            if (pageIndex < 0 || pageIndex >= BankOverlay.getCurrentMaxPages()) return;
+
+            if (Pages != null && activeInv != -1 && BankOverlay.activeInvSlots.size() >= 45 && !shouldWait) {
+                Pages.getBankPages().put(activeInv, BankOverlay.activeInvSlots.stream()
+                        .limit(45)
+                        .map(Slot::getStack)
+                        .collect(Collectors.toList()));
+            }
+
+            activeInv = pageIndex;
+            try {
+                BankOverlay.getPersonalStorageUtils().jumpToDestination(activeInv + 1);
+            } catch (Exception e) {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils. Please create a bug report on discord if this still appears after you have enabled."));
+                return;
+            }
+            clearAnnotationCache(activeInv);
+            retryLoad();
         }
 
         public List<ItemStack> getItems() {
