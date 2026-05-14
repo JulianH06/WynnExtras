@@ -81,6 +81,33 @@ public class TextInputWidget extends Widget {
     protected boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
         if (!isFocused()) return false;
 
+        boolean ctrl = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
+        net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+
+        if (ctrl && keyCode == GLFW.GLFW_KEY_V) {
+            String clip = mc.keyboard.getClipboard();
+            if (clip != null && !clip.isEmpty()) {
+                // Strip control chars to avoid weird artifacts on multi-line paste.
+                String clean = clip.replaceAll("[\\r\\n\\t]", " ");
+                input = insertAt(cursorPos, clean, input);
+                cursorPos += clean.length();
+            }
+            return true;
+        }
+        if (ctrl && (keyCode == GLFW.GLFW_KEY_C || keyCode == GLFW.GLFW_KEY_X)) {
+            // No selection model, so Ctrl+C/X copy the whole field. Ctrl+X also clears it.
+            mc.keyboard.setClipboard(input);
+            if (keyCode == GLFW.GLFW_KEY_X) {
+                input = "";
+                cursorPos = 0;
+            }
+            return true;
+        }
+        if (ctrl && keyCode == GLFW.GLFW_KEY_A) {
+            cursorPos = input.length();
+            return true;
+        }
+
         if (keyCode == GLFW.GLFW_KEY_BACKSPACE && cursorPos > 0) {
             input = removeAt(cursorPos, input);
             cursorPos--;

@@ -54,6 +54,15 @@ public class RaidLootConfig {
                 if (this.data.perRaidData == null) {
                     this.data.perRaidData = new HashMap<>();
                 }
+                // One-time migration: TWP's reward chest coords were missing from
+                // RaidLootTracker.REWARD_CHEST_COORDS, so every TWP run got logged under
+                // "UNKNOWN". Fold that bucket into TWP so users don't lose their history.
+                RaidLootData.RaidSpecificLoot unknown = this.data.perRaidData.remove("UNKNOWN");
+                if (unknown != null) {
+                    this.data.getOrCreateRaidData("TWP").mergeFrom(unknown);
+                    WynnExtras.LOGGER.info("[WynnExtras] Migrated UNKNOWN raid loot -> TWP");
+                    save();
+                }
                 WynnExtras.LOGGER.info("[WynnExtras] Loaded RaidLootTracker data successfully");
             }
         } catch (Exception e) {

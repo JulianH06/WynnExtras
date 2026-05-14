@@ -29,7 +29,8 @@ public class RaidLootTracker {
             "NOTG", new double[]{10342, 41, 3111},
             "NOL",  new double[]{11005, 58, 2909},
             "TCC",  new double[]{10817, 45, 3901},
-            "TNA",  new double[]{24489, 8, -23878}
+            "TNA",  new double[]{24489, 8, -23878},
+            "TWP",  new double[]{-19065, 125, -1819}
     );
 
     public static boolean loggedThisChest = false;

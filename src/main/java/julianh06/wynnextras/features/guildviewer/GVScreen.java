@@ -714,6 +714,9 @@ public class GVScreen extends WEScreen {
 
             if(member.online) {
                 PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, x + 5, y + 5, 20, 20, ui);
+                if (member.server != null && !member.server.isEmpty()) {
+                    ui.drawCenteredText("§a" + member.server, x + 175, y + 5);
+                }
             }
         }
 

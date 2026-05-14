@@ -34,6 +34,9 @@ public class GuildData {
         public String joined;
         public long contributed;
         public boolean online;
+        /** Wynncraft world the member is on, e.g. "WC1". Null when offline (or if the
+         *  API didn't include it). */
+        public String server;
     }
 
     public static class Banner {

@@ -5,6 +5,7 @@ import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.*;
 import com.wynntils.models.gear.type.GearTier;
 import com.wynntils.models.character.type.ClassType;
+import com.wynntils.models.profession.type.ProfessionType;
 import com.wynntils.models.stats.type.StatActualValue;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
@@ -251,6 +252,12 @@ public class SearchQueryParser {
             }
         }
 
+        if (query.profession != null) {
+            if (!matchesProfession(wynnItem, query.profession)) {
+                return false;
+            }
+        }
+
         if (query.type != null) {
             if (!matchesType(wynnItem, query.type)) {
                 return false;
@@ -329,6 +336,21 @@ public class SearchQueryParser {
         if (loreLower.contains("set")) return "set";
         if (loreLower.contains("common")) return "common";
         return null;
+    }
+
+    /** Matches the profession query against the item's profession metadata.
+     *  Currently only IngredientItem exposes profession types directly via Wynntils.
+     *  Crafted items don't have a simple profession getter — for those, users can fall back
+     *  to combining `type:craftedgear` with a text search for the profession name. */
+    private static boolean matchesProfession(WynnItem wynnItem, String prof) {
+        if (wynnItem == null || prof == null) return false;
+        String needle = prof.toLowerCase();
+        if (wynnItem instanceof IngredientItem ing) {
+            for (ProfessionType t : ing.getProfessionTypes()) {
+                if (t.name().toLowerCase().contains(needle)) return true;
+            }
+        }
+        return false;
     }
 
     private static boolean matchesType(WynnItem wynnItem, String type) {

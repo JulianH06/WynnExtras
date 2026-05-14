@@ -156,5 +156,30 @@ public class RaidLootData {
         public int getTotalAmplifiers() {
             return amplifierTier1 + amplifierTier2 + amplifierTier3 + amplifierTier4;
         }
+
+        /** Adds every counter from {@code other} into this instance (in-place). */
+        public void mergeFrom(RaidSpecificLoot other) {
+            if (other == null) return;
+            this.emeraldBlocks      += other.emeraldBlocks;
+            this.liquidEmeralds     += other.liquidEmeralds;
+            this.amplifierTier1     += other.amplifierTier1;
+            this.amplifierTier2     += other.amplifierTier2;
+            this.amplifierTier3     += other.amplifierTier3;
+            this.amplifierTier4     += other.amplifierTier4;
+            this.totalBags          += other.totalBags;
+            this.stuffedBags        += other.stuffedBags;
+            this.packedBags         += other.packedBags;
+            this.variedBags         += other.variedBags;
+            this.totalTomes         += other.totalTomes;
+            this.mythicTomes        += other.mythicTomes;
+            this.fabledTomes        += other.fabledTomes;
+            this.totalCharms        += other.totalCharms;
+            this.totalAspects       += other.totalAspects;
+            this.mythicAspects      += other.mythicAspects;
+            this.fabledAspects      += other.fabledAspects;
+            this.legendaryAspects   += other.legendaryAspects;
+            this.totalWards         += other.totalWards;
+            this.completionCount    += other.completionCount;
+        }
     }
 }

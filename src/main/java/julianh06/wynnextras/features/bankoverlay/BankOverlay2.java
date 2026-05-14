@@ -780,6 +780,7 @@ public class BankOverlay2 extends WEHandledScreen {
         shownPages = pageAmount;
 
         drawEmeraldOverlay(context, xStart - 36, yStart - 14);
+        drawSearchInfoButton(context, xStart, yStart, mouseX, mouseY);
         if (WynnExtrasConfig.INSTANCE.bankBagOverlay
                 && (currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER || currentOverlayType == BankOverlayType.MISC)) {
             cacheCurrentBankPageIfPossible();
@@ -1700,6 +1701,37 @@ public class BankOverlay2 extends WEHandledScreen {
         } else {
             RenderUtils.drawTexturedRect(context, signRight, CustomColor.NONE, x + 10 + 10 * amount, y - 15, 10, 15, 10, 15);
         }
+    }
+
+    /** Top-left "[?]" hover for search-filter help. List comes from SearchQueryParser's
+     *  supported filters — keep in sync if new filters are added. */
+    private void drawSearchInfoButton(DrawContext context, int xStart, int yStart, int mouseX, int mouseY) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        net.minecraft.client.font.TextRenderer tr = mc.textRenderer;
+        String label = "[?]";
+        int btnX = xStart - 36;
+        int btnY = yStart - 30;
+        int w = tr.getWidth(label);
+        int h = tr.fontHeight;
+        boolean hovered = mouseX >= btnX && mouseX < btnX + w && mouseY >= btnY && mouseY < btnY + h;
+        context.drawText(tr, label, btnX, btnY, hovered ? 0xFFFFFFFF : 0xFFAAAAAA, true);
+        if (!hovered) return;
+
+        java.util.List<net.minecraft.text.Text> lines = new java.util.ArrayList<>();
+        lines.add(net.minecraft.text.Text.literal("§eSearch filters"));
+        lines.add(net.minecraft.text.Text.literal("§7Plain text — matches name + lore"));
+        lines.add(net.minecraft.text.Text.literal("§7level:§fN§7 or §flevel:§fA-B"));
+        lines.add(net.minecraft.text.Text.literal("§7class:§fwarrior|mage|archer|assassin|shaman"));
+        lines.add(net.minecraft.text.Text.literal("§7rarity:§fcommon|unique|rare|legendary|fabled|mythic|set"));
+        lines.add(net.minecraft.text.Text.literal("§7prof:§fcooking|alchemism|cooking|jeweling|..."));
+        lines.add(net.minecraft.text.Text.literal("§7type:§fgear|craftedgear|craftedconsumable|box|powder|"));
+        lines.add(net.minecraft.text.Text.literal("§7      §fpotion|tome|tool|ingredient|pouch|key|horse|"));
+        lines.add(net.minecraft.text.Text.literal("§7      §fscroll|amplifier|charm|aspect|trinket|rune|"));
+        lines.add(net.minecraft.text.Text.literal("§7      §fmaterial|insulator"));
+        lines.add(net.minecraft.text.Text.literal("§7crafted:§ftrue|false"));
+        lines.add(net.minecraft.text.Text.literal("§8Combine: §ftype:gear level:80-100 rarity:fabled"));
+        lines.add(net.minecraft.text.Text.literal("§8Search-bar shortcuts: §fCtrl+C, Ctrl+V, Ctrl+X, Ctrl+A"));
+        context.drawTooltip(tr, lines, mouseX, mouseY);
     }
 
     void drawEmeraldOverlay(DrawContext context, int x, int y) {

@@ -329,7 +329,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
                 .add(visibleWhen(toggle("Passive aspect scanning", "Scan your aspects passively without bothering you",
                         () -> config.passiveAspectScanning, v -> config.passiveAspectScanning = v),
-                        () -> !config.automaticAspectScanning));
+                        () -> !config.automaticAspectScanning))
+                .add(toggle("Encounter Selection overlay", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
+                        () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v));
 
         // ===== COMBAT =====
         category("Combat", 0xFFfda216)
@@ -384,9 +386,29 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .sub("Provoke Timer")
                 .add(toggle("Enable Provoke Timer", "Show provoke timer on HUD",
                         () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
-                .add(visibleWhen(dropdown("Timer Color", "Timer text color",
-                                WynnExtrasConfig.TextColor.class, () -> config.provokeTimerColor, v -> config.provokeTimerColor = v),
-                        () -> config.provokeTimerToggle));
+                .sub("Radiant HUD")
+                .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
+                        () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))
+                .sub("Aura")
+                .add(toggle("Aura Ping", "Flash screen and show countdown when aura procs",
+                        () -> config.auraPingEnabled, v -> config.auraPingEnabled = v))
+                .sub("Wars / Territory")
+                .add(toggle("Weekly War Count", "Show number of wars in last 7 days on HUD",
+                        () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
+                .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
+                        () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
+                .add(toggle("Attack Timer Menu", "Show upcoming attack times from scoreboard",
+                        () -> config.attackTimerMenuEnabled, v -> config.attackTimerMenuEnabled = v))
+                .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
+                                () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),
+                        () -> config.attackTimerMenuEnabled))
+                .add(toggle("War Beacon", "Green beacon beam at the soonest war territory",
+                        () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v))
+                .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
+                        () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
+                .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
+                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v),
+                        () -> config.territoryMenuKeyEnabled));
 
         // ===== INVENTORY =====
         Category invCategory = category("Inventory", 0xFFea1219);
@@ -510,7 +532,14 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .add(toggle("Quick PV/GV Access (EXPERIMENTAL)", "Click on a players name or guild to open the pv/gv!",
                     () -> config.chatClickPV, v -> config.chatClickPV = v))
             .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs with your guild when someone asks about them in chat",
-                    () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v));
+                    () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
+            .add(toggle("Right-click chat to copy", "Right-click a chat message (while chat is open) to copy it to the clipboard",
+                    () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
+            .add(toggle("Stack Duplicate Messages (EXPERIMENTAL)", "Collapse repeated messages into one with a (N) counter (Experimental, might break your chat)",
+                    () -> config.stackDuplicateMessages, v -> config.stackDuplicateMessages = v))
+            .add(visibleWhen(slider("Stack Window (minutes)", "Only stack messages sent within the last X minutes",
+                    1, 60, () -> config.stackDuplicateWindowMinutes, v -> config.stackDuplicateWindowMinutes = v),
+                    () -> config.stackDuplicateMessages));
 
         // ===== Hiders =====
         category("Hiders", 0xFF673190)
@@ -535,11 +564,16 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(toggle("Show Exact XP", "Show exact XP values instead of percentages",
                                 () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
                         () -> config.professionOverlayEnabled))
-            .sub("Radiant HUD")
-                .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
-                        () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))
+            .sub("Class Selection")
                 .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
                         () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
+            .sub("Auto Actions")
+                .add(toggle("Auto /stream", "Automatically send /stream when streamer mode disables (e.g. world swap)",
+                        () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
+                .add(toggle("Auto Skip Dialogue", "Automatically skip 'Press SHIFT to continue' NPC dialogue",
+                        () -> config.autoSkipDialogueEnabled, v -> config.autoSkipDialogueEnabled = v))
+                .add(toggle("Auto Skip Cutscenes", "Automatically swap-hand-skip cutscenes that show 'Swap Hands to skip'",
+                        () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
             .sub("Dark Mode Toggles")
                 .add(toggle("Bank Overlay", "Dark mode for the Bank Overlay",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
