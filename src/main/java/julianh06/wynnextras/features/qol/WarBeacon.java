@@ -25,15 +25,15 @@ public class WarBeacon {
     @SubscribeEvent
     public void onRenderWorld(RenderWorldEvent event) {
         if (!WynnExtrasConfig.INSTANCE.warBeaconEnabled) return;
-        if (AttackTimerMenu.soonestTerritory == null) return;
+        if (AttackTimer.soonestTerritory == null) return;
 
         try {
-            TerritoryProfile profile = Models.Territory.getTerritoryProfile(AttackTimerMenu.soonestTerritory);
+            TerritoryProfile profile = Models.Territory.getTerritoryProfile(AttackTimer.soonestTerritory);
             if (profile == null) return;
 
             double mx = (profile.getStartX() + profile.getEndX()) / 2.0;
             double mz = (profile.getStartZ() + profile.getEndZ()) / 2.0;
-            drawBeam(event.matrices, event.camera, event.orderedRenderCommandQueue, mx, mz, 0x3296FF32, AttackTimerMenu.soonestTerritory);
+            drawBeam(event.matrices, event.camera, event.orderedRenderCommandQueue, mx, mz, 0x3296FF32, AttackTimer.soonestTerritory);
         } catch (Exception ignored) {}
     }
 

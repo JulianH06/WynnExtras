@@ -205,7 +205,7 @@ public class WynnExtras implements ClientModInitializer {
         julianh06.wynnextras.features.qol.AuraPing.register();
         julianh06.wynnextras.features.qol.WeeklyWarCount.register();
         julianh06.wynnextras.features.qol.WarDPS.register();
-        julianh06.wynnextras.features.qol.AttackTimerMenu.register();
+        julianh06.wynnextras.features.qol.AttackTimer.register();
         julianh06.wynnextras.features.qol.WarBeacon.register();
         julianh06.wynnextras.features.qol.TerritoryMenuKey.register();
         RaidLootConfig.INSTANCE.load();

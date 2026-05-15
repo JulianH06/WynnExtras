@@ -44,7 +44,7 @@ public class ChangelogScreen extends Screen {
         addToggle("Aura ping HUD overlay", () -> c.auraPingEnabled, v -> c.auraPingEnabled = v, false);
         addToggle("Weekly war count HUD", () -> c.weeklyWarCountEnabled, v -> c.weeklyWarCountEnabled = v, false);
         addToggle("War DPS / Tower HP info", () -> c.warDpsEnabled, v -> c.warDpsEnabled = v, false);
-        addToggle("Attack Timer Menu", () -> c.attackTimerMenuEnabled, v -> c.attackTimerMenuEnabled = v, false);
+        addToggle("Attack Timer", () -> c.attackTimerMenuEnabled, v -> c.attackTimerMenuEnabled = v, false);
         addToggle("War beacon at soonest territory", () -> c.warBeaconEnabled, v -> c.warBeaconEnabled = v, false);
         addInfo("Config Profiles (save/switch named toggle presets)");
         addInfo("Disable/Enable WynnExtras toggle (preserves settings)");

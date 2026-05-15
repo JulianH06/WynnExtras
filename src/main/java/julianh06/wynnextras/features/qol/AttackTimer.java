@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.qol;
 
+import com.wynntils.core.components.Models;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.event.api.WEEventBus;
@@ -27,7 +28,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class AttackTimerMenu {
+public class AttackTimer {
     private static final Pattern ATTACK_PATTERN = Pattern.compile("§b- \\d\\d:\\d\\d §3.*", Pattern.CASE_INSENSITIVE);
     // Matches "<anything>: <Territory> defense is <Level>" anywhere in the line.
     // Doesn't anchor to start so it works inside guild chat prefixes like "[Guild] Name: ...".
@@ -44,8 +45,8 @@ public class AttackTimerMenu {
     private static long lastSelfLookupAt = 0;
 
     public static void register() {
-        HudRenderCallback.EVENT.register(AttackTimerMenu::render);
-        WEEventBus.registerEventListener(new AttackTimerMenu());
+        HudRenderCallback.EVENT.register(AttackTimer::render);
+        WEEventBus.registerEventListener(new AttackTimer());
         // Scan open "Attacking: X" menus for defense info and cache it
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (!WynnExtrasConfig.INSTANCE.attackTimerMenuEnabled) return;
@@ -147,6 +148,22 @@ public class AttackTimerMenu {
         };
     }
 
+    private static String getDefenseLevel(String territory) {
+        String cached = cachedDefenses.get(territory);
+        if (cached != null) return cached;
+
+        try {
+            var poi = Models.Territory.getTerritoryPoiFromAdvancement(territory);
+            if (poi == null || poi.getTerritoryInfo() == null) return null;
+            String def = strip(poi.getTerritoryInfo().getDefences().getAsString()).trim();
+            if (def.isEmpty()) return null;
+            cachedDefenses.put(territory, def);
+            return def;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private static int parseMinutes(String time) {
         try {
             String[] parts = time.split(":");
@@ -193,7 +210,7 @@ public class AttackTimerMenu {
                 if (i > 1) terr.append(" ");
                 terr.append(words[i]);
             }
-            String def = cachedDefenses.get(terr.toString());
+            String def = getDefenseLevel(terr.toString());
             String defSuffix = def != null ? " (" + defenseColor(def) + def + "§6)" : "";
             lines.add("§6" + time + " " + terr + defSuffix);
         }

@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.misc;
 
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.features.qol.AttackTimerMenu;
+import julianh06.wynnextras.features.qol.AttackTimer;
 import julianh06.wynnextras.features.raid.RaidSessionTracker;
 import julianh06.wynnextras.features.raid.TreeRoomMinimap;
 import net.minecraft.client.MinecraftClient;
@@ -162,7 +162,7 @@ public class HudEditScreen extends Screen {
         }
         if (c.attackTimerMenuEnabled) {
             String attackText = "13:47 Otherworldly Monolith";
-            List<String> attacks = AttackTimerMenu.getUpcomingAttacks();
+            List<String> attacks = AttackTimer.getUpcomingAttacks();
             if (!attacks.isEmpty()) attackText = attacks.get(0);
             HudElement attackTimerEl = new HudElement("attackTimer", attackText,
                     c.attackTimerX, c.attackTimerY, 1.0f, WynnExtrasConfig.Align.LEFT, 0xFFFFAA00);

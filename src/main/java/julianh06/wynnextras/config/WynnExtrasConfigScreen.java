@@ -227,7 +227,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
                 .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
                         () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
-                .add(toggle("Attack Timer Menu", "Show upcoming attack times from scoreboard",
+                .add(toggle("Attack Timer", "Show upcoming attack times from scoreboard",
                         () -> config.attackTimerMenuEnabled, v -> config.attackTimerMenuEnabled = v))
                 .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
                         () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),
@@ -397,7 +397,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
                 .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
                         () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
-                .add(toggle("Attack Timer Menu", "Show upcoming attack times from scoreboard",
+                .add(toggle("Attack Timer", "Show upcoming attack times from scoreboard",
                         () -> config.attackTimerMenuEnabled, v -> config.attackTimerMenuEnabled = v))
                 .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
                                 () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),

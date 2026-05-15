@@ -84,9 +84,13 @@ public class ClassWidget extends Widget {
                 DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureActiveDark, classBackgroundTextureActive,  x, y, 390, 132, ui);
             }
         } else if(hovered) {
-            DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered,  x, y, 390, 132, ui);
+            float fade = DarkModeToggleWidget.fade;
+            ui.drawImage(classBackgroundTextureHovered, x, y, 390, 132, 0, 10, 130, 44, 130, 54, 1f - fade);
+            ui.drawImage(classBackgroundTextureHoveredDark, x, y, 390, 132, 0, 10, 130, 44, 130, 54, fade);
         } else if(characterData.getTotalLevel() != 1690) {
-            DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture,  x, y, 390, 132, ui);
+            float fade = DarkModeToggleWidget.fade;
+            ui.drawImage(classBackgroundTexture, x, y, 390, 132, 0, 10, 130, 44, 130, 54, 1f - fade);
+            ui.drawImage(classBackgroundTextureDark, x, y, 390, 132, 0, 10, 130, 44, 130, 54, fade);
         } else {
             DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureGoldDark, classBackgroundTextureGold,  x, y, 390, 132, ui);
         }
