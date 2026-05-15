@@ -216,6 +216,7 @@ public abstract class WEHandledScreen {
         if (minSH > 0 && screenHeight < minSH) extraScale = Math.min(extraScale, (double) screenHeight / minSH);
         if (extraScale < 1.0) {
             matrixScale *= extraScale;
+            scaleFactor *= extraScale;
             screenWidth = (int) Math.round(w.getScaledWidth() / matrixScale);
             screenHeight = (int) Math.round(w.getScaledHeight() / matrixScale);
         }

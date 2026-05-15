@@ -567,6 +567,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Class Selection")
                 .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
                         () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
+                .add(toggle("Colored Class Cards", "Use class-colored accents on class cards instead of brown",
+                        () -> config.classCardColoredAccents, v -> config.classCardColoredAccents = v))
+                .add(toggle("Quick Toggle Button", "Show the enable/disable class overlay button on class selection screens",
+                        () -> config.classSelectionQuickToggleButton, v -> config.classSelectionQuickToggleButton = v))
             .sub("Auto Actions")
                 .add(toggle("Auto /stream", "Automatically send /stream when streamer mode disables (e.g. world swap)",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))

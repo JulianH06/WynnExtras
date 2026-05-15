@@ -7,7 +7,9 @@ import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.WEHandledScreen;
+import julianh06.wynnextras.utils.UI.Widget;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -42,7 +44,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     @Override protected double getTargetScaleFactor() { return 4.0; }
     @Override protected int getMinScreenWidth() { return 700; }
-    @Override protected int getMinScreenHeight() { return 500; }
+    @Override protected int getMinScreenHeight() { return 530; }
 
     public static final String CLASS_SELECTION_TITLE = "\uDAFF\uDFD5\uE01F";
     public static final String CLASS_EDIT_TITLE = "\uDAFF\uDFD0\uE020";
@@ -83,8 +85,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private int hoveredEditOption = -1;
     private int hoveredIconColor = -1;
     private int hoveredIconSub = -1;
-    private boolean hoveredToggle = false;
-    private boolean hoveredColorToggle = false;
     private boolean hoveredBack = false;
     private List<Text> hoveredTooltip = new ArrayList<>();
 
@@ -112,10 +112,14 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     // Vanilla toggle
     public static boolean vanillaMode = false;
+    private static final int CLASS_OVERLAY_TOGGLE_W = 100;
+    private static final int CLASS_OVERLAY_TOGGLE_H = 15;
+    private static final int CLASS_OVERLAY_TOGGLE_MARGIN = 2;
+    private static final float CLASS_OVERLAY_TOGGLE_TEXT_SCALE = 0.8f;
+    private static final ClassOverlayToggleWidget VANILLA_TOGGLE_WIDGET = new ClassOverlayToggleWidget();
 
     // Toggle/back button bounds (logical)
-    private float toggleLX, toggleLY, toggleLW, toggleLH;
-    private float colorToggleLX, colorToggleLY, colorToggleLW, colorToggleLH;
+    private final ClassOverlayToggleWidget overlayToggleWidget = new ClassOverlayToggleWidget();
     private float backLX, backLY, backLW, backLH;
 
     // Custom background from config/wynnextras/customscreen/
@@ -310,8 +314,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         for (int i = 0; i < visibleCardCount; i++) {
             order.add(visCharId[i]);
         }
-        WynnExtrasConfig.INSTANCE.classCardOrder = order;
-        WynnExtrasConfig.save();
+        ClassSelectionData.setClassCardOrder(order);
     }
 
     public static boolean isClassSelectionScreen(String title) { return CLASS_SELECTION_TITLE.equals(title); }
@@ -344,10 +347,10 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         hoveredEditOption = -1;
         hoveredIconColor = -1;
         hoveredIconSub = -1;
-        hoveredToggle = false;
-        hoveredColorToggle = false;
         hoveredBack = false;
         hoveredTooltip = new ArrayList<>();
+
+        ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("§6Class selection overlay"), (screenWidth / 2f) * ui.getScaleFactorF(), 25, 1.25f * ui.getScaleFactorF());
 
         if (mode == ScreenMode.CLASS_SELECTION) {
             drawClassSelection(ctx, mouseX, mouseY);
@@ -413,7 +416,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 String[] uuids = matchCharacters(charDataList);
 
                 // Sort by saved order (UUIDs), unmatched go at end
-                List<String> savedOrder = WynnExtrasConfig.INSTANCE.classCardOrder;
+                List<String> savedOrder = ClassSelectionData.getClassCardOrder();
                 visibleCardCount = 0;
                 boolean[] used = new boolean[charSlotIndices.size()];
                 if (savedOrder != null) {
@@ -458,31 +461,14 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         float titleYPx = panelYPx + marginPx;
         ui.drawRect(px(panelXPx + marginPx), px(titleYPx) - px(2),
                 px(panelWPx - marginPx * 2), px(titleHPx), CustomColor.fromHexString("2e251c"));
-        ui.drawCenteredText("Select Your Character",
+        drawOverlayCenteredText("Select Your Character",
                 px(panelXPx + panelWPx / 2f), px(titleYPx + titleHPx / 2f),
                 CustomColor.fromHexString("FFAA00"), 4.5f);
 
-        // "Vanilla" toggle button in title bar right side
-        float tbWPx = 50, tbHPx = 16;
-        float tbXPx = panelXPx + panelWPx - marginPx - tbWPx - 4;
-        float tbYPx = titleYPx + (titleHPx - tbHPx) / 2f;
-        toggleLX = px(tbXPx); toggleLY = px(tbYPx); toggleLW = px(tbWPx); toggleLH = px(tbHPx);
-        hoveredToggle = isInBounds(mouseX, mouseY, toggleLX, toggleLY, toggleLW, toggleLH);
-        ui.drawButton(toggleLX, toggleLY, toggleLW, toggleLH, hoveredToggle);
-        ui.drawCenteredText("Vanilla", toggleLX + toggleLW / 2f, toggleLY + toggleLH / 2f,
-                CustomColor.fromHexString("AAAAAA"), 2f);
-
-        // Color toggle button (class colors vs. brown)
-        float ctWPx = 60, ctHPx = 16;
-        float ctXPx = tbXPx - ctWPx - 6;
-        float ctYPx = tbYPx;
-        colorToggleLX = px(ctXPx); colorToggleLY = px(ctYPx); colorToggleLW = px(ctWPx); colorToggleLH = px(ctHPx);
-        hoveredColorToggle = isInBounds(mouseX, mouseY, colorToggleLX, colorToggleLY, colorToggleLW, colorToggleLH);
-        ui.drawButton(colorToggleLX, colorToggleLY, colorToggleLW, colorToggleLH, hoveredColorToggle);
-        boolean colored = WynnExtrasConfig.INSTANCE.classCardColoredAccents;
-        ui.drawCenteredText(colored ? "§aColored" : "§7Brown",
-                colorToggleLX + colorToggleLW / 2f, colorToggleLY + colorToggleLH / 2f,
-                colored ? CustomColor.fromHexString("55FF55") : CustomColor.fromHexString("5d4736"), 2f);
+        if (WynnExtrasConfig.INSTANCE.classSelectionQuickToggleButton) {
+            layoutOverlayToggleWidget(overlayToggleWidget);
+            overlayToggleWidget.draw(ctx, mouseX, mouseY, 0, ui);
+        }
 
         // Separator
         float sepYPx = titleYPx + titleHPx + 4;
@@ -530,7 +516,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         drawSettingsButtons(ctx, stacks, mouseX, mouseY, panelXPx, settingsYPx, panelWPx);
 
         // Hint text
-        ui.drawCenteredText("\u00A77Left Click: Play  |  Right Click: Edit  |  Drag: Rearrange",
+        drawOverlayCenteredText("\u00A77Left Click: Play  |  Right Click: Edit  |  Drag: Rearrange",
                 px(panelXPx + panelWPx / 2f), px(settingsYPx + settingsHPx + 4),
                 CustomColor.fromHexString("666666"), 2.2f);
     }
@@ -573,13 +559,14 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             charName = clientNick;
         }
         charName = truncate(charName, 20);
-        float textX = cx + px(iconAreaPx + 18);
-        float textNameY = cy + px(20);
-        ui.drawText(charName, textX, textNameY, CustomColor.fromHexString("FFFFFF"), 2.6f);
+        float textX = cx + px(iconAreaPx + 21);
+        float textNameY = cy + px(8);
+        drawOverlayText(charName, textX, textNameY, CustomColor.fromHexString("FFFFFF"), 2.35f);
 
-        // Class/level info
-        if (!classInfo.isEmpty()) {
-            ui.drawText(classInfo, textX, textNameY + px(14), accent, 2.2f);
+        List<String> details = extractClassDetails(stack);
+        for (int i = 0; i < details.size(); i++) {
+            drawOverlayText(details.get(i), textX, textNameY + px(13 + i * 11),
+                    accent, 2.05f);
         }
     }
 
@@ -600,7 +587,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private void drawSettingsButtons(DrawContext ctx, List<ItemStack> stacks, int mouseX, int mouseY,
                                       float panelXPx, float settingsYPx, float panelWPx) {
         int[] slots = {SLOT_CANCEL_DELETION, SLOT_BACKUPS, SLOT_MUSIC, SLOT_AUTO_OPEN};
-        float btnWPx = 100, btnHPx = 22, gapPx = 10;
+        float btnWPx = 115, btnHPx = 22, gapPx = 10;
         float totalW = slots.length * btnWPx + (slots.length - 1) * gapPx;
         float startXPx = panelXPx + (panelWPx - totalW) / 2f;
 
@@ -617,10 +604,32 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 hoveredTooltip = getTooltipLines(stack);
             }
             ui.drawButton(bx, by, bw, bh, hovered);
-            String label = truncate(cleanName(stack.getName().getString()), 14);
+            String label = truncate(cleanName(stack.getName().getString()), 18);
+            float textScale = getFittingButtonTextScale(label, btnWPx, 2.45f);
             ui.drawCenteredText(label, bx + bw / 2f, by + bh / 2f,
-                    CustomColor.fromHexString("FFFFFF"), 1.7f);
+                    CustomColor.fromHexString("FFFFFF"), textScale);
         }
+    }
+
+    private float getFittingButtonTextScale(String text, float buttonWidthPx, float preferredTextScale) {
+        int textWidth = MinecraftClient.getInstance().textRenderer.getWidth(text);
+        if (textWidth <= 0) return preferredTextScale;
+
+        float availableWidthPx = buttonWidthPx - 16f;
+        float maxTextScale = availableWidthPx * (float) scaleFactor / textWidth;
+        return Math.min(preferredTextScale, maxTextScale);
+    }
+
+    private void drawOverlayText(String text, float x, float y, CustomColor color, float textScale) {
+        ui.drawText(text, x, y, color, getOverlayTextScale(textScale));
+    }
+
+    private void drawOverlayCenteredText(String text, float x, float y, CustomColor color, float textScale) {
+        ui.drawCenteredText(text, x, y, color, getOverlayTextScale(textScale));
+    }
+
+    private float getOverlayTextScale(float textScale) {
+        return textScale * (float) (scaleFactor / Math.max(scaleFactor, 2.0));
     }
 
     // ==================== CLASS EDIT ====================
@@ -653,7 +662,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         float titleYPx = panelYPx + marginPx;
         ui.drawRect(px(panelXPx + marginPx), px(titleYPx) - px(2),
                 px(panelWPx - marginPx * 2), px(titleHPx), CustomColor.fromHexString("2e251c"));
-        ui.drawCenteredText("Edit Character",
+        drawOverlayCenteredText("Edit Character",
                 px(panelXPx + panelWPx / 2f), px(titleYPx + titleHPx / 2f),
                 CustomColor.fromHexString("FFAA00"), 4.5f);
 
@@ -692,7 +701,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             ctx.getMatrices().popMatrix();
 
             String label = truncate(cleanName(stack.getName().getString()), 24);
-            ui.drawCenteredText(label, bx + bw / 2f + px(14), by + bh / 2f,
+            drawOverlayCenteredText(label, bx + bw / 2f + px(14), by + bh / 2f,
                     CustomColor.fromHexString("FFFFFF"), 3f);
             idx++;
         }
@@ -704,7 +713,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         backLX = px(backXPx); backLY = px(backYPx); backLW = px(backWPx); backLH = px(backHPx);
         hoveredBack = isInBounds(mouseX, mouseY, backLX, backLY, backLW, backLH);
         ui.drawButton(backLX, backLY, backLW, backLH, hoveredBack);
-        ui.drawCenteredText("\u00A7c\u2190 Back", backLX + backLW / 2f, backLY + backLH / 2f,
+        drawOverlayCenteredText("\u00A7c\u2190 Back", backLX + backLW / 2f, backLY + backLH / 2f,
                 CustomColor.fromHexString("FF6666"), 2.5f);
     }
 
@@ -740,7 +749,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         float titleYPx = panelYPx + marginPx;
         ui.drawRect(px(panelXPx + marginPx), px(titleYPx) - px(2),
                 px(panelWPx - marginPx * 2), px(titleHPx), CustomColor.fromHexString("2e251c"));
-        ui.drawCenteredText("Choose Icon Color",
+        drawOverlayCenteredText("Choose Icon Color",
                 px(panelXPx + panelWPx / 2f), px(titleYPx + titleHPx / 2f),
                 CustomColor.fromHexString("FFAA00"), 4.5f);
 
@@ -786,7 +795,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
                 // Color label
                 String name = i < ICON_COLOR_NAMES.length ? ICON_COLOR_NAMES[i] : cleanName(stack.getName().getString());
-                ui.drawCenteredText(truncate(name, 10), bx + bw / 2f, by + bh - px(4),
+                drawOverlayCenteredText(truncate(name, 10), bx + bw / 2f, by + bh - px(4),
                         CustomColor.fromHexString("CCCCCC"), 1.6f);
             }
         }
@@ -810,7 +819,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 ctx.getMatrices().popMatrix();
             }
         }
-        ui.drawCenteredText("Preview", pvx + pvw / 2f, pvy + pvh + px(4),
+        drawOverlayCenteredText("Preview", pvx + pvw / 2f, pvy + pvh + px(4),
                 CustomColor.fromHexString("888888"), 2f);
 
         // Subcategory row
@@ -847,7 +856,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
                 // Label
                 String label = truncate(cleanName(stack.getName().getString()), 8);
-                ui.drawCenteredText(label, bx + bw / 2f, by + bh - px(3),
+                drawOverlayCenteredText(label, bx + bw / 2f, by + bh - px(3),
                         CustomColor.fromHexString("CCCCCC"), 1.4f);
                 subIdx++;
             }
@@ -861,7 +870,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         backLX = px(backXPx); backLY = px(backYPx); backLW = px(backWPx); backLH = px(backHPx);
         hoveredBack = isInBounds(mouseX, mouseY, backLX, backLY, backLW, backLH);
         ui.drawButton(backLX, backLY, backLW, backLH, hoveredBack);
-        ui.drawCenteredText("\u00A7c\u2190 Back", backLX + backLW / 2f, backLY + backLH / 2f,
+        drawOverlayCenteredText("\u00A7c\u2190 Back", backLX + backLW / 2f, backLY + backLH / 2f,
                 CustomColor.fromHexString("FF6666"), 2.5f);
     }
 
@@ -883,16 +892,9 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         // If nickname input is active, consume all clicks (Escape/Enter to close)
         if (nicknameInputActive) return true;
 
-        // Vanilla toggle
-        if (mode == ScreenMode.CLASS_SELECTION && hoveredToggle) {
-            vanillaMode = true;
-            return true;
-        }
-
-        // Color/brown toggle
-        if (mode == ScreenMode.CLASS_SELECTION && hoveredColorToggle) {
-            WynnExtrasConfig.INSTANCE.classCardColoredAccents = !WynnExtrasConfig.INSTANCE.classCardColoredAccents;
-            WynnExtrasConfig.save();
+        if (mode == ScreenMode.CLASS_SELECTION
+                && WynnExtrasConfig.INSTANCE.classSelectionQuickToggleButton
+                && overlayToggleWidget.mouseClicked(x, y, button)) {
             return true;
         }
 
@@ -997,35 +999,75 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     // ==================== VANILLA MODE TOGGLE (static, used by mixin) ====================
 
     public static void renderVanillaToggleButton(DrawContext ctx, HandledScreen<?> screen) {
+        if (!WynnExtrasConfig.INSTANCE.classSelectionQuickToggleButton) {
+            vanillaMode = false;
+            return;
+        }
         if (!vanillaMode) return;
         String title = screen.getTitle().getString();
         if (!isClassSelectionScreen(title) && !isClassEditScreen(title) && !isIconEditScreen(title)) return;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         int sw = mc.getWindow().getScaledWidth();
-        int bw = 80, bh = 20;
-        int bx = sw - bw - 5, by = 5;
-
-        ctx.fill(bx - 1, by - 1, bx + bw + 1, by + bh + 1, 0xFF666666);
-        ctx.fill(bx, by, bx + bw, by + bh, 0xFF333333);
-        int textW = mc.textRenderer.getWidth("Custom View");
-        ctx.drawText(mc.textRenderer, "Custom View", bx + (bw - textW) / 2, by + (bh - 8) / 2, 0xFFFFFFFF, true);
+        double mx = mc.mouse.getX() * sw / mc.getWindow().getWidth();
+        double my = mc.mouse.getY() * mc.getWindow().getScaledHeight() / mc.getWindow().getHeight();
+        UIUtils vanillaUi = new UIUtils(ctx, 1, 0, 0);
+        layoutToggleWidget(VANILLA_TOGGLE_WIDGET, sw, 1f);
+        VANILLA_TOGGLE_WIDGET.draw(ctx, (int) mx, (int) my, 0, vanillaUi);
     }
 
     public static boolean handleVanillaToggleClick(double mx, double my, HandledScreen<?> screen) {
+        if (!WynnExtrasConfig.INSTANCE.classSelectionQuickToggleButton) {
+            vanillaMode = false;
+            return false;
+        }
         if (!vanillaMode) return false;
         String title = screen.getTitle().getString();
         if (!isClassSelectionScreen(title) && !isClassEditScreen(title) && !isIconEditScreen(title)) return false;
 
         MinecraftClient mc = MinecraftClient.getInstance();
-        int sw = mc.getWindow().getScaledWidth();
-        int bw = 80, bh = 20;
-        int bx = sw - bw - 5, by = 5;
-        if (mx >= bx && mx <= bx + bw && my >= by && my <= by + bh) {
-            vanillaMode = false;
+        layoutToggleWidget(VANILLA_TOGGLE_WIDGET, mc.getWindow().getScaledWidth(), 1f);
+        return VANILLA_TOGGLE_WIDGET.mouseClicked(mx, my, 0);
+    }
+
+    private void layoutOverlayToggleWidget(ClassOverlayToggleWidget widget) {
+        float visibleScreenWidth = (float) (screenWidth * matrixScale);
+        float inverseMatrixScale = (float) (1.0 / matrixScale);
+        layoutToggleWidget(widget, visibleScreenWidth, (float) scaleFactor * inverseMatrixScale);
+    }
+
+    private static void layoutToggleWidget(ClassOverlayToggleWidget widget, int screenWidth, float logicalScale) {
+        layoutToggleWidget(widget, (float) screenWidth, logicalScale);
+    }
+
+    private static void layoutToggleWidget(ClassOverlayToggleWidget widget, float screenWidth, float logicalScale) {
+        int x = Math.round((screenWidth - CLASS_OVERLAY_TOGGLE_W - CLASS_OVERLAY_TOGGLE_MARGIN) * logicalScale);
+        int y = Math.round(CLASS_OVERLAY_TOGGLE_MARGIN * logicalScale);
+        int w = Math.round(CLASS_OVERLAY_TOGGLE_W * logicalScale);
+        int h = Math.round(CLASS_OVERLAY_TOGGLE_H * logicalScale);
+        widget.setBounds(x, y, w, h);
+        widget.setTextScale(logicalScale * CLASS_OVERLAY_TOGGLE_TEXT_SCALE);
+    }
+
+    private static class ClassOverlayToggleWidget extends Widget {
+        private float textScale = 0.8f;
+
+        private void setTextScale(float textScale) {
+            this.textScale = textScale;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, hovered);
+            ui.drawCenteredText(vanillaMode ? "Enable class overlay" : "Disable class overlay",
+                    x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), textScale);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            vanillaMode = !vanillaMode;
             return true;
         }
-        return false;
     }
 
     // ==================== NICKNAME INPUT ====================
@@ -1349,10 +1391,47 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     private String extractClassInfo(ItemStack stack) {
         for (Text line : getTooltipLines(stack)) {
-            String str = line.getString().replaceAll("\u00A7[0-9a-fk-or]", "").trim();
+            String str = cleanTooltipLine(line);
             if (str.contains("Class")) return str;
         }
         return "";
+    }
+
+    private List<String> extractClassDetails(ItemStack stack) {
+        List<String> details = new ArrayList<>();
+        boolean afterClassLine = false;
+        for (Text line : getTooltipLines(stack)) {
+            String str = cleanTooltipLine(line);
+            if (str.isEmpty()) continue;
+
+            if (afterClassLine) {
+                details.add(truncate(formatClassDetail(str), 25));
+                if (details.size() >= 3) break;
+            } else if (str.contains("Class")) {
+                afterClassLine = true;
+            }
+        }
+        return details;
+    }
+
+    private String formatClassDetail(String detail) {
+        if (!detail.contains("Time Played:")) return detail;
+
+        String prefix = detail.substring(0, detail.indexOf("Time Played:"));
+        String formatted = detail.replace("Time Played:", "Playtime:");
+        int valueStart = formatted.indexOf("Playtime:") + "Playtime:".length();
+        String value = formatted.substring(valueStart).trim();
+        String numberText = value.replace("hours", "").replace("hour", "").trim();
+        try {
+            int roundedHours = (int) Math.round(Double.parseDouble(numberText));
+            return prefix + "Playtime: " + roundedHours + "h";
+        } catch (NumberFormatException e) {
+            return formatted.replace("hours", "h").replace("hour", "h");
+        }
+    }
+
+    private String cleanTooltipLine(Text line) {
+        return cleanName(line.getString().replaceAll("\u00A7[0-9a-fk-or]", ""));
     }
 
     private CustomColor getClassColor(String classInfo) {

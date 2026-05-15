@@ -300,7 +300,7 @@ public class WynnExtrasConfig {
     public boolean customClassSelectionEnabled = true;
     public String customClassPngPath = "";
     public boolean classCardColoredAccents = true; // true = class colors, false = always brown
-    public List<String> classCardOrder = new ArrayList<>(); // ordered list of character UUIDs
+    public boolean classSelectionQuickToggleButton = true;
     public Map<String, String> clientNicknames = new HashMap<>(); // UUID -> nickname
     public Map<String, CharIdentity> charIdentities = new HashMap<>(); // UUID -> identity data
 
@@ -500,7 +500,6 @@ public class WynnExtrasConfig {
                 if (INSTANCE.raidPBs == null) INSTANCE.raidPBs = new HashMap<>();
                 if (INSTANCE.professionOverflowXp == null) INSTANCE.professionOverflowXp = new HashMap<>();
                 if (INSTANCE.professionGoals == null) INSTANCE.professionGoals = new HashMap<>();
-                if (INSTANCE.classCardOrder == null) INSTANCE.classCardOrder = new ArrayList<>();
                 if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
                 if (INSTANCE.charIdentities == null) INSTANCE.charIdentities = new HashMap<>();
                 //if (INSTANCE.configProfiles == null) INSTANCE.configProfiles = new LinkedHashMap<>();
