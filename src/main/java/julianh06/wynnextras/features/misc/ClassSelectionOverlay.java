@@ -465,7 +465,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 px(panelXPx + panelWPx / 2f), px(titleYPx + titleHPx / 2f),
                 CustomColor.fromHexString("FFAA00"), 4.5f);
 
-        if (WynnExtrasConfig.INSTANCE.classSelectionQuickToggleButton) {
+        if (!WynnExtrasConfig.INSTANCE.hideClassSelectionQuickToggleButton) {
             layoutOverlayToggleWidget(overlayToggleWidget);
             overlayToggleWidget.draw(ctx, mouseX, mouseY, 0, ui);
         }
@@ -893,7 +893,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         if (nicknameInputActive) return true;
 
         if (mode == ScreenMode.CLASS_SELECTION
-                && WynnExtrasConfig.INSTANCE.classSelectionQuickToggleButton
+                && !WynnExtrasConfig.INSTANCE.hideClassSelectionQuickToggleButton
                 && overlayToggleWidget.mouseClicked(x, y, button)) {
             return true;
         }
@@ -999,7 +999,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     // ==================== VANILLA MODE TOGGLE (static, used by mixin) ====================
 
     public static void renderVanillaToggleButton(DrawContext ctx, HandledScreen<?> screen) {
-        if (!WynnExtrasConfig.INSTANCE.classSelectionQuickToggleButton) {
+        if (WynnExtrasConfig.INSTANCE.hideClassSelectionQuickToggleButton) {
             vanillaMode = false;
             return;
         }
@@ -1017,7 +1017,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     public static boolean handleVanillaToggleClick(double mx, double my, HandledScreen<?> screen) {
-        if (!WynnExtrasConfig.INSTANCE.classSelectionQuickToggleButton) {
+        if (WynnExtrasConfig.INSTANCE.hideClassSelectionQuickToggleButton) {
             vanillaMode = false;
             return false;
         }
@@ -1435,13 +1435,39 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     private CustomColor getClassColor(String classInfo) {
-        if (!WynnExtrasConfig.INSTANCE.classCardColoredAccents) return CustomColor.fromHexString("5d4736");
+        String classKey = getClassColorKey(classInfo);
+        if (WynnExtrasConfig.INSTANCE.useCustomClassColors) {
+            Integer customColor = WynnExtrasConfig.INSTANCE.classCardAccentColors.get(classKey);
+            if (customColor != null && customColor >= 0) {
+                return CustomColor.fromInt(0xFF000000 | (customColor & 0xFFFFFF));
+            }
+        }
+        return CustomColor.fromInt(0xFF000000 | getDefaultClassColor(classKey));
+    }
+
+    private String getClassColorKey(String classInfo) {
         String l = classInfo.toLowerCase();
-        if (l.contains("warrior") || l.contains("knight")) return CustomColor.fromHexString("CC4444");
-        if (l.contains("mage") || l.contains("dark wizard")) return CustomColor.fromHexString("55BBFF");
-        if (l.contains("assassin") || l.contains("ninja")) return CustomColor.fromHexString("FF55FF");
-        if (l.contains("archer") || l.contains("hunter")) return CustomColor.fromHexString("55FF55");
-        if (l.contains("shaman") || l.contains("skyseer")) return CustomColor.fromHexString("FFFF55");
-        return CustomColor.fromHexString("5d4736");
+        if (l.contains("knight")) return "knight";
+        if (l.contains("warrior")) return "warrior";
+        if (l.contains("dark wizard")) return "dark_wizard";
+        if (l.contains("mage")) return "mage";
+        if (l.contains("ninja")) return "ninja";
+        if (l.contains("assassin")) return "assassin";
+        if (l.contains("hunter")) return "hunter";
+        if (l.contains("archer")) return "archer";
+        if (l.contains("skyseer")) return "skyseer";
+        if (l.contains("shaman")) return "shaman";
+        return "";
+    }
+
+    private int getDefaultClassColor(String classKey) {
+        return switch (classKey) {
+            case "warrior", "knight" -> 0xCC4444;
+            case "mage", "dark_wizard" -> 0x55BBFF;
+            case "assassin", "ninja" -> 0xFF55FF;
+            case "archer", "hunter" -> 0x55FF55;
+            case "shaman", "skyseer" -> 0xFFFF55;
+            default -> 0x5d4736;
+        };
     }
 }

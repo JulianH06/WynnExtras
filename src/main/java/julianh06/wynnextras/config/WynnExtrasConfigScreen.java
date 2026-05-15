@@ -410,8 +410,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 () -> config.territoryMenuKey, v -> config.territoryMenuKey = v),
                         () -> config.territoryMenuKeyEnabled));
 
-        // ===== INVENTORY =====
-        Category invCategory = category("Inventory", 0xFFea1219);
+        // ===== OVERLAYS =====
+        Category invCategory = category("Overlays", 0xFFea1219);
 
         invCategory
             .sub("Bank Overlay")
@@ -431,6 +431,45 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.bankOverlayHideEmptyRows, v -> config.bankOverlayHideEmptyRows = v))
                 .add(toggle("Bag Overlay", "Show crafter bag counts by raid/tier on bank screens",
                         () -> config.bankBagOverlay, v -> config.bankBagOverlay = v)).endSub()
+            .sub("Class Selection")
+                .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
+                        () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
+                .add(toggle("Use custom class colors", "Configure the accent color for each class and reskin",
+                        () -> config.useCustomClassColors, v -> config.useCustomClassColors = v))
+                .add(visibleWhen(classColor("Warrior Color", "Accent color for Warrior class cards", "warrior", 0xCC4444),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Knight Color", "Accent color for Knight class cards", "knight", 0xCC4444),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Mage Color", "Accent color for Mage class cards", "mage", 0x55BBFF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Dark Wizard Color", "Accent color for Dark Wizard class cards", "dark_wizard", 0x55BBFF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Assassin Color", "Accent color for Assassin class cards", "assassin", 0xFF55FF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Ninja Color", "Accent color for Ninja class cards", "ninja", 0xFF55FF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Archer Color", "Accent color for Archer class cards", "archer", 0x55FF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Hunter Color", "Accent color for Hunter class cards", "hunter", 0x55FF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Shaman Color", "Accent color for Shaman class cards", "shaman", 0xFFFF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Skyseer Color", "Accent color for Skyseer class cards", "skyseer", 0xFFFF55),
+                        () -> config.useCustomClassColors))
+                .add(toggle("Hide quick toggle button", "Hide the enable/disable class overlay button on class selection screens",
+                        () -> config.hideClassSelectionQuickToggleButton, v -> config.hideClassSelectionQuickToggleButton = v))
+            .sub("Crafting")
+                .add(toggle("Crafting helper", "Crafting Helper toggle",
+                        () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
+                .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
+                        () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
+                .add(toggle("Auto Start", "Automatically start crafting when a recipe is loaded",
+                        () -> config.craftingAutoStart, v -> config.craftingAutoStart = v))
+                .add(toggle("Crafting preview", "Crafting preview toggle",
+                        () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
+                .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
+                        () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
+                .add(text("The preview is movable", "To change its position just drag it where you want"))
             .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
                         () -> config.showWeight, v -> {
@@ -452,19 +491,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.tradeMarketOverlay, v -> config.tradeMarketOverlay = v))
                 .add(toggle("Price overlay background", "Show a dark background for the price overlay",
                         () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
-                .add(text("The price summary is movable", "To change its position just drag it where you want")).endSub()
-            .sub("Crafting")
-                .add(toggle("Crafting helper", "Crafting Helper toggle",
-                        () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
-                .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
-                        () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
-                .add(toggle("Auto Start", "Automatically start crafting when a recipe is loaded",
-                        () -> config.craftingAutoStart, v -> config.craftingAutoStart = v))
-                .add(toggle("Crafting preview", "Crafting preview toggle",
-                        () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
-                .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
-                        () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
-                .add(text("The preview is movable", "To change its position just drag it where you want"))
+                .add(text("The price summary is movable", "To change its position just drag it where you want"))
             .endSub()
                 .add(toggle("Skill point helper (experimental)", "Show you your armor in the compass menu and a button to automatically assign skill points",
                         () -> config.skillpointHelper, v -> config.skillpointHelper = v));
@@ -564,13 +591,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(toggle("Show Exact XP", "Show exact XP values instead of percentages",
                                 () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
                         () -> config.professionOverlayEnabled))
-            .sub("Class Selection")
-                .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
-                        () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
-                .add(toggle("Colored Class Cards", "Use class-colored accents on class cards instead of brown",
-                        () -> config.classCardColoredAccents, v -> config.classCardColoredAccents = v))
-                .add(toggle("Quick Toggle Button", "Show the enable/disable class overlay button on class selection screens",
-                        () -> config.classSelectionQuickToggleButton, v -> config.classSelectionQuickToggleButton = v))
             .sub("Auto Actions")
                 .add(toggle("Auto /stream", "Automatically send /stream when streamer mode disables (e.g. world swap)",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
@@ -626,8 +646,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.showOwnNametag, v -> config.showOwnNametag = v))
             .add(toggle("Custom GUI Scale", "Use different scale inside of inventories",
                     () -> config.differentGUIScale, v -> config.differentGUIScale = v))
-            .add(slider("GUI Scale", "Custom GUI scale value",
-                    1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
+            .add(visibleWhen(slider("GUI Scale", "Custom GUI scale value",
+                    1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v),
+                    () -> config.differentGUIScale))
             .add(toggle("Lootpool button in pf menu", "Show a button to quickly access /we lootpool through the pf menu",
                     () -> config.showLootpoolButtonInPartyFinder, v -> config.showLootpoolButtonInPartyFinder = v))
             .add(toggle("Redirect Wynntils View Stats", "Changes the Wynntils 'View Player Stats' button to open the pv instead of the wynn website",
@@ -703,6 +724,23 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     private ConfigOption toggle(String name, String desc, Supplier<Boolean> get, Consumer<Boolean> set) {
         return new BooleanOption(name, desc, get, set);
+    }
+
+    private ConfigOption color(String name, String desc, Supplier<Integer> get, Consumer<Integer> set, int resetValue, int fallbackColor) {
+        return new ColorOption(name, desc, get, set, resetValue, fallbackColor);
+    }
+
+    private ConfigOption classColor(String name, String desc, String classKey, int defaultColor) {
+        return color(name, desc,
+                () -> config.classCardAccentColors.getOrDefault(classKey, -1),
+                v -> {
+                    if (v == null || v < 0) {
+                        config.classCardAccentColors.remove(classKey);
+                    } else {
+                        config.classCardAccentColors.put(classKey, v);
+                    }
+                },
+                -1, defaultColor);
     }
 
     private ConfigOption slider(String name, String desc, int min, int max, Supplier<Integer> get, Consumer<Integer> set) {
@@ -1298,7 +1336,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                             if (matchesSearch(opt)) {
                                 int optH = opt.getHeight(contentW - 8);
                                 if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + optH)) {
-                                    if (opt.mouseClicked(mx, my, contentX + 8, y, contentW - 8, optH, btn)) return true;
+                                    if (opt.mouseClicked(mx, my, contentX + 8, y, contentW - 8, optH, btn)) {
+                                        updateMaxScroll();
+                                        return true;
+                                    }
                                 }
                                 y += optH + OPTION_SPACING;
                             }
@@ -1307,7 +1348,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
                     int optH = opt.getHeight(contentW);
                     if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + optH)) {
-                        if (opt.mouseClicked(mx, my, contentX, y, contentW, optH, btn)) return true;
+                        if (opt.mouseClicked(mx, my, contentX, y, contentW, optH, btn)) {
+                            updateMaxScroll();
+                            return true;
+                        }
                     }
                     y += optH + OPTION_SPACING;
                 }

@@ -3,6 +3,7 @@ package julianh06.wynnextras.config;
 import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.Screen;
@@ -299,8 +300,10 @@ public class WynnExtrasConfig {
     // ==================== CUSTOM CLASS SELECTION ====================
     public boolean customClassSelectionEnabled = true;
     public String customClassPngPath = "";
-    public boolean classCardColoredAccents = true; // true = class colors, false = always brown
-    public boolean classSelectionQuickToggleButton = true;
+    public int classCardCustomAccentColor = -1; // -1 = class colors
+    public boolean useCustomClassColors = false;
+    public Map<String, Integer> classCardAccentColors = new HashMap<>();
+    public boolean hideClassSelectionQuickToggleButton = false;
     public Map<String, String> clientNicknames = new HashMap<>(); // UUID -> nickname
     public Map<String, CharIdentity> charIdentities = new HashMap<>(); // UUID -> identity data
 
@@ -488,9 +491,19 @@ public class WynnExtrasConfig {
         try {
             if (Files.exists(CONFIG_PATH)) {
                 String json = Files.readString(CONFIG_PATH);
+                JsonObject jsonObject = GSON.fromJson(json, JsonObject.class);
+                Boolean oldClassSelectionQuickToggleButton = null;
+                if (jsonObject != null
+                        && jsonObject.has("classSelectionQuickToggleButton")
+                        && !jsonObject.has("hideClassSelectionQuickToggleButton")) {
+                    oldClassSelectionQuickToggleButton = jsonObject.get("classSelectionQuickToggleButton").getAsBoolean();
+                }
                 INSTANCE = GSON.fromJson(json, WynnExtrasConfig.class);
                 if (INSTANCE == null) {
                     INSTANCE = new WynnExtrasConfig();
+                }
+                if (oldClassSelectionQuickToggleButton != null) {
+                    INSTANCE.hideClassSelectionQuickToggleButton = !oldClassSelectionQuickToggleButton;
                 }
                 // Ensure lists are not null
                 if (INSTANCE.hiddenPlayers == null) INSTANCE.hiddenPlayers = new ArrayList<>();
@@ -500,6 +513,7 @@ public class WynnExtrasConfig {
                 if (INSTANCE.raidPBs == null) INSTANCE.raidPBs = new HashMap<>();
                 if (INSTANCE.professionOverflowXp == null) INSTANCE.professionOverflowXp = new HashMap<>();
                 if (INSTANCE.professionGoals == null) INSTANCE.professionGoals = new HashMap<>();
+                if (INSTANCE.classCardAccentColors == null) INSTANCE.classCardAccentColors = new HashMap<>();
                 if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
                 if (INSTANCE.charIdentities == null) INSTANCE.charIdentities = new HashMap<>();
                 //if (INSTANCE.configProfiles == null) INSTANCE.configProfiles = new LinkedHashMap<>();
