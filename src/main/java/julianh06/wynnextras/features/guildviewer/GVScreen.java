@@ -202,7 +202,7 @@ public class GVScreen extends WEScreen {
         if (GV.currentGuildData.members == null) return;
 
         int textX = xStart + 1180;
-        int spacing = 150;
+        int spacing = 160;
 
         int contentHeight = 100;
 
@@ -598,7 +598,7 @@ public class GVScreen extends WEScreen {
             int yOffset,
             int spacing
     ) {
-        int widgetHeight = 120;
+        int widgetHeight = 150;
         int widgetWidth = 350;
 
         int index = 0;
@@ -660,13 +660,21 @@ public class GVScreen extends WEScreen {
 
     private static class GuildMemeberWidget extends Widget {
         static Identifier classBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive.png");
+        static Identifier classBackgroundTextureOnline = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive_online.png");
         static Identifier classBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive_dark.png");
+        static Identifier classBackgroundTextureDarkOnline = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive_dark_online.png");
 
         static Identifier classBackgroundTextureHovered = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered.png");
+        static Identifier classBackgroundTextureHoveredOnline = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered_online.png");
         static Identifier classBackgroundTextureHoveredDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered_dark.png");
+        static Identifier classBackgroundTextureHoveredDarkOnline = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered_dark_online.png");
 
         static Identifier onlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle_dark.png");
         static Identifier onlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle.png");
+        private static final float SERVER_TEXT_SCALE = 2.25f;
+        private static final float SERVER_TEXT_X = 40f;
+        private static final float FOUR_CHARACTER_SERVER_TEXT_WIDTH =
+                MinecraftClient.getInstance().textRenderer.getWidth("eu34") * SERVER_TEXT_SCALE;
 
         private final Runnable action;
 
@@ -693,12 +701,14 @@ public class GVScreen extends WEScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(hovered && mouseInMenu) {
-                PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered, x, y, width, height, ui);
+                if(member.online) PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDarkOnline, classBackgroundTextureHoveredOnline, x, y, width, height, ui);
+                else PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered, x, y, width, height, ui);
             } else {
-                PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture,  x, y, width, height, ui);
+                if(member.online) PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDarkOnline, classBackgroundTextureOnline, x, y, width, height, ui);
+                else PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture,  x, y, width, height, ui);
             }
             //ui.drawRect(x, y, width, height);
-            ui.drawCenteredText(member.username, x + 175, y + 25);
+            ui.drawCenteredText(member.username, x + 175, y + 60);
 
             Instant instant = Instant.parse(member.joined);
             ZoneId zone = ZoneId.systemDefault();
@@ -708,14 +718,16 @@ public class GVScreen extends WEScreen {
                     .withZone(zone);
 
             String formatted = formatter.format(instant);
-            ui.drawCenteredText("Joined: " + formatted, x + 175, y + 55);
+            ui.drawCenteredText("Joined: " + formatted, x + 175, y + 90);
 
-            ui.drawCenteredText("Contributed: " + formatLong(member.contributed), x + 175, y + 85);
+            ui.drawCenteredText("Contributed: " + formatLong(member.contributed), x + 175, y + 120);
 
             if(member.online) {
-                PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, x + 5, y + 5, 20, 20, ui);
+                PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, x + 18, y + 6, 18, 18, ui);
                 if (member.server != null && !member.server.isEmpty()) {
-                    ui.drawCenteredText("§a" + member.server, x + 175, y + 5);
+                    float serverTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(member.server) * SERVER_TEXT_SCALE;
+                    float serverTextX = x + SERVER_TEXT_X + Math.max(0f, (FOUR_CHARACTER_SERVER_TEXT_WIDTH - serverTextWidth) / 2f);
+                    ui.drawText("§a" + member.server, serverTextX, y + 8, CustomColor.fromHexString("FFFFFF"), SERVER_TEXT_SCALE);
                 }
             }
         }
