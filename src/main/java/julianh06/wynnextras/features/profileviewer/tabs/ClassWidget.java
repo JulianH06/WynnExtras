@@ -80,7 +80,7 @@ public class ClassWidget extends Widget {
         if(selectedCharacter == characterData) {
             if(hovered) {
                 DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureActiveHoveredDark, classBackgroundTextureActiveHovered,  x, y, 390, 132, ui);
-           } else {
+            } else {
                 DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureActiveDark, classBackgroundTextureActive,  x, y, 390, 132, ui);
             }
         } else if(hovered) {

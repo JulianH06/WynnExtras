@@ -175,11 +175,8 @@ public class LootrunScanning {
             rarity = "Unknown";
         }
 
-        String shinyStat = extractShinyTracker(stack);
         String type = LootrunLootPoolData.LootrunItem.determineType(name);
-        if (!shinyStat.isEmpty()) {
-            type = "shiny";
-        }
+        String shinyStat = type.equals("shiny") ? extractShinyTracker(stack) : "";
 
         String tooltipText = buildTooltipText(name, tooltips);
 

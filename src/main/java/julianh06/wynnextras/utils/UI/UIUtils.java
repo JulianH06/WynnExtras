@@ -372,6 +372,27 @@ public final class UIUtils {
         drawImage(texture, x, y, width, height, 1.0f);
     }
 
+    private void drawImageExact(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            int textureWidth, int textureHeight
+    ) {
+        RenderUtils.drawTexturedRect(
+                drawContext,
+                texture,
+                CustomColor.NONE,
+                sx(x), sy(y),
+                sx(x + width) - sx(x),
+                sy(y + height) - sy(y),
+                u, v,
+                uWidth, vHeight,
+                textureWidth, textureHeight
+        );
+    }
+
     public void drawButton(float x, float y, float width, float height, boolean hovered) {
         Identifier sprite = hovered
                 ? Identifier.ofVanilla("widget/button_highlighted")
@@ -528,41 +549,41 @@ public final class UIUtils {
          * OUTER
          * */
         // corners
-        drawImage(GENERIC_CONTAINER_TEX, x, y, scale, scale, 0, 0, uvWH, uvWH, tw, th); // TL
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale, y, scale, scale, 172, 0, uvWH, uvWH, tw, th); // TR
-        drawImage(GENERIC_CONTAINER_TEX, x, y + height - scale, scale, scale, 0, 218, uvWH, uvWH, tw, th); // BL
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale, y + height - scale, scale, scale, 172, 218, uvWH, uvWH, tw, th); // BR
+        drawImageExact(GENERIC_CONTAINER_TEX, x, y, scale, scale, 0, 0, uvWH, uvWH, tw, th); // TL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y, scale, scale, 172, 0, uvWH, uvWH, tw, th); // TR
+        drawImageExact(GENERIC_CONTAINER_TEX, x, y + height - scale, scale, scale, 0, 218, uvWH, uvWH, tw, th); // BL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y + height - scale, scale, scale, 172, 218, uvWH, uvWH, tw, th); // BR
 
         // fill
-        drawImage(GENERIC_CONTAINER_TEX, x + scale - 1, y + scale - 1, width - 2 * scale + 2, height - 2 * scale + 2, 4, 4, 1, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 1, y + scale - 1, width - 2 * scale + 2, height - 2 * scale + 2, 4, 4, 1, 1, tw, th);
 
         // top/bot edges
-        drawImage(GENERIC_CONTAINER_TEX, x + scale - 2, y, width- 2 * scale + 4, scale, 4, 0, 1, uvWH, tw, th);
-        drawImage(GENERIC_CONTAINER_TEX, x + scale - 2, y + height - scale, width - 2 * scale + 4, scale, 4, 218,  1, uvWH, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 2, y, width- 2 * scale + 4, scale, 4, 0, 1, uvWH, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 2, y + height - scale, width - 2 * scale + 4, scale, 4, 218,  1, uvWH, tw, th);
 
         // left/right edges
-        drawImage(GENERIC_CONTAINER_TEX, x, y + scale - 2, scale, height - 2 * scale + 4, 0, 4, uvWH, 1, tw, th);
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale, y + scale - 2, scale, height - 2 * scale + 4, 172, 4, uvWH, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x, y + scale - 2, scale, height - 2 * scale + 4, 0, 4, uvWH, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y + scale - 2, scale, height - 2 * scale + 4, 172, 4, uvWH, 1, tw, th);
         
         /*
         * INNER
         * */
         // corners
-        drawImage(GENERIC_CONTAINER_TEX, x + leftOffset, y + topOffset, scale, scale, 7, 15, uvWH, uvWH, tw, th); // TL
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + topOffset, scale, scale, 165, 15, uvWH, uvWH, tw, th); // TR
-        drawImage(GENERIC_CONTAINER_TEX, x + leftOffset, y + height - scale - botOffset, scale, scale, 7, 124, uvWH, uvWH, tw, th); // BL
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + height - scale - botOffset, scale, scale, 165, 124, uvWH, uvWH, tw, th); // BR
+        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + topOffset, scale, scale, 7, 15, uvWH, uvWH, tw, th); // TL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + topOffset, scale, scale, 165, 15, uvWH, uvWH, tw, th); // TR
+        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + height - scale - botOffset, scale, scale, 7, 124, uvWH, uvWH, tw, th); // BL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + height - scale - botOffset, scale, scale, 165, 124, uvWH, uvWH, tw, th); // BR
 
         // fill
-        drawImage(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + scale + topOffset, width - leftOffset - rightOffset - scale * 2, height - topOffset - botOffset - scale * 2, 16, 20, 1, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + scale + topOffset, width - leftOffset - rightOffset - scale * 2, height - topOffset - botOffset - scale * 2, 16, 20, 1, 1, tw, th);
 
         // top/bot edges
-        drawImage(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + topOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 16, 1, uvWH, tw, th);
-        drawImage(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + height - scale - botOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 123,  1, uvWH, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + topOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 16, 1, uvWH, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + height - scale - botOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 123,  1, uvWH, tw, th);
 
         // left/right edges
-        drawImage(GENERIC_CONTAINER_TEX, x + leftOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 7, 21, uvWH, 1, tw, th);
-        drawImage(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 165, 120, uvWH, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 7, 21, uvWH, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 165, 120, uvWH, 1, tw, th);
     }
 
     public void drawNineSlice(float x, float y, float width, float height, int scale, Identifier l, Identifier r, Identifier t, Identifier b, Identifier tl, Identifier tr, Identifier bl, Identifier br, CustomColor fillColor) {
