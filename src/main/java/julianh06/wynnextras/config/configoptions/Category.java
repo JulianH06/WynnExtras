@@ -9,6 +9,7 @@ public class Category {
     public final String name;
     public final int color;
     public final List<Object> items = new ArrayList<>();
+    public boolean searchable = true;
     private SubCategory currentSub = null;
     private final ConfigScreenContext ctx;
 
@@ -21,6 +22,11 @@ public class Category {
     public Category add(ConfigOption opt) {
         if (currentSub != null) currentSub.options.add(opt);
         else items.add(opt);
+        return this;
+    }
+
+    public Category excludeFromSearch() {
+        searchable = false;
         return this;
     }
 

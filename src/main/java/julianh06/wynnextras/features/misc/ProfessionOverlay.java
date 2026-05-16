@@ -4,7 +4,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.profession.type.ProfessionType;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.CappedValue;
@@ -15,6 +14,9 @@ import julianh06.wynnextras.features.profileviewer.data.Profession;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.render.RenderTickCounter;
 
 import net.minecraft.item.Item;
@@ -350,10 +352,12 @@ public class ProfessionOverlay {
     }
 
     /**
-     * Called from Screen.render mixin — renders on top of screens when in a crafting station.
+     * Called from screen mixins to render on top of gameplay screens.
      */
     public static void renderOnScreen(DrawContext ctx) {
-        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
+        if (MinecraftClient.getInstance().options.hudHidden) return;
+        Screen screen = MinecraftClient.getInstance().currentScreen;
+        if (!(screen instanceof HandledScreen<?>) && !(screen instanceof ChatScreen)) return;
         doRender(ctx);
     }
 

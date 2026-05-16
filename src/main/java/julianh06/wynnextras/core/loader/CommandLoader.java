@@ -176,13 +176,13 @@ public class CommandLoader implements WELoader {
             base = base.then(hide);
             alias = alias.then(hide);
 
-            var changelog = ClientCommandManager.literal("changelog").executes(ctx -> {
-                MinecraftClient.getInstance().send(() ->
-                        MinecraftClient.getInstance().setScreen(new julianh06.wynnextras.config.ChangelogScreen()));
-                return 1;
-            });
-            base = base.then(changelog);
-            alias = alias.then(changelog);
+//            var changelog = ClientCommandManager.literal("changelog").executes(ctx -> {
+//                MinecraftClient.getInstance().send(() ->
+//                        MinecraftClient.getInstance().setScreen(new julianh06.wynnextras.config.ChangelogScreen()));
+//                return 1;
+//            });
+//            base = base.then(changelog);
+//            alias = alias.then(changelog);
 
             var ignorelist = ClientCommandManager.literal("ignorelist").executes(ctx -> {
                 Set<String> ignored = julianh06.wynnextras.features.raid.PartyIgnoreOnRaid.getTrackedIgnored();

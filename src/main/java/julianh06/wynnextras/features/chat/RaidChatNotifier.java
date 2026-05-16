@@ -542,12 +542,12 @@ public class RaidChatNotifier {
 
     private static class WatchPhaseDetector implements RaidMessageDetector {
 
-        private long lastWatchPhaseTime = -1; // Zeit des letzten Watchphase-Starts
+        private long lastWatchPhaseTime = -1;
         private static final Pattern PATTERN = Pattern.compile(
                 "The Obelisks have appeared; they must be", Pattern.CASE_INSENSITIVE);
 
         public void resetForNewRaid() {
-            lastWatchPhaseTime = -1; // nur die Zeit zurücksetzen
+            lastWatchPhaseTime = -1;
         }
 
         @Override
@@ -557,7 +557,7 @@ public class RaidChatNotifier {
 
         @Override
         public String extractProgress(String msg) {
-            return null; // keine speziellen Progress-Daten
+            return null;
         }
 
         @Override

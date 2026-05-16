@@ -122,6 +122,8 @@ public class BankOverlay2 extends WEHandledScreen {
     private static final Identifier buttonBackgroundShort = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbgshort.png");
     private static final Identifier buttonBackgroundDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbg_dark.png");
     private static final Identifier buttonBackgroundShortDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbgshort_dark.png");
+    private static final Identifier buttonBackgroundSingle = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttons_charactersearch.png");
+    private static final Identifier buttonBackgroundSingleDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttons_charactersearch_dark.png");
 
     private record TooltipRenderData(List<Text> tooltip, List<TooltipComponent> components, int height) {}
 
@@ -374,7 +376,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         int xStart = xRemain / 2 - 2;
         int yStart = yRemain / 2 - 2;
-        int buttonWidgetsX = (int) ((xStart + (xFitAmount / 2) * (162 + 4) - 166) * ui.getScaleFactor());
+        int buttonWidgetsX = getButtonWidgetsX(xStart);
 
         if(currentOverlayType != BankOverlayType.NONE && expectedOverlayType != BankOverlayType.NONE && currentOverlayType != expectedOverlayType) {
             bridgeScreen = screen;
@@ -614,7 +616,8 @@ public class BankOverlay2 extends WEHandledScreen {
             scrollBarWidget = new ScrollBarWidget();
         }
 
-        scrollBarWidget.setBounds(xStart + xFitAmount * 170, yStart - 13, 15, (yFitAmount - 1) * 104 + 12);
+        int scrollBarHeight = (yFitAmount - 1) * 104 + (xFitAmount == 2 ? 0 : 12);
+        scrollBarWidget.setBounds(xStart + xFitAmount * 170, yStart - 13, 15, scrollBarHeight);
         scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
 
         ci.cancel();
@@ -768,7 +771,13 @@ public class BankOverlay2 extends WEHandledScreen {
 
             context.disableScissor();
 
-            inventoryWidget.setBounds(buttonWidgetsX + 160, yStart + (yFitAmount - 1) * (90 + 4 + 10) - 3, (int) (176 * ui.getScaleFactor()), (int) (86 * ui.getScaleFactor()));
+            int bottomWidgetsY = yStart + (yFitAmount - 1) * (90 + 4 + 10);
+            int inventoryWidgetX = buttonWidgetsX + (int) (160 * ui.getScaleFactor());
+            int rightButtonWidgetsX = buttonWidgetsX + (int) (342 * ui.getScaleFactor());
+
+            drawDetachedButtonPanelBarsIfNeeded(buttonWidgetsX, rightButtonWidgetsX, bottomWidgetsY - 8, xStart);
+
+            inventoryWidget.setBounds(inventoryWidgetX, bottomWidgetsY - 3, (int) (176 * ui.getScaleFactor()), (int) (86 * ui.getScaleFactor()));
             inventoryWidget.setItems(buildInventoryForIndex(0, true));
             inventoryWidget.draw(context, mouseX, mouseY, delta, ui);
 
@@ -790,12 +799,18 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             if (allCharactersBrowseMode) {
+                ui.drawImage(WynnExtrasConfig.INSTANCE.darkmodeToggle ? buttonBackgroundSingleDark : buttonBackgroundSingle,
+                        buttonWidgetsX - 8, bottomWidgetsY - 8,
+                        (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+            }
+
+            if (allCharactersBrowseMode) {
                 // In browse mode: only show search bar and new buttons, positioned compactly
-                searchbar2.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+                searchbar2.setBounds(buttonWidgetsX, bottomWidgetsY + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
             } else if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
-                searchbar2.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 59, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+                searchbar2.setBounds(buttonWidgetsX, bottomWidgetsY + 59, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
             } else {
-                searchbar2.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 31, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+                searchbar2.setBounds(buttonWidgetsX, bottomWidgetsY + 31, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
             }
 
             searchbar2.setTextColor(WHITE_TEXT_COLOR);
@@ -811,6 +826,31 @@ public class BankOverlay2 extends WEHandledScreen {
                 } else {
                     ui.drawCenteredText("Quick Actions", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, WHITE_TEXT_COLOR, 1.1f);
                 }
+            }
+
+            boolean showAllCharactersButton = currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER;
+
+            if(currentOverlayType != BankOverlayType.NONE) {
+                Identifier rightButtonBackground = showAllCharactersButton
+                        ? (WynnExtrasConfig.INSTANCE.darkmodeToggle ? buttonBackgroundShortDark : buttonBackgroundShort)
+                        : (WynnExtrasConfig.INSTANCE.darkmodeToggle ? buttonBackgroundSingleDark : buttonBackgroundSingle);
+                ui.drawImage(rightButtonBackground,
+                        rightButtonWidgetsX - 8, bottomWidgetsY - 8,
+                        (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+
+                if (showAllCharactersButton) {
+                    allCharactersButtonWidget.setBounds(rightButtonWidgetsX, bottomWidgetsY + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+                    allCharactersButtonWidget.draw(context, mouseX, mouseY, delta, ui);
+                } else {
+                    allCharactersButtonWidget.setBounds(0, 0, 0, 0);
+                }
+
+                int reloadButtonY = showAllCharactersButton ? bottomWidgetsY + 31 : bottomWidgetsY + 3;
+                reloadBankWidget.setBounds(rightButtonWidgetsX, reloadButtonY, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
+                reloadBankWidget.draw(context, mouseX, mouseY, delta, ui);
+            } else {
+                allCharactersButtonWidget.setBounds(0, 0, 0, 0);
+                reloadBankWidget.setBounds(0, 0, 0, 0);
             }
         }
 
@@ -832,7 +872,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     bankGridX,
                     bankGridY,
                     getCurrentPageStacks(),
-                    collectAccountAndCharacterBagCounts());
+                    collectVisibleBankBagCounts());
 
             // Bottom section: bags currently in player inventory, in the same column directly
             // below the bank grid with a gap so the two read as separate sections. Reserve
@@ -858,27 +898,61 @@ public class BankOverlay2 extends WEHandledScreen {
             quickActionWidget.setBounds(0, 0, 0, 0);
         }
 
-        // Draw new buttons (below search bar normally, or below search bar in browse mode)
-        if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
-            int btnY = allCharactersBrowseMode
-                    ? yStart + (yFitAmount - 1) * (90 + 4 + 10) + 29
-                    : yStart + (yFitAmount - 1) * (90 + 4 + 10) + 85;
-            int halfWidth = (int) (75 * ui.getScaleFactor());
-            int btnHeight = (int) (18 * ui.getScaleFactor());
-            int gap = (int) (5 * ui.getScaleFactor());
-
-            allCharactersButtonWidget.setBounds(xStart, btnY, halfWidth, btnHeight);
-            allCharactersButtonWidget.draw(context, mouseX, mouseY, delta, ui);
-
-            reloadBankWidget.setBounds(xStart + halfWidth + gap, btnY, halfWidth, btnHeight);
-            reloadBankWidget.draw(context, mouseX, mouseY, delta, ui);
-        } else {
-            allCharactersButtonWidget.setBounds(0, 0, 0, 0);
-            reloadBankWidget.setBounds(0, 0, 0, 0);
-        }
-
         touchHoveredSlot = hoveredBackingSlot;
         BankOverlaySlotBridge.endFrame();
+    }
+
+    private int getButtonWidgetsX(int xStart) {
+        if (xFitAmount == 2) {
+            int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
+            float virtualThreeColumnWidth = 3 * (162 + 4) - 4;
+            float virtualXStart = (screenWidth - virtualThreeColumnWidth) / 2f - 2;
+            return (int) (virtualXStart * ui.getScaleFactor());
+        }
+
+        if (xFitAmount > 2 && xFitAmount % 2 == 0) {
+            float pagesWidth = xFitAmount * (162 + 4) - 4;
+            float centeredInventoryX = xStart + pagesWidth / 2f - 88;
+            return (int) ((centeredInventoryX - 160) * ui.getScaleFactor());
+        }
+
+        return (int) ((xStart + (xFitAmount / 2) * (162 + 4) - 166) * ui.getScaleFactor());
+    }
+
+    private void drawDetachedButtonPanelBarsIfNeeded(int leftButtonWidgetsX, int rightButtonWidgetsX, int panelY, int xStart) {
+        if (xFitAmount != 2) return;
+
+        CustomColor barColor = WynnExtrasConfig.INSTANCE.darkmodeToggle ? DARK_BACKGROUND_COLOR : LIGHT_BACKGROUND_COLOR;
+        CustomColor borderColor = WynnExtrasConfig.INSTANCE.darkmodeToggle ? DARK_BORDER_COLOR : LIGHT_BORDER_COLOR;
+
+        float scale = ui.getScaleFactorF();
+        float backgroundLeft = (xStart - 7) * scale;
+        float backgroundRight = backgroundLeft + (xFitAmount * (162 + 4) + 11) * scale;
+        float leftPanelLeft = leftButtonWidgetsX - 7.5f;
+        float rightPanelRight = rightButtonWidgetsX - 7.5f + 169 * scale;
+
+        drawDetachedButtonPanelBar(leftPanelLeft, panelY, backgroundLeft - leftPanelLeft, barColor, borderColor, true);
+        drawDetachedButtonPanelBar(backgroundRight, panelY, rightPanelRight - backgroundRight, barColor, borderColor, false);
+    }
+
+    private void drawDetachedButtonPanelBar(float x, int panelY, float width, CustomColor barColor, CustomColor borderColor, boolean leftBar) {
+        if (width <= 0) return;
+
+        ui.drawRect(
+                x,
+                panelY - 4.5f,
+                width,
+                (int) (10 * ui.getScaleFactor()),
+                borderColor
+        );
+
+        ui.drawRect(
+                x - (leftBar ? -1 : 1),
+                panelY - 3.5f,
+                width,
+                (int) (8 * ui.getScaleFactor()),
+                barColor
+        );
     }
 
     private void drawBackgroundRect(DrawContext context, float xRemain, float yRemain) {
@@ -1996,14 +2070,13 @@ public class BankOverlay2 extends WEHandledScreen {
         java.util.List<net.minecraft.text.Text> lines = new java.util.ArrayList<>();
         lines.add(net.minecraft.text.Text.literal("§eSearch filters"));
         lines.add(net.minecraft.text.Text.literal("§7Plain text — matches name + lore"));
-        lines.add(net.minecraft.text.Text.literal("§7level:§fN§7 or §flevel:§fA-B"));
+        lines.add(net.minecraft.text.Text.literal("§7level:§fN§7, §flevel:§fA-B§7, §flevel:§fN+§7, §flevel:§fN-"));
         lines.add(net.minecraft.text.Text.literal("§7class:§fwarrior|mage|archer|assassin|shaman"));
         lines.add(net.minecraft.text.Text.literal("§7rarity:§fcommon|unique|rare|legendary|fabled|mythic|set"));
         lines.add(net.minecraft.text.Text.literal("§7prof:§fcooking|alchemism|cooking|jeweling|..."));
-        lines.add(net.minecraft.text.Text.literal("§7type:§fgear|craftedgear|craftedconsumable|box|powder|"));
-        lines.add(net.minecraft.text.Text.literal("§7      §fpotion|tome|tool|ingredient|pouch|key|horse|"));
-        lines.add(net.minecraft.text.Text.literal("§7      §fscroll|amplifier|charm|aspect|trinket|rune|"));
-        lines.add(net.minecraft.text.Text.literal("§7      §fmaterial|insulator"));
+        lines.add(net.minecraft.text.Text.literal("§7type:§fgear|box|powder|potion|food|tome|tool|"));
+        lines.add(net.minecraft.text.Text.literal("§7      §fingredient|pouch|key|horse|scroll|amplifier|"));
+        lines.add(net.minecraft.text.Text.literal("§7      §fcharm|trinket|rune|material"));
         lines.add(net.minecraft.text.Text.literal("§7crafted:§ftrue|false"));
         lines.add(net.minecraft.text.Text.literal("§8Combine: §ftype:gear level:80-100 rarity:fabled"));
         lines.add(net.minecraft.text.Text.literal("§8Search-bar shortcuts: §fCtrl+C, Ctrl+V, Ctrl+X, Ctrl+A"));
@@ -2081,8 +2154,6 @@ public class BankOverlay2 extends WEHandledScreen {
     private static final Map<String, Integer> BAG_TOTAL_CACHE = new HashMap<>();
     private static final HashMap<String, Integer> BAG_PAGE_COUNT_SCRATCH = new HashMap<>();
     private static final Map<String, BagGroup> BAG_GROUP_SCRATCH = new LinkedHashMap<>();
-    private static final long BAG_TOTAL_CACHE_TTL_MS = 250;
-    private static long bagTotalCacheLastUpdateMs = 0;
 
     private static Map<String, StyledText> createBagRaidLabels() {
         Map<String, StyledText> labels = new HashMap<>();
@@ -2478,7 +2549,6 @@ public class BankOverlay2 extends WEHandledScreen {
         if (existing != null && existing.equals(BAG_PAGE_COUNT_SCRATCH)) return;
 
         data.getBagCounts().put(pageNum, new HashMap<>(BAG_PAGE_COUNT_SCRATCH));
-        bagTotalCacheLastUpdateMs = 0;
 
         long now = System.currentTimeMillis();
         if (now - lastBagCacheSaveMs > BAG_CACHE_SAVE_DEBOUNCE_MS) {
@@ -2508,17 +2578,26 @@ public class BankOverlay2 extends WEHandledScreen {
      * (stored as plain numbers in BankData's bag count cache, so they don't depend on
      * Wynntils item annotations).
      */
-    /**
-     * Aggregates bag counts from Account Bank + Character Bank only.
-     */
     private static Map<String, Integer> collectAccountAndCharacterBagCounts() {
-        long now = System.currentTimeMillis();
-        if (now - bagTotalCacheLastUpdateMs < BAG_TOTAL_CACHE_TTL_MS) {
-            return BAG_TOTAL_CACHE;
+        return collectBagCounts(AccountBankData.INSTANCE, CharacterBankData.INSTANCE);
+    }
+
+    private static Map<String, Integer> collectVisibleBankBagCounts() {
+        if (currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+            return collectAccountAndCharacterBagCounts();
         }
 
+        BankData data = getBankDataForCurrentContainer();
+        if (data == null) {
+            BAG_TOTAL_CACHE.clear();
+            return BAG_TOTAL_CACHE;
+        }
+        return collectBagCounts(data);
+    }
+
+    private static Map<String, Integer> collectBagCounts(BankData... dataSources) {
         BAG_TOTAL_CACHE.clear();
-        for (BankData data : new BankData[]{AccountBankData.INSTANCE, CharacterBankData.INSTANCE}) {
+        for (BankData data : dataSources) {
             if (data == null || data.getBagCounts() == null) continue;
             for (Map<String, Integer> pageCounts : data.getBagCounts().values()) {
                 if (pageCounts == null) continue;
@@ -2531,7 +2610,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             }
         }
-        bagTotalCacheLastUpdateMs = now;
         return BAG_TOTAL_CACHE;
     }
 
@@ -3559,9 +3637,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButtonCustom(x, y, width, height, 3, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
-            String text = allCharactersBrowseMode ? "Back" : "All Characters";
-            ui.drawCenteredText(text, x + width / 2f, y + height / 2f, WHITE_TEXT_COLOR, 0.85f);
+            String text = allCharactersBrowseMode ? "Back" : "All Characters Mode";
+            ui.drawCenteredText(text, x + width / 2f, y + height / 2f, WHITE_TEXT_COLOR, 1.1f);
         }
 
         @Override
@@ -3595,14 +3672,15 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButtonCustom(x, y, width, height, 3, hovered, WynnExtrasConfig.INSTANCE.darkmodeToggle);
             String text;
+            float scale = 1.1f;
             if (isReloading) {
                 text = "Reloading " + (reloadCurrentPage + 1) + "/" + reloadTotalPages;
+                scale = 0.85f;
             } else {
-                text = "Reload";
+                text = "Reload all pages";
             }
-            ui.drawCenteredText(text, x + width / 2f, y + height / 2f, WHITE_TEXT_COLOR, 0.85f);
+            ui.drawCenteredText(text, x + width / 2f, y + height / 2f, WHITE_TEXT_COLOR, scale);
         }
 
         @Override

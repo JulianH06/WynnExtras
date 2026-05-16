@@ -1,10 +1,14 @@
 package julianh06.wynnextras.utils;
 
 import com.wynntils.models.gear.type.GearType;
+import com.wynntils.models.gear.type.ConsumableType;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.*;
 import com.wynntils.models.gear.type.GearTier;
 import com.wynntils.models.character.type.ClassType;
+import com.wynntils.models.items.properties.ClassableItemProperty;
+import com.wynntils.models.items.properties.GearTierItemProperty;
+import com.wynntils.models.items.properties.LeveledItemProperty;
 import com.wynntils.models.profession.type.ProfessionType;
 import com.wynntils.models.stats.type.StatActualValue;
 import net.minecraft.component.DataComponentTypes;
@@ -46,13 +50,13 @@ public class SearchQueryParser {
         }
     }
 
-    private static final Pattern LEVEL_PATTERN = Pattern.compile("level:(\\d+)(?:-(\\d+))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern LEVEL_PATTERN = Pattern.compile("level:(\\d+)(?:-(\\d+)|([+-]))?", Pattern.CASE_INSENSITIVE);
     private static final Pattern CLASS_PATTERN = Pattern.compile("class:(warrior|mage|archer|assassin|shaman)", Pattern.CASE_INSENSITIVE);
     private static final Pattern RARITY_PATTERN = Pattern.compile("rarity:(common|unique|rare|legendary|fabled|mythic|set)", Pattern.CASE_INSENSITIVE);
     private static final Pattern PROF_PATTERN = Pattern.compile("prof:(\\w+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern MAINSCALE_PATTERN = Pattern.compile("@mainscale:(\\d+(?:\\.\\d+)?)(?:-(\\d+(?:\\.\\d+)?))?", Pattern.CASE_INSENSITIVE);
     private static final Pattern CRAFTED_PATTERN = Pattern.compile("crafted:(true|false)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern TYPE_PATTERN = Pattern.compile("type:(gear|craftedgear|craftedconsumable|box|powder|potion|tome|tool|ingredient|pouch|key|horse|scroll|amplifier|charm|aspect|trinket|rune|material|insulator)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TYPE_PATTERN = Pattern.compile("type:(gear|box|powder|potion|food|tome|tool|ingredient|pouch|key|horse|scroll|amplifier|charm|trinket|rune|material)", Pattern.CASE_INSENSITIVE);
     private static final Pattern SLOT_PATTERN = Pattern.compile("slot:(helmet|chestplate|leggings|boots|spear|dagger|bow|wand|relik|ring|bracelet|necklace|weapon|armor|accessory)", Pattern.CASE_INSENSITIVE);
     private static final Pattern ID_PATTERN = Pattern.compile("id:(\\w+)(?:([><])(\\d+))?", Pattern.CASE_INSENSITIVE);
     private static final Pattern IDENTIFIED_PATTERN = Pattern.compile("identified:(true|false)", Pattern.CASE_INSENSITIVE);
@@ -81,10 +85,15 @@ public class SearchQueryParser {
                 minLevel = Integer.parseInt(levelMatcher.group(1));
                 if (levelMatcher.group(2) != null) {
                     maxLevel = Integer.parseInt(levelMatcher.group(2));
+                } else if ("+".equals(levelMatcher.group(3))) {
+                    maxLevel = null;
+                } else if ("-".equals(levelMatcher.group(3))) {
+                    maxLevel = minLevel;
+                    minLevel = null;
                 } else {
                     maxLevel = minLevel;
                 }
-                if (minLevel < 0 || minLevel > 1000) minLevel = null;
+                if (minLevel != null && (minLevel < 0 || minLevel > 1000)) minLevel = null;
                 if (maxLevel != null && (maxLevel < 0 || maxLevel > 1000)) maxLevel = null;
                 remaining = remaining.replace(levelMatcher.group(), "").trim();
             } catch (NumberFormatException e) {
@@ -203,7 +212,7 @@ public class SearchQueryParser {
         }
 
         if (query.minLevel != null || query.maxLevel != null) {
-            Integer itemLevel = parseLevelFromLore(fullLore);
+            Integer itemLevel = getItemLevel(wynnItem, fullLore);
             if (itemLevel == null) {
                 return false;
             }
@@ -215,11 +224,17 @@ public class SearchQueryParser {
             }
         }
 
+        if (query.classType != null) {
+            if (!matchesClass(wynnItem, query.classType)) {
+                return false;
+            }
+        }
+
         if (query.rarities != null && !query.rarities.isEmpty()) {
             String itemRarity = null;
 
-            if (wynnItem instanceof GearItem gear) {
-                GearTier tier = gear.getGearTier();
+            if (wynnItem instanceof GearTierItemProperty tierItem) {
+                GearTier tier = tierItem.getGearTier();
                 if (tier != null) {
                     itemRarity = tier.name().toLowerCase();
                 }
@@ -326,6 +341,14 @@ public class SearchQueryParser {
         return null;
     }
 
+    private static Integer getItemLevel(WynnItem wynnItem, String lore) {
+        if (wynnItem instanceof LeveledItemProperty leveledItem) {
+            int level = leveledItem.getLevel();
+            if (level > 0) return level;
+        }
+        return parseLevelFromLore(lore);
+    }
+
     private static String parseRarityFromLore(String lore) {
         String loreLower = lore.toLowerCase();
         if (loreLower.contains("mythic")) return "mythic";
@@ -338,10 +361,26 @@ public class SearchQueryParser {
         return null;
     }
 
+    private static boolean matchesClass(WynnItem wynnItem, String classType) {
+        ClassType requiredClass = getRequiredClass(wynnItem);
+        if (requiredClass == null || requiredClass == ClassType.NONE) return false;
+        return requiredClass.name().equalsIgnoreCase(classType)
+                || requiredClass.getName().equalsIgnoreCase(classType)
+                || requiredClass.getFullName().equalsIgnoreCase(classType);
+    }
+
+    private static ClassType getRequiredClass(WynnItem wynnItem) {
+        if (wynnItem instanceof ClassableItemProperty classableItem) return classableItem.getRequiredClass();
+        if (wynnItem instanceof CharmItem charmItem) return charmItem.getRequiredClass();
+        if (wynnItem instanceof TomeItem tomeItem) return tomeItem.getRequiredClass();
+        if (wynnItem instanceof CraftedConsumableItem consumableItem) return consumableItem.getRequiredClass();
+        return null;
+    }
+
     /** Matches the profession query against the item's profession metadata.
      *  Currently only IngredientItem exposes profession types directly via Wynntils.
-     *  Crafted items don't have a simple profession getter — for those, users can fall back
-     *  to combining `type:craftedgear` with a text search for the profession name. */
+     *  Crafted items don't have a simple profession getter, so users can fall back
+     *  to combining `crafted:true` with a text search for the profession name. */
     private static boolean matchesProfession(WynnItem wynnItem, String prof) {
         if (wynnItem == null || prof == null) return false;
         String needle = prof.toLowerCase();
@@ -356,32 +395,38 @@ public class SearchQueryParser {
     private static boolean matchesType(WynnItem wynnItem, String type) {
         if (wynnItem == null) return false;
         return switch (type) {
-            case "gear" -> wynnItem instanceof GearItem;
-            case "craftedgear" -> wynnItem instanceof CraftedGearItem;
-            case "craftedconsumable" -> wynnItem instanceof CraftedConsumableItem;
+            case "gear" -> wynnItem instanceof GearItem || wynnItem instanceof CraftedGearItem;
             case "box" -> wynnItem instanceof GearBoxItem;
             case "powder" -> wynnItem instanceof PowderItem;
-            case "potion" -> wynnItem instanceof PotionItem || wynnItem instanceof MultiHealthPotionItem;
+            case "potion" -> wynnItem instanceof PotionItem || wynnItem instanceof MultiHealthPotionItem
+                    || isCraftedConsumableType(wynnItem, ConsumableType.POTION);
+            case "food" -> isCraftedConsumableType(wynnItem, ConsumableType.FOOD);
             case "tome" -> wynnItem instanceof TomeItem;
             case "tool" -> wynnItem instanceof GatheringToolItem;
             case "ingredient" -> wynnItem instanceof IngredientItem;
             case "pouch" -> wynnItem instanceof EmeraldPouchItem;
             case "key" -> wynnItem instanceof DungeonKeyItem;
-            case "scroll" -> wynnItem instanceof TeleportScrollItem;
+            case "horse" -> wynnItem instanceof MountItem;
+            case "scroll" -> wynnItem instanceof TeleportScrollItem
+                    || isCraftedConsumableType(wynnItem, ConsumableType.SCROLL);
             case "amplifier" -> wynnItem instanceof AmplifierItem;
             case "charm" -> wynnItem instanceof CharmItem;
-            case "aspect" -> wynnItem instanceof AspectItem;
             case "trinket" -> wynnItem instanceof TrinketItem;
             case "rune" -> wynnItem instanceof RuneItem;
             case "material" -> wynnItem instanceof MaterialItem;
-            case "insulator" -> wynnItem instanceof InsulatorItem;
             default -> false;
         };
+    }
+
+    private static boolean isCraftedConsumableType(WynnItem wynnItem, ConsumableType type) {
+        return wynnItem instanceof CraftedConsumableItem consumableItem
+                && consumableItem.getConsumableType() == type;
     }
 
     private static boolean matchesSlot(WynnItem wynnItem, String slot) {
         GearType gearType = null;
         if (wynnItem instanceof GearItem gear) gearType = gear.getGearType();
+        else if (wynnItem instanceof CraftedGearItem gear) gearType = gear.getGearType();
         else if (wynnItem instanceof GearBoxItem box) gearType = box.getGearType();
         if (gearType == null) return false;
 

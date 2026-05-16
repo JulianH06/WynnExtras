@@ -86,6 +86,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
     // Search state
     private String searchQuery = "";
     private boolean searchFocused = false;
+    private Map<String, Boolean> expandedSubsBeforeSearch = null;
     private static final int SEARCH_BAR_HEIGHT = 28;
 
     public WynnExtrasConfigScreen(Screen parent) {
@@ -180,6 +181,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .endSub();
         // ===== NEW =====
         category("New", 0xFFff5ea8)
+            .excludeFromSearch()
             .add(text("", "All features added in this update. Toggle any of them on or off."))
                 .add(toggle("Auto-ignore party in raid", "Auto /ignore party members on raid start, /ignore remove on raid end (reduces lag from teammate effects)",
                         () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
@@ -216,7 +218,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.autoSkipDialogueEnabled, v -> config.autoSkipDialogueEnabled = v))
                 .add(toggle("Auto Skip Cutscenes", "Automatically skip cutscenes that show 'Swap Hands to skip'",
                         () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
-                .add(toggle("Stack Duplicate Messages (EXPERIMENTAL)", "Collapse repeated messages into one with a (N) counter (Experimental, might break your chat)",
+                .add(toggle("Stack Duplicate Messages (VERY EXPERIMENTAL)", "Collapse repeated messages into one with a (N) counter (Experimental, might break your chat)",
                         () -> config.stackDuplicateMessages, v -> config.stackDuplicateMessages = v))
                 .add(visibleWhen(slider("Stack Window (minutes)", "Only stack messages sent within the last X minutes",
                         1, 60, () -> config.stackDuplicateWindowMinutes, v -> config.stackDuplicateWindowMinutes = v),
@@ -232,7 +234,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
                         () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),
                         () -> config.attackTimerMenuEnabled))
-                .add(toggle("War Beacon", "Green beacon beam at the soonest war territory",
+                .add(toggle("War Beacon (EXPERIMENTAL)", "Green beacon beam at the soonest war territory (Experimental, might not render correctly)",
                         () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v))
                 .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
                         () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
@@ -402,7 +404,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
                                 () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),
                         () -> config.attackTimerMenuEnabled))
-                .add(toggle("War Beacon", "Green beacon beam at the soonest war territory",
+                .add(toggle("War Beacon (EXPERIMENTAL)", "Green beacon beam at the soonest war territory (Experimental, might not render correctly)",
                         () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v))
                 .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
                         () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
@@ -690,6 +692,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
     // Check if category has any matching options
     private boolean categoryHasMatches(Category cat) {
         if (searchQuery.isEmpty()) return true;
+        if (!cat.searchable) return false;
         if (cat.name.toLowerCase().contains(searchQuery.toLowerCase())) return true;
         for (Object item : cat.items) {
             if (item instanceof ConfigOption opt && matchesSearch(opt)) return true;
@@ -801,7 +804,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     private void updateMaxScroll() {
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
-            int contentHeight = categories.get(selectedCategory).getTotalHeight();
+            Category cat = categories.get(selectedCategory);
+            int contentHeight = searchQuery.isEmpty() || categoryHasMatches(cat) ? cat.getTotalHeight() : 0;
             int visibleHeight = this.height - HEADER_HEIGHT - FOOTER_HEIGHT - 40;
             maxScroll = Math.max(0, contentHeight - visibleHeight);
         }
@@ -936,6 +940,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
         if (selectedCategory < 0 || selectedCategory >= categories.size()) return;
         Category cat = categories.get(selectedCategory);
+        boolean categoryVisibleForSearch = searchQuery.isEmpty() || categoryHasMatches(cat);
 
         selectedCategoryColor = cat.color;
 
@@ -963,20 +968,22 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         int y = listTop + 20 - (int)scrollOffset;
 
         SubCategory stickyCandidate = null;
-        for (Object item : cat.items) {
-            if (item instanceof SubCategory sub && subHasMatches(sub)) {
-                int headerY = y;
-                y = renderSubCategory(ctx, sub, contentX, y, contentW, mouseX, mouseY, listTop + 15, listBottom);
-                if (sub.isExpanded() && headerY < listTop + 15 && y > listTop + 15) {
-                    stickyCandidate = sub;
+        if (categoryVisibleForSearch) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub && subHasMatches(sub)) {
+                    int headerY = y;
+                    y = renderSubCategory(ctx, sub, contentX, y, contentW, mouseX, mouseY, listTop + 15, listBottom);
+                    if (sub.isExpanded() && headerY < listTop + 15 && y > listTop + 15) {
+                        stickyCandidate = sub;
+                    }
+                } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
+                    int optH = opt.getHeight(contentW);
+                    if (y + optH > listTop && y < listBottom) {
+                        boolean hovered = mouseX >= contentX && mouseX < contentX + contentW && mouseY >= y && mouseY < y + optH - 5;
+                        opt.render(ctx, contentX, y, contentW, optH, mouseX, mouseY, hovered, cat.color);
+                    }
+                    y += optH + OPTION_SPACING;
                 }
-            } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
-                int optH = opt.getHeight(contentW);
-                if (y + optH > listTop && y < listBottom) {
-                    boolean hovered = mouseX >= contentX && mouseX < contentX + contentW && mouseY >= y && mouseY < y + optH - 5;
-                    opt.render(ctx, contentX, y, contentW, optH, mouseX, mouseY, hovered, cat.color);
-                }
-                y += optH + OPTION_SPACING;
             }
         }
         stickySub = stickyCandidate;
@@ -1200,9 +1207,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 int clearX = SIDEBAR_WIDTH - 28;
                 if (mx >= clearX && mx < clearX + 20) {
                     searchQuery = "";
-                    scrollOffset = 0; scrollTarget = 0;
-                    updateMaxScroll();
-                    autoSelectMatchingCategory();
+                    onSearchQueryChanged();
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
@@ -1268,13 +1273,15 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             int stickyY = HEADER_HEIGHT + 30;
             if (my >= stickyY && my < stickyY + SUBCATEGORY_HEADER_HEIGHT
                     && mx >= SIDEBAR_WIDTH + 20 && mx < width - 30) {
+                Category cat = categories.get(selectedCategory);
+                if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) return true;
+
                 stickySub.toggleExpanded();
                 updateMaxScroll();
                 if (!stickySub.isExpanded()) {
                     // scroll so the now collapsed header sits at the top of the viewport
                     int contentW = width - SIDEBAR_WIDTH - 40;
                     int contentY = 0;
-                    Category cat = categories.get(selectedCategory);
                     for (Object item : cat.items) {
                         if (item == stickySub) break;
                         if (item instanceof SubCategory sub && subHasMatches(sub)) {
@@ -1298,6 +1305,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category cat = categories.get(selectedCategory);
+            if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) return super.mouseClicked(click, doubleClick);
+
             int contentX = SIDEBAR_WIDTH + 20;
             int contentW = width - SIDEBAR_WIDTH - 40;
             int listTop = HEADER_HEIGHT + 30;
@@ -1355,6 +1364,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         sidebarScrollbarDragging = false;
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category cat = categories.get(selectedCategory);
+            if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) return super.mouseReleased(click);
+
             for (Object item : cat.items) {
                 if (item instanceof SubCategory sub) {
                     for (ConfigOption opt : sub.options) opt.mouseReleased(mx, my, btn);
@@ -1391,6 +1402,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category cat = categories.get(selectedCategory);
+            if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) return super.mouseDragged(click, dx, dy);
+
             int contentX = SIDEBAR_WIDTH + 20;
             int contentW = width - SIDEBAR_WIDTH - 40;
             int y = HEADER_HEIGHT + 35 - (int)scrollOffset;
@@ -1462,9 +1475,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 String clipboard = net.minecraft.client.MinecraftClient.getInstance().keyboard.getClipboard();
                 if (clipboard != null && !clipboard.isEmpty()) {
                     searchQuery += clipboard.replaceAll("[\\r\\n\\t]", "");
-                    scrollOffset = 0; scrollTarget = 0;
-                    updateMaxScroll();
-                    autoSelectMatchingCategory();
+                    onSearchQueryChanged();
                 }
                 return true;
             } else if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_C) {
@@ -1473,16 +1484,12 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             } else if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_X) {
                 net.minecraft.client.MinecraftClient.getInstance().keyboard.setClipboard(searchQuery);
                 searchQuery = "";
-                scrollOffset = 0; scrollTarget = 0;
-                updateMaxScroll();
-                autoSelectMatchingCategory();
+                onSearchQueryChanged();
                 return true;
             } else if (key == 259) { // Backspace
                 if (!searchQuery.isEmpty()) {
                     searchQuery = searchQuery.substring(0, searchQuery.length() - 1);
-                    scrollOffset = 0; scrollTarget = 0;
-                    updateMaxScroll();
-                    autoSelectMatchingCategory();
+                    onSearchQueryChanged();
                 }
                 return true;
             } else if (key == 256) { // Escape
@@ -1509,13 +1516,62 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             char c = (char) charInput.codepoint();
             if (c >= 32 && c < 127) {
                 searchQuery += c;
-                scrollOffset = 0; scrollTarget = 0;
-                updateMaxScroll();
-                autoSelectMatchingCategory();
+                onSearchQueryChanged();
                 return true;
             }
         }
         return super.charTyped(charInput);
+    }
+
+    private void onSearchQueryChanged() {
+        if (searchQuery.isEmpty()) {
+            restoreExpandedSubsBeforeSearch();
+        } else {
+            if (expandedSubsBeforeSearch == null) {
+                expandedSubsBeforeSearch = snapshotExpandedSubs();
+            }
+            expandSubCategoriesWithSearchMatches();
+        }
+        scrollOffset = 0;
+        scrollTarget = 0;
+        autoSelectMatchingCategory();
+        updateMaxScroll();
+    }
+
+    private Map<String, Boolean> snapshotExpandedSubs() {
+        Map<String, Boolean> snapshot = new HashMap<>();
+        for (Category cat : categories) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub) {
+                    snapshot.put(subKey(cat, sub), sub.isExpanded());
+                }
+            }
+        }
+        return snapshot;
+    }
+
+    private void restoreExpandedSubsBeforeSearch() {
+        if (expandedSubsBeforeSearch == null) return;
+        for (Category cat : categories) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub) {
+                    Boolean expanded = expandedSubsBeforeSearch.get(subKey(cat, sub));
+                    if (expanded != null) sub.setExpanded(expanded);
+                }
+            }
+        }
+        expandedSubsBeforeSearch = null;
+    }
+
+    private void expandSubCategoriesWithSearchMatches() {
+        for (Category cat : categories) {
+            if (!cat.searchable) continue;
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub && subHasMatches(sub)) {
+                    sub.setExpanded(true);
+                }
+            }
+        }
     }
 
     private void autoSelectMatchingCategory() {
@@ -1535,6 +1591,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     @Override
     public void close() {
+        restoreExpandedSubsBeforeSearch();
         saveLastScreenState(selectedCategory, scrollTarget, categories);
         client.setScreen(parent);
     }
@@ -1545,9 +1602,13 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         for (Category cat : categories) {
             for (Object item : cat.items) {
                 if (item instanceof SubCategory sub) {
-                    lastExpandedSubs.put(cat.name + "/" + sub.name, sub.isExpanded());
+                    lastExpandedSubs.put(subKey(cat, sub), sub.isExpanded());
                 }
             }
         }
+    }
+
+    private static String subKey(Category cat, SubCategory sub) {
+        return cat.name + "/" + sub.name;
     }
 }

@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+//Temporarily removed, might be added back in the future
+
 /**
  * /we changelog screen.
  *

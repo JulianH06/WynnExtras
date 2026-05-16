@@ -22,6 +22,8 @@ import java.util.stream.Stream;
  * Triggered when search query contains '@'.
  */
 public class CrossClassBankSearch {
+    private static final String CHARACTER_BANK_PREFIX = "characterbank_";
+    private static final String JSON_SUFFIX = ".json";
 
     /**
      * Result of a cross-class search
@@ -63,12 +65,11 @@ public class CrossClassBankSearch {
         String currentCharacterId = BankOverlay.currentCharacterID;
 
         try (Stream<Path> files = Files.list(configDir)) {
-            files.filter(p -> p.getFileName().toString().startsWith("characterbank_"))
-                 .filter(p -> p.getFileName().toString().endsWith(".json"))
+            files.filter(CrossClassBankSearch::isCharacterBankFile)
                  .forEach(file -> {
-                     String fileName = file.getFileName().toString();
-                     // Extract character ID from filename: characterbank_XXXX.json
-                     String characterId = fileName.substring("characterbank_".length(), fileName.length() - ".json".length());
+                     String characterId = getCharacterId(file);
+
+                     if (isNullClassName(characterId)) return;
 
                      // Skip current character - it's already being searched normally
                      if (characterId.equals(currentCharacterId)) return;
@@ -93,6 +94,7 @@ public class CrossClassBankSearch {
         try (Reader reader = Files.newBufferedReader(file)) {
             BankData data = BankData.getGson().fromJson(reader, CharacterBankData.class);
             if (data == null || data.getBankPages() == null) return results;
+            if (isInvalidCharacterBank(characterId, data)) return results;
 
             String nickname = data.getCharacterNickname();
             int level = data.getCharacterLevel();
@@ -147,11 +149,10 @@ public class CrossClassBankSearch {
         if (!Files.exists(configDir)) return ids;
 
         try (Stream<Path> files = Files.list(configDir)) {
-            files.filter(p -> p.getFileName().toString().startsWith("characterbank_"))
-                 .filter(p -> p.getFileName().toString().endsWith(".json"))
+            files.filter(CrossClassBankSearch::isCharacterBankFile)
                  .forEach(file -> {
-                     String fileName = file.getFileName().toString();
-                     String characterId = fileName.substring("characterbank_".length(), fileName.length() - ".json".length());
+                     String characterId = getCharacterId(file);
+                     if (isNullClassName(characterId)) return;
                      ids.add(characterId);
                  });
         } catch (IOException e) {
@@ -182,15 +183,15 @@ public class CrossClassBankSearch {
 
         try (Stream<Path> files = Files.list(configDir)) {
             List<Path> bankFiles = files
-                    .filter(p -> p.getFileName().toString().startsWith("characterbank_"))
-                    .filter(p -> p.getFileName().toString().endsWith(".json"))
+                    .filter(CrossClassBankSearch::isCharacterBankFile)
                     .toList();
 
             WynnExtras.LOGGER.info("[WynnExtras] Found " + bankFiles.size() + " character bank files");
 
             for (Path file : bankFiles) {
-                String fileName = file.getFileName().toString();
-                String characterId = fileName.substring("characterbank_".length(), fileName.length() - ".json".length());
+                String characterId = getCharacterId(file);
+
+                if (isNullClassName(characterId)) continue;
 
                 // Skip current character
                 if (characterId.equals(currentCharacterId)) {
@@ -230,13 +231,12 @@ public class CrossClassBankSearch {
 
         try (Stream<Path> files = Files.list(configDir)) {
             List<Path> bankFiles = files
-                    .filter(p -> p.getFileName().toString().startsWith("characterbank_"))
-                    .filter(p -> p.getFileName().toString().endsWith(".json"))
+                    .filter(CrossClassBankSearch::isCharacterBankFile)
                     .toList();
 
             for (Path file : bankFiles) {
-                String fileName = file.getFileName().toString();
-                String characterId = fileName.substring("characterbank_".length(), fileName.length() - ".json".length());
+                String characterId = getCharacterId(file);
+                if (isNullClassName(characterId)) continue;
 
                 List<SearchResult> characterPages = loadAllPagesFromCharacter(file, characterId);
                 results.addAll(characterPages);
@@ -266,11 +266,10 @@ public class CrossClassBankSearch {
         if (!Files.exists(configDir)) return results;
 
         try (Stream<Path> files = Files.list(configDir)) {
-            files.filter(p -> p.getFileName().toString().startsWith("characterbank_"))
-                 .filter(p -> p.getFileName().toString().endsWith(".json"))
+            files.filter(CrossClassBankSearch::isCharacterBankFile)
                  .forEach(file -> {
-                     String fileName = file.getFileName().toString();
-                     String characterId = fileName.substring("characterbank_".length(), fileName.length() - ".json".length());
+                     String characterId = getCharacterId(file);
+                     if (isNullClassName(characterId)) return;
 
                      List<SearchResult> characterResults = searchCharacterBank(file, characterId, parsedQuery);
                      results.addAll(characterResults);
@@ -352,6 +351,10 @@ public class CrossClassBankSearch {
                 WynnExtras.LOGGER.info("[WynnExtras] No bank data for character: " + characterId);
                 return results;
             }
+            if (isInvalidCharacterBank(characterId, data)) {
+                WynnExtras.LOGGER.info("[WynnExtras] Skipping invalid character bank: " + characterId);
+                return results;
+            }
 
             String nickname = data.getCharacterNickname();
             int level = data.getCharacterLevel();
@@ -377,5 +380,23 @@ public class CrossClassBankSearch {
         }
 
         return results;
+    }
+
+    private static boolean isCharacterBankFile(Path path) {
+        String fileName = path.getFileName().toString();
+        return fileName.startsWith(CHARACTER_BANK_PREFIX) && fileName.endsWith(JSON_SUFFIX);
+    }
+
+    private static String getCharacterId(Path file) {
+        String fileName = file.getFileName().toString();
+        return fileName.substring(CHARACTER_BANK_PREFIX.length(), fileName.length() - JSON_SUFFIX.length());
+    }
+
+    private static boolean isInvalidCharacterBank(String characterId, BankData data) {
+        return isNullClassName(characterId) || isNullClassName(data.getCharacterNickname());
+    }
+
+    private static boolean isNullClassName(String value) {
+        return value != null && value.trim().equalsIgnoreCase("null");
     }
 }

@@ -22,6 +22,7 @@ import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.misc.ClassSelectionOverlay;
 import julianh06.wynnextras.features.misc.CompassMenuOverlay;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
+import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.misc.QuickRepair;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -89,6 +90,7 @@ public abstract class HandledScreenMixin {
             HandledScreen<?> encSelf = (HandledScreen<?>) (Object) this;
             if (julianh06.wynnextras.features.qol.EncounterOverlay.isReadyToRender(encSelf)) {
                 julianh06.wynnextras.features.qol.EncounterOverlay.render(context, encSelf, mouseX, mouseY);
+                ProfessionOverlay.renderOnScreen(context);
                 ci.cancel();
                 return;
             }
@@ -104,6 +106,7 @@ public abstract class HandledScreenMixin {
                     classSelectionOverlay = new ClassSelectionOverlay(self, ClassSelectionOverlay.ScreenMode.CLASS_SELECTION);
                 }
                 classSelectionOverlay.render(context, mouseX, mouseY, delta);
+                ProfessionOverlay.renderOnScreen(context);
                 ci.cancel();
                 return;
             } else if (ClassSelectionOverlay.isClassEditScreen(title)) {
@@ -111,6 +114,7 @@ public abstract class HandledScreenMixin {
                     classSelectionOverlay = new ClassSelectionOverlay(self, ClassSelectionOverlay.ScreenMode.CLASS_EDIT);
                 }
                 classSelectionOverlay.render(context, mouseX, mouseY, delta);
+                ProfessionOverlay.renderOnScreen(context);
                 ci.cancel();
                 return;
             } else if (ClassSelectionOverlay.isIconEditScreen(title)) {
@@ -118,6 +122,7 @@ public abstract class HandledScreenMixin {
                     classSelectionOverlay = new ClassSelectionOverlay(self, ClassSelectionOverlay.ScreenMode.ICON_EDIT);
                 }
                 classSelectionOverlay.render(context, mouseX, mouseY, delta);
+                ProfessionOverlay.renderOnScreen(context);
                 ci.cancel();
                 return;
             } else {
@@ -183,6 +188,10 @@ public abstract class HandledScreenMixin {
 
         // Character selection highlighting (when clicking cross-class bank page)
         renderCharacterSelectionHighlight(context, (HandledScreen<?>) (Object) this);
+
+        if (ci.isCancelled()) {
+            ProfessionOverlay.renderOnScreen(context);
+        }
     }
 
     @Inject(method = "render", at = @At("TAIL"), cancellable = true)
@@ -202,6 +211,8 @@ public abstract class HandledScreenMixin {
         // Quick Repair button in blacksmith
         if (quickRepairOverlay == null) quickRepairOverlay = new QuickRepair();
         quickRepairOverlay.render(context, mouseX, mouseY, delta);
+
+        ProfessionOverlay.renderOnScreen(context);
     }
 
     @Unique
