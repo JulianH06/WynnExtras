@@ -122,6 +122,11 @@ public class RaidChatNotifier {
                     "wings"
             ),
             new SingleOccurrenceDetector(
+                    "Key! [2/2]",
+                    "§bBoth keys collected §c",
+                    "hubertBothKeys"
+            ),
+            new SingleOccurrenceDetector(
                     "Collected the Left Key!",
                     "§bLeft key collected §c",
                     "hubertLeftKey"
@@ -130,11 +135,6 @@ public class RaidChatNotifier {
                     "Collected the Right Key!",
                     "§bRight key collected §c",
                     "hubertRightKey"
-            ),
-            new SingleOccurrenceDetector(
-                    "Key! [2/2]",
-                    "§bBoth keys collected §c",
-                    "hubertBothKeys"
             ),
 
             new MultiOccurrenceDetector(
@@ -239,16 +239,18 @@ public class RaidChatNotifier {
     public static void handleMessage(String rawMsg) {
         if (!WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) return;
         if (rawMsg == null) return;
+
+        String msg = stripColorCodes(rawMsg).trim();
+        if (msg.isEmpty()) return;
+
         long now = System.currentTimeMillis();
-        if (rawMsg.equals(lastHandledMsg) && now - lastHandledMs < 200) return;
-        lastHandledMsg = rawMsg;
+        if (msg.equals(lastHandledMsg) && now - lastHandledMs < 200) return;
+        lastHandledMsg = msg;
         lastHandledMs = now;
 
         long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
                 ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()
                 : 0;
-
-        String msg = stripColorCodes(rawMsg);
 
         for (RaidMessageDetector detector : detectors) {
             if (detector.matches(msg)) {
@@ -266,6 +268,7 @@ public class RaidChatNotifier {
                         );
                     }
                 });
+                return;
             }
         }
     }
@@ -336,6 +339,7 @@ public class RaidChatNotifier {
             Pattern.compile("A miniboss has spawned! It has sped", Pattern.CASE_INSENSITIVE),
             Pattern.compile("The golem has been defeated, and", Pattern.CASE_INSENSITIVE),
             Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("Key! \\[2/2]", Pattern.CASE_INSENSITIVE),
             Pattern.compile("Collected the Left Key!", Pattern.CASE_INSENSITIVE),
             Pattern.compile("Collected the Right Key!", Pattern.CASE_INSENSITIVE)
     );
