@@ -93,6 +93,9 @@ public class CraftingHelperOverlay extends WEMenuExtension {
     private static final List<Integer> lastMaterialCounts = new ArrayList<>(); // click count per material
     private static final List<String> lastIngredientNames = new ArrayList<>(); // ingredient names (from inventory)
 
+    private record ItemRequirement(String type, String name, int amount) {}
+    private record MissingRequirement(String type, String name, int amount) {}
+
     private static final String MAIN_ING_MAP_URL = "https://raw.githubusercontent.com/hppeng-wynn/hppeng-wynn.github.io/HEAD/py_script/ing_map.json";
     private static final String BETA_ING_MAP_URL = "https://raw.githubusercontent.com/wynnbuilder-beta/wynnbuilder-beta.github.io/master/py_script/ing_map.json";
     private static final HttpClient ING_HTTP = HttpClient.newHttpClient();
@@ -394,12 +397,13 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             CustomColor statusColor = wbStatusMessage.startsWith("Missing") || wbStatusMessage.startsWith("Wrong") || wbStatusMessage.startsWith("Invalid") || wbStatusMessage.startsWith("Unknown") || wbStatusMessage.startsWith("Please") || wbStatusMessage.startsWith("Not") || wbStatusMessage.startsWith("Loading") || wbStatusMessage.startsWith("No craft")
                     ? CustomColor.fromHexString("FF4444") : CustomColor.fromHexString("44FF44");
             int statusRY = wbBtnY + 3 * (wbBtnH + 2) + 3;
+            int statusWrapWidth = Math.max(40, wbBtnW - 18);
             String[] words = wbStatusMessage.split(" ");
             StringBuilder line = new StringBuilder();
             int lineY = statusRY;
             for (String word : words) {
                 String candidate = line.isEmpty() ? word : line + " " + word;
-                if (textRenderer.getWidth(candidate) > wbBtnW && !line.isEmpty()) {
+                if (textRenderer.getWidth(candidate) > statusWrapWidth && !line.isEmpty()) {
                     ui.drawText(line.toString(), wbBtnX, lineY, statusColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, 1f);
                     line = new StringBuilder(word);
                     lineY += 10;
@@ -643,43 +647,12 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             return;
         }
 
-        // Clear queue
-        WB_CLICK_QUEUE.clear();
-
-        // Reset all crafting slots first (not counted in progress)
-        try {
-            for (int slot : new int[]{0, 9, 2, 3, 11, 12, 20, 21}) {
-                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
-                if (stack != null && !stack.isEmpty()) {
-                    String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
-                    if (!name.contains("Material Slot") && !name.contains("Ingredient Slot") && !name.isEmpty()) {
-                        ContainerUtils.clickOnSlot(slot, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
-
-        // Queue material clicks - match by base material name (ignore stars/tiers)
+        List<ItemRequirement> requirements = new ArrayList<>();
         for (int m = 0; m < 2; m++) {
             Pair<IMaterial, Integer> mat = materials.get(m);
-            int amount = mat.getSecond();
-            String matName = mat.getFirst().getName();
-            for (Slot slot : McUtils.containerMenu().slots) {
-                try {
-                    if (!(slot.inventory instanceof PlayerInventory)) continue;
-                    if (slot.getStack().getCustomName() == null) continue;
-                    String slotName = slot.getStack().getCustomName().getString();
-                    if (slotName.contains(matName)) {
-                        for (int i = 0; i < amount; i++) {
-                            WB_CLICK_QUEUE.add(slot.id);
-                        }
-                        break;
-                    }
-                } catch (Exception ignored) {}
-            }
+            requirements.add(new ItemRequirement("materials", mat.getFirst().getName(), mat.getSecond()));
         }
 
-        // Queue ingredient clicks using the WynnBuilder ing_map (ID → ingredient name).
         List<String> ingNamesFromLink = new ArrayList<>();
         Map<Integer, String> ingMap = isBetaLink ? betaIngMap : mainIngMap;
         if (ingMap == null) {
@@ -697,21 +670,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
                 continue;
             }
             ingNamesFromLink.add(ingName);
-            for (Slot slot : McUtils.containerMenu().slots) {
-                try {
-                    if (!(slot.inventory instanceof PlayerInventory)) continue;
-                    if (slot.getStack().getCustomName() == null) continue;
-                    String slotName = slot.getStack().getCustomName().getString();
-                    if (slotName.contains(ingName)) {
-                        WB_CLICK_QUEUE.add(slot.id);
-                        break;
-                    }
-                } catch (Exception ignored) {}
-            }
+            requirements.add(new ItemRequirement("ingredients", ingName, 1));
         }
-
-        wbTotalClicks = WB_CLICK_QUEUE.size();
-        wbClicksDone = 0;
 
         // Save for "Reuse Last"
         List<String> matNamesForSave = new ArrayList<>();
@@ -721,6 +681,39 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             matCountsForSave.add(materials.get(m).getSecond());
         }
         saveLastCraft(matNamesForSave, matCountsForSave, ingNamesFromLink);
+
+        List<MissingRequirement> missingRequirements = findMissingRequirements(requirements);
+        if (!missingRequirements.isEmpty()) {
+            WB_CLICK_QUEUE.clear();
+            wbTotalClicks = 0;
+            wbClicksDone = 0;
+            wbStatusMessage = formatMissingRequirements(missingRequirements);
+            return;
+        }
+
+        // Clear queue
+        WB_CLICK_QUEUE.clear();
+
+        // Reset all crafting slots first (not counted in progress)
+        try {
+            for (int slot : new int[]{0, 9, 2, 3, 11, 12, 20, 21}) {
+                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                if (stack != null && !stack.isEmpty()) {
+                    String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
+                    if (!name.contains("Material Slot") && !name.contains("Ingredient Slot") && !name.isEmpty()) {
+                        ContainerUtils.clickOnSlot(slot, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        Map<Integer, Integer> queuedBySlot = new HashMap<>();
+        for (ItemRequirement requirement : requirements) {
+            queueInventoryItem(requirement.name(), requirement.amount(), queuedBySlot);
+        }
+
+        wbTotalClicks = WB_CLICK_QUEUE.size();
+        wbClicksDone = 0;
 
         if (!isBetaLink) {
             wbStatusMessage = recipeData.type().getDisplayName() + " " + recipeData.lvl().x + "-" + recipeData.lvl().y;
@@ -787,6 +780,80 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             lastIngredientNames.clear();
             lastIngredientNames.addAll(ingNames);
         }
+    }
+
+    private static List<MissingRequirement> findMissingRequirements(List<ItemRequirement> requirements) {
+        Map<String, ItemRequirement> mergedRequirements = new LinkedHashMap<>();
+        for (ItemRequirement requirement : requirements) {
+            if (requirement.name() == null || requirement.name().isBlank() || requirement.amount() <= 0) continue;
+
+            String key = requirement.type() + "\u0000" + requirement.name();
+            ItemRequirement existing = mergedRequirements.get(key);
+            if (existing == null) {
+                mergedRequirements.put(key, requirement);
+            } else {
+                mergedRequirements.put(key, new ItemRequirement(existing.type(), existing.name(), existing.amount() + requirement.amount()));
+            }
+        }
+
+        List<MissingRequirement> missingRequirements = new ArrayList<>();
+        for (ItemRequirement requirement : mergedRequirements.values()) {
+            int available = countInventoryItems(requirement.name());
+            if (available < requirement.amount()) {
+                missingRequirements.add(new MissingRequirement(requirement.type(), requirement.name(), requirement.amount() - available));
+            }
+        }
+        return missingRequirements;
+    }
+
+    private static int countInventoryItems(String itemName) {
+        int count = 0;
+        for (Slot slot : McUtils.containerMenu().slots) {
+            try {
+                if (!(slot.inventory instanceof PlayerInventory)) continue;
+                if (slot.getStack().getCustomName() == null) continue;
+                if (slot.getStack().getCustomName().getString().contains(itemName)) {
+                    count += slot.getStack().getCount();
+                }
+            } catch (Exception ignored) {}
+        }
+        return count;
+    }
+
+    private static void queueInventoryItem(String itemName, int amount, Map<Integer, Integer> queuedBySlot) {
+        int remaining = amount;
+        for (Slot slot : McUtils.containerMenu().slots) {
+            try {
+                if (remaining <= 0) return;
+                if (!(slot.inventory instanceof PlayerInventory)) continue;
+                if (slot.getStack().getCustomName() == null) continue;
+                if (!slot.getStack().getCustomName().getString().contains(itemName)) continue;
+
+                int alreadyQueued = queuedBySlot.getOrDefault(slot.id, 0);
+                int available = slot.getStack().getCount() - alreadyQueued;
+                if (available <= 0) continue;
+                int clicks = Math.min(remaining, available);
+                for (int i = 0; i < clicks; i++) {
+                    WB_CLICK_QUEUE.add(slot.id);
+                }
+                queuedBySlot.put(slot.id, alreadyQueued + clicks);
+                remaining -= clicks;
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private static String formatMissingRequirements(List<MissingRequirement> missingRequirements) {
+        List<String> items = new ArrayList<>();
+        for (MissingRequirement requirement : missingRequirements) {
+            items.add(formatMissingRequirement(requirement));
+        }
+        return "Missing: " + String.join(", ", items) + ".";
+    }
+
+    private static String formatMissingRequirement(MissingRequirement requirement) {
+        String name = requirement.name().replaceAll("§.", "");
+        if (requirement.amount() <= 1) return name;
+        return requirement.amount() + "x " + name;
     }
 
     /**
@@ -857,6 +924,30 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             return;
         }
 
+        List<ItemRequirement> requirements = new ArrayList<>();
+        for (int m = 0; m < Math.min(2, lastMaterialNames.size()); m++) {
+            String matName = lastMaterialNames.get(m);
+            int amount = lastMaterialCounts.get(m);
+            if (matName == null || amount <= 0) continue;
+            requirements.add(new ItemRequirement("materials", matName, amount));
+        }
+
+        for (int i = 0; i < Math.min(6, lastIngredientNames.size()); i++) {
+            String ingName = lastIngredientNames.get(i);
+            if (ingName == null) continue;
+            requirements.add(new ItemRequirement("ingredients", ingName, 1));
+        }
+
+        List<MissingRequirement> missingRequirements = findMissingRequirements(requirements);
+        if (!missingRequirements.isEmpty()) {
+            WB_CLICK_QUEUE.clear();
+            wbClicking = false;
+            wbTotalClicks = 0;
+            wbClicksDone = 0;
+            wbStatusMessage = formatMissingRequirements(missingRequirements);
+            return;
+        }
+
         // Clear existing slots and queue
         WB_CLICK_QUEUE.clear();
         wbClicking = false;
@@ -866,42 +957,9 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             ContainerUtils.clickOnSlot(slot, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
         }
 
-        // Queue material clicks
-        for (int m = 0; m < Math.min(2, lastMaterialNames.size()); m++) {
-            String matName = lastMaterialNames.get(m);
-            int amount = lastMaterialCounts.get(m);
-            if (matName == null || amount <= 0) continue;
-
-            for (Slot slot : McUtils.containerMenu().slots) {
-                try {
-                    if (!(slot.inventory instanceof PlayerInventory)) continue;
-                    if(slot.getStack().getCustomName() == null) continue;
-                    if (slot.getStack().getCustomName().getString().contains(matName)) {
-                        for (int i = 0; i < amount; i++) {
-                            WB_CLICK_QUEUE.add(slot.id);
-                        }
-                        break;
-                    }
-                } catch (Exception ignored) {}
-            }
-        }
-
-        // Queue ingredient clicks
-        for (int i = 0; i < Math.min(6, lastIngredientNames.size()); i++) {
-            String ingName = lastIngredientNames.get(i);
-            if (ingName == null) continue;
-
-            for (Slot slot : McUtils.containerMenu().slots) {
-                try {
-                    if (!(slot.inventory instanceof PlayerInventory)) continue;
-                    if (slot.getStack().getCustomName() == null) continue;
-                    String slotName = slot.getStack().getCustomName().getString();
-                    if (slotName.contains(ingName)) {
-                        WB_CLICK_QUEUE.add(slot.id);
-                        break;
-                    }
-                } catch (Exception ignored) {}
-            }
+        Map<Integer, Integer> queuedBySlot = new HashMap<>();
+        for (ItemRequirement requirement : requirements) {
+            queueInventoryItem(requirement.name(), requirement.amount(), queuedBySlot);
         }
 
         wbTotalClicks = WB_CLICK_QUEUE.size();
@@ -1581,6 +1639,3 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         }
     }
 }
-//TODO: cant click on item after switching to account bank
-//TODO: bug in character bank when character is not known (when restarting game while in raid and joining again wynntils doesnt know which class you are on)
-//TODO: wynnbuilder loader: link at the left where you can paste a wynnbuilder link to load a recipe

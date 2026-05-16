@@ -210,11 +210,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
                             () -> config.isopteraBlue, v -> config.isopteraBlue = v))
                 .endSub()
-                .add(toggle("Auto /stream", "Automatically send /stream when streamer mode disables (e.g. world swap)",
+                .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
                 .add(toggle("Auto Skip Dialogue", "Automatically skip 'Press SHIFT to continue' NPC dialogue",
                         () -> config.autoSkipDialogueEnabled, v -> config.autoSkipDialogueEnabled = v))
-                .add(toggle("Auto Skip Cutscenes", "Automatically swap-hand-skip cutscenes that show 'Swap Hands to skip'",
+                .add(toggle("Auto Skip Cutscenes", "Automatically skip cutscenes that show 'Swap Hands to skip'",
                         () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
                 .add(toggle("Stack Duplicate Messages (EXPERIMENTAL)", "Collapse repeated messages into one with a (N) counter (Experimental, might break your chat)",
                         () -> config.stackDuplicateMessages, v -> config.stackDuplicateMessages = v))
@@ -592,33 +592,17 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
                         () -> config.professionOverlayEnabled))
             .sub("Auto Actions")
-                .add(toggle("Auto /stream", "Automatically send /stream when streamer mode disables (e.g. world swap)",
+                .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
                 .add(toggle("Auto Skip Dialogue", "Automatically skip 'Press SHIFT to continue' NPC dialogue",
                         () -> config.autoSkipDialogueEnabled, v -> config.autoSkipDialogueEnabled = v))
-                .add(toggle("Auto Skip Cutscenes", "Automatically swap-hand-skip cutscenes that show 'Swap Hands to skip'",
+                .add(toggle("Auto Skip Cutscenes", "Automatically skip cutscenes that show 'Swap Hands to skip'",
                         () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
             .sub("Dark Mode Toggles")
                 .add(toggle("Bank Overlay", "Dark mode for the Bank Overlay",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
                 .add(toggle("Profile Viewer", "Dark mode for the Profile viewer",
                         () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
-                .add(toggle("Crafting helper", "Dark mode for the Crafting helper",
-                        () -> config.craftingHelperDarkMode, v -> config.craftingHelperDarkMode = v))
-                .add(toggle("Main menu", "Dark mode for the WynnExtras main menu (/we)",
-                        () -> config.mainMenuDarkMode, v -> config.mainMenuDarkMode = v))
-                .add(button("Enable for all", "Enable the Dark mode for all options above",
-                        v -> {
-                            config.darkmodeToggle = true;
-                            config.pvDarkmodeToggle = true;
-                            config.craftingHelperDarkMode = true;
-                            config.mainMenuDarkMode = true; }, "Enable"))
-                .add(button("Disable for all", "Disable the Dark mode for all options above",
-                        v -> {
-                            config.darkmodeToggle = false;
-                            config.pvDarkmodeToggle = false;
-                            config.craftingHelperDarkMode = false;
-                            config.mainMenuDarkMode = false; }, "Disable"))
             .sub("Tetris")
                 .add(slider("DAS", "Delayed Auto Shift (ms) — delay before repeated movement begins",
                         0, 300, () -> config.tetrisDAS, v -> config.tetrisDAS = v))

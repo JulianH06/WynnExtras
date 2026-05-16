@@ -64,6 +64,8 @@ public class BankOverlay {
     public static boolean shouldWait = false;
     public static long shouldWaitSince = 0L;
 
+    private static final boolean FORCE_MISSING_CHARACTER_ID_FOR_TESTING = false;
+
     private static boolean registeredScroll = false;
 
     public static PersonalStorageUtilitiesFeature getPersonalStorageUtils() {
@@ -84,6 +86,15 @@ public class BankOverlay {
 
     public static int getCurrentMaxPages() {
         return currentMaxPages;
+    }
+
+    public static boolean hasValidCurrentCharacterId() {
+        if (FORCE_MISSING_CHARACTER_ID_FOR_TESTING) return false;
+        return currentCharacterID != null && !currentCharacterID.isBlank() && !"null".equalsIgnoreCase(currentCharacterID);
+    }
+
+    public static boolean isCharacterBankMissingCharacterId() {
+        return currentOverlayType == BankOverlayType.CHARACTER && !hasValidCurrentCharacterId();
     }
 
     @SubscribeEvent
@@ -218,6 +229,7 @@ public class BankOverlay {
         currentData = null;
         Pages = null;
         activeInv = -1;
+        currentCharacterID = null;
         activeInvSlots.clear();
         annotationCache.clear();
         heldItem = Items.AIR.getDefaultStack();

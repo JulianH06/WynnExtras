@@ -486,7 +486,7 @@ public abstract class HandledScreenMixin {
         if (currentOverlayType != BankOverlayType.NONE) {
             heldItem = Items.AIR.getDefaultStack();
 
-            if (Pages != null && activeInv != -1 && !shouldWait) {
+            if (Pages != null && activeInv != -1 && !shouldWait && !BankOverlay.isCharacterBankMissingCharacterId()) {
                 List<ItemStack> stacks = new ArrayList<>();
                 for (int j = 0; j < Math.min(45, activeInvSlots.size()); j++) {
                     stacks.add(activeInvSlots.get(j).getStack());

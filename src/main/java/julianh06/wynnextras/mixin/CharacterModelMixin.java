@@ -49,6 +49,12 @@ public class CharacterModelMixin {
         String id = this.id;
 
         if (id == null || id.isEmpty() || id.equals("-")) {
+            BankOverlay.currentCharacterID = null;
+            BankOverlay.Pages = null;
+            BankOverlay.currentData = null;
+            BankOverlay.activeInvSlots.clear();
+            BankOverlay.annotationCache.clear();
+            BankOverlay.expectedOverlayType = BankOverlayType.NONE;
             return;
         }
 

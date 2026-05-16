@@ -10,6 +10,18 @@ public class CharacterBankData extends BankData {
     public static final CharacterBankData INSTANCE = new CharacterBankData();
 
     @Override
+    public void save() {
+        if (!BankOverlay.hasValidCurrentCharacterId()) return;
+        super.save();
+    }
+
+    @Override
+    public void load() {
+        if (!BankOverlay.hasValidCurrentCharacterId()) return;
+        super.load();
+    }
+
+    @Override
     public Path getConfigPath() {
         return FabricLoader.getInstance().getConfigDir().resolve("wynnextras/" + MinecraftClient.getInstance().player.getUuid().toString() + "/characterbank_" + BankOverlay.currentCharacterID +  ".json");
     }

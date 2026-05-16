@@ -328,8 +328,6 @@ public class WynnExtrasConfig {
     //==================== Dark Modes ==========================
     public boolean darkmodeToggle = false; //for bank overlay (dont wanna change the variable cause it would reset it to false for everyone)
     public boolean pvDarkmodeToggle = false;
-    public boolean craftingHelperDarkMode = false;
-    public boolean mainMenuDarkMode = false;
 
     // ==================== ENUMS ====================
     public enum TextColor {
