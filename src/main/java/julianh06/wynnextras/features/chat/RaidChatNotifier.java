@@ -12,8 +12,10 @@ import com.wynntils.core.text.StyledText;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.ChatEvent;
+import julianh06.wynnextras.features.raid.TreeRoomMinimap;
 import julianh06.wynnextras.mixin.RaidKindAccessor;
 import julianh06.wynnextras.utils.ChatUtils;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
@@ -28,16 +30,57 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @WEModule
 public class RaidChatNotifier {
+    private static boolean receiveEventsRegistered = false;
     private static RaidChatNotifier INSTANCE = new RaidChatNotifier();
     private Map<String, Long> raidPBs = new HashMap<>();
 
     public static long disableChiropUntil = 0;
+
+    public RaidChatNotifier() {
+        registerReceiveEvents();
+    }
+
+    private static void registerReceiveEvents() {
+        if (receiveEventsRegistered) return;
+        receiveEventsRegistered = true;
+
+        ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signedMessage, sender, params, receptionTimestamp) ->
+                allowReceivedMessage(message));
+        ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) ->
+                overlay || allowReceivedMessage(message));
+    }
+
+    private static boolean allowReceivedMessage(Text message) {
+        String raw = stripColorCodes(message.getString());
+        TreeRoomMinimap.handleMessage(raw);
+
+        if (!shouldBlockRaidTimestampMessage(raw)) return true;
+
+        handleMessage(raw);
+        return false;
+    }
+
+    private static boolean shouldBlockRaidTimestampMessage(String raw) {
+        if (!WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) return false;
+        if (raw == null || raw.isEmpty()) return false;
+
+        String msgLower = raw.toLowerCase(Locale.ROOT);
+        if (msgLower.contains(": ") || msgLower.contains("[wynnextras]")) return false;
+
+        for (Pattern pattern : BLOCKED_PATTERNS) {
+            if (pattern.matcher(msgLower).find()) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     private static final List<RaidMessageDetector> detectors = Arrays.asList(
             new SlimeGatheringDetector(),
@@ -222,16 +265,6 @@ public class RaidChatNotifier {
         return INSTANCE.raidPBs.get(key);
     }
 
-    // Registered automatically as a WEModule — receives ChatEvent so PB tracking works
-    // even if Wynntils's MessageFilterFeature (which our mixin taps into) is disabled.
-    @SubscribeEvent
-    public void onChat(ChatEvent event) {
-        if (!WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) return;
-        String raw = event.message.getString();
-        if (raw == null || raw.isEmpty()) return;
-        handleMessage(raw);
-    }
-
     // Dedup so the mixin path and direct ChatEvent path don't double-process the same message.
     private static String lastHandledMsg = null;
     private static long lastHandledMs = 0;
@@ -242,6 +275,7 @@ public class RaidChatNotifier {
 
         String msg = stripColorCodes(rawMsg).trim();
         if (msg.isEmpty()) return;
+        if (msg.contains(": ")) return;
 
         long now = System.currentTimeMillis();
         if (msg.equals(lastHandledMsg) && now - lastHandledMs < 200) return;
@@ -290,7 +324,7 @@ public class RaidChatNotifier {
     }
 
     private static String stripColorCodes(String input) {
-        return input.replaceAll("§[0-9a-fk-or]", "");
+        return input.replaceAll("§[0-9a-fk-orx]", "");
     }
 
     private interface RaidMessageDetector {
@@ -717,7 +751,7 @@ public class RaidChatNotifier {
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
             if (progress == null) {
-                progress = "[" + occurrenceCount + "]";
+                return "";
             }
             if (timestamp == null) {
                 timestamp = "??:??";

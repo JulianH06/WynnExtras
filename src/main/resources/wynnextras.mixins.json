@@ -46,7 +46,6 @@
     "ItemFavoriteFeatureAccessor",
     "ItemGuessFeatureAccessor",
     "ItemStatInfoFeatureMixin",
-    "MessageFilterFeatureMixin",
     "PartyFinderClickBlockMixin",
     "PressableWidgetMixin",
     "ProfessionXpGainMixin",
