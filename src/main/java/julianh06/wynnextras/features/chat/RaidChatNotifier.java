@@ -27,6 +27,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -37,6 +38,7 @@ import java.util.regex.Pattern;
 
 @WEModule
 public class RaidChatNotifier {
+    private static final String WYNNEXTRAS_FOREGROUND_PILL_TEXT = "\uE016\uE018\uE00D\uE00D\uE004\uE017\uE013\uE011\uE000\uE012\uDB00\uDC06";
     private static boolean receiveEventsRegistered = false;
     private static RaidChatNotifier INSTANCE = new RaidChatNotifier();
     private Map<String, Long> raidPBs = new HashMap<>();
@@ -70,9 +72,10 @@ public class RaidChatNotifier {
     private static boolean shouldBlockRaidTimestampMessage(String raw) {
         if (!WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) return false;
         if (raw == null || raw.isEmpty()) return false;
+        if (raw.contains(WYNNEXTRAS_FOREGROUND_PILL_TEXT)) return false;
 
         String msgLower = raw.toLowerCase(Locale.ROOT);
-        if (msgLower.contains(": ") || msgLower.contains("[wynnextras]")) return false;
+        if (msgLower.contains(": ")) return false;
 
         for (Pattern pattern : BLOCKED_PATTERNS) {
             if (pattern.matcher(msgLower).find()) {
@@ -164,21 +167,7 @@ public class RaidChatNotifier {
                     "§bWings picked up §c",
                     "wings"
             ),
-            new SingleOccurrenceDetector(
-                    "Key! [2/2]",
-                    "§bBoth keys collected §c",
-                    "hubertBothKeys"
-            ),
-            new SingleOccurrenceDetector(
-                    "Collected the Left Key!",
-                    "§bLeft key collected §c",
-                    "hubertLeftKey"
-            ),
-            new SingleOccurrenceDetector(
-                    "Collected the Right Key!",
-                    "§bRight key collected §c",
-                    "hubertRightKey"
-            ),
+            new HubertKeyDetector(),
 
             new MultiOccurrenceDetector(
                     "A new platform has appeared on the Lower Area!",
@@ -293,10 +282,11 @@ public class RaidChatNotifier {
                         : "??:??.???";
 
                 String progress = detector.extractProgress(msg);
-                String finalMsg = detector.getFormattedMessage(progress, timestamp);
+                List<String> finalMessages = detector.getFormattedMessages(progress, timestamp);
 
                 MinecraftClient.getInstance().execute(() -> {
-                    if (!finalMsg.isEmpty()) {
+                    for (String finalMsg : finalMessages) {
+                        if (finalMsg.isEmpty()) continue;
                         McUtils.sendMessageToClient(
                                 WynnExtras.addWynnExtrasPrefix(Text.of(finalMsg))
                         );
@@ -333,6 +323,11 @@ public class RaidChatNotifier {
         String extractProgress(String msg);
 
         String getFormattedMessage(String progress, String timestamp);
+
+        default List<String> getFormattedMessages(String progress, String timestamp) {
+            String message = getFormattedMessage(progress, timestamp);
+            return message.isEmpty() ? List.of() : List.of(message);
+        }
     }
 
 
@@ -360,7 +355,7 @@ public class RaidChatNotifier {
             Pattern.compile("A Void Pedestal has been activated! \\[1/2]", Pattern.CASE_INSENSITIVE),
             Pattern.compile("A Void Pedestal has been activated! \\[2/2]", Pattern.CASE_INSENSITIVE),
             //Pattern.compile("You have unblocked the voidhole out!", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("\\[1 Void Matter]", Pattern.CASE_INSENSITIVE),
+            Pattern.compile(Pattern.quote("[+1 Void Matter]"), Pattern.CASE_INSENSITIVE),
             Pattern.compile("has entered the tree", Pattern.CASE_INSENSITIVE),
             Pattern.compile("goo to the tower! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE),
             Pattern.compile("binding seal! \\[(\\d+/\\d+)]", Pattern.CASE_INSENSITIVE),
@@ -637,6 +632,64 @@ public class RaidChatNotifier {
     }
 
 
+    private static String buildSingleOccurrenceMessage(String formattedMessage, String pbKey, String timestamp) {
+        String message = formattedMessage + timestamp;
+
+        if (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null) {
+            long currentTime = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
+            Long pb = getPB(pbKey);
+
+            if (pb == null || currentTime < pb) {
+                savePB(pbKey, currentTime);
+                message += (pb == null ? " §e[First PB]" : " §e[New PB! Old: " + formatTime(pb) + "]");
+            } else {
+                message += " §7[PB: " + formatTime(pb) + "]";
+            }
+        }
+        return message;
+    }
+
+    private static class HubertKeyDetector implements RaidMessageDetector {
+        private static final Pattern LEFT_PATTERN = Pattern.compile(Pattern.quote("Collected the Left Key!"), Pattern.CASE_INSENSITIVE);
+        private static final Pattern RIGHT_PATTERN = Pattern.compile(Pattern.quote("Collected the Right Key!"), Pattern.CASE_INSENSITIVE);
+        private static final Pattern BOTH_PATTERN = Pattern.compile(Pattern.quote("Key! [2/2]"), Pattern.CASE_INSENSITIVE);
+
+        @Override
+        public boolean matches(String msg) {
+            return LEFT_PATTERN.matcher(msg).find()
+                    || RIGHT_PATTERN.matcher(msg).find()
+                    || BOTH_PATTERN.matcher(msg).find();
+        }
+
+        @Override
+        public String extractProgress(String msg) {
+            return msg;
+        }
+
+        @Override
+        public String getFormattedMessage(String progress, String timestamp) {
+            return "";
+        }
+
+        @Override
+        public List<String> getFormattedMessages(String progress, String timestamp) {
+            List<String> messages = new ArrayList<>();
+            if (progress == null) return messages;
+
+            if (LEFT_PATTERN.matcher(progress).find()) {
+                messages.add(buildSingleOccurrenceMessage("§bLeft key collected §c", "hubertLeftKey", timestamp));
+            }
+            if (RIGHT_PATTERN.matcher(progress).find()) {
+                messages.add(buildSingleOccurrenceMessage("§bRight key collected §c", "hubertRightKey", timestamp));
+            }
+            if (BOTH_PATTERN.matcher(progress).find()) {
+                messages.add(buildSingleOccurrenceMessage("§bBoth keys collected §c", "hubertBothKeys", timestamp));
+            }
+
+            return messages;
+        }
+    }
+
     private static class SingleOccurrenceDetector implements RaidMessageDetector {
         private final Pattern pattern;
         private final String formattedMessage;
@@ -660,20 +713,7 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
-            String message = formattedMessage + timestamp;
-
-            if (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null) {
-                long currentTime = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
-                Long pb = getPB(pbKey);
-
-                if (pb == null || currentTime < pb) {
-                    savePB(pbKey, currentTime);
-                    message += (pb == null ? " §e[First PB]" : " §e[New PB! Old: " + formatTime(pb) + "]");
-                } else {
-                    message += " §7[PB: " + formatTime(pb) + "]";
-                }
-            }
-            return message;
+            return buildSingleOccurrenceMessage(formattedMessage, pbKey, timestamp);
         }
     }
 

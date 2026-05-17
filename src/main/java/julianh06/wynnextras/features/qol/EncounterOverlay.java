@@ -5,6 +5,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
@@ -40,6 +41,7 @@ public class EncounterOverlay {
     // shrink the visible panel count.
     private static final java.util.LinkedHashMap<Integer, Option> latchedOptions = new java.util.LinkedHashMap<>();
     private static String latchedTitle = null;
+    private static Screen latchedScreen = null;
 
     public record Option(String element, int slot, String itemName) {}
 
@@ -82,10 +84,11 @@ public class EncounterOverlay {
             return List.of();
         }
         String title = screen.getTitle().getString();
-        if (!title.equals(latchedTitle)) {
-            // New screen instance — start fresh.
+        if (screen != latchedScreen || !title.equals(latchedTitle)) {
+            // New screen instance - start fresh.
             latchedOptions.clear();
             latchedTitle = title;
+            latchedScreen = screen;
         }
         for (Option o : scanOptionsRaw()) {
             latchedOptions.put(o.slot(), o);
@@ -96,6 +99,14 @@ public class EncounterOverlay {
     private static void resetLatch() {
         latchedOptions.clear();
         latchedTitle = null;
+        latchedScreen = null;
+    }
+
+    public static void clearLatchIfNoContainerOpen() {
+        if (latchedTitle == null && latchedScreen == null && latchedOptions.isEmpty()) return;
+        if (!(MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?>)) {
+            resetLatch();
+        }
     }
 
     private static int[] panelBounds(int index, int total, int screenW, int screenH) {

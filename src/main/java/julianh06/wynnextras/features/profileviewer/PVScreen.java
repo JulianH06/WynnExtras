@@ -376,6 +376,8 @@ public class PVScreen extends WEScreen {
         if (openInBrowserButton != null) {
             openInBrowserButton.setX((int) (xStart / scaleFactor));
             openInBrowserButton.setY((int) ((yStart + currentTabWidget.getHeight()) / scaleFactor) + 1);
+            openInBrowserButton.setWidth((float) (260 / scaleFactor));
+            openInBrowserButton.setHeight((float) (60 / scaleFactor));
             openInBrowserButton.buttonText = "Open in browser";
             DarkModeToggleWidget.drawImageWithFade(openInBrowserButtonTextureDark, openInBrowserButtonTexture, xStart, yStart + currentTabWidget.getHeight(), 260, 60, ui);
             openInBrowserButton.drawWithTexture(context, null);

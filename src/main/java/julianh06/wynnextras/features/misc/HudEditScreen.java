@@ -55,6 +55,7 @@ public class HudEditScreen extends Screen {
 
     private static final int H = 14;
     private static final int SNAP_DIST = 8;
+    private static final boolean HUD_COLOR_EDITING_ENABLED = false; //temporarily disabled since its not finished yet
     private final List<HudElement> elements = new ArrayList<>();
 
     // Color edit popup state (HSV internally, converted to RGB on save)
@@ -243,7 +244,7 @@ public class HudEditScreen extends Screen {
 
         String hint = elements.isEmpty()
                 ? "No HUD elements enabled  |  Esc to close"
-                : "Drag to move  |  Scroll to resize  |  Right-click: color  |  Esc to save";
+                : "Drag to move  |  Scroll to resize  |  Esc to save";
         ctx.drawText(textRenderer, hint, 4, height - 12, 0xFFaaaaaa, true);
 
         // Draw unfocused elements first.
@@ -585,7 +586,7 @@ public class HudEditScreen extends Screen {
                     return true;
                 }
             }
-        } else if (click.button() == 1) {
+        } else if (HUD_COLOR_EDITING_ENABLED && click.button() == 1) {
             // Right-click: open color picker for hovered element
             for (HudElement e : elements) {
                 if (e.hovered(mx, my)) {

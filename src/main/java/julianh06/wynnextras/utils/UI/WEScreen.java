@@ -42,7 +42,7 @@ public abstract class WEScreen extends Screen {
     protected double actualScale = 1.0;
 
     public final List<Widget> rootWidgets = new ArrayList<>();
-    protected final List<WEElement<?>> listElements = new ArrayList<>(); // generisch
+    protected final List<WEElement<?>> listElements = new ArrayList<>();
     protected Widget focusedWidget = null;
     protected WEElement<?> focusedElement = null;
     protected float listX, listY, listWidth, listHeight;
@@ -96,7 +96,6 @@ public abstract class WEScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        //this.renderPanoramaBackground(context, delta);
         try {
             if (super.client != null) super.applyBlur(context);
         } catch (Exception ignored) {}

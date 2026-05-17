@@ -432,9 +432,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 toggleOverlayWidget.setBounds(0, 0, 0, 0);
             }
         }
-//        else {
-//            RenderUtils.drawRect(context, CustomColor.fromInt(-804253680), 0, 0, 0, MinecraftClient.getInstance().currentScreen.width, MinecraftClient.getInstance().currentScreen.height);
-//        } i dont remember why i added this but ill keep it here for now if i need it again
 
         if(currentOverlayType == BankOverlayType.NONE || MinecraftClient.getInstance() == null) {
             BankOverlaySlotBridge.restoreAll();
@@ -506,23 +503,10 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
                 reloadReadyTicks++;
 
-                WynnExtras.LOGGER.info("[BankReload] ready candidate: currentPage=" + reloadCurrentPage
-                        + ", activeInv=" + activeInv
-                        + ", readyTicks=" + reloadReadyTicks
-                        + ", stableTicks=" + reloadStableTicks
-                        + ", fingerprint=" + slotFingerprint
-                        + ", totalPages=" + reloadTotalPages
-                        + ", currentDataLastPage=" + (currentData != null ? currentData.getLastPage() : -1));
-
                 if (reloadReadyTicks >= RELOAD_READY_DELAY && reloadStableTicks >= RELOAD_STABLE_DELAY) {
                     saveReloadCurrentPage();
                     reloadPageLoaded = true;
                     reloadSettleTicks = 0;
-                    WynnExtras.LOGGER.info("[BankReload] page loaded: currentPage=" + reloadCurrentPage
-                            + ", activeInv=" + activeInv
-                            + ", totalPages=" + reloadTotalPages
-                            + ", currentDataLastPage=" + (currentData != null ? currentData.getLastPage() : -1)
-                            + ", maxPages=" + BankOverlay.getCurrentMaxPages());
                 }
             } else if (!reloadPageLoaded && activeInv == reloadCurrentPage) {
                 reloadReadyTicks = 0;
@@ -1099,9 +1083,6 @@ public class BankOverlay2 extends WEHandledScreen {
         Pages.getBankPages().put(reloadCurrentPage, snapshot);
         clearAnnotationCache(reloadCurrentPage);
         reloadSavedPage = reloadCurrentPage;
-        WynnExtras.LOGGER.info("[BankReload] saved page: page=" + reloadCurrentPage
-                + ", fingerprint=" + reloadLastSlotFingerprint
-                + ", stacks=" + snapshot.size());
     }
 
     private static void resetReloadPageReadiness() {
@@ -1118,13 +1099,6 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static void stopReloadAndReturnToOriginalPage(String reason) {
-        WynnExtras.LOGGER.info("[BankReload] stopping: reason=" + reason
-                + ", currentPage=" + reloadCurrentPage
-                + ", totalPages=" + reloadTotalPages
-                + ", originalPage=" + reloadOriginalPage
-                + ", activeInv=" + activeInv
-                + ", shouldWait=" + shouldWait
-                + ", button=" + describeRightPageButton(getRightPageButton()));
         isReloading = false;
         resetReloadPageReadiness();
         reloadNextPageCustomModelData = null;
@@ -1139,8 +1113,6 @@ public class BankOverlay2 extends WEHandledScreen {
     private static boolean canReloadNextPage() {
         int maxPages = BankOverlay.getCurrentMaxPages();
         if (reloadCurrentPage >= maxPages - 1) {
-            WynnExtras.LOGGER.info("[BankReload] next check: at max page, currentPage=" + reloadCurrentPage
-                    + ", maxPages=" + maxPages);
             return false;
         }
 
@@ -1150,27 +1122,14 @@ public class BankOverlay2 extends WEHandledScreen {
         boolean purchaseButton = !pointsToNextPage && isPagePurchaseButton(rightButton);
         Float buttonModelData = getFirstCustomModelData(rightButton);
 
-        WynnExtras.LOGGER.info("[BankReload] next check: currentPage=" + reloadCurrentPage
-                + ", nextPageNumber=" + nextPageNumber
-                + ", totalPagesBefore=" + reloadTotalPages
-                + ", currentDataLastPage=" + (currentData != null ? currentData.getLastPage() : -1)
-                + ", maxPages=" + maxPages
-                + ", purchaseButton=" + purchaseButton
-                + ", pointsToNextPage=" + pointsToNextPage
-                + ", buttonModelData=" + buttonModelData
-                + ", knownNextPageModelData=" + reloadNextPageCustomModelData
-                + ", button=" + describeRightPageButton(rightButton));
-
         if (purchaseButton) return false;
 
         if (pointsToNextPage) {
             if (nextPageNumber <= reloadTotalPages) {
                 if (reloadNextPageCustomModelData == null) {
                     reloadNextPageCustomModelData = buttonModelData;
-                    WynnExtras.LOGGER.info("[BankReload] learned next page model data: " + reloadNextPageCustomModelData);
                 }
             } else if (!matchesKnownNextPageModelData(rightButton)) {
-                WynnExtras.LOGGER.info("[BankReload] refusing to extend reload into unknown page because model data changed");
                 return false;
             }
 
@@ -1186,9 +1145,6 @@ public class BankOverlay2 extends WEHandledScreen {
         reloadTotalPages = Math.min(reloadTotalPages, maxPages);
 
         boolean canContinue = reloadCurrentPage + 1 < reloadTotalPages;
-        WynnExtras.LOGGER.info("[BankReload] next result: canContinue=" + canContinue
-                + ", totalPagesAfter=" + reloadTotalPages
-                + ", currentDataLastPage=" + (currentData != null ? currentData.getLastPage() : -1));
         return canContinue;
     }
 
@@ -2169,17 +2125,12 @@ public class BankOverlay2 extends WEHandledScreen {
     // Click bounds for the sort toggle label, updated each frame so the mixin click handler can hit-test.
     private static int sortToggleX = 0, sortToggleY = 0, sortToggleW = 0, sortToggleH = 0;
 
-    /**
-     * Draws the bag grid from live {@code gridStacks} and the top-right "Total Bags"
-     * breakdown from pre-counted {@code totalCounts} (raid|tier → count).
-     */
     static void drawBagOverlay(DrawContext context, int x, int y,
                                List<ItemStack> gridStacks, Map<String, Integer> totalCounts) {
-        drawBagTopRightHeader(context, totalCounts);
+        if(WynnExtrasConfig.INSTANCE.showTotalBagsInBankOverlay) drawBagTopRightHeader(context, totalCounts);
         drawBagGrid(context, x, y, gridStacks);
     }
 
-    /** Reused (raidAbbrev, tier) entry for the top-right text lines. */
     private static final class BagCountEntry {
         final String key;
         final String raidAbbrev;
@@ -2213,11 +2164,6 @@ public class BankOverlay2 extends WEHandledScreen {
         return entries;
     }
 
-    /**
-     * Draws the "Total Bags" block floating in the top-right corner. Shows per-(raid, tier)
-     * lines (skipping zero-count combos) and a clickable sort-mode toggle below the total.
-     * Uses pre-counted numbers so it doesn't depend on Wynntils item annotations.
-     */
     private static void drawBagTopRightHeader(DrawContext context, Map<String, Integer> totalCounts) {
         int totalCount = 0;
         for (int c : totalCounts.values()) totalCount += c;
@@ -2557,7 +2503,6 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 
-    /** True if the current open container is one of the personal bank types. */
     public static boolean isCurrentContainerBank() {
         Container container = Models.Container.getCurrentContainer();
         return container instanceof AccountBankContainer
@@ -2566,18 +2511,12 @@ public class BankOverlay2 extends WEHandledScreen {
                 || container instanceof MiscBucketContainer;
     }
 
-    /** Saves the BankData for the currently open bank container, if any. */
     public static void saveCurrentBankData() {
         if (BankOverlay.isCharacterBankMissingCharacterId()) return;
         BankData data = getBankDataForCurrentContainer();
         if (data != null) data.save();
     }
 
-    /**
-     * Aggregates bag counts from all cached pages of the current bank container
-     * (stored as plain numbers in BankData's bag count cache, so they don't depend on
-     * Wynntils item annotations).
-     */
     private static Map<String, Integer> collectAccountAndCharacterBagCounts() {
         return collectBagCounts(AccountBankData.INSTANCE, CharacterBankData.INSTANCE);
     }
@@ -2603,7 +2542,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 if (pageCounts == null) continue;
                 for (Map.Entry<String, Integer> e : pageCounts.entrySet()) {
                     // Old caches were written with "TWP|..." keys before Wynntils renamed
-                    // the abbreviation to WTP. Fold them so they're not stranded.
                     String key = e.getKey();
                     if (key.startsWith("TWP|")) key = "WTP|" + key.substring(4);
                     BAG_TOTAL_CACHE.merge(key, e.getValue(), Integer::sum);
@@ -2664,14 +2602,6 @@ public class BankOverlay2 extends WEHandledScreen {
         return CURRENT_PAGE_STACKS;
     }
 
-    /**
-     * Returns the 0-based current bank page number (matching the cached bank page key
-     * convention, see HandledScreenMixin.onClose which stores activeInv),
-     * or -1 if unavailable. Prefers {@code Models.Bank.getCurrentPage()} because it's accurate
-     * in both custom and vanilla modes, falling back to BankOverlay.activeInv only if Wynntils
-     * hasn't reported a page yet. {@code Models.Bank.getCurrentPage()} is 1-based, so we
-     * subtract 1 to align with the cache.
-     */
     private static int getCurrentBankPageNumber() {
         try {
             int p = Models.Bank.getCurrentPage();
@@ -3702,11 +3632,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 resetReloadPageReadiness();
                 reloadNextPageCustomModelData = null;
                 activeInv = 0;
-                WynnExtras.LOGGER.info("[BankReload] starting: originalPage=" + reloadOriginalPage
-                        + ", totalPages=" + reloadTotalPages
-                        + ", currentDataLastPage=" + (currentData != null ? currentData.getLastPage() : -1)
-                        + ", maxPages=" + BankOverlay.getCurrentMaxPages()
-                        + ", button=" + describeRightPageButton(getRightPageButton()));
                 try {
                     BankOverlay.getPersonalStorageUtils().jumpToDestination(1);
                 } catch (Exception e) {

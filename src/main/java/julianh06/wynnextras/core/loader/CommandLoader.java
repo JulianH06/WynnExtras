@@ -88,7 +88,7 @@ public class CommandLoader implements WELoader {
 
             var bombshare = ClientCommandManager.literal("bombshare")
                     .executes(ctx -> {
-                        executeBombshare("g", false);
+                        executeBombshare("g", null);
                         return 1;
                     })
                     .then(ClientCommandManager.argument("channel", StringArgumentType.word())
@@ -103,9 +103,9 @@ public class CommandLoader implements WELoader {
                             .executes(ctx -> {
                                 String channel = StringArgumentType.getString(ctx, "channel").toLowerCase();
                                 switch (channel) {
-                                    case "guild", "g" -> executeBombshare("g", (Set<BombType>) null);
-                                    case "party", "p" -> executeBombshare("p", (Set<BombType>) null);
-                                    case "local" -> executeBombshare(null, (Set<BombType>) null);
+                                    case "guild", "g" -> executeBombshare("g", null);
+                                    case "party", "p" -> executeBombshare("p", null);
+                                    case "local" -> executeBombshare(null, null);
                                     case "clipboard" -> copyBombshareToClipboard(null);
                                     case "disable" -> {
                                         WynnExtrasConfig.INSTANCE.bombShareSuggestion = false;
@@ -119,6 +119,7 @@ public class CommandLoader implements WELoader {
                             })
                             .then(ClientCommandManager.argument("filter", StringArgumentType.word())
                                     .suggests((ctx, builder) -> {
+                                        builder.suggest("all");
                                         builder.suggest("prof");
                                         builder.suggest("loot");
                                         builder.suggest("combat");
@@ -128,12 +129,12 @@ public class CommandLoader implements WELoader {
                                         String channel = StringArgumentType.getString(ctx, "channel").toLowerCase();
                                         String filterStr = StringArgumentType.getString(ctx, "filter").toLowerCase();
                                         Set<BombType> bombFilter = switch (filterStr) {
+                                            case "all" -> null;
                                             case "prof" -> PROF_BOMBS;
                                             case "loot" -> LOOT_BOMBS;
                                             case "combat" -> COMBAT_BOMBS;
                                             default -> { McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown filter: " + filterStr + ". Use prof, loot, or combat.")); yield null; }
                                         };
-                                        if (bombFilter == null) return 1;
                                         switch (channel) {
                                             case "guild", "g" -> executeBombshare("g", bombFilter);
                                             case "party", "p" -> executeBombshare("p", bombFilter);
@@ -484,10 +485,6 @@ public class CommandLoader implements WELoader {
     private static final Set<BombType> PROF_BOMBS = Set.of(BombType.PROFESSION_XP, BombType.PROFESSION_SPEED);
     private static final Set<BombType> LOOT_BOMBS = Set.of(BombType.LOOT, BombType.LOOT_CHEST);
     private static final Set<BombType> COMBAT_BOMBS = Set.of(BombType.COMBAT_XP);
-
-    private static void executeBombshare(String chatPrefix, boolean profOnly) {
-        executeBombshare(chatPrefix, profOnly ? PROF_BOMBS : null);
-    }
 
     private static String filterName(Set<BombType> filter) {
         if (filter == null) return "";

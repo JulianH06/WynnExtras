@@ -36,7 +36,7 @@ public class RaidKindAdapter extends TypeAdapter<RaidKind> {
             case "TCC" -> gson.fromJson(obj, TheCanyonColossusRaid.class);
             case "NOL" -> gson.fromJson(obj, OrphionsNexusOfLightRaid.class);
             case "NOG" -> gson.fromJson(obj, NestOfTheGrootslangsRaid.class);
-            case "TWP" -> gson.fromJson(obj, TheWartornPalaceRaid.class);
+            case "TWP", "WTP" -> gson.fromJson(obj, TheWartornPalaceRaid.class);
             default -> {
                 WynnExtras.LOGGER.error("Unknown raid: " + abbreviation);
                 yield null;

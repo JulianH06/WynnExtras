@@ -170,7 +170,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 (x) -> {
                     config.disableAll();
                 }, "Disable"))
-            .add(text("", "If you accidentally clicked on one of these buttons click on \"cancel\" to get your old settings back.")) //TODO; improve wording here
+            .add(text("", "If you accidentally clicked on one of these buttons click on \"cancel\" to get your old settings back."))
             .sub("Minigames")
                 .add(text("Bored during raid downtime, attack queues or waiting for a friend?", "Then try out these minigames! Have fun!"))
                 .add(button("Tetris", "A fully fledged Integration of the the game everyone knows and loves!",
@@ -185,7 +185,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .add(text("", "All features added in this update. Toggle any of them on or off."))
                 .add(toggle("Auto-ignore party in raid", "Auto /ignore party members on raid start, /ignore remove on raid end (reduces lag from teammate effects)",
                         () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
-                .add(toggle("Encounter Selection overlay", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
+                .add(toggle("Encounter Selection overlay (Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
                         () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v))
                 .add(toggle("Right-click chat to copy", "Right-click a chat message (while chat is open) to copy it to the clipboard",
                         () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
@@ -332,7 +332,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(toggle("Passive aspect scanning", "Scan your aspects passively without bothering you",
                         () -> config.passiveAspectScanning, v -> config.passiveAspectScanning = v),
                         () -> !config.automaticAspectScanning))
-                .add(toggle("Encounter Selection overlay", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
+                .add(toggle("Encounter Selection overlay (Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
                         () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v));
 
         // ===== COMBAT =====
@@ -432,7 +432,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Hide empty rows", "Hides rows that only have locked pages",
                         () -> config.bankOverlayHideEmptyRows, v -> config.bankOverlayHideEmptyRows = v))
                 .add(toggle("Bag Overlay", "Show crafter bag counts by raid/tier on bank screens",
-                        () -> config.bankBagOverlay, v -> config.bankBagOverlay = v)).endSub()
+                        () -> config.bankBagOverlay, v -> config.bankBagOverlay = v))
+                .add(visibleWhen(toggle("Show total bag count in bank overlay", "Shows you a breakdown of all crafter bags you have across all pages of your bank",
+                        () -> config.showTotalBagsInBankOverlay, v -> config.showTotalBagsInBankOverlay = v), () -> config.bankBagOverlay))
+                .endSub()
             .sub("Class Selection")
                 .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
                         () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
@@ -465,6 +468,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
                 .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
                         () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
+                .add(toggle("Reverse crafting helper order", "Show recipes from lowest to highest level",
+                        () -> config.craftingHelperReverseOrder, v -> config.craftingHelperReverseOrder = v))
                 .add(toggle("Auto Start", "Automatically start crafting when a recipe is loaded",
                         () -> config.craftingAutoStart, v -> config.craftingAutoStart = v))
                 .add(toggle("Crafting preview", "Crafting preview toggle",
@@ -648,7 +653,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
                     () -> config.badgesEnabled, v -> config.badgesEnabled = v))
             .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
-                    () -> config.removeChroma, v -> config.removeChroma = v));
+                    () -> config.removeChroma, v -> config.removeChroma = v))
+            .sub("Debug")
+                .add(keybind("Item Components Key", "Show the hovered container item's components in a debug window",
+                        () -> config.debugItemComponentsKey, v -> config.debugItemComponentsKey = v));
     }
 
     // ==================== BUILDER HELPERS ====================

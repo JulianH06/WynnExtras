@@ -24,6 +24,7 @@ public class KeybindOption extends ConfigOption {
     }
 
     private String keyName(int key) {
+        if (key == GLFW.GLFW_KEY_UNKNOWN) return "UNBOUND";
         String n = GLFW.glfwGetKeyName(key, 0);
         if (n != null) return n.toUpperCase();
         return switch (key) {
@@ -73,6 +74,13 @@ public class KeybindOption extends ConfigOption {
     public boolean onKeyPressed(int key) {
         if (!listening) return false;
         if (key == GLFW.GLFW_KEY_ESCAPE) { listening = false; return true; }
+        if (key == GLFW.GLFW_KEY_BACKSPACE || key == GLFW.GLFW_KEY_DELETE) {
+            setter.accept(GLFW.GLFW_KEY_UNKNOWN);
+            listening = false;
+            WynnExtrasConfig.save();
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
+        }
         setter.accept(key);
         listening = false;
         WynnExtrasConfig.save();

@@ -30,6 +30,7 @@ import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.misc.QuickRepair;
 import julianh06.wynnextras.features.misc.TotemTimer;
 import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.qol.EncounterOverlay;
 import julianh06.wynnextras.features.raid.*;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.waypoints.WaypointData;
@@ -186,7 +187,6 @@ public class WynnExtras implements ClientModInitializer {
 		BloodSorrowTimer.register();
 		julianh06.wynnextras.features.misc.RadiantHud.init();
 		julianh06.wynnextras.features.misc.ProfessionOverlay.register();
-		julianh06.wynnextras.features.misc.ClassSelectionPngOverlay.register();
 		julianh06.wynnextras.features.bankoverlay.BankOverlay2.registerScreenHooks();
 		ChatNotificator.init();
 		Waypoints.register();
@@ -291,12 +291,8 @@ public class WynnExtras implements ClientModInitializer {
 	@SubscribeEvent
 	public void onWorldChange(WorldChangeEvent event) {
 		if (latestVersion != null && !CurrentVersionData.INSTANCE.version.equals(latestVersion)) {
-			scheduleVersionNotification();
+			ticksUntilNotify = 50; //small delay
 		}
-	}
-
-	private static void scheduleVersionNotification() {
-		ticksUntilNotify = 50; //small delay
 	}
 
 	private static int normalGUIScale = -1;
@@ -304,6 +300,7 @@ public class WynnExtras implements ClientModInitializer {
 	@SubscribeEvent
 	public void onClientTick(TickEvent event) {
 		WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+		EncounterOverlay.clearLatchIfNoContainerOpen();
 		if(config.differentGUIScale) {
 			if (MinecraftClient.getInstance().currentScreen == null) {
 				restoreNormalGuiScale();

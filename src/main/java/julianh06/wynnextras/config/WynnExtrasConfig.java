@@ -30,12 +30,6 @@ public class WynnExtrasConfig {
 
     public static WynnExtrasConfig INSTANCE = new WynnExtrasConfig();
 
-    private static final List<Consumer<WynnExtrasConfig>> saveListeners = new ArrayList<>();
-
-    /** When non-null, WynnExtras is "disabled": stores the previous values of every boolean
-     *  field so they can be restored on re-enable. While disabled, all boolean fields are false. */
-    public HashMap<String, Boolean> disabledStateBackup = null;
-
     /** Named bool-only profiles. Each profile maps fieldName -> value. Switching a profile
      *  applies its bool snapshot; non-bool settings (positions, colors, etc.) are shared. */
     //public LinkedHashMap<String, HashMap<String, Boolean>> configProfiles = new LinkedHashMap<>();
@@ -121,6 +115,7 @@ public class WynnExtrasConfig {
     public int bankOverlayMaxColumns = 3;
     public boolean bankOverlayHideEmptyRows = false;
     public boolean bankBagOverlay = false;
+    public boolean showTotalBagsInBankOverlay = false;
     public boolean showWeight = false;
     public boolean showScales = false;
     public boolean scaleBackgroundEnabled = false;
@@ -136,6 +131,7 @@ public class WynnExtrasConfig {
     public int craftingPreviewOverlayX = 20;
     public int craftingPreviewOverlayY = 20;
     public boolean craftingDynamicTextures = true;
+    public boolean craftingHelperReverseOrder = false;
     public float craftingHelperHeightPercent = 0.6f;
     public boolean skillpointHelper = true;
     public boolean tradeMarketOverlay = true;
@@ -205,7 +201,7 @@ public class WynnExtrasConfig {
     public boolean automaticAspectScanning = false;
     public boolean passiveAspectScanning = true;
     public boolean tnaTreeMap = false;
-    public float tnaTreeMapScale = 1.0f;
+    public float tnaTreeMapScale = 1.75f;
     public boolean showTreeMapOnlyWhileInsideOfTree = false;
     public boolean showPathsOnTreeMap = true;
     public boolean showTreeMapEverywhere = false;
@@ -296,11 +292,14 @@ public class WynnExtrasConfig {
     public boolean sourceOfTruthToggle = false;
     public boolean territoryEstimateToggle = false;
     public boolean removeChroma = false;
+    public int debugItemComponentsKey = GLFW.GLFW_KEY_UNKNOWN;
+    public int debugItemComponentsWindowX = 20;
+    public int debugItemComponentsWindowY = 20;
+    public int debugItemComponentsWindowW = 360;
+    public int debugItemComponentsWindowH = 220;
 
     // ==================== CUSTOM CLASS SELECTION ====================
     public boolean customClassSelectionEnabled = true;
-    public String customClassPngPath = "";
-    public int classCardCustomAccentColor = -1; // -1 = class colors
     public boolean useCustomClassColors = false;
     public Map<String, Integer> classCardAccentColors = new HashMap<>();
     public boolean hideClassSelectionQuickToggleButton = false;
@@ -417,39 +416,6 @@ public class WynnExtrasConfig {
         }
     }
 
-    public boolean isWynnExtrasEnabled() {
-        return disabledStateBackup == null;
-    }
-
-    /** Snapshots every boolean field, then sets all of them to false. */
-    public void disableWynnExtras() {
-        if (disabledStateBackup != null) return;
-        HashMap<String, Boolean> backup = new HashMap<>();
-        for (java.lang.reflect.Field field : WynnExtrasConfig.class.getDeclaredFields()) {
-            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
-            if (field.getType() != boolean.class) continue;
-            try {
-                backup.put(field.getName(), field.getBoolean(this));
-                field.setBoolean(this, false);
-            } catch (IllegalAccessException ignored) {}
-        }
-        disabledStateBackup = backup;
-    }
-
-    /** Restores every boolean field from the snapshot taken in disableWynnExtras. */
-    public void enableWynnExtras() {
-        if (disabledStateBackup == null) return;
-        for (Map.Entry<String, Boolean> entry : disabledStateBackup.entrySet()) {
-            try {
-                java.lang.reflect.Field field = WynnExtrasConfig.class.getDeclaredField(entry.getKey());
-                if (field.getType() == boolean.class) {
-                    field.setBoolean(this, entry.getValue());
-                }
-            } catch (NoSuchFieldException | IllegalAccessException ignored) {}
-        }
-        disabledStateBackup = null;
-    }
-
 //    // ==================== CONFIG PROFILES ====================
 //    /** Snapshots all current boolean field values into a profile with the given name. */
 //    public void saveCurrentAsProfile(String name) {
@@ -489,19 +455,9 @@ public class WynnExtrasConfig {
         try {
             if (Files.exists(CONFIG_PATH)) {
                 String json = Files.readString(CONFIG_PATH);
-                JsonObject jsonObject = GSON.fromJson(json, JsonObject.class);
-                Boolean oldClassSelectionQuickToggleButton = null;
-                if (jsonObject != null
-                        && jsonObject.has("classSelectionQuickToggleButton")
-                        && !jsonObject.has("hideClassSelectionQuickToggleButton")) {
-                    oldClassSelectionQuickToggleButton = jsonObject.get("classSelectionQuickToggleButton").getAsBoolean();
-                }
                 INSTANCE = GSON.fromJson(json, WynnExtrasConfig.class);
                 if (INSTANCE == null) {
                     INSTANCE = new WynnExtrasConfig();
-                }
-                if (oldClassSelectionQuickToggleButton != null) {
-                    INSTANCE.hideClassSelectionQuickToggleButton = !oldClassSelectionQuickToggleButton;
                 }
                 // Ensure lists are not null
                 if (INSTANCE.hiddenPlayers == null) INSTANCE.hiddenPlayers = new ArrayList<>();
@@ -528,16 +484,9 @@ public class WynnExtrasConfig {
         try {
             Files.createDirectories(CONFIG_PATH.getParent());
             Files.writeString(CONFIG_PATH, GSON.toJson(INSTANCE));
-            for (Consumer<WynnExtrasConfig> listener : saveListeners) {
-                listener.accept(INSTANCE);
-            }
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Failed to save config: " + e.getMessage());
         }
-    }
-
-    public static void registerSaveListener(Consumer<WynnExtrasConfig> listener) {
-        saveListeners.add(listener);
     }
 
     // ==================== CONFIG SCREEN ====================

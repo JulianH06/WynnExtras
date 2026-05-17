@@ -20,6 +20,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.tooltip.TooltipType;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -1003,7 +1004,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             vanillaMode = false;
             return;
         }
-        if (!vanillaMode) return;
+        if (WynnExtrasConfig.INSTANCE.customClassSelectionEnabled) return;
         String title = screen.getTitle().getString();
         if (!isClassSelectionScreen(title) && !isClassEditScreen(title) && !isIconEditScreen(title)) return;
 
@@ -1021,7 +1022,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             vanillaMode = false;
             return false;
         }
-        if (!vanillaMode) return false;
+        if (WynnExtrasConfig.INSTANCE.customClassSelectionEnabled) return false;
         String title = screen.getTitle().getString();
         if (!isClassSelectionScreen(title) && !isClassEditScreen(title) && !isIconEditScreen(title)) return false;
 
@@ -1059,13 +1060,16 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             ui.drawButton(x, y, width, height, hovered);
-            ui.drawCenteredText(vanillaMode ? "Enable class overlay" : "Disable class overlay",
+            ui.drawCenteredText(WynnExtrasConfig.INSTANCE.customClassSelectionEnabled ? "Disable class overlay" : "Enable class overlay",
                     x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), textScale);
         }
 
         @Override
         protected boolean onClick(int button) {
-            vanillaMode = !vanillaMode;
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            WynnExtrasConfig.INSTANCE.customClassSelectionEnabled = !WynnExtrasConfig.INSTANCE.customClassSelectionEnabled;
+            vanillaMode = !WynnExtrasConfig.INSTANCE.customClassSelectionEnabled;
+            WynnExtrasConfig.save();
             return true;
         }
     }

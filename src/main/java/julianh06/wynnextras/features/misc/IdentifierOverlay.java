@@ -51,9 +51,9 @@ public class IdentifierOverlay extends WEMenuExtension {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawCenteredText("Should i keep gambling?", x + width / 2f, y - 8);
+            ui.drawCenteredText("Should i keep gambling?", x + width / 2f, y - 8, 1f);
             ui.drawButton(x, y, width, height, hovered);
-            ui.drawCenteredText("Find out here!", x + width / 2f, y + height / 2f);
+            ui.drawCenteredText("Find out here!", x + width / 2f, y + height / 2f, 1f);
         }
 
         @Override

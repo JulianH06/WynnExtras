@@ -22,6 +22,7 @@ import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.misc.ClassSelectionOverlay;
 import julianh06.wynnextras.features.misc.CompassMenuOverlay;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
+import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.misc.QuickRepair;
 import net.minecraft.client.MinecraftClient;
@@ -98,7 +99,7 @@ public abstract class HandledScreenMixin {
             julianh06.wynnextras.features.qol.EncounterOverlay.tickSettle(encSelf);
         }
         // Class Selection Overlay
-        if (WynnExtrasConfig.INSTANCE.customClassSelectionEnabled && !ClassSelectionOverlay.vanillaMode) {
+        if (WynnExtrasConfig.INSTANCE.customClassSelectionEnabled) {
             HandledScreen<?> self = (HandledScreen<?>) (Object) this;
             String title = self.getTitle().getString();
             if (ClassSelectionOverlay.isClassSelectionScreen(title)) {
@@ -213,6 +214,7 @@ public abstract class HandledScreenMixin {
         quickRepairOverlay.render(context, mouseX, mouseY, delta);
 
         ProfessionOverlay.renderOnScreen(context);
+        ItemComponentsDebugOverlay.render(context, mouseX, mouseY);
     }
 
     @Unique
@@ -277,6 +279,11 @@ public abstract class HandledScreenMixin {
         double mouseX = click.x();
         double mouseY = click.y();
         int button = click.button();
+
+        if (ItemComponentsDebugOverlay.mouseClicked(mouseX, mouseY, button)) {
+            cir.setReturnValue(true);
+            return;
+        }
 
         // Encounter Selection overlay (intercept before anything else so vanilla slots aren't touched)
         HandledScreen<?> self = (HandledScreen<?>) (Object) this;
@@ -378,6 +385,11 @@ public abstract class HandledScreenMixin {
         double mouseY = click.y();
         int button = click.button();
 
+        if (ItemComponentsDebugOverlay.mouseReleased(mouseX, mouseY, button)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
         // Class Selection Overlay release (for drag-to-reorder)
         if (classSelectionOverlay != null) {
             classSelectionOverlay.onMouseReleased(mouseX, mouseY, button);
@@ -417,6 +429,11 @@ public abstract class HandledScreenMixin {
         double mouseX = click.x();
         double mouseY = click.y();
 
+        if (ItemComponentsDebugOverlay.mouseDragged(mouseX, mouseY)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
         // Class Selection Overlay dragging (for drag-to-reorder)
         if (classSelectionOverlay != null) {
             classSelectionOverlay.onMouseDragged(mouseX, mouseY);
@@ -432,6 +449,13 @@ public abstract class HandledScreenMixin {
         // Handle Trade Market Overlay dragging
         if (TradeMarketOverlay.isDragging()) {
             TradeMarketOverlay.handleMouseMove(mouseX, mouseY);
+        }
+    }
+
+    @Inject(method = "mouseScrolled", at = @At("HEAD"), cancellable = true)
+    private void onMouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount, CallbackInfoReturnable<Boolean> cir) {
+        if (ItemComponentsDebugOverlay.mouseScrolled(mouseX, mouseY, verticalAmount)) {
+            cir.setReturnValue(true);
         }
     }
 
@@ -462,6 +486,7 @@ public abstract class HandledScreenMixin {
         BankOverlaySlotBridge.restoreAll();
         craftingHelperOverlay = null;
         classSelectionOverlay = null;
+        ItemComponentsDebugOverlay.reset();
 
         // Clear Trade Market Comparison on close
         TradeMarketComparisonPanel.clearAllPanels();
@@ -538,6 +563,15 @@ public abstract class HandledScreenMixin {
         // F2 key in Trade Market to toggle scale background
         if (keyCode == GLFW.GLFW_KEY_F2 && TradeMarketComparisonPanel.isInTradeMarket()) {
             if (TradeMarketComparisonPanel.handleF2Press()) {
+                cir.setReturnValue(true);
+                cir.cancel();
+                return;
+            }
+        }
+
+        if (keyCode == WynnExtrasConfig.INSTANCE.debugItemComponentsKey) {
+            if (focusedSlot != null && focusedSlot.hasStack()) {
+                ItemComponentsDebugOverlay.open(focusedSlot.getStack());
                 cir.setReturnValue(true);
                 cir.cancel();
                 return;

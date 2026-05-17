@@ -92,6 +92,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
     private static final List<String> lastMaterialNames = new ArrayList<>();  // material names (from inventory)
     private static final List<Integer> lastMaterialCounts = new ArrayList<>(); // click count per material
     private static final List<String> lastIngredientNames = new ArrayList<>(); // ingredient names (from inventory)
+    private static final List<String> preparedMaterialNames = new ArrayList<>();
+    private static final List<Integer> preparedMaterialCounts = new ArrayList<>();
 
     private record ItemRequirement(String type, String name, int amount) {}
     private record MissingRequirement(String type, String name, int amount) {}
@@ -185,6 +187,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         wbStatusMessage = "";
         WB_CLICK_QUEUE.clear();
         wbClicking = false;
+        preparedMaterialNames.clear();
+        preparedMaterialCounts.clear();
 
         if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
         ProfessionType type = container.getProfessionType();
@@ -433,8 +437,10 @@ public class CraftingHelperOverlay extends WEMenuExtension {
                 }
             }
             if (lastResultSlotsEmpty && hasOutput) {
-                captureCurrentMaterials();
+                capturePreparedMaterials();
                 captureCurrentIngredients();
+            } else if (!hasOutput) {
+                updatePreparedMaterialSnapshot();
             }
             lastResultSlotsEmpty = !hasOutput;
         } catch (Exception ignored) {}
@@ -709,7 +715,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         Map<Integer, Integer> queuedBySlot = new HashMap<>();
         for (ItemRequirement requirement : requirements) {
-            queueInventoryItem(requirement.name(), requirement.amount(), queuedBySlot);
+            queueInventoryItem(requirement, queuedBySlot);
         }
 
         wbTotalClicks = WB_CLICK_QUEUE.size();
@@ -799,6 +805,12 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         List<MissingRequirement> missingRequirements = new ArrayList<>();
         for (ItemRequirement requirement : mergedRequirements.values()) {
             int available = countInventoryItems(requirement.name());
+            if (requirement.type().equals("materials")) {
+                if (available == 0) {
+                    missingRequirements.add(new MissingRequirement(requirement.type(), requirement.name(), 1));
+                }
+                continue;
+            }
             if (available < requirement.amount()) {
                 missingRequirements.add(new MissingRequirement(requirement.type(), requirement.name(), requirement.amount() - available));
             }
@@ -820,14 +832,21 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         return count;
     }
 
-    private static void queueInventoryItem(String itemName, int amount, Map<Integer, Integer> queuedBySlot) {
-        int remaining = amount;
+    private static void queueInventoryItem(ItemRequirement requirement, Map<Integer, Integer> queuedBySlot) {
+        int remaining = requirement.amount();
         for (Slot slot : McUtils.containerMenu().slots) {
             try {
                 if (remaining <= 0) return;
                 if (!(slot.inventory instanceof PlayerInventory)) continue;
                 if (slot.getStack().getCustomName() == null) continue;
-                if (!slot.getStack().getCustomName().getString().contains(itemName)) continue;
+                if (!slot.getStack().getCustomName().getString().contains(requirement.name())) continue;
+
+                if (requirement.type().equals("materials")) {
+                    for (int i = 0; i < remaining; i++) {
+                        WB_CLICK_QUEUE.add(slot.id);
+                    }
+                    return;
+                }
 
                 int alreadyQueued = queuedBySlot.getOrDefault(slot.id, 0);
                 int available = slot.getStack().getCount() - alreadyQueued;
@@ -916,6 +935,49 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         }
     }
 
+    private static void updatePreparedMaterialSnapshot() {
+        if (McUtils.containerMenu() == null) return;
+        List<String> matNames = new ArrayList<>();
+        List<Integer> matCounts = new ArrayList<>();
+        boolean hasAny = false;
+        for (int slot : new int[]{0, 9}) {
+            try {
+                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
+                if (!name.isEmpty() && !name.contains("Material Slot")) {
+                    matNames.add(name);
+                    matCounts.add(stack.getCount());
+                    hasAny = true;
+                } else {
+                    matNames.add(null);
+                    matCounts.add(0);
+                }
+            } catch (Exception e) {
+                matNames.add(null);
+                matCounts.add(0);
+            }
+        }
+
+        if (hasAny) {
+            preparedMaterialNames.clear();
+            preparedMaterialCounts.clear();
+            preparedMaterialNames.addAll(matNames);
+            preparedMaterialCounts.addAll(matCounts);
+        }
+    }
+
+    private static void capturePreparedMaterials() {
+        if (preparedMaterialNames.stream().noneMatch(Objects::nonNull)) {
+            captureCurrentMaterials();
+            return;
+        }
+
+        lastMaterialNames.clear();
+        lastMaterialNames.addAll(preparedMaterialNames);
+        lastMaterialCounts.clear();
+        lastMaterialCounts.addAll(preparedMaterialCounts);
+    }
+
     private void reuseLast() {
         if (McUtils.containerMenu() == null) return;
 
@@ -959,7 +1021,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         Map<Integer, Integer> queuedBySlot = new HashMap<>();
         for (ItemRequirement requirement : requirements) {
-            queueInventoryItem(requirement.name(), requirement.amount(), queuedBySlot);
+            queueInventoryItem(requirement, queuedBySlot);
         }
 
         wbTotalClicks = WB_CLICK_QUEUE.size();
@@ -1118,6 +1180,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         private static final Queue<Integer> CLICK_QUEUE = new ArrayDeque<>();
         public int maxOffset;
         private static long lastClick = 0;
+        private boolean reverseOrder = WynnExtrasConfig.INSTANCE.craftingHelperReverseOrder;
         int scissorX1, scissorY1, scissorX2, scissorY2;
 
         public HelperWidget(int maxOffset) {
@@ -1182,8 +1245,18 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             map.put(state, actualOffset);
             lastOffset.put(type, map);
 
+            if (reverseOrder != WynnExtrasConfig.INSTANCE.craftingHelperReverseOrder) {
+                reverseOrder = WynnExtrasConfig.INSTANCE.craftingHelperReverseOrder;
+                recipeWidgets.clear();
+                children.clear();
+                targetOffset = 0;
+                actualOffset = 0;
+            }
+
             if (recipeWidgets.isEmpty()) {
-                int[] levelOrder = {115, 110, 105, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0};
+                int[] levelOrder = reverseOrder
+                        ? new int[]{0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 105, 110, 115}
+                        : new int[]{115, 110, 105, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0};
                 for (int i = 0; i < widgetAmount; i++) {
                     int level = levelOrder[i];
 

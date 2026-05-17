@@ -1,26 +1,19 @@
 package julianh06.wynnextras.features.profileviewer;
 
-import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.FontRenderer;
-import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.utils.LinkUtils;
 import julianh06.wynnextras.utils.overlays.EasyButton;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
-import java.awt.*;
-import java.net.URI;
-
 public class OpenInBrowserButton extends EasyButton {
     private final String url;
-    int scaleFactor;
 
     public OpenInBrowserButton(int x, int y, int height, int width, String url) {
         super(x, y, height, width, "Open in browser");
@@ -29,15 +22,7 @@ public class OpenInBrowserButton extends EasyButton {
 
     @Override
     public void click() {
-        try {
-            if (Desktop.isDesktopSupported()) {
-                LinkUtils.openLink(url);
-            } else {
-                WynnExtras.LOGGER.error("Error while opening the link");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        LinkUtils.openLink(url);
     }
 
     @Override
@@ -46,7 +31,6 @@ public class OpenInBrowserButton extends EasyButton {
         if(buttonText == null) {
             return;
         }
-        scaleFactor = (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
-        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(buttonText)), (float) (x + 53), y + (float) 10, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, 1.2f);
+        FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(buttonText)), x + width / 2f, y + height / 2f - 2, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, TextShadow.NORMAL, height / 20f);
     }
 }
