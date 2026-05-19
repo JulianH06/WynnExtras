@@ -304,17 +304,6 @@ public class WynnExtrasConfig {
     public Map<String, Integer> classCardAccentColors = new HashMap<>();
     public boolean hideClassSelectionQuickToggleButton = false;
     public Map<String, String> clientNicknames = new HashMap<>(); // UUID -> nickname
-    public Map<String, CharIdentity> charIdentities = new HashMap<>(); // UUID -> identity data
-
-    public static class CharIdentity {
-        public String uuid = "";
-        public String name = "";
-        public String classType = "";
-        public int color = 0;
-        public double timePlayed = 0;
-        public int level = 0;
-        public int xpPercent = 0;
-    }
 
     // ==================== TETRIS ====================
     public int tetrisBestScore = 0;
@@ -469,7 +458,6 @@ public class WynnExtrasConfig {
                 if (INSTANCE.professionGoals == null) INSTANCE.professionGoals = new HashMap<>();
                 if (INSTANCE.classCardAccentColors == null) INSTANCE.classCardAccentColors = new HashMap<>();
                 if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
-                if (INSTANCE.charIdentities == null) INSTANCE.charIdentities = new HashMap<>();
                 //if (INSTANCE.configProfiles == null) INSTANCE.configProfiles = new LinkedHashMap<>();
                 if (INSTANCE.weeklyWars == null) INSTANCE.weeklyWars = new ArrayList<>();
                 if (INSTANCE.hudColorOverrides == null) INSTANCE.hudColorOverrides = new HashMap<>();

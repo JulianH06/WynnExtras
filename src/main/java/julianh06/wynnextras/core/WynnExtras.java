@@ -25,6 +25,7 @@ import julianh06.wynnextras.features.chat.ChatNotificator;
 import julianh06.wynnextras.features.loader.SkillPointLoader;
 import julianh06.wynnextras.features.misc.BloodSorrowTimer;
 import julianh06.wynnextras.features.misc.FastRequeue;
+import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.misc.QuickRepair;
@@ -173,6 +174,7 @@ public class WynnExtras implements ClientModInitializer {
 
 		WELoader.loadAll();
 		TickScheduler.init();
+		ChatEvent.register();
 
         new InitEvent().post();
 
@@ -188,6 +190,7 @@ public class WynnExtras implements ClientModInitializer {
 		julianh06.wynnextras.features.misc.RadiantHud.init();
 		julianh06.wynnextras.features.misc.ProfessionOverlay.register();
 		julianh06.wynnextras.features.bankoverlay.BankOverlay2.registerScreenHooks();
+		ItemComponentsDebugOverlay.registerInventoryScreenHooks();
 		ChatNotificator.init();
 		Waypoints.register();
 		FastRequeue.registerFastRequeue();

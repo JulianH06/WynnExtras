@@ -4,9 +4,12 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.utils.WEVec;
 import julianh06.wynnextras.utils.render.WorldRenderUtils;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.neoforged.bus.api.SubscribeEvent;
 
@@ -23,6 +26,8 @@ public class WaypointRenderer {
         for(WaypointPackage pkg : WaypointData.INSTANCE.packages) {
             if(!pkg.enabled) continue;
             for(Waypoint waypoint : pkg.waypoints) {
+                if(isOnBarrier(waypoint)) continue;
+
                 WEVec pos = new WEVec(waypoint.x + 0.5f, waypoint.y + 1.5f, waypoint.z + 0.5f);
                 if(MinecraftClient.getInstance().player != null && waypoint.showDistance) {
                     WEVec playerPos = new WEVec(MinecraftClient.getInstance().player.getBlockPos().toBottomCenterPos());
@@ -50,5 +55,12 @@ public class WaypointRenderer {
 
         //Render phase
         if(renderedAny) WorldRenderUtils.INSTANCE_WAYPOINTS.drawFilledBoxes(MinecraftClient.getInstance(), WorldRenderUtils.FILLED_BOX);
+    }
+
+    private boolean isOnBarrier(Waypoint waypoint) {
+        ClientWorld world = MinecraftClient.getInstance().world;
+        if(world == null) return false;
+
+        return world.getBlockState(new BlockPos(waypoint.x, waypoint.y, waypoint.z)).isOf(Blocks.BARRIER);
     }
 }

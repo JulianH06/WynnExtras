@@ -40,7 +40,6 @@
   ],
   "mixins": [
     "CharacterModelMixin",
-    "ChatPacketRecievedEventMixin",
     "ChatScreenMixin",
     "Accessor.EventAccessor",
     "ItemFavoriteFeatureAccessor",

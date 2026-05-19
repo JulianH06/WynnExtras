@@ -10,7 +10,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ClassSelectionData {
     private static final Gson GSON = new GsonBuilder()
@@ -19,9 +21,28 @@ public class ClassSelectionData {
 
     private static String loadedPlayerUuid = "";
     private static Data data = new Data();
+    private static String loadedIdentityPlayerUuid = "";
+    private static IdentityData identityData = new IdentityData();
 
     private static class Data {
         List<String> classCardOrder = new ArrayList<>();
+    }
+
+    private static class IdentityData {
+        Map<String, CharIdentity> charIdentities = new HashMap<>();
+    }
+
+    public static class CharIdentity {
+        public String uuid = "";
+        public String stableId = "";
+        public String fallbackId = "";
+        public String slotId = "";
+        public String name = "";
+        public String classType = "";
+        public int color = 0;
+        public double timePlayed = 0;
+        public int level = 0;
+        public int xpPercent = 0;
     }
 
     public static List<String> getClassCardOrder() {
@@ -33,6 +54,16 @@ public class ClassSelectionData {
         load();
         data.classCardOrder = order == null ? new ArrayList<>() : new ArrayList<>(order);
         save();
+    }
+
+    public static Map<String, CharIdentity> getCharIdentities() {
+        loadIdentities();
+        return identityData.charIdentities;
+    }
+
+    public static void saveCharIdentities() {
+        loadIdentities();
+        saveIdentities();
     }
 
     private static void load() {
@@ -68,12 +99,53 @@ public class ClassSelectionData {
         }
     }
 
+    private static void loadIdentities() {
+        String playerUuid = getPlayerUuid();
+        if (playerUuid.isEmpty()) return;
+        if (playerUuid.equals(loadedIdentityPlayerUuid)) return;
+
+        loadedIdentityPlayerUuid = playerUuid;
+        identityData = new IdentityData();
+
+        Path path = getIdentityPath(playerUuid);
+        if (Files.exists(path)) {
+            try {
+                IdentityData loaded = GSON.fromJson(Files.readString(path), IdentityData.class);
+                if (loaded != null) identityData = loaded;
+            } catch (IOException e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Failed to load class identity data: " + e.getMessage());
+            }
+        }
+
+        if (identityData.charIdentities == null) identityData.charIdentities = new HashMap<>();
+    }
+
+    private static void saveIdentities() {
+        if (loadedIdentityPlayerUuid.isEmpty()) return;
+
+        try {
+            Path path = getIdentityPath(loadedIdentityPlayerUuid);
+            Files.createDirectories(path.getParent());
+            Files.writeString(path, GSON.toJson(identityData));
+        } catch (IOException e) {
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to save class identity data: " + e.getMessage());
+        }
+    }
+
     private static Path getPath(String playerUuid) {
         return FabricLoader.getInstance()
                 .getConfigDir()
                 .resolve("wynnextras")
                 .resolve(playerUuid)
                 .resolve("class_selection.json");
+    }
+
+    private static Path getIdentityPath(String playerUuid) {
+        return FabricLoader.getInstance()
+                .getConfigDir()
+                .resolve("wynnextras")
+                .resolve(playerUuid)
+                .resolve("class_identities.json");
     }
 
     private static String getPlayerUuid() {

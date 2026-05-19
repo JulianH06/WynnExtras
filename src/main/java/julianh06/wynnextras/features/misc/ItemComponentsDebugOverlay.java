@@ -1,15 +1,22 @@
 package julianh06.wynnextras.features.misc;
 
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.component.ComponentType;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 
@@ -44,6 +51,30 @@ public class ItemComponentsDebugOverlay {
     private static boolean resizing = false;
     private static int dragOffsetX;
     private static int dragOffsetY;
+    private static int lastMouseX;
+    private static int lastMouseY;
+
+    public static void registerInventoryScreenHooks() {
+        ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+            if (!(screen instanceof InventoryScreen inventoryScreen)) return;
+
+            ScreenEvents.afterRender(screen).register((s, context, mouseX, mouseY, tickDelta) ->
+                    render(context, mouseX, mouseY));
+            ScreenKeyboardEvents.allowKeyPress(screen).register((s, input) -> {
+                if (input.key() != WynnExtrasConfig.INSTANCE.debugItemComponentsKey) return true;
+                return !openHoveredStack(inventoryScreen);
+            });
+            ScreenMouseEvents.allowMouseClick(screen).register((s, click) ->
+                    !mouseClicked(click.x(), click.y(), click.button()));
+            ScreenMouseEvents.allowMouseRelease(screen).register((s, click) ->
+                    !mouseReleased(click.x(), click.y(), click.button()));
+            ScreenMouseEvents.allowMouseDrag(screen).register((s, click, horizontalAmount, verticalAmount) ->
+                    !mouseDragged(click.x(), click.y()));
+            ScreenMouseEvents.allowMouseScroll(screen).register((s, mouseX, mouseY, horizontalAmount, verticalAmount) ->
+                    !mouseScrolled(mouseX, mouseY, verticalAmount));
+            ScreenEvents.remove(screen).register(s -> reset());
+        });
+    }
 
     public static void open(ItemStack newStack) {
         if (newStack == null || newStack.isEmpty()) return;
@@ -82,7 +113,18 @@ public class ItemComponentsDebugOverlay {
         return dragging || resizing;
     }
 
+    public static boolean openHoveredStack(HandledScreen<?> screen) {
+        Slot slot = ((HandledScreenAccessor) screen).getFocusedSlot();
+        if (slot == null) slot = findSlotAtLastMouse(screen);
+        if (slot == null || !slot.hasStack()) return false;
+
+        open(slot.getStack());
+        return true;
+    }
+
     public static void render(DrawContext context, int mouseX, int mouseY) {
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
         if (!visible) return;
         loadConfig();
         clampToScreen();
@@ -341,6 +383,22 @@ public class ItemComponentsDebugOverlay {
 
     private static int getMaxScroll(int contentH) {
         return Math.max(0, wrappedLines.size() * LINE_HEIGHT - contentH);
+    }
+
+    private static Slot findSlotAtLastMouse(HandledScreen<?> screen) {
+        HandledScreenAccessor accessor = (HandledScreenAccessor) screen;
+        int left = accessor.getX();
+        int top = accessor.getY();
+
+        for (Slot slot : screen.getScreenHandler().slots) {
+            int slotX = left + slot.x;
+            int slotY = top + slot.y;
+            if (lastMouseX >= slotX && lastMouseX < slotX + 16 && lastMouseY >= slotY && lastMouseY < slotY + 16) {
+                return slot;
+            }
+        }
+
+        return null;
     }
 
     private static void drawScrollbar(DrawContext context, int contentY, int contentH, int maxScroll) {

@@ -79,6 +79,7 @@ public class CharacterModelMixin {
 
     private void updateCharacterInfo(String characterId) {
         try {
+            if (!characterId.equals(BankOverlay.currentCharacterID)) return;
             // First try Wynntils local data
             String actualName = Models.Character.getActualName();
             int combatLevel = this.level;
@@ -107,6 +108,7 @@ public class CharacterModelMixin {
 
         String playerName = McUtils.player().getName().getString();
         WynncraftApiHandler.fetchPlayerData(playerName).thenAccept(playerData -> {
+            if (!characterId.equals(BankOverlay.currentCharacterID)) return;
             if (playerData == null) return;
 
             Map<String, CharacterData> characters = playerData.getCharacters();

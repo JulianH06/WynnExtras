@@ -110,22 +110,6 @@ public abstract class HandledScreenMixin {
                 ProfessionOverlay.renderOnScreen(context);
                 ci.cancel();
                 return;
-            } else if (ClassSelectionOverlay.isClassEditScreen(title)) {
-                if (classSelectionOverlay == null || classSelectionOverlay.getMode() != ClassSelectionOverlay.ScreenMode.CLASS_EDIT) {
-                    classSelectionOverlay = new ClassSelectionOverlay(self, ClassSelectionOverlay.ScreenMode.CLASS_EDIT);
-                }
-                classSelectionOverlay.render(context, mouseX, mouseY, delta);
-                ProfessionOverlay.renderOnScreen(context);
-                ci.cancel();
-                return;
-            } else if (ClassSelectionOverlay.isIconEditScreen(title)) {
-                if (classSelectionOverlay == null || classSelectionOverlay.getMode() != ClassSelectionOverlay.ScreenMode.ICON_EDIT) {
-                    classSelectionOverlay = new ClassSelectionOverlay(self, ClassSelectionOverlay.ScreenMode.ICON_EDIT);
-                }
-                classSelectionOverlay.render(context, mouseX, mouseY, delta);
-                ProfessionOverlay.renderOnScreen(context);
-                ci.cancel();
-                return;
             } else {
                 classSelectionOverlay = null;
             }
@@ -570,8 +554,7 @@ public abstract class HandledScreenMixin {
         }
 
         if (keyCode == WynnExtrasConfig.INSTANCE.debugItemComponentsKey) {
-            if (focusedSlot != null && focusedSlot.hasStack()) {
-                ItemComponentsDebugOverlay.open(focusedSlot.getStack());
+            if (ItemComponentsDebugOverlay.openHoveredStack((HandledScreen<?>) (Object) this)) {
                 cir.setReturnValue(true);
                 cir.cancel();
                 return;

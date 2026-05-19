@@ -24,6 +24,8 @@ import java.util.stream.Stream;
 public class CrossClassBankSearch {
     private static final String CHARACTER_BANK_PREFIX = "characterbank_";
     private static final String JSON_SUFFIX = ".json";
+    private static final int ACCOUNT_BANK_MAX_PAGES = 21;
+    private static final int CHARACTER_BANK_MAX_PAGES = 12;
 
     /**
      * Result of a cross-class search
@@ -290,14 +292,11 @@ public class CrossClassBankSearch {
             AccountBankData data = AccountBankData.INSTANCE;
             if (data == null || data.getBankPages() == null) return results;
 
-            for (Map.Entry<Integer, List<ItemStack>> entry : data.getBankPages().entrySet()) {
-                int pageNum = entry.getKey();
-                List<ItemStack> pageItems = entry.getValue();
-                if (pageItems == null || pageItems.isEmpty()) continue;
-                boolean hasItems = pageItems.stream().anyMatch(s -> s != null && !s.isEmpty());
-                if (hasItems) {
-                    results.add(new SearchResult("__account__", "Account Bank", 0, pageNum, pageItems, pageItems));
-                }
+            int pageCount = Math.min(Math.max(data.getLastPage(), data.getBankPages().size()), ACCOUNT_BANK_MAX_PAGES);
+            for (int pageNum = 0; pageNum < pageCount; pageNum++) {
+                List<ItemStack> pageItems = data.getBankPages().get(pageNum);
+                if (pageItems == null) pageItems = Collections.emptyList();
+                results.add(new SearchResult("__account__", "Account Bank", 0, pageNum, pageItems, pageItems));
             }
         } catch (Exception e) {
             WynnExtras.LOGGER.error("[WynnExtras] Error loading account bank pages: " + e.getMessage());
@@ -360,17 +359,11 @@ public class CrossClassBankSearch {
             int level = data.getCharacterLevel();
             WynnExtras.LOGGER.info("[WynnExtras] Character " + characterId + " (" + nickname + " Lv." + level + ") has " + data.getBankPages().size() + " pages");
 
-            for (Map.Entry<Integer, List<ItemStack>> entry : data.getBankPages().entrySet()) {
-                int pageNum = entry.getKey();
-                List<ItemStack> pageItems = entry.getValue();
-
-                if (pageItems == null || pageItems.isEmpty()) continue;
-
-                // Check if page has any non-empty items
-                boolean hasItems = pageItems.stream().anyMatch(s -> s != null && !s.isEmpty());
-                if (hasItems) {
-                    results.add(new SearchResult(characterId, nickname, level, pageNum, pageItems, pageItems));
-                }
+            int pageCount = Math.min(Math.max(data.getLastPage(), data.getBankPages().size()), CHARACTER_BANK_MAX_PAGES);
+            for (int pageNum = 0; pageNum < pageCount; pageNum++) {
+                List<ItemStack> pageItems = data.getBankPages().get(pageNum);
+                if (pageItems == null) pageItems = Collections.emptyList();
+                results.add(new SearchResult(characterId, nickname, level, pageNum, pageItems, pageItems));
             }
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());

@@ -24,10 +24,13 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.text.Text;
 import net.minecraft.util.collection.DefaultedList;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
@@ -35,9 +38,12 @@ import org.lwjgl.glfw.GLFW;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @WEModule
 public class BankOverlay {
+    private static final Pattern CHARACTER_ID_PATTERN = Pattern.compile("^[a-z0-9]{8}$");
+    private static final Pattern MINECRAFT_FORMATTING_CODE_PATTERN = Pattern.compile("§[0-9a-fk-or]");
     public static final DefaultedList<Slot> playerInvSlots = DefaultedList.of();
     public static final DefaultedList<Slot> activeInvSlots = DefaultedList.of();
     private static PersonalStorageUtilitiesFeature personalStorageUtils;
@@ -97,6 +103,48 @@ public class BankOverlay {
         return currentOverlayType == BankOverlayType.CHARACTER && !hasValidCurrentCharacterId();
     }
 
+    public static boolean syncCurrentCharacterIdFromWynntils() {
+        String characterId = getCurrentCharacterIdFromCompass();
+        if (characterId == null) {
+            characterId = Models.Character.getId();
+        }
+        if (characterId == null || characterId.isBlank() || "-".equals(characterId) || "null".equalsIgnoreCase(characterId)) {
+            return false;
+        }
+        if (characterId.equals(currentCharacterID)) {
+            return true;
+        }
+
+        currentCharacterID = characterId;
+        Pages = null;
+        activeInvSlots.clear();
+        annotationCache.clear();
+        CharacterBankData.INSTANCE.load();
+        if (currentOverlayType == BankOverlayType.CHARACTER) {
+            currentData = CharacterBankData.INSTANCE;
+        }
+        WynnExtras.LOGGER.info("[WynnExtras] Synced character bank id from Wynntils: " + characterId);
+        return true;
+    }
+
+    private static String getCurrentCharacterIdFromCompass() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.player == null) return null;
+        ItemStack compass = client.player.getInventory().getStack(7);
+        if (compass == null || compass.isEmpty() || compass.getComponents() == null) return null;
+
+        LoreComponent lore = compass.getComponents().get(DataComponentTypes.LORE);
+        if (lore == null || lore.lines().isEmpty()) return null;
+
+        for (Text line : lore.lines()) {
+            String text = MINECRAFT_FORMATTING_CODE_PATTERN.matcher(line.getString()).replaceAll("").trim();
+            if (CHARACTER_ID_PATTERN.matcher(text).matches()) {
+                return text;
+            }
+        }
+        return null;
+    }
+
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
         if (ClassSelectionOverlay.handleKeyInput(event)) return;
@@ -149,6 +197,7 @@ public class BankOverlay {
             }
             case CharacterBankContainer characterBankContainer -> {
                 BankOverlay.currentOverlayType = BankOverlayType.CHARACTER;
+                BankOverlay.syncCurrentCharacterIdFromWynntils();
                 BankOverlay.currentData = CharacterBankData.INSTANCE;
                 currentMaxPages = 12;
             }
