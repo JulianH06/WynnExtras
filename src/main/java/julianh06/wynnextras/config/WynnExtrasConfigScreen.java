@@ -324,6 +324,8 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.hideAllPlayersInWar, v -> config.hideAllPlayersInWar = v))
                 .add(stringList("Hidden Players", "Always hide these players",
                         () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"))
+                .add(toggle("Arrow Hider", "Hides arrows",
+                        () -> config.arrowHiderToggle, v -> config.arrowHiderToggle = v))
             .add(dropdown("Spell Hider Profile (EXPERIMENTAL)", "The default values for the spell hider, this can be changed at will without changing the overrides set with /Wynnextras SpellHider modify",
                     SpellProfiles.getProfileNames(), () -> config.spellProfile, v -> config.spellProfile = v));
 
