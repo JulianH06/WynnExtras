@@ -36,10 +36,11 @@ public class EncounterOverlay {
             "Thunder", 0xFFFFDD33
     );
 
-    // Latched options per (slot index → option). Preserved across frames while the
-    // encounter screen is open so transient empty-slot packets from the server don't
+    // Latched options keyed by element name so the same element can never appear
+    // twice even if the server briefly moves it to a different slot. Preserved across
+    // frames while the encounter screen is open so transient empty-slot packets don't
     // shrink the visible panel count.
-    private static final java.util.LinkedHashMap<Integer, Option> latchedOptions = new java.util.LinkedHashMap<>();
+    private static final java.util.LinkedHashMap<String, Option> latchedOptions = new java.util.LinkedHashMap<>();
     private static String latchedTitle = null;
     private static Screen latchedScreen = null;
 
@@ -91,7 +92,7 @@ public class EncounterOverlay {
             latchedScreen = screen;
         }
         for (Option o : scanOptionsRaw()) {
-            latchedOptions.put(o.slot(), o);
+            latchedOptions.put(o.element(), o);
         }
         return new ArrayList<>(latchedOptions.values());
     }

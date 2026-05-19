@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.raid;
 
 import com.wynntils.core.components.Models;
+import com.wynntils.models.raid.type.RaidRoomInfo;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.event.RaidEndedEvent;
@@ -34,23 +35,30 @@ public class RaidSessionTracker {
     private static final int LINE_HEIGHT = 11;
 
     private static class Session {
-        long startTime;
+        long startTime = 0;          // 0 until armed (first raid entry)
+        boolean armed = false;
         int raidCount = 0;
         int failCount = 0;
         long lastRaidTime;
         long pausedTime = 0;
         boolean manuallyPaused = false;
         long manualPauseStart = 0;
-        long totalRunTimeMs = 0;
+        long totalRunTimeMs = 0;          // pure challenge time (no intermissions)
+        long totalIntermissionMs = 0;     // raid-internal intermission between rooms
         int timedRunCount = 0;
         String cachedStatsLine = "";
 
-        Session() {
+        Session() {}
+
+        void arm() {
+            if (armed) return;
+            armed = true;
             startTime = System.currentTimeMillis();
             lastRaidTime = startTime;
         }
 
         long getElapsedMs() {
+            if (!armed) return 0;
             long elapsed = System.currentTimeMillis() - startTime - pausedTime;
             if (manuallyPaused) {
                 elapsed -= (System.currentTimeMillis() - manualPauseStart);
@@ -83,6 +91,15 @@ public class RaidSessionTracker {
 
         String buildStatsLine(int index) {
             julianh06.wynnextras.config.WynnExtrasConfig c = julianh06.wynnextras.config.WynnExtrasConfig.INSTANCE;
+            StringBuilder sb = new StringBuilder();
+            if (sessions.size() > 1) sb.append("#").append(index + 1).append(" ");
+
+            if (!armed) {
+                sb.append("Waiting for raid...");
+                if (manuallyPaused) sb.append(" (Paused)");
+                return sb.toString();
+            }
+
             long elapsed = getElapsedMs();
             double hours = elapsed / 3_600_000.0;
             double runsPerHour = hours > 0.001 ? raidCount / hours : 0;
@@ -90,9 +107,6 @@ public class RaidSessionTracker {
             long h = totalMin / 60;
             long m = totalMin % 60;
             String time = h > 0 ? h + "h " + m + "m" : m + "m";
-
-            StringBuilder sb = new StringBuilder();
-            if (sessions.size() > 1) sb.append("#").append(index + 1).append(" ");
 
             if (c.raidSessionShowRuns) {
                 sb.append("Runs: ").append(raidCount);
@@ -113,7 +127,13 @@ public class RaidSessionTracker {
                 long avgMin = avgMs / 60_000;
                 long avgSec = (avgMs % 60_000) / 1000;
                 if (sb.length() > 0 && !sb.toString().endsWith(" ")) sb.append(" | ");
-                sb.append(String.format("avg %d:%02d", avgMin, avgSec));
+                sb.append(String.format("avg: %d:%02d", avgMin, avgSec));
+                if (totalIntermissionMs > 0) {
+                    long intMs = totalIntermissionMs / timedRunCount;
+                    long intMin = intMs / 60_000;
+                    long intSec = (intMs % 60_000) / 1000;
+                    sb.append(String.format(" (interm.: %d:%02d)", intMin, intSec));
+                }
             }
             if (manuallyPaused) sb.append(" (Paused)");
             return sb.toString();
@@ -132,10 +152,15 @@ public class RaidSessionTracker {
     }
 
     public static void startNewSession() {
-        sessions.add(new Session());
+        Session s = new Session();
+        try {
+            if (Models.Raid.getCurrentRaid() != null) s.arm();
+        } catch (Exception ignored) {}
+        sessions.add(s);
         if (McUtils.player() != null) {
-            McUtils.sendMessageToClient(Text.literal(
-                    "§e[Session] §fNew session started" + (sessions.size() > 1 ? " (#" + sessions.size() + ")" : "")));
+            String suffix = sessions.size() > 1 ? " (#" + sessions.size() + ")" : "";
+            String state = s.armed ? "started" : "armed — starts on first raid entry";
+            McUtils.sendMessageToClient(Text.literal("§e[Session] §fNew session " + state + suffix));
         }
     }
 
@@ -155,17 +180,34 @@ public class RaidSessionTracker {
         if (event.getRaid() == null) return;
         long runMs = event.getRaid().getTimeInRaid();
         if (runMs <= 0) return;
-        for (Session s : sessions) {
-            if (!s.manuallyPaused) {
-                s.totalRunTimeMs += runMs;
-                s.timedRunCount++;
+
+        // Split into pure challenge time vs intermissions between rooms.
+        long challengeSum = 0;
+        try {
+            var challenges = event.getRaid().getChallenges();
+            if (challenges != null) {
+                for (RaidRoomInfo room : challenges.values()) {
+                    if (room == null) continue;
+                    long t = room.getRoomTotalTime();
+                    if (t > 0) challengeSum += t;
+                }
             }
+        } catch (Exception ignored) {}
+        long pureRunMs = challengeSum > 0 ? challengeSum : runMs;
+        long intermissionMs = challengeSum > 0 ? Math.max(0, runMs - challengeSum) : 0;
+
+        for (Session s : sessions) {
+            if (!s.armed || s.manuallyPaused) continue;
+            s.totalRunTimeMs += pureRunMs;
+            s.totalIntermissionMs += intermissionMs;
+            s.timedRunCount++;
         }
     }
 
     public static String getStatsString() {
         Session s = primarySession();
         if (s == null) return null;
+        if (!s.armed) return "Session armed — waiting for first raid";
         long elapsed = s.getElapsedMs();
         double hours = elapsed / 3_600_000.0;
         double runsPerHour = hours > 0.001 ? s.raidCount / hours : 0;
@@ -176,6 +218,12 @@ public class RaidSessionTracker {
             long avgMin = avgMs / 60_000;
             long avgSec = (avgMs % 60_000) / 1000;
             base += String.format(" | Avg: %d:%02d", avgMin, avgSec);
+            if (s.totalIntermissionMs > 0) {
+                long intMs = s.totalIntermissionMs / s.timedRunCount;
+                long intMin = intMs / 60_000;
+                long intSec = (intMs % 60_000) / 1000;
+                base += String.format(" (interm.: %d:%02d)", intMin, intSec);
+            }
         }
         return base;
     }
@@ -189,6 +237,7 @@ public class RaidSessionTracker {
             if (raw.contains("Raid Completed!") && !raw.contains(":")) {
                 lastRaidCompleted = true;
                 for (Session s : sessions) {
+                    if (!s.armed) continue;
                     if (!s.manuallyPaused) s.unpause();
                     s.raidCount++;
                     s.lastRaidTime = System.currentTimeMillis();
@@ -197,6 +246,7 @@ public class RaidSessionTracker {
             if (raw.contains("Raid Failed!") && !raw.contains(":")) {
                 lastRaidCompleted = false;
                 for (Session s : sessions) {
+                    if (!s.armed) continue;
                     if (!s.manuallyPaused) s.unpause();
                     s.failCount++;
                     s.lastRaidTime = System.currentTimeMillis();
@@ -221,11 +271,12 @@ public class RaidSessionTracker {
             try {
                 boolean inRaid = Models.Raid.getCurrentRaid() != null;
                 if (inRaid && !wasInRaid) {
-                    for (Session s : sessions) {
-                        if (!s.manuallyPaused) s.unpause();
-                    }
                     if (sessions.isEmpty()) {
-                        startNewSession();
+                        startNewSession(); // arms itself because getCurrentRaid() != null
+                    }
+                    for (Session s : sessions) {
+                        if (!s.armed) s.arm();
+                        else if (!s.manuallyPaused) s.unpause();
                     }
                 }
                 wasInRaid = inRaid;
