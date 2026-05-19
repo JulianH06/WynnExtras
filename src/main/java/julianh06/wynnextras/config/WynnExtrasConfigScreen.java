@@ -323,7 +323,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
                 .add(toggle("Fast Requeue", "Auto /pf on chest close",
                         () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
-                .add(toggle("Block Guild Raid (Shift to allow)", "Blocks clicks on 'Guild Raid Available' in party finder unless SHIFT is held",
+                .add(toggle("Block GRaid toggle (Shift to bypass)", "Blocks clicks on 'Guild Raid Available' in party finder unless SHIFT is held to prevent accidentally toggling graids",
                         () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
                 .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
                         () -> config.chiropTimer, v -> config.chiropTimer = v))
@@ -337,7 +337,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
         // ===== COMBAT =====
         category("Combat", 0xFFfda216)
-                .sub("Shaman Totem Timer")
+            .sub("Shaman Totem Timer")
                 .add(toggle("Totem Timer", "Show totem countdown timer on HUD",
                         () -> config.totemTimerEnabled, v -> config.totemTimerEnabled = v))
                 .add(visibleWhen(toggle("Own Totems Only", "Only show timers for your own totems",

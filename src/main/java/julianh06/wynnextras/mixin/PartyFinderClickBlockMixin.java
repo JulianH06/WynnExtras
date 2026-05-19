@@ -12,18 +12,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Cancels guild-raid slot clicks in the Party Finder unless the user holds Shift.
- *
- * Has to mixin {@link HandledScreen#onMouseClick(Slot, int, int, SlotActionType)} —
- * NOT {@link net.minecraft.screen.ScreenHandler#onSlotClick} — because clickSlot fires
- * the network packet BEFORE the local onSlotClick runs. Cancelling onSlotClick stops
- * local prediction only; the server still toggles the queue. onMouseClick is upstream
- * of both the packet send and the predict, so cancelling here actually prevents the toggle.
- */
 @Mixin(HandledScreen.class)
 public class PartyFinderClickBlockMixin {
-
     private static final String PARTY_FINDER_TITLE = "\uDAFF\uDFE1\uE00C";
 
     @Inject(method = "onMouseClick(Lnet/minecraft/screen/slot/Slot;IILnet/minecraft/screen/slot/SlotActionType;)V",

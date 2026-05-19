@@ -1,7 +1,9 @@
 package julianh06.wynnextras.features.misc;
 
+import com.wynntils.utils.mc.McUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.sound.SoundEvents;
 
 public class GuildRaidBlockOverlay {
     private static final long DURATION_MS = 2000;
@@ -9,6 +11,7 @@ public class GuildRaidBlockOverlay {
 
     public static void trigger() {
         shownUntil = System.currentTimeMillis() + DURATION_MS;
+        McUtils.playSoundUI(SoundEvents.ENTITY_VILLAGER_NO);
     }
 
     public static void render(DrawContext ctx) {
@@ -21,16 +24,20 @@ public class GuildRaidBlockOverlay {
         int w = mc.getWindow().getScaledWidth();
         int h = mc.getWindow().getScaledHeight();
 
-        String line1 = "§cBlocked by WynnExtras";
-        String line2 = "§7Hold §eSHIFT §7to toggle";
+        String line1 = "§cClick blocked by WynnExtras";
+        String line2 = "§cto prevent accidentally toggling graid";
+        String line3 = "§7Hold §eSHIFT §7to bypass";
+        String line4 = "§7Or disable §f\"Block GRaid toggle\" §7in the config";
 
         int w1 = mc.textRenderer.getWidth(line1);
         int w2 = mc.textRenderer.getWidth(line2);
-        int maxW = Math.max(w1, w2);
+        int w3 = mc.textRenderer.getWidth(line3);
+        int w4 = mc.textRenderer.getWidth(line4);
+        int maxW = Math.max(Math.max(w1, w2), Math.max(w3, w4));
         int boxW = maxW + 16;
-        int boxH = 28;
+        int boxH = 53;
         int bx = w / 2 - boxW / 2;
-        int by = h / 8;
+        int by = 10;
 
         // Fade out in last 400ms
         long remaining = shownUntil - now;
@@ -46,5 +53,7 @@ public class GuildRaidBlockOverlay {
 
         ctx.drawCenteredTextWithShadow(mc.textRenderer, line1, w / 2, by + 5, 0xFFFFFFFF);
         ctx.drawCenteredTextWithShadow(mc.textRenderer, line2, w / 2, by + 16, 0xFFFFFFFF);
+        ctx.drawCenteredTextWithShadow(mc.textRenderer, line3, w / 2, by + 27, 0xFFFFFFFF);
+        ctx.drawCenteredTextWithShadow(mc.textRenderer, line4, w / 2, by + 38, 0xFFFFFFFF);
     }
 }

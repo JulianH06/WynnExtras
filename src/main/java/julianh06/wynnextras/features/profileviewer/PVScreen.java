@@ -58,7 +58,7 @@ public class PVScreen extends WEScreen {
     public static List<CharacterButton> characterButtons = new ArrayList<>();
 
     public static List<String> WETeam = List.of("JulianH06", "Teslanator", "pat_crafter07");
-    public static List<String> WEContributors = List.of("Mikecraft1224", "elwood24", "LegendaryVirus", "BaltrazYT", "LookingForSleep", "SidOfThe7Cs", "drzxm", "theoplegends", "Tabytac");
+    public static List<String> WEContributors = List.of("Mikecraft1224", "elwood24", "LegendaryVirus", "BaltrazYT", "LookingForSleep", "SidOfThe7Cs", "drzxm", "theoplegends", "Tabytac", "Zatzou");
 
     static Identifier tabLeft = Identifier.of("wynnextras", "textures/gui/profileviewer/tableft.png");
     static Identifier tabMid = Identifier.of("wynnextras", "textures/gui/profileviewer/tabmid.png");

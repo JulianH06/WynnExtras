@@ -169,7 +169,7 @@ public class WynnExtrasConfig {
     public boolean toggleFastRequeue = false;
     public boolean quickRepairEnabled = true;
     public int quickRepairKey = org.lwjgl.glfw.GLFW.GLFW_KEY_R;
-    public boolean shiftDisableGuildRaid = false;
+    public boolean shiftDisableGuildRaid = true;
 
     public boolean autoStreamEnabled = false;
     public boolean autoSkipDialogueEnabled = false;
