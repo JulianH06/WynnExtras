@@ -264,7 +264,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(toggle("Passive aspect scanning", "Scan your aspects passively without bothering you",
                         () -> config.passiveAspectScanning, v -> config.passiveAspectScanning = v),
                         () -> !config.automaticAspectScanning))
-                .add(toggle("Encounter Selection overlay (Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
+                .add(toggle("Encounter Selection overlay (Very Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
                         () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v));
 
         // ===== COMBAT =====
@@ -432,20 +432,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
                 .add(text("The price summary is movable", "To change its position just drag it where you want"))
             .endSub()
-                .add(toggle("Skill point helper (experimental)", "Show you your armor in the compass menu and a button to automatically assign skill points",
-                        () -> config.skillpointHelper, v -> config.skillpointHelper = v))
-            .sub("Crafting")
-                .add(toggle("Crafting helper", "Crafting Helper toggle",
-                        () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
-                .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
-                        () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
-                .add(toggle("Crafting preview", "Crafting preview toggle",
-                        () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
-                .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
-                        () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
-                .add(text("The preview is movable", "To change its position just drag it where you want"))
-                .add(toggle("Show Mount Helper", "Renders the needed materials to max out a mounts stats in the feeder",
-                        () -> config.showMountHelper, v -> config.showMountHelper = v));
+            .add(toggle("Skill point helper (experimental)", "Show you your armor in the compass menu and a button to automatically assign skill points",
+                    () -> config.skillpointHelper, v -> config.skillpointHelper = v))
+            .add(toggle("Show Mount Helper", "Renders the needed materials to max out a mounts stats in the feeder",
+                    () -> config.showMountHelper, v -> config.showMountHelper = v));
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)
@@ -606,8 +596,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
         // ===== NEW =====
         category("New", 0xFF00bad5)
-            .excludeFromSearch()
-            .add(text("", "All features added in this update. Toggle any of them on or off."))
+        .excludeFromSearch()
+        .add(text("", "All features added in this update. Toggle any of them on or off."))
             .sub("Wars")
                 .add(toggle("Weekly War Count", "Show number of wars in last 7 days on HUD",
                         () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
@@ -669,7 +659,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.raidSessionEnabled, v -> config.raidSessionEnabled = v))
                 .add(toggle("Block GRaid toggle (Shift to bypass)", "Blocks clicks on 'Guild Raid Available' in party finder unless SHIFT is held to prevent accidentally toggling graids",
                         () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
-                .add(toggle("Encounter Selection overlay (Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
+                .add(toggle("Encounter Selection overlay (Very Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
                         () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v))
             .sub("Class Selection")
                 .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
@@ -712,7 +702,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.quickRepairEnabled))
             .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
                     () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))
-            .add(text("", "Full configuration for each feature lives in its own category (Raiding, Chat, Misc, etc.)."));
+            .add(toggle("Arrow Hider", "Hides arrows",
+                    () -> config.arrowHiderToggle, v -> config.arrowHiderToggle = v))
+            .add(toggle("Show Mount Helper", "Renders the needed materials to max out a mounts stats in the feeder",
+                    () -> config.showMountHelper, v -> config.showMountHelper = v))
+            .add(text("", "Full configuration for each feature is in its own category (Raiding, Chat, Misc, etc.)."));
     }
 
     // ==================== BUILDER HELPERS ====================
