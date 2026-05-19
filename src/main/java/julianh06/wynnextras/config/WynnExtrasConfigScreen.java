@@ -653,7 +653,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Raiding")
                 .add(toggle("Raid Session Tracker (more options in the raiding tab)", "HUD showing raid completion/failure counts and avg time",
                         () -> config.raidSessionEnabled, v -> config.raidSessionEnabled = v))
-                .add(toggle("Shift-toggle Guild Raid", "Block Guild Raid clicks by default, hold SHIFT to allow them through",
+                .add(toggle("Block GRaid toggle (Shift to bypass)", "Blocks clicks on 'Guild Raid Available' in party finder unless SHIFT is held to prevent accidentally toggling graids",
                         () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
                 .add(toggle("Encounter Selection overlay (Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
                         () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v))
