@@ -154,6 +154,7 @@ public class WynnExtrasConfig {
     public boolean differentGUIScale = false;
     public boolean showLootpoolButtonInPartyFinder = true;
     public boolean redirectWynntilsViewStatsToPV = false;
+    public boolean arrowHiderToggle = false;
 
     public boolean showOwnNametag = false;
     // The code for this is in LivingEntityRendererMixin

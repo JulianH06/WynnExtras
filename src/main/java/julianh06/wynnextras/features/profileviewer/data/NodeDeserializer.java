@@ -12,6 +12,10 @@ public class NodeDeserializer implements JsonDeserializer<AbilityMapData.Node> {
         AbilityMapData.Node node = new AbilityMapData.Node();
 
         node.type = getAsStringOrNull(obj, "type");
+        if (obj.has("unlocked") && obj.get("unlocked").isJsonPrimitive()) {
+            node.unlocked = obj.get("unlocked").getAsBoolean();
+        }
+
         if (obj.has("coordinates") && obj.get("coordinates").isJsonObject()) {
             node.coordinates = ctx.deserialize(obj.get("coordinates"), AbilityMapData.Coordinates.class);
         }

@@ -12,6 +12,7 @@
   "client": [
     "ChatClickMixin",
     "ClientPacketListenerMixin",
+    "EntityRenderMixin",
     "GameRendererMixin",
     "GuildMapScreenMixin",
     "InventoryScreenMixin",
