@@ -138,6 +138,7 @@ public class WynnExtrasConfig {
     public int tradeMarketOverlayX = 10;
     public int tradeMarketOverlayY = 10;
     public boolean tradeMarketOverlayBackground = true;
+    public boolean showMountHelper = true;
 
     // ==================== RAID ====================
     public boolean toggleRaidTimestamps = true;
@@ -223,6 +224,7 @@ public class WynnExtrasConfig {
     public boolean differentGUIScale = false;
     public boolean showLootpoolButtonInPartyFinder = true;
     public boolean redirectWynntilsViewStatsToPV = false;
+    public boolean arrowHiderToggle = false;
 
     public boolean showOwnNametag = false;
     // The code for this is in LivingEntityRendererMixin

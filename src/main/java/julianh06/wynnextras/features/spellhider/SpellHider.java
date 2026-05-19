@@ -5,6 +5,7 @@ import com.google.gson.*;
 import com.wynntils.mc.extension.EntityExtension;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.event.InitEvent;
 import julianh06.wynnextras.event.SetEntityDataEvent;
 import julianh06.wynnextras.utils.EntityUtils;
 import julianh06.wynnextras.utils.ItemUtils;
@@ -208,6 +209,11 @@ public class SpellHider {
                 ((EntityExtension) entity).setRendered(false);
             }
         }
+    }
+
+    @SubscribeEvent
+    public void init(InitEvent event) {
+        loadModifiers();
     }
 
     public static int hashNativeImage(NativeImage image) {

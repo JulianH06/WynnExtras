@@ -25,6 +25,7 @@ import julianh06.wynnextras.features.misc.IdentifierOverlay;
 import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.misc.QuickRepair;
+import julianh06.wynnextras.features.mount.MountOverlay;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -117,6 +118,7 @@ public abstract class HandledScreenMixin {
             classSelectionOverlay = null;
         }
 
+        MountOverlay.render(context, mouseX, mouseY);
         // Only create BankOverlay2 for bank-type containers to avoid expensive
         // initialization on every GUI open
         if (isBankScreen == null) {

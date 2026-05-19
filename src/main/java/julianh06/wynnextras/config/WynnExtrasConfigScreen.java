@@ -433,7 +433,19 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(text("The price summary is movable", "To change its position just drag it where you want"))
             .endSub()
                 .add(toggle("Skill point helper (experimental)", "Show you your armor in the compass menu and a button to automatically assign skill points",
-                        () -> config.skillpointHelper, v -> config.skillpointHelper = v));
+                        () -> config.skillpointHelper, v -> config.skillpointHelper = v))
+            .sub("Crafting")
+                .add(toggle("Crafting helper", "Crafting Helper toggle",
+                        () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
+                .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
+                        () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
+                .add(toggle("Crafting preview", "Crafting preview toggle",
+                        () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
+                .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
+                        () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
+                .add(text("The preview is movable", "To change its position just drag it where you want"))
+                .add(toggle("Show Mount Helper", "Renders the needed materials to max out a mounts stats in the feeder",
+                        () -> config.showMountHelper, v -> config.showMountHelper = v));
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)
@@ -519,6 +531,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.hideAllPlayersInWar, v -> config.hideAllPlayersInWar = v))
                 .add(stringList("Hidden Players", "Always hide these players",
                         () -> config.hiddenPlayers, v -> config.hiddenPlayers = v, "Players"))
+                .add(toggle("Arrow Hider", "Hides arrows",
+                        () -> config.arrowHiderToggle, v -> config.arrowHiderToggle = v))
             .add(dropdown("Spell Hider Profile (EXPERIMENTAL)", "The default values for the spell hider, this can be changed at will without changing the overrides set with /Wynnextras SpellHider modify",
                     SpellProfiles.getProfileNames(), () -> config.spellProfile, v -> config.spellProfile = v));
 
@@ -809,7 +823,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
     }
 
     private static DescLine line(String text) { return DescLine.of(text); }
-    
+
     private static DescLine emptyLine() { return DescLine.of(" "); }
 
     private static DescLine emptyLine(float scale) { return DescLine.of(" ").scale(scale); }
