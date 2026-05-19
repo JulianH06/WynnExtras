@@ -23,7 +23,7 @@ public class PartyFinderOpenLootpoolOverlay extends WEHandledScreen {
 
         //" \uDAFF\uDFE4\uE03F"
         //" \uDAFF\uDFE1\uE00C" NOTG
-        //System.out.println(MinecraftClient.getInstance().currentScreen.getTitle().getString());
+        //WynnExtras.LOGGER.info(MinecraftClient.getInstance().currentScreen.getTitle().getString());
 
         if(lootPoolOpenButton == null) {
             lootPoolOpenButton = new LootPoolOpenButton(0, 0, 0, 0);
@@ -51,7 +51,7 @@ public class PartyFinderOpenLootpoolOverlay extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("View Weekly Lootpools", x + width / 2f, y + height / 2f);
         }
 

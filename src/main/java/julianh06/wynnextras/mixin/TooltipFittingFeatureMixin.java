@@ -23,14 +23,15 @@ public class TooltipFittingFeatureMixin {
             )
     )
     private List<TooltipComponent> redirectGetClientTooltipComponent(List<Text> components) {
-        if (!WynnExtrasConfig.INSTANCE.showWeight || WeightDisplay.currentHoveredStack == null)
+        var currentHoveredStack = WeightDisplay.getCurrentHoveredStack();
+        if (!WynnExtrasConfig.INSTANCE.showWeight || currentHoveredStack == null)
             return TooltipUtils.getClientTooltipComponent(components);
 
-        if (!WeightDisplay.isTrackedMythic(WeightDisplay.currentHoveredStack))
+        if (!WeightDisplay.isTrackedMythic(currentHoveredStack))
             return TooltipUtils.getClientTooltipComponent(components);
 
-        String cleanName = WeightDisplay.extractCleanName(WeightDisplay.currentHoveredStack);
-        WeightDisplay.ItemData scaleData = WeightDisplay.weightCacheByHash.get(WeightDisplay.currentHoveredStack.getComponents().hashCode());
+        String cleanName = WeightDisplay.extractCleanName(currentHoveredStack);
+        WeightDisplay.ItemData scaleData = WeightDisplay.weightCacheByHash.get(currentHoveredStack.getComponents().hashCode());
         WeightDisplay.ItemData itemData = WeightDisplay.itemCache.get(cleanName);
         if (scaleData == null || scaleData.data().isEmpty() || itemData == null) return TooltipUtils.getClientTooltipComponent(components);
 

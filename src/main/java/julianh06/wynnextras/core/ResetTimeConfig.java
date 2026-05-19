@@ -32,8 +32,8 @@ public class ResetTimeConfig {
     private int gambitMinute;
     private String gambitTimezone;
 
-    private boolean fetched = false;
-    private boolean fetching = false;
+    private volatile boolean fetched = false;
+    private volatile boolean fetching = false;
 
     public ResetTimeConfig() {
         resetToFallbackDefaults();
@@ -59,8 +59,13 @@ public class ResetTimeConfig {
 
                 return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .handle((response, ex) -> {
+                        if (ex != null || response == null) {
+                            WynnExtras.LOGGER.error("[WynnExtras] Failed to fetch reset times: " + (ex != null ? ex.getMessage() : "null response"));
+                            fetching = false;
+                            return null;
+                        }
                         if (response.statusCode() != 200) {
-                            System.err.println("[WynnExtras] Failed to fetch reset times, Invalid status: " + response.statusCode());
+                            WynnExtras.LOGGER.error("[WynnExtras] Failed to fetch reset times, Invalid status: " + response.statusCode());
                             fetching = false;
                             return null;
                         }
@@ -86,11 +91,11 @@ public class ResetTimeConfig {
 
                         fetched = true;
                         fetching = false;
-                        System.out.println("[WynnExtras] Successfully fetched reset times");
+                        WynnExtras.LOGGER.info("[WynnExtras] Successfully fetched reset times");
                         return null;
                     });
             } catch (Exception e) {
-                System.err.println("[WynnExtras] Failed to fetch reset times, using defaults: " + e.getMessage());
+                WynnExtras.LOGGER.error("[WynnExtras] Failed to fetch reset times, using defaults: " + e.getMessage());
             }
             fetching = false;
             return null;

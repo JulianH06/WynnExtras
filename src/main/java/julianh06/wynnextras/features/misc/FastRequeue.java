@@ -8,12 +8,11 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
 
 public class FastRequeue {
     static boolean inRaidChest = false;
+    private static boolean waitingForQueue = false;
 
     public static void registerFastRequeue() {
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
@@ -28,6 +27,22 @@ public class FastRequeue {
 
             String InventoryTitle = currScreen.getTitle().getString();
             inRaidChest = InventoryTitle.equals("\uDAFF\uDFEA\uE00E");
+
+            // Handle queue click in the same listener instead of registering new ones
+            if (waitingForQueue) {
+                if (McUtils.player() == null || client.currentScreen == null) return;
+
+                ScreenHandler menu = McUtils.containerMenu();
+                if (menu == null || menu.slots.size() < 50) return;
+
+                Slot slot = menu.getSlot(49);
+                if (slot == null || slot.getStack() == null || slot.getStack().getCustomName() == null) return;
+
+                if (slot.getStack().getCustomName().getString().contains("Queue")) {
+                    clickOnSlot(49, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+                    waitingForQueue = false;
+                }
+            }
         });
     }
 
@@ -39,29 +54,7 @@ public class FastRequeue {
             ScreenHandler currScreenHandler = McUtils.containerMenu();
             if(currScreenHandler == null) { return; }
             McUtils.sendChat("/partyfinder");
-
-            //atomicboolean instead of normal because it can be final (needed for lambda) while still being able to be changed
-            final AtomicBoolean opened = new AtomicBoolean(false);
-            ClientTickEvents.END_CLIENT_TICK.register(clientt -> {
-                if(opened.get()) return;
-                if(McUtils.player() == null) { return; }
-                if(clientt.currentScreen == null) { return; }
-
-                ScreenHandler menu = McUtils.containerMenu();
-                if(menu == null) return;
-                if(menu.slots.size() < 50) return;
-
-                Slot slot = menu.getSlot(49);
-
-                if(slot == null) return;
-                if(slot.getStack() == null) return;
-                if(slot.getStack().getCustomName() == null) return;
-                if(slot.getStack().getCustomName().getString().contains("Queue")) {
-                    clickOnSlot(49, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
-                    opened.set(true);
-                }
-            });
+            waitingForQueue = true;
         }
     }
 }
-

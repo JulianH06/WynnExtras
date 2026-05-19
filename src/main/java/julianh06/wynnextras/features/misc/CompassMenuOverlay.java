@@ -18,7 +18,7 @@ import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.loader.SkillPointLoader;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
-import julianh06.wynnextras.utils.UI.WEHandledScreen;
+import julianh06.wynnextras.utils.UI.WEMenuExtension;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Optional;
 
 
-public class CompassMenuOverlay extends WEHandledScreen {
+public class CompassMenuOverlay extends WEMenuExtension {
     AutoAssignButton autoAssignButton;
     List<ItemWidget> itemWidgets = new ArrayList<>();
     static ItemStack hoveredItem = Items.AIR.getDefaultStack();
@@ -90,24 +90,24 @@ public class CompassMenuOverlay extends WEHandledScreen {
         if(!(Models.Container.getCurrentContainer() instanceof CharacterInfoContainer)) return;
         if(!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
 
-        float xStart = (int) (((HandledScreenAccessor) screen).getX() * ui.getScaleFactor());
-        float yStart = (int) ((((HandledScreenAccessor) screen).getY() + ((HandledScreenAccessor) screen).getBackgroundHeight()) * ui.getScaleFactor());
-        float backgroundWidth = ((HandledScreenAccessor) screen).getBackgroundWidth() * ui.getScaleFactorF();
+        float xStart = hsX(screen);
+        float yStart = hsY(screen) + hsHeight(screen);
+        float backgroundWidth = hsWidth(screen);
+        int buttonWidth = 133;
 
-
-        int itemWidth = 50;
+        int itemWidth = 17;
         int itemHeight = itemWidth;
-        float itemXStart = xStart + 23;
-        float itemYStart = yStart + 60;
+        float itemXStart = xStart + 8;
+        float itemYStart = yStart + 20;
 
-        autoAssignButton.setBounds((int) (xStart - 200 + backgroundWidth / 2f), (int) (itemYStart + (65 / 3f) * ui.getScaleFactor()), 400, 50);
+        autoAssignButton.setBounds((int) (xStart + (backgroundWidth - buttonWidth) / 2f), (int) (itemYStart + 22), buttonWidth, 17);
 
-        ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("§6Skillpoint helper:"), xStart + backgroundWidth / 2f, yStart + 25, CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF());
-        ui.drawCenteredText(Text.of("§7This is an experimental feature, new items"), xStart + backgroundWidth / 2f, (float) (itemYStart + ((selectingWeapon ? 170 : 130) / 3f) * ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF() / 1.5f);
-        ui.drawCenteredText(Text.of("§7and crafteds might not be recognized yet"), xStart + backgroundWidth / 2f, (float) (itemYStart + ((selectingWeapon ? 190 : 150) / 3f) * ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF() / 1.5f);
-        if(selectingWeapon) ui.drawCenteredText(Text.of("§eClick on a weapon if you want to include it in the calculation."), xStart + backgroundWidth / 2f, (float) (itemYStart + (140 / 3f) * ui.getScaleFactor()), CustomColor.fromHexString("FFFFFF"), ui.getScaleFactorF() / 1.25f);
+        ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("§6Skillpoint helper:"), xStart + backgroundWidth / 2f, yStart + 8, CustomColor.fromHexString("FFFFFF"), 1f);
+        ui.drawCenteredText(Text.of("§7This is an experimental feature, new items"), xStart + backgroundWidth / 2f, (float) (itemYStart + (selectingWeapon ? 57 : 43)), CustomColor.fromHexString("FFFFFF"), 0.67f);
+        ui.drawCenteredText(Text.of("§7and crafteds might not be recognized yet"), xStart + backgroundWidth / 2f, (float) (itemYStart + (selectingWeapon ? 63 : 50)), CustomColor.fromHexString("FFFFFF"), 0.67f);
+        if(selectingWeapon) ui.drawCenteredText(Text.of("§eClick on a weapon if you want to include it in the calculation."), xStart + backgroundWidth / 2f, (float) (itemYStart + 47), CustomColor.fromHexString("FFFFFF"), 0.8f);
 
-        backgroundWidth -= 97;
+        backgroundWidth -= 32;
         for(int i = 0; i < 4; i++) {
             ItemStack item = McUtils.player().getEquippedStack(EquipmentSlot.FROM_INDEX.apply(4 - i));
             itemWidgets.get(i).setBounds((int) (itemXStart + i * backgroundWidth / 3f), (int) itemYStart, itemWidth, itemHeight);
@@ -180,11 +180,11 @@ public class CompassMenuOverlay extends WEHandledScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(!(Models.Container.getCurrentContainer() instanceof CharacterInfoContainer)) return;
-            ui.drawButton(x, y, width, height, 13, hovered);
+            ui.drawButton(x, y, width, height, hovered);
             if (selectingWeapon) {
-                ui.drawCenteredText("Skip weapon selection", x + width / 2f, y + height / 2f);
+                ui.drawCenteredText("Skip weapon selection", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 1f);
             } else {
-                ui.drawCenteredText("Auto assign skill points", x + width / 2f, y + height / 2f);
+                ui.drawCenteredText("Auto assign skill points", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 1f);
             }
         }
 
@@ -331,14 +331,14 @@ public class CompassMenuOverlay extends WEHandledScreen {
 
     private static void logBestOrder(List<SolvableItem> order, SolvableItem weapon, int[] assigned) {
         String[] skillNames = {"STR", "DEX", "INT", "DEF", "AGI"};
-        System.out.println("[WE-BEST] === Best order found ===");
+        WynnExtras.LOGGER.info("[WE-BEST] === Best order found ===");
         for (SolvableItem si : order) {
-            System.out.println("[WE-BEST]   " + si.name
+            WynnExtras.LOGGER.info("[WE-BEST]   " + si.name
                     + " reqs=" + Arrays.toString(si.reqs)
                     + " bonuses=" + Arrays.toString(si.bonuses));
         }
-        if (weapon != null) System.out.println("[WE-BEST]   WEAPON " + weapon.name);
-        System.out.println("[WE-BEST]   result=" + Arrays.toString(assigned)
+        if (weapon != null) WynnExtras.LOGGER.info("[WE-BEST]   WEAPON " + weapon.name);
+        WynnExtras.LOGGER.info("[WE-BEST]   result=" + Arrays.toString(assigned)
                 + " total=" + (assigned[0]+assigned[1]+assigned[2]+assigned[3]+assigned[4]));
     }
 
@@ -410,13 +410,13 @@ public class CompassMenuOverlay extends WEHandledScreen {
         } else if (wynnItem instanceof CraftedGearItem craftedItem) {
             if (craftedItem.getRequirements() == null) return null;
 
-            System.out.println("[WE-CRAFT] class=" + craftedItem.getClass().getName());
+            WynnExtras.LOGGER.info("[WE-CRAFT] class=" + craftedItem.getClass().getName());
             for (var method : craftedItem.getClass().getMethods()) {
                 if (method.getName().toLowerCase().contains("req") ||
                         method.getName().toLowerCase().contains("skill") ||
                         method.getName().toLowerCase().contains("stat") ||
                         method.getName().toLowerCase().contains("info")) {
-                    System.out.println("[WE-CRAFT] method: " + method.getName()
+                    WynnExtras.LOGGER.info("[WE-CRAFT] method: " + method.getName()
                             + " → " + method.getReturnType().getSimpleName());
                 }
             }

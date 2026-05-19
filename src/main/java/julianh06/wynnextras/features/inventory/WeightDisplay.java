@@ -33,14 +33,35 @@ public class WeightDisplay {
     public record WeightData(String weightName, Map<String, Float> identifications, Float score) {}
     public record ItemData(String name, List<WeightData> data, int index) {}
 
-    public static Map<String, ItemData> itemCache = new ConcurrentHashMap<>();
+    public static final Map<String, ItemData> itemCache = new ConcurrentHashMap<>();
     public static final Map<Integer, ItemData> weightCacheByHash = new ConcurrentHashMap<>();
     public static final Map<String, Map<String, float[]>> itemStatRanges = new ConcurrentHashMap<>();
     public static final Map<Integer, Map<String, Float>> tooltipIdentCache = new ConcurrentHashMap<>();
 
-    public static boolean upPressed = false;
-    public static boolean downPressed = false;
-    public static ItemStack currentHoveredStack = null;
+    private static boolean upPressed = false;
+    private static boolean downPressed = false;
+    private static ItemStack currentHoveredStack = null;
+
+    public static boolean isUpPressed() {
+        return upPressed;
+    }
+
+    public static boolean isDownPressed() {
+        return downPressed;
+    }
+
+    public static void clearCycleInput() {
+        upPressed = false;
+        downPressed = false;
+    }
+
+    public static ItemStack getCurrentHoveredStack() {
+        return currentHoveredStack;
+    }
+
+    public static void setCurrentHoveredStack(ItemStack stack) {
+        currentHoveredStack = stack;
+    }
 
     public WeightDisplay() {
          ItemTooltipCallback.EVENT.register((stack, tooltipContext, tooltipType, lines) -> {
@@ -185,16 +206,16 @@ public class WeightDisplay {
 
     public static void populateStatRangesFromDatabase() {
         int retries = 30;
-        while (WynncraftApiHandler.cachedItemDatabase == null && retries-- > 0) {
+        while (WynncraftApiHandler.getCachedItemDatabase() == null && retries-- > 0) {
             // sleep shouldnt cause any problems here cause this function is only called asynchronously
             try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
         }
-        if (WynncraftApiHandler.cachedItemDatabase == null) {
+        if (WynncraftApiHandler.getCachedItemDatabase() == null) {
             return;
         }
 
         for (String itemName : itemCache.keySet()) {
-            com.google.gson.JsonObject itemJson = WynncraftApiHandler.cachedItemDatabase.get(itemName);
+            com.google.gson.JsonObject itemJson = WynncraftApiHandler.getCachedItemDatabase().get(itemName);
             if (itemJson == null || !itemJson.has("identifications")) continue;
 
             com.google.gson.JsonObject ids = itemJson.getAsJsonObject("identifications");

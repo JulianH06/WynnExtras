@@ -97,6 +97,7 @@ public class CraftingResultPreviewer {
             currentHeight = height;
         }
 
+        if (McUtils.player() == null) return;
         DefaultedList<ItemStack> stacks = McUtils.containerMenu().getStacks();
         if (stacks.equals(CraftingResultPreviewer.stacks))
             return; // probably a slot changed even but i dont wanna find it
@@ -211,6 +212,10 @@ public class CraftingResultPreviewer {
             dragOffsetY = (int) mouseY - yPos;
         }
 
+    }
+
+    public static boolean isDragging() {
+        return isDragging;
     }
 
     public static void handleMouseMove(double mouseX, double mouseY) {

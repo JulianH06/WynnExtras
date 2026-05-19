@@ -34,7 +34,7 @@ public class BadgeRenderer {
         // Iterate through all players in the world
         for (PlayerEntity player : mc.world.getPlayers()) {
             if (player == null) continue;
-            if (player == localPlayer) continue; // Don't render badge for self
+            if (player == localPlayer && (!WynnExtrasConfig.INSTANCE.showOwnNametag || mc.options.getPerspective().isFirstPerson())) continue;
 
             // Check if this player is a WynnExtras user
             String uuid = player.getUuid().toString();
@@ -49,7 +49,7 @@ public class BadgeRenderer {
                     player.getLerpedPos(tickDelta).z
             );
 
-            //System.out.println("reder at " + player.getLerpedPos(tickDelta).x + " " + player.getLerpedPos(tickDelta).y + " " + player.getLerpedPos(tickDelta).z);
+            //WynnExtras.LOGGER.info("reder at " + player.getLerpedPos(tickDelta).x + " " + player.getLerpedPos(tickDelta).y + " " + player.getLerpedPos(tickDelta).z);
 
             // Render the star badge
             //u2618

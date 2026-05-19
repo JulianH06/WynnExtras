@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Mouse.class)
 public class RaidLootOverlayClickMixin {
@@ -36,10 +37,35 @@ public class RaidLootOverlayClickMixin {
         boolean ctrlHeld = (mods & GLFW.GLFW_MOD_CONTROL) != 0;
         boolean shiftHeld = (mods & GLFW.GLFW_MOD_SHIFT) != 0;
 
-        RaidLootTrackerOverlay.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
-        TradeMarketOverlay.handleClick(mouseX, mouseY, button, action);
-        CraftingResultPreviewer.handleClick(mouseX, mouseY, button, action);
-        TreeRoomMinimap.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
+        if (action == 1) {
+            // On mousedown: short-circuit after first overlay claims the drag
+            boolean dragClaimed = false;
+
+            if (!dragClaimed) {
+                boolean was = RaidLootTrackerOverlay.isDragging();
+                RaidLootTrackerOverlay.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
+                if (!was && RaidLootTrackerOverlay.isDragging()) dragClaimed = true;
+            }
+            if (!dragClaimed) {
+                boolean was = TradeMarketOverlay.isDragging();
+                TradeMarketOverlay.handleClick(mouseX, mouseY, button, action);
+                if (!was && TradeMarketOverlay.isDragging()) dragClaimed = true;
+            }
+            if (!dragClaimed) {
+                boolean was = CraftingResultPreviewer.isDragging();
+                CraftingResultPreviewer.handleClick(mouseX, mouseY, button, action);
+                if (!was && CraftingResultPreviewer.isDragging()) dragClaimed = true;
+            }
+            if (!dragClaimed) {
+                TreeRoomMinimap.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
+            }
+        } else {
+            // On mouseup: all overlays release drag independently
+            RaidLootTrackerOverlay.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
+            TradeMarketOverlay.handleClick(mouseX, mouseY, button, action);
+            CraftingResultPreviewer.handleClick(mouseX, mouseY, button, action);
+            TreeRoomMinimap.handleClick(mouseX, mouseY, button, action, ctrlHeld, shiftHeld);
+        }
     }
 
     @Inject(method = "onCursorPos", at = @At("HEAD"))
@@ -58,5 +84,21 @@ public class RaidLootOverlayClickMixin {
         CraftingResultPreviewer.handleMouseMove(x, y);
 
         TreeRoomMinimap.handleMouseMove(x, y);
+    }
+
+    @Inject(method = "onMouseScroll", at = @At("HEAD"), cancellable = true)
+    private void onMouseScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
+        Mouse mouse = (Mouse) (Object) this;
+        double mouseX = mouse.getX();
+        double mouseY = mouse.getY();
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.getWindow() != null) {
+            double scale = mc.getWindow().getScaleFactor();
+            mouseX = mouseX / scale;
+            mouseY = mouseY / scale;
+        }
+        if (TreeRoomMinimap.handleScroll(mouseX, mouseY, vertical)) {
+            ci.cancel();
+        }
     }
 }

@@ -1,5 +1,6 @@
 package julianh06.wynnextras.utils;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
 import com.wynntils.features.tooltips.ItemStatInfoFeature;
@@ -42,7 +43,7 @@ public class CraftingUtils {
                             (existing, replacement) -> existing
                     ));
         } catch (Exception e) {
-            System.err.println("Failed to load ingredient list from wynntills: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to load ingredient list from wynntills: " + e.getMessage());
             allIngredients = new HashMap<>();
             initAttempted = false;
         }

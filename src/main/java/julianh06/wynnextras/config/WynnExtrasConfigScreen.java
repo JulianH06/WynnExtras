@@ -1,10 +1,16 @@
 package julianh06.wynnextras.config;
 
+import julianh06.wynnextras.config.configoptions.*;
+import static julianh06.wynnextras.config.ConfigTheme.*;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.features.spellhider.SpellProfiles;
 import julianh06.wynnextras.core.CurrentVersionData;
+import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
-import net.fabricmc.loader.api.FabricLoader;
+import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.tetris.TetrisScreen;
+import julianh06.wynnextras.utils.LinkUtils;
+import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -16,10 +22,11 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -37,56 +44,49 @@ import java.util.function.Supplier;
  *    - stringList("Name", "Description", getter, setter)
  * 3. To add subcategories: category.sub("SubcategoryName").add(...)
  */
-public class WynnExtrasConfigScreen extends Screen {
+public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContext {
+    private static Identifier logoTexture = Identifier.of("wynnextras", "textures/general/wynnextrasbanner.png");
+
     private final Screen parent;
     private final WynnExtrasConfig config;
 
-    // ==================== THEME COLORS ====================
-    private static int BG_DARK = 0xFF1a1410;
-    private static int BG_MEDIUM = 0xFF2e251c;
-    private static int BG_LIGHT = 0xFF4d3c2d;
-    private static int PARCHMENT = 0xFF6c4f36;
-    private static int PARCHMENT_LIGHT = 0xFF876141;
-    private static int PARCHMENT_HOVER = 0xFF705030;
-    private static int GOLD = 0xFFcca76f;
-    private static int GOLD_DARK = 0xFFecc600;
-    private static int TEXT_LIGHT = 0xFFe8dcc8;
-    private static int TEXT_DIM = 0xFF9a8b70;
-    private static int BORDER_DARK = 0xFF3a2d24;
-    private static int BORDER_LIGHT = PARCHMENT_LIGHT;
-    private static int TOGGLE_ON = 0xFF4a8c3a;
-    private static int TOGGLE_OFF = 0xFF5c4535;
-    private static int ACCENT_RED = 0xFFa83232;
-    private static int SUBCATEGORY_BG = 0xFF694d33;
-
-    // ==================== LAYOUT ====================
-    private static final int SIDEBAR_WIDTH = 140;
-    private static final int HEADER_HEIGHT = 50;
-    private static final int FOOTER_HEIGHT = 50;
-    private static final int OPTION_HEIGHT = 45;
-    private static final int OPTION_SPACING = 5;
-    private static final int SUBCATEGORY_HEADER_HEIGHT = 25;
-
     // ==================== STATE ====================
+    private static int lastSelectedCategory = 0;
+    private static double lastScrollTarget = 0;
+    private static final Map<String, Boolean> lastExpandedSubs = new HashMap<>();
+
     private int selectedCategory = 0;
     private int selectedCategoryColor = 0;
     private final List<Category> categories = new ArrayList<>();
     private double scrollOffset = 0;
+    private double scrollTarget = 0;
     private double maxScroll = 0;
     private boolean scrollbarDragging = false;
     private double scrollbarDragOffset = 0;
     private int scrollbarY, scrollbarHeight, scrollbarThumbY, scrollbarThumbH;
 
+    // Sidebar scroll state
+    private double sidebarScrollOffset = 0;
+    private double sidebarScrollTarget = 0;
+    private boolean sidebarScrollbarDragging = false;
+    private double sidebarScrollbarDragOffset = 0;
+    private int sidebarScrollbarY, sidebarScrollbarHeight, sidebarScrollbarThumbY, sidebarScrollbarThumbH;
+
+    private static final float SCROLL_SPEED = 0.3f;
+    private static final float SCROLL_SNAP = 0.5f;
+
     // Dropdown state
     private DropdownOption<?> activeDropdown = null;
     private int dropdownX, dropdownY, dropdownWidth;
     private double dropdownScroll = 0;
-    private static final int DROPDOWN_MAX_HEIGHT = 150;
-    private static final int DROPDOWN_ITEM_HEIGHT = 22;
+
+    // Sticky subcategory header state
+    private SubCategory stickySub = null;
 
     // Search state
     private String searchQuery = "";
     private boolean searchFocused = false;
+    private Map<String, Boolean> expandedSubsBeforeSearch = null;
     private static final int SEARCH_BAR_HEIGHT = 28;
 
     public WynnExtrasConfigScreen(Screen parent) {
@@ -100,20 +100,89 @@ public class WynnExtrasConfigScreen extends Screen {
     private void initCategories() {
         categories.clear();
 
+        // ===== GENERAL =====
+        category("General", 0xFF81c539)
+            .add(image(logoTexture, 800, 250, 0.4f,
+                    List.of(
+                            line("Welcome to WynnExtras!").center().underline().bold().scale(1.5f).color(TEXT_LIGHT),
+                            emptyLine(0.75f),
+                            line("Our goal is to make your Wynncraft experience as smooth and as customizable as possible!").center(),
+                            emptyLine(0.2f),
+                            line("We have a lot of different features, which help you with all kinds of areas this wonderful game has to offer!").center(),
+                            emptyLine(0.2f),
+                            line("We also have a ton of custom commands you can try out with \"/we <...>\"!").center(),
+                            emptyLine(0.2f),
+                            line("If you have any kind of suggestions or bug reports we would appreciate if you'd let us know on our §9Discord!").center(),
+                            emptyLine(0.5f)
+                    )))
+            .sub("Links")
+                .add(button("Discord", "Join the WynnExtras Discord server", (x) -> {
+                    LinkUtils.openLink("https://discord.gg/UbC6vZDaD5");
+                }, "Open"))
+                .add(button("Modrinth", "WynnExtras on Modrinth", (x) -> {
+                    LinkUtils.openLink("https://modrinth.com/mod/wynnextras");
+                }, "Open"))
+                .add(button("GitHub", "WynnExtras source code on GitHub", (x) -> {
+                    LinkUtils.openLink("https://github.com/JulianH06/WynnExtras");
+                }, "Open"))
+//                .add(button("YouTube", "Julian's personal YouTube channel", (x) -> {
+//                    LinkUtils.openLink("https://www.youtube.com/@H06Julian");
+//                }, "Open"))
+            .endSub()
+            .sub("Quick Access")
+                .add(button("Loot Pools", "Open the Loot Pools screen", (x) -> {
+                    WEScreen.open(AspectScreen::new);
+                    AspectScreen.currentPage = AspectScreen.Page.LootPools;
+                }, "Open"))
+                .add(button("Profile Viewer", "View your stats", (x) -> {
+                    PV.open(McUtils.playerName());
+                }, "Open"))
+                .add(button("Waypoints", "Open the Waypoints screen", (x) -> {
+                    MinecraftClient.getInstance().setScreen(null);
+                    if (MinecraftClient.getInstance().player != null) {
+                        MinecraftClient.getInstance().player.networkHandler.sendChatCommand("we waypoints");
+                    }
+                }, "Open"))
+                .add(button("Raid List", "Open the Raid List", (x) -> {
+                    MinecraftClient.getInstance().setScreen(null);
+                    if (MinecraftClient.getInstance().player != null) {
+                        MinecraftClient.getInstance().player.networkHandler.sendChatCommand("we raidlist");
+                    }
+                }, "Open"))
+            .endSub()
+//            .add(visibleWhen(button("Disable WynnExtras", "Turn off all features (your settings are preserved)",
+//                (x) -> {
+//                    config.disableWynnExtras();
+//                }, "Disable"), config::isWynnExtrasEnabled))
+//            .add(visibleWhen(button("Enable WynnExtras", "Re-enable all features with your previous settings",
+//                (x) -> {
+//                    config.enableWynnExtras();
+//                }, "Enable"), () -> !config.isWynnExtrasEnabled()))
+//            .add(button("Config Profiles", "Save and switch between named on/off setting presets",
+//                (x) -> {
+//                    MinecraftClient.getInstance().setScreen(new ProfilesScreen(MinecraftClient.getInstance().currentScreen));
+//                }, "Manage"))
+            .add(button("Reset to defaults", "Reset all settings back to their default values",
+                    (x) -> {
+                        config.resetToDefaults();
+                    }, "Reset"))
+            .add(button("Disable everything", "Click this to turn off everything so you can configure it yourself",
+                (x) -> {
+                    config.disableAll();
+                }, "Disable"))
+            .add(text("", "If you accidentally clicked on one of these buttons click on \"cancel\" to get your old settings back."))
+            .sub("Minigames")
+                .add(text("Bored during raid downtime, attack queues or waiting for a friend?", "Then try out these minigames! Have fun!"))
+                .add(button("Tetris", "A fully fledged Integration of the the game everyone knows and loves!",
+                    (x) -> {
+                        TetrisScreen.open();
+                    }, "Play"))
+                .add(text("More to come!", "More minigames are planned to be released in the future!"))
+            .endSub();
+
         // ===== RAIDS =====
         category("Raiding", GOLD_DARK)
-                .add(toggle("Timestamps", "Show timestamps during raids",
-                        () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
-                .add(toggle("Fast Requeue", "Auto /pf on chest close",
-                        () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
-                .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
-                        () -> config.chiropTimer, v -> config.chiropTimer = v))
-                .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests by quickly clicking through the rewards",
-                        () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
-                .add(visibleWhen(toggle("Passive aspect scanning", "Scan your aspects passively without bothering you",
-                        () -> config.passiveAspectScanning, v -> config.passiveAspectScanning = v),
-                        () -> !config.automaticAspectScanning))
-                .sub("Loot Tracker")
+            .sub("Loot Tracker")
                 .add(toggle("Enable Tracker", "Track raid loot drops",
                         () -> config.toggleRaidLootTracker, v -> config.toggleRaidLootTracker = v))
                 .add(visibleWhen(toggle("Render in HUD", "Render the Overlay in the HUD",
@@ -136,23 +205,71 @@ public class WynnExtrasConfigScreen extends Screen {
                         () -> config.toggleRaidLootTracker))
                 .add(visibleWhen(text("The Tracker is movable", "To change its position open your inventory and drag it where you want"),
                         () -> config.toggleRaidLootTracker))
+            .sub("Session Tracker")
+                .add(toggle("Enable Session Tracker", "Track raids per hour, completions, fails, and avg time",
+                        () -> config.raidSessionEnabled, v -> config.raidSessionEnabled = v))
+                .add(visibleWhen(toggle("Only show in raid", "Only display the HUD while inside a raid",
+                                () -> config.raidSessionOnlyInRaid, v -> config.raidSessionOnlyInRaid = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Only show in inventory", "Only display the HUD while inventory is open",
+                                () -> config.raidSessionOnlyInInventory, v -> config.raidSessionOnlyInInventory = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(sliderF("HUD Scale", "Scale of the session tracker HUD", 0.5f, 3.0f, 0.1f,
+                                () -> config.raidSessionHudScale, v -> config.raidSessionHudScale = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Show Runs", "Display 'Runs: N' counter",
+                                () -> config.raidSessionShowRuns, v -> config.raidSessionShowRuns = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Show Fails", "Display fail count (e.g. (3 F))",
+                                () -> config.raidSessionShowFails, v -> config.raidSessionShowFails = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Show Runs/hr", "Display runs-per-hour rate",
+                                () -> config.raidSessionShowRate, v -> config.raidSessionShowRate = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Show Elapsed Time", "Display session elapsed time",
+                                () -> config.raidSessionShowTime, v -> config.raidSessionShowTime = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(toggle("Show Avg Run Time", "Display average raid completion time",
+                                () -> config.raidSessionShowAvgTime, v -> config.raidSessionShowAvgTime = v),
+                        () -> config.raidSessionEnabled))
+                .add(visibleWhen(text("Movable in inventory", "Open inventory to drag the tracker or click [ADD]/[X]/[||] buttons"),
+                        () -> config.raidSessionEnabled))
+            .sub("Auto-ignore party in raid")
+                .add(toggle("Auto-ignore party in raid", "On raid start, /ignore add all party members to reduce lag from their effects; /ignore remove them on raid end",
+                        () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
             .sub("TNA Tree Room Map")
                 .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
                         () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))
                 .add(visibleWhen(toggle("Show Tree Map only inside of tree", "Only show the Tree Map while you are the person inside of the tree",
-                        () -> config.showTreeMapOnlyWhileInsideOfTree, v -> config.showTreeMapOnlyWhileInsideOfTree = v),
+                                () -> config.showTreeMapOnlyWhileInsideOfTree, v -> config.showTreeMapOnlyWhileInsideOfTree = v),
                         () -> config.tnaTreeMap))
                 .add(visibleWhen(toggle("Show paths on Tree Map", "Show the optimal path to the soul while inside the tree",
-                        () -> config.showPathsOnTreeMap, v -> config.showPathsOnTreeMap = v),
+                                () -> config.showPathsOnTreeMap, v -> config.showPathsOnTreeMap = v),
                         () -> config.tnaTreeMap))
                 .add(visibleWhen(toggle("Show Map everywhere", "Enable this if you want to edit the position without going into TNA",
-                        () -> config.showTreeMapEverywhere, v -> config.showTreeMapEverywhere = v),
+                                () -> config.showTreeMapEverywhere, v -> config.showTreeMapEverywhere = v),
                         () -> config.tnaTreeMap))
-                .add(visibleWhen(text("The Map is movable", "To change its position open your inventory and drag it where you want"), () -> config.tnaTreeMap));
+                .add(visibleWhen(text("The Map is movable", "To change its position open your inventory and drag it where you want"), () -> config.tnaTreeMap))
+            .endSub()
+                .add(toggle("Timestamps", "Show timestamps during raids",
+                        () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
+                .add(toggle("Fast Requeue", "Auto /pf on chest close",
+                        () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
+                .add(toggle("Block GRaid toggle (Shift to bypass)", "Blocks clicks on 'Guild Raid Available' in party finder unless SHIFT is held to prevent accidentally toggling graids",
+                        () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
+                .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
+                        () -> config.chiropTimer, v -> config.chiropTimer = v))
+                .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests by quickly clicking through the rewards",
+                        () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
+                .add(visibleWhen(toggle("Passive aspect scanning", "Scan your aspects passively without bothering you",
+                        () -> config.passiveAspectScanning, v -> config.passiveAspectScanning = v),
+                        () -> !config.automaticAspectScanning))
+                .add(toggle("Encounter Selection overlay (Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
+                        () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v));
 
         // ===== COMBAT =====
         category("Combat", 0xFFfda216)
-                .sub("Shaman Totem Timer")
+            .sub("Shaman Totem Timer")
                 .add(toggle("Totem Timer", "Show totem countdown timer on HUD",
                         () -> config.totemTimerEnabled, v -> config.totemTimerEnabled = v))
                 .add(visibleWhen(toggle("Own Totems Only", "Only show timers for your own totems",
@@ -179,6 +296,9 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(visibleWhen(toggle("Estimate Out-of-Range", "Continue countdown when totem leaves render distance",
                                 () -> config.totemTimerEstimate, v -> config.totemTimerEstimate = v),
                         () -> config.totemTimerEnabled))
+                .add(visibleWhen(toggle("Solid Color", "Use the color set in /we gui instead of the time-based green→red gradient",
+                                () -> config.totemTimerSolidColor, v -> config.totemTimerSolidColor = v),
+                        () -> config.totemTimerEnabled))
                 .sub("Shaman Blood Sorrow Timer")
                 .add(toggle("Blood Sorrow Timer", "Show Blood Sorrow cooldown on HUD",
                         () -> config.bloodSorrowTimerEnabled, v -> config.bloodSorrowTimerEnabled = v))
@@ -200,22 +320,35 @@ public class WynnExtrasConfigScreen extends Screen {
                 .sub("Provoke Timer")
                 .add(toggle("Enable Provoke Timer", "Show provoke timer on HUD",
                         () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
-                .add(visibleWhen(dropdown("Timer Color", "Timer text color",
-                                WynnExtrasConfig.TextColor.class, () -> config.provokeTimerColor, v -> config.provokeTimerColor = v),
-                        () -> config.provokeTimerToggle));
+                .sub("Radiant HUD")
+                .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
+                        () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))
+                .sub("Aura")
+                .add(toggle("Aura Ping", "Flash screen and show countdown when aura procs",
+                        () -> config.auraPingEnabled, v -> config.auraPingEnabled = v))
+                .sub("Wars / Territory")
+                .add(toggle("Weekly War Count", "Show number of wars in last 7 days on HUD",
+                        () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
+                .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
+                        () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
+                .add(toggle("Attack Timer", "Show upcoming attack times from scoreboard",
+                        () -> config.attackTimerMenuEnabled, v -> config.attackTimerMenuEnabled = v))
+                .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
+                                () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),
+                        () -> config.attackTimerMenuEnabled))
+                .add(toggle("War Beacon (EXPERIMENTAL)", "Green beacon beam at the soonest war territory (Experimental, might not render correctly)",
+                        () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v))
+                .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
+                        () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
+                .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
+                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v),
+                        () -> config.territoryMenuKeyEnabled));
 
-        // ===== INVENTORY =====
-        Category invCategory = category("Inventory", 0xFFea1219);
-
-        if (FabricLoader.getInstance().isModLoaded("wynnventory")) {
-            invCategory.add(toggle("Wynnventory price overlay in bank", "Enable the Wynnventory price overlay in the bank overlay",
-                    () -> config.wynnventoryOverlay, v -> config.wynnventoryOverlay = v));
-        }
+        // ===== OVERLAYS =====
+        Category invCategory = category("Overlays", 0xFFea1219);
 
         invCategory
-                .add(toggle("Skill point helper (experimental)", "Show you your armor in the compass menu and a button to automatically assign skill points",
-                        () -> config.skillpointHelper, v -> config.skillpointHelper = v))
-                .sub("Bank Overlay")
+            .sub("Bank Overlay")
                 .add(toggle("Enable Bank Overlay", "Custom Bank Overlay",
                         () -> config.toggleBankOverlay, v -> config.toggleBankOverlay = v))
                 .add(toggle("Smooth Scroll", "Smooth scrolling",
@@ -230,7 +363,53 @@ public class WynnExtrasConfigScreen extends Screen {
                         2, 24, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
                 .add(toggle("Hide empty rows", "Hides rows that only have locked pages",
                         () -> config.bankOverlayHideEmptyRows, v -> config.bankOverlayHideEmptyRows = v))
-                .sub("Tooltips")
+                .add(toggle("Bag Overlay", "Show crafter bag counts by raid/tier on bank screens",
+                        () -> config.bankBagOverlay, v -> config.bankBagOverlay = v))
+                .add(visibleWhen(toggle("Show total bag count in bank overlay", "Shows you a breakdown of all crafter bags you have across all pages of your bank",
+                        () -> config.showTotalBagsInBankOverlay, v -> config.showTotalBagsInBankOverlay = v), () -> config.bankBagOverlay))
+                .endSub()
+            .sub("Class Selection")
+                .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
+                        () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
+                .add(toggle("Use custom class colors", "Configure the accent color for each class and reskin",
+                        () -> config.useCustomClassColors, v -> config.useCustomClassColors = v))
+                .add(visibleWhen(classColor("Warrior Color", "Accent color for Warrior class cards", "warrior", 0xCC4444),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Knight Color", "Accent color for Knight class cards", "knight", 0xCC4444),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Mage Color", "Accent color for Mage class cards", "mage", 0x55BBFF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Dark Wizard Color", "Accent color for Dark Wizard class cards", "dark_wizard", 0x55BBFF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Assassin Color", "Accent color for Assassin class cards", "assassin", 0xFF55FF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Ninja Color", "Accent color for Ninja class cards", "ninja", 0xFF55FF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Archer Color", "Accent color for Archer class cards", "archer", 0x55FF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Hunter Color", "Accent color for Hunter class cards", "hunter", 0x55FF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Shaman Color", "Accent color for Shaman class cards", "shaman", 0xFFFF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Skyseer Color", "Accent color for Skyseer class cards", "skyseer", 0xFFFF55),
+                        () -> config.useCustomClassColors))
+                .add(toggle("Hide quick toggle button", "Hide the enable/disable class overlay button on class selection screens",
+                        () -> config.hideClassSelectionQuickToggleButton, v -> config.hideClassSelectionQuickToggleButton = v))
+            .sub("Crafting")
+                .add(toggle("Crafting helper", "Crafting Helper toggle",
+                        () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
+                .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
+                        () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
+                .add(toggle("Reverse crafting helper order", "Show recipes from lowest to highest level",
+                        () -> config.craftingHelperReverseOrder, v -> config.craftingHelperReverseOrder = v))
+                .add(toggle("Auto Start", "Automatically start crafting when a recipe is loaded",
+                        () -> config.craftingAutoStart, v -> config.craftingAutoStart = v))
+                .add(toggle("Crafting preview", "Crafting preview toggle",
+                        () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
+                .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
+                        () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
+                .add(text("The preview is movable", "To change its position just drag it where you want"))
+            .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
                         () -> config.showWeight, v -> {
                             config.showWeight = v;
@@ -238,8 +417,8 @@ public class WynnExtrasConfigScreen extends Screen {
                         }))
                 .add(visibleWhen(toggle("Stat Scales", "Show weights for each stat",
                         () -> config.showScales, v -> config.showScales = v),
-                        () -> config.showWeight))
-                .sub("Trade Market")
+                        () -> config.showWeight)).endSub()
+            .sub("Trade Market")
                 .add(toggle("Scale background", "Use mythic scale as item background",
                         () -> config.scaleBackgroundEnabled, v -> config.scaleBackgroundEnabled = v))
                 .add(toggle("Hide scale background button", "Hides the quick toggle for the scale background setting",
@@ -252,7 +431,10 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Price overlay background", "Show a dark background for the price overlay",
                         () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
                 .add(text("The price summary is movable", "To change its position just drag it where you want"))
-                .sub("Crafting")
+            .endSub()
+                .add(toggle("Skill point helper (experimental)", "Show you your armor in the compass menu and a button to automatically assign skill points",
+                        () -> config.skillpointHelper, v -> config.skillpointHelper = v))
+            .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
                         () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
                 .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
@@ -267,11 +449,7 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)
-                .add(stringList("Blocked Words", "Hide messages with these",
-                        () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
-                .add(toggle("Quick PV/GV Access (EXPERIMENTAL)", "Click on a players name or guild to open the pv/gv!",
-                        () -> config.chatClickPV, v -> config.chatClickPV = v))
-                .sub("Notifications")
+            .sub("Notifications")
                 .add(stringListDual("Notifier Words", "Trigger word and display text",
                         () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
                 .add(sliderF("Duration (ms)", "How long notification shows",
@@ -289,8 +467,8 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(slider("Pitch", "Sound pitch",
                         0, 200, () -> (int)(config.soundPitch), v -> config.soundPitch = v))
                 .add(button("Sound Test", "Click the button to test the sound",
-                        v -> McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test"))
-                .sub("Premade Notifications")
+                        v -> McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test")).endSub()
+            .sub("Premade Notifications")
                 .add(toggle("Lost Eye", "Lost Eye in TNA light room",
                         () -> config.lostEye, v -> config.lostEye = v))
                 .add(toggle("+1 Goo", "+1 Goo in NOTG Slime Gathering",
@@ -312,7 +490,34 @@ public class WynnExtrasConfigScreen extends Screen {
                 .add(toggle("Lower platform spawned", "Lower platform spawn in NOTG minibosses",
                         () -> config.notgLowerPlatform, v -> config.notgLowerPlatform = v))
                 .add(toggle("Artifacts power restored", "When you can charge again in TWP room 3",
-                        () -> config.artifactRestored, v -> config.artifactRestored = v));
+                        () -> config.artifactRestored, v -> config.artifactRestored = v))
+                .add(toggle("Item broke (0 durability)", "Show 'ITEM BROKE' when one of your items reaches zero durability",
+                        () -> config.itemZeroDurability, v -> config.itemZeroDurability = v)).endSub()
+            .sub("Tree Room Grotto Announcements")
+                .add(toggle("Isoptera in Gray Grotto", "Show 'GRAY' when the Interdimensional Isoptera is in the Gray Grotto",
+                        () -> config.isopteraGray, v -> config.isopteraGray = v))
+                .add(toggle("Isoptera in Black Grotto", "Show 'BLACK' when the Interdimensional Isoptera is in the Black Grotto",
+                        () -> config.isopteraBlack, v -> config.isopteraBlack = v))
+                .add(toggle("Isoptera in White Grotto", "Show 'WHITE' when the Interdimensional Isoptera is in the White Grotto",
+                        () -> config.isopteraWhite, v -> config.isopteraWhite = v))
+                .add(toggle("Isoptera in Orange Grotto", "Show 'ORANGE' when the Interdimensional Isoptera is in the Orange Grotto",
+                        () -> config.isopteraOrange, v -> config.isopteraOrange = v))
+                .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
+                        () -> config.isopteraBlue, v -> config.isopteraBlue = v))
+            .endSub()
+            .add(stringList("Blocked Words", "Hide messages with these",
+                    () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
+            .add(toggle("Quick PV/GV Access (EXPERIMENTAL)", "Click on a players name or guild to open the pv/gv!",
+                    () -> config.chatClickPV, v -> config.chatClickPV = v))
+            .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs with your guild when someone asks about them in chat",
+                    () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
+            .add(toggle("Right-click chat to copy", "Right-click a chat message (while chat is open) to copy it to the clipboard",
+                    () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
+            .add(toggle("Stack Duplicate Messages (EXPERIMENTAL)", "Collapse repeated messages into one with a (N) counter (Experimental, might break your chat)",
+                    () -> config.stackDuplicateMessages, v -> config.stackDuplicateMessages = v))
+            .add(visibleWhen(slider("Stack Window (minutes)", "Only stack messages sent within the last X minutes",
+                    1, 60, () -> config.stackDuplicateWindowMinutes, v -> config.stackDuplicateWindowMinutes = v),
+                    () -> config.stackDuplicateMessages));
 
         // ===== Hiders =====
         category("Hiders", 0xFF673190)
@@ -333,78 +538,205 @@ public class WynnExtrasConfigScreen extends Screen {
 
         // ===== MISC =====
         category("Misc", 0xFF0872bc)
-                .add(toggle("Show Own Nametag", "Render your nametag above your head",
-                        () -> config.showOwnNametag, v -> config.showOwnNametag = v))
-                .add(toggle("Custom GUI Scale", "Use different scale for WE menus",
-                        () -> config.differentGUIScale, v -> config.differentGUIScale = v))
-                .add(slider("GUI Scale", "Custom GUI scale value",
-                        1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v))
-                .add(toggle("Lootpool button in pf menu", "Show a button to quickly access /we lootpool through the pf menu",
-                        () -> config.showLootpoolButtonInPartyFinder, v -> config.showLootpoolButtonInPartyFinder = v))
-                .add(toggle("Redirect Wynntils View Stats", "Changes the Wynntils 'View Player Stats' button to open the pv instead of the wynn website",
-                        () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v))
-                .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
-                        () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
-                .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
-                        () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
-                .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
-                        () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
-                .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
-                        () -> config.badgesEnabled, v -> config.badgesEnabled = v))
-                .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
-                        () -> config.removeChroma, v -> config.removeChroma = v))
-                .sub("Dark Mode Toggles")
+            .sub("Profession Overlay")
+                .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
+                        () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))
+                .add(visibleWhen(toggle("Show Exact XP", "Show exact XP values instead of percentages",
+                                () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
+                        () -> config.professionOverlayEnabled))
+            .sub("Auto Actions")
+                .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
+                        () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
+                .add(toggle("Auto Skip Dialogue", "Automatically skip 'Press SHIFT to continue' NPC dialogue",
+                        () -> config.autoSkipDialogueEnabled, v -> config.autoSkipDialogueEnabled = v))
+                .add(toggle("Auto Skip Cutscenes", "Automatically skip cutscenes that show 'Swap Hands to skip'",
+                        () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
+            .sub("Dark Mode Toggles")
                 .add(toggle("Bank Overlay", "Dark mode for the Bank Overlay",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
                 .add(toggle("Profile Viewer", "Dark mode for the Profile viewer",
                         () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
-                .add(toggle("Lootpool & Aspect pages", "Dark mode for the Lootpool & Aspect pages",
-                        () -> config.lootPoolPagesDarkMode, v -> config.lootPoolPagesDarkMode = v))
-                .add(toggle("Crafting helper", "Dark mode for the Crafting helper",
-                        () -> config.craftingHelperDarkMode, v -> config.craftingHelperDarkMode = v))
-                .add(toggle("Main menu", "Dark mode for the WynnExtras main menu (/we)",
-                        () -> config.mainMenuDarkMode, v -> config.mainMenuDarkMode = v))
-                .add(button("Enable for all", "Enable the Dark mode for all options above",
-                        v -> {
-                            config.darkmodeToggle = true;
-                            config.pvDarkmodeToggle = true;
-                            config.lootPoolPagesDarkMode = true;
-                            config.craftingHelperDarkMode = true;
-                            config.mainMenuDarkMode = true; }, "Enable"))
-                .add(button("Disable for all", "Disable the Dark mode for all options above",
-                    v -> {
-                        config.darkmodeToggle = false;
-                        config.pvDarkmodeToggle = false;
-                        config.lootPoolPagesDarkMode = false;
-                        config.craftingHelperDarkMode = false;
-                        config.mainMenuDarkMode = false; }, "Disable"))
             .sub("Tetris")
                 .add(slider("DAS", "Delayed Auto Shift (ms) — delay before repeated movement begins",
-                    0, 300, () -> config.tetrisDAS, v -> config.tetrisDAS = v))
+                        0, 300, () -> config.tetrisDAS, v -> config.tetrisDAS = v))
                 .add(slider("ARR", "Auto Repeat Rate (ms) — speed of repeated moves, 0 = instant",
-                    0, 100, () -> config.tetrisARR, v -> config.tetrisARR = v))
+                        0, 100, () -> config.tetrisARR, v -> config.tetrisARR = v))
                 .add(slider("SDF Delay", "Soft Drop delay (ms) before fast-fall kicks in",
-                    0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
+                        0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
                 .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
-                    0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
+                        0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
             .sub("Crowd sourcing")
                 .add(toggle("Lootrun lootpools", "Help gather the current lootrun lootpool so others can see it with /we lootruns",
                         () -> config.crowdSourceLootrunLootpools, v -> config.crowdSourceLootrunLootpools = v))
                 .add(toggle("Raid lootpools", "Help gather the current raid lootpool so others can see it with /we lootpool",
                         () -> config.crowdSourceRaidLootpools, v -> config.crowdSourceRaidLootpools = v))
                 .add(toggle("Gambits", "Help gather the current gambits so others can see them with /we gambits",
-                        () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v));
+                        () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v))
+            .sub("Quick Repair")
+                .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
+                        () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
+                .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
+                                () -> config.quickRepairKey, v -> config.quickRepairKey = v),
+                        () -> config.quickRepairEnabled))
+            .endSub()
+            .add(toggle("Show Own Nametag", "Render your nametag above your head",
+                    () -> config.showOwnNametag, v -> config.showOwnNametag = v))
+            .add(toggle("Custom GUI Scale", "Use different scale inside of inventories",
+                    () -> config.differentGUIScale, v -> config.differentGUIScale = v))
+            .add(visibleWhen(slider("GUI Scale", "Custom GUI scale value",
+                    1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v),
+                    () -> config.differentGUIScale))
+            .add(toggle("Lootpool button in pf menu", "Show a button to quickly access /we lootpool through the pf menu",
+                    () -> config.showLootpoolButtonInPartyFinder, v -> config.showLootpoolButtonInPartyFinder = v))
+            .add(toggle("Redirect Wynntils View Stats", "Changes the Wynntils 'View Player Stats' button to open the pv instead of the wynn website",
+                    () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v))
+            .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
+                    () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
+            .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
+                    () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
+            .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
+                    () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
+            .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
+                    () -> config.badgesEnabled, v -> config.badgesEnabled = v))
+            .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
+                    () -> config.removeChroma, v -> config.removeChroma = v))
+            .sub("Debug")
+                .add(keybind("Item Components Key", "Show the hovered container item's components in a debug window",
+                        () -> config.debugItemComponentsKey, v -> config.debugItemComponentsKey = v));
+
+        // ===== NEW =====
+        category("New", 0xFF00bad5)
+            .excludeFromSearch()
+            .add(text("", "All features added in this update. Toggle any of them on or off."))
+            .sub("Wars")
+                .add(toggle("Weekly War Count", "Show number of wars in last 7 days on HUD",
+                        () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
+                .add(toggle("War Beacon (EXPERIMENTAL)", "Green beacon beam at the soonest war territory (Experimental, might not render correctly)",
+                        () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v))
+                .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
+                        () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
+                .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
+                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v),
+                        () -> config.territoryMenuKeyEnabled))
+                .add(toggle("Guild Bank Keybind", "Press a key to open /gu manage > Bank directly",
+                        () -> config.guildBankKeyEnabled, v -> config.guildBankKeyEnabled = v))
+                .add(visibleWhen(keybind("Guild Bank Key", "Key to open the guild bank",
+                                () -> config.guildBankKey, v -> config.guildBankKey = v),
+                        () -> config.guildBankKeyEnabled))
+                .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
+                        () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
+                .add(toggle("Attack Timer", "Show upcoming attack times from scoreboard",
+                        () -> config.attackTimerMenuEnabled, v -> config.attackTimerMenuEnabled = v))
+                .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
+                                () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),
+                        () -> config.attackTimerMenuEnabled))
+                .add(toggle("Aura Ping", "Flash screen and show countdown when aura procs",
+                        () -> config.auraPingEnabled, v -> config.auraPingEnabled = v))
+            .sub("Chat")
+                .add(toggle("Item broke notifier", "Show 'ITEM BROKE' when one of your items reaches zero durability",
+                        () -> config.itemZeroDurability, v -> config.itemZeroDurability = v))
+                .add(toggle("Stack Duplicate Messages (VERY EXPERIMENTAL)", "Collapse repeated messages into one with a (N) counter (Experimental, might break your chat)",
+                        () -> config.stackDuplicateMessages, v -> config.stackDuplicateMessages = v))
+                .add(visibleWhen(slider("Stack Window (minutes)", "Only stack messages sent within the last X minutes",
+                                1, 60, () -> config.stackDuplicateWindowMinutes, v -> config.stackDuplicateWindowMinutes = v),
+                        () -> config.stackDuplicateMessages))
+                .add(toggle("Right-click chat to copy", "Right-click a chat message (while chat is open) to copy it to the clipboard",
+                        () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
+                .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs with your guild when someone asks about them in chat",
+                        () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
+            .sub("Automation")
+                .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
+                        () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
+                .add(toggle("Auto Skip Dialogue", "Automatically skip 'Press SHIFT to continue' NPC dialogue",
+                        () -> config.autoSkipDialogueEnabled, v -> config.autoSkipDialogueEnabled = v))
+                .add(toggle("Auto Skip Cutscenes", "Automatically skip cutscenes that show 'Swap Hands to skip'",
+                        () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
+                .add(toggle("Auto-ignore party in raid", "Auto /ignore party members on raid start, /ignore remove on raid end (reduces lag from teammate effects)",
+                        () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
+            .sub("Tree Room Grotto Announcements")
+                .add(toggle("Isoptera in Gray Grotto", "Show 'GRAY' when the Interdimensional Isoptera is in the Gray Grotto",
+                        () -> config.isopteraGray, v -> config.isopteraGray = v))
+                .add(toggle("Isoptera in Black Grotto", "Show 'BLACK' when the Interdimensional Isoptera is in the Black Grotto",
+                        () -> config.isopteraBlack, v -> config.isopteraBlack = v))
+                .add(toggle("Isoptera in White Grotto", "Show 'WHITE' when the Interdimensional Isoptera is in the White Grotto",
+                        () -> config.isopteraWhite, v -> config.isopteraWhite = v))
+                .add(toggle("Isoptera in Orange Grotto", "Show 'ORANGE' when the Interdimensional Isoptera is in the Orange Grotto",
+                        () -> config.isopteraOrange, v -> config.isopteraOrange = v))
+                .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
+                        () -> config.isopteraBlue, v -> config.isopteraBlue = v))
+            .sub("Raiding")
+                .add(toggle("Raid Session Tracker (more options in the raiding tab)", "HUD showing raid completion/failure counts and avg time",
+                        () -> config.raidSessionEnabled, v -> config.raidSessionEnabled = v))
+                .add(toggle("Block GRaid toggle (Shift to bypass)", "Blocks clicks on 'Guild Raid Available' in party finder unless SHIFT is held to prevent accidentally toggling graids",
+                        () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
+                .add(toggle("Encounter Selection overlay (Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
+                        () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v))
+            .sub("Class Selection")
+                .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
+                        () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
+                .add(toggle("Use custom class colors", "Configure the accent color for each class and reskin",
+                        () -> config.useCustomClassColors, v -> config.useCustomClassColors = v))
+                .add(visibleWhen(classColor("Warrior Color", "Accent color for Warrior class cards", "warrior", 0xCC4444),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Knight Color", "Accent color for Knight class cards", "knight", 0xCC4444),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Mage Color", "Accent color for Mage class cards", "mage", 0x55BBFF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Dark Wizard Color", "Accent color for Dark Wizard class cards", "dark_wizard", 0x55BBFF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Assassin Color", "Accent color for Assassin class cards", "assassin", 0xFF55FF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Ninja Color", "Accent color for Ninja class cards", "ninja", 0xFF55FF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Archer Color", "Accent color for Archer class cards", "archer", 0x55FF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Hunter Color", "Accent color for Hunter class cards", "hunter", 0x55FF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Shaman Color", "Accent color for Shaman class cards", "shaman", 0xFFFF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Skyseer Color", "Accent color for Skyseer class cards", "skyseer", 0xFFFF55),
+                        () -> config.useCustomClassColors))
+                .add(toggle("Hide quick toggle button", "Hide the enable/disable class overlay button on class selection screens",
+                        () -> config.hideClassSelectionQuickToggleButton, v -> config.hideClassSelectionQuickToggleButton = v))
+            .sub("Profession Overlay")
+                .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
+                        () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))
+                .add(visibleWhen(toggle("Show Exact XP", "Show exact XP values instead of percentages",
+                                () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
+                        () -> config.professionOverlayEnabled))
+            .endSub()
+            .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
+                    () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
+            .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
+                            () -> config.quickRepairKey, v -> config.quickRepairKey = v),
+                    () -> config.quickRepairEnabled))
+            .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
+                    () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))
+            .add(text("", "Full configuration for each feature lives in its own category (Raiding, Chat, Misc, etc.)."));
     }
 
     // ==================== BUILDER HELPERS ====================
     private Category category(String name, int color) {
-        Category cat = new Category(name, color);
+        Category cat = new Category(name, color, this);
         categories.add(cat);
         return cat;
     }
 
+    @Override
+    public int getContentWidth() { return width - SIDEBAR_WIDTH - 40; }
+
+    @Override
+    public void openDropdown(DropdownOption<?> opt, int x, int y, int w) {
+        this.activeDropdown = opt;
+        this.dropdownX = x;
+        this.dropdownY = y;
+        this.dropdownWidth = w;
+        this.dropdownScroll = 0;
+    }
+
     // Check if option matches search query
-    private boolean matchesSearch(ConfigOption opt) {
+    @Override
+    public boolean matchesSearch(ConfigOption opt) {
         if (!opt.isVisible()) return false;
         if (searchQuery.isEmpty()) return true;
         String query = searchQuery.toLowerCase();
@@ -412,7 +744,8 @@ public class WynnExtrasConfigScreen extends Screen {
     }
 
     // Check if subcategory has any matching options
-    private boolean subHasMatches(SubCategory sub) {
+    @Override
+    public boolean subHasMatches(SubCategory sub) {
         if (searchQuery.isEmpty()) return true;
         for (ConfigOption opt : sub.options) {
             if (matchesSearch(opt)) return true;
@@ -423,12 +756,11 @@ public class WynnExtrasConfigScreen extends Screen {
     // Check if category has any matching options
     private boolean categoryHasMatches(Category cat) {
         if (searchQuery.isEmpty()) return true;
+        if (!cat.searchable) return false;
         if (cat.name.toLowerCase().contains(searchQuery.toLowerCase())) return true;
-        for (ConfigOption opt : cat.options) {
-            if (matchesSearch(opt)) return true;
-        }
-        for (SubCategory sub : cat.subCategories) {
-            if (subHasMatches(sub)) return true;
+        for (Object item : cat.items) {
+            if (item instanceof ConfigOption opt && matchesSearch(opt)) return true;
+            if (item instanceof SubCategory sub && subHasMatches(sub)) return true;
         }
         return false;
     }
@@ -445,6 +777,23 @@ public class WynnExtrasConfigScreen extends Screen {
         return new BooleanOption(name, desc, get, set);
     }
 
+    private ConfigOption color(String name, String desc, Supplier<Integer> get, Consumer<Integer> set, int resetValue, int fallbackColor) {
+        return new ColorOption(name, desc, get, set, resetValue, fallbackColor);
+    }
+
+    private ConfigOption classColor(String name, String desc, String classKey, int defaultColor) {
+        return color(name, desc,
+                () -> config.classCardAccentColors.getOrDefault(classKey, -1),
+                v -> {
+                    if (v == null || v < 0) {
+                        config.classCardAccentColors.remove(classKey);
+                    } else {
+                        config.classCardAccentColors.put(classKey, v);
+                    }
+                },
+                -1, defaultColor);
+    }
+
     private ConfigOption slider(String name, String desc, int min, int max, Supplier<Integer> get, Consumer<Integer> set) {
         return new SliderOption(name, desc, min, max, get, set);
     }
@@ -454,11 +803,11 @@ public class WynnExtrasConfigScreen extends Screen {
     }
 
     private <T extends Enum<T>> ConfigOption dropdown(String name, String desc, Class<T> cls, Supplier<T> get, Consumer<T> set) {
-        return new EnumOption<>(name, desc, cls, get, set);
+        return new EnumOption<>(name, desc, cls, get, set, this);
     }
 
     private <T> ConfigOption dropdown(String name, String desc, List<T> vals, Supplier<T> get, Consumer<T> set) {
-        return new ListOption<>(name, desc, vals, get, set);
+        return new ListOption<>(name, desc, vals, get, set, this);
     }
 
     private ConfigOption stringList(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set, String itemName) {
@@ -473,6 +822,28 @@ public class WynnExtrasConfigScreen extends Screen {
         return new ButtonOption(name, desc, action, buttonText);
     }
 
+    private static DescLine line(String text) { return DescLine.of(text); }
+
+    private static DescLine emptyLine() { return DescLine.of(" "); }
+
+    private static DescLine emptyLine(float scale) { return DescLine.of(" ").scale(scale); }
+
+    private ConfigOption image(Identifier identifier, int imgW, int imgH) {
+        return new ImageOption(identifier, imgW, imgH, 1.0f, List.of());
+    }
+
+    private ConfigOption image(Identifier identifier, int imgW, int imgH, float widthFraction) {
+        return new ImageOption(identifier, imgW, imgH, widthFraction, List.of());
+    }
+
+    private ConfigOption image(Identifier identifier, int imgW, int imgH, List<DescLine> lines) {
+        return new ImageOption(identifier, imgW, imgH, 1.0f, lines);
+    }
+
+    private ConfigOption image(Identifier identifier, int imgW, int imgH, float widthFraction, List<DescLine> lines) {
+        return new ImageOption(identifier, imgW, imgH, widthFraction, lines);
+    }
+
     private ConfigOption visibleWhen(ConfigOption option, BooleanSupplier condition) {
         option.visibleWhen(condition);
         return option;
@@ -481,12 +852,24 @@ public class WynnExtrasConfigScreen extends Screen {
     // ==================== SCREEN LIFECYCLE ====================
     @Override
     protected void init() {
+        selectedCategory = MathHelper.clamp(lastSelectedCategory, 0, categories.size() - 1);
+        for (Category cat : categories) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub) {
+                    Boolean saved = lastExpandedSubs.get(cat.name + "/" + sub.name);
+                    if (saved != null) sub.setExpanded(saved);
+                }
+            }
+        }
         updateMaxScroll();
+        scrollTarget = MathHelper.clamp(lastScrollTarget, 0, maxScroll);
+        scrollOffset = scrollTarget;
     }
 
     private void updateMaxScroll() {
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
-            int contentHeight = categories.get(selectedCategory).getTotalHeight();
+            Category cat = categories.get(selectedCategory);
+            int contentHeight = searchQuery.isEmpty() || categoryHasMatches(cat) ? cat.getTotalHeight() : 0;
             int visibleHeight = this.height - HEADER_HEIGHT - FOOTER_HEIGHT - 40;
             maxScroll = Math.max(0, contentHeight - visibleHeight);
         }
@@ -496,7 +879,16 @@ public class WynnExtrasConfigScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         updateMaxScroll();
-        scrollOffset = Math.min(scrollOffset, maxScroll);
+        scrollTarget = MathHelper.clamp(scrollTarget, 0, maxScroll);
+        double scrollDiff = scrollTarget - scrollOffset;
+        if (Math.abs(scrollDiff) < SCROLL_SNAP) scrollOffset = scrollTarget;
+        else scrollOffset += scrollDiff * SCROLL_SPEED * delta;
+
+        double sidebarMax = getSidebarMaxScroll();
+        sidebarScrollTarget = MathHelper.clamp(sidebarScrollTarget, 0, sidebarMax);
+        double sidebarDiff = sidebarScrollTarget - sidebarScrollOffset;
+        if (Math.abs(sidebarDiff) < SCROLL_SNAP) sidebarScrollOffset = sidebarScrollTarget;
+        else sidebarScrollOffset += sidebarDiff * SCROLL_SPEED * delta;
 
         ctx.fill(0, 0, width, height, BG_DARK);
 
@@ -519,6 +911,13 @@ public class WynnExtrasConfigScreen extends Screen {
             context.fill(cx - i, cy - size + i, cx + i + 1, cy - size + i + 1, color);
             context.fill(cx - i, cy + size - i, cx + i + 1, cy + size - i + 1, color);
         }
+    }
+
+    private double getSidebarMaxScroll() {
+        int listStartY = 40 + SEARCH_BAR_HEIGHT + 8;
+        int listH = height - 5 - listStartY;
+        long count = categories.stream().filter(c -> searchQuery.isEmpty() || categoryHasMatches(c)).count();
+        return Math.max(0, count * 28 - listH);
     }
 
     private void drawSidebar(DrawContext ctx, int mouseX, int mouseY) {
@@ -552,7 +951,16 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.drawCenteredTextWithShadow(textRenderer, "X", clearX + 10, searchY + 10, TEXT_LIGHT);
         }
 
-        int y = searchY + SEARCH_BAR_HEIGHT + 8;
+        int listStartY = searchY + SEARCH_BAR_HEIGHT + 8;
+        int listEndY = height - 5;
+        int listH = listEndY - listStartY;
+
+        double sidebarMaxScroll = getSidebarMaxScroll();
+        sidebarScrollOffset = MathHelper.clamp(sidebarScrollOffset, 0, sidebarMaxScroll);
+
+        ctx.enableScissor(0, listStartY, SIDEBAR_WIDTH - 2, listEndY);
+
+        int y = listStartY - (int) sidebarScrollOffset;
         for (int i = 0; i < categories.size(); i++) {
             Category cat = categories.get(i);
 
@@ -573,6 +981,19 @@ public class WynnExtrasConfigScreen extends Screen {
 
             y += 28;
         }
+
+        ctx.disableScissor();
+
+        if (sidebarMaxScroll > 0) {
+            int sbX = SIDEBAR_WIDTH - 9;
+            sidebarScrollbarY = listStartY;
+            sidebarScrollbarHeight = listH;
+            sidebarScrollbarThumbH = Math.max(16, (int)(listH * listH / (double)(listH + sidebarMaxScroll)));
+            sidebarScrollbarThumbY = sidebarScrollbarY + (int)((listH - sidebarScrollbarThumbH) * (sidebarScrollOffset / sidebarMaxScroll));
+
+            ctx.fill(sbX, sidebarScrollbarY, sbX + 5, sidebarScrollbarY + sidebarScrollbarHeight, BORDER_DARK);
+            ctx.fill(sbX + 1, sidebarScrollbarThumbY, sbX + 4, sidebarScrollbarThumbY + sidebarScrollbarThumbH, GOLD_DARK);
+        }
     }
 
     private void drawMainPanel(DrawContext ctx, int mouseX, int mouseY) {
@@ -583,6 +1004,7 @@ public class WynnExtrasConfigScreen extends Screen {
 
         if (selectedCategory < 0 || selectedCategory >= categories.size()) return;
         Category cat = categories.get(selectedCategory);
+        boolean categoryVisibleForSearch = searchQuery.isEmpty() || categoryHasMatches(cat);
 
         selectedCategoryColor = cat.color;
 
@@ -609,23 +1031,40 @@ public class WynnExtrasConfigScreen extends Screen {
 
         int y = listTop + 20 - (int)scrollOffset;
 
-        for (SubCategory sub : cat.subCategories) {
-            if (subHasMatches(sub)) {
-                y = renderSubCategory(ctx, sub, contentX, y, contentW, mouseX, mouseY, listTop + 15, listBottom);
-            }
-        }
-
-        for (ConfigOption opt : cat.options) {
-            if (matchesSearch(opt)) {
-                if (y + OPTION_HEIGHT > listTop && y < listBottom) {
-                    boolean hovered = mouseX >= contentX && mouseX < contentX + contentW && mouseY >= y && mouseY < y + OPTION_HEIGHT - 5;
-                    opt.render(ctx, contentX, y, contentW, OPTION_HEIGHT, mouseX, mouseY, hovered, cat.color);
+        SubCategory stickyCandidate = null;
+        if (categoryVisibleForSearch) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub && subHasMatches(sub)) {
+                    int headerY = y;
+                    y = renderSubCategory(ctx, sub, contentX, y, contentW, mouseX, mouseY, listTop + 15, listBottom);
+                    if (sub.isExpanded() && headerY < listTop + 15 && y > listTop + 15) {
+                        stickyCandidate = sub;
+                    }
+                } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
+                    int optH = opt.getHeight(contentW);
+                    if (y + optH > listTop && y < listBottom) {
+                        boolean hovered = mouseX >= contentX && mouseX < contentX + contentW && mouseY >= y && mouseY < y + optH - 5;
+                        opt.render(ctx, contentX, y, contentW, optH, mouseX, mouseY, hovered, cat.color);
+                    }
+                    y += optH + OPTION_SPACING;
                 }
-                y += OPTION_HEIGHT + OPTION_SPACING;
             }
         }
+        stickySub = stickyCandidate;
 
         ctx.disableScissor();
+
+        if (stickySub != null) {
+            int stickyY = listTop + 15;
+            boolean hovered = mouseX >= contentX && mouseX < contentX + contentW
+                           && mouseY >= stickyY && mouseY < stickyY + SUBCATEGORY_HEADER_HEIGHT;
+            ctx.fill(contentX, stickyY, contentX + contentW, stickyY + SUBCATEGORY_HEADER_HEIGHT, hovered ? PARCHMENT_LIGHT : SUBCATEGORY_BG);
+            ctx.fill(contentX, stickyY, contentX + contentW, stickyY + 1, BORDER_LIGHT);
+            ctx.fill(contentX, stickyY + SUBCATEGORY_HEADER_HEIGHT - 1, contentX + contentW, stickyY + SUBCATEGORY_HEADER_HEIGHT, BORDER_DARK);
+            String arrow = stickySub.isExpanded() ? "▼" : "▶";
+            ctx.drawTextWithShadow(textRenderer, arrow, contentX + 8, stickyY + 8, selectedCategoryColor);
+            ctx.drawTextWithShadow(textRenderer, stickySub.name, contentX + 22, stickyY + 8, TEXT_LIGHT);
+        }
 
         if (maxScroll > 0) {
             int sbX = panelX + panelW - 12;
@@ -646,21 +1085,22 @@ public class WynnExtrasConfigScreen extends Screen {
             ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
             ctx.fill(x, y + SUBCATEGORY_HEADER_HEIGHT - 1, x + w, y + SUBCATEGORY_HEADER_HEIGHT, BORDER_DARK);
 
-            String arrow = sub.expanded ? "\u25BC" : "\u25B6";
+            String arrow = sub.isExpanded() ? "\u25BC" : "\u25B6";
             ctx.drawTextWithShadow(textRenderer, arrow, x + 8, y + 8, selectedCategoryColor);
             ctx.drawTextWithShadow(textRenderer, sub.name, x + 22, y + 8, TEXT_LIGHT);
         }
         y += SUBCATEGORY_HEADER_HEIGHT + 5;
 
-        if (sub.expanded) {
+        if (sub.isExpanded()) {
             for (ConfigOption opt : sub.options) {
                 if (matchesSearch(opt)) {
-                    if (y + OPTION_HEIGHT > top && y < bot) {
-                        boolean hovered = mX >= x + 8 && mX < x + w && mY >= y && mY < y + OPTION_HEIGHT - 5;
-                        ctx.fill(x, y, x + 4, y + OPTION_HEIGHT - 5, selectedCategoryColor);
-                        opt.render(ctx, x + 8, y, w - 8, OPTION_HEIGHT, mX, mY, hovered, selectedCategoryColor);
+                    int optH = opt.getHeight(w - 8);
+                    if (y + optH > top && y < bot) {
+                        boolean hovered = mX >= x + 8 && mX < x + w && mY >= y && mY < y + optH - 5;
+                        ctx.fill(x, y, x + 4, y + optH - 5, selectedCategoryColor);
+                        opt.render(ctx, x + 8, y, w - 8, optH, mX, mY, hovered, selectedCategoryColor);
                     }
-                    y += OPTION_HEIGHT + OPTION_SPACING;
+                    y += optH + OPTION_SPACING;
                 }
             }
         }
@@ -831,9 +1271,7 @@ public class WynnExtrasConfigScreen extends Screen {
                 int clearX = SIDEBAR_WIDTH - 28;
                 if (mx >= clearX && mx < clearX + 20) {
                     searchQuery = "";
-                    scrollOffset = 0;
-                    updateMaxScroll();
-                    autoSelectMatchingCategory();
+                    onSearchQueryChanged();
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
@@ -843,21 +1281,19 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         if (searchFocused && (my < sidebarSearchY || my >= sidebarSearchY + SEARCH_BAR_HEIGHT || mx < 8 || mx >= SIDEBAR_WIDTH - 8)) {
-            if (mx < SIDEBAR_WIDTH) {
-                searchFocused = false;
-            }
+            searchFocused = false;
         }
 
         // Categories in sidebar
         if (mx >= 8 && mx < SIDEBAR_WIDTH - 8) {
-            int y = sidebarSearchY + SEARCH_BAR_HEIGHT + 8;
+            int y = sidebarSearchY + SEARCH_BAR_HEIGHT + 8 - (int) sidebarScrollOffset;
             for (int i = 0; i < categories.size(); i++) {
                 Category cat = categories.get(i);
                 if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) continue;
 
                 if (my >= y && my < y + 24) {
                     selectedCategory = i;
-                    scrollOffset = 0;
+                    scrollOffset = 0; scrollTarget = 0;
                     updateMaxScroll();
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
@@ -866,8 +1302,24 @@ public class WynnExtrasConfigScreen extends Screen {
             }
         }
 
+        // Sidebar scrollbar
+        double sidebarMaxScroll = getSidebarMaxScroll();
+        if (sidebarMaxScroll > 0 && mx >= SIDEBAR_WIDTH - 9 && mx < SIDEBAR_WIDTH - 4) {
+            if (my >= sidebarScrollbarThumbY && my < sidebarScrollbarThumbY + sidebarScrollbarThumbH) {
+                sidebarScrollbarDragging = true;
+                sidebarScrollbarDragOffset = my - sidebarScrollbarThumbY;
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            } else if (my >= sidebarScrollbarY && my < sidebarScrollbarY + sidebarScrollbarHeight) {
+                double clickPercent = (my - sidebarScrollbarY - sidebarScrollbarThumbH / 2.0) / (sidebarScrollbarHeight - sidebarScrollbarThumbH);
+                sidebarScrollTarget = MathHelper.clamp(clickPercent * sidebarMaxScroll, 0, sidebarMaxScroll);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            }
+        }
+
         // Scrollbar
-        if (maxScroll > 0 && mx >= width - 17 && mx < width - 5) {
+        if (maxScroll > 0 && mx >= width - 17 && mx < width - 11) {
             if (my >= scrollbarThumbY && my < scrollbarThumbY + scrollbarThumbH) {
                 scrollbarDragging = true;
                 scrollbarDragOffset = my - scrollbarThumbY;
@@ -875,7 +1327,41 @@ public class WynnExtrasConfigScreen extends Screen {
                 return true;
             } else if (my >= scrollbarY && my < scrollbarY + scrollbarHeight) {
                 double clickPercent = (my - scrollbarY - scrollbarThumbH / 2.0) / (scrollbarHeight - scrollbarThumbH);
-                scrollOffset = MathHelper.clamp(clickPercent * maxScroll, 0, maxScroll);
+                scrollTarget = MathHelper.clamp(clickPercent * maxScroll, 0, maxScroll);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            }
+        }
+
+        if (stickySub != null) {
+            int stickyY = HEADER_HEIGHT + 30;
+            if (my >= stickyY && my < stickyY + SUBCATEGORY_HEADER_HEIGHT
+                    && mx >= SIDEBAR_WIDTH + 20 && mx < width - 30) {
+                Category cat = categories.get(selectedCategory);
+                if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) return true;
+
+                stickySub.toggleExpanded();
+                updateMaxScroll();
+                if (!stickySub.isExpanded()) {
+                    // scroll so the now collapsed header sits at the top of the viewport
+                    int contentW = width - SIDEBAR_WIDTH - 40;
+                    int contentY = 0;
+                    for (Object item : cat.items) {
+                        if (item == stickySub) break;
+                        if (item instanceof SubCategory sub && subHasMatches(sub)) {
+                            contentY += SUBCATEGORY_HEADER_HEIGHT + 5;
+                            if (sub.isExpanded()) {
+                                for (ConfigOption opt : sub.options) {
+                                    if (matchesSearch(opt)) contentY += opt.getHeight(contentW - 8) + OPTION_SPACING;
+                                }
+                            }
+                        } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
+                            contentY += opt.getHeight(contentW) + OPTION_SPACING;
+                        }
+                    }
+                    scrollTarget = MathHelper.clamp(contentY + 5, 0, maxScroll);
+                    scrollOffset = scrollTarget;
+                }
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
@@ -883,42 +1369,48 @@ public class WynnExtrasConfigScreen extends Screen {
 
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category cat = categories.get(selectedCategory);
+            if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) return super.mouseClicked(click, doubleClick);
+
             int contentX = SIDEBAR_WIDTH + 20;
-            int contentW = width - SIDEBAR_WIDTH - 50;
+            int contentW = width - SIDEBAR_WIDTH - 40;
             int listTop = HEADER_HEIGHT + 30;
             int listBot = height - FOOTER_HEIGHT - 10;
 
             int y = listTop - (int)scrollOffset + 5;
 
-            for (SubCategory sub : cat.subCategories) {
-                if (subHasMatches(sub)) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub && subHasMatches(sub)) {
                     if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + SUBCATEGORY_HEADER_HEIGHT) && mx >= contentX && mx < contentX + contentW) {
-                        sub.expanded = !sub.expanded;
+                        sub.toggleExpanded();
                         updateMaxScroll();
                         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }
                     y += SUBCATEGORY_HEADER_HEIGHT + 5;
 
-                    if (sub.expanded) {
+                    if (sub.isExpanded()) {
                         for (ConfigOption opt : sub.options) {
                             if (matchesSearch(opt)) {
-                                if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + OPTION_HEIGHT)) {
-                                    if (opt.mouseClicked(mx, my, contentX + 8, y, contentW - 8, OPTION_HEIGHT, btn)) return true;
+                                int optH = opt.getHeight(contentW - 8);
+                                if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + optH)) {
+                                    if (opt.mouseClicked(mx, my, contentX + 8, y, contentW - 8, optH, btn)) {
+                                        updateMaxScroll();
+                                        return true;
+                                    }
                                 }
-                                y += OPTION_HEIGHT + OPTION_SPACING;
+                                y += optH + OPTION_SPACING;
                             }
                         }
                     }
-                }
-            }
-
-            for (ConfigOption opt : cat.options) {
-                if (matchesSearch(opt)) {
-                    if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + OPTION_HEIGHT)) {
-                        if (opt.mouseClicked(mx, my, contentX, y, contentW, OPTION_HEIGHT, btn)) return true;
+                } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
+                    int optH = opt.getHeight(contentW);
+                    if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + optH)) {
+                        if (opt.mouseClicked(mx, my, contentX, y, contentW, optH, btn)) {
+                            updateMaxScroll();
+                            return true;
+                        }
                     }
-                    y += OPTION_HEIGHT + OPTION_SPACING;
+                    y += optH + OPTION_SPACING;
                 }
             }
         }
@@ -933,12 +1425,18 @@ public class WynnExtrasConfigScreen extends Screen {
         int btn = click.button();
 
         scrollbarDragging = false;
+        sidebarScrollbarDragging = false;
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category cat = categories.get(selectedCategory);
-            for (SubCategory sub : cat.subCategories) {
-                for (ConfigOption opt : sub.options) opt.mouseReleased(mx, my, btn);
+            if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) return super.mouseReleased(click);
+
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub) {
+                    for (ConfigOption opt : sub.options) opt.mouseReleased(mx, my, btn);
+                } else if (item instanceof ConfigOption opt) {
+                    opt.mouseReleased(mx, my, btn);
+                }
             }
-            for (ConfigOption opt : cat.options) opt.mouseReleased(mx, my, btn);
         }
         return super.mouseReleased(click);
     }
@@ -949,37 +1447,47 @@ public class WynnExtrasConfigScreen extends Screen {
         double my = click.y();
         int btn = click.button();
 
+        if (sidebarScrollbarDragging) {
+            double sidebarMaxScroll = getSidebarMaxScroll();
+            if (sidebarMaxScroll > 0) {
+                double newThumbY = my - sidebarScrollbarDragOffset;
+                double percent = (newThumbY - sidebarScrollbarY) / (sidebarScrollbarHeight - sidebarScrollbarThumbH);
+                sidebarScrollTarget = MathHelper.clamp(percent * sidebarMaxScroll, 0, sidebarMaxScroll);
+            }
+            return true;
+        }
+
         if (scrollbarDragging && maxScroll > 0) {
             double newThumbY = my - scrollbarDragOffset;
             double percent = (newThumbY - scrollbarY) / (scrollbarHeight - scrollbarThumbH);
-            scrollOffset = MathHelper.clamp(percent * maxScroll, 0, maxScroll);
+            scrollTarget = MathHelper.clamp(percent * maxScroll, 0, maxScroll);
             return true;
         }
 
         if (selectedCategory >= 0 && selectedCategory < categories.size()) {
             Category cat = categories.get(selectedCategory);
-            int contentX = SIDEBAR_WIDTH + 20;
-            int contentW = width - SIDEBAR_WIDTH - 50;
-            int y = HEADER_HEIGHT + 30 - (int)scrollOffset;
+            if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) return super.mouseDragged(click, dx, dy);
 
-            for (SubCategory sub : cat.subCategories) {
-                if (subHasMatches(sub)) {
+            int contentX = SIDEBAR_WIDTH + 20;
+            int contentW = width - SIDEBAR_WIDTH - 40;
+            int y = HEADER_HEIGHT + 35 - (int)scrollOffset;
+
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub && subHasMatches(sub)) {
                     y += SUBCATEGORY_HEADER_HEIGHT + 5;
-                    if (sub.expanded) {
+                    if (sub.isExpanded()) {
                         for (ConfigOption opt : sub.options) {
                             if (matchesSearch(opt)) {
-                                if (opt.mouseDragged(mx, my, contentX + 8, y, contentW - 8, OPTION_HEIGHT)) return true;
-                                y += OPTION_HEIGHT + OPTION_SPACING;
+                                int optH = opt.getHeight(contentW - 8);
+                                if (opt.mouseDragged(mx, my, contentX + 8, y, contentW - 8, optH)) return true;
+                                y += optH + OPTION_SPACING;
                             }
                         }
                     }
-                }
-            }
-
-            for (ConfigOption opt : cat.options) {
-                if (matchesSearch(opt)) {
-                    if (opt.mouseDragged(mx, my, contentX, y, contentW, OPTION_HEIGHT)) return true;
-                    y += OPTION_HEIGHT + OPTION_SPACING;
+                } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
+                    int optH = opt.getHeight(contentW);
+                    if (opt.mouseDragged(mx, my, contentX, y, contentW, optH)) return true;
+                    y += optH + OPTION_SPACING;
                 }
             }
         }
@@ -997,19 +1505,24 @@ public class WynnExtrasConfigScreen extends Screen {
             return true;
         }
         if (mx > SIDEBAR_WIDTH) {
-            scrollOffset = MathHelper.clamp(scrollOffset - vAmt * 30, 0, maxScroll);
-            return true;
+            scrollTarget = MathHelper.clamp(scrollTarget - vAmt * 30, 0, maxScroll);
+        } else {
+            sidebarScrollTarget = MathHelper.clamp(sidebarScrollTarget - vAmt * 20, 0, getSidebarMaxScroll());
         }
-        return super.mouseScrolled(mx, my, hAmt, vAmt);
+        return true;
     }
 
     @Override
     public boolean keyPressed(KeyInput input) {
         // Relay to any listening KeybindOption
         for (Category cat : categories) {
-            for (SubCategory sub : cat.subCategories) {
-                for (ConfigOption opt : sub.options) {
+            for (Object item : cat.items) {
+                if (item instanceof ConfigOption opt) {
                     if (opt instanceof KeybindOption kb && kb.onKeyPressed(input.key())) return true;
+                } else if (item instanceof SubCategory sub) {
+                    for (ConfigOption opt : sub.options) {
+                        if (opt instanceof KeybindOption kb && kb.onKeyPressed(input.key())) return true;
+                    }
                 }
             }
         }
@@ -1021,12 +1534,26 @@ public class WynnExtrasConfigScreen extends Screen {
         }
 
         if (searchFocused) {
-            if (key == 259) { // Backspace
+            boolean ctrl = (input.modifiers() & org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL) != 0;
+            if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_V) {
+                String clipboard = net.minecraft.client.MinecraftClient.getInstance().keyboard.getClipboard();
+                if (clipboard != null && !clipboard.isEmpty()) {
+                    searchQuery += clipboard.replaceAll("[\\r\\n\\t]", "");
+                    onSearchQueryChanged();
+                }
+                return true;
+            } else if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_C) {
+                net.minecraft.client.MinecraftClient.getInstance().keyboard.setClipboard(searchQuery);
+                return true;
+            } else if (ctrl && key == org.lwjgl.glfw.GLFW.GLFW_KEY_X) {
+                net.minecraft.client.MinecraftClient.getInstance().keyboard.setClipboard(searchQuery);
+                searchQuery = "";
+                onSearchQueryChanged();
+                return true;
+            } else if (key == 259) { // Backspace
                 if (!searchQuery.isEmpty()) {
                     searchQuery = searchQuery.substring(0, searchQuery.length() - 1);
-                    scrollOffset = 0;
-                    updateMaxScroll();
-                    autoSelectMatchingCategory();
+                    onSearchQueryChanged();
                 }
                 return true;
             } else if (key == 256) { // Escape
@@ -1043,17 +1570,72 @@ public class WynnExtrasConfigScreen extends Screen {
 
     @Override
     public boolean charTyped(CharInput charInput) {
+        // Block character input when Ctrl is held (Ctrl+V etc.)
+        long window = net.minecraft.client.MinecraftClient.getInstance().getWindow().getHandle();
+        boolean ctrlHeld = org.lwjgl.glfw.GLFW.glfwGetKey(window, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS
+                || org.lwjgl.glfw.GLFW.glfwGetKey(window, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        if (ctrlHeld) return true;
+
         if (searchFocused) {
             char c = (char) charInput.codepoint();
             if (c >= 32 && c < 127) {
                 searchQuery += c;
-                scrollOffset = 0;
-                updateMaxScroll();
-                autoSelectMatchingCategory();
+                onSearchQueryChanged();
                 return true;
             }
         }
         return super.charTyped(charInput);
+    }
+
+    private void onSearchQueryChanged() {
+        if (searchQuery.isEmpty()) {
+            restoreExpandedSubsBeforeSearch();
+        } else {
+            if (expandedSubsBeforeSearch == null) {
+                expandedSubsBeforeSearch = snapshotExpandedSubs();
+            }
+            expandSubCategoriesWithSearchMatches();
+        }
+        scrollOffset = 0;
+        scrollTarget = 0;
+        autoSelectMatchingCategory();
+        updateMaxScroll();
+    }
+
+    private Map<String, Boolean> snapshotExpandedSubs() {
+        Map<String, Boolean> snapshot = new HashMap<>();
+        for (Category cat : categories) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub) {
+                    snapshot.put(subKey(cat, sub), sub.isExpanded());
+                }
+            }
+        }
+        return snapshot;
+    }
+
+    private void restoreExpandedSubsBeforeSearch() {
+        if (expandedSubsBeforeSearch == null) return;
+        for (Category cat : categories) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub) {
+                    Boolean expanded = expandedSubsBeforeSearch.get(subKey(cat, sub));
+                    if (expanded != null) sub.setExpanded(expanded);
+                }
+            }
+        }
+        expandedSubsBeforeSearch = null;
+    }
+
+    private void expandSubCategoriesWithSearchMatches() {
+        for (Category cat : categories) {
+            if (!cat.searchable) continue;
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub && subHasMatches(sub)) {
+                    sub.setExpanded(true);
+                }
+            }
+        }
     }
 
     private void autoSelectMatchingCategory() {
@@ -1073,827 +1655,24 @@ public class WynnExtrasConfigScreen extends Screen {
 
     @Override
     public void close() {
+        restoreExpandedSubsBeforeSearch();
+        saveLastScreenState(selectedCategory, scrollTarget, categories);
         client.setScreen(parent);
     }
 
-    // ==================== DATA CLASSES ====================
-    private class Category {
-        final String name;
-        final int color;
-        final List<ConfigOption> options = new ArrayList<>();
-        final List<SubCategory> subCategories = new ArrayList<>();
-        private SubCategory currentSub = null;
-
-        Category(String name, int color) { this.name = name; this.color = color; }
-
-        Category add(ConfigOption opt) {
-            if (currentSub != null) currentSub.options.add(opt);
-            else options.add(opt);
-            return this;
-        }
-
-        Category sub(String name) {
-            currentSub = new SubCategory(name);
-            subCategories.add(currentSub);
-            return this;
-        }
-
-        int getTotalHeight() {
-            int h = 0;
-            for (SubCategory s : subCategories) {
-                if (subHasMatches(s)) {
-                    h += SUBCATEGORY_HEADER_HEIGHT + 5;
-                    if (s.expanded) {
-                        for (ConfigOption opt : s.options) {
-                            if (matchesSearch(opt)) {
-                                h += OPTION_HEIGHT + OPTION_SPACING;
-                            }
-                        }
-                    }
+    private static void saveLastScreenState(int selectedCategory, double scrollTarget, List<Category> categories) {
+        lastSelectedCategory = selectedCategory;
+        lastScrollTarget = scrollTarget;
+        for (Category cat : categories) {
+            for (Object item : cat.items) {
+                if (item instanceof SubCategory sub) {
+                    lastExpandedSubs.put(subKey(cat, sub), sub.isExpanded());
                 }
             }
-            for (ConfigOption opt : options) {
-                if (matchesSearch(opt)) {
-                    h += OPTION_HEIGHT + OPTION_SPACING;
-                }
-            }
-            return h + 20;
         }
     }
 
-    private static class SubCategory {
-        final String name;
-        final List<ConfigOption> options = new ArrayList<>();
-        boolean expanded = true;
-        SubCategory(String name) { this.name = name; }
-    }
-
-    // ==================== CONFIG OPTIONS ====================
-    private static abstract class ConfigOption {
-        final String name, desc;
-        private BooleanSupplier visibilityCondition = () -> true;
-
-        ConfigOption(String name, String desc) { this.name = name; this.desc = desc; }
-
-        abstract void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor);
-        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) { return false; }
-        boolean mouseReleased(double mx, double my, int btn) { return false; }
-        boolean mouseDragged(double mx, double my, int x, int y, int w, int h) { return false; }
-
-        ConfigOption visibleWhen(BooleanSupplier condition) {
-            this.visibilityCondition = condition;
-            return this;
-        }
-
-        boolean isVisible() {
-            return visibilityCondition.getAsBoolean();
-        }
-    }
-
-    private static class TextOption extends ConfigOption {
-        TextOption(String name, String desc) {
-            super(name, desc);
-        }
-
-        @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
-            var tr = MinecraftClient.getInstance().textRenderer;
-            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
-            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
-            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
-        }
-    }
-
-    private static class KeybindOption extends ConfigOption {
-        final Supplier<Integer> getter;
-        final Consumer<Integer> setter;
-        boolean listening = false;
-
-        KeybindOption(String name, String desc, Supplier<Integer> get, Consumer<Integer> set) {
-            super(name, desc);
-            this.getter = get;
-            this.setter = set;
-        }
-
-        private String keyName(int key) {
-            String n = GLFW.glfwGetKeyName(key, 0);
-            if (n != null) return n.toUpperCase();
-            return switch (key) {
-                case GLFW.GLFW_KEY_SPACE -> "SPACE";
-                case GLFW.GLFW_KEY_LEFT_SHIFT -> "LSHIFT";
-                case GLFW.GLFW_KEY_RIGHT_SHIFT -> "RSHIFT";
-                case GLFW.GLFW_KEY_LEFT_ALT -> "LALT";
-                case GLFW.GLFW_KEY_RIGHT_ALT -> "RALT";
-                case GLFW.GLFW_KEY_LEFT_CONTROL -> "LCTRL";
-                case GLFW.GLFW_KEY_RIGHT_CONTROL -> "RCTRL";
-                default -> "KEY_" + key;
-            };
-        }
-
-        @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
-            var tr = MinecraftClient.getInstance().textRenderer;
-            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
-            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
-            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
-
-            int bx = x + w - 90, by = y + 10;
-            boolean btnHover = mx >= bx && mx < bx + 80 && my >= by && my < by + 24;
-            ctx.fill(bx, by, bx + 80, by + 24, listening ? categoryColor : BORDER_DARK);
-            ctx.fill(bx + 1, by + 1, bx + 79, by + 23, listening ? PARCHMENT_HOVER : (btnHover ? PARCHMENT_HOVER : PARCHMENT));
-            String label = listening ? "[ ... ]" : "[ " + keyName(getter.get()) + " ]";
-            ctx.drawCenteredTextWithShadow(tr, label, bx + 40, by + 8,
-                    listening ? 0xFFFFDD44 : TEXT_LIGHT);
-        }
-
-        @Override
-        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
-            int bx = x + w - 90, by = y + 10;
-            if (mx >= bx && mx < bx + 80 && my >= by && my < by + 24) {
-                listening = !listening;
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            }
-            if (listening) { listening = false; return true; }
-            return false;
-        }
-
-        boolean onKeyPressed(int key) {
-            if (!listening) return false;
-            if (key == GLFW.GLFW_KEY_ESCAPE) { listening = false; return true; }
-            setter.accept(key);
-            listening = false;
-            WynnExtrasConfig.save();
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-            return true;
-        }
-    }
-
-    private static class BooleanOption extends ConfigOption {
-        final Supplier<Boolean> getter;
-        final Consumer<Boolean> setter;
-
-        BooleanOption(String name, String desc, Supplier<Boolean> get, Consumer<Boolean> set) {
-            super(name, desc);
-            this.getter = get;
-            this.setter = set;
-        }
-
-        @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
-            var tr = MinecraftClient.getInstance().textRenderer;
-            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
-            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
-            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
-
-            int tx = x + w - 55, ty = y + 12;
-            boolean val = getter.get();
-            ctx.fill(tx, ty, tx + 44, ty + 20, BORDER_DARK);
-            ctx.fill(tx + 1, ty + 1, tx + 43, ty + 19, val ? TOGGLE_ON : TOGGLE_OFF);
-            int kx = val ? tx + 24 : tx + 2;
-            ctx.fill(kx, ty + 2, kx + 18, ty + 18, BORDER_DARK);
-            ctx.fill(kx + 1, ty + 3, kx + 17, ty + 17, GOLD);
-        }
-
-        @Override
-        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
-            int tx = x + w - 45, ty = y + 12;
-            if (mx >= tx && mx < tx + 44 && my >= ty && my < ty + 20) {
-                setter.accept(!getter.get());
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            }
-            return false;
-        }
-    }
-
-    private static class SliderOption extends ConfigOption {
-        final int min, max;
-        final Supplier<Integer> getter;
-        final Consumer<Integer> setter;
-        boolean dragging = false;
-        int sliderX, sliderW = 120;
-
-        SliderOption(String name, String desc, int min, int max, Supplier<Integer> get, Consumer<Integer> set) {
-            super(name, desc);
-            this.min = min; this.max = max; this.getter = get; this.setter = set;
-        }
-
-        @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
-            var tr = MinecraftClient.getInstance().textRenderer;
-            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
-            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
-            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
-
-            sliderX = x + w - 130;
-            int sy = y + 15, val = getter.get();
-            float pct = (float)(val - min) / (max - min);
-
-            ctx.fill(sliderX, sy, sliderX + sliderW, sy + 8, BORDER_DARK);
-            ctx.fill(sliderX + 1, sy + 1, sliderX + sliderW - 1, sy + 7, BG_MEDIUM);
-            int fill = (int)((sliderW - 2) * pct);
-            if (fill > 0) ctx.fill(sliderX + 1, sy + 1, sliderX + 1 + fill, sy + 7, categoryColor);
-
-            int kx = sliderX + (int)(sliderW * pct) - 5;
-            ctx.fill(kx, sy - 3, kx + 10, sy + 11, BORDER_DARK);
-            ctx.fill(kx + 1, sy - 2, kx + 9, sy + 10, GOLD);
-
-            ctx.drawTextWithShadow(tr, String.valueOf(val), x + w - 135 - MinecraftClient.getInstance().textRenderer.getWidth(String.valueOf(val)), sy, GOLD);
-        }
-
-        @Override
-        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
-            int sy = y + 10;
-            if (mx >= sliderX - 5 && mx < sliderX + sliderW + 10 && my >= sy && my < sy + 20) {
-                dragging = true;
-                updateValue(mx);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        boolean mouseReleased(double mx, double my, int btn) {
-            if (dragging) { dragging = false; return true; }
-            return false;
-        }
-
-        @Override
-        boolean mouseDragged(double mx, double my, int x, int y, int w, int h) {
-            if (dragging) { updateValue(mx); return true; }
-            return false;
-        }
-
-        void updateValue(double mx) {
-            float pct = MathHelper.clamp((float)(mx - sliderX) / sliderW, 0, 1);
-            setter.accept(min + Math.round(pct * (max - min)));
-        }
-    }
-
-    private static class FloatSliderOption extends ConfigOption {
-        final float min, max, step;
-        final Supplier<Float> getter;
-        final Consumer<Float> setter;
-        boolean dragging = false;
-        int sliderX, sliderW = 120;
-
-        FloatSliderOption(String name, String desc, float min, float max, float step, Supplier<Float> get, Consumer<Float> set) {
-            super(name, desc);
-            this.min = min; this.max = max; this.step = step; this.getter = get; this.setter = set;
-        }
-
-        @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
-            var tr = MinecraftClient.getInstance().textRenderer;
-            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
-            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
-            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
-
-            sliderX = x + w - 130;
-            int sy = y + 15;
-            float val = getter.get();
-            float pct = (val - min) / (max - min);
-
-            ctx.fill(sliderX, sy, sliderX + sliderW, sy + 8, BORDER_DARK);
-            ctx.fill(sliderX + 1, sy + 1, sliderX + sliderW - 1, sy + 7, BG_MEDIUM);
-            int fill = (int)((sliderW - 2) * pct);
-            if (fill > 0) ctx.fill(sliderX + 1, sy + 1, sliderX + 1 + fill, sy + 7, categoryColor);
-
-            int kx = sliderX + (int)(sliderW * pct) - 5;
-            ctx.fill(kx, sy - 3, kx + 10, sy + 11, BORDER_DARK);
-            ctx.fill(kx + 1, sy - 2, kx + 9, sy + 10, GOLD);
-
-            String valStr = step >= 1 ? String.valueOf((int)val) : String.format("%.1f", val);
-            ctx.drawTextWithShadow(tr, valStr, x + w - 135 - MinecraftClient.getInstance().textRenderer.getWidth(valStr), sy, GOLD);
-        }
-
-        @Override
-        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
-            int sy = y + 10;
-            if (mx >= sliderX - 5 && mx < sliderX + sliderW + 10 && my >= sy && my < sy + 20) {
-                dragging = true;
-                updateValue(mx);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        boolean mouseReleased(double mx, double my, int btn) {
-            if (dragging) { dragging = false; return true; }
-            return false;
-        }
-
-        @Override
-        boolean mouseDragged(double mx, double my, int x, int y, int w, int h) {
-            if (dragging) { updateValue(mx); return true; }
-            return false;
-        }
-
-        void updateValue(double mx) {
-            float pct = MathHelper.clamp((float)(mx - sliderX) / sliderW, 0, 1);
-            float rawVal = min + pct * (max - min);
-            float stepped = Math.round(rawVal / step) * step;
-            setter.accept(MathHelper.clamp(stepped, min, max));
-        }
-    }
-
-    private abstract class DropdownOption<T> extends ConfigOption  {
-        DropdownOption(String name, String desc, Supplier<T> get, Consumer<T> set) {
-            super(name, desc);
-            this.getter = get;
-            this.setter = set;
-        }
-
-        final Supplier<T> getter;
-        final Consumer<T> setter;
-        int btnX, btnY, btnW = 125, btnH = 22;
-
-        abstract void setValueByIndex(int idx);
-        abstract Object[] getValues();
-
-
-        @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
-            var tr = MinecraftClient.getInstance().textRenderer;
-            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
-            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
-            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
-
-            btnX = x + w - 135; btnY = y + 10;
-            T val = getter.get();
-            boolean btnHover = mx >= btnX && mx < btnX + btnW && my >= btnY && my < btnY + btnH;
-
-            ctx.fill(btnX, btnY, btnX + btnW, btnY + btnH, BORDER_DARK);
-            ctx.fill(btnX + 1, btnY + 1, btnX + btnW - 1, btnY + btnH - 1, btnHover ? PARCHMENT_HOVER : PARCHMENT);
-
-            String txt = val.toString();
-            if (txt.length() > 14) txt = txt.substring(0, 12) + "..";
-            ctx.drawTextWithShadow(tr, txt, btnX + 8, btnY + 7, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, "\u25BC", btnX + btnW - 14, btnY + 7, TEXT_DIM);
-        }
-
-        @Override
-        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
-            if (mx >= btnX && mx < btnX + btnW && my >= btnY && my < btnY + btnH) {
-                activeDropdown = this;
-                dropdownX = btnX;
-                dropdownY = btnY + btnH;
-                dropdownWidth = btnW;
-                dropdownScroll = 0;
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            }
-            return false;
-        }
-
-    }
-
-    private class EnumOption<T extends Enum<T>>extends DropdownOption<T> {
-        final Class<T> enumClass;
-
-        EnumOption(String name, String desc, Class<T> cls, Supplier<T> get, Consumer<T> set) {
-            super(name, desc, get, set);
-            this.enumClass = cls;
-        }
-
-        @Override
-        public void setValueByIndex(int idx) {
-            T[] vals = getValues();
-            if (idx >= 0 && idx < vals.length) setter.accept(vals[idx]);
-        }
-
-        @Override
-        public T[] getValues() {
-            return enumClass.getEnumConstants();
-        }
-    }
-
-    private class ListOption<T> extends DropdownOption<T> {
-        private final List<T> values;
-
-        ListOption(String name, String desc, List<T> values, Supplier<T> get, Consumer<T> set) {
-            super(name, desc, get, set);
-            this.values = values;
-        }
-
-        @Override
-        public void setValueByIndex(int idx) {
-            T[] vals = getValues();
-            if (idx >= 0 && idx < vals.length) setter.accept(vals[idx]);
-        }
-
-        @Override
-        public T[] getValues() {
-            return (T[]) values.toArray();
-        }
-    }
-
-    private static class StringListOption extends ConfigOption {
-        final Supplier<List<String>> getter;
-        final Consumer<List<String>> setter;
-        final String itemName;
-        final boolean dualInput;
-
-        StringListOption(String name, String desc, Supplier<List<String>> get, Consumer<List<String>> set, String itemName, boolean dualInput) {
-            super(name, desc);
-            this.getter = get; this.setter = set;
-            this.itemName = itemName;
-            this.dualInput = dualInput;
-        }
-
-        @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
-            var tr = MinecraftClient.getInstance().textRenderer;
-            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
-            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
-            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, getter.get().size() + " " + itemName, x + 8, y + 22, TEXT_DIM);
-
-            int bx = x + w - 75, by = y + 12;
-            boolean btnHover = mx >= bx && mx < bx + 65 && my >= by && my < by + 20;
-            ctx.fill(bx, by, bx + 65, by + 20, BORDER_DARK);
-            ctx.fill(bx + 1, by + 1, bx + 64, by + 19, btnHover ? PARCHMENT_HOVER : PARCHMENT);
-            ctx.drawCenteredTextWithShadow(tr, "Edit...", bx + 32, by + 6, TEXT_LIGHT);
-        }
-
-        @Override
-        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
-            int bx = x + w - 75, by = y + 12;
-            if (mx >= bx && mx < bx + 65 && my >= by && my < by + 20) {
-                MinecraftClient.getInstance().setScreen(new StringListEditorScreen(
-                        MinecraftClient.getInstance().currentScreen, name, getter.get(), setter, dualInput));
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            }
-            return false;
-        }
-    }
-
-    private static class ButtonOption extends ConfigOption {
-        final Consumer<Void> action;
-        final String buttonText;
-
-        ButtonOption(String name, String desc, Consumer<Void> action, String buttonText) {
-            super(name, desc);
-            this.action = action;
-            this.buttonText = buttonText;
-        }
-
-        @Override
-        void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
-            var tr = MinecraftClient.getInstance().textRenderer;
-            ctx.fill(x, y, x + w, y + h - 5, hovered ? PARCHMENT_HOVER : PARCHMENT);
-            ctx.fill(x, y, x + w, y + 1, BORDER_LIGHT);
-            ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
-            ctx.drawTextWithShadow(tr, name, x + 8, y + 8, TEXT_LIGHT);
-            ctx.drawTextWithShadow(tr, desc, x + 8, y + 22, TEXT_DIM);
-
-            int bx = x + w - 75, by = y + 12;
-            boolean btnHover = mx >= bx && mx < bx + 65 && my >= by && my < by + 20;
-            ctx.fill(bx, by, bx + 65, by + 20, BORDER_DARK);
-            ctx.fill(bx + 1, by + 1, bx + 64, by + 19, btnHover ? PARCHMENT_HOVER : PARCHMENT);
-            ctx.drawCenteredTextWithShadow(tr, buttonText, bx + 32, by + 6, TEXT_LIGHT);
-        }
-
-        @Override
-        boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
-            int bx = x + w - 75, by = y + 12;
-            if (mx >= bx && mx < bx + 65 && my >= by && my < by + 20) {
-                action.accept(null);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            }
-            return false;
-        }
-    }
-
-    // ==================== STRING LIST EDITOR ====================
-    private static class StringListEditorScreen extends Screen {
-        final Screen parent;
-        final List<String> items;
-        final Consumer<List<String>> setter;
-        final boolean dualInput;
-        String input1 = "";
-        String input2 = "";
-        int activeField = 0; // 0 = input1, 1 = input2
-        int editingIndex = -1; // -1 = adding new, >= 0 = editing existing
-        double scroll = 0;
-
-        StringListEditorScreen(Screen parent, String title, List<String> items, Consumer<List<String>> setter, boolean dualInput) {
-            super(Text.literal("Edit: " + title));
-            this.parent = parent;
-            this.items = new ArrayList<>(items);
-            this.setter = setter;
-            this.dualInput = dualInput;
-        }
-
-        private String getActiveInput() {
-            return activeField == 0 ? input1 : input2;
-        }
-
-        private void setActiveInput(String val) {
-            if (activeField == 0) input1 = val;
-            else input2 = val;
-        }
-
-        private void clearInputs() {
-            input1 = "";
-            input2 = "";
-            editingIndex = -1;
-            activeField = 0;
-        }
-
-        private void loadItemForEditing(int index) {
-            if (index < 0 || index >= items.size()) return;
-            String item = items.get(index);
-            editingIndex = index;
-            if (dualInput && item.contains("|")) {
-                String[] parts = item.split("\\|", 2);
-                input1 = parts[0];
-                input2 = parts.length > 1 ? parts[1] : "";
-            } else {
-                input1 = item;
-                input2 = "";
-            }
-            activeField = 0;
-        }
-
-        private void saveCurrentInput() {
-            String value = dualInput ? input1 + "|" + input2 : input1;
-            if (value.isEmpty() || (dualInput && input1.isEmpty())) return;
-
-            if (editingIndex >= 0 && editingIndex < items.size()) {
-                items.set(editingIndex, value);
-            } else {
-                items.add(value);
-            }
-            clearInputs();
-        }
-
-        @Override
-        public void render(DrawContext ctx, int mx, int my, float delta) {
-            boolean isEditing = editingIndex >= 0;
-
-            ctx.fill(0, 0, width, height, BG_DARK);
-
-            int px = width / 2 - 180, pw = 360;
-            ctx.fill(px, 20, px + pw, height - 20, BG_MEDIUM);
-            ctx.fill(px + 2, 22, px + pw - 2, height - 22, BG_LIGHT);
-
-            ctx.drawCenteredTextWithShadow(textRenderer, title, width / 2, 35, GOLD);
-            ctx.fill(px + 20, 48, px + pw - 20, 49, GOLD_DARK);
-
-            int inputY = 65;
-            if (dualInput) {
-                if (isEditing) {
-                    int fieldW = (pw - 140) / 2;
-
-                    ctx.drawTextWithShadow(textRenderer, "Trigger:", px + 15, inputY - 10, TEXT_DIM);
-                    ctx.fill(px + 15, inputY, px + 15 + fieldW, inputY + 24, BORDER_DARK);
-                    ctx.fill(px + 16, inputY + 1, px + 14 + fieldW, inputY + 23, activeField == 0 ? PARCHMENT_LIGHT : PARCHMENT);
-                    ctx.drawTextWithShadow(textRenderer, input1 + (activeField == 0 ? "_" : ""), px + 20, inputY + 8, TEXT_LIGHT);
-
-                    ctx.drawTextWithShadow(textRenderer, "Display:", px + 20 + fieldW, inputY - 10, TEXT_DIM);
-                    ctx.fill(px + 20 + fieldW, inputY, px + 20 + fieldW * 2, inputY + 24, BORDER_DARK);
-                    ctx.fill(px + 21 + fieldW, inputY + 1, px + 19 + fieldW * 2, inputY + 23, activeField == 1 ? PARCHMENT_LIGHT : PARCHMENT);
-                    ctx.drawTextWithShadow(textRenderer, input2 + (activeField == 1 ? "_" : ""), px + 25 + fieldW, inputY + 8, TEXT_LIGHT);
-                } else {
-                    int fieldW = (pw - 90) / 2;
-
-                    ctx.drawTextWithShadow(textRenderer, "Trigger:", px + 15, inputY - 10, TEXT_DIM);
-                    ctx.fill(px + 15, inputY, px + 15 + fieldW, inputY + 24, BORDER_DARK);
-                    ctx.fill(px + 16, inputY + 1, px + 14 + fieldW, inputY + 23, activeField == 0 ? PARCHMENT_LIGHT : PARCHMENT);
-                    String t1 = input1.length() > 18 ? input1.substring(0, 16) + ".." : input1;
-                    ctx.drawTextWithShadow(textRenderer, t1 + (activeField == 0 ? "_" : ""), px + 20, inputY + 8, TEXT_LIGHT);
-
-                    ctx.drawTextWithShadow(textRenderer, "Display:", px + 23 + fieldW, inputY - 10, TEXT_DIM);
-                    ctx.fill(px + 23 + fieldW, inputY, px + 23 + fieldW * 2, inputY + 24, BORDER_DARK);
-                    ctx.fill(px + 24 + fieldW, inputY + 1, px + 22 + fieldW * 2, inputY + 23, activeField == 1 ? PARCHMENT_LIGHT : PARCHMENT);
-                    String t2 = input2.length() > 18 ? input2.substring(0, 16) + ".." : input2;
-                    ctx.drawTextWithShadow(textRenderer, t2 + (activeField == 1 ? "_" : ""), px + 28 + fieldW, inputY + 8, TEXT_LIGHT);
-                }
-            } else {
-                if (isEditing) {
-                    ctx.fill(px + 15, inputY, px + pw - 120, inputY + 24, BORDER_DARK);
-                    ctx.fill(px + 16, inputY + 1, px + pw - 121, inputY + 23, PARCHMENT);
-                    ctx.drawTextWithShadow(textRenderer, input1 + "_", px + 20, inputY + 8, TEXT_LIGHT);
-                } else {
-                    ctx.fill(px + 15, inputY, px + pw - 65, inputY + 24, BORDER_DARK);
-                    ctx.fill(px + 16, inputY + 1, px + pw - 66, inputY + 23, PARCHMENT);
-                    ctx.drawTextWithShadow(textRenderer, input1 + "_", px + 20, inputY + 8, TEXT_LIGHT);
-                }
-            }
-
-            if (isEditing) {
-                boolean saveH = mx >= px + pw - 115 && mx < px + pw - 68 && my >= inputY && my < inputY + 24;
-                ctx.fill(px + pw - 115, inputY, px + pw - 68, inputY + 24, BORDER_DARK);
-                ctx.fill(px + pw - 114, inputY + 1, px + pw - 69, inputY + 23, saveH ? TOGGLE_ON : PARCHMENT);
-                ctx.drawCenteredTextWithShadow(textRenderer, "Save", px + pw - 91, inputY + 8, TEXT_LIGHT);
-
-                boolean cancelEditH = mx >= px + pw - 63 && mx < px + pw - 16 && my >= inputY && my < inputY + 24;
-                ctx.fill(px + pw - 63, inputY, px + pw - 16, inputY + 24, BORDER_DARK);
-                ctx.fill(px + pw - 62, inputY + 1, px + pw - 17, inputY + 23, cancelEditH ? ACCENT_RED : PARCHMENT);
-                ctx.drawCenteredTextWithShadow(textRenderer, "Cancel", px + pw - 39, inputY + 8, TEXT_LIGHT);
-            } else {
-                boolean addH = mx >= px + pw - 60 && mx < px + pw - 15 && my >= inputY && my < inputY + 24;
-                ctx.fill(px + pw - 60, inputY, px + pw - 15, inputY + 24, BORDER_DARK);
-                ctx.fill(px + pw - 59, inputY + 1, px + pw - 16, inputY + 23, addH ? TOGGLE_ON : PARCHMENT);
-                ctx.drawCenteredTextWithShadow(textRenderer, "+ Add", px + pw - 37, inputY + 8, TEXT_LIGHT);
-            }
-
-            int listTop = inputY + 30;
-            ctx.enableScissor(px + 10, listTop, px + pw - 10, height - 70);
-            int y = listTop - (int)scroll;
-            for (int i = 0; i < items.size(); i++) {
-                if (y + 24 > listTop && y < height - 70) {
-                    boolean isSelected = i == editingIndex;
-                    boolean itemHover = mx >= px + 15 && mx < px + pw - 50 && my >= y && my < y + 24;
-                    ctx.fill(px + 15, y, px + pw - 50, y + 24, isSelected ? PARCHMENT_LIGHT : (itemHover ? PARCHMENT_HOVER : PARCHMENT));
-                    String t = items.get(i);
-                    if (t.length() > 35) t = t.substring(0, 33) + "..";
-                    ctx.drawTextWithShadow(textRenderer, t, px + 20, y + 8, isSelected ? GOLD : TEXT_LIGHT);
-
-                    boolean delH = mx >= px + pw - 45 && mx < px + pw - 15 && my >= y && my < y + 24;
-                    ctx.fill(px + pw - 45, y, px + pw - 15, y + 24, BORDER_DARK);
-                    ctx.fill(px + pw - 44, y + 1, px + pw - 16, y + 23, delH ? ACCENT_RED : PARCHMENT);
-                    ctx.drawCenteredTextWithShadow(textRenderer, "X", px + pw - 30, y + 8, TEXT_LIGHT);
-                }
-                y += 28;
-            }
-            ctx.disableScissor();
-
-            if (items.isEmpty()) ctx.drawCenteredTextWithShadow(textRenderer, "No items", width / 2, height / 2, TEXT_DIM);
-
-            int by = height - 55;
-            boolean doneH = mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24;
-            boolean cancelH = mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24;
-
-            ctx.fill(width / 2 - 105, by, width / 2 - 5, by + 24, BORDER_DARK);
-            ctx.fill(width / 2 - 104, by + 1, width / 2 - 6, by + 23, doneH ? TOGGLE_ON : PARCHMENT);
-            ctx.drawCenteredTextWithShadow(textRenderer, "Done", width / 2 - 55, by + 8, TEXT_LIGHT);
-
-            ctx.fill(width / 2 + 5, by, width / 2 + 105, by + 24, BORDER_DARK);
-            ctx.fill(width / 2 + 6, by + 1, width / 2 + 104, by + 23, cancelH ? ACCENT_RED : PARCHMENT);
-            ctx.drawCenteredTextWithShadow(textRenderer, "Cancel", width / 2 + 55, by + 8, TEXT_LIGHT);
-        }
-
-        @Override
-        public boolean mouseClicked(Click click, boolean doubleClick) {
-            double mx = click.x();
-            double my = click.y();
-            int btn = click.button();
-
-            int px = width / 2 - 180, pw = 360;
-            int inputY = 65;
-            boolean isEditing = editingIndex >= 0;
-
-            if (dualInput) {
-                if (isEditing) {
-                    int fieldW = (pw - 140) / 2;
-                    if (mx >= px + 15 && mx < px + 15 + fieldW && my >= inputY && my < inputY + 24) {
-                        activeField = 0;
-                        return true;
-                    }
-                    if (mx >= px + 20 + fieldW && mx < px + 20 + fieldW * 2 && my >= inputY && my < inputY + 24) {
-                        activeField = 1;
-                        return true;
-                    }
-                } else {
-                    int fieldW = (pw - 90) / 2;
-                    if (mx >= px + 15 && mx < px + 15 + fieldW && my >= inputY && my < inputY + 24) {
-                        activeField = 0;
-                        return true;
-                    }
-                    if (mx >= px + 23 + fieldW && mx < px + 23 + fieldW * 2 && my >= inputY && my < inputY + 24) {
-                        activeField = 1;
-                        return true;
-                    }
-                }
-            }
-
-            if (isEditing) {
-                if (mx >= px + pw - 115 && mx < px + pw - 68 && my >= inputY && my < inputY + 24) {
-                    if (!input1.isEmpty()) {
-                        saveCurrentInput();
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    }
-                    return true;
-                }
-                if (mx >= px + pw - 63 && mx < px + pw - 16 && my >= inputY && my < inputY + 24) {
-                    clearInputs();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    return true;
-                }
-            } else {
-                if (mx >= px + pw - 60 && mx < px + pw - 15 && my >= inputY && my < inputY + 24) {
-                    if (!input1.isEmpty()) {
-                        saveCurrentInput();
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    }
-                    return true;
-                }
-            }
-
-            int by = height - 55;
-            if (mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24) {
-                setter.accept(items);
-                client.setScreen(parent);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            }
-            if (mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24) {
-                client.setScreen(parent);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            }
-
-            int listTop = inputY + 30;
-            int y = listTop - (int)scroll;
-            for (int i = 0; i < items.size(); i++) {
-                if (my >= y && my < y + 24) {
-                    if (mx >= px + pw - 45 && mx < px + pw - 15) {
-                        items.remove(i);
-                        if (editingIndex == i) clearInputs();
-                        else if (editingIndex > i) editingIndex--;
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                        return true;
-                    }
-                    if (mx >= px + 15 && mx < px + pw - 50) {
-                        loadItemForEditing(i);
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                        return true;
-                    }
-                }
-                y += 28;
-            }
-            return super.mouseClicked(click, doubleClick);
-        }
-
-        @Override
-        public boolean keyPressed(KeyInput input) {
-            int key = input.key();
-
-            String current = getActiveInput();
-            if (key == 259 && !current.isEmpty()) {
-                setActiveInput(current.substring(0, current.length() - 1));
-                return true;
-            }
-            if (key == 257) { // Enter
-                if (!input1.isEmpty()) {
-                    saveCurrentInput();
-                }
-                return true;
-            }
-            if (key == 258 && dualInput) { // Tab - switch fields
-                activeField = activeField == 0 ? 1 : 0;
-                return true;
-            }
-            if (key == 256) { // Escape
-                if (editingIndex >= 0) {
-                    clearInputs();
-                } else {
-                    client.setScreen(parent);
-                }
-                return true;
-            }
-            return super.keyPressed(input);
-        }
-
-        @Override
-        public boolean charTyped(CharInput charInput) {
-            int c = charInput.codepoint();
-            if (c >= 32) {
-                setActiveInput(getActiveInput() + (char) c);
-                return true;
-            }
-            return super.charTyped(charInput);
-        }
-
-        @Override
-        public boolean mouseScrolled(double mx, double my, double h, double v) {
-            int max = Math.max(0, items.size() * 28 - (height - 165));
-            scroll = MathHelper.clamp(scroll - v * 25, 0, max);
-            return true;
-        }
-
-        @Override
-        public void close() { client.setScreen(parent); }
+    private static String subKey(Category cat, SubCategory sub) {
+        return cat.name + "/" + sub.name;
     }
 }

@@ -8,8 +8,11 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.mixin.Invoker.NativeImageInvoker;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.texture.NativeImage;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -52,23 +55,23 @@ public final class UIUtils {
     Identifier buttonleftHd = Identifier.of("wynnextras", "textures/general/buttondark/lefth.png");
     Identifier buttonrightHd = Identifier.of("wynnextras", "textures/general/buttondark/righth.png");
 
-    public static Identifier sliderButtontl = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertl.png");
-    public static Identifier sliderButtontr = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertr.png");
-    public static Identifier sliderButtonbl = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbl.png");
-    public static Identifier sliderButtonbr = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbr.png");
-    public static Identifier sliderButtontop = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/top.png");
-    public static Identifier sliderButtonbot = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/bot.png");
-    public static Identifier sliderButtonleft = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/left.png");
-    public static Identifier sliderButtonright = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/right.png");
+    public static final Identifier sliderButtontl = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertl.png");
+    public static final Identifier sliderButtontr = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertr.png");
+    public static final Identifier sliderButtonbl = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbl.png");
+    public static final Identifier sliderButtonbr = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbr.png");
+    public static final Identifier sliderButtontop = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/top.png");
+    public static final Identifier sliderButtonbot = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/bot.png");
+    public static final Identifier sliderButtonleft = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/left.png");
+    public static final Identifier sliderButtonright = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/right.png");
 
-    public static Identifier sliderButtontlDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertld.png");
-    public static Identifier sliderButtontrDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertrd.png");
-    public static Identifier sliderButtonblDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbld.png");
-    public static Identifier sliderButtonbrDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbrd.png");
-    public static Identifier sliderButtontopDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/topd.png");
-    public static Identifier sliderButtonbotDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/botd.png");
-    public static Identifier sliderButtonleftDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/leftd.png");
-    public static Identifier sliderButtonrightDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/rightd.png");
+    public static final Identifier sliderButtontlDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertld.png");
+    public static final Identifier sliderButtontrDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornertrd.png");
+    public static final Identifier sliderButtonblDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbld.png");
+    public static final Identifier sliderButtonbrDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/cornerbrd.png");
+    public static final Identifier sliderButtontopDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/topd.png");
+    public static final Identifier sliderButtonbotDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/botd.png");
+    public static final Identifier sliderButtonleftDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/leftd.png");
+    public static final Identifier sliderButtonrightDark = Identifier.of("wynnextras", "textures/general/sliderbackgrounds/rightd.png");
 
     private DrawContext drawContext;
     private double scaleFactor;
@@ -80,6 +83,7 @@ public final class UIUtils {
         this.scaleFactor = scaleFactor;
         this.xStart = xStart;
         this.yStart = yStart;
+        clearSeparatorCache();
     }
 
     // --- Kontext aktualisieren (bei jedem Render) ---
@@ -210,6 +214,10 @@ public final class UIUtils {
         drawText(text, x, y, color, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, textScale);
     }
 
+    public void drawCenteredText(String text, float x, float y, float textScale) {
+        drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, textScale);
+    }
+
     public void drawCenteredText(String text, float x, float y, CustomColor color) {
         drawText(text, x, y, color, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, 3f);
     }
@@ -220,6 +228,10 @@ public final class UIUtils {
 
     public void drawCenteredText(Text text, float x, float y, CustomColor color, float textScale) {
         drawText(text, x, y, color, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, textScale);
+    }
+
+    public void drawCenteredText(Text text, float x, float y, float textScale) {
+        drawText(text, x, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, TextShadow.NORMAL, textScale);
     }
 
     public void drawCenteredText(Text text, float x, float y, CustomColor color) {
@@ -360,11 +372,35 @@ public final class UIUtils {
         drawImage(texture, x, y, width, height, 1.0f);
     }
 
-    public void drawButton(float x, float y, float width, float height, int scale, boolean hovered) {
-        drawButton(x, y, width, height, scale, hovered, false);
+    private void drawImageExact(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            int textureWidth, int textureHeight
+    ) {
+        RenderUtils.drawTexturedRect(
+                drawContext,
+                texture,
+                CustomColor.NONE,
+                sx(x), sy(y),
+                sx(x + width) - sx(x),
+                sy(y + height) - sy(y),
+                u, v,
+                uWidth, vHeight,
+                textureWidth, textureHeight
+        );
     }
 
-    public void drawButton(float x, float y, float width, float height, int scale, boolean hovered, boolean darkMode) {
+    public void drawButton(float x, float y, float width, float height, boolean hovered) {
+        Identifier sprite = hovered
+                ? Identifier.ofVanilla("widget/button_highlighted")
+                : Identifier.ofVanilla("widget/button");
+        drawContext.drawGuiTexture(RenderPipelines.GUI_TEXTURED, sprite, (int) sx(x), (int) sy(y), sw(width), sh(height));
+    }
+
+    public void drawButtonCustom(float x, float y, float width, float height, int scale, boolean hovered, boolean darkMode) {
         if(width > scale * 2 || height > scale * 2) {
             RenderUtils.drawRect(
                     drawContext,
@@ -421,11 +457,6 @@ public final class UIUtils {
         if (alpha <= 0.001f) return;
 
         if (hovered) {
-            drawImage(buttontlH, x, y, scale, scale, alpha);
-            drawImage(buttontrH, x + width - scale, y, scale, scale, alpha);
-            drawImage(buttonblH, x, y + height - scale, scale, scale, alpha);
-            drawImage(buttonbrH, x + width - scale, y + height - scale, scale, scale, alpha);
-
             if (width > scale * 2) {
                 drawImage(buttontopH, x + scale - 2, y, width - scale * 2 + 4, scale, alpha);
                 drawImage(buttonbotH, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale, alpha);
@@ -434,20 +465,23 @@ public final class UIUtils {
                 drawImage(buttonleftH, x, y + scale - 2, scale, height - scale * 2 + 4, alpha);
                 drawImage(buttonrightH, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4, alpha);
             }
+            drawImage(buttontlH, x, y, scale, scale, alpha);
+            drawImage(buttontrH, x + width - scale, y, scale, scale, alpha);
+            drawImage(buttonblH, x, y + height - scale, scale, scale, alpha);
+            drawImage(buttonbrH, x + width - scale, y + height - scale, scale, scale, alpha);
         } else {
-            drawImage(buttontl, x, y, scale, scale, alpha);
-            drawImage(buttontr, x + width - scale, y, scale, scale, alpha);
-            drawImage(buttonbl, x, y + height - scale - 1, scale, scale * 1.25f, alpha);
-            drawImage(buttonbr, x + width - scale, y + height - scale - 1, scale, scale * 1.25f, alpha);
-
             if (width > scale * 2) {
                 drawImage(buttontop, x + scale - 2, y, width - scale * 2 + 4, scale, alpha);
-                drawImage(buttonbot, x + scale - 2, y + height - scale - 1, width - scale * 2 + 4, scale * 1.25f, alpha);
+                drawImage(buttonbot, x + scale - 2, y + height - scale - 1, width - scale * 2 + 4, scale + 1, alpha);
             }
             if (height > scale * 2) {
                 drawImage(buttonleft, x, y + scale - 2, scale, height - scale * 2 + 4, alpha);
                 drawImage(buttonright, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4, alpha);
             }
+            drawImage(buttontl, x, y, scale, scale, alpha);
+            drawImage(buttontr, x + width - scale, y, scale, scale, alpha);
+            drawImage(buttonbl, x, y + height - scale - 1, scale, scale + 1, alpha);
+            drawImage(buttonbr, x + width - scale, y + height - scale - 1, scale, scale + 1, alpha);
         }
     }
 
@@ -475,17 +509,81 @@ public final class UIUtils {
     }
 
 
-    public void drawSliderBackground(float x, float y, float width, float height, int scale, boolean darkMode) {
-        if(width > scale * 2 || height > scale * 2) {
-            RenderUtils.drawRect(
-                    drawContext,
-                    darkMode ? CustomColor.fromHexString("1b1b1c") : CustomColor.fromHexString("50352d"),
-                    sx(x + scale) - 1, sy(y + scale) - 1,
-                    sw(width - scale * 2) + 2, sh(height - scale * 2) + 2
-            );
-        }
+    public void drawSliderBackground(float x, float y, float width, float height) {
+        drawContext.drawGuiTexture(RenderPipelines.GUI_TEXTURED, Identifier.ofVanilla("widget/slider"), (int) sx(x), (int) sy(y), sw(width), sh(height));
+    }
 
-        drawButtonTextures(x, y, width, height, scale, darkMode, sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark, sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark, sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr, sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright, 1);
+    public void drawSliderFade(float x, float y, float width, float height, int scale, float fade) {
+        if (width > scale * 2 || height > scale * 2) {
+            RenderUtils.drawRect(drawContext,
+                    CustomColor.fromHexString("50352d").withAlpha(1f - fade),
+                    sx(x + scale) - 1, sy(y + scale) - 1,
+                    sw(width - scale * 2) + 2, sh(height - scale * 2) + 2);
+            RenderUtils.drawRect(drawContext,
+                    CustomColor.fromHexString("1b1b1c").withAlpha(fade),
+                    sx(x + scale) - 1, sy(y + scale) - 1,
+                    sw(width - scale * 2) + 2, sh(height - scale * 2) + 2);
+        }
+        drawButtonTextures(x, y, width, height, scale, false,
+                sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr,
+                sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright,
+                sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr,
+                sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright, 1f - fade);
+        drawButtonTextures(x, y, width, height, scale, false,
+                sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark,
+                sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark,
+                sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark,
+                sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark, fade);
+    }
+
+    private static final Identifier GENERIC_CONTAINER_TEX = Identifier.ofVanilla("textures/gui/container/generic_54.png");
+    private static final int GENERIC_W  = 256;
+    private static final int GENERIC_H  = 256;
+
+    public void drawVanillaPanel(float x, float y, float width, float height, int scale, int leftOffset, int rightOffset, int topOffset, int botOffset) {
+        int tw = GENERIC_W, th = GENERIC_H;
+
+        int uvWH = 4;
+
+        /*
+         * OUTER
+         * */
+        // corners
+        drawImageExact(GENERIC_CONTAINER_TEX, x, y, scale, scale, 0, 0, uvWH, uvWH, tw, th); // TL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y, scale, scale, 172, 0, uvWH, uvWH, tw, th); // TR
+        drawImageExact(GENERIC_CONTAINER_TEX, x, y + height - scale, scale, scale, 0, 218, uvWH, uvWH, tw, th); // BL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y + height - scale, scale, scale, 172, 218, uvWH, uvWH, tw, th); // BR
+
+        // fill
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 1, y + scale - 1, width - 2 * scale + 2, height - 2 * scale + 2, 4, 4, 1, 1, tw, th);
+
+        // top/bot edges
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 2, y, width- 2 * scale + 4, scale, 4, 0, 1, uvWH, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 2, y + height - scale, width - 2 * scale + 4, scale, 4, 218,  1, uvWH, tw, th);
+
+        // left/right edges
+        drawImageExact(GENERIC_CONTAINER_TEX, x, y + scale - 2, scale, height - 2 * scale + 4, 0, 4, uvWH, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y + scale - 2, scale, height - 2 * scale + 4, 172, 4, uvWH, 1, tw, th);
+        
+        /*
+        * INNER
+        * */
+        // corners
+        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + topOffset, scale, scale, 7, 15, uvWH, uvWH, tw, th); // TL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + topOffset, scale, scale, 165, 15, uvWH, uvWH, tw, th); // TR
+        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + height - scale - botOffset, scale, scale, 7, 124, uvWH, uvWH, tw, th); // BL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + height - scale - botOffset, scale, scale, 165, 124, uvWH, uvWH, tw, th); // BR
+
+        // fill
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + scale + topOffset, width - leftOffset - rightOffset - scale * 2, height - topOffset - botOffset - scale * 2, 16, 20, 1, 1, tw, th);
+
+        // top/bot edges
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + topOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 16, 1, uvWH, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + height - scale - botOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 123,  1, uvWH, tw, th);
+
+        // left/right edges
+        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 7, 21, uvWH, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 165, 120, uvWH, 1, tw, th);
     }
 
     public void drawNineSlice(float x, float y, float width, float height, int scale, Identifier l, Identifier r, Identifier t, Identifier b, Identifier tl, Identifier tr, Identifier bl, Identifier br, CustomColor fillColor) {
@@ -498,10 +596,6 @@ public final class UIUtils {
             );
         }
 
-        if(tl != null) drawImage(tl, x, y, scale, scale);
-        if(tr != null) drawImage(tr, x + width - scale, y, scale, scale);
-        if(bl != null) drawImage(bl, x, y + height - scale, scale, scale);
-        if(br != null) drawImage(br, x + width - scale, y + height - scale, scale, scale);
         if (width > scale * 2) {
             if(t != null) drawImage(t, x + scale - 2, y, width - scale * 2 + 4, scale);
             if(b != null) drawImage(b, x + scale - 2, y + height - scale, width - scale * 2 + 4, scale);
@@ -510,6 +604,36 @@ public final class UIUtils {
             if(l != null) drawImage(l, x, y + scale - 2, scale, height - scale * 2 + 4);
             if(r != null) drawImage(r, x + width - scale, y + scale - 2, scale, height - scale * 2 + 4);
         }
+        if(tl != null) drawImage(tl, x, y, scale, scale);
+        if(tr != null) drawImage(tr, x + width - scale, y, scale, scale);
+        if(bl != null) drawImage(bl, x, y + height - scale, scale, scale);
+        if(br != null) drawImage(br, x + width - scale, y + height - scale, scale, scale);
+    }
+
+    public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier progressTexture, DrawContext context) {
+        drawProgressBar(x, y, width, height, textScale, progress, progressTexture, context, false);
+    }
+
+    public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier progressTexture, DrawContext context, boolean chroma) {
+        drawRect(x, y, width, height, getVanillaPanelBgColor());
+
+        context.enableScissor((int) sx(x), (int) sy(y), (int) sx(x + width * (progress)), (int) sy(y + height));
+        if(chroma) {
+            RenderUtils.drawTexturedRect(
+                    drawContext,
+                    progressTexture,
+                    getRainbowColor(7f, 0),
+                    sx(x), sy(y),
+                    sw(width), sh(height),
+                    0, 0,
+                    sw(width), sh(height),
+                    sw(width), sh(height)
+            );
+        } else drawImage(progressTexture, x, y, width, height);
+        context.disableScissor();
+
+        drawRectBorders(x, y, width, height, getVanillaPanelBorderColor());
+        drawCenteredText(String.format("%.2f%%", progress * 100), x + width / 2f, y + height / 2f + 2, CustomColor.fromHexString("FFFFFF"), textScale);
     }
 
     public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier border, Identifier background, Identifier progressTexture, DrawContext context) {
@@ -545,6 +669,129 @@ public final class UIUtils {
 
         int rgb = Color.HSBtoRGB(hue, 1.0f, 0.75f);
         return CustomColor.fromInt(rgb & 0xFFFFFF);
+    }
+
+    private static final Identifier BUTTON_TEX = Identifier.ofVanilla("textures/gui/sprites/widget/button.png");
+    private static final Identifier BUTTON_HIGHLIGHTED_TEX = Identifier.ofVanilla("textures/gui/sprites/widget/button_highlighted.png");
+
+    private static CustomColor cachedSepNormal = null;
+    private static CustomColor cachedSepHovered = null;
+    private static CustomColor cachedSepNormalDark = null;
+    private static CustomColor cachedSepHoveredDark = null;
+    private static CustomColor cachedPanelBg = null;
+    private static CustomColor cachedPanelBorder = null;
+
+    public static void clearSeparatorCache() {
+        cachedSepNormal = null;
+        cachedSepHovered = null;
+        cachedSepNormalDark = null;
+        cachedSepHoveredDark = null;
+        cachedPanelBg = null;
+        cachedPanelBorder = null;
+    }
+
+    /**
+     * Returns the separator line color derived from the resource pack's button sprites
+     * so it harmonises with drawButton on any texture pack.
+     * Normal: center of widget/button.png darkened slightly.
+     * Hovered: center of widget/button_highlighted.png darkened slightly.
+     */
+    public static CustomColor getVanillaSeparatorColor(boolean hovered) {
+        if (cachedSepNormal == null || cachedSepHovered == null) {
+            int[] normal = sampleSpriteCenter(BUTTON_TEX);
+            int[] highlighted = sampleSpriteCenter(BUTTON_HIGHLIGHTED_TEX);
+            if (normal == null) normal = new int[]{166, 138, 115};
+            if (highlighted == null) highlighted = normal;
+            cachedSepNormal = toColor(normal, 1f);
+            cachedSepHovered = toColor(highlighted, 1f);
+        }
+        return hovered ? cachedSepHovered : cachedSepNormal;
+    }
+
+    public static CustomColor getVanillaDarkSeparatorColor(boolean hovered) {
+        if (cachedSepNormalDark == null || cachedSepHoveredDark == null) {
+            int[] normal = sampleSpriteNotCenterButAtThePositionForTheDarkerColor(BUTTON_TEX);
+            int[] highlighted = sampleSpriteNotCenterButAtThePositionForTheDarkerColor(BUTTON_HIGHLIGHTED_TEX);
+            if (normal == null) normal = new int[]{166, 138, 115};
+            if (highlighted == null) highlighted = normal;
+            cachedSepNormalDark = toColor(normal, 1f);
+            cachedSepHoveredDark = toColor(highlighted, 1f);
+        }
+        return hovered ? cachedSepHoveredDark : cachedSepNormalDark;
+    }
+
+    private static CustomColor toColor(int[] rgb, float factor) {
+        return CustomColor.fromHexString(String.format("%02X%02X%02X",
+                Math.min(255, (int)(rgb[0] * factor)),
+                Math.min(255, (int)(rgb[1] * factor)),
+                Math.min(255, (int)(rgb[2] * factor))));
+    }
+
+    // Reads the second-outermost pixel from the left edge of a GUI sprite using NativeImage.
+    // Returns [R, G, B] (0-255) or null on failure.
+    private static int[] sampleSpriteCenter(Identifier id) {
+        try {
+            var res = MinecraftClient.getInstance().getResourceManager().getResource(id);
+            if (res.isEmpty()) return null;
+            try (var is = res.get().getInputStream();
+                 NativeImage img = NativeImage.read(is)) {
+                // NativeImage.getColor is private; accessed via @Invoker mixin.
+                // Pixel format is ABGR (little-endian RGBA): lowest byte = R.
+                int c = ((NativeImageInvoker) (Object) img).invokeGetColor(1, img.getHeight() / 2);
+                return new int[]{c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF};
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private static int[] sampleSpriteNotCenterButAtThePositionForTheDarkerColor(Identifier id) {
+        try {
+            var res = MinecraftClient.getInstance().getResourceManager().getResource(id);
+            if (res.isEmpty()) return null;
+            try (var is = res.get().getInputStream();
+                 NativeImage img = NativeImage.read(is)) {
+                // NativeImage.getColor is private; accessed via @Invoker mixin.
+                // Pixel format is ABGR (little-endian RGBA): lowest byte = R.
+                int c = ((NativeImageInvoker) (Object) img).invokeGetColor(2, 2);
+                return new int[]{c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF};
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private static int[] sampleSpriteAt(Identifier id, int u, int v) {
+        try {
+            var res = MinecraftClient.getInstance().getResourceManager().getResource(id);
+            if (res.isEmpty()) return null;
+            try (var is = res.get().getInputStream();
+                 NativeImage img = NativeImage.read(is)) {
+                int c = ((NativeImageInvoker) (Object) img).invokeGetColor(u, v);
+                return new int[]{c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF};
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    public static CustomColor getVanillaPanelBgColor() {
+        if (cachedPanelBg == null) {
+            int[] px = sampleSpriteAt(GENERIC_CONTAINER_TEX, 16, 20);
+            if (px == null) px = new int[]{198, 198, 198};
+            cachedPanelBg = toColor(px, 1f);
+            cachedPanelBorder = toColor(px, 0.6f);
+        }
+        return cachedPanelBg;
+    }
+
+    public static CustomColor getVanillaPanelBorderColor() {
+        getVanillaPanelBgColor();
+        return cachedPanelBorder;
+    }
+
+    public static boolean isVanillaPanelDark() {
+        int[] px = sampleSpriteAt(GENERIC_CONTAINER_TEX, 16, 20);
+        if (px == null) return false;
+        float lum = 0.299f * px[0] + 0.587f * px[1] + 0.114f * px[2];
+        return lum < 100f;
     }
 
 }

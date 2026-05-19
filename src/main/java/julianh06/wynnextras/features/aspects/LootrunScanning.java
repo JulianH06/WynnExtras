@@ -175,11 +175,8 @@ public class LootrunScanning {
             rarity = "Unknown";
         }
 
-        String shinyStat = extractShinyTracker(stack);
         String type = LootrunLootPoolData.LootrunItem.determineType(name);
-        if (!shinyStat.isEmpty()) {
-            type = "shiny";
-        }
+        String shinyStat = type.equals("shiny") ? extractShinyTracker(stack) : "";
 
         String tooltipText = buildTooltipText(name, tooltips);
 
@@ -263,13 +260,13 @@ public class LootrunScanning {
     }
 
     private static void clickNextPage(HandledScreen<?> screen) {
-        System.out.println("[WynnExtras] Lootrun preview: clicking next page");
+        WynnExtras.LOGGER.info("[WynnExtras] Lootrun preview: clicking next page");
         TreeLoader.clickOnNameInInventory("Next Page", screen, MinecraftClient.getInstance());
         settleTicks = 0;
     }
 
     private static void clickPreviousPage(HandledScreen<?> screen) {
-        System.out.println("[WynnExtras] Lootrun preview: clicking previous page");
+        WynnExtras.LOGGER.info("[WynnExtras] Lootrun preview: clicking previous page");
         TreeLoader.clickOnNameInInventory("Previous Page", screen, MinecraftClient.getInstance());
         settleTicks = 0;
     }

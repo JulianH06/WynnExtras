@@ -9,9 +9,12 @@ import com.wynntils.utils.render.Texture;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.TextShadow;
 import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.utils.Pair;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -30,6 +33,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@WEModule
 public class TreeRoomMinimap {
     private static final int DEFAULT_SIZE = 130;
     private static final Texture mapTexture = Texture.WYNN_MAP_TEXTURES;
@@ -86,6 +90,10 @@ public class TreeRoomMinimap {
 
     private static void loadConfig() {
         if (configLoaded) return;
+        syncFromConfig();
+    }
+
+    public static void syncFromConfig() {
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         xPos = config.treeMapX;
         yPos = config.treeMapY;
@@ -109,6 +117,12 @@ public class TreeRoomMinimap {
 
             TreeRoomMinimap.render(context, renderTickCounter);
         });
+    }
+
+    @SubscribeEvent
+    public void onChat(ChatEvent event) {
+        String raw = event.message.getString().replaceAll("\u00a7[0-9a-fk-orx]", "");
+        handleMessage(raw);
     }
 
     private static void reset() {
@@ -138,6 +152,12 @@ public class TreeRoomMinimap {
             return;
         }
 
+        float scale = Math.max(0.3f, Math.min(3.0f, config.tnaTreeMapScale));
+        context.getMatrices().pushMatrix();
+        context.getMatrices().translate(xPos, yPos);
+        context.getMatrices().scale(scale, scale);
+        context.getMatrices().translate(-xPos, -yPos);
+
         RenderUtils.drawTexturedRect(
                 context,
                 background,
@@ -157,6 +177,7 @@ public class TreeRoomMinimap {
         renderPlayer(playerGrotto, context, getSkinTexture(player));
 
         renderOverlay(context);
+        context.getMatrices().popMatrix();
     }
 
     public static void renderOverlay(DrawContext context) {
@@ -367,8 +388,10 @@ public class TreeRoomMinimap {
         loadConfig();
         MinecraftClient mc = MinecraftClient.getInstance();
 
-        boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + WIDTH + 2 &&
-                mouseY >= yPos - 2 && mouseY <= yPos + WIDTH + 4;
+        float scale = Math.max(0.3f, Math.min(3.0f, config.tnaTreeMapScale));
+        int scaledW = (int) (WIDTH * scale);
+        boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + scaledW + 2 &&
+                mouseY >= yPos - 2 && mouseY <= yPos + scaledW + 4;
 
         if (action == 0) {
             if (button == 0 && isDragging) {
@@ -416,6 +439,29 @@ public class TreeRoomMinimap {
             xPos = Math.max(0, Math.min(xPos, screenWidth - WIDTH));
             yPos = Math.max(0, Math.min(yPos, screenHeight - 100));
         }
+    }
+
+    public static boolean isDragging() {
+        return isDragging;
+    }
+
+    public static boolean handleScroll(double mouseX, double mouseY, double verticalAmount) {
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        if (!config.tnaTreeMap) return false;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        boolean inEditScreen = mc.currentScreen instanceof InventoryScreen || mc.currentScreen instanceof ChatScreen;
+        if (!inEditScreen) return false;
+
+        float scale = Math.max(0.3f, Math.min(3.0f, config.tnaTreeMapScale));
+        int scaledW = (int) (WIDTH * scale);
+        boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + scaledW + 2 &&
+                mouseY >= yPos - 2 && mouseY <= yPos + scaledW + 4;
+        if (!inBounds) return false;
+
+        float newScale = (float) Math.max(0.3, Math.min(3.0, scale + verticalAmount * 0.1));
+        config.tnaTreeMapScale = newScale;
+        WynnExtrasConfig.save();
+        return true;
     }
 
     private static Identifier getSkinTexture(String name) {

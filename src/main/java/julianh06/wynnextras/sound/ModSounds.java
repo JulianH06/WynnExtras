@@ -6,7 +6,7 @@ import net.minecraft.registry.Registry;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.Identifier;
 
-import static julianh06.wynnextras.features.misc.SourceOfThruth.sounds;
+import julianh06.wynnextras.features.misc.SourceOfThruth;
 
 public class ModSounds {
     //Dont forget to edit the sounds.json if you want to add a new sound here
@@ -26,11 +26,11 @@ public class ModSounds {
     }
 
     public static void registerSounds() {
-        sounds.add(YES);
-        sounds.add(NO);
-        sounds.add(NOTHING);
-        sounds.add(IDTS);
-        sounds.add(ASKAGAIN);
-        sounds.add(NEITHER);
+        SourceOfThruth.addSound(YES);
+        SourceOfThruth.addSound(NO);
+        SourceOfThruth.addSound(NOTHING);
+        SourceOfThruth.addSound(IDTS);
+        SourceOfThruth.addSound(ASKAGAIN);
+        SourceOfThruth.addSound(NEITHER);
     }
 }

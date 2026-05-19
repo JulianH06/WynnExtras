@@ -32,7 +32,7 @@ public class PlayerWidget extends Widget {
     }
 
     public void draw(DrawContext ctx, int x, int y) {
-        //System.out.println(hovered);
+        //WynnExtras.LOGGER.info(hovered);
         if(this.ui == null) return;
         setBounds(x, y, 100, 80);
         //ui.drawText(lastViewedPlayers.get(index), x, y);
@@ -68,8 +68,9 @@ public class PlayerWidget extends Widget {
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(hovered) {
-            //ui.drawText(lastViewedPlayers.get(index), (float) (mouseX * ui.getScaleFactor() + 10), (float) (mouseY * ui.getScaleFactor() + 10));
-            ctx.drawTooltip(McUtils.mc().textRenderer, Text.of(lastViewedPlayers.get(index)), mouseX, mouseY);
+            int tx = (int)(mouseX * PVScreen.currentMatrixScale);
+            int ty = (int)(mouseY * PVScreen.currentMatrixScale);
+            ctx.drawTooltip(McUtils.mc().textRenderer, Text.of(lastViewedPlayers.get(index)), tx, ty);
         }
         //uses custom draw method which gets called in updatevalues to render over the background
     }

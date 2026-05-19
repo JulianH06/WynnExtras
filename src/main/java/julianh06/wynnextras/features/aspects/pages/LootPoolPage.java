@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects.pages;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
@@ -8,6 +9,7 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.*;
+import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -112,7 +114,7 @@ public class LootPoolPage extends PageWidget {
 
             fetchRunning.put(raidType, true);
 
-            System.out.println("starting fetch for " + raidType);
+            WynnExtras.LOGGER.info("starting fetch for " + raidType);
             lastCrowdsourceFetch.put(raidType, now);
             WynncraftApiHandler.fetchCrowdsourcedLootPool(raidType.name()).thenAccept(result -> {
                 fetchRunning.put(raidType, false);
@@ -123,12 +125,12 @@ public class LootPoolPage extends PageWidget {
 
                 lastCrowdsourceFetch.put(raidType, now);
                 if (isSamePool(oldItems, result)) {
-                    System.out.println("still old pool, retry in 30s");
+                    WynnExtras.LOGGER.info("still old pool, retry in 30s");
                     hasOldLootpool.put(raidType, true);
                     return;
                 }
 
-                System.out.println("NEW POOL for " + raidType);
+                WynnExtras.LOGGER.info("NEW POOL for " + raidType);
                 crowdsourcedLootPools.put(raidType.name(), result);
                 hasOldLootpool.put(raidType, false);
 
@@ -250,7 +252,9 @@ public class LootPoolPage extends PageWidget {
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(hoveredTooltip.isEmpty()) return;
-        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), mouseX - 5, mouseY + 20);
+        int absX = (int)(mouseX * parent.getMatrixScale());
+        int absY = (int)(mouseY * parent.getMatrixScale());
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), absX, absY + 20);
     }
 
     @Override
@@ -330,6 +334,7 @@ public class LootPoolPage extends PageWidget {
         static Identifier NOLTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/nol.png");
         static Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tcc.png");
         static Identifier TNATexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tna.png");
+        static Identifier TWPTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/twp.png");
 
         Identifier ltop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/ltop.png");
         Identifier rtop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/rtop.png");
@@ -386,25 +391,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            int topHeight = 202;
-
-            if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
-                ui.drawNineSlice((int) (x),
-                        (int) (y), width,
-                        (int) (topHeight + 1), 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
-
-                ui.drawNineSlice((int) (x),
-                        (int) (y + topHeight), width,
-                        (int) (height - topHeight), 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
-            } else {
-                ui.drawNineSlice((int) (x),
-                        (int) (y), width,
-                        (int) (topHeight + 1), 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
-
-                ui.drawNineSlice((int) (x),
-                        (int) (y + topHeight), width,
-                        (int) (height - topHeight), 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
-            }
+            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 192, 21);
 
             Identifier raidIcon = getTextureForRaid(raid);
             if(raidIcon != null) ui.drawImage(raidIcon, x + (width - textureWidth) / 2f, y - textureWidth / 4f, textureWidth, textureWidth);
@@ -516,9 +503,7 @@ public class LootPoolPage extends PageWidget {
                         x + width - 20,
                         aspectY - spacing * 2,
                         3,
-                        WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode
-                            ? CustomColor.fromHexString("1b1b1c")
-                            : CustomColor.fromHexString("5d4736")
+                        UIUtils.getVanillaDarkSeparatorColor(false)
                     );
                 }
             }
@@ -588,6 +573,7 @@ public class LootPoolPage extends PageWidget {
                 case NOL -> NOLTexture;
                 case TCC -> TCCTexture;
                 case TNA -> TNATexture;
+                case TWP -> TWPTexture;
                 case null, default -> null;
             };
         }
@@ -770,7 +756,7 @@ public class LootPoolPage extends PageWidget {
 
                 @Override
                 protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                    ui.drawRect(x, y, width, height, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromInt(0xFF707070) : CustomColor.fromInt(0xFF674439));
+                    ui.drawRect(x, y, width, height, UIUtils.getVanillaSeparatorColor(hovered || isHold));
                 }
 
                 @Override
@@ -929,7 +915,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Import favorites from Wynntils", x + width / 2f, y + height / 2f);
         }
 
@@ -954,7 +940,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Hide max aspects", x + width / 2f, y + height / 2f);
         }
 
@@ -977,7 +963,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Only favorite aspects", x + width / 2f, y + height / 2f);
         }
 
@@ -1000,7 +986,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Reload your aspects & lootpools", x + width / 2f, y + height / 2f);
         }
 
@@ -1067,7 +1053,7 @@ public class LootPoolPage extends PageWidget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseX = mouseX;
-            ui.drawSliderBackground(x, y, width, height, 5, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawSliderBackground(x, y, width, height);
 
             float maxOffset = getMax.get();
             int buttonWidth = maxOffset == 0 ? width : 750;
@@ -1110,7 +1096,7 @@ public class LootPoolPage extends PageWidget {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 5, hovered || isHold, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+                ui.drawButton(x, y, width, height, hovered || isHold);
             }
 
             @Override

@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import julianh06.wynnextras.features.aspects.pages.LootrunLootPoolPage;
@@ -53,17 +54,33 @@ public class LootrunLootPoolData {
         public LootrunItem(String name, String rarity, String type) {
             this.name = name;
             this.rarity = rarity;
-            this.type = type;
+            this.type = type != null ? type : "normal";
             this.tooltip = "";
             this.shinyStat = "";
+            normalizeShinyType();
         }
 
         public LootrunItem(String name, String rarity, String type, String tooltip, String shinyStat) {
             this.name = name;
             this.rarity = rarity;
-            this.type = type;
+            this.type = type != null ? type : "normal";
             this.tooltip = tooltip != null ? tooltip : "";
             this.shinyStat = shinyStat != null ? shinyStat : "";
+            normalizeShinyType();
+        }
+
+        public void normalizeShinyType() {
+            if (!"shiny".equals(type)) {
+                shinyStat = "";
+                return;
+            }
+
+            if (!hasShinyName(name)) {
+                type = determineType(name);
+                if (!"shiny".equals(type)) {
+                    shinyStat = "";
+                }
+            }
         }
 
         /**
@@ -80,6 +97,10 @@ public class LootrunLootPoolData {
                 return "shiny";
             }
             return "normal";
+        }
+
+        public static boolean hasShinyName(String name) {
+            return name != null && name.toLowerCase().contains("shiny");
         }
     }
 
@@ -121,6 +142,9 @@ public class LootrunLootPoolData {
      * Save a camp's loot pool with items
      */
     public void saveLootPool(String camp, List<LootrunItem> items) {
+        for (LootrunItem item : items) {
+            item.normalizeShinyType();
+        }
         lootPools.put(camp, new ArrayList<>(items));
         savedTimestamp = System.currentTimeMillis();
         save();
@@ -136,7 +160,11 @@ public class LootrunLootPoolData {
             clear();
             return new ArrayList<>();
         }
-        return lootPools.getOrDefault(camp, new ArrayList<>());
+        List<LootrunItem> pool = lootPools.getOrDefault(camp, new ArrayList<>());
+        for (LootrunItem item : pool) {
+            item.normalizeShinyType();
+        }
+        return pool;
     }
 
     /**
@@ -166,7 +194,7 @@ public class LootrunLootPoolData {
                 GSON.toJson(this, writer);
             }
         } catch (Exception e) {
-            System.err.println("Failed to save lootrun loot pool data: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to save lootrun loot pool data: " + e.getMessage());
         }
     }
 
@@ -190,7 +218,7 @@ public class LootrunLootPoolData {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to load lootrun loot pool data: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to load lootrun loot pool data: " + e.getMessage());
         }
     }
 

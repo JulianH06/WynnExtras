@@ -1,7 +1,9 @@
 package julianh06.wynnextras.config;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.Screen;
@@ -28,8 +30,10 @@ public class WynnExtrasConfig {
 
     public static WynnExtrasConfig INSTANCE = new WynnExtrasConfig();
 
-    private static final List<Consumer<WynnExtrasConfig>> saveListeners = new ArrayList<>();
-
+    /** Named bool-only profiles. Each profile maps fieldName -> value. Switching a profile
+     *  applies its bool snapshot; non-bool settings (positions, colors, etc.) are shared. */
+    //public LinkedHashMap<String, HashMap<String, Boolean>> configProfiles = new LinkedHashMap<>();
+    //public String activeProfile = null;
     // ==================== HIDERS ====================
     public boolean playerHiderToggle = true;
     public int maxHideDistance = 3;
@@ -55,7 +59,7 @@ public class WynnExtrasConfig {
     // ==================== CHAT NOTIFIER PREMADES ====================
 
     public Map<String, Boolean> premades;
-    public boolean lostEye = false;
+    public boolean lostEye = true;
     public boolean oneGoo = false;
     public boolean twoGoo = false;
     public boolean soul = true;
@@ -63,9 +67,10 @@ public class WynnExtrasConfig {
     public boolean fourOutOfFiveVoidMatter = true;
     public boolean oneLightCrystal = false;
     public boolean twoLightCrystal = false;
-    public boolean notgUpperPlatform = true;
-    public boolean notgLowerPlatform = true;
+    public boolean notgUpperPlatform = false;
+    public boolean notgLowerPlatform = false;
     public boolean artifactRestored = true;
+    public boolean itemZeroDurability = true;
 
     public void syncPremades() {
         if(premades == null) premades = new HashMap<>();
@@ -81,7 +86,23 @@ public class WynnExtrasConfig {
         premades.put("The players on the|UPPER PLATFORM SPAWNED", notgUpperPlatform);
         premades.put("A new platform has|LOWER PLATFORM SPAWNED", notgLowerPlatform);
         premades.put("The Artifact's power has been restored|SPEAR RECHARGED", artifactRestored);
+        premades.put("One of your items has reached zero durability|ITEM BROKE", itemZeroDurability);
+
+        //Isoptera announcements
+        premades.put("The Interdimensional Isoptera is in the Gray Grotto|GRAY", isopteraGray);
+        premades.put("The Interdimensional Isoptera is in the Black Grotto|BLACK", isopteraBlack);
+        premades.put("The Interdimensional Isoptera is in the White Grotto|WHITE", isopteraWhite);
+        premades.put("The Interdimensional Isoptera is in the Orange Grotto|ORANGE", isopteraOrange);
+        premades.put("The Interdimensional Isoptera is in the Blue Grotto|BLUE", isopteraBlue);
     }
+
+    // ==================== ISOPTERA PREMADE NOTIFICATIONS ====================
+    public boolean isopteraGray = false;
+    public boolean isopteraBlack = false;
+    public boolean isopteraWhite = false;
+    public boolean isopteraOrange = false;
+    public boolean isopteraBlue = false;
+
 
     // ==================== CHAT BLOCKER ====================
     public List<String> blockedWords = new ArrayList<>();
@@ -93,19 +114,26 @@ public class WynnExtrasConfig {
     public int bankOverlayMaxRows = 3;
     public int bankOverlayMaxColumns = 3;
     public boolean bankOverlayHideEmptyRows = false;
+    public boolean bankBagOverlay = false;
+    public boolean showTotalBagsInBankOverlay = false;
     public boolean showWeight = false;
     public boolean showScales = false;
-    public boolean scaleBackgroundEnabled = true;
+    public boolean scaleBackgroundEnabled = false;
     public boolean hideTMInfoText = false;
     public boolean hideScaleBackgroundButton = false;
     public boolean craftingHelperOverlay = true;
+    public boolean craftingAutoStart = false;
+    public List<String> craftingLastMaterialNames = new ArrayList<>();
+    public List<Integer> craftingLastMaterialCounts = new ArrayList<>();
+    public List<String> craftingLastIngredientNames = new ArrayList<>();
     public boolean craftingPreviewOverlay = true;
     public boolean craftingPreviewBackground = true;
     public int craftingPreviewOverlayX = 20;
     public int craftingPreviewOverlayY = 20;
     public boolean craftingDynamicTextures = true;
+    public boolean craftingHelperReverseOrder = false;
+    public float craftingHelperHeightPercent = 0.6f;
     public boolean skillpointHelper = true;
-    public boolean wynnventoryOverlay = true;
     public boolean tradeMarketOverlay = true;
     public int tradeMarketOverlayX = 10;
     public int tradeMarketOverlayY = 10;
@@ -125,29 +153,71 @@ public class WynnExtrasConfig {
     public List<String> raidLootTrackerHiddenLines = new ArrayList<>();
     public boolean raidLootTrackerBackground = true;
     public RaidLootTrackerOverlay.mode raidLootTrackerMode = RaidLootTrackerOverlay.mode.ALL;
+    public boolean autoIgnorePartyInRaid = false;
+    public boolean encounterOverlayEnabled = false;
+    public boolean rightClickToCopyChat = false;
+    public boolean raidSessionEnabled = false;
+    public boolean raidSessionOnlyInRaid = false;
+    public boolean raidSessionOnlyInInventory = false;
+    public boolean raidSessionShowRuns = false;
+    public boolean raidSessionShowFails = false;
+    public boolean raidSessionShowRate = false;
+    public boolean raidSessionShowTime = false;
+    public boolean raidSessionShowAvgTime = false;
+    public int raidSessionHudX = 4;
+    public int raidSessionHudY = 270;
+    public float raidSessionHudScale = 1.0f;
     public boolean toggleFastRequeue = false;
+    public boolean quickRepairEnabled = true;
+    public int quickRepairKey = org.lwjgl.glfw.GLFW.GLFW_KEY_R;
+    public boolean shiftDisableGuildRaid = true;
+
+    public boolean autoStreamEnabled = false;
+    public boolean autoSkipDialogueEnabled = false;
+    public boolean autoSkipCutscenesEnabled = false;
+    public boolean stackDuplicateMessages = false;
+    public int stackDuplicateWindowMinutes = 5;
+    public boolean auraPingEnabled = false;
+    public String auraPingColor = "FF6F00";
+    public boolean weeklyWarCountEnabled = false;
+    public int weeklyWarCountX = 5;
+    public int weeklyWarCountY = 5;
+    public List<Long> weeklyWars = new ArrayList<>();
+    public boolean warDpsEnabled = false;
+    public int warDpsX = 5;
+    public int warDpsY = 50;
+    public boolean attackTimerMenuEnabled = false;
+    public boolean attackTimerAutoBroadcast = false;
+    public int attackTimerX = 5;
+    public int attackTimerY = 150;
+    public boolean warBeaconEnabled = false;
+    public HashMap<String, Integer> hudColorOverrides = new HashMap<>();
+    public boolean territoryMenuKeyEnabled = false;
+    public int territoryMenuKey = org.lwjgl.glfw.GLFW.GLFW_KEY_I;
+    public boolean guildBankKeyEnabled = false;
+    public int guildBankKey = org.lwjgl.glfw.GLFW.GLFW_KEY_Y;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
     public boolean chiropTimer = false;
     public boolean automaticAspectScanning = false;
     public boolean passiveAspectScanning = true;
     public boolean tnaTreeMap = false;
+    public float tnaTreeMapScale = 1.75f;
     public boolean showTreeMapOnlyWhileInsideOfTree = false;
     public boolean showPathsOnTreeMap = true;
     public boolean showTreeMapEverywhere = false;
     public int treeMapX = 5;
     public int treeMapY = 5;
+    public float treeMapScale = 1.0f;
 
     // ==================== CHAT CLICK ====================
     public boolean chatClickPV = false;
+    public boolean bombShareSuggestion = false;
 
     // ==================== Crowd Sourcing ================
     public boolean crowdSourceRaidLootpools = true;
     public boolean crowdSourceLootrunLootpools = true;
     public boolean crowdSourceGambits = true;
-
-    // ==================== BADGES ====================
-    public boolean badgesEnabled = false;
 
     // ==================== MISC ====================
     public TextColor provokeTimerColor = TextColor.WHITE;
@@ -158,6 +228,7 @@ public class WynnExtrasConfig {
 
     public boolean showOwnNametag = false;
     // The code for this is in LivingEntityRendererMixin
+    public boolean badgesEnabled = false;
 
     // ==================== CHAT PEEK ====================
     public boolean chatPeekEnabled = false;
@@ -167,7 +238,7 @@ public class WynnExtrasConfig {
     //WIP, not used currently
 
     // ==================== TOTEM TIMER ====================
-    public boolean totemTimerEnabled = true;
+    public boolean totemTimerEnabled = false;
     public boolean totemTimerOwnOnly = true;
     public boolean totemTimerWarningText = true;
     public boolean totemTimerWarningSound = false;
@@ -175,6 +246,7 @@ public class WynnExtrasConfig {
     public int totemTimerWarningThreshold = 2;
     public boolean totemTimerEstimate = true;
     public boolean totemTimerTimeOnly = false;
+    public boolean totemTimerSolidColor = false;
     public int totemTimerX = -1;
     public int totemTimerY = 40;
     public float totemTimerScale = 1.0f;
@@ -197,6 +269,21 @@ public class WynnExtrasConfig {
     public float bloodSorrowTimerScale = 1.0f;
     public Align bloodSorrowAlignment = Align.CENTER;
 
+    // ==================== PROFESSION OVERLAY ====================
+    public boolean professionOverlayEnabled = false;
+    public int professionOverlayX = 5;
+    public int professionOverlayY = 100;
+    public float professionOverlayScale = 1.0f;
+    public boolean professionOverlayExactXp = false;
+    public Map<String, Float> professionOverflowXp = new HashMap<>();
+    public Map<String, Float> professionGoals = new HashMap<>();
+
+    // ==================== RADIANT HUD ====================
+    public boolean radiantHudEnabled = false;
+    public int radiantHudX = 5;
+    public int radiantHudY = 80;
+    public float radiantHudScale = 1.0f;
+
     // ==================== PROVOKE TIMER HUD ====================
     public int provokeTimerX = -1;
     public int provokeTimerY = 20;
@@ -207,6 +294,18 @@ public class WynnExtrasConfig {
     public boolean sourceOfTruthToggle = false;
     public boolean territoryEstimateToggle = false;
     public boolean removeChroma = false;
+    public int debugItemComponentsKey = GLFW.GLFW_KEY_UNKNOWN;
+    public int debugItemComponentsWindowX = 20;
+    public int debugItemComponentsWindowY = 20;
+    public int debugItemComponentsWindowW = 360;
+    public int debugItemComponentsWindowH = 220;
+
+    // ==================== CUSTOM CLASS SELECTION ====================
+    public boolean customClassSelectionEnabled = true;
+    public boolean useCustomClassColors = false;
+    public Map<String, Integer> classCardAccentColors = new HashMap<>();
+    public boolean hideClassSelectionQuickToggleButton = false;
+    public Map<String, String> clientNicknames = new HashMap<>(); // UUID -> nickname
 
     // ==================== TETRIS ====================
     public int tetrisBestScore = 0;
@@ -219,9 +318,6 @@ public class WynnExtrasConfig {
     //==================== Dark Modes ==========================
     public boolean darkmodeToggle = false; //for bank overlay (dont wanna change the variable cause it would reset it to false for everyone)
     public boolean pvDarkmodeToggle = false;
-    public boolean lootPoolPagesDarkMode = false;
-    public boolean craftingHelperDarkMode = false;
-    public boolean mainMenuDarkMode = false;
 
     // ==================== ENUMS ====================
     public enum TextColor {
@@ -290,6 +386,61 @@ public class WynnExtrasConfig {
         }
     }
 
+    // ==================== RESET / DISABLE ALL ====================
+    public void resetToDefaults() {
+        WynnExtrasConfig defaults = new WynnExtrasConfig();
+        for (java.lang.reflect.Field field : WynnExtrasConfig.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+            try {
+                field.set(this, field.get(defaults));
+            } catch (IllegalAccessException ignored) {}
+        }
+    }
+
+    public void disableAll() {
+        for (java.lang.reflect.Field field : WynnExtrasConfig.class.getDeclaredFields()) {
+            if (field.getType() == boolean.class) {
+                try {
+                    field.set(this, false);
+                } catch (IllegalAccessException ignored) {}
+            }
+        }
+    }
+
+//    // ==================== CONFIG PROFILES ====================
+//    /** Snapshots all current boolean field values into a profile with the given name. */
+//    public void saveCurrentAsProfile(String name) {
+//        if (name == null || name.isBlank()) return;
+//        HashMap<String, Boolean> snap = new HashMap<>();
+//        for (java.lang.reflect.Field field : WynnExtrasConfig.class.getDeclaredFields()) {
+//            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+//            if (field.getType() != boolean.class) continue;
+//            try { snap.put(field.getName(), field.getBoolean(this)); } catch (IllegalAccessException ignored) {}
+//        }
+//        configProfiles.put(name, snap);
+//        activeProfile = name;
+//    }
+//
+//    /** Applies the boolean snapshot stored under the given profile name. */
+//    public void applyProfile(String name) {
+//        HashMap<String, Boolean> snap = configProfiles.get(name);
+//        if (snap == null) return;
+//        for (Map.Entry<String, Boolean> entry : snap.entrySet()) {
+//            try {
+//                java.lang.reflect.Field field = WynnExtrasConfig.class.getDeclaredField(entry.getKey());
+//                if (field.getType() == boolean.class) {
+//                    field.setBoolean(this, entry.getValue());
+//                }
+//            } catch (NoSuchFieldException | IllegalAccessException ignored) {}
+//        }
+//        activeProfile = name;
+//    }
+//
+//    public void deleteProfile(String name) {
+//        configProfiles.remove(name);
+//        if (name != null && name.equals(activeProfile)) activeProfile = null;
+//    }
+
     // ==================== SAVE/LOAD ====================
     public static void load() {
         try {
@@ -305,9 +456,16 @@ public class WynnExtrasConfig {
                 if (INSTANCE.blockedWords == null) INSTANCE.blockedWords = new ArrayList<>();
                 if (INSTANCE.raidLootTrackerHiddenLines == null) INSTANCE.raidLootTrackerHiddenLines = new ArrayList<>();
                 if (INSTANCE.raidPBs == null) INSTANCE.raidPBs = new HashMap<>();
+                if (INSTANCE.professionOverflowXp == null) INSTANCE.professionOverflowXp = new HashMap<>();
+                if (INSTANCE.professionGoals == null) INSTANCE.professionGoals = new HashMap<>();
+                if (INSTANCE.classCardAccentColors == null) INSTANCE.classCardAccentColors = new HashMap<>();
+                if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
+                //if (INSTANCE.configProfiles == null) INSTANCE.configProfiles = new LinkedHashMap<>();
+                if (INSTANCE.weeklyWars == null) INSTANCE.weeklyWars = new ArrayList<>();
+                if (INSTANCE.hudColorOverrides == null) INSTANCE.hudColorOverrides = new HashMap<>();
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Failed to load config: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load config: " + e.getMessage());
             INSTANCE = new WynnExtrasConfig();
         }
     }
@@ -316,16 +474,9 @@ public class WynnExtrasConfig {
         try {
             Files.createDirectories(CONFIG_PATH.getParent());
             Files.writeString(CONFIG_PATH, GSON.toJson(INSTANCE));
-            for (Consumer<WynnExtrasConfig> listener : saveListeners) {
-                listener.accept(INSTANCE);
-            }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Failed to save config: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to save config: " + e.getMessage());
         }
-    }
-
-    public static void registerSaveListener(Consumer<WynnExtrasConfig> listener) {
-        saveListeners.add(listener);
     }
 
     // ==================== CONFIG SCREEN ====================

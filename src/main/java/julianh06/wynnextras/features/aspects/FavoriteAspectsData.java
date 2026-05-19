@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -63,7 +64,7 @@ public class FavoriteAspectsData {
 
         int imported = importFromWynntils();
         if (imported > 0) {
-            System.out.println("[WynnExtras] Imported " + imported + " aspect favorites from Wynntils");
+            WynnExtras.LOGGER.info("[WynnExtras] Imported " + imported + " aspect favorites from Wynntils");
         }
     }
 
@@ -158,10 +159,10 @@ public class FavoriteAspectsData {
         Path gameDir = FabricLoader.getInstance().getConfigDir().getParent();
         Path wynntilsConfig = gameDir.resolve("wynntils/config/" + uuid + ".conf.json");
 
-        System.out.println("[WynnExtras] Looking for Wynntils config at: " + wynntilsConfig);
+        WynnExtras.LOGGER.info("[WynnExtras] Looking for Wynntils config at: " + wynntilsConfig);
 
         if (!Files.exists(wynntilsConfig)) {
-            System.out.println("[WynnExtras] Wynntils config not found");
+            WynnExtras.LOGGER.info("[WynnExtras] Wynntils config not found");
             return 0;
         }
 
@@ -186,7 +187,7 @@ public class FavoriteAspectsData {
                 }
             }
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Failed to import Wynntils favorites: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to import Wynntils favorites: " + e.getMessage());
         }
 
         return imported;

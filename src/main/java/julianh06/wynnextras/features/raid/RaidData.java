@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.raid;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.models.raid.type.RaidInfo;
 import julianh06.wynnextras.mixin.Invoker.RaidInfoInvoker;
 
@@ -33,9 +34,9 @@ public class RaidData {
         this.duration = ((RaidInfoInvoker) raidInfo).invokeGetTimeInRooms();
 
         // Debug logging
-        System.out.println("[WynnExtras] RaidData created:");
-        System.out.println("  Start time: " + this.raidStartTime);
-        System.out.println("  End time: " + this.raidEndTime);
-        System.out.println("  Duration: " + this.duration);
+        WynnExtras.LOGGER.info("[WynnExtras] RaidData created:");
+        WynnExtras.LOGGER.info("  Start time: " + this.raidStartTime);
+        WynnExtras.LOGGER.info("  End time: " + this.raidEndTime);
+        WynnExtras.LOGGER.info("  Duration: " + this.duration);
     }
 }

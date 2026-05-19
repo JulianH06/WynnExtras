@@ -50,10 +50,8 @@ public class SpellHiderMappings {
 
     public SpellNamespace getSpellMapping(Identifier id) {
         SpellData fromPath = SpellHider.getFromPath(id.getPath());
-        if (fromPath == null) {
-            WynnExtras.LOGGER.warn("the return value of \"julianh06.wynnextras.features.spellhider.SpellHider.getFromPath(String)\" is null");
-            return null;
-        }
+        if (fromPath == null) return null;
+
         return idMappings.get(fromPath.getHash());
     }
 
@@ -163,7 +161,7 @@ public class SpellHiderMappings {
                 }
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Failed to load spell mappings: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load spell mappings: " + e.getMessage());
             INSTANCE = new SpellHiderMappings();
         }
     }
@@ -173,7 +171,7 @@ public class SpellHiderMappings {
             Files.createDirectories(MAPPINGS_PATH.getParent());
             Files.writeString(MAPPINGS_PATH, GSON.toJson(new SaveFormat(INSTANCE)));
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Failed to save spell mappings: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to save spell mappings: " + e.getMessage());
         }
     }
 }

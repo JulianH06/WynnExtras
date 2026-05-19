@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -149,7 +150,7 @@ public class LootPoolData {
                 GSON.toJson(this, writer);
             }
         } catch (Exception e) {
-            System.err.println("Failed to save loot pool data: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to save loot pool data: " + e.getMessage());
         }
     }
 
@@ -173,7 +174,7 @@ public class LootPoolData {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to load loot pool data: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to load loot pool data: " + e.getMessage());
         }
     }
 

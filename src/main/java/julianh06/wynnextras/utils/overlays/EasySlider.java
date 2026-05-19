@@ -20,7 +20,7 @@ public class EasySlider extends EasyElement {
     private final float max;
     private float value = 50f;
 
-    public boolean dragging = false;
+    private boolean dragging = false;
     private boolean useFloatInsteadOfInt;
     private final int handleWidth = 30;
 
@@ -59,6 +59,14 @@ public class EasySlider extends EasyElement {
             dragging = true;
             updateValueFromMouse(mouseX);
         }
+    }
+
+    public boolean isDragging() {
+        return dragging;
+    }
+
+    public void setDragging(boolean dragging) {
+        this.dragging = dragging;
     }
 
     public void updateValueFromMouse(int mouseX) {

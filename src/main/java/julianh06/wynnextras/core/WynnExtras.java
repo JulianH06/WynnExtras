@@ -25,10 +25,13 @@ import julianh06.wynnextras.features.chat.ChatNotificator;
 import julianh06.wynnextras.features.loader.SkillPointLoader;
 import julianh06.wynnextras.features.misc.BloodSorrowTimer;
 import julianh06.wynnextras.features.misc.FastRequeue;
+import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
+import julianh06.wynnextras.features.misc.QuickRepair;
 import julianh06.wynnextras.features.misc.TotemTimer;
 import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.qol.EncounterOverlay;
 import julianh06.wynnextras.features.raid.*;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.waypoints.WaypointData;
@@ -116,8 +119,8 @@ public class WynnExtras implements ClientModInitializer {
 	public static final String MOD_ID = "wynnextras";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	public static DefaultedList<Slot> testInv;
-	public static int testInvSize;
+	private static DefaultedList<Slot> testInv;
+	private static int testInvSize;
 
 	GLFWKeyCallbackI previousCallback;
 
@@ -127,7 +130,7 @@ public class WynnExtras implements ClientModInitializer {
 	private static final Text WYNNEXTRAS_BACKGROUND_PILL;
 	private static final Text WYNNEXTRAS_FOREGROUND_PILL;
 
-	public static String latestVersion = null;
+	private static String latestVersion = null;
 
 	static {
 		BACKGROUND_STYLE = Style.EMPTY.withFont(new StyleSpriteSource.Font(PILL_FONT)).
@@ -153,19 +156,25 @@ public class WynnExtras implements ClientModInitializer {
 		return addWynnExtrasPrefix(Text.of(text));
 	}
 
+	public static void sendMessageToClient(Text text) {
+		McUtils.sendMessageToClient(addWynnExtrasPrefix(text));
+	}
+
+	public static void sendMessageToClient(String text) {
+		McUtils.sendMessageToClient(addWynnExtrasPrefix(text));
+	}
+
 
 	@Override
 	public void onInitializeClient() {
 		Core.init(MOD_ID);
-		CurrentVersionData.INSTANCE.version = FabricLoader.getInstance().getModContainer("wynnextras").map(mod -> mod.getMetadata().getVersion().getFriendlyString()).orElse("unknown");
-		CurrentVersionData.save();
-		//TODO: remove once test version is gone
-		latestVersion = CurrentVersionData.fetchLatestVersion();
+		updateVersionData();
 
 		SpecialGuiElementRegistry.register(context -> new BannerGuiRenderer(context.vertexConsumers(), MinecraftClient.getInstance().getAtlasManager()));
 
 		WELoader.loadAll();
 		TickScheduler.init();
+		ChatEvent.register();
 
         new InitEvent().post();
 
@@ -178,6 +187,10 @@ public class WynnExtras implements ClientModInitializer {
 		ProvokeTimer.init();
 		TotemTimer.register();
 		BloodSorrowTimer.register();
+		julianh06.wynnextras.features.misc.RadiantHud.init();
+		julianh06.wynnextras.features.misc.ProfessionOverlay.register();
+		julianh06.wynnextras.features.bankoverlay.BankOverlay2.registerScreenHooks();
+		ItemComponentsDebugOverlay.registerInventoryScreenHooks();
 		ChatNotificator.init();
 		Waypoints.register();
 		FastRequeue.registerFastRequeue();
@@ -185,6 +198,19 @@ public class WynnExtras implements ClientModInitializer {
 		maintracking.init();
         RaidLootTracker.register();
         RaidLootTrackerOverlay.register();
+        RaidSessionTracker.register();
+        julianh06.wynnextras.features.raid.PartyIgnoreOnRaid.register();
+        julianh06.wynnextras.features.raid.TreeRoomMinimap.register();
+        QuickRepair.register();
+        julianh06.wynnextras.features.qol.AutoSkipDialogue.register();
+        julianh06.wynnextras.features.qol.AutoSkipCutscenes.register();
+        julianh06.wynnextras.features.chat.ChainsAttachedTracker.register();
+        julianh06.wynnextras.features.qol.AuraPing.register();
+        julianh06.wynnextras.features.qol.WeeklyWarCount.register();
+        julianh06.wynnextras.features.qol.WarDPS.register();
+        julianh06.wynnextras.features.qol.AttackTimer.register();
+        julianh06.wynnextras.features.qol.WarBeacon.register();
+        julianh06.wynnextras.features.qol.TerritoryMenuKey.register();
         RaidLootConfig.INSTANCE.load();
 		MaterialTextureResolver.register();
 		RecipeLoader.loadRecipes();
@@ -193,7 +219,7 @@ public class WynnExtras implements ClientModInitializer {
 
 		RaidListData.load();
 		WaypointData.load();
-		RaidChatNotifier.INSTANCE.load();
+		RaidChatNotifier.load();
 
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -202,7 +228,7 @@ public class WynnExtras implements ClientModInitializer {
 			BookshelfData.INSTANCE.load();
 			MiscBucketData.INSTANCE.load();
 			WynncraftApiHandler.load();
-			WynncraftApiHandler.fetchItemDatabase().thenAccept(result -> WynncraftApiHandler.cachedItemDatabase = result);
+			WynncraftApiHandler.fetchItemDatabase().thenAccept(WynncraftApiHandler::setCachedItemDatabase);
 
 			ExecutorService executor = Executors.newFixedThreadPool(4);
 			CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool, executor).thenRunAsync(WeightDisplay::populateStatRangesFromDatabase, executor);
@@ -217,6 +243,23 @@ public class WynnExtras implements ClientModInitializer {
 		}
 
 		ResetTimeConfig.INSTANCE.fetchIfNeeded();
+
+	}
+
+	private static void updateVersionData() {
+		CurrentVersionData.INSTANCE.version = FabricLoader.getInstance().getModContainer("wynnextras").map(mod -> mod.getMetadata().getVersion().getFriendlyString()).orElse("unknown");
+		CurrentVersionData.save();
+		//TODO: remove once test version is gone
+		latestVersion = CurrentVersionData.fetchLatestVersion();
+	}
+
+	public static boolean hasTestInventory() {
+		return testInv != null;
+	}
+
+	public static void updateTestInventory(DefaultedList<Slot> slots) {
+		testInv = slots;
+		testInvSize = slots.size() - 36;
 	}
 
 	@SubscribeEvent(priority = EventPriority.LOWEST)
@@ -229,16 +272,9 @@ public class WynnExtras implements ClientModInitializer {
 					new KeyInputEvent(key, scancode, action, mods).post();//, character.get()).post();
 				}
 
-				if(BankOverlay2.searchbar2 != null) {
-					if (BankOverlay.currentOverlayType != BankOverlayType.NONE && BankOverlay2.searchbar2.isFocused() && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
-				}
-
-				for(BankOverlay2.PageWidget page : BankOverlay2.pages) {
-					if(page.sign == null) continue;
-					if(page.sign.textInputWidget == null) continue;
-
-					if (BankOverlay.currentOverlayType != BankOverlayType.NONE && page.sign.textInputWidget.isFocused() && key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
-				}
+				if (BankOverlay.currentOverlayType != BankOverlayType.NONE
+						&& BankOverlay2.isAnyTextInputFocused()
+						&& key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
 
 				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)) return;
 
@@ -262,26 +298,46 @@ public class WynnExtras implements ClientModInitializer {
 		}
 	}
 
-	public static int normalGUIScale = -1;
+	private static int normalGUIScale = -1;
 
 	@SubscribeEvent
 	public void onClientTick(TickEvent event) {
 		WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+		EncounterOverlay.clearLatchIfNoContainerOpen();
 		if(config.differentGUIScale) {
 			if (MinecraftClient.getInstance().currentScreen == null) {
-				if (normalGUIScale != -1) {
-					MinecraftClient.getInstance().options.getGuiScale().setValue(normalGUIScale);
-					normalGUIScale = -1;
-				}
+				restoreNormalGuiScale();
 			}
 		}
 
-		if (ticksUntilNotify < 0) return;
+		tickVersionNotificationCountdown();
+	}
 
+	private static void tickVersionNotificationCountdown() {
+		if (ticksUntilNotify < 0) return;
 		ticksUntilNotify--;
 		if (ticksUntilNotify == 0) {
 			tryNotifyVersionUpdate(CurrentVersionData.INSTANCE.version, latestVersion);
 		}
+	}
+
+	public static boolean hasStoredNormalGuiScale() {
+		return normalGUIScale != -1;
+	}
+
+	public static void storeNormalGuiScale(int guiScale) {
+		normalGUIScale = guiScale;
+	}
+
+	private static void restoreNormalGuiScale() {
+		if (normalGUIScale != -1) {
+			MinecraftClient.getInstance().options.getGuiScale().setValue(normalGUIScale);
+			clearStoredNormalGuiScale();
+		}
+	}
+
+	private static void clearStoredNormalGuiScale() {
+		normalGUIScale = -1;
 	}
 
 	private static Instant lastNotificationTime = null;

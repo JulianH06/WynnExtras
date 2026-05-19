@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.core.persisted.config.Config;
 import com.wynntils.features.inventory.ItemHighlightFeature;
 import com.wynntils.handlers.item.ItemAnnotation;
@@ -92,7 +93,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
                         }
                     })
                     .exceptionally(ex -> {
-                        System.err.println("Unexpected error: " + ex.getMessage());
+                        WynnExtras.LOGGER.error("Unexpected error: " + ex.getMessage());
                         return null;
                     });
         }
@@ -337,18 +338,18 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
                     int xPos;
                     if(amount % 2 == 0) {
-                        xPos = 130 * (i % (amount / 2));
+                        xPos = 120 * (i % (amount / 2));
                     } else {
                         if(i < amount / 2f) {
-                            xPos = 130 * (i % ((amount + 1) / 2)) - 70;
+                            xPos = 120 * (i % ((amount + 1) / 2)) - 60;
                         } else {
-                            xPos = 130 * (i % (amount / 2));
+                            xPos = 120 * (i % (amount / 2));
                         }
                     }
                     int yPos = 315 * Math.floorDiv(i, (amount + 1) / 2);
 
                     aspectWidgets.get(widgetIndex).setBounds(
-                            x + width / 2 - 63 * (amount / 2) + xPos,
+                            x + width / 2 - 59 * (amount / 2) + xPos,
                             y + yPos + 240,
                             100,
                             100
@@ -364,7 +365,11 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         if(currentHovered == null) return;
 
-        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, currentHovered.getTooltip(Item.TooltipContext.DEFAULT, McUtils.player(), TooltipType.BASIC), mouseX, mouseY);
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().scale((float)(1.0 / PVScreen.currentMatrixScale), (float)(1.0 / PVScreen.currentMatrixScale));
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, currentHovered.getTooltip(Item.TooltipContext.DEFAULT, McUtils.player(), TooltipType.BASIC),
+                (int)(mouseX * PVScreen.currentMatrixScale), (int)(mouseY * PVScreen.currentMatrixScale));
+        ctx.getMatrices().popMatrix();
     }
 
     private static int getAspectAmountForClass(Page page, List<ApiAspect> warriorAspects, List<ApiAspect> shamanAspects, List<ApiAspect> mageAspects, List<ApiAspect> archerAspects, List<ApiAspect> assassinAspects) {
@@ -618,7 +623,11 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
             if(hovered) {
                 String formatted = formatter.format(Instant.ofEpochMilli(lastUpdatedTimestamp));
-                ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, List.of(Text.of("Last updated at"), Text.of(formatted)), mouseX, mouseY);
+                ctx.getMatrices().pushMatrix();
+                ctx.getMatrices().scale((float)(1.0 / PVScreen.currentMatrixScale), (float)(1.0 / PVScreen.currentMatrixScale));
+                ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, List.of(Text.of("Last updated at"), Text.of(formatted)),
+                        (int)(mouseX * PVScreen.currentMatrixScale), (int)(mouseY * PVScreen.currentMatrixScale));
+                ctx.getMatrices().popMatrix();
             }
         }
     }

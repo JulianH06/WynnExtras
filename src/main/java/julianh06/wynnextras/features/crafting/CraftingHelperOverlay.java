@@ -1,5 +1,8 @@
 package julianh06.wynnextras.features.crafting;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.profession.type.ProfessionType;
@@ -12,11 +15,13 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.type.Time;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.features.crafting.data.CraftableType;
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.VcitCompat;
 import julianh06.wynnextras.features.crafting.data.recipes.AlchemismRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.CookingRecipes;
+import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
 import julianh06.wynnextras.features.crafting.data.recipes.ScribingRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.armouring.ChestplateRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.armouring.HelmetRecipes;
@@ -30,13 +35,16 @@ import julianh06.wynnextras.features.crafting.data.recipes.weaponsmithing.SpearR
 import julianh06.wynnextras.features.crafting.data.recipes.woodworking.BowRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.woodworking.RelikRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.woodworking.WandRecipes;
+import julianh06.wynnextras.features.crafting.wynnbuilder.DecodedCraft;
+import julianh06.wynnextras.features.crafting.wynnbuilder.WynnBuilderDecoder;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.UI.UIUtils;
-import julianh06.wynnextras.utils.UI.WEHandledScreen;
+import julianh06.wynnextras.utils.UI.WEMenuExtension;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.component.DataComponentTypes;
@@ -46,12 +54,15 @@ import net.minecraft.item.Items;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
-public class CraftingHelperOverlay extends WEHandledScreen {
-    private static final boolean registeredScroll = false;
+public class CraftingHelperOverlay extends WEMenuExtension {
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 50; // in ms
     public static float targetOffset = 0;
@@ -63,38 +74,91 @@ public class CraftingHelperOverlay extends WEHandledScreen {
     SelectionWidget selectionWidget2;
     SelectionWidget selectionWidget3;
 
+    static final MinecraftClient mc = MinecraftClient.getInstance();
+
+    private static final Queue<Integer> WB_CLICK_QUEUE = new ArrayDeque<>();
+    private static long wbLastClick = 0;
+    private static boolean wbClicking = false;
+    private static String wbStatusMessage = "";
+    private static int wbTotalClicks = 0;
+    private static int wbClicksDone = 0;
+    private static boolean wbIsReuse = false; // true = filling from Reuse Last, false = from Clipboard
+    private static long wbFinishedTime = 0; // timestamp when queue emptied, used to delay completion check
+    private static boolean lastResultSlotsEmpty = true; // tracks output slots to detect craft completion
+    private static final int[] RESULT_SLOTS = {5, 6, 7, 8, 14, 15, 16, 17, 23, 24, 25, 26};
+    private static final int[] INGREDIENT_SLOTS = {2, 3, 11, 12, 20, 21};
+
+    // "Reuse last" - stores item names from the last craft (saved when items are queued for placement)
+    private static final List<String> lastMaterialNames = new ArrayList<>();  // material names (from inventory)
+    private static final List<Integer> lastMaterialCounts = new ArrayList<>(); // click count per material
+    private static final List<String> lastIngredientNames = new ArrayList<>(); // ingredient names (from inventory)
+    private static final List<String> preparedMaterialNames = new ArrayList<>();
+    private static final List<Integer> preparedMaterialCounts = new ArrayList<>();
+
+    private record ItemRequirement(String type, String name, int amount) {}
+    private record MissingRequirement(String type, String name, int amount) {}
+
+    private static final String MAIN_ING_MAP_URL = "https://raw.githubusercontent.com/hppeng-wynn/hppeng-wynn.github.io/HEAD/py_script/ing_map.json";
+    private static final String BETA_ING_MAP_URL = "https://raw.githubusercontent.com/wynnbuilder-beta/wynnbuilder-beta.github.io/master/py_script/ing_map.json";
+    private static final HttpClient ING_HTTP = HttpClient.newHttpClient();
+    private static volatile Map<Integer, String> mainIngMap = null;
+    private static volatile Map<Integer, String> betaIngMap = null;
+    private static volatile boolean ingMapsLoading = false;
+
+    private static void ensureIngMapsLoaded() {
+        if ((mainIngMap != null && betaIngMap != null) || ingMapsLoading) return;
+        ingMapsLoading = true;
+        CompletableFuture.runAsync(() -> {
+            mainIngMap = fetchIngMap(MAIN_ING_MAP_URL);
+            betaIngMap = fetchIngMap(BETA_ING_MAP_URL);
+            ingMapsLoading = false;
+        });
+    }
+
+    private static Map<Integer, String> fetchIngMap(String url) {
+        try {
+            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).build();
+            HttpResponse<String> resp = ING_HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            JsonObject obj = JsonParser.parseString(resp.body()).getAsJsonObject();
+            Map<Integer, String> map = new HashMap<>();
+            for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
+                map.put(entry.getValue().getAsInt(), entry.getKey());
+            }
+            return map;
+        } catch (Exception e) {
+            return Collections.emptyMap();
+        }
+    }
+
     private static RecipeState state = RecipeState.NONE;
 
     private final static Map<ProfessionType, Map<RecipeState, Float>> lastOffset = new HashMap<>();
     private final static Map<ProfessionType, RecipeState> lastState = new HashMap<>();
 
-    Identifier l = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/l.png");
-    Identifier r = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/r.png");
-    Identifier t = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/t.png");
-    Identifier b = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/b.png");
-    Identifier tl = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/tl.png");
-    Identifier tr = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/tr.png");
-    Identifier bl = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/bl.png");
-    Identifier br = Identifier.of("wynnextras", "textures/gui/craftinghelper/light/br.png");
-
-    Identifier ld = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/l.png");
-    Identifier rd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/r.png");
-    Identifier td = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/t.png");
-    Identifier bd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/b.png");
-    Identifier tld = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/tl.png");
-    Identifier trd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/tr.png");
-    Identifier bld = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/bl.png");
-    Identifier brd = Identifier.of("wynnextras", "textures/gui/craftinghelper/dark/br.png");
-
+    private static boolean resizingTop = false;
+    private static boolean resizingBottom = false;
+    private static double resizeDragStartY = 0;
+    private static int resizeDragStartBlockHeight = 0;
+    private static int resizeDragScreenHeight = 0;
+    private static int currentActualBlockH = 0;
+    private static int currentBlockTop = 0;
+    private static int currentScreenH = 0;
+    private static int currentXStart = 0;
+    private static int currentWidgetWidth = 200;
 
     ProfBombWidget profSpeedBombWidget;
     ProfBombWidget profXpBombWidget;
+
+    ActionButtonWidget loadClipboardBtn;
+    ActionButtonWidget reuseLastBtn;
+    ActionButtonWidget autoStartBtn;
 
     static ScrollBarWidget scrollBarWidget = null;
 
     static String statusMessage = "";
 
     public CraftingHelperOverlay() {
+        ensureIngMapsLoaded();
         state = RecipeState.NONE;
         helperWidget = null;
         selectionWidget1 = null;
@@ -103,8 +167,28 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         profSpeedBombWidget = null;
         profXpBombWidget = null;
         actualOffset = 0;
+
+        loadClipboardBtn = new ActionButtonWidget(List.of(Text.of("Copy a WynnBuilder link and"), Text.of("click here to paste it!")));
+        loadClipboardBtn.setOnClick(w -> loadFromWynnBuilder(MinecraftClient.getInstance().keyboard.getClipboard()));
+        rootWidgets.add(loadClipboardBtn);
+
+        reuseLastBtn = new ActionButtonWidget(List.of(Text.of("Paste the same recipe you"), Text.of("used for your last craft")));
+        reuseLastBtn.setOnClick(w -> reuseLast());
+        rootWidgets.add(reuseLastBtn);
+
+        autoStartBtn = new ActionButtonWidget(List.of(Text.of("Automatically start crafting when"), Text.of("using one of the buttons above")));
+        autoStartBtn.setOnClick(w -> {
+            WynnExtrasConfig.INSTANCE.craftingAutoStart = !WynnExtrasConfig.INSTANCE.craftingAutoStart;
+            WynnExtrasConfig.save();
+        });
+        rootWidgets.add(autoStartBtn);
         targetOffset = ui == null ? -10 : -10 / ui.getScaleFactorF();
         statusMessage = "";
+        wbStatusMessage = "";
+        WB_CLICK_QUEUE.clear();
+        wbClicking = false;
+        preparedMaterialNames.clear();
+        preparedMaterialCounts.clear();
 
         if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
         ProfessionType type = container.getProfessionType();
@@ -136,18 +220,61 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         if (state == null) state = RecipeState.NONE;
 
+        ProfessionType type = container.getProfessionType();
+        lastState.put(type, state);
+
         int xStart = ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth();
-        int yStart = (int) (((HandledScreenAccessor) screen).getY() + (70 / ui.getScaleFactor()));
-        int widgetWidth = 600;
-        int widgetHeight = (int) (((HandledScreenAccessor) screen).getBackgroundHeight() - (24 * 3 / ui.getScaleFactor()));
+        int widgetWidth = 165;
+        int screenY = ((HandledScreenAccessor) screen).getY();
+        int backgroundHeight = ((HandledScreenAccessor) screen).getBackgroundHeight();
+
+        boolean big = (type == null || type == ProfessionType.ALCHEMISM || type == ProfessionType.COOKING || type == ProfessionType.SCRIBING);
+        int selBtnHeight = big ? 0 : 20;
+        int helperPadding = big ? 18 : 14;
+        int maxNineSliceH = 14 * 38 + helperPadding;
+        int maxBlockH = maxNineSliceH + selBtnHeight;
+        int minNineSliceH = 38 + helperPadding;
+        int minBlockH = minNineSliceH + selBtnHeight;
+
+        if (resizingTop || resizingBottom) {
+            // Multiply dy by 2: block is center-anchored so each edge moves at half speed;
+            // doubling the height delta makes the dragged edge track the mouse 1:1.
+            int dy = mouseY - (int) resizeDragStartY;
+            int newBlock = resizingTop ? (resizeDragStartBlockHeight - 2 * dy) : (resizeDragStartBlockHeight + 2 * dy);
+            float minPct = (float) minBlockH / resizeDragScreenHeight;
+            WynnExtrasConfig.INSTANCE.craftingHelperHeightPercent = Math.clamp((float) newBlock / resizeDragScreenHeight, minPct, 1.0f);
+        }
+
+        int desiredBlockH = (int) (screen.height * WynnExtrasConfig.INSTANCE.craftingHelperHeightPercent);
+        int actualBlockH = Math.clamp(desiredBlockH, minBlockH, maxBlockH);
+        int centerY = screenY + backgroundHeight / 2;
+        int blockTop = Math.clamp(centerY - actualBlockH / 2, 0, screen.height - actualBlockH);
+
+        int widgetHeight = actualBlockH - selBtnHeight;
+        int yStart = blockTop + selBtnHeight;
+
+        currentActualBlockH = actualBlockH;
+        currentBlockTop = blockTop;
+        currentScreenH = screen.height;
+        currentXStart = xStart;
+        currentWidgetWidth = widgetWidth;
 
         if (profSpeedBombWidget == null) profSpeedBombWidget = new ProfBombWidget(BombType.PROFESSION_SPEED);
         if (profXpBombWidget == null) profXpBombWidget = new ProfBombWidget(BombType.PROFESSION_XP);
 
-        int speedWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(profSpeedBombWidget.text) * ui.getScaleFactor());
-        int xpWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(profXpBombWidget.text) * ui.getScaleFactor());
-        profSpeedBombWidget.setBounds((int) ((screen.width / 2f) * ui.getScaleFactorF() - speedWidth / 2f), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 130), speedWidth, 30);
-        profXpBombWidget.setBounds((int) ((screen.width / 2f) * ui.getScaleFactorF() - xpWidth / 2f), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 170), xpWidth, 30);
+        var textRenderer = MinecraftClient.getInstance().textRenderer;
+        int menuWidth = ((HandledScreenAccessor) screen).getBackgroundWidth();
+        int speedWidth = textRenderer.getWidth(profSpeedBombWidget.text);
+        int xpWidth = textRenderer.getWidth(profXpBombWidget.text);
+        int maxBombWidth = Math.max(speedWidth, Math.max(xpWidth,
+                !profXpBombWidget.isActive && !profSpeedBombWidget.isActive ? textRenderer.getWidth("There are no active profession bombs.") :
+                textRenderer.getWidth("There are no active prof bombs on your world. Click below to switch worlds.")));
+        boolean bombYOverlap = blockTop < screenY - 33;
+        boolean bombXOverlap = xStart < screen.width / 2 + maxBombWidth / 2;
+        int bombCenterX = (bombYOverlap && bombXOverlap) ? xStart - maxBombWidth / 2 - 4 : screen.width / 2;
+
+        profSpeedBombWidget.setBounds(bombCenterX - speedWidth / 2, screenY - 43, speedWidth, 10);
+        profXpBombWidget.setBounds(bombCenterX - xpWidth / 2, screenY - 57, xpWidth, 10);
 
         profSpeedBombWidget.draw(ctx, mouseX, mouseY, delta, ui);
         profXpBombWidget.draw(ctx, mouseX, mouseY, delta, ui);
@@ -158,16 +285,15 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             dontShowWorldText = true;
 
         if ((profXpBombWidget.isActive || profSpeedBombWidget.isActive) && !dontShowWorldText) {
-            int currentWorldTextYOffset = profXpBombWidget.isActive ? 200 : 160;
-            ui.drawCenteredText("There are no active profession bombs on your world. Click below to switch worlds.", (screen.width / 2f) * ui.getScaleFactorF(), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - currentWorldTextYOffset), CustomColor.fromHexString("FF0000"));
+            int currentWorldTextYOffset = profXpBombWidget.isActive ? 67 : 53;
+            drawCenteredWrappedUpward(ui, textRenderer, "There are no active profession bombs on your world. Click below to switch worlds.",
+                    bombCenterX, screenY - currentWorldTextYOffset, maxBombWidth, CustomColor.fromHexString("FF0000"));
         }
 
         if (!profXpBombWidget.isActive && !profSpeedBombWidget.isActive) {
-            ui.drawCenteredText("There are no active profession bombs.", (screen.width / 2f) * ui.getScaleFactorF(), (int) (((HandledScreenAccessor) screen).getY() * ui.getScaleFactorF() - 120), CustomColor.fromHexString("FF0000"));
+            drawCenteredWrappedUpward(ui, textRenderer, "There are no active profession bombs.",
+                    bombCenterX, screenY - 40, maxBombWidth, CustomColor.fromHexString("FF0000"));
         }
-
-        ProfessionType type = container.getProfessionType();
-        lastState.put(type, state);
 
         if (selectionWidget1 == null) {
             selectionWidget1 = new SelectionWidget(0);
@@ -184,8 +310,6 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             rootWidgets.add(selectionWidget3);
         }
 
-        boolean big = false;
-
         switch (type) {
             case JEWELING, WOODWORKING -> {
                 setupSelectionWidget(selectionWidget1, type, 0, 3, xStart, yStart, widgetWidth);
@@ -201,21 +325,12 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 selectionWidget1.setBounds(0, 0, 0, 0);
                 selectionWidget2.setBounds(0, 0, 0, 0);
                 selectionWidget3.setBounds(0, 0, 0, 0);
-                big = true;
             }
         }
 
-        if (WynnExtrasConfig.INSTANCE.craftingHelperDarkMode) {
-            ui.drawNineSlice((int) (xStart * ui.getScaleFactor() + 5),
-                    (int) (yStart * ui.getScaleFactor()) - (big ? 66 : 0), widgetWidth,
-                    (int) (widgetHeight * ui.getScaleFactor()) + (big ? 66 : 0), 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
-        } else {
-            ui.drawNineSlice((int) (xStart * ui.getScaleFactor() + 5),
-                    (int) (yStart * ui.getScaleFactor()) - (big ? 66 : 0), widgetWidth,
-                    (int) (widgetHeight * ui.getScaleFactor()) + (big ? 66 : 0), 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
-        }
+        ui.drawVanillaPanel(xStart + 1.7f, yStart, widgetWidth, widgetHeight, 4, 7, 7, 6, 6);
 
-        int step = 142;
+        int step = 38;
         int recipeWidgetAmount = 14;
 
         int contentHeight = recipeWidgetAmount * step;
@@ -246,39 +361,137 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         helperWidget.maxOffset = maxOffset;
         scrollBarWidget.maxOffset = maxOffset;
 
-        scrollBarWidget.setBounds((int) ((xStart + 5) * ui.getScaleFactor()) + widgetWidth, (int) ((int) (((HandledScreenAccessor) screen).getY() + (big ? 10 : 70) / ui.getScaleFactor()) * ui.getScaleFactor()), 30, (int) ((((HandledScreenAccessor) screen).getBackgroundHeight() - (big ? 12 : 75) / ui.getScaleFactor()) * ui.getScaleFactor()));
-        scrollBarWidget.draw(ctx, mouseX, mouseY, delta, ui);
+        scrollBarWidget.setBounds(xStart + 5 + widgetWidth, yStart, 10, widgetHeight);
+        if (maxOffset > 0) {
+            scrollBarWidget.draw(ctx, mouseX, mouseY, delta, ui);
+        }
 
         int scissorX1 = xStart;
-        int scissorY1 = (int) (yStart + Math.round((big ? -46.5f : 20) / ui.getScaleFactor()));
+        int scissorY1 = yStart + (big ? 6 : 7);
         int scissorX2 = xStart + widgetWidth;
-        int scissorY2 = (int) (yStart + widgetHeight - Math.round(20 / ui.getScaleFactor()));
+        int scissorY2 = yStart + widgetHeight - 7;
 
-        ui.drawCenteredText(statusMessage, (xStart + (ui.getScaleFactorF() == 2 ? 40 : 0)) * ui.getScaleFactorF(), (((HandledScreenAccessor) screen).getY() + ((HandledScreenAccessor) screen).getBackgroundHeight() + 10) * ui.getScaleFactorF(), CustomColor.fromHexString("FF0000"));
+        // Buttons (left side of crafting station, right-aligned near GUI)
+        int leftX = ((HandledScreenAccessor) screen).getX();
+        int wbBtnW = (leftX - 10) / 2;
+        int wbBtnH = 17;
+        int wbBtnX = leftX - wbBtnW - 2;
+        int wbBtnY = screenY + 2;
+        boolean hasLastCraft = !lastMaterialNames.isEmpty() || !lastIngredientNames.isEmpty();
 
-        ctx.enableScissor(
-                scissorX1,
-                scissorY1,
-                scissorX2,
-                scissorY2);
+        loadClipboardBtn.setBounds(wbBtnX, wbBtnY, wbBtnW, wbBtnH);
+        loadClipboardBtn.isDisabled = wbClicking;
+        loadClipboardBtn.isFilling = wbClicking && !wbIsReuse;
+        loadClipboardBtn.fillDone = wbClicksDone;
+        loadClipboardBtn.fillTotal = wbTotalClicks;
+        loadClipboardBtn.label = "Load from Clipboard";
+
+        reuseLastBtn.setBounds(wbBtnX, wbBtnY + wbBtnH + 2, wbBtnW, wbBtnH);
+        reuseLastBtn.isDisabled = wbClicking || !hasLastCraft;
+        reuseLastBtn.isFilling = wbClicking && wbIsReuse;
+        reuseLastBtn.fillDone = wbClicksDone;
+        reuseLastBtn.fillTotal = wbTotalClicks;
+        reuseLastBtn.label = "Reuse Last";
+
+        autoStartBtn.setBounds(wbBtnX, wbBtnY + 2 * (wbBtnH + 2), wbBtnW, wbBtnH);
+        autoStartBtn.label = "Auto Start: " + (WynnExtrasConfig.INSTANCE.craftingAutoStart ? "§aON" : "§cOFF");
+
+        // Status message below buttons (word-wrapped to button width)
+        if (!wbStatusMessage.isEmpty()) {
+            CustomColor statusColor = wbStatusMessage.startsWith("Missing") || wbStatusMessage.startsWith("Wrong") || wbStatusMessage.startsWith("Invalid") || wbStatusMessage.startsWith("Unknown") || wbStatusMessage.startsWith("Please") || wbStatusMessage.startsWith("Not") || wbStatusMessage.startsWith("Loading") || wbStatusMessage.startsWith("No craft")
+                    ? CustomColor.fromHexString("FF4444") : CustomColor.fromHexString("44FF44");
+            int statusRY = wbBtnY + 3 * (wbBtnH + 2) + 3;
+            int statusWrapWidth = Math.max(40, wbBtnW - 18);
+            String[] words = wbStatusMessage.split(" ");
+            StringBuilder line = new StringBuilder();
+            int lineY = statusRY;
+            for (String word : words) {
+                String candidate = line.isEmpty() ? word : line + " " + word;
+                if (textRenderer.getWidth(candidate) > statusWrapWidth && !line.isEmpty()) {
+                    ui.drawText(line.toString(), wbBtnX, lineY, statusColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, 1f);
+                    line = new StringBuilder(word);
+                    lineY += 10;
+                } else {
+                    line = new StringBuilder(candidate);
+                }
+            }
+            if (!line.isEmpty()) {
+                ui.drawText(line.toString(), wbBtnX, lineY, statusColor, HorizontalAlignment.LEFT, VerticalAlignment.TOP, 1f);
+            }
+        }
+
+        // Process WynnBuilder click queue
+        processWynnBuilderClicks();
+
+        // Auto-capture craft: when any result slot gets an item, save the current materials + ingredients
+        try {
+            boolean hasOutput = false;
+            for (int slot : RESULT_SLOTS) {
+                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                if (stack != null && !stack.isEmpty()) {
+                    String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
+                    if (!name.isEmpty() && !name.contains("Crafted Item Slot")) {
+                        hasOutput = true;
+                        break;
+                    }
+                }
+            }
+            if (lastResultSlotsEmpty && hasOutput) {
+                capturePreparedMaterials();
+                captureCurrentIngredients();
+            } else if (!hasOutput) {
+                updatePreparedMaterialSnapshot();
+            }
+            lastResultSlotsEmpty = !hasOutput;
+        } catch (Exception ignored) {}
+
+        if (!statusMessage.isEmpty()) {
+            int statusY = screenY + backgroundHeight + 10;
+            if (textRenderer.getWidth(statusMessage) > menuWidth) {
+                String[] words = statusMessage.split(" ");
+                StringBuilder sb1 = new StringBuilder();
+                int wi = 0;
+                while (wi < words.length && textRenderer.getWidth((sb1.isEmpty() ? "" : sb1 + " ") + words[wi]) <= menuWidth) {
+                    if (!sb1.isEmpty()) sb1.append(" ");
+                    sb1.append(words[wi++]);
+                }
+                StringBuilder sb2 = new StringBuilder();
+                while (wi < words.length) {
+                    if (!sb2.isEmpty()) sb2.append(" ");
+                    sb2.append(words[wi++]);
+                }
+                ui.drawCenteredText(sb1.toString(), ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth() / 2f, statusY, CustomColor.fromHexString("FF0000"), 1f);
+                if (!sb2.isEmpty()) ui.drawCenteredText(sb2.toString(), ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth() / 2f, statusY + 10, CustomColor.fromHexString("FF0000"), 1f);
+            } else {
+                ui.drawCenteredText(statusMessage, xStart, statusY, CustomColor.fromHexString("FF0000"), 1f);
+            }
+        }
 
         selectionWidget1.setScissorBounds(scissorX1, scissorY1, scissorX2, scissorY2);
         selectionWidget2.setScissorBounds(scissorX1, scissorY1, scissorX2, scissorY2);
         selectionWidget3.setScissorBounds(scissorX1, scissorY1, scissorX2, scissorY2);
 
-        helperWidget.setBounds((int) (xStart * ui.getScaleFactor() + 5), (int) ((yStart + (big ? -15 : 7)) * ui.getScaleFactor()), widgetWidth, (int) ((widgetHeight + (big ? 12 : -14)) * ui.getScaleFactor()));
+        helperWidget.setBounds(xStart + 2, yStart + (big ? 17 : 7), widgetWidth, widgetHeight + (big ? -18 : -14));
+        helperWidget.scissorX1 = scissorX1;
+        helperWidget.scissorY1 = scissorY1;
+        helperWidget.scissorX2 = scissorX2;
+        helperWidget.scissorY2 = scissorY2;
+
+        boolean nearBottom = mouseY >= blockTop + actualBlockH - 6 && mouseY <= blockTop + actualBlockH && !resizingTop;
+        if (nearBottom || resizingBottom)
+            ui.drawRect(xStart, blockTop + actualBlockH - 3, widgetWidth, 3, CustomColor.fromHexString("FFFFFF").withAlpha(0.3f));
     }
 
     private void setupSelectionWidget(SelectionWidget selectionWidget, ProfessionType type, int i, int maxWidgets, int xStart, int yStart, int widgetWidth) {
-        int spacing = 20;
+        int spacing = 4;
 
         int totalSpacing = spacing * (maxWidgets - 1);
         int sectionWidth = (widgetWidth - totalSpacing) / maxWidgets;
 
-        int x = (int) ((xStart + 2) * ui.getScaleFactor()) + i * (sectionWidth + spacing);
-        int y = (int) (yStart * ui.getScaleFactor()) - 60;
+        int x = xStart + 2 + i * (sectionWidth + spacing);
+        int y = yStart - 20;
 
-        selectionWidget.setBounds(x, y, sectionWidth, 50);
+        selectionWidget.setBounds(x, y, sectionWidth, 18);
 
         selectionWidget.setText(getSelectorText(type, i));
     }
@@ -318,27 +531,526 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
-        if (!(McUtils.screen() instanceof HandledScreen<?>)) return;
+    }
 
-        try {
-            ctx.disableScissor();
-        } catch (Exception ignored) {
+    private static void drawCenteredWrappedUpward(UIUtils ui, TextRenderer tr,
+                                                   String text, float cx, float bottomY, int maxWidth, CustomColor color) {
+        List<String> lines = new ArrayList<>();
+        String[] words = text.split(" ");
+        StringBuilder line = new StringBuilder();
+        for (String word : words) {
+            String candidate = line.isEmpty() ? word : line + " " + word;
+            if (tr.getWidth(candidate) > maxWidth && !line.isEmpty()) {
+                lines.add(line.toString());
+                line = new StringBuilder(word);
+            } else {
+                line = new StringBuilder(candidate);
+            }
+        }
+        if (!line.isEmpty()) lines.add(line.toString());
+        for (int i = lines.size() - 1; i >= 0; i--) {
+            float y = bottomY - (lines.size() - 1 - i) * 10;
+            ui.drawCenteredText(lines.get(i), cx, y, color, 1f);
         }
     }
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if (scrollBarWidget != null) scrollBarWidget.mouseClicked(x, y, button);
-        if (profSpeedBombWidget != null) profSpeedBombWidget.mouseClicked(x, y, button);
-        if (profXpBombWidget != null) profXpBombWidget.mouseClicked(x, y, button);
+        if (button == 0 && currentActualBlockH > 0) {
+            int bTop = currentBlockTop;
+            int bBottom = bTop + currentActualBlockH;
+            if (x >= currentXStart && x <= currentXStart + currentWidgetWidth) {
+                if (y >= bBottom - 6 && y <= bBottom + 3) {
+                    resizingBottom = true;
+                    resizeDragStartY = y;
+                    resizeDragStartBlockHeight = currentActualBlockH;
+                    resizeDragScreenHeight = currentScreenH;
+                    return true;
+                }
+            }
+        }
+
+        if(scrollBarWidget != null && scrollBarWidget.maxOffset > 0) scrollBarWidget.mouseClicked(x, y, button);
+        if(profSpeedBombWidget != null) profSpeedBombWidget.mouseClicked(x, y, button);
+        if(profXpBombWidget != null) profXpBombWidget.mouseClicked(x, y, button);
+
         return super.mouseClicked(x, y, button);
     }
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
+        if (button == 0 && (resizingTop || resizingBottom)) {
+            resizingTop = false;
+            resizingBottom = false;
+            WynnExtrasConfig.save();
+            return true;
+        }
         if (scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
         return super.mouseReleased(x, y, button);
+    }
+
+
+    private void loadFromWynnBuilder(String link) {
+
+        // Block re-clicking while already processing
+        if (wbClicking) {
+            return;
+        }
+
+        if (link == null || link.isBlank()) {
+            wbStatusMessage = "Clipboard is empty.";
+            return;
+        }
+
+        if (!link.startsWith("http://") && !link.startsWith("https://")) {
+            wbStatusMessage = "Please paste a full WynnBuilder URL.";
+            return;
+        }
+
+        if (!link.contains("#")) {
+            wbStatusMessage = "No craft hash found in URL.";
+            return;
+        }
+
+        // Detect beta WynnBuilder from the URL domain (before the # fragment).
+        String urlPart = link.substring(0, link.lastIndexOf('#')).toLowerCase();
+        boolean isBetaLink = urlPart.contains("wynnbuilder-beta") || urlPart.contains("beta.wynnbuilder");
+
+        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) {
+            wbStatusMessage = "Not at a crafting station.";
+            return;
+        }
+
+        DecodedCraft craft = WynnBuilderDecoder.decode(link);
+        if (craft == null) {
+            wbStatusMessage = "Invalid WynnBuilder link.";
+            return;
+        }
+
+        RecipeLoader.RecipeData recipeData = RecipeLoader.getRecipeById(craft.recipeId());
+        if (recipeData == null) {
+            wbStatusMessage = "Unknown recipe ID: " + craft.recipeId();
+            return;
+        }
+
+        // Verify correct crafting station
+        ProfessionType stationProf = container.getProfessionType();
+        if (stationProf != recipeData.skill()) {
+            wbStatusMessage = "Wrong station! The recipe needs " + recipeData.skill().getDisplayName() + ", you are at a " + stationProf.getDisplayName() + " station.";
+            return;
+        }
+
+        // Get material data for this recipe
+        IRecipeData materialData = getRecipeDataForType(recipeData.type());
+        if (materialData == null) {
+            wbStatusMessage = "Could not find material data for " + recipeData.type();
+            return;
+        }
+
+        List<Pair<IMaterial, Integer>> materials = materialData.getMaterials(recipeData.lvl().x);
+        if (materials == null || materials.size() < 2) {
+            wbStatusMessage = "Could not determine materials for this recipe.";
+            return;
+        }
+
+        List<ItemRequirement> requirements = new ArrayList<>();
+        for (int m = 0; m < 2; m++) {
+            Pair<IMaterial, Integer> mat = materials.get(m);
+            requirements.add(new ItemRequirement("materials", mat.getFirst().getName(), mat.getSecond()));
+        }
+
+        List<String> ingNamesFromLink = new ArrayList<>();
+        Map<Integer, String> ingMap = isBetaLink ? betaIngMap : mainIngMap;
+        if (ingMap == null) {
+            wbStatusMessage = "Loading ingredient data, try again shortly.";
+            return;
+        }
+        for (int id : craft.ingredientIds()) {
+            if (WynnBuilderDecoder.isNoIngredient(id)) {
+                ingNamesFromLink.add(null);
+                continue;
+            }
+            String ingName = ingMap.get(id);
+            if (ingName == null) {
+                ingNamesFromLink.add(null);
+                continue;
+            }
+            ingNamesFromLink.add(ingName);
+            requirements.add(new ItemRequirement("ingredients", ingName, 1));
+        }
+
+        // Save for "Reuse Last"
+        List<String> matNamesForSave = new ArrayList<>();
+        List<Integer> matCountsForSave = new ArrayList<>();
+        for (int m = 0; m < 2; m++) {
+            matNamesForSave.add(materials.get(m).getFirst().getName());
+            matCountsForSave.add(materials.get(m).getSecond());
+        }
+        saveLastCraft(matNamesForSave, matCountsForSave, ingNamesFromLink);
+
+        List<MissingRequirement> missingRequirements = findMissingRequirements(requirements);
+        if (!missingRequirements.isEmpty()) {
+            WB_CLICK_QUEUE.clear();
+            wbTotalClicks = 0;
+            wbClicksDone = 0;
+            wbStatusMessage = formatMissingRequirements(missingRequirements);
+            return;
+        }
+
+        // Clear queue
+        WB_CLICK_QUEUE.clear();
+
+        // Reset all crafting slots first (not counted in progress)
+        try {
+            for (int slot : new int[]{0, 9, 2, 3, 11, 12, 20, 21}) {
+                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                if (stack != null && !stack.isEmpty()) {
+                    String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
+                    if (!name.contains("Material Slot") && !name.contains("Ingredient Slot") && !name.isEmpty()) {
+                        ContainerUtils.clickOnSlot(slot, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        Map<Integer, Integer> queuedBySlot = new HashMap<>();
+        for (ItemRequirement requirement : requirements) {
+            queueInventoryItem(requirement, queuedBySlot);
+        }
+
+        wbTotalClicks = WB_CLICK_QUEUE.size();
+        wbClicksDone = 0;
+
+        if (!isBetaLink) {
+            wbStatusMessage = recipeData.type().getDisplayName() + " " + recipeData.lvl().x + "-" + recipeData.lvl().y;
+        }
+
+        wbIsReuse = false;
+        wbFinishedTime = 0;
+        wbClicking = true;
+    }
+
+    private static void processWynnBuilderClicks() {
+        if (!wbClicking) return;
+
+        if (WB_CLICK_QUEUE.isEmpty()) {
+            // Wait 500ms after last click before checking completion
+            if (wbFinishedTime == 0) {
+                wbFinishedTime = System.currentTimeMillis();
+                return;
+            }
+            if (System.currentTimeMillis() - wbFinishedTime < 500) return;
+
+            wbClicking = false;
+            wbFinishedTime = 0;
+            if (wbStatusMessage.startsWith("Done!") || wbStatusMessage.startsWith("Crafting!")) return;
+
+            // Check if slot 13 still shows "Incomplete Recipe"
+            try {
+                ItemStack craftSlot = McUtils.containerMenu().getSlot(13).getStack();
+                String craftName = craftSlot.getCustomName() != null ? craftSlot.getCustomName().getString() : "";
+                if (craftName.contains("Incomplete")) {
+                    wbStatusMessage = "Missing materials or ingredients!";
+                    return;
+                }
+            } catch (Exception ignored) {}
+
+            wbStatusMessage = "Done!";
+
+            // Auto Start: shift-click the craft button (slot 13) after filling
+            if (WynnExtrasConfig.INSTANCE.craftingAutoStart) {
+                ContainerUtils.shiftClickOnSlot(13, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+                wbStatusMessage = "Crafting!";
+            }
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (now - wbLastClick < 10) return; // 10ms between clicks
+
+        Integer next = WB_CLICK_QUEUE.poll();
+        if (next == null) return;
+
+        ContainerUtils.clickOnSlot(next, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+        wbLastClick = now;
+        wbClicksDone++;
+    }
+
+    private static void saveLastCraft(List<String> matNames, List<Integer> matCounts, List<String> ingNames) {
+        lastMaterialNames.clear();
+        lastMaterialNames.addAll(matNames);
+        lastMaterialCounts.clear();
+        lastMaterialCounts.addAll(matCounts);
+        // Only overwrite ingredients if new list has actual entries
+        if (ingNames != null && ingNames.stream().anyMatch(Objects::nonNull)) {
+            lastIngredientNames.clear();
+            lastIngredientNames.addAll(ingNames);
+        }
+    }
+
+    private static List<MissingRequirement> findMissingRequirements(List<ItemRequirement> requirements) {
+        Map<String, ItemRequirement> mergedRequirements = new LinkedHashMap<>();
+        for (ItemRequirement requirement : requirements) {
+            if (requirement.name() == null || requirement.name().isBlank() || requirement.amount() <= 0) continue;
+
+            String key = requirement.type() + "\u0000" + requirement.name();
+            ItemRequirement existing = mergedRequirements.get(key);
+            if (existing == null) {
+                mergedRequirements.put(key, requirement);
+            } else {
+                mergedRequirements.put(key, new ItemRequirement(existing.type(), existing.name(), existing.amount() + requirement.amount()));
+            }
+        }
+
+        List<MissingRequirement> missingRequirements = new ArrayList<>();
+        for (ItemRequirement requirement : mergedRequirements.values()) {
+            int available = countInventoryItems(requirement.name());
+            if (requirement.type().equals("materials")) {
+                if (available == 0) {
+                    missingRequirements.add(new MissingRequirement(requirement.type(), requirement.name(), 1));
+                }
+                continue;
+            }
+            if (available < requirement.amount()) {
+                missingRequirements.add(new MissingRequirement(requirement.type(), requirement.name(), requirement.amount() - available));
+            }
+        }
+        return missingRequirements;
+    }
+
+    private static int countInventoryItems(String itemName) {
+        int count = 0;
+        for (Slot slot : McUtils.containerMenu().slots) {
+            try {
+                if (!(slot.inventory instanceof PlayerInventory)) continue;
+                if (slot.getStack().getCustomName() == null) continue;
+                if (slot.getStack().getCustomName().getString().contains(itemName)) {
+                    count += slot.getStack().getCount();
+                }
+            } catch (Exception ignored) {}
+        }
+        return count;
+    }
+
+    private static void queueInventoryItem(ItemRequirement requirement, Map<Integer, Integer> queuedBySlot) {
+        int remaining = requirement.amount();
+        for (Slot slot : McUtils.containerMenu().slots) {
+            try {
+                if (remaining <= 0) return;
+                if (!(slot.inventory instanceof PlayerInventory)) continue;
+                if (slot.getStack().getCustomName() == null) continue;
+                if (!slot.getStack().getCustomName().getString().contains(requirement.name())) continue;
+
+                if (requirement.type().equals("materials")) {
+                    for (int i = 0; i < remaining; i++) {
+                        WB_CLICK_QUEUE.add(slot.id);
+                    }
+                    return;
+                }
+
+                int alreadyQueued = queuedBySlot.getOrDefault(slot.id, 0);
+                int available = slot.getStack().getCount() - alreadyQueued;
+                if (available <= 0) continue;
+                int clicks = Math.min(remaining, available);
+                for (int i = 0; i < clicks; i++) {
+                    WB_CLICK_QUEUE.add(slot.id);
+                }
+                queuedBySlot.put(slot.id, alreadyQueued + clicks);
+                remaining -= clicks;
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private static String formatMissingRequirements(List<MissingRequirement> missingRequirements) {
+        List<String> items = new ArrayList<>();
+        for (MissingRequirement requirement : missingRequirements) {
+            items.add(formatMissingRequirement(requirement));
+        }
+        return "Missing: " + String.join(", ", items) + ".";
+    }
+
+    private static String formatMissingRequirement(MissingRequirement requirement) {
+        String name = requirement.name().replaceAll("§.", "");
+        if (requirement.amount() <= 1) return name;
+        return requirement.amount() + "x " + name;
+    }
+
+    /**
+     * Read ingredient names currently in the crafting slots and save them.
+     */
+    private static void captureCurrentIngredients() {
+        if (McUtils.containerMenu() == null) return;
+        List<String> ingNames = new ArrayList<>();
+        boolean hasAny = false;
+        for (int slot : INGREDIENT_SLOTS) {
+            try {
+                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
+                if (!name.isEmpty() && !name.contains("Ingredient Slot")) {
+                    ingNames.add(name);
+                    hasAny = true;
+                } else {
+                    ingNames.add(null);
+                }
+            } catch (Exception e) {
+                ingNames.add(null);
+            }
+        }
+        if (hasAny) {
+            lastIngredientNames.clear();
+            lastIngredientNames.addAll(ingNames);
+        }
+    }
+
+    /**
+     * Read material names currently in the crafting slots and save them.
+     */
+    private static void captureCurrentMaterials() {
+        if (McUtils.containerMenu() == null) return;
+        List<String> matNames = new ArrayList<>();
+        List<Integer> matCounts = new ArrayList<>();
+        boolean hasAny = false;
+        for (int slot : new int[]{0, 9}) {
+            try {
+                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
+                if (!name.isEmpty() && !name.contains("Material Slot")) {
+                    matNames.add(name);
+                    matCounts.add(stack.getCount());
+                    hasAny = true;
+                } else {
+                    matNames.add(null);
+                    matCounts.add(0);
+                }
+            } catch (Exception e) {
+                matNames.add(null);
+                matCounts.add(0);
+            }
+        }
+        if (hasAny) {
+            lastMaterialNames.clear();
+            lastMaterialNames.addAll(matNames);
+            lastMaterialCounts.clear();
+            lastMaterialCounts.addAll(matCounts);
+        }
+    }
+
+    private static void updatePreparedMaterialSnapshot() {
+        if (McUtils.containerMenu() == null) return;
+        List<String> matNames = new ArrayList<>();
+        List<Integer> matCounts = new ArrayList<>();
+        boolean hasAny = false;
+        for (int slot : new int[]{0, 9}) {
+            try {
+                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
+                if (!name.isEmpty() && !name.contains("Material Slot")) {
+                    matNames.add(name);
+                    matCounts.add(stack.getCount());
+                    hasAny = true;
+                } else {
+                    matNames.add(null);
+                    matCounts.add(0);
+                }
+            } catch (Exception e) {
+                matNames.add(null);
+                matCounts.add(0);
+            }
+        }
+
+        if (hasAny) {
+            preparedMaterialNames.clear();
+            preparedMaterialCounts.clear();
+            preparedMaterialNames.addAll(matNames);
+            preparedMaterialCounts.addAll(matCounts);
+        }
+    }
+
+    private static void capturePreparedMaterials() {
+        if (preparedMaterialNames.stream().noneMatch(Objects::nonNull)) {
+            captureCurrentMaterials();
+            return;
+        }
+
+        lastMaterialNames.clear();
+        lastMaterialNames.addAll(preparedMaterialNames);
+        lastMaterialCounts.clear();
+        lastMaterialCounts.addAll(preparedMaterialCounts);
+    }
+
+    private void reuseLast() {
+        if (McUtils.containerMenu() == null) return;
+
+        if (lastMaterialNames.isEmpty() && lastIngredientNames.isEmpty()) {
+            wbStatusMessage = "No previous craft to reuse.";
+            return;
+        }
+
+        List<ItemRequirement> requirements = new ArrayList<>();
+        for (int m = 0; m < Math.min(2, lastMaterialNames.size()); m++) {
+            String matName = lastMaterialNames.get(m);
+            int amount = lastMaterialCounts.get(m);
+            if (matName == null || amount <= 0) continue;
+            requirements.add(new ItemRequirement("materials", matName, amount));
+        }
+
+        for (int i = 0; i < Math.min(6, lastIngredientNames.size()); i++) {
+            String ingName = lastIngredientNames.get(i);
+            if (ingName == null) continue;
+            requirements.add(new ItemRequirement("ingredients", ingName, 1));
+        }
+
+        List<MissingRequirement> missingRequirements = findMissingRequirements(requirements);
+        if (!missingRequirements.isEmpty()) {
+            WB_CLICK_QUEUE.clear();
+            wbClicking = false;
+            wbTotalClicks = 0;
+            wbClicksDone = 0;
+            wbStatusMessage = formatMissingRequirements(missingRequirements);
+            return;
+        }
+
+        // Clear existing slots and queue
+        WB_CLICK_QUEUE.clear();
+        wbClicking = false;
+
+        // Reset all crafting slots immediately
+        for (int slot : new int[]{0, 9, 2, 3, 11, 12, 20, 21}) {
+            ContainerUtils.clickOnSlot(slot, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+        }
+
+        Map<Integer, Integer> queuedBySlot = new HashMap<>();
+        for (ItemRequirement requirement : requirements) {
+            queueInventoryItem(requirement, queuedBySlot);
+        }
+
+        wbTotalClicks = WB_CLICK_QUEUE.size();
+        wbClicksDone = 0;
+        wbStatusMessage = "Reusing last craft...";
+
+        wbIsReuse = true;
+        wbFinishedTime = 0;
+        wbClicking = true;
+    }
+
+    private static IRecipeData getRecipeDataForType(CraftableType type) {
+        return switch (type) {
+            case HELMET -> HelmetRecipes.INSTANCE;
+            case CHESTPLATE -> ChestplateRecipes.INSTANCE;
+            case LEGGINGS -> LeggingsRecipes.INSTANCE;
+            case BOOTS -> BootsRecipes.INSTANCE;
+            case SPEAR -> SpearRecipes.INSTANCE;
+            case DAGGER -> DaggerRecipes.INSTANCE;
+            case BOW -> BowRecipes.INSTANCE;
+            case WAND -> WandRecipes.INSTANCE;
+            case RELIK -> RelikRecipes.INSTANCE;
+            case RING -> RingRecipes.INSTANCE;
+            case BRACELET -> BraceletRecipes.INSTANCE;
+            case NECKLACE -> NecklaceRecipes.INSTANCE;
+            case POTION -> AlchemismRecipes.INSTANCE;
+            case SCROLL -> ScribingRecipes.INSTANCE;
+            case FOOD -> CookingRecipes.INSTANCE;
+        };
     }
 
     private static IRecipeData getRecipeDataInstance(ProfessionType type) {
@@ -379,8 +1091,8 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         };
     }
 
-    private static void drawRecipe(DrawContext ctx, int x, int y, int width, int height, int level,
-                                   IRecipeData recipe, boolean hovered, UIUtils ui) {
+    private static void drawRecipe(DrawContext ctx, int x, int y, int height, int level,
+                                   IRecipeData recipe, UIUtils ui) {
         if (recipe == null) return;
 
         List<Pair<IMaterial, Integer>> materials = recipe.getMaterials(level);
@@ -389,17 +1101,17 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         //ui.drawRect(x, y, width, height, CustomColor.fromHexString("080808"));
 
-        drawMaterialIcon(ctx, ui, materials.getFirst().getFirst(), x + 10, y + 5, 60);
-        ui.drawText(materials.getFirst().getFirst().getName() + " " + materials.getFirst().getSecond(), x + 80, y + height / 4f + 4, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
+        drawMaterialIcon(ctx, ui, materials.getFirst().getFirst(), x + 3, y + 2, 14);
+        ui.drawText(materials.getFirst().getFirst().getName() + " " + materials.getFirst().getSecond(), x + 20, y + height / 4f + 1, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 0.85f);
 
-        drawMaterialIcon(ctx, ui, materials.get(1).getFirst(), x + 10, y + 60, 60);
-        ui.drawText(materials.get(1).getFirst().getName() + " " + materials.get(1).getSecond(), x + 80, y + 3 * height / 4f - 4, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
+        drawMaterialIcon(ctx, ui, materials.get(1).getFirst(), x + 3, y + 16, 14);
+        ui.drawText(materials.get(1).getFirst().getName() + " " + materials.get(1).getSecond(), x + 20, y + 3 * height / 4f - 1, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 0.85f);
     }
 
     private static void drawMaterialIcon(DrawContext ctx, UIUtils ui, IMaterial material, float x, float y, float size) {
         ItemStack stack = buildMaterialStack(material);
         if (shouldUseVcit(stack)) {
-            drawItemScaled(ctx, ui, stack, x, y, size);
+            drawItemScaled(ctx, ui, stack, size);
             return;
         }
         ui.drawImage(material.getTexture(), x, y, size, size);
@@ -446,12 +1158,9 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         return VcitCompat.hasModel(stack);
     }
 
-    private static void drawItemScaled(DrawContext ctx, UIUtils ui, ItemStack stack, float x, float y, float size) {
-        float px = ui.sx(x);
-        float py = ui.sy(y);
+    private static void drawItemScaled(DrawContext ctx, UIUtils ui, ItemStack stack, float size) {
         float scale = (float) ui.sw(size) / 16.0f;
         ctx.getMatrices().pushMatrix();
-        //ctx.getMatrices().translate(px, py, 100.0f);
         ctx.getMatrices().scale(scale, scale);
         ctx.drawItem(stack, 0, 0);
         ctx.getMatrices().popMatrix();
@@ -471,6 +1180,8 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         private static final Queue<Integer> CLICK_QUEUE = new ArrayDeque<>();
         public int maxOffset;
         private static long lastClick = 0;
+        private boolean reverseOrder = WynnExtrasConfig.INSTANCE.craftingHelperReverseOrder;
+        int scissorX1, scissorY1, scissorX2, scissorY2;
 
         public HelperWidget(int maxOffset) {
             super(0, 0, 0, 0);
@@ -494,9 +1205,9 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
                 if (hovered) {
                     if (verticalAmount > 0) {
-                        targetOffset -= 104f;
+                        targetOffset -= 38f;
                     } else /*if(canScrollFurther)*/ {
-                        targetOffset += 104f;
+                        targetOffset += 38f;
                     }
                 }
                 return true;
@@ -505,23 +1216,24 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ctx.enableScissor(scissorX1, scissorY1, scissorX2, scissorY2);
+
             if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
             ProfessionType type = container.getProfessionType();
 
             if (state == RecipeState.NONE && type != ProfessionType.ALCHEMISM && type != ProfessionType.COOKING && type != ProfessionType.SCRIBING) {
-                ui.drawCenteredText("Select the type", x + width / 2f, y + height / 2f - 30, CustomColor.fromHexString("FF0000"), 4);
-                ui.drawCenteredText("you want to craft.", x + width / 2f, y + height / 2f + 30, CustomColor.fromHexString("FF0000"), 4);
+                ui.drawCenteredText("Select the type", x + width / 2f, y + height / 2f - 10, CustomColor.fromHexString("FF0000"), 1.5f);
+                ui.drawCenteredText("you want to craft.", x + width / 2f, y + height / 2f + 10, CustomColor.fromHexString("FF0000"), 1.5f);
             }
 
             if (recipeData == null) return;
 
             float snapValue = 0.5f;
 
-            int widgetHeight = 130;
+            int widgetHeight = 34;
             int widgetAmount = 14;
 
-            boolean big = type == ProfessionType.ALCHEMISM || type == ProfessionType.COOKING || type == ProfessionType.SCRIBING;
-            targetOffset = ui == null ? 0 : Math.clamp(targetOffset, big ? (-8 * (ui.getScaleFactorF() - 3)) : 0, maxOffset);
+            targetOffset = ui == null ? 0 : Math.clamp(targetOffset, 0, maxOffset);
 
             float speed = 0.3f;
             float diff = (targetOffset - actualOffset);
@@ -533,9 +1245,20 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             map.put(state, actualOffset);
             lastOffset.put(type, map);
 
+            if (reverseOrder != WynnExtrasConfig.INSTANCE.craftingHelperReverseOrder) {
+                reverseOrder = WynnExtrasConfig.INSTANCE.craftingHelperReverseOrder;
+                recipeWidgets.clear();
+                children.clear();
+                targetOffset = 0;
+                actualOffset = 0;
+            }
+
             if (recipeWidgets.isEmpty()) {
+                int[] levelOrder = reverseOrder
+                        ? new int[]{0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 105, 110, 115}
+                        : new int[]{115, 110, 105, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0};
                 for (int i = 0; i < widgetAmount; i++) {
-                    int level = (i > 10) ? 50 + i * 5 : i * 10;
+                    int level = levelOrder[i];
 
                     RecipeWidget recipeWidget = new RecipeWidget(recipeData, i, level);
 
@@ -545,21 +1268,26 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             }
 
             for (int i = 0; i < widgetAmount; i++) {
-                int baseY = y + 10 + 140 * i;
+                int baseY = y + 3 + 38 * i;
                 int drawY = baseY - (int) actualOffset;
 
                 recipeWidgets.get(i).setBounds(
-                        x + 30,
+                        x + 12,
                         drawY,
-                        width - 60,
+                        width - 24,
                         widgetHeight
                 );
             }
         }
 
         @Override
+        protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ctx.disableScissor();
+        }
+
+        @Override
         public boolean mouseClicked(double mx, double my, int button) {
-            if (contains((int) mx, (int) my)) {
+            if (contains((int) mx, (int) my) && recipeData != null && !recipeWidgets.isEmpty()) {
                 resetMaterialSlots();
             }
 
@@ -567,10 +1295,11 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         }
 
         public void setRecipeData(IRecipeData recipeData) {
+            boolean hadRecipe = this.recipeData != null;
             this.recipeData = recipeData;
             recipeWidgets.clear();
             children.clear();
-            resetMaterialSlots();
+            if (hadRecipe) resetMaterialSlots();
         }
 
         private static void resetMaterialSlots() {
@@ -596,33 +1325,21 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 //ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromHexString("FFFFFF"));
-                ui.drawButton(x, y, width, height, 19, hovered && helperWidget.hovered, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
-                drawRecipe(ctx, x, y, width, height, level, recipeData, hovered, ui);
-                ui.drawLine(x + width * 0.8f, y + 5, x + width * 0.8f, y + height - 9, ui.getScaleFactorF(), WynnExtrasConfig.INSTANCE.craftingHelperDarkMode ? hovered ? CustomColor.fromHexString("6a6a71") : CustomColor.fromHexString("444448") : hovered ? CustomColor.fromHexString("c5b490") : CustomColor.fromHexString("a68a73"));
+                ui.drawButton(x, y, width, height, hovered && helperWidget.hovered);
+                drawRecipe(ctx, x, y, height, level, recipeData, ui);
+                ui.drawLine(x + width * 0.8f, y + 2, x + width * 0.8f, y + height - 3, 1f, UIUtils.getVanillaSeparatorColor(hovered && helperWidget.hovered));
                 if (level < 100) {
-                    ui.drawCenteredText(String.valueOf(Math.max(1, level)), x + width * 0.9f, y + height / 4f + 4);
-                    ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
-                    ui.drawCenteredText(String.valueOf(level + 9), x + width * 0.9f, y + 3 * height / 4f - 4);
+                    ui.drawCenteredText(String.valueOf(Math.max(1, level)), x + width * 0.9f, y + height / 4f + 1, 0.85f);
+                    ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f, 0.85f);
+                    ui.drawCenteredText(String.valueOf(level + 9), x + width * 0.9f, y + 3 * height / 4f - 1, 0.85f);
                 } else {
-                    ui.drawCenteredText(String.valueOf(level), x + width * 0.9f, y + height / 4f + 4);
-                    ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f);
-                    ui.drawCenteredText(String.valueOf(level + 4), x + width * 0.9f, y + 3 * height / 4f - 4);
+                    ui.drawCenteredText(String.valueOf(level), x + width * 0.9f, y + height / 4f + 1, 0.85f);
+                    ui.drawCenteredText("-", x + width * 0.9f, y + 2 * height / 4f, 0.85f);
+                    ui.drawCenteredText(String.valueOf(level + 4), x + width * 0.9f, y + 3 * height / 4f - 1, 0.85f);
                 }
 
-                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
+                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
 
-                ProfessionType profession = container.getProfessionType();
-
-                try {
-                    int level = Models.Profession.getLevel(profession);
-
-                    if (level > 0 && level < this.level) {
-                        ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHSV(0, 0, 0, 0.5f) : CustomColor.fromHSV(0, 0, 0, 0.75f));
-                        ui.drawCenteredText("Requires " + profession.getDisplayName(), x + width / 2f, y + height / 2f - 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
-                        ui.drawCenteredText("level " + this.level + " to craft.", x + width / 2f, y + height / 2f + 20, hovered ? CustomColor.fromHexString("FF0000").withAlpha(0.2f) : CustomColor.fromHexString("FF0000"));
-                    }
-                } catch (Exception ignored) {
-                }
                 checkClick();
             }
 
@@ -630,12 +1347,10 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             protected boolean onClick(int button) {
                 if (!helperWidget.hovered) return false;
 
-                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container))
+                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer))
                     return false;
 
                 statusMessage = "";
-
-                ProfessionType profession = container.getProfessionType();
 
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 
@@ -643,13 +1358,22 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
                 if (materials.isEmpty() || materials.size() < 2) return true;
 
-                clickMaterial(materials.getFirst(), true);
-                clickMaterial(materials.get(1), false);
+                clickMaterial(materials.getFirst());
+                clickMaterial(materials.get(1));
+
+                // Save for "Reuse Last" (recipe clicks only place materials, no ingredients)
+                List<String> matNames = new ArrayList<>();
+                List<Integer> matCounts = new ArrayList<>();
+                for (Pair<IMaterial, Integer> mat : materials) {
+                    matNames.add(mat.getFirst().getName());
+                    matCounts.add(mat.getSecond());
+                }
+                saveLastCraft(matNames, matCounts, new ArrayList<>());
 
                 return true;
             }
 
-            private void clickMaterial(Pair<IMaterial, Integer> material, boolean isFirstMaterial) {
+            private void clickMaterial(Pair<IMaterial, Integer> material) {
                 int materialAmount = material.getSecond();
 
                 List<Slot> slots = McUtils.containerMenu().slots;
@@ -659,7 +1383,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 for (Slot slot : slots) {
                     try {
                         if (!(slot.inventory instanceof PlayerInventory)) continue;
-
+                        if(slot.getStack().getCustomName() == null) continue;
                         if (slot.getStack().getCustomName().getString().contains(material.getFirst().getName())) {
                             canClick = true;
                             for (int i = 0; i < materialAmount; i++) {
@@ -679,14 +1403,18 @@ public class CraftingHelperOverlay extends WEHandledScreen {
             }
 
             private void checkClick() {
-                if (McUtils.containerMenu().getSlot(0).getStack().getCustomName() == null ||
-                        McUtils.containerMenu().getSlot(9).getStack().getCustomName() == null) return;
+                if(McUtils.containerMenu().getSlot(0) == null) return;
+                if(McUtils.containerMenu().getSlot(9) == null) return;
 
-                if (McUtils.containerMenu().getSlot(0).getStack().getCustomName().getString() == null ||
-                        McUtils.containerMenu().getSlot(9).getStack().getCustomName().getString() == null) return;
+                ItemStack stackSlot0 = McUtils.containerMenu().getSlot(0).getStack();
+                ItemStack stackSlot9 = McUtils.containerMenu().getSlot(9).getStack();
 
-                if ((!McUtils.containerMenu().getSlot(0).getStack().getCustomName().getString().contains("Material Slot")
-                        || !McUtils.containerMenu().getSlot(9).getStack().getCustomName().getString().contains("Material Slot")) && !isClicking)
+                if (stackSlot0.getCustomName() == null) return;
+                if (stackSlot9.getCustomName() == null) return;
+
+                if (stackSlot0.getCustomName().getString() == null || stackSlot9.getCustomName().getString() == null) return;
+
+                if ((!stackSlot0.getCustomName().getString().contains("Material Slot") || !stackSlot9.getCustomName().getString().contains("Material Slot")) && !isClicking)
                     return;
 
                 isClicking = true;
@@ -728,23 +1456,11 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if (!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
             if (state == null) return;
-
-            ctx.disableScissor();
-            ui.drawButton(x, y - 6, width + 2, height + 10, 13, hovered, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
+            ui.drawButton(x, y - 2, width + 2, height + 3, hovered);
             if (index == state.ordinal() - 1)
-                ui.drawRectBorders(x + 2, y - 2, x + width, y + height - 2, CustomColor.fromHexString("FFFF00"));
-            ui.drawCenteredText(text, x + width / 2f, y + height / 2f);
-            int xStart = ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth();
-            int yStart = ((HandledScreenAccessor) screen).getY() + 22;
-            int widgetWidth = 600;
-            int widgetHeight = ((HandledScreenAccessor) screen).getBackgroundHeight() - 24;
-            ctx.enableScissor(
-                    scissorX1,
-                    scissorY1,
-                    scissorX2,
-                    scissorY2);
+                ui.drawRectBorders(x + 2, y - 1, x + width, y + height - 1, CustomColor.fromHexString("FFFF00"));
+            ui.drawCenteredText(text, x + width / 2f, y + height / 2f, 1f);
         }
 
         @Override
@@ -804,8 +1520,8 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         }
 
         private void setOffset(int mouseY, int maxOffset, int scrollAreaHeight) {
-            float relativeY = mouseY * ui.getScaleFactorF() - y - scrollBarButtonWidget.getHeight() / 2f;
-            relativeY = Math.max(-1.15f * ui.getScaleFactorF(), Math.min(relativeY, scrollAreaHeight));
+            float relativeY = mouseY - y - scrollBarButtonWidget.getHeight() / 2f;
+            relativeY = Math.clamp(relativeY, -1.15f, scrollAreaHeight);
 
             float scrollPercent = relativeY / scrollAreaHeight;
 
@@ -815,9 +1531,9 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-            ui.drawSliderBackground(x, y, width, height, 5, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
+            ui.drawSliderBackground(x, y, width, height);
 
-            int buttonHeight = 50;
+            int buttonHeight = 17;
             int scrollAreaHeight = height - buttonHeight;
 
             if (scrollBarButtonWidget.isHeld) {
@@ -836,7 +1552,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         @Override
         protected boolean onClick(int button) {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-            int buttonHeight = 30;
+            int buttonHeight = 17;
             int scrollAreaHeight = height - buttonHeight;
 
             setOffset(currentMouseY, maxOffset, scrollAreaHeight);
@@ -860,7 +1576,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 5, hovered || isHeld, WynnExtrasConfig.INSTANCE.craftingHelperDarkMode);
+                ui.drawButton(x, y, width, height, hovered || isHeld);
             }
 
             @Override
@@ -875,6 +1591,46 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                 isHeld = false;
                 return true;
             }
+        }
+    }
+
+    private static class ActionButtonWidget extends Widget {
+        String label = "";
+        boolean isDisabled = false;
+        boolean isFilling = false;
+        int fillDone = 0, fillTotal = 0;
+        final List<Text> tooltipText;
+
+        ActionButtonWidget(List<Text> tooltipText) {
+            super(0, 0, 0, 0);
+            this.tooltipText = tooltipText;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, hovered && !isDisabled && !isFilling);
+            if (isFilling) {
+                int progress = fillTotal > 0 ? fillDone * width / fillTotal : 0;
+                ui.drawRect(x, y, progress, height, CustomColor.fromHexString("2a7a2a").withAlpha(0.5f));
+                ui.drawCenteredText("Filling... " + fillDone + "/" + fillTotal, x + width / 2f, y + height / 2f, 1f);
+            } else {
+                CustomColor color = isDisabled ? CustomColor.fromHexString("666666") : CustomColor.fromHexString("FFFFFF");
+                ui.drawCenteredText(label, x + width / 2f, y + height / 2f, color, 1f);
+            }
+
+            if (hovered && tooltipText != null && !tooltipText.isEmpty()) {
+                ctx.drawTooltip(mc.textRenderer, tooltipText, mouseX, mouseY);
+            }
+        }
+
+        @Override
+        public boolean mouseClicked(double mx, double my, int button) {
+            if (!visible || !enabled || !contains((int) mx, (int) my)) return false;
+            if (isDisabled || isFilling) return true;
+            setFocused(true);
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            if (onClickCallback != null) onClickCallback.accept(this);
+            return true;
         }
     }
 
@@ -933,7 +1689,7 @@ public class CraftingHelperOverlay extends WEHandledScreen {
                                 + " (" + bomb.getRemainingString() + ") (EXPIRING SOON)";
                     }
 
-                    ui.drawCenteredText(text, x + width / 2f, y + height / 2f);
+                    ui.drawCenteredText(text, x + width / 2f, y + height / 2f, 1f);
                 }
             } catch (Exception ignored) {
             }
@@ -956,6 +1712,3 @@ public class CraftingHelperOverlay extends WEHandledScreen {
         }
     }
 }
-//TODO: cant click on item after switching to account bank
-//TODO: bug in character bank when character is not known (when restarting game while in raid and joining again wynntils doesnt know which class you are on)
-//TODO: wynnbuilder loader: link at the left where you can paste a wynnbuilder link to load a recipe

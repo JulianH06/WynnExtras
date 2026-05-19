@@ -18,8 +18,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.ArrayList;
 import java.util.List;
 
-import static julianh06.wynnextras.features.inventory.WeightDisplay.*;
-
 @Mixin(ItemStatInfoFeature.class)
 public class ItemStatInfoFeatureMixin {
     @Redirect(
@@ -31,12 +29,13 @@ public class ItemStatInfoFeatureMixin {
             remap = false
     )
     private List<Text> redirectGetWynnItemTooltip(ItemStack itemStack, WynnItem wynnItem) {
-        currentHoveredStack = itemStack;
+        WeightDisplay.setCurrentHoveredStack(itemStack);
         return TooltipUtils.getWynnItemTooltip(itemStack, wynnItem);
     }
 
     @Inject(method = "onTooltipPre", at = @At("RETURN"), remap = false)
     private void captureProcessedTooltip(ItemTooltipRenderEvent.Pre event, CallbackInfo ci) {
+        ItemStack currentHoveredStack = WeightDisplay.getCurrentHoveredStack();
         if (currentHoveredStack != null && event.getTooltips() != null) {
             List<Text> tooltips = new ArrayList<>(event.getTooltips());
             TradeMarketComparisonPanel.cacheHoveredTooltip(currentHoveredStack, tooltips);
@@ -47,6 +46,7 @@ public class ItemStatInfoFeatureMixin {
     private void appendWeightAnnotations(ItemTooltipRenderEvent.Pre event, CallbackInfo ci) {
         //this will run if the user has the ItemStatInfoFeature enabled, if they dont then the annotation will be added in WeightDisplay instead
 
+        ItemStack currentHoveredStack = WeightDisplay.getCurrentHoveredStack();
         if (currentHoveredStack == null || event.getTooltips() == null) return;
         if (WeightDisplay.isUnidentified(currentHoveredStack)) return;
 
@@ -54,14 +54,13 @@ public class ItemStatInfoFeatureMixin {
         WeightDisplay.ItemData itemData = WeightDisplay.itemCache.get(cleanName);
         if (itemData == null) return;
 
-        if ((upPressed || downPressed) && !itemData.data().isEmpty()) {
+        if ((WeightDisplay.isUpPressed() || WeightDisplay.isDownPressed()) && !itemData.data().isEmpty()) {
             int nextIndex = itemData.index();
-            if (downPressed) nextIndex = (nextIndex + 1) % itemData.data().size();
+            if (WeightDisplay.isDownPressed()) nextIndex = (nextIndex + 1) % itemData.data().size();
             else nextIndex = (nextIndex - 1 + itemData.data().size()) % itemData.data().size();
             itemData = new WeightDisplay.ItemData(itemData.name(), itemData.data(), nextIndex);
             WeightDisplay.itemCache.put(cleanName, itemData);
-            upPressed = false;
-            downPressed = false;
+            WeightDisplay.clearCycleInput();
         }
 
         int hash = currentHoveredStack.getComponents().hashCode();

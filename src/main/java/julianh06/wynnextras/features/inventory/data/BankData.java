@@ -1,9 +1,11 @@
 package julianh06.wynnextras.features.inventory.data;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
 import julianh06.wynnextras.features.misc.ItemStackDeserializer;
 import julianh06.wynnextras.features.misc.ItemStackSerializer;
@@ -22,11 +24,16 @@ import java.util.List;
 import java.util.Optional;
 
 public abstract class BankData {
-    public int lastPage = 1;
-    public HashMap<Integer, List<ItemStack>> BankPages = new HashMap<>();
-    public HashMap<Integer, String> BankPageNames = new HashMap<>();
-    public String characterNickname = null; // For character banks - stores the character's class name (e.g., "Dark Wizard")
-    public int characterLevel = 0; // For character banks - stores the character's combat level
+    private int lastPage = 1;
+    @SerializedName("BankPages")
+    private HashMap<Integer, List<ItemStack>> bankPages = new HashMap<>();
+    @SerializedName("BankPageNames")
+    private HashMap<Integer, String> bankPageNames = new HashMap<>();
+    private String characterNickname = null; // For character banks - stores the character's class name (e.g., "Dark Wizard")
+    private int characterLevel = 0; // For character banks - stores the character's combat level
+    /** Per-page bag counts keyed by "RAID|TIER" (e.g. "NOG|LEGENDARY" -> 3). Stored as plain
+     *  numbers so they survive serialization without depending on Wynntils item annotations. */
+    private HashMap<Integer, HashMap<String, Integer>> bagCounts = new HashMap<>();
 
     public abstract Path getConfigPath();
 
@@ -39,7 +46,7 @@ public abstract class BankData {
                 getGson().toJson(this, writer);
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't write bank data:");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't write bank data:");
             e.printStackTrace();
         }
     }
@@ -49,7 +56,7 @@ public abstract class BankData {
         try {
             Files.createDirectories(path.getParent());
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't create config directory:");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't create config directory:");
             e.printStackTrace();
         }
 
@@ -57,23 +64,64 @@ public abstract class BankData {
             try (Reader reader = Files.newBufferedReader(path)) {
                 BankData loaded = getGson().fromJson(reader, this.getClass());
                 if (loaded != null) {
-                    this.BankPages = loaded.BankPages;
+                    this.bankPages = loaded.bankPages != null ? loaded.bankPages : new HashMap<>();
                     this.lastPage = loaded.lastPage;
-                    this.BankPageNames = loaded.BankPageNames;
+                    this.bankPageNames = loaded.bankPageNames != null ? loaded.bankPageNames : new HashMap<>();
                     this.characterNickname = loaded.characterNickname;
                     this.characterLevel = loaded.characterLevel;
+                    this.bagCounts = loaded.bagCounts != null ? loaded.bagCounts : new HashMap<>();
                 }
             } catch (IOException e) {
-                System.err.println("[WynnExtras] Couldn't read bank data:");
+                WynnExtras.LOGGER.error("[WynnExtras] Couldn't read bank data:");
                 e.printStackTrace();
             }
         } else {
-            this.BankPages = new HashMap<>();
+            // No file for this UUID/character yet — clear EVERYTHING so we don't leak the
+            // previous character's pages/bag counts into the new in-memory INSTANCE.
+            this.bankPages = new HashMap<>();
             this.lastPage = 1;
-            this.BankPageNames = new HashMap<>();
+            this.bankPageNames = new HashMap<>();
             this.characterNickname = null;
             this.characterLevel = 0;
+            this.bagCounts = new HashMap<>();
         }
+    }
+
+    public int getLastPage() {
+        return lastPage;
+    }
+
+    public void setLastPage(int lastPage) {
+        this.lastPage = lastPage;
+    }
+
+    public void incrementLastPage() {
+        lastPage++;
+    }
+
+    public HashMap<Integer, List<ItemStack>> getBankPages() {
+        return bankPages;
+    }
+
+    public HashMap<Integer, String> getBankPageNames() {
+        return bankPageNames;
+    }
+
+    public String getCharacterNickname() {
+        return characterNickname;
+    }
+
+    public int getCharacterLevel() {
+        return characterLevel;
+    }
+
+    public void setCharacterInfo(String characterNickname, int characterLevel) {
+        this.characterNickname = characterNickname;
+        this.characterLevel = characterLevel;
+    }
+
+    public HashMap<Integer, HashMap<String, Integer>> getBagCounts() {
+        return bagCounts;
     }
 
     private static final Gson GSON = new GsonBuilder()
@@ -97,4 +145,3 @@ public abstract class BankData {
         return GSON;
     }
 }
-

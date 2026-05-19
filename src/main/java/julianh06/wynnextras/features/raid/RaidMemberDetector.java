@@ -63,9 +63,9 @@ public class RaidMemberDetector {
 //                for(String member : members) {
 //                    if(member.isEmpty()) return 1;
 //                    if(ready.get(i)) {
-//                        System.out.println(member + " is ready");
+//                        WynnExtras.LOGGER.info(member + " is ready");
 //                    } else {
-//                        System.out.println(member + " is not ready");
+//                        WynnExtras.LOGGER.info(member + " is not ready");
 //                    }
 //                    i++;
 //                }
@@ -217,7 +217,7 @@ public class RaidMemberDetector {
 //                realName = realName.split("\\s+", 2)[1];
 //            }
 //
-//            System.out.println("Entzifferter Name: " + realName);
+//            WynnExtras.LOGGER.info("Entzifferter Name: " + realName);
 //
 //            if(isReady) {
 //                if(members.contains(realName)) {

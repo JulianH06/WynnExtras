@@ -906,12 +906,12 @@ public class TreeLoader {
                 TreeData.loadAll();
                 return;
             } catch (IOException e) {
-                System.err.println("[WynnExtras] Couldn't write ability tree file:");
+                WynnExtras.LOGGER.error("[WynnExtras] Couldn't write ability tree file:");
                 e.printStackTrace();
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Failed to save ability tree file")));
             }
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Error fetching ability tree:");
+            WynnExtras.LOGGER.error("[WynnExtras] Error fetching ability tree:");
             e.printStackTrace();
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Error fetching ability tree")));
         }
@@ -937,7 +937,7 @@ public class TreeLoader {
                 );
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't delete ability tree file:");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't delete ability tree file:");
             e.printStackTrace();
             McUtils.sendMessageToClient(
                     WynnExtras.addWynnExtrasPrefix(Text.of("Failed to delete ability tree file"))
@@ -974,11 +974,11 @@ public class TreeLoader {
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("HTTP Request failed: 401")));
                 return null;
             } else {
-                System.err.println("[WynnExtras] HTTP Error: " + responseCode);
+                WynnExtras.LOGGER.error("[WynnExtras] HTTP Error: " + responseCode);
                 return null;
             }
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Network error:");
+            WynnExtras.LOGGER.error("[WynnExtras] Network error:");
             e.printStackTrace();
             return null;
         }
@@ -1013,15 +1013,34 @@ public class TreeLoader {
 
     static public void clickOnAbility(MinecraftClient client, PlayerEntity player, String nameToClick, HandledScreen<?> screen) {
         if (!inTreeMenu) return;
-        clickOnNameInInventory(nameToClick, screen, client);
-    }
-    static public boolean hasUnlockPrefix(String ability, HandledScreen<?> screen) {
-        String unlockName = "Unlock " + ability;
+        // "Next Page" / "Previous Page" are menu buttons, not abilities — use the fuzzy matcher
+        if (nameToClick.equals("Next Page") || nameToClick.equals("Previous Page")) {
+            clickOnNameInInventory(nameToClick, screen, client);
+            return;
+        }
+        // For ability clicks, use exact-name match to avoid hitting tiered names like
+        // "Haste II" when the target is "Haste".
+        String target = "Unlock " + nameToClick;
         for (int i = 0; i < screen.getScreenHandler().slots.size(); i++) {
             Slot slot = screen.getScreenHandler().slots.get(i);
             if (!slot.hasStack() || slot.getStack().getCustomName() == null) continue;
-            String name = slot.getStack().getCustomName().getString();
-            if (name.contains(unlockName)) { // Substring match instead of exact match
+            String raw = slot.getStack().getCustomName().getString();
+            String stripped = raw.replaceAll("§[0-9a-fk-or]", "").trim();
+            if (stripped.equals(target)) {
+                clickSlotHelper(i, screen, client);
+                return;
+            }
+        }
+    }
+
+    static public boolean hasUnlockPrefix(String ability, HandledScreen<?> screen) {
+        String target = "Unlock " + ability;
+        for (int i = 0; i < screen.getScreenHandler().slots.size(); i++) {
+            Slot slot = screen.getScreenHandler().slots.get(i);
+            if (!slot.hasStack() || slot.getStack().getCustomName() == null) continue;
+            String raw = slot.getStack().getCustomName().getString();
+            String stripped = raw.replaceAll("§[0-9a-fk-or]", "").trim();
+            if (stripped.equals(target)) {
                 return true;
             }
         }

@@ -52,7 +52,7 @@ public abstract class WEElement<T> {
         this.ui = ui;
         if(!visible || this.ui == null) return;
         hovered = isMouseOver(mouseX, mouseY);
-//        System.out.println(hovered);
+//        WynnExtras.LOGGER.info(hovered);
         drawBackground(ctx, mouseX, mouseY, tickDelta);
         drawContent(ctx, mouseX, mouseY, tickDelta);
         drawChildren(ctx, mouseX, mouseY, tickDelta);

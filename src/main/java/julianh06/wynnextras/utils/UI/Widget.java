@@ -28,11 +28,14 @@ public abstract class Widget {
 
     // ---- Bounds / Layout ----
     public final void setBounds(int x, int y, int width, int height) {
+        int normalizedWidth = Math.max(0, width);
+        int normalizedHeight = Math.max(0, height);
+        if (this.x == x && this.y == y && this.width == normalizedWidth && this.height == normalizedHeight) return;
         this.x = x;
         this.y = y;
-        this.width = Math.max(0, width);
-        this.height = Math.max(0, height);
-        onResize(width, height);
+        this.width = normalizedWidth;
+        this.height = normalizedHeight;
+        onResize(normalizedWidth, normalizedHeight);
     }
 
     protected void onResize(int newWidth, int newHeight) { /* override in subclasses if needed */ }

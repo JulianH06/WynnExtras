@@ -552,10 +552,10 @@ public class TetrisScreen extends Screen {
         if (!gameOver && currentPiece != null) {
             long now = System.currentTimeMillis();
             switch (keyCode) {
-                case GLFW.GLFW_KEY_RIGHT -> { rightPressed = true; rightPressTime = now; if (currentPiece.canMoveRight()) { if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) { lockStart = now; lockResets++; } currentPiece.moveRight(); lastActionWasRotation = false; } return true; }
-                case GLFW.GLFW_KEY_LEFT -> { leftPressed = true; leftPressTime = now; if (currentPiece.canMoveLeft()) { if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) { lockStart = now; lockResets++; } currentPiece.moveLeft(); lastActionWasRotation = false; } return true; }
-                case GLFW.GLFW_KEY_DOWN -> { downPressed = true; downPressTime = now; lastActionWasRotation = false; return true; }
-                case GLFW.GLFW_KEY_UP -> { if (currentPiece.canRotate(true)) { if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) { lockStart = now; lockResets++; } currentPiece.rotate(true); lastActionWasRotation = true; } return true; }
+                case GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_D -> { rightPressed = true; rightPressTime = now; if (currentPiece.canMoveRight()) { if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) { lockStart = now; lockResets++; } currentPiece.moveRight(); lastActionWasRotation = false; } return true; }
+                case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_A -> { leftPressed = true; leftPressTime = now; if (currentPiece.canMoveLeft()) { if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) { lockStart = now; lockResets++; } currentPiece.moveLeft(); lastActionWasRotation = false; } return true; }
+                case GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_S -> { downPressed = true; downPressTime = now; lastActionWasRotation = false; return true; }
+                case GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_W -> { if (currentPiece.canRotate(true)) { if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) { lockStart = now; lockResets++; } currentPiece.rotate(true); lastActionWasRotation = true; } return true; }
                 case GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_X -> { if (currentPiece.canRotate(false)) { if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) { lockStart = now; lockResets++; } currentPiece.rotate(false); lastActionWasRotation = true; } return true; }
                 case GLFW.GLFW_KEY_SPACE -> {
                     if (!currentPiece.getFamily().isEmpty()) {
@@ -574,9 +574,9 @@ public class TetrisScreen extends Screen {
     @Override
     public boolean keyReleased(KeyInput input) {
         switch (input.key()) {
-            case GLFW.GLFW_KEY_RIGHT -> { rightPressed = false; return true; }
-            case GLFW.GLFW_KEY_LEFT -> { leftPressed = false; return true; }
-            case GLFW.GLFW_KEY_DOWN -> { downPressed = false; return true; }
+            case GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_D -> { rightPressed = false; return true; }
+            case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_A -> { leftPressed = false; return true; }
+            case GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_S -> { downPressed = false; return true; }
         }
         return false;
     }

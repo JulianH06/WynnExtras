@@ -5,6 +5,7 @@ import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.ChatEvent;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -12,8 +13,9 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.sound.SoundEvent;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
 
@@ -47,18 +49,25 @@ public class ChatNotificator {
         notify(event.message);
     }
 
+    private static final String[] BOMB_KEYWORDS = {"bomb", "bombs", "any prof", "dxp"};
+    private static final String[] BOMB_EXCLUDE = {
+            "shout", "combat level", "storm", "wynnextras",
+            // Cosmetic / non-server-bomb references that mention "bomb" but aren't an actual bomb-active announcement.
+            "item bomb", "love bomb", "smoke bomb", "party bomb", "confetti", "glitter", "arrow bomb", "dxp weekend", "dxp month"
+    };
+
     private static void notify(Text message) {
         if(message.getString().contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
 
+        handleBombshareSuggestion(message);
+
         for(String notificator : WynnExtrasConfig.INSTANCE.notifierWords) {
-            if(!notificator.contains("|")) return;
+            if(!notificator.contains("|")) continue;
             String[] parts = notificator.split("\\|");
             if(message.getString().toLowerCase().contains(parts[0].toLowerCase())) {
                 displayAndPlaySound(parts[1]);
             }
         }
-
-        //TODO: add twp to pv loot tracker aasdfhjk
 
         WynnExtrasConfig.INSTANCE.syncPremades();
 
@@ -88,6 +97,7 @@ public class ChatNotificator {
     }
 
     private static void renderHud(DrawContext ctx, RenderTickCounter tickCounter) {
+        if (MinecraftClient.getInstance().options.hudHidden) return;
         if (activeText == null) return;
         long now = System.currentTimeMillis();
         if (now >= expireTimeMs) {
@@ -142,5 +152,51 @@ public class ChatNotificator {
         ctx.getMatrices().scale(scale, scale);
         ctx.drawText(mc.textRenderer, activeText, textOffsetX, -th / 2, CustomColor.fromInt(activeColor).withAlpha(alpha).asInt(), true);
         ctx.getMatrices().popMatrix();
+    }
+
+    private static void handleBombshareSuggestion(Text message) {
+        // Bomb share suggestion: player chat messages contain ":"
+        if (!WynnExtrasConfig.INSTANCE.bombShareSuggestion) return;
+
+        String msg = message.getString().toLowerCase();
+        if (!msg.contains(":")) return;
+
+        boolean excluded = false;
+        for (String ex : BOMB_EXCLUDE) {
+            if (msg.contains(ex)) {
+                excluded = true;
+                break;
+            }
+        }
+
+        if(excluded) return;
+
+        for (String keyword : BOMB_KEYWORDS) {
+            if (!msg.contains(keyword)) continue;
+
+            boolean lootRelated = msg.contains("loot");
+            boolean combatRelated = msg.contains("combat");
+            MinecraftClient.getInstance().send(() -> {
+                var text = WynnExtras.addWynnExtrasPrefix(Text.literal(""))
+                        .append(Text.literal("§e§n[Share all Bombs]").setStyle(Style.EMPTY
+                                .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild"))))
+                        .append(Text.literal("  "));
+                if (lootRelated) {
+                    text.append(Text.literal("§a§n[Loot only]").setStyle(Style.EMPTY
+                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild loot"))));
+                } else if (combatRelated) {
+                    text.append(Text.literal("§a§n[Combat only]").setStyle(Style.EMPTY
+                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild combat"))));
+                } else {
+                    text.append(Text.literal("§a§n[Prof only]").setStyle(Style.EMPTY
+                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild prof"))));
+                }
+                text.append(Text.literal("  "))
+                        .append(Text.literal("§c§n[Disable]").setStyle(Style.EMPTY
+                                .withClickEvent(new ClickEvent.RunCommand("/we bombshare disable"))));
+                McUtils.sendMessageToClient(text);
+            });
+            break;
+        }
     }
 }

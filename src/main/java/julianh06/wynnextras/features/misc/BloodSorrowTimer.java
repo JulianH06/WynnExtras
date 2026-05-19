@@ -5,15 +5,13 @@ import com.wynntils.core.components.Models;
 import com.wynntils.models.gear.type.GearType;
 import com.wynntils.models.items.WynnItem;
 import com.wynntils.models.items.items.game.GearItem;
-import com.wynntils.models.wynnitem.parsing.WynnItemParser;
+import com.wynntils.models.abilities.AbilityModel;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.wynn.ItemUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.config.WynnExtrasConfigScreen;
-import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.aspects.LocalAspectStorage;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -23,6 +21,7 @@ import net.minecraft.client.sound.SoundInstanceListener;
 import net.minecraft.client.sound.WeightedSoundSet;
 import net.minecraft.item.ItemStack;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -33,6 +32,17 @@ public class BloodSorrowTimer {
     private static int lastSelectedSlot = -1;
     private static int skipEstimatesTicks = 0;
     private static final int SKIP_TICKS_AFTER_SLOT_CHANGE = 10; // ~0.5s
+    private static int lastBloodPoolValue = -1;
+    private static long soundFiredAt = 0;
+    private static final long TRIGGER_WINDOW_MS = 500;
+
+    private static int cachedAcolyteBonus = -1;
+    private static String cachedAcolyteBonusClassId = null;
+
+    public static void invalidateAcolyteCache() {
+        cachedAcolyteBonus = -1;
+        cachedAcolyteBonusClassId = null;
+    }
 
     private static int getAcolyteBonus() {
         if(!WynnExtrasConfig.INSTANCE.autoDetectBloodSorrowTime && !WynnExtrasConfig.INSTANCE.autoDetectAcolyteAspectTier) {
@@ -46,6 +56,10 @@ public class BloodSorrowTimer {
         String classId = BankOverlay.currentCharacterID;
         if (classId == null || classId.isEmpty()) return 0;
 
+        if (cachedAcolyteBonus >= 0 && classId.equals(cachedAcolyteBonusClassId)) {
+            return cachedAcolyteBonus;
+        }
+
         Map<String, String> active = LocalAspectStorage.loadActiveAspects(classId);
 
         int result = 0;
@@ -58,6 +72,9 @@ public class BloodSorrowTimer {
             else if (tierLine.contains("Tier II")) result = 250;
             else if (tierLine.contains("Tier I")) result = 250;
         }
+
+        cachedAcolyteBonus = result;
+        cachedAcolyteBonusClassId = classId;
         return result;
     }
 
@@ -78,11 +95,7 @@ public class BloodSorrowTimer {
         if (!WynnExtrasConfig.INSTANCE.bloodSorrowTimerEnabled) return;
         if (Models.Character.getClassType() != ClassType.SHAMAN) return;
         if (!path.contains("wither_skeleton.hurt")) return;
-        long now = System.currentTimeMillis();
-        long duration = (hasResonance() ? 1250 : 5000) + getAcolyteBonus() * (hasResonance() ? 1L : 4L);
-        if (now - lastStartMs <= duration + 100) return;
-        lastStartMs = now;
-        timerEndMs = now + duration;
+        soundFiredAt = System.currentTimeMillis();
     }
 
     public static boolean isActive() {
@@ -93,6 +106,14 @@ public class BloodSorrowTimer {
         return Math.max(0, (timerEndMs - System.currentTimeMillis()) / 1000f);
     }
 
+    private static void startTimer() {
+        long now = System.currentTimeMillis();
+        long duration = (hasResonance() ? 1250 : 5000) + getAcolyteBonus() * (hasResonance() ? 1L : 4L);
+        if (now - lastStartMs <= duration + 100) return;
+        lastStartMs = now;
+        timerEndMs = now + duration;
+    }
+
     public static void register() {
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
             client.getSoundManager().registerListener(new SoundInstanceListener() {
@@ -101,6 +122,29 @@ public class BloodSorrowTimer {
                     onSound(sound.getId().getPath());
                 }
             });
+        });
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (!WynnExtrasConfig.INSTANCE.bloodSorrowTimerEnabled) return;
+            if (client.player == null) return;
+            if (Models.Character.getClassType() != ClassType.SHAMAN) return;
+
+            int currentValue = -1;
+            try {
+                if (AbilityModel.bloodPoolBar.isActive()) {
+                    currentValue = AbilityModel.bloodPoolBar.getBarProgress().value().current();
+                }
+            } catch (Exception ignored) {}
+
+            if (lastBloodPoolValue >= 0 && currentValue >= 0) {
+                int change = Math.abs(currentValue - lastBloodPoolValue);
+                boolean soundRecent = System.currentTimeMillis() - soundFiredAt < TRIGGER_WINDOW_MS;
+                if (change > 50 && soundRecent) {
+                    startTimer();
+                    soundFiredAt = 0;
+                }
+            }
+            lastBloodPoolValue = currentValue;
         });
 
         HudRenderCallback.EVENT.register(BloodSorrowTimer::renderHud);

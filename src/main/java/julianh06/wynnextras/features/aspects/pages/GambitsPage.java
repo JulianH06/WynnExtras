@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects.pages;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -81,7 +82,7 @@ public class GambitsPage extends PageWidget{
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
         ZonedDateTime nextReset = ResetTimeConfig.INSTANCE.getNextGambitReset();
         if (nextReset.isBefore(now) || nextReset.isEqual(now)) {
-            nextReset = nextReset.plusWeeks(1);
+            nextReset = nextReset.plusDays(1);
         }
 
         // Calculate time difference
@@ -109,7 +110,7 @@ public class GambitsPage extends PageWidget{
 
                     lastCrowdsourceFetch = now;
                     if(isSamePool(oldGambits, result)) {
-                        System.out.println("still old pool, retry in 30s");
+                        WynnExtras.LOGGER.info("still old pool, retry in 30s");
                         hasOldData = true;
                     } else {
                         hasOldData = false;
@@ -192,21 +193,7 @@ public class GambitsPage extends PageWidget{
     }
 
     private void drawGambitPanel(int x, int y, int panelWidth, int panelHeight, GambitData.GambitEntry gambit) {
-        int topHeight = 60;
-
-        if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
-            ui.drawNineSlice(x, y, panelWidth,
-                    topHeight, 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
-
-            ui.drawNineSlice(x, y + topHeight, panelWidth,
-                    panelHeight - topHeight, 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
-        } else {
-            ui.drawNineSlice(x, y, panelWidth,
-                    topHeight, 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
-
-            ui.drawNineSlice(x, y + topHeight, panelWidth,
-                    panelHeight - topHeight, 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
-        }
+        ui.drawVanillaPanel(x, y, panelWidth, panelHeight, 12, 15, 15, 50, 20);
 
         // Name
         String truncatedName = gambit.name;
@@ -306,7 +293,7 @@ public class GambitsPage extends PageWidget{
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Reload gambits", x + width / 2f, y + height / 2f);
         }
 

@@ -1,8 +1,12 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.models.character.type.ClassType;
+import com.wynntils.models.gear.type.GearType;
+import com.wynntils.models.items.WynnItem;
+import com.wynntils.models.items.items.game.CraftedGearItem;
+import com.wynntils.models.items.items.game.GearItem;
 import com.wynntils.core.components.Models;
 import com.wynntils.utils.mc.McUtils;
+import net.minecraft.item.ItemStack;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -24,10 +28,21 @@ import java.util.*;
 
 public class TotemTimer {
     private static int lastSelectedSlot = -1;
-    private static int skipEstimatesTicks = 0;
-    private static final int SKIP_TICKS_AFTER_SLOT_CHANGE = 10; // ~0.5s
 
     public record TotemInfo(String owner, String timeText, boolean estimated) {}
+
+    /** True if the stack is a relik — including crafted reliks, which are CraftedGearItem
+     *  not GearItem and were previously ignored, leaving the timer stuck on stale data
+     *  when switching to/from a crafted relik. */
+    private static boolean isRelik(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        Optional<WynnItem> opt = Models.Item.getWynnItem(stack);
+        if (opt.isEmpty()) return false;
+        WynnItem item = opt.get();
+        if (item instanceof GearItem gear) return gear.getGearType() == GearType.RELIK;
+        if (item instanceof CraftedGearItem crafted) return crafted.getGearType() == GearType.RELIK;
+        return false;
+    }
 
     private static float parseSeconds(String timeText) {
         String digits = timeText.replaceAll("[^0-9.]", "");
@@ -53,6 +68,7 @@ public class TotemTimer {
 
     // Out-of-render estimation: owner -> {lastKnownSeconds, lastUpdateTick}
     private static final Map<String, float[]> estimatedTotems = new HashMap<>();
+    private static final List<String> lastFoundKeys = new ArrayList<>();
     private static long tickCounter = 0;
 
     public static List<TotemInfo> getTotems() {
@@ -76,30 +92,47 @@ public class TotemTimer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if(client.player == null) return;
 
-            if(client.player.getInventory() != null) {
+            if (client.player.getInventory() != null) {
                 int currentSlot = client.player.getInventory().getSelectedSlot();
                 if (lastSelectedSlot != -1 && currentSlot != lastSelectedSlot) {
-                    estimatedTotems.clear();
-                    skipEstimatesTicks = SKIP_TICKS_AFTER_SLOT_CHANGE;
-                } else if (skipEstimatesTicks > 0) {
-                    estimatedTotems.clear();
-                    skipEstimatesTicks--;
+                    ItemStack prevStack = client.player.getInventory().getStack(lastSelectedSlot);
+                    ItemStack newStack = client.player.getInventory().getStack(currentSlot);
+                    if (isRelik(prevStack) && isRelik(newStack)) {
+                        estimatedTotems.clear();
+                    }
                 }
                 lastSelectedSlot = currentSlot;
             }
 
-            boolean skipEstimatesThisTick = skipEstimatesTicks > 0;
-
-            totems.clear();
             warningActive = false;
-            if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled) return;
-            if (client.world == null || client.player == null) return;
+            if (!WynnExtrasConfig.INSTANCE.totemTimerEnabled) { totems.clear(); return; }
+            if (client.world == null || client.player == null) { totems.clear(); return; }
 
             tickCounter++;
             WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
-            float threshold = c.totemTimerWarningThreshold;
             String playerName = McUtils.playerName();
 
+            // Warning check + sound runs every tick
+            if (c.totemTimerWarningText || c.totemTimerWarningSound) {
+                float threshold = c.totemTimerWarningThreshold;
+                for (TotemInfo t : totems) {
+                    float secs = parseSeconds(t.timeText());
+                    if (secs > 0 && secs <= threshold) {
+                        warningActive = true;
+                        break;
+                    }
+                }
+            }
+            if (warningActive && c.totemTimerWarningSound) {
+                McUtils.playSoundAmbient(
+                    SoundEvent.of(Identifier.of("block.note_block.pling")),
+                    c.totemTimerWarningSoundVolume / 100, 2.0f
+                );
+            }
+
+            if (tickCounter % 10 != 0) return;
+
+            totems.clear();
             double px = client.player.getX(), py = client.player.getY(), pz = client.player.getZ();
             Box searchBox = new Box(px - 64, py - 32, pz - 64, px + 64, py + 32, pz + 64);
 
@@ -108,14 +141,14 @@ public class TotemTimer {
                 if (e instanceof DisplayEntity.TextDisplayEntity tde) allTdes.add(tde);
             }
 
-            // Count per-owner to distinguish multiple totems (owner#0, owner#1, etc.)
             Map<String, Integer> ownerCounts = new HashMap<>();
-            List<String> foundKeys = new ArrayList<>();
+            lastFoundKeys.clear();
 
             for (DisplayEntity.TextDisplayEntity tde : allTdes) {
                 String raw = tde.getText().getString();
                 String text = Formatting.strip(raw);
                 if (text == null || (!text.contains("'s Totem") && !text.contains("' Totem"))) continue;
+                if (text.contains("Totem of Tales")) continue;
 
                 int idx = text.contains("'s Totem") ? text.indexOf("'s Totem") : text.indexOf("' Totem");
                 // Take only the text on the same line as "'s Totem"/"' Totem", Wynntils may prepend
@@ -124,7 +157,6 @@ public class TotemTimer {
                 String owner = text.substring(lineStart + 1, idx).trim();
                 if (owner.isEmpty()) owner = "?";
 
-                // Own-only filter
                 if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
 
                 String timeText = "";
@@ -162,22 +194,21 @@ public class TotemTimer {
                 int num = ownerCounts.getOrDefault(owner, 0);
                 ownerCounts.put(owner, num + 1);
                 String key = owner + "#" + num;
-                foundKeys.add(key);
+                lastFoundKeys.add(key);
 
                 float secs = parseSeconds(timeText);
-                if (secs > 0 && !skipEstimatesThisTick) {
+                if (secs > 0) {
                     estimatedTotems.put(key, new float[]{ secs, tickCounter });
                 }
 
                 totems.add(new TotemInfo(owner, timeText, false));
             }
 
-            // Out-of-render estimation
-            if (c.totemTimerEstimate && !skipEstimatesThisTick) {
+            if (c.totemTimerEstimate) {
                 List<String> toRemove = new ArrayList<>();
                 for (Map.Entry<String, float[]> entry : estimatedTotems.entrySet()) {
                     String key = entry.getKey();
-                    if (foundKeys.contains(key)) continue;
+                    if (lastFoundKeys.contains(key)) continue;
                     String owner = key.contains("#") ? key.substring(0, key.lastIndexOf('#')) : key;
                     if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
 
@@ -198,24 +229,6 @@ public class TotemTimer {
                 toRemove.forEach(estimatedTotems::remove);
             }
 
-            // Check warning condition
-            if (c.totemTimerWarningText || c.totemTimerWarningSound) {
-                for (TotemInfo t : totems) {
-                    float secs = parseSeconds(t.timeText());
-                    if (secs > 0 && secs <= threshold) {
-                        warningActive = true;
-                        break;
-                    }
-                }
-            }
-
-            // Play warning sound
-            if (warningActive && c.totemTimerWarningSound) {
-                McUtils.playSoundAmbient(
-                    SoundEvent.of(Identifier.of("block.note_block.pling")),
-                    c.totemTimerWarningSoundVolume / 100, 2.0f
-                );
-            }
         });
 
         HudRenderCallback.EVENT.register(TotemTimer::renderHud);
@@ -252,7 +265,10 @@ public class TotemTimer {
                         : (c.totemTimerOwnOnly ? ("Totem: " + timeDisplay)
                         : (t.owner() + "'s Totem: " + timeDisplay));
 
-                int color = t.estimated() ? 0xFFAAAAAA : timeColor(t.timeText());
+                Integer override = WynnExtrasConfig.INSTANCE.hudColorOverrides.get("totem");
+                boolean useSolid = c.totemTimerSolidColor && override != null;
+                int color = t.estimated() ? 0xFFAAAAAA
+                        : (useSolid ? (override | 0xFF000000) : timeColor(t.timeText()));
 
                 int tw = mc.textRenderer.getWidth(line);
                 int th = mc.textRenderer.fontHeight;

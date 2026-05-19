@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.waypoints;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.render.FontRenderer;
@@ -228,7 +229,7 @@ public class WaypointElement {
         if(categoryDropdown.isClickInBounds(mouseX, mouseY)) {
             WaypointCategory category = categoryDropdown.clickAndGetCategory();
             if(category != null) {
-                System.out.println(category.name);
+                WynnExtras.LOGGER.info(category.name);
                 waypoint.setCategory(category);
                 WaypointData.save();
             }
@@ -237,8 +238,8 @@ public class WaypointElement {
             yInput.setActive(false);
             zInput.setActive(false);
             return;
-        } else if (categoryDropdown.isExpanded) {
-            categoryDropdown.isExpanded = false;
+        } else if (categoryDropdown.isExpanded()) {
+            categoryDropdown.collapse();
             nameInput.setActive(false);
             xInput.setActive(false);
             yInput.setActive(false);

@@ -13,6 +13,7 @@ public class RaidLootData {
     public int amplifierTier1 = 0;
     public int amplifierTier2 = 0;
     public int amplifierTier3 = 0;
+    public int amplifierTier4 = 0;
 
     // ===== Crafter Bags =====
     public int totalBags = 0;
@@ -54,7 +55,7 @@ public class RaidLootData {
     }
 
     public int getTotalAmplifiers() {
-        return amplifierTier1 + amplifierTier2 + amplifierTier3;
+        return amplifierTier1 + amplifierTier2 + amplifierTier3 + amplifierTier4;
     }
 
     public int getTotalCrafterBags() {
@@ -103,6 +104,7 @@ public class RaidLootData {
         amplifierTier1 = 0;
         amplifierTier2 = 0;
         amplifierTier3 = 0;
+        amplifierTier4 = 0;
         totalBags = 0;
         stuffedBags = 0;
         packedBags = 0;
@@ -131,6 +133,7 @@ public class RaidLootData {
         public int amplifierTier1 = 0;
         public int amplifierTier2 = 0;
         public int amplifierTier3 = 0;
+        public int amplifierTier4 = 0;
         public int totalBags = 0;
         public int stuffedBags = 0;
         public int packedBags = 0;
@@ -151,7 +154,32 @@ public class RaidLootData {
         }
 
         public int getTotalAmplifiers() {
-            return amplifierTier1 + amplifierTier2 + amplifierTier3;
+            return amplifierTier1 + amplifierTier2 + amplifierTier3 + amplifierTier4;
+        }
+
+        /** Adds every counter from {@code other} into this instance (in-place). */
+        public void mergeFrom(RaidSpecificLoot other) {
+            if (other == null) return;
+            this.emeraldBlocks      += other.emeraldBlocks;
+            this.liquidEmeralds     += other.liquidEmeralds;
+            this.amplifierTier1     += other.amplifierTier1;
+            this.amplifierTier2     += other.amplifierTier2;
+            this.amplifierTier3     += other.amplifierTier3;
+            this.amplifierTier4     += other.amplifierTier4;
+            this.totalBags          += other.totalBags;
+            this.stuffedBags        += other.stuffedBags;
+            this.packedBags         += other.packedBags;
+            this.variedBags         += other.variedBags;
+            this.totalTomes         += other.totalTomes;
+            this.mythicTomes        += other.mythicTomes;
+            this.fabledTomes        += other.fabledTomes;
+            this.totalCharms        += other.totalCharms;
+            this.totalAspects       += other.totalAspects;
+            this.mythicAspects      += other.mythicAspects;
+            this.fabledAspects      += other.fabledAspects;
+            this.legendaryAspects   += other.legendaryAspects;
+            this.totalWards         += other.totalWards;
+            this.completionCount    += other.completionCount;
         }
     }
 }
