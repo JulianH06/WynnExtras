@@ -179,74 +179,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     }, "Play"))
                 .add(text("More to come!", "More minigames are planned to be released in the future!"))
             .endSub();
-        // ===== NEW =====
-        category("New", 0xFFff5ea8)
-            .excludeFromSearch()
-            .add(text("", "All features added in this update. Toggle any of them on or off."))
-                .add(toggle("Auto-ignore party in raid", "Auto /ignore party members on raid start, /ignore remove on raid end (reduces lag from teammate effects)",
-                        () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
-                .add(toggle("Encounter Selection overlay (Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
-                        () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v))
-                .add(toggle("Right-click chat to copy", "Right-click a chat message (while chat is open) to copy it to the clipboard",
-                        () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
-                .add(toggle("Item broke notifier", "Show 'ITEM BROKE' when one of your items reaches zero durability",
-                        () -> config.itemZeroDurability, v -> config.itemZeroDurability = v))
-                .add(toggle("Raid Session Tracker", "HUD showing raid completion/failure counts and avg time",
-                        () -> config.raidSessionEnabled, v -> config.raidSessionEnabled = v))
-                .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
-                        () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
-                .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
-                        () -> config.quickRepairKey, v -> config.quickRepairKey = v),
-                        () -> config.quickRepairEnabled))
-                .add(toggle("Shift-toggle Guild Raid", "Block Guild Raid clicks by default, hold SHIFT to allow them through",
-                        () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
-                .sub("Tree Room Grotto Announcements")
-                    .add(toggle("Isoptera in Gray Grotto", "Show 'GRAY' when the Interdimensional Isoptera is in the Gray Grotto",
-                            () -> config.isopteraGray, v -> config.isopteraGray = v))
-                    .add(toggle("Isoptera in Black Grotto", "Show 'BLACK' when the Interdimensional Isoptera is in the Black Grotto",
-                            () -> config.isopteraBlack, v -> config.isopteraBlack = v))
-                    .add(toggle("Isoptera in White Grotto", "Show 'WHITE' when the Interdimensional Isoptera is in the White Grotto",
-                            () -> config.isopteraWhite, v -> config.isopteraWhite = v))
-                    .add(toggle("Isoptera in Orange Grotto", "Show 'ORANGE' when the Interdimensional Isoptera is in the Orange Grotto",
-                            () -> config.isopteraOrange, v -> config.isopteraOrange = v))
-                    .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
-                            () -> config.isopteraBlue, v -> config.isopteraBlue = v))
-                .endSub()
-                .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
-                        () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
-                .add(toggle("Auto Skip Dialogue", "Automatically skip 'Press SHIFT to continue' NPC dialogue",
-                        () -> config.autoSkipDialogueEnabled, v -> config.autoSkipDialogueEnabled = v))
-                .add(toggle("Auto Skip Cutscenes", "Automatically skip cutscenes that show 'Swap Hands to skip'",
-                        () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
-                .add(toggle("Stack Duplicate Messages (VERY EXPERIMENTAL)", "Collapse repeated messages into one with a (N) counter (Experimental, might break your chat)",
-                        () -> config.stackDuplicateMessages, v -> config.stackDuplicateMessages = v))
-                .add(visibleWhen(slider("Stack Window (minutes)", "Only stack messages sent within the last X minutes",
-                        1, 60, () -> config.stackDuplicateWindowMinutes, v -> config.stackDuplicateWindowMinutes = v),
-                        () -> config.stackDuplicateMessages))
-                .add(toggle("Aura Ping", "Flash screen and show countdown when aura procs",
-                        () -> config.auraPingEnabled, v -> config.auraPingEnabled = v))
-                .add(toggle("Weekly War Count", "Show number of wars in last 7 days on HUD",
-                        () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
-                .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
-                        () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
-                .add(toggle("Attack Timer", "Show upcoming attack times from scoreboard",
-                        () -> config.attackTimerMenuEnabled, v -> config.attackTimerMenuEnabled = v))
-                .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
-                        () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),
-                        () -> config.attackTimerMenuEnabled))
-                .add(toggle("War Beacon (EXPERIMENTAL)", "Green beacon beam at the soonest war territory (Experimental, might not render correctly)",
-                        () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v))
-                .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
-                        () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
-                .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
-                        () -> config.territoryMenuKey, v -> config.territoryMenuKey = v),
-                        () -> config.territoryMenuKeyEnabled))
-                .add(toggle("Guild Bank Keybind", "Press a key to open /gu manage > Bank directly",
-                        () -> config.guildBankKeyEnabled, v -> config.guildBankKeyEnabled = v))
-                .add(visibleWhen(keybind("Guild Bank Key", "Key to open the guild bank",
-                        () -> config.guildBankKey, v -> config.guildBankKey = v),
-                        () -> config.guildBankKeyEnabled))
-                .add(text("", "Full configuration for each feature lives in its own category (Raiding, Chat, Misc, etc.)."));
 
         // ===== RAIDS =====
         category("Raiding", GOLD_DARK)
@@ -657,6 +589,116 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Debug")
                 .add(keybind("Item Components Key", "Show the hovered container item's components in a debug window",
                         () -> config.debugItemComponentsKey, v -> config.debugItemComponentsKey = v));
+
+        // ===== NEW =====
+        category("New", 0xFF00bad5)
+            .excludeFromSearch()
+            .add(text("", "All features added in this update. Toggle any of them on or off."))
+            .sub("Wars")
+                .add(toggle("Weekly War Count", "Show number of wars in last 7 days on HUD",
+                        () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
+                .add(toggle("War Beacon (EXPERIMENTAL)", "Green beacon beam at the soonest war territory (Experimental, might not render correctly)",
+                        () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v))
+                .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
+                        () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
+                .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
+                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v),
+                        () -> config.territoryMenuKeyEnabled))
+                .add(toggle("Guild Bank Keybind", "Press a key to open /gu manage > Bank directly",
+                        () -> config.guildBankKeyEnabled, v -> config.guildBankKeyEnabled = v))
+                .add(visibleWhen(keybind("Guild Bank Key", "Key to open the guild bank",
+                                () -> config.guildBankKey, v -> config.guildBankKey = v),
+                        () -> config.guildBankKeyEnabled))
+                .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
+                        () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
+                .add(toggle("Attack Timer", "Show upcoming attack times from scoreboard",
+                        () -> config.attackTimerMenuEnabled, v -> config.attackTimerMenuEnabled = v))
+                .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
+                                () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),
+                        () -> config.attackTimerMenuEnabled))
+                .add(toggle("Aura Ping", "Flash screen and show countdown when aura procs",
+                        () -> config.auraPingEnabled, v -> config.auraPingEnabled = v))
+            .sub("Chat")
+                .add(toggle("Item broke notifier", "Show 'ITEM BROKE' when one of your items reaches zero durability",
+                        () -> config.itemZeroDurability, v -> config.itemZeroDurability = v))
+                .add(toggle("Stack Duplicate Messages (VERY EXPERIMENTAL)", "Collapse repeated messages into one with a (N) counter (Experimental, might break your chat)",
+                        () -> config.stackDuplicateMessages, v -> config.stackDuplicateMessages = v))
+                .add(visibleWhen(slider("Stack Window (minutes)", "Only stack messages sent within the last X minutes",
+                                1, 60, () -> config.stackDuplicateWindowMinutes, v -> config.stackDuplicateWindowMinutes = v),
+                        () -> config.stackDuplicateMessages))
+                .add(toggle("Right-click chat to copy", "Right-click a chat message (while chat is open) to copy it to the clipboard",
+                        () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
+                .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs with your guild when someone asks about them in chat",
+                        () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
+            .sub("Automation")
+                .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
+                        () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
+                .add(toggle("Auto Skip Dialogue", "Automatically skip 'Press SHIFT to continue' NPC dialogue",
+                        () -> config.autoSkipDialogueEnabled, v -> config.autoSkipDialogueEnabled = v))
+                .add(toggle("Auto Skip Cutscenes", "Automatically skip cutscenes that show 'Swap Hands to skip'",
+                        () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
+                .add(toggle("Auto-ignore party in raid", "Auto /ignore party members on raid start, /ignore remove on raid end (reduces lag from teammate effects)",
+                        () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
+            .sub("Tree Room Grotto Announcements")
+                .add(toggle("Isoptera in Gray Grotto", "Show 'GRAY' when the Interdimensional Isoptera is in the Gray Grotto",
+                        () -> config.isopteraGray, v -> config.isopteraGray = v))
+                .add(toggle("Isoptera in Black Grotto", "Show 'BLACK' when the Interdimensional Isoptera is in the Black Grotto",
+                        () -> config.isopteraBlack, v -> config.isopteraBlack = v))
+                .add(toggle("Isoptera in White Grotto", "Show 'WHITE' when the Interdimensional Isoptera is in the White Grotto",
+                        () -> config.isopteraWhite, v -> config.isopteraWhite = v))
+                .add(toggle("Isoptera in Orange Grotto", "Show 'ORANGE' when the Interdimensional Isoptera is in the Orange Grotto",
+                        () -> config.isopteraOrange, v -> config.isopteraOrange = v))
+                .add(toggle("Isoptera in Blue Grotto", "Show 'BLUE' when the Interdimensional Isoptera is in the Blue Grotto",
+                        () -> config.isopteraBlue, v -> config.isopteraBlue = v))
+            .sub("Raiding")
+                .add(toggle("Raid Session Tracker (more options in the raiding tab)", "HUD showing raid completion/failure counts and avg time",
+                        () -> config.raidSessionEnabled, v -> config.raidSessionEnabled = v))
+                .add(toggle("Shift-toggle Guild Raid", "Block Guild Raid clicks by default, hold SHIFT to allow them through",
+                        () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
+                .add(toggle("Encounter Selection overlay (Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
+                        () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v))
+            .sub("Class Selection")
+                .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
+                        () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
+                .add(toggle("Use custom class colors", "Configure the accent color for each class and reskin",
+                        () -> config.useCustomClassColors, v -> config.useCustomClassColors = v))
+                .add(visibleWhen(classColor("Warrior Color", "Accent color for Warrior class cards", "warrior", 0xCC4444),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Knight Color", "Accent color for Knight class cards", "knight", 0xCC4444),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Mage Color", "Accent color for Mage class cards", "mage", 0x55BBFF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Dark Wizard Color", "Accent color for Dark Wizard class cards", "dark_wizard", 0x55BBFF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Assassin Color", "Accent color for Assassin class cards", "assassin", 0xFF55FF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Ninja Color", "Accent color for Ninja class cards", "ninja", 0xFF55FF),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Archer Color", "Accent color for Archer class cards", "archer", 0x55FF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Hunter Color", "Accent color for Hunter class cards", "hunter", 0x55FF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Shaman Color", "Accent color for Shaman class cards", "shaman", 0xFFFF55),
+                        () -> config.useCustomClassColors))
+                .add(visibleWhen(classColor("Skyseer Color", "Accent color for Skyseer class cards", "skyseer", 0xFFFF55),
+                        () -> config.useCustomClassColors))
+                .add(toggle("Hide quick toggle button", "Hide the enable/disable class overlay button on class selection screens",
+                        () -> config.hideClassSelectionQuickToggleButton, v -> config.hideClassSelectionQuickToggleButton = v))
+            .sub("Profession Overlay")
+                .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
+                        () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))
+                .add(visibleWhen(toggle("Show Exact XP", "Show exact XP values instead of percentages",
+                                () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
+                        () -> config.professionOverlayEnabled))
+            .endSub()
+            .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
+                    () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
+            .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
+                            () -> config.quickRepairKey, v -> config.quickRepairKey = v),
+                    () -> config.quickRepairEnabled))
+            .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
+                    () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))
+            .add(text("", "Full configuration for each feature lives in its own category (Raiding, Chat, Misc, etc.)."));
     }
 
     // ==================== BUILDER HELPERS ====================
