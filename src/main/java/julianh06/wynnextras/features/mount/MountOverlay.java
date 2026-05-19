@@ -1,13 +1,13 @@
 package julianh06.wynnextras.features.mount;
 
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.render.type.HorizontalAlignment;
+import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
@@ -41,23 +41,46 @@ public class MountOverlay {
 
         if (currentScreen instanceof GenericContainerScreen container) {
             List<Slot> slots = container.getScreenHandler().slots;
-            if (slots.size() < 46) {
-                WynnExtras.LOGGER.warn("Found to small mount container");
-                return;
+            if (slots.size() < 46) return;
+
+            List<Slot> feederSlots = List.of(slots.get(9), slots.get(18), slots.get(27), slots.get(36), slots.get(45));
+            List<List<RequiredMaterialInfo>> materials = feederSlots.stream().map(MountOverlay::solve).toList();
+
+            renderMaterialHeader(context, container, feederSlots, materials);
+            for (int i = 0; i < feederSlots.size(); i++) {
+                renderMaterialReqs(context, container, feederSlots.get(i), materials.get(i), mouseX, mouseY);
             }
-
-            renderMaterialReqs(context, container, slots.get(9), mouseX, mouseY);
-            renderMaterialReqs(context, container, slots.get(18), mouseX, mouseY);
-            renderMaterialReqs(context, container, slots.get(27), mouseX, mouseY);
-            renderMaterialReqs(context, container, slots.get(36), mouseX, mouseY);
-            renderMaterialReqs(context, container, slots.get(45), mouseX, mouseY);
-
-        } else WynnExtras.LOGGER.warn("mount screen is not a container");
+        }
     }
 
-    public static void renderMaterialReqs(DrawContext context, GenericContainerScreen container, Slot slot, int mouseX, int mouseY) {
+    private static void renderMaterialHeader(DrawContext context, GenericContainerScreen container, List<Slot> slots, List<List<RequiredMaterialInfo>> materials) {
+        int maxMaterials = materials.stream().mapToInt(List::size).max().orElse(0);
+        if (maxMaterials == 0) return;
+
         HandledScreenAccessor screen = (HandledScreenAccessor) container;
-        List<RequiredMaterialInfo> solved = solve(slot);
+        Slot firstSlotWithMaterials = slots.stream()
+                .filter(slot -> !materials.get(slots.indexOf(slot)).isEmpty())
+                .findFirst()
+                .orElse(slots.getFirst());
+        int firstMaterialX = screen.getX() + firstSlotWithMaterials.x - 30;
+        int materialAreaWidth = 16 + (maxMaterials - 1) * 20;
+        int headerX = firstMaterialX - (maxMaterials - 1) * 20 + materialAreaWidth / 2;
+        int headerY = screen.getY() + firstSlotWithMaterials.y - 13;
+
+        UIUtils ui = new UIUtils(context, 1, 0, 0);
+        ui.drawText(
+                "Required materials",
+                headerX,
+                headerY,
+                CustomColor.fromHexString("FFFFFF"),
+                HorizontalAlignment.CENTER,
+                VerticalAlignment.TOP,
+                0.85f
+        );
+    }
+
+    public static void renderMaterialReqs(DrawContext context, GenericContainerScreen container, Slot slot, List<RequiredMaterialInfo> solved, int mouseX, int mouseY) {
+        HandledScreenAccessor screen = (HandledScreenAccessor) container;
         UIUtils ui = new UIUtils(context, 1, 0, 0);
         Text hoverText = null;
         for (int i = 0; i < solved.size(); i++) {
@@ -71,9 +94,7 @@ public class MountOverlay {
             }
         }
         if (hoverText != null) {
-            TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
-            int width = textRenderer.getWidth(hoverText.getString());
-            ui.drawText(hoverText, mouseX - width, mouseY - textRenderer.fontHeight, CustomColor.NONE, 1f);
+            context.drawTooltip(hoverText, mouseX, mouseY);
         }
     }
 
@@ -90,10 +111,7 @@ public class MountOverlay {
                 int max = Integer.parseInt(matcher.group("max"));
 
                 MountStat mountStat = MountStat.fromString(stat);
-                if (mountStat == null) {
-                    WynnExtras.LOGGER.warn("mount matched in one place but not another how did i even manage that");
-                    return;
-                }
+                if (mountStat == null) return;
 
                 result.put(mountStat, new StatEntry(current, limit, max));
             }
