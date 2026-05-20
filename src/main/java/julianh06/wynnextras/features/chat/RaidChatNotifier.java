@@ -437,7 +437,11 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
-            long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
+            var raid = Models.Raid.getCurrentRaid();
+            if (raid == null || raid.getCurrentRoom() == null) {
+                return "§bCompleted Seal " + progress + " §c@ " + timestamp;
+            }
+            long currentMillis = raid.getCurrentRoom().getRoomTotalTime();
 
             String key = PB_PREFIX + "_" + progress;
             Long pb = getPB(key);
@@ -477,7 +481,11 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
-            long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
+            var raid = Models.Raid.getCurrentRaid();
+            if (raid == null || raid.getCurrentRoom() == null) {
+                return "§bAdded light " + progress + " §c@ " + timestamp;
+            }
+            long currentMillis = raid.getCurrentRoom().getRoomTotalTime();
             String key = PB_PREFIX + "_" + progress;
 
             Long pb = getPB(key);
@@ -518,11 +526,15 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
-            long currentMillis = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
-
             if ("3/3".equals(progress) && Time.now().timestamp() >= disableChiropUntil && WynnExtrasConfig.INSTANCE.chiropTimer) {
                 startSpawnCountdown();
             }
+
+            var raid = Models.Raid.getCurrentRaid();
+            if (raid == null || raid.getCurrentRoom() == null) {
+                return "§bKilled Shadowling " + progress + " §c@ " + timestamp;
+            }
+            long currentMillis = raid.getCurrentRoom().getRoomTotalTime();
 
             String key = PB_PREFIX + "_" + progress;
             Long pb = getPB(key);
