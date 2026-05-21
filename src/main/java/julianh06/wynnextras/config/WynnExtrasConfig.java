@@ -210,6 +210,7 @@ public class WynnExtrasConfig {
 
     // ==================== ASPECTS SCORING ====================
     public AspectScoringMode aspectScoringMode = AspectScoringMode.MAX;
+    public boolean showIndividualAspectScore = true;
     public float mythicAspectMultiplier = 26;
     public float fabledAspectMultiplier = 1;
     public float legendaryAspectMultiplier = 0.4F;

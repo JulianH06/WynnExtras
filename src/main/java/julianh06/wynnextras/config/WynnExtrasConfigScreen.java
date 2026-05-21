@@ -251,6 +251,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.tnaTreeMap))
                 .add(visibleWhen(text("The Map is movable", "To change its position open your inventory and drag it where you want"), () -> config.tnaTreeMap))
             .sub("Aspect Scoring")
+                .add(toggle("Show Score", "Shows the individual score for each aspect",
+                        () -> config.showIndividualAspectScore, v -> config.showIndividualAspectScore = v))
                 .add(sliderF("Mythic Multiplier", "Multiplier applied to mythic aspects for scoring", 0.f, 200.f, 0.1f,
                         () -> config.mythicAspectMultiplier, v -> config.mythicAspectMultiplier = v))
                 .add(sliderF("Fabled Multiplier", "Multiplier applied to fabled aspects for scoring", 0.f, 20.f, 0.1f,

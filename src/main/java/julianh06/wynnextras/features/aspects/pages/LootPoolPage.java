@@ -437,7 +437,7 @@ public class LootPoolPage extends PageWidget {
                 }
             }
 
-            double score = calculateRaidScore(lootPool);
+            double score = calculateRaidScore(aspectWidgets);
             String scoreString = "Personal Score: " + df.format(score);
 
             boolean max = score == 0;
@@ -578,15 +578,17 @@ public class LootPoolPage extends PageWidget {
             };
         }
 
-        private double calculateRaidScore(List<LootPoolData.AspectEntry> aspects) {
+        private double calculateRaidScore(List<AspectWidget> aspects) {
             if(aspects.isEmpty()) return -1;
 
             double score = 0.0;
 
-            for (LootPoolData.AspectEntry aspect : aspects) {
+            for (AspectWidget aspectWidget : aspects) {
+                LootPoolData.AspectEntry aspect = aspectWidget.aspect;
                 String tierInfo = aspect.tierInfo;
 
                 if (tierInfo != null && tierInfo.contains("[MAX]")) {
+                    aspect.score = 0;
                     continue; // Already maxed, no score contribution
                 }
 
@@ -640,6 +642,7 @@ public class LootPoolPage extends PageWidget {
                 }
 
                 score += contribution;
+                aspect.score = contribution;
             }
 
             return score;
@@ -824,7 +827,7 @@ public class LootPoolPage extends PageWidget {
                 String displayName = aspect.name;
                 TextRenderer tr = MinecraftClient.getInstance().textRenderer;
 
-                int availableWidth = (int)(maxWidth) - extra;
+                int availableWidth = (int) (maxWidth) - extra;
 
                 if (tr.getWidth(displayName) > availableWidth) {
                     displayName = tr.trimToWidth(displayName, availableWidth - tr.getWidth("...")) + "...";
@@ -835,15 +838,14 @@ public class LootPoolPage extends PageWidget {
                 boolean isMax = !isNotOwned && aspect.tierInfo.contains("MAX");
                 CustomColor textColor = isNotOwned ? CustomColor.fromHexString("808080") : CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
-                if(isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
+                if (isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
                     textColor = WynncraftShaderColor.RAINBOW.color;
-                } else if(!isNotOwned) {
+                } else if (!isNotOwned) {
                     rarityColorCode = getAspectColorCode(aspect);
                 }
 
                 String namePrefix = isNotOwned ? "§8" : rarityColorCode;
                 ui.drawText(namePrefix + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 87, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
-
 
                 ApiAspect apiAspect = findApiAspectByName(aspect.name);
                 ItemStack flameItem = createAspectFlameIcon(apiAspect, isMax);
@@ -853,21 +855,25 @@ public class LootPoolPage extends PageWidget {
                     float flameScale = 2.1f;
                     ctx.getMatrices().pushMatrix();
                     ctx.getMatrices().scale(flameScale / ui.getScaleFactorF(), flameScale / ui.getScaleFactorF());
-                    ctx.drawItem(flameItem, (int)(screenX / (flameScale / ui.getScaleFactorF())), (int)(screenY / (flameScale / ui.getScaleFactorF())));
+                    ctx.drawItem(flameItem, (int) (screenX / (flameScale / ui.getScaleFactorF())), (int) (screenY / (flameScale / ui.getScaleFactorF())));
                     ctx.getMatrices().popMatrix();
                 }
 
-                if(hovered && parent.isHovered() && mouseY * ui.getScaleFactorF() > parent.y + 190) {
+                if (ui != null && WynnExtrasConfig.INSTANCE.showIndividualAspectScore) {
+                    ui.drawText(Text.literal(new DecimalFormat("0.##").format(aspect.score)), x + 56, y + 26 + height / 2f, CustomColor.fromHexString("c0c0c0"), HorizontalAlignment.CENTER, VerticalAlignment.BOTTOM, 1.9f);
+                }
+
+                if (hovered && parent.isHovered() && mouseY * ui.getScaleFactorF() > parent.y + 190) {
                     List<Text> tooltip = new ArrayList<>();
-                    if(apiAspect == null) return;
+                    if (apiAspect == null) return;
                     int tier = 1;
-                    if(isMax) {
-                        if(aspect.rarity.equalsIgnoreCase("Legendary")) tier = 4;
+                    if (isMax) {
+                        if (aspect.rarity.equalsIgnoreCase("Legendary")) tier = 4;
                         else tier = 3;
                     }
 
                     Pattern pattern = Pattern.compile("Tier ([IVXLCDM]+)");
-                    if(aspect.tierInfo != null) {
+                    if (aspect.tierInfo != null) {
                         Matcher matcher = pattern.matcher(aspect.tierInfo);
 
                         if (matcher.find()) {
@@ -880,8 +886,9 @@ public class LootPoolPage extends PageWidget {
                     tooltip = aspectItemStack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
 
                     int longestTextWidth = 0;
-                    for(Text text : tooltip) {
-                        if(MinecraftClient.getInstance().textRenderer.getWidth(text) > longestTextWidth) longestTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(text);
+                    for (Text text : tooltip) {
+                        if (MinecraftClient.getInstance().textRenderer.getWidth(text) > longestTextWidth)
+                            longestTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(text);
                     }
 
                     String name = tooltip.getFirst().getString();
