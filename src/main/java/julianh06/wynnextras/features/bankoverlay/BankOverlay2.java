@@ -1124,10 +1124,12 @@ public class BankOverlay2 extends WEHandledScreen {
         currentData.setLastPage(validPageCount);
         currentData.getBankPages().keySet().removeIf(pageIndex -> pageIndex >= validPageCount);
         currentData.getBankPageNames().keySet().removeIf(pageIndex -> pageIndex >= validPageCount);
+        currentData.getBagCounts().keySet().removeIf(pageIndex -> pageIndex >= validPageCount);
         annotationCache.keySet().removeIf(pageIndex -> pageIndex >= validPageCount);
         annotationStackCache.keySet().removeIf(pageIndex -> pageIndex >= validPageCount);
         annotationComponentCache.keySet().removeIf(pageIndex -> pageIndex >= validPageCount);
         reloadTotalPages = Math.min(reloadTotalPages, validPageCount);
+        invalidateBagTotalCache();
         currentData.save();
     }
 
@@ -2370,8 +2372,15 @@ public class BankOverlay2 extends WEHandledScreen {
     private static final List<ItemStack> PLAYER_INVENTORY_STACKS = new ArrayList<>(36);
     private static final List<ItemStack> SCREEN_HANDLER_STACKS = new ArrayList<>(54);
     private static final Map<String, Integer> BAG_TOTAL_CACHE = new HashMap<>();
+    private static String bagTotalCacheKey = null;
+    private static boolean bagTotalCacheDirty = true;
     private static final HashMap<String, Integer> BAG_PAGE_COUNT_SCRATCH = new HashMap<>();
     private static final Map<String, BagGroup> BAG_GROUP_SCRATCH = new LinkedHashMap<>();
+
+    public static void invalidateBagTotalCache() {
+        bagTotalCacheDirty = true;
+        bagTotalCacheKey = null;
+    }
 
     private static Map<String, StyledText> createBagRaidLabels() {
         Map<String, StyledText> labels = new HashMap<>();
@@ -2757,6 +2766,7 @@ public class BankOverlay2 extends WEHandledScreen {
         if (existing != null && existing.equals(BAG_PAGE_COUNT_SCRATCH)) return;
 
         data.getBagCounts().put(pageNum, new HashMap<>(BAG_PAGE_COUNT_SCRATCH));
+        invalidateBagTotalCache();
 
         long now = System.currentTimeMillis();
         if (now - lastBagCacheSaveMs > BAG_CACHE_SAVE_DEBOUNCE_MS) {
@@ -2791,12 +2801,18 @@ public class BankOverlay2 extends WEHandledScreen {
         BankData data = getBankDataForCurrentContainer();
         if (data == null) {
             BAG_TOTAL_CACHE.clear();
+            invalidateBagTotalCache();
             return BAG_TOTAL_CACHE;
         }
         return collectBagCounts(data);
     }
 
     private static Map<String, Integer> collectBagCounts(BankData... dataSources) {
+        String cacheKey = createBagTotalCacheKey(dataSources);
+        if (!bagTotalCacheDirty && Objects.equals(cacheKey, bagTotalCacheKey)) {
+            return BAG_TOTAL_CACHE;
+        }
+
         BAG_TOTAL_CACHE.clear();
         for (BankData data : dataSources) {
             if (data == null || data.getBagCounts() == null) continue;
@@ -2810,7 +2826,18 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             }
         }
+        bagTotalCacheKey = cacheKey;
+        bagTotalCacheDirty = false;
         return BAG_TOTAL_CACHE;
+    }
+
+    private static String createBagTotalCacheKey(BankData... dataSources) {
+        StringBuilder key = new StringBuilder();
+        for (BankData data : dataSources) {
+            if (key.length() > 0) key.append('|');
+            key.append(data == null ? "null" : System.identityHashCode(data));
+        }
+        return key.toString();
     }
 
     private static Map<String, BagGroup> groupBagsFromStacks(Iterable<ItemStack> stacks) {

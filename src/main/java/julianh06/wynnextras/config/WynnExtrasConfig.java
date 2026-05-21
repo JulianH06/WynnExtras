@@ -357,6 +357,7 @@ public class WynnExtrasConfig {
 
     // ==================== CUSTOM CLASS SELECTION ====================
     public boolean customClassSelectionEnabled = true;
+    public boolean classSelectionBackgroundEnabled = false;
     public boolean useCustomClassColors = false;
     public Map<String, Integer> classCardAccentColors = new HashMap<>();
     public boolean hideClassSelectionQuickToggleButton = false;

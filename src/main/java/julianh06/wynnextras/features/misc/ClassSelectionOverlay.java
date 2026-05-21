@@ -689,6 +689,11 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     @Override
     protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        if (!WynnExtrasConfig.INSTANCE.classSelectionBackgroundEnabled) {
+            ctx.fillGradient(0, 0, screenWidth, screenHeight, 0xC0101010, 0xD0101010);
+            return;
+        }
+
         ctx.fill(0, 0, screenWidth, screenHeight, 0xFF101010);
 
         // Custom background image from config/wynnextras/customscreen/ folder
@@ -985,7 +990,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     private boolean hasCompletionChroma(ContentProgress progress) {
         return progress.found
-                && progress.percent >= 0f
+                && progress.percent >= 100f
                 && !WynnExtrasConfig.INSTANCE.removeChroma
                 && getCompletionChromaMode() != WynnExtrasConfig.ClassSelectionCompletionChromaMode.NONE;
     }

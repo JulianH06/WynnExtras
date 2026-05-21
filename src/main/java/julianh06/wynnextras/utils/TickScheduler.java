@@ -26,9 +26,9 @@ public final class TickScheduler {
     private static void tick(MinecraftClient client) {
         if (client == null || client.world == null) return;
 
-        for (Task task : new ArrayList<>(TASKS.values())) {
+        for (Task task : TASKS.values()) {
             if (task.tick()) {
-                TASKS.remove(task.id);
+                TASKS.remove(task.id, task);
             }
         }
     }

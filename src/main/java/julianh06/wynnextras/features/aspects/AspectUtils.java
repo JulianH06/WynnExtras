@@ -19,13 +19,17 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
 
 public class AspectUtils {
     static List<ApiAspect> apiAspects = WynncraftApiHandler.fetchAllAspects();
     private static String pendingRaidJoin = null;
+    private static boolean partyFinderJoinListenerRegistered = false;
+    private static boolean clickedQueue = false;
+    private static boolean clickedRaid = false;
+    private static int ticksSinceQueueClick = 0;
+    private static int partyFinderJoinTicks = 0;
 
     public static List<ApiAspect> getApiAspects() {
         return apiAspects;
@@ -82,14 +86,25 @@ public class AspectUtils {
         // Open party finder
         client.player.networkHandler.sendChatCommand("pf");
 
-        // Register tick listener to wait for party finder menu and click through
-        final AtomicBoolean clickedQueue = new AtomicBoolean(false);
-        final AtomicBoolean clickedRaid = new AtomicBoolean(false);
-        final int[] ticksSinceQueueClick = {0}; // Wait ticks after clicking queue
+        clickedQueue = false;
+        clickedRaid = false;
+        ticksSinceQueueClick = 0;
+        partyFinderJoinTicks = 0;
+        registerPartyFinderJoinListener();
+    }
 
+    private static void registerPartyFinderJoinListener() {
+        if (partyFinderJoinListenerRegistered) return;
+        partyFinderJoinListenerRegistered = true;
         ClientTickEvents.END_CLIENT_TICK.register(clientTick -> {
-            if (pendingRaidJoin == null || clickedRaid.get()) {
+            if (pendingRaidJoin == null || clickedRaid) {
                 return; // Done, listener will stay registered but do nothing
+            }
+            if (++partyFinderJoinTicks > 200) {
+                pendingRaidJoin = null;
+                clickedQueue = false;
+                clickedRaid = false;
+                return;
             }
 
             if (McUtils.player() == null || clientTick.currentScreen == null) return;
@@ -98,29 +113,29 @@ public class AspectUtils {
             if (menu == null) return;
 
             // Step 1: Click "Party Queue" button (slot 49)
-            if (!clickedQueue.get() && menu.slots.size() > 49) {
+            if (!clickedQueue && menu.slots.size() > 49) {
                 Slot slot = menu.getSlot(49);
                 if (slot != null && slot.getStack() != null && slot.getStack().getName() != null) {
                     String name = slot.getStack().getName().getString();
                     if (name.contains("Queue")) {
                         clickOnSlot(49, menu.syncId, 0, menu.getStacks());
-                        clickedQueue.set(true);
-                        ticksSinceQueueClick[0] = 0;
+                        clickedQueue = true;
+                        ticksSinceQueueClick = 0;
                         return;
                     }
                 }
             }
 
             // Wait 8 ticks after clicking queue before clicking raid
-            if (clickedQueue.get() && !clickedRaid.get()) {
-                ticksSinceQueueClick[0]++;
-                if (ticksSinceQueueClick[0] < 8) {
+            if (clickedQueue && !clickedRaid) {
+                ticksSinceQueueClick++;
+                if (ticksSinceQueueClick < 8) {
                     return; // Wait more
                 }
             }
 
             // Step 2: Click the specific raid button - search by name instead of hardcoded slot
-            if (clickedQueue.get() && !clickedRaid.get() && menu.slots.size() > 20) {
+            if (clickedQueue && !clickedRaid && menu.slots.size() > 20) {
                 // Search for the raid by name in slots 10-20
                 String searchName = switch (pendingRaidJoin) {
                     case "NOTG" -> "Nest of the Grootslangs";
@@ -137,7 +152,7 @@ public class AspectUtils {
                         String itemName = slot.getStack().getName().getString();
                         if (itemName.contains(searchName) || itemName.contains(pendingRaidJoin)) {
                             clickOnSlot(slotIdx, menu.syncId, 0, menu.getStacks());
-                            clickedRaid.set(true);
+                            clickedRaid = true;
                             pendingRaidJoin = null;
                             return;
                         }

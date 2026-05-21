@@ -283,6 +283,7 @@ public class BankOverlay {
         annotationCache.clear();
         heldItem = Items.AIR.getDefaultStack();
         registeredScroll = false;
+        BankOverlay2.invalidateBagTotalCache();
         BankOverlaySlotBridge.restoreAll();
     }
 }

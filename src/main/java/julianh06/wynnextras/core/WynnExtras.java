@@ -66,8 +66,6 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 
 // TODO: Use WELogger instead of normal logger
@@ -214,7 +212,6 @@ public class WynnExtras implements ClientModInitializer {
         RaidLootConfig.INSTANCE.load();
 		MaterialTextureResolver.register();
 		RecipeLoader.loadRecipes();
-		TreeRoomMinimap.register();
 		SkillPointLoader.init();
 
 		RaidListData.load();
@@ -227,11 +224,11 @@ public class WynnExtras implements ClientModInitializer {
 			CharacterBankData.INSTANCE.load();
 			BookshelfData.INSTANCE.load();
 			MiscBucketData.INSTANCE.load();
+			BankOverlay2.invalidateBagTotalCache();
 			WynncraftApiHandler.load();
 			WynncraftApiHandler.fetchItemDatabase().thenAccept(WynncraftApiHandler::setCachedItemDatabase);
 
-			ExecutorService executor = Executors.newFixedThreadPool(4);
-			CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool, executor).thenRunAsync(WeightDisplay::populateStatRangesFromDatabase, executor);
+			CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool).thenRunAsync(WeightDisplay::populateStatRangesFromDatabase);
 		});
 
 		ModSounds.registerSounds();

@@ -382,6 +382,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Class Selection")
                 .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
                         () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
+                .add(toggle("Class Selection Background", "Show the dark fullscreen background behind the class selection overlay",
+                        () -> config.classSelectionBackgroundEnabled, v -> config.classSelectionBackgroundEnabled = v))
                 .add(dropdown("Content Progress Style", "How content progress is shown on class cards",
                         WynnExtrasConfig.ClassSelectionContentProgressStyle.class,
                         () -> config.classSelectionContentProgressStyle,
@@ -687,6 +689,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Class Selection")
                 .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
                         () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
+                .add(toggle("Class Selection Background", "Show the dark fullscreen background behind the class selection overlay",
+                        () -> config.classSelectionBackgroundEnabled, v -> config.classSelectionBackgroundEnabled = v))
                 .add(dropdown("Content Progress Style", "How content progress is shown on class cards",
                         WynnExtrasConfig.ClassSelectionContentProgressStyle.class,
                         () -> config.classSelectionContentProgressStyle,
