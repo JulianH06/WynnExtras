@@ -465,7 +465,7 @@ public class LootPoolPage extends PageWidget {
                     (int) (x / ui.getScaleFactor()),
                     (int) ((y + 195) / ui.getScaleFactor()),
                     (int) ((x + width - 7) / ui.getScaleFactor()),
-                    (int) ((y + height - 20) / ui.getScaleFactor()));
+                    (int) ((y + height - 24) / ui.getScaleFactor()));
 
             float snapValue = 0.5f;
             float speed = 0.3f;
