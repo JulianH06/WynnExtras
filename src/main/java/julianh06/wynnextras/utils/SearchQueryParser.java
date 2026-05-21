@@ -64,7 +64,7 @@ public class SearchQueryParser {
     private static String cachedInput = null;
     private static ParsedQuery cachedQuery = null;
 
-    public static ParsedQuery parse(String input) {
+    public static synchronized ParsedQuery parse(String input) {
         if (input == null || input.isEmpty()) {
             return new ParsedQuery(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
         }
@@ -202,8 +202,6 @@ public class SearchQueryParser {
         }
         itemName = itemName.replaceAll("§[0-9a-fk-or]", "").toLowerCase();
 
-        String fullLore = getLoreAsString(stack);
-
         if (query.textSearch != null && !query.textSearch.isEmpty()) {
             String searchLower = query.textSearch.toLowerCase();
             if (!itemName.contains(searchLower)) {
@@ -211,7 +209,9 @@ public class SearchQueryParser {
             }
         }
 
+        String fullLore = null;
         if (query.minLevel != null || query.maxLevel != null) {
+            fullLore = getLoreAsString(stack);
             Integer itemLevel = getItemLevel(wynnItem, fullLore);
             if (itemLevel == null) {
                 return false;
@@ -241,6 +241,7 @@ public class SearchQueryParser {
             }
 
             if (itemRarity == null) {
+                if (fullLore == null) fullLore = getLoreAsString(stack);
                 itemRarity = parseRarityFromLore(fullLore);
             }
 

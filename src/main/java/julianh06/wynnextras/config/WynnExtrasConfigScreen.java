@@ -77,7 +77,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     // Dropdown state
     private DropdownOption<?> activeDropdown = null;
-    private int dropdownX, dropdownY, dropdownWidth;
+    private int dropdownX, dropdownY, dropdownWidth, dropdownOptionWidth;
     private double dropdownScroll = 0;
 
     // Sticky subcategory header state
@@ -371,6 +371,18 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Class Selection")
                 .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
                         () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
+                .add(dropdown("Content Progress Style", "How content progress is shown on class cards",
+                        WynnExtrasConfig.ClassSelectionContentProgressStyle.class,
+                        () -> config.classSelectionContentProgressStyle,
+                        v -> {
+                            config.classSelectionContentProgressStyle = v;
+                            config.syncClassSelectionLines();
+                        }))
+                .add(classSelectionLines("Class Card Lines", "Choose which current stat lines are shown and in which order"))
+                .add(dropdown("Completion Chroma", "Where rainbow text is used for classes with 100% content completion",
+                        WynnExtrasConfig.ClassSelectionCompletionChromaMode.class,
+                        () -> config.classSelectionCompletionChromaMode,
+                        v -> config.classSelectionCompletionChromaMode = v))
                 .add(toggle("Use custom class colors", "Configure the accent color for each class and reskin",
                         () -> config.useCustomClassColors, v -> config.useCustomClassColors = v))
                 .add(visibleWhen(classColor("Warrior Color", "Accent color for Warrior class cards", "warrior", 0xCC4444),
@@ -664,6 +676,18 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Class Selection")
                 .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",
                         () -> config.customClassSelectionEnabled, v -> config.customClassSelectionEnabled = v))
+                .add(dropdown("Content Progress Style", "How content progress is shown on class cards",
+                        WynnExtrasConfig.ClassSelectionContentProgressStyle.class,
+                        () -> config.classSelectionContentProgressStyle,
+                        v -> {
+                            config.classSelectionContentProgressStyle = v;
+                            config.syncClassSelectionLines();
+                        }))
+                .add(dropdown("Completion Chroma", "Where rainbow text is used for classes with 100% content completion",
+                        WynnExtrasConfig.ClassSelectionCompletionChromaMode.class,
+                        () -> config.classSelectionCompletionChromaMode,
+                        v -> config.classSelectionCompletionChromaMode = v))
+                .add(classSelectionLines("Class Card Lines", "Choose which current stat lines are shown and in which order"))
                 .add(toggle("Use custom class colors", "Configure the accent color for each class and reskin",
                         () -> config.useCustomClassColors, v -> config.useCustomClassColors = v))
                 .add(visibleWhen(classColor("Warrior Color", "Accent color for Warrior class cards", "warrior", 0xCC4444),
@@ -720,11 +744,12 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
     public int getContentWidth() { return width - SIDEBAR_WIDTH - 40; }
 
     @Override
-    public void openDropdown(DropdownOption<?> opt, int x, int y, int w) {
+    public void openDropdown(DropdownOption<?> opt, int x, int y, int w, int optionW) {
         this.activeDropdown = opt;
         this.dropdownX = x;
         this.dropdownY = y;
         this.dropdownWidth = w;
+        this.dropdownOptionWidth = optionW;
         this.dropdownScroll = 0;
     }
 
@@ -786,6 +811,57 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     }
                 },
                 -1, defaultColor);
+    }
+
+    private ConfigOption classSelectionLines(String name, String desc) {
+        return new LineListOption(name, desc,
+                () -> {
+                    config.syncClassSelectionLines();
+                    return visibleClassSelectionLines(config.classSelectionActiveLines);
+                },
+                v -> {
+                    config.classSelectionActiveLines = mergeHiddenClassSelectionLines(v, config.classSelectionActiveLines);
+                    config.syncClassSelectionLines();
+                },
+                () -> {
+                    config.syncClassSelectionLines();
+                    return visibleClassSelectionLines(config.classSelectionAvailableLines);
+                },
+                v -> {
+                    config.classSelectionAvailableLines = mergeHiddenClassSelectionLines(v, config.classSelectionAvailableLines);
+                    config.syncClassSelectionLines();
+                },
+                () -> WynnExtrasConfig.CLASS_SELECTION_LINE_NAMES,
+                "Active lines",
+                "Available lines");
+    }
+
+    private List<String> visibleClassSelectionLines(List<String> lines) {
+        if (config.classSelectionContentProgressStyle == WynnExtrasConfig.ClassSelectionContentProgressStyle.LINE) {
+            return lines;
+        }
+
+        List<String> visible = new ArrayList<>();
+        for (String line : lines) {
+            if (!WynnExtrasConfig.CLASS_SELECTION_LINE_CONTENT_PROGRESS.equals(line)) {
+                visible.add(line);
+            }
+        }
+        return visible;
+    }
+
+    private List<String> mergeHiddenClassSelectionLines(List<String> visibleLines, List<String> previousLines) {
+        List<String> merged = new ArrayList<>(visibleLines);
+        if (config.classSelectionContentProgressStyle == WynnExtrasConfig.ClassSelectionContentProgressStyle.LINE) {
+            return merged;
+        }
+
+        for (int i = 0; i < previousLines.size(); i++) {
+            String line = previousLines.get(i);
+            if (!WynnExtrasConfig.CLASS_SELECTION_LINE_CONTENT_PROGRESS.equals(line) || merged.contains(line)) continue;
+            merged.add(Math.min(i, merged.size()), line);
+        }
+        return merged;
     }
 
     private ConfigOption slider(String name, String desc, int min, int max, Supplier<Integer> get, Consumer<Integer> set) {
@@ -1107,9 +1183,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
         boolean needsScroll = totalContentH > DROPDOWN_MAX_HEIGHT;
 
-        int ddW = dropdownWidth + (needsScroll ? 10 : 0);
-        int ddX = dropdownX;
+        DropdownBounds bounds = getDropdownBounds(values, needsScroll);
+        int ddW = bounds.width();
+        int ddX = bounds.x();
         int ddY = dropdownY;
+        int itemW = bounds.itemWidth();
 
         if (ddY + visibleH > height - 10) {
             ddY = dropdownY - visibleH - 24;
@@ -1123,26 +1201,25 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         ctx.fill(ddX - 1, ddY - 1, ddX + ddW + 1, ddY + visibleH + 1, BG_MEDIUM);
         ctx.fill(ddX, ddY, ddX + ddW, ddY + visibleH, PARCHMENT);
 
-        ctx.enableScissor(ddX, ddY, ddX + ddW - (needsScroll ? 8 : 0), ddY + visibleH);
+        ctx.enableScissor(ddX, ddY, ddX + itemW, ddY + visibleH);
 
         for (int i = 0; i < values.length; i++) {
             int iy = ddY + i * DROPDOWN_ITEM_HEIGHT - (int)dropdownScroll;
 
             if (iy + DROPDOWN_ITEM_HEIGHT < ddY || iy > ddY + visibleH) continue;
 
-            boolean hovered = mouseX >= ddX && mouseX < ddX + ddW - (needsScroll ? 8 : 0)
+            boolean hovered = mouseX >= ddX && mouseX < ddX + itemW
                     && mouseY >= Math.max(ddY, iy) && mouseY < Math.min(ddY + visibleH, iy + DROPDOWN_ITEM_HEIGHT);
             boolean selected = values[i].equals(activeDropdown.getter.get());
 
             int itemBg = selected ? selectedCategoryColor : (hovered ? PARCHMENT_HOVER : PARCHMENT);
-            ctx.fill(ddX, iy, ddX + ddW - (needsScroll ? 8 : 0), iy + DROPDOWN_ITEM_HEIGHT, itemBg);
+            ctx.fill(ddX, iy, ddX + itemW, iy + DROPDOWN_ITEM_HEIGHT, itemBg);
 
             if (i > 0) {
-                ctx.fill(ddX + 8, iy, ddX + ddW - (needsScroll ? 16 : 8), iy + 1, BG_LIGHT);
+                ctx.fill(ddX + 8, iy, ddX + itemW - 8, iy + 1, BG_LIGHT);
             }
 
-            String text = values[i].toString();
-            if (text.length() > 14) text = text.substring(0, 12) + "..";
+            String text = trimDropdownText(values[i].toString(), itemW - 16);
             ctx.drawTextWithShadow(textRenderer, text, ddX + 8, iy + 7, selected ? GOLD : TEXT_LIGHT);
         }
 
@@ -1158,6 +1235,31 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             ctx.fill(sbX + 1, thumbY, sbX + 4, thumbY + thumbH, selectedCategoryColor);
         }
     }
+
+    private DropdownBounds getDropdownBounds(Object[] values, boolean needsScroll) {
+        int scrollW = needsScroll ? 10 : 0;
+        int longestTextW = 0;
+        for (Object value : values) {
+            longestTextW = Math.max(longestTextW, textRenderer.getWidth(value.toString()));
+        }
+
+        int desiredW = Math.max(dropdownWidth, longestTextW + 16 + scrollW);
+        int maxW = Math.max(dropdownWidth, dropdownOptionWidth / 2);
+        int ddW = Math.min(desiredW, maxW);
+        int ddX = dropdownX + dropdownWidth - ddW;
+        return new DropdownBounds(ddX, ddW, ddW - scrollW);
+    }
+
+    private String trimDropdownText(String text, int maxTextW) {
+        if (textRenderer.getWidth(text) <= maxTextW) return text;
+
+        String suffix = "..";
+        int suffixW = textRenderer.getWidth(suffix);
+        if (maxTextW <= suffixW) return textRenderer.trimToWidth(text, maxTextW);
+        return textRenderer.trimToWidth(text, maxTextW - suffixW) + suffix;
+    }
+
+    private record DropdownBounds(int x, int width, int itemWidth) {}
 
     private void drawFooter(DrawContext ctx, int mouseX, int mouseY) {
         int footerY = height - FOOTER_HEIGHT + 5;
@@ -1201,9 +1303,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             int totalContentH = values.length * DROPDOWN_ITEM_HEIGHT;
             int visibleH = Math.min(totalContentH, DROPDOWN_MAX_HEIGHT);
             boolean needsScroll = totalContentH > DROPDOWN_MAX_HEIGHT;
-            int ddW = dropdownWidth + (needsScroll ? 10 : 0);
-            int ddX = dropdownX;
+            DropdownBounds bounds = getDropdownBounds(values, needsScroll);
+            int ddW = bounds.width();
+            int ddX = bounds.x();
             int ddY = dropdownY;
+            int itemW = bounds.itemWidth();
 
             if (ddY + visibleH > height - 10) {
                 ddY = dropdownY - visibleH - 24;
@@ -1215,10 +1319,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     if (iy < ddY - DROPDOWN_ITEM_HEIGHT || iy > ddY + visibleH) continue;
 
                     if (my >= Math.max(ddY, iy) && my < Math.min(ddY + visibleH, iy + DROPDOWN_ITEM_HEIGHT)
-                            && mx < ddX + ddW - (needsScroll ? 8 : 0)) {
+                            && mx < ddX + itemW) {
                         activeDropdown.setValueByIndex(i);
                         activeDropdown = null;
                         dropdownScroll = 0;
+                        updateMaxScroll();
                         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }

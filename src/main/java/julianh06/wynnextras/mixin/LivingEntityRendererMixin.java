@@ -61,7 +61,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
         if (!WynnExtrasConfig.INSTANCE.showOwnNametag) return;
         if (!HuntedModeTracker.huntedMode) return;
 
-        Text pvpPrefix = Text.literal("[PVP] ").formatted(Formatting.RED);
+        Text pvpPrefix = Text.literal("[PvP] ").formatted(Formatting.RED);
         if (playerState.playerName != null) {
             playerState.playerName = pvpPrefix.copy().append(playerState.playerName);
         }

@@ -13,31 +13,20 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
-import julianh06.wynnextras.command.ChatCommands;
+import julianh06.wynnextras.core.command.ChatCommands;
 import julianh06.wynnextras.event.CommandRegistrationEvent;
 import julianh06.wynnextras.features.aspects.ScreenTitleDebugger;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
-import julianh06.wynnextras.features.profileviewer.PVScreen;
-import julianh06.wynnextras.features.profileviewer.data.CharacterData;
-import julianh06.wynnextras.features.profileviewer.data.PlayerData;
-import julianh06.wynnextras.features.profileviewer.data.Profession;
-import julianh06.wynnextras.features.profileviewer.data.Raids;
-import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
-import julianh06.wynnextras.features.raid.RaidLootData;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.crafting.calc.ProfessionCalculatorScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.tetris.TetrisScreen;
-import julianh06.wynnextras.utils.ItemUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.item.ItemStack;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -201,6 +190,7 @@ public class CommandLoader implements WELoader {
             dispatcher.register(baseLowerCase);
             dispatcher.register(alias);
             dispatcher.register(ChatCommands.register());
+            dispatcher.register(ChatCommands.registerAlias());
 
             dispatcher.register(
                     ClientCommandManager.literal("pv")

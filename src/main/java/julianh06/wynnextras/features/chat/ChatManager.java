@@ -14,7 +14,6 @@ import org.lwjgl.glfw.GLFW;
 
 @WEModule
 public class ChatManager implements WELoader {
-
     public enum ChatChannel { ALL, PARTY, GUILD }
 
     private static ChatChannel currentChannel = ChatChannel.ALL;

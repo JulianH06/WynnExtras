@@ -30,6 +30,7 @@ public class ClassSelectionData {
 
     private static class IdentityData {
         Map<String, CharIdentity> charIdentities = new HashMap<>();
+        Map<String, String> classDescriptions = new HashMap<>();
     }
 
     public static class CharIdentity {
@@ -63,6 +64,21 @@ public class ClassSelectionData {
 
     public static void saveCharIdentities() {
         loadIdentities();
+        saveIdentities();
+    }
+
+    public static String getClassDescription(String charId) {
+        loadIdentities();
+        return identityData.classDescriptions.get(charId);
+    }
+
+    public static void setClassDescription(String charId, String description) {
+        loadIdentities();
+        if (description == null || description.isBlank()) {
+            identityData.classDescriptions.remove(charId);
+        } else {
+            identityData.classDescriptions.put(charId, description);
+        }
         saveIdentities();
     }
 
@@ -118,6 +134,7 @@ public class ClassSelectionData {
         }
 
         if (identityData.charIdentities == null) identityData.charIdentities = new HashMap<>();
+        if (identityData.classDescriptions == null) identityData.classDescriptions = new HashMap<>();
     }
 
     private static void saveIdentities() {

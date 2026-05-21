@@ -530,8 +530,9 @@ public abstract class HandledScreenMixin {
         int scanCode = input.scancode();
         int modifiers = input.modifiers();
 
-        // Block all key presses when nickname input is active (handled via CharInputEvent/KeyInputEvent)
-        if (ClassSelectionOverlay.nicknameInputActive) {
+        // Block all key presses when a class selection text input is active (handled via CharInputEvent/KeyInputEvent)
+        if (ClassSelectionOverlay.isTextInputActive()) {
+            ClassSelectionOverlay.handleScreenKeyInput(keyCode, scanCode, modifiers);
             cir.setReturnValue(true);
             cir.cancel();
             return;

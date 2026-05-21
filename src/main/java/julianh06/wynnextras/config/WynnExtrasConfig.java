@@ -18,6 +18,55 @@ import java.util.function.Consumer;
 
 public class WynnExtrasConfig {
     public enum Align { LEFT, CENTER, RIGHT }
+    public enum ClassSelectionContentProgressStyle {
+        LINE("Line"),
+        PROGRESS_BAR("Progress Bar"),
+        COMPACT("Compact (inline with name)");
+
+        private final String displayName;
+
+        ClassSelectionContentProgressStyle(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
+    public enum ClassSelectionCompletionChromaMode {
+        NAME_AND_LINES("Name + lines"),
+        NAME_ONLY("Name only"),
+        NONE("None");
+
+        private final String displayName;
+
+        ClassSelectionCompletionChromaMode(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
+    public static final String CLASS_SELECTION_LINE_LEVEL = "level";
+    public static final String CLASS_SELECTION_LINE_LOCATION = "location";
+    public static final String CLASS_SELECTION_LINE_PLAYTIME = "playtime";
+    public static final String CLASS_SELECTION_LINE_CONTENT_PROGRESS = "content_progress";
+    public static final List<String> CLASS_SELECTION_BASE_LINE_IDS = List.of(
+            CLASS_SELECTION_LINE_LEVEL,
+            CLASS_SELECTION_LINE_PLAYTIME,
+            CLASS_SELECTION_LINE_LOCATION,
+            CLASS_SELECTION_LINE_CONTENT_PROGRESS);
+    public static final List<String> CLASS_SELECTION_LINE_IDS = List.of(
+            CLASS_SELECTION_LINE_LEVEL,
+            CLASS_SELECTION_LINE_LOCATION,
+            CLASS_SELECTION_LINE_PLAYTIME,
+            CLASS_SELECTION_LINE_CONTENT_PROGRESS);
+    public static final Map<String, String> CLASS_SELECTION_LINE_NAMES = createClassSelectionLineNames();
 
     private static final Path CONFIG_PATH = FabricLoader.getInstance()
             .getConfigDir()
@@ -306,6 +355,10 @@ public class WynnExtrasConfig {
     public Map<String, Integer> classCardAccentColors = new HashMap<>();
     public boolean hideClassSelectionQuickToggleButton = false;
     public Map<String, String> clientNicknames = new HashMap<>(); // UUID -> nickname
+    public List<String> classSelectionActiveLines = new ArrayList<>(CLASS_SELECTION_BASE_LINE_IDS);
+    public List<String> classSelectionAvailableLines = new ArrayList<>();
+    public ClassSelectionContentProgressStyle classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
+    public ClassSelectionCompletionChromaMode classSelectionCompletionChromaMode = ClassSelectionCompletionChromaMode.NAME_AND_LINES;
 
     // ==================== TETRIS ====================
     public int tetrisBestScore = 0;
@@ -460,6 +513,13 @@ public class WynnExtrasConfig {
                 if (INSTANCE.professionGoals == null) INSTANCE.professionGoals = new HashMap<>();
                 if (INSTANCE.classCardAccentColors == null) INSTANCE.classCardAccentColors = new HashMap<>();
                 if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
+                INSTANCE.syncClassSelectionLines();
+                if (INSTANCE.classSelectionContentProgressStyle == null) {
+                    INSTANCE.classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
+                }
+                if (INSTANCE.classSelectionCompletionChromaMode == null) {
+                    INSTANCE.classSelectionCompletionChromaMode = ClassSelectionCompletionChromaMode.NAME_AND_LINES;
+                }
                 //if (INSTANCE.configProfiles == null) INSTANCE.configProfiles = new LinkedHashMap<>();
                 if (INSTANCE.weeklyWars == null) INSTANCE.weeklyWars = new ArrayList<>();
                 if (INSTANCE.hudColorOverrides == null) INSTANCE.hudColorOverrides = new HashMap<>();
@@ -467,6 +527,13 @@ public class WynnExtrasConfig {
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Failed to load config: " + e.getMessage());
             INSTANCE = new WynnExtrasConfig();
+        }
+        INSTANCE.syncClassSelectionLines();
+        if (INSTANCE.classSelectionContentProgressStyle == null) {
+            INSTANCE.classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
+        }
+        if (INSTANCE.classSelectionCompletionChromaMode == null) {
+            INSTANCE.classSelectionCompletionChromaMode = ClassSelectionCompletionChromaMode.NAME_AND_LINES;
         }
     }
 
@@ -482,5 +549,52 @@ public class WynnExtrasConfig {
     // ==================== CONFIG SCREEN ====================
     public static Screen createConfigScreen(Screen parent) {
         return new WynnExtrasConfigScreen(parent);
+    }
+
+    private static Map<String, String> createClassSelectionLineNames() {
+        LinkedHashMap<String, String> names = new LinkedHashMap<>();
+        names.put(CLASS_SELECTION_LINE_LEVEL, "Level");
+        names.put(CLASS_SELECTION_LINE_LOCATION, "Location");
+        names.put(CLASS_SELECTION_LINE_PLAYTIME, "Playtime");
+        names.put(CLASS_SELECTION_LINE_CONTENT_PROGRESS, "Content Progress");
+        return Collections.unmodifiableMap(names);
+    }
+
+    public void syncClassSelectionLines() {
+        if (classSelectionActiveLines == null) classSelectionActiveLines = new ArrayList<>();
+        if (classSelectionAvailableLines == null) classSelectionAvailableLines = new ArrayList<>();
+
+        classSelectionActiveLines = sanitizeClassSelectionLineList(classSelectionActiveLines, new HashSet<>());
+        Set<String> activeIds = new HashSet<>(classSelectionActiveLines);
+        classSelectionAvailableLines = sanitizeClassSelectionLineList(classSelectionAvailableLines, activeIds);
+
+        boolean showContentProgressLine = classSelectionContentProgressStyle == ClassSelectionContentProgressStyle.LINE;
+        Set<String> configuredIds = new HashSet<>(classSelectionActiveLines);
+        configuredIds.addAll(classSelectionAvailableLines);
+        for (String id : CLASS_SELECTION_BASE_LINE_IDS) {
+            if (!configuredIds.contains(id)) classSelectionAvailableLines.add(id);
+        }
+        if (showContentProgressLine && !configuredIds.contains(CLASS_SELECTION_LINE_CONTENT_PROGRESS)) {
+            classSelectionAvailableLines.add(CLASS_SELECTION_LINE_CONTENT_PROGRESS);
+        }
+    }
+
+    private List<String> sanitizeClassSelectionLineList(List<String> lines, Set<String> excludedIds) {
+        List<String> result = new ArrayList<>();
+        Set<String> seen = new HashSet<>(excludedIds);
+        for (String id : lines) {
+            id = migrateClassSelectionLineId(id);
+            if (!CLASS_SELECTION_LINE_IDS.contains(id) || seen.contains(id)) continue;
+            result.add(id);
+            seen.add(id);
+        }
+        return result;
+    }
+
+    private String migrateClassSelectionLineId(String id) {
+        if ("detail_1".equals(id)) return CLASS_SELECTION_LINE_LEVEL;
+        if ("detail_2".equals(id)) return CLASS_SELECTION_LINE_LOCATION;
+        if ("detail_3".equals(id)) return CLASS_SELECTION_LINE_PLAYTIME;
+        return id;
     }
 }

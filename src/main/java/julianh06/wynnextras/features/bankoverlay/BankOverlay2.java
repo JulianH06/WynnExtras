@@ -86,6 +86,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
 import java.util.Collections;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -190,6 +193,18 @@ public class BankOverlay2 extends WEHandledScreen {
     private static List<CrossClassPageWidget> crossClassPages = new ArrayList<>();
     private static String lastCrossClassSearchQuery = "";
     private static boolean crossClassSearchActive = false;
+    private static volatile String activeCrossClassSearchKey = "";
+    private static volatile int crossClassSearchGeneration = 0;
+    private static volatile CrossClassSearchPayload completedCrossClassSearch = null;
+    private static CompletableFuture<List<CrossClassBankSearch.SearchResult>> pendingCrossClassSearchTask = null;
+    private static CompletableFuture<CrossClassSearchPayload> pendingCrossClassSearch = null;
+    private static boolean crossClassSearchLoading = false;
+    private static boolean crossClassSearchQueued = false;
+    private static String queuedCrossClassSearchKey = "";
+    private static String queuedCrossClassSearchInput = "";
+    private static boolean queuedCrossClassIncludeCurrentAndAccount = false;
+    private static long queuedCrossClassSearchAt = 0L;
+    private static final long CROSS_CLASS_SEARCH_DEBOUNCE_MS = 175L;
     private static String activeSearchInput = "";
     private static SearchQueryParser.ParsedQuery activeSearchQuery = SearchQueryParser.parse("");
     private static HandledScreen<?> bridgeScreen = null;
@@ -257,15 +272,20 @@ public class BankOverlay2 extends WEHandledScreen {
     private int layoutXRemain = 0;
     private int layoutYRemain = 0;
 
+    private record CrossClassSearchPayload(
+            String cacheKey,
+            int generation,
+            List<CrossClassBankSearch.SearchResult> results,
+            Throwable error
+    ) {}
+
     public BankOverlay2(CallbackInfo ci, HandledScreen<?> screen) {
         this.ci = ci;
         this.screen = screen;
         actualOffset = 0;
         targetOffset = 0;
         pages.clear();
-        crossClassPages.clear();
-        lastCrossClassSearchQuery = "";
-        crossClassSearchActive = false;
+        clearCrossClassSearchState();
         allCharactersBrowseMode = false;
         allCharactersButtonWidget = null;
         isReloading = false;
@@ -635,60 +655,28 @@ public class BankOverlay2 extends WEHandledScreen {
                 searchInput = searchInput.replace("@", "").trim();
             }
 
-            if (!Objects.equals(activeSearchInput, searchInput)) {
-                activeSearchInput = searchInput == null ? "" : searchInput;
-                activeSearchQuery = SearchQueryParser.parse(activeSearchInput);
-            }
-
             if (characterBankUnavailable) {
-                crossClassPages.clear();
-                lastCrossClassSearchQuery = "";
-                crossClassSearchActive = false;
+                clearCrossClassSearchState();
                 drawMissingCharacterIdWarning(xStart, yStart);
             } else if (isCrossClassSearch) {
                 // Trigger cross-class search if needed (@ present, with or without search text)
                 String cacheKey = allCharactersBrowseMode ? ("__allchars__" + (rawSearchInput != null ? rawSearchInput : "")) : rawSearchInput;
                 if (!cacheKey.equals(lastCrossClassSearchQuery)) {
-                    saveActivePageSnapshot();
                     lastCrossClassSearchQuery = cacheKey;
                     crossClassSearchActive = true;
-
                     crossClassPages.clear();
-
-                    List<CrossClassBankSearch.SearchResult> results;
-                    if (allCharactersBrowseMode) {
-                        if (searchInput == null || searchInput.isEmpty()) {
-                            results = CrossClassBankSearch.getAllCharacterPagesIncludingCurrent();
-                        } else {
-                            results = CrossClassBankSearch.searchAllCharactersIncludingCurrent(searchInput);
-                        }
-                    } else {
-                        if (searchInput == null || searchInput.isEmpty()) {
-                            results = CrossClassBankSearch.getAllCharacterPages();
-                        } else {
-                            results = CrossClassBankSearch.searchAllCharacters(searchInput);
-                        }
-                    }
-
-                    for (CrossClassBankSearch.SearchResult result : results) {
-                        CrossClassPageWidget ccPage = new CrossClassPageWidget(
-                                result.characterId,
-                                result.characterNickname,
-                                result.characterLevel,
-                                result.pageNumber,
-                                result.pageItems,
-                                yStart,
-                                (int) (yStart + (yFitAmount) * (90 + 4 + 10) * Math.max(2, ui.getScaleFactor()))
-                        );
-                        crossClassPages.add(ccPage);
-                    }
+                    queueCrossClassSearch(cacheKey, searchInput, allCharactersBrowseMode);
                 }
+                startQueuedCrossClassSearchIfReady();
+                applyCompletedCrossClassSearch(yStart);
             } else {
+                if (!Objects.equals(activeSearchInput, searchInput)) {
+                    activeSearchInput = searchInput == null ? "" : searchInput;
+                    activeSearchQuery = SearchQueryParser.parse(activeSearchInput);
+                }
                 // Clear cross-class results if not in cross-class mode
                 if (crossClassSearchActive) {
-                    crossClassPages.clear();
-                    lastCrossClassSearchQuery = "";
-                    crossClassSearchActive = false;
+                    clearCrossClassSearchState();
                 }
             }
 
@@ -739,16 +727,22 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             // Render cross-class pages after regular pages
-            if (!characterBankUnavailable && crossClassSearchActive && !crossClassPages.isEmpty()) {
-                for (CrossClassPageWidget ccPage : crossClassPages) {
-                    float invX = xStart + (visuali % xFitAmount) * (162 + 4);
-                    float invY = yStart + Math.floorDiv(visuali, xFitAmount) * (90 + 4 + 10) - actualOffset;
-                    ccPage.setBounds((int) (invX * ui.getScaleFactor()), (int) (invY * ui.getScaleFactor()), (int) (164 * ui.getScaleFactor()), (int) (92 * ui.getScaleFactor()));
-                    if (pageIntersectsClip(invY, 92, true)) {
-                        ccPage.draw(context, mouseX, mouseY, delta, ui);
+            if (!characterBankUnavailable && crossClassSearchActive) {
+                if (crossClassPages.isEmpty() && crossClassSearchLoading) {
+                    drawCrossClassSearchLoading(xStart, yStart);
+                } else if (crossClassPages.isEmpty()) {
+                    drawCrossClassSearchEmpty(xStart, yStart);
+                } else {
+                    for (CrossClassPageWidget ccPage : crossClassPages) {
+                        float invX = xStart + (visuali % xFitAmount) * (162 + 4);
+                        float invY = yStart + Math.floorDiv(visuali, xFitAmount) * (90 + 4 + 10) - actualOffset;
+                        ccPage.setBounds((int) (invX * ui.getScaleFactor()), (int) (invY * ui.getScaleFactor()), (int) (164 * ui.getScaleFactor()), (int) (92 * ui.getScaleFactor()));
+                        if (pageIntersectsClip(invY, 92, true)) {
+                            ccPage.draw(context, mouseX, mouseY, delta, ui);
+                        }
+                        visuali++;
+                        pageAmount++;
                     }
-                    visuali++;
-                    pageAmount++;
                 }
             }
 
@@ -1270,11 +1264,149 @@ public class BankOverlay2 extends WEHandledScreen {
 
     private static void clearCrossClassBrowseState() {
         allCharactersBrowseMode = false;
-        crossClassPages.clear();
-        lastCrossClassSearchQuery = "";
-        crossClassSearchActive = false;
+        clearCrossClassSearchState();
         targetOffset = 0;
         actualOffset = 0;
+    }
+
+    private static void clearCrossClassSearchState() {
+        crossClassPages.clear();
+        lastCrossClassSearchQuery = "";
+        activeCrossClassSearchKey = "";
+        crossClassSearchActive = false;
+        crossClassSearchLoading = false;
+        crossClassSearchQueued = false;
+        queuedCrossClassSearchKey = "";
+        queuedCrossClassSearchInput = "";
+        queuedCrossClassIncludeCurrentAndAccount = false;
+        queuedCrossClassSearchAt = 0L;
+        completedCrossClassSearch = null;
+        crossClassSearchGeneration++;
+        cancelPendingCrossClassSearch();
+    }
+
+    private static void cancelPendingCrossClassSearch() {
+        if (pendingCrossClassSearchTask != null && !pendingCrossClassSearchTask.isDone()) {
+            pendingCrossClassSearchTask.cancel(true);
+        }
+        if (pendingCrossClassSearch != null && !pendingCrossClassSearch.isDone()) {
+            pendingCrossClassSearch.cancel(true);
+        }
+        pendingCrossClassSearchTask = null;
+        pendingCrossClassSearch = null;
+    }
+
+    private static void queueCrossClassSearch(String cacheKey, String searchInput, boolean includeCurrentAndAccount) {
+        crossClassSearchGeneration++;
+        activeCrossClassSearchKey = cacheKey;
+        completedCrossClassSearch = null;
+        crossClassSearchLoading = true;
+        crossClassSearchQueued = true;
+        queuedCrossClassSearchKey = cacheKey;
+        queuedCrossClassSearchInput = searchInput == null ? "" : searchInput;
+        queuedCrossClassIncludeCurrentAndAccount = includeCurrentAndAccount;
+        queuedCrossClassSearchAt = System.currentTimeMillis() + CROSS_CLASS_SEARCH_DEBOUNCE_MS;
+        cancelPendingCrossClassSearch();
+    }
+
+    private static void startQueuedCrossClassSearchIfReady() {
+        if (!crossClassSearchQueued) return;
+        if (System.currentTimeMillis() < queuedCrossClassSearchAt) return;
+
+        String cacheKey = queuedCrossClassSearchKey;
+        String searchInput = queuedCrossClassSearchInput;
+        boolean includeCurrentAndAccount = queuedCrossClassIncludeCurrentAndAccount;
+        crossClassSearchQueued = false;
+        startCrossClassSearch(cacheKey, searchInput, includeCurrentAndAccount);
+    }
+
+    private static void startCrossClassSearch(String cacheKey, String searchInput, boolean includeCurrentAndAccount) {
+        cancelPendingCrossClassSearch();
+
+        int generation = ++crossClassSearchGeneration;
+        activeCrossClassSearchKey = cacheKey;
+        completedCrossClassSearch = null;
+        crossClassSearchLoading = true;
+
+        String query = searchInput == null ? "" : searchInput;
+        saveActivePageSnapshot();
+        if (!Objects.equals(activeSearchInput, query)) {
+            activeSearchInput = query;
+            activeSearchQuery = SearchQueryParser.parse(activeSearchInput);
+        }
+        CrossClassBankSearch.SearchRequest request = CrossClassBankSearch.createRequest(
+                query,
+                includeCurrentAndAccount,
+                includeCurrentAndAccount,
+                query.isEmpty()
+        );
+
+        pendingCrossClassSearchTask = CrossClassBankSearch.searchAsync(request);
+        pendingCrossClassSearch = pendingCrossClassSearchTask.handle((results, throwable) -> {
+            Throwable error = unwrapCompletionError(throwable);
+            List<CrossClassBankSearch.SearchResult> safeResults = results == null
+                    ? Collections.emptyList()
+                    : List.copyOf(results);
+            CrossClassSearchPayload payload = new CrossClassSearchPayload(cacheKey, generation, safeResults, error);
+            if (generation == crossClassSearchGeneration && Objects.equals(cacheKey, activeCrossClassSearchKey)) {
+                completedCrossClassSearch = payload;
+            }
+            return payload;
+        });
+    }
+
+    private static Throwable unwrapCompletionError(Throwable throwable) {
+        if (throwable == null) return null;
+        if (throwable instanceof CompletionException && throwable.getCause() != null) {
+            return throwable.getCause();
+        }
+        return throwable;
+    }
+
+    private void applyCompletedCrossClassSearch(int yStart) {
+        CrossClassSearchPayload payload = completedCrossClassSearch;
+        if (payload == null) return;
+        if (payload.generation() != crossClassSearchGeneration || !Objects.equals(payload.cacheKey(), activeCrossClassSearchKey)) {
+            return;
+        }
+
+        completedCrossClassSearch = null;
+        pendingCrossClassSearchTask = null;
+        pendingCrossClassSearch = null;
+        crossClassSearchLoading = false;
+        crossClassPages.clear();
+
+        if (payload.error() != null && !(payload.error() instanceof CancellationException)) {
+            WynnExtras.LOGGER.error("[WynnExtras] Error searching cross-class banks: " + payload.error().getMessage());
+            return;
+        }
+
+        int bottomBorder = (int) (yStart + (yFitAmount) * (90 + 4 + 10) * Math.max(2, ui.getScaleFactor()));
+        for (CrossClassBankSearch.SearchResult result : payload.results()) {
+            CrossClassPageWidget ccPage = new CrossClassPageWidget(
+                    result.characterId,
+                    result.characterNickname,
+                    result.characterLevel,
+                    result.pageNumber,
+                    result.pageItems,
+                    yStart,
+                    bottomBorder
+            );
+            crossClassPages.add(ccPage);
+        }
+    }
+
+    private void drawCrossClassSearchLoading(int xStart, int yStart) {
+        int dots = (int) ((System.currentTimeMillis() / 350) % 3) + 1;
+        float centerX = xStart + xFitAmount * (162 + 4) / 2f;
+        float centerY = yStart + Math.max(40, (yFitAmount - 1) * 104 / 2f);
+        ui.drawCenteredText("Searching" + ".".repeat(dots), centerX, centerY, WHITE_TEXT_COLOR, 1.3f);
+    }
+
+    private void drawCrossClassSearchEmpty(int xStart, int yStart) {
+        float centerX = xStart + xFitAmount * (162 + 4) / 2f;
+        float centerY = yStart + Math.max(40, (yFitAmount - 1) * 104 / 2f);
+        ui.drawCenteredText("No results found", centerX, centerY, GRAY_TEXT_COLOR, 1.3f);
     }
 
     private static void switchBankAndJumpToPage(BankOverlayType targetType, int pageIndex) {

@@ -3,8 +3,11 @@ package julianh06.wynnextras.features.misc;
 import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
+import com.wynntils.utils.render.type.HorizontalAlignment;
+import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.UI.UIUtils;
@@ -21,14 +24,16 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
-import julianh06.wynnextras.utils.TickScheduler;
 import julianh06.wynnextras.features.misc.ClassSelectionData.CharIdentity;
+import julianh06.wynnextras.utils.TickScheduler;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.component.type.PotionContentsComponent;
@@ -42,19 +47,19 @@ import java.io.*;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ClassSelectionOverlay extends WEHandledScreen {
 
     @Override protected double getTargetScaleFactor() { return 4.0; }
-    @Override protected int getMinScreenWidth() { return 700; }
-    @Override protected int getMinScreenHeight() { return 530; }
+    @Override protected int getMinScreenWidth() { return 800; }
+    @Override protected int getMinScreenHeight() { return Math.round(getClassSelectionPanelHeightPx(5) + 72); }
 
     public static final String CLASS_SELECTION_TITLE = "\uDAFF\uDFD5\uE01F";
-    public static final String CLASS_EDIT_TITLE = "\uDAFF\uDFD0\uE020";
-    public static final String ICON_EDIT_TITLE = "\uDAFF\uDFDB\uE023";
 
-    public enum ScreenMode { CLASS_SELECTION, CLASS_EDIT, ICON_EDIT }
+    public enum ScreenMode { CLASS_SELECTION }
 
     private ScreenMode mode;
     private HandledScreen<?> screen;
@@ -67,29 +72,16 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private static final int SLOT_BACKUPS = 25;
     private static final int SLOT_MUSIC = 51;
     private static final int SLOT_AUTO_OPEN = 53;
-
-    // ==================== CLASS EDIT SLOTS ====================
-    private static final int SLOT_EDIT_NICKNAME = 7;
-    private static final int SLOT_FAVORITE = 19;
-    private static final int SLOT_CHANGE_SCENE = 25;
-    private static final int SLOT_RESKIN_CLASS = 37;
-    private static final int SLOT_EDIT_ICON = 43;
-
-    // ==================== ICON EDIT SLOTS ====================
-    private static final int[] ICON_COLOR_SLOTS = {3, 4, 5, 12, 13, 14, 21, 22, 23};
-    private static final int ICON_COLS = 3;
-    private static final int[] ICON_SUB_SLOTS = {37, 38, 39, 40, 41};
-    private static final int ICON_BACK_SLOT = 10;
-    private static final int ICON_PREVIEW_SLOT = 43;
-    private static final String[] ICON_COLOR_NAMES = {"Gray", "Red", "Orange", "Yellow", "Green", "Blue", "Dark Blue", "Purple", "Pink"};
+    private static final float CARD_W_PX = 247;
+    private static final float CARD_GAP_X_PX = 12;
+    private static final float CARD_GAP_Y_PX = 7;
+    private static final float TITLE_H_PX = 30;
+    private static final float SETTINGS_H_PX = 22;
+    private static final float PANEL_MARGIN_PX = 9;
 
     // Hover state
     private int hoveredCharVisIdx = -1;
     private int hoveredSettingSlot = -1;
-    private int hoveredEditOption = -1;
-    private int hoveredIconColor = -1;
-    private int hoveredIconSub = -1;
-    private boolean hoveredBack = false;
     private List<Text> hoveredTooltip = new ArrayList<>();
 
     // Drag state
@@ -115,9 +107,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     // Only run identity matching once per screen open
     private boolean identityMatched = false;
 
-    // Track which character we're editing (set when right-clicking a card)
-    private static String editingCharId = "";
-
     // Vanilla toggle
     public static boolean vanillaMode = false;
     private static final int CLASS_OVERLAY_TOGGLE_W = 100;
@@ -126,21 +115,61 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private static final float CLASS_OVERLAY_TOGGLE_TEXT_SCALE = 0.8f;
     private static final ClassOverlayToggleWidget VANILLA_TOGGLE_WIDGET = new ClassOverlayToggleWidget();
 
-    // Toggle/back button bounds (logical)
+    // Toggle button bounds (logical)
     private final ClassOverlayToggleWidget overlayToggleWidget = new ClassOverlayToggleWidget();
-    private float backLX, backLY, backLW, backLH;
 
     // Custom background from config/wynnextras/customscreen/
     private static Identifier bgTexture = null;
     private static boolean bgScanned = false;
     private static int bgImgW = 1, bgImgH = 1;
 
-    // Nickname input state (static so BankOverlay event handlers can forward)
-    public static boolean nicknameInputActive = false;
-    private static String nicknameText = "";
-    private static int nicknameCursor = 0;
-    private static String nicknameCharId = ""; // character identifier we're editing
-    private static boolean nicknameHasRank = false; // true = send via chat, false = client-side only
+    private static boolean descriptionInputActive = false;
+    private static String descriptionText = "";
+    private static int descriptionCursor = 0;
+    private static String descriptionCharId = "";
+    private static final int DESCRIPTION_MAX_LENGTH = 40;
+    private static final Pattern PERCENT_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)?)%");
+    private static final Pattern CONTENT_COUNT_PATTERN = Pattern.compile("(\\d+)\\s+of\\s+(\\d+)", Pattern.CASE_INSENSITIVE);
+
+    private static float getClassSelectionCardHeightPx() {
+        WynnExtrasConfig.ClassSelectionContentProgressStyle progressStyle = getContentProgressStyle();
+        int lineCount = getVisibleConfiguredLineCount(progressStyle);
+
+        int detailStart = 24;
+        int detailSpacing = 14;
+        float descY = Math.max(66, detailStart + lineCount * detailSpacing + 6);
+        if (progressStyle == WynnExtrasConfig.ClassSelectionContentProgressStyle.PROGRESS_BAR) {
+            float progressLabelY = Math.max(68, detailStart + lineCount * detailSpacing + 20);
+            return Math.max(90, progressLabelY + 39);
+        }
+        return Math.max(72, descY + 9);
+    }
+
+    private static int getVisibleConfiguredLineCount(WynnExtrasConfig.ClassSelectionContentProgressStyle progressStyle) {
+        List<String> activeLines = WynnExtrasConfig.INSTANCE.classSelectionActiveLines;
+        if (activeLines == null) return WynnExtrasConfig.CLASS_SELECTION_BASE_LINE_IDS.size();
+
+        int count = 0;
+        for (String lineId : activeLines) {
+            if (WynnExtrasConfig.CLASS_SELECTION_LINE_CONTENT_PROGRESS.equals(lineId)
+                    && progressStyle != WynnExtrasConfig.ClassSelectionContentProgressStyle.LINE) {
+                continue;
+            }
+            count++;
+        }
+        return count;
+    }
+
+    private static float getClassSelectionPanelHeightPx(int rows) {
+        float cardHPx = getClassSelectionCardHeightPx();
+        float gridHPx = rows * cardHPx + Math.max(0, rows - 1) * CARD_GAP_Y_PX;
+        return TITLE_H_PX + gridHPx + SETTINGS_H_PX + PANEL_MARGIN_PX * 3 + 16;
+    }
+
+    private static WynnExtrasConfig.ClassSelectionContentProgressStyle getContentProgressStyle() {
+        WynnExtrasConfig.ClassSelectionContentProgressStyle style = WynnExtrasConfig.INSTANCE.classSelectionContentProgressStyle;
+        return style == null ? WynnExtrasConfig.ClassSelectionContentProgressStyle.PROGRESS_BAR : style;
+    }
 
     public ClassSelectionOverlay(HandledScreen<?> screen, ScreenMode mode) {
         this.screen = screen;
@@ -654,8 +683,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     public static boolean isClassSelectionScreen(String title) { return CLASS_SELECTION_TITLE.equals(title); }
-    public static boolean isClassEditScreen(String title) { return CLASS_EDIT_TITLE.equals(title); }
-    public static boolean isIconEditScreen(String title) { return ICON_EDIT_TITLE.equals(title); }
 
     /** Convert desired screen pixels to logical UIUtils coordinates */
     private float px(float screenPx) { return screenPx * (float) scaleFactor; }
@@ -680,21 +707,12 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
         hoveredCharVisIdx = -1;
         hoveredSettingSlot = -1;
-        hoveredEditOption = -1;
-        hoveredIconColor = -1;
-        hoveredIconSub = -1;
-        hoveredBack = false;
         hoveredTooltip = new ArrayList<>();
 
-        ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("§6Class selection overlay"), (screenWidth / 2f) * ui.getScaleFactorF(), 25, 1.25f * ui.getScaleFactorF());
+        ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("§6Class selection overlay"),
+                px(screenWidth / 2f), px(12), 1.25f * ui.getScaleFactorF());
 
-        if (mode == ScreenMode.CLASS_SELECTION) {
-            drawClassSelection(ctx, mouseX, mouseY);
-        } else if (mode == ScreenMode.CLASS_EDIT) {
-            drawClassEdit(ctx, mouseX, mouseY);
-        } else if (mode == ScreenMode.ICON_EDIT) {
-            drawIconEdit(ctx, mouseX, mouseY);
-        }
+        drawClassSelection(ctx, mouseX, mouseY);
     }
 
     @Override
@@ -702,7 +720,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         if (isDragging && pressedVisIdx >= 0 && mode == ScreenMode.CLASS_SELECTION) {
             drawDraggedCard(ctx, mouseX, mouseY);
         }
-        if (!hoveredTooltip.isEmpty() && !nicknameInputActive) {
+        if (!hoveredTooltip.isEmpty() && !isTextInputActive()) {
             // ctx.drawTooltip expects GUI-scale coordinates and clamps against screen.width/height.
             // mouseX/mouseY here are in logical space (divided by matrixScale), so undo the
             // matrix transform before calling to prevent boundary clamping going wrong at high GUI scales.
@@ -712,7 +730,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                     (int)(mouseX * matrixScale), (int)(mouseY * matrixScale));
             ctx.getMatrices().popMatrix();
         }
-        drawNicknameInput(ctx, mouseX, mouseY);
+        drawDescriptionInput(ctx, mouseX, mouseY);
     }
 
     // ==================== CLASS SELECTION ====================
@@ -721,8 +739,8 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         List<ItemStack> stacks = getStacks();
         if (stacks == null || stacks.isEmpty()) return;
 
-        float cardWPx = 200, cardHPx = 56, gapXPx = 14, gapYPx = 10;
-        float titleHPx = 36, settingsHPx = 28, marginPx = 16;
+        float cardWPx = CARD_W_PX, cardHPx = getClassSelectionCardHeightPx(), gapXPx = CARD_GAP_X_PX, gapYPx = CARD_GAP_Y_PX;
+        float titleHPx = TITLE_H_PX, settingsHPx = SETTINGS_H_PX, marginPx = PANEL_MARGIN_PX;
 
         // Build visible card list with fuzzy identity matching
         if (!identityMatched) {
@@ -787,7 +805,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         float gridHPx = rows * cardHPx + (rows - 1) * gapYPx;
 
         float panelWPx = gridWPx + marginPx * 2;
-        float panelHPx = titleHPx + gridHPx + settingsHPx + marginPx * 3 + 24;
+        float panelHPx = titleHPx + gridHPx + settingsHPx + marginPx * 3 + 16;
         float panelXPx = (screenWidth - panelWPx) / 2f;
         float panelYPx = (screenHeight - panelHPx) / 2f;
 
@@ -807,13 +825,13 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         }
 
         // Separator
-        float sepYPx = titleYPx + titleHPx + 4;
+        float sepYPx = titleYPx + titleHPx + 2;
         ui.drawRect(px(panelXPx + marginPx + 10), px(sepYPx),
                 px(panelWPx - (marginPx + 10) * 2), px(1), CustomColor.fromHexString("5d4736"));
 
         // Character cards
         float gridStartXPx = panelXPx + marginPx;
-        float gridStartYPx = sepYPx + 8;
+        float gridStartYPx = sepYPx + 6;
         cardLW = px(cardWPx);
         cardLH = px(cardHPx);
 
@@ -852,9 +870,9 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         drawSettingsButtons(ctx, stacks, mouseX, mouseY, panelXPx, settingsYPx, panelWPx);
 
         // Hint text
-        drawOverlayCenteredText("\u00A77Left Click: Play  |  Right Click: Edit  |  Drag: Rearrange",
-                px(panelXPx + panelWPx / 2f), px(settingsYPx + settingsHPx + 4),
-                CustomColor.fromHexString("666666"), 2.2f);
+        drawOverlayCenteredText("\u00A77Left Click: Play  |  Right Click: Edit  |  Shift Right/Middle Click: Edit description  |  Drag: Rearrange",
+                px(panelXPx + panelWPx / 2f), px(settingsYPx + settingsHPx + 5),
+                CustomColor.fromHexString("666666"), 2.5f);
     }
 
     private void drawCharCard(DrawContext ctx, ItemStack stack, String charId, float cx, float cy,
@@ -867,6 +885,15 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
         String classInfo = extractClassInfo(stack);
         CustomColor accent = getClassColor(classInfo);
+        Text gamemodeIcons = extractGamemodeIcons(stack);
+        ContentProgress progress = extractContentProgress(stack);
+        WynnExtrasConfig.ClassSelectionContentProgressStyle progressStyle = getContentProgressStyle();
+        List<String> details = extractClassDetails(stack, progress, progressStyle);
+        String description = ClassSelectionData.getClassDescription(charId);
+        boolean hasDescription = description != null && !description.isBlank();
+        int detailStartYPx = hasDescription ? 23 : 24;
+        int detailSpacingPx = hasDescription ? 12 : 14;
+        float descriptionStartYPx = Math.max(66, detailStartYPx + details.size() * detailSpacingPx + 6);
 
         // Left accent bar
         ui.drawRect(cx, cy, px(3), cardLH, accent);
@@ -879,14 +906,20 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
         // Item icon
         float iconAreaPx = 44;
+        float iconYPx = Math.max(6, (descriptionStartYPx - iconAreaPx) / 2f);
         ctx.getMatrices().pushMatrix();
         float sIX = ui.sx(cx + px(10));
-        float sIY = ui.sy(cy + px(6));
+        float sIY = ui.sy(cy + px(iconYPx));
         ctx.getMatrices().translate(sIX, sIY);
         float iScale = iconAreaPx / 16f;
         ctx.getMatrices().scale(iScale, iScale);
         ctx.drawItem(stack, 0, 0);
         ctx.getMatrices().popMatrix();
+
+        if (gamemodeIcons != null && !gamemodeIcons.getString().isBlank()) {
+            drawOverlayText(gamemodeIcons, cx + cardLW - px(8), cy + cardLH - px(16),
+                    CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.75f);
+        }
 
         // Character name - use client nickname if set, otherwise cleaned name
         String charName = cleanName(stack.getName().getString());
@@ -894,15 +927,45 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         if (clientNick != null && !clientNick.isEmpty()) {
             charName = clientNick;
         }
-        charName = truncate(charName, 20);
+        if (progressStyle == WynnExtrasConfig.ClassSelectionContentProgressStyle.COMPACT && progress.found) {
+            charName = charName + " (" + Math.round(progress.percent) + "%)";
+        }
+        boolean completionChroma = hasCompletionChroma(progress);
+        CustomColor charNameColor = completionChroma && usesCompletionChromaForName()
+                ? WynncraftShaderColor.RAINBOW.color
+                : CustomColor.fromHexString("FFFFFF");
+        charName = truncate(charName, 24);
         float textX = cx + px(iconAreaPx + 21);
-        float textNameY = cy + px(8);
-        drawOverlayText(charName, textX, textNameY, CustomColor.fromHexString("FFFFFF"), 2.35f);
+        float textNameY = cy + px(7);
+        drawOverlayText(charName, textX, textNameY, charNameColor, 2.55f);
 
-        List<String> details = extractClassDetails(stack);
         for (int i = 0; i < details.size(); i++) {
-            drawOverlayText(details.get(i), textX, textNameY + px(13 + i * 11),
-                    accent, 2.05f);
+            drawOverlayText(details.get(i), textX, cy + px(detailStartYPx + i * detailSpacingPx),
+                    completionChroma && usesCompletionChromaForLines()
+                            ? WynncraftShaderColor.RAINBOW.color
+                            : accent, 2.25f);
+        }
+
+        if (hasDescription) {
+            drawOverlayText(truncate(description.trim(), DESCRIPTION_MAX_LENGTH), cx + px(10), cy + px(descriptionStartYPx),
+                    CustomColor.fromHexString("BBBBBB"), 2.1f);
+        }
+
+        if (progressStyle == WynnExtrasConfig.ClassSelectionContentProgressStyle.PROGRESS_BAR && progress.found) {
+            float progressX = cx + px(10);
+            float progressW = cardLW - px(20);
+            float progressLabelYPx = hasDescription
+                    ? descriptionStartYPx + 20
+                    : Math.max(68, detailStartYPx + details.size() * detailSpacingPx + 20);
+            float progressLabelY = cy + px(progressLabelYPx);
+            drawOverlayCenteredText("Content Progress", cx + cardLW / 2f, progressLabelY,
+                    CustomColor.fromHexString("CCCCCC"), 1.95f);
+            drawContentProgress(progress, progressX, progressLabelY + px(8), progressW);
+            if (progress.total > 0) {
+                drawOverlayCenteredText(progress.completed + " of " + progress.total,
+                        cx + cardLW / 2f, progressLabelY + px(28),
+                        CustomColor.fromHexString("AAAAAA"), 1.8f);
+            }
         }
     }
 
@@ -920,10 +983,31 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         drawCharCard(ctx, stack, visCharId[pressedVisIdx], cx, cy, true, false);
     }
 
+    private boolean hasCompletionChroma(ContentProgress progress) {
+        return progress.found
+                && progress.percent >= 0f
+                && !WynnExtrasConfig.INSTANCE.removeChroma
+                && getCompletionChromaMode() != WynnExtrasConfig.ClassSelectionCompletionChromaMode.NONE;
+    }
+
+    private boolean usesCompletionChromaForName() {
+        return getCompletionChromaMode() == WynnExtrasConfig.ClassSelectionCompletionChromaMode.NAME_AND_LINES
+                || getCompletionChromaMode() == WynnExtrasConfig.ClassSelectionCompletionChromaMode.NAME_ONLY;
+    }
+
+    private boolean usesCompletionChromaForLines() {
+        return getCompletionChromaMode() == WynnExtrasConfig.ClassSelectionCompletionChromaMode.NAME_AND_LINES;
+    }
+
+    private WynnExtrasConfig.ClassSelectionCompletionChromaMode getCompletionChromaMode() {
+        WynnExtrasConfig.ClassSelectionCompletionChromaMode mode = WynnExtrasConfig.INSTANCE.classSelectionCompletionChromaMode;
+        return mode == null ? WynnExtrasConfig.ClassSelectionCompletionChromaMode.NAME_AND_LINES : mode;
+    }
+
     private void drawSettingsButtons(DrawContext ctx, List<ItemStack> stacks, int mouseX, int mouseY,
                                       float panelXPx, float settingsYPx, float panelWPx) {
         int[] slots = {SLOT_CANCEL_DELETION, SLOT_BACKUPS, SLOT_MUSIC, SLOT_AUTO_OPEN};
-        float btnWPx = 115, btnHPx = 22, gapPx = 10;
+        float btnWPx = 112, btnHPx = 18, gapPx = 8;
         float totalW = slots.length * btnWPx + (slots.length - 1) * gapPx;
         float startXPx = panelXPx + (panelWPx - totalW) / 2f;
 
@@ -941,7 +1025,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             }
             ui.drawButton(bx, by, bw, bh, hovered);
             String label = truncate(cleanName(stack.getName().getString()), 18);
-            float textScale = getFittingButtonTextScale(label, btnWPx, 2.45f);
+            float textScale = getFittingButtonTextScale(label, btnWPx, 2.15f);
             ui.drawCenteredText(label, bx + bw / 2f, by + bh / 2f,
                     CustomColor.fromHexString("FFFFFF"), textScale);
         }
@@ -960,254 +1044,59 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         ui.drawText(text, x, y, color, getOverlayTextScale(textScale));
     }
 
+    private void drawOverlayText(String text, float x, float y, CustomColor color,
+                                 HorizontalAlignment hAlign, VerticalAlignment vAlign, float textScale) {
+        ui.drawText(text, x, y, color, hAlign, vAlign, getOverlayTextScale(textScale));
+    }
+
+    private void drawOverlayText(Text text, float x, float y, CustomColor color,
+                                 HorizontalAlignment hAlign, VerticalAlignment vAlign, float textScale) {
+        ui.drawText(text, x, y, color, hAlign, vAlign, getOverlayTextScale(textScale));
+    }
+
     private void drawOverlayCenteredText(String text, float x, float y, CustomColor color, float textScale) {
         ui.drawCenteredText(text, x, y, color, getOverlayTextScale(textScale));
+    }
+
+    private void drawContentProgress(ContentProgress progress, float x, float y, float width) {
+        float height = px(11);
+        float clamped = Math.max(0f, Math.min(1f, progress.percent / 100f));
+        ui.drawRect(x, y, width, height, CustomColor.fromHexString("161616"));
+        if (clamped > 0) {
+            ui.drawRect(x + px(1), y + px(1), Math.max(px(1), (width - px(2)) * clamped), height - px(2),
+                    CustomColor.fromInt(0xFF000000 | getProgressColor(progress.percent)));
+        }
+        ui.drawRect(x, y, width, px(1), CustomColor.fromHexString("5d4736"));
+        ui.drawRect(x, y + height - px(1), width, px(1), CustomColor.fromHexString("5d4736"));
+        ui.drawRect(x, y, px(1), height, CustomColor.fromHexString("5d4736"));
+        ui.drawRect(x + width - px(1), y, px(1), height, CustomColor.fromHexString("5d4736"));
+        drawOverlayCenteredText(Math.round(progress.percent) + "%", x + width / 2f, y + height / 2f,
+                CustomColor.fromHexString("FFFFFF"), 2.75f);
     }
 
     private float getOverlayTextScale(float textScale) {
         return textScale * (float) (scaleFactor / Math.max(scaleFactor, 2.0));
     }
 
-    // ==================== CLASS EDIT ====================
-
-    private void drawClassEdit(DrawContext ctx, int mouseX, int mouseY) {
-        List<ItemStack> stacks = getStacks();
-        if (stacks == null || stacks.isEmpty()) return;
-
-        int[] editSlots = {SLOT_EDIT_NICKNAME, SLOT_FAVORITE, SLOT_CHANGE_SCENE, SLOT_RESKIN_CLASS, SLOT_EDIT_ICON};
-        float btnWPx = 220, btnHPx = 36, gapPx = 10;
-        float titleHPx = 36, marginPx = 20, backHPx = 28;
-
-        int visCount = 0;
-        for (int s : editSlots) {
-            if (s < stacks.size()) {
-                ItemStack st = stacks.get(s);
-                if (st != null && !st.isEmpty() && st.getItem() != Items.AIR) visCount++;
-            }
+    private int getProgressColor(float percent) {
+        float clamped = Math.max(0f, Math.min(100f, percent));
+        if (clamped <= 50f) {
+            return interpolateColor(0xCC3333, 0xE6D34A, clamped / 50f);
         }
-
-        float contentHPx = visCount * btnHPx + (visCount - 1) * gapPx;
-        float panelWPx = btnWPx + marginPx * 2;
-        float panelHPx = titleHPx + contentHPx + backHPx + marginPx * 4;
-        float panelXPx = (screenWidth - panelWPx) / 2f;
-        float panelYPx = (screenHeight - panelHPx) / 2f;
-
-        drawPanel(panelXPx, panelYPx, panelWPx, panelHPx);
-
-        // Title
-        float titleYPx = panelYPx + marginPx;
-        ui.drawRect(px(panelXPx + marginPx), px(titleYPx) - px(2),
-                px(panelWPx - marginPx * 2), px(titleHPx), CustomColor.fromHexString("2e251c"));
-        drawOverlayCenteredText("Edit Character",
-                px(panelXPx + panelWPx / 2f), px(titleYPx + titleHPx / 2f),
-                CustomColor.fromHexString("FFAA00"), 4.5f);
-
-        float sepYPx = titleYPx + titleHPx + 4;
-        ui.drawRect(px(panelXPx + marginPx + 10), px(sepYPx),
-                px(panelWPx - (marginPx + 10) * 2), px(1), CustomColor.fromHexString("5d4736"));
-
-        // Edit option buttons
-        float btnStartXPx = panelXPx + marginPx;
-        float btnStartYPx = sepYPx + 8;
-        int idx = 0;
-        for (int i = 0; i < editSlots.length; i++) {
-            int slot = editSlots[i];
-            if (slot >= stacks.size()) continue;
-            ItemStack stack = stacks.get(slot);
-            if (stack == null || stack.isEmpty() || stack.getItem() == Items.AIR) continue;
-
-            float bx = px(btnStartXPx), by = px(btnStartYPx + idx * (btnHPx + gapPx));
-            float bw = px(btnWPx), bh = px(btnHPx);
-            boolean hovered = isInBounds(mouseX, mouseY, bx, by, bw, bh);
-            if (hovered) {
-                hoveredEditOption = i;
-                hoveredTooltip = getTooltipLines(stack);
-            }
-
-            ui.drawButton(bx, by, bw, bh, hovered);
-
-            // Item icon
-            ctx.getMatrices().pushMatrix();
-            float sIX = ui.sx(bx + px(8));
-            float sIY = ui.sy(by + px(2));
-            ctx.getMatrices().translate(sIX, sIY);
-            float iSc = (btnHPx - 4) / 16f;
-            ctx.getMatrices().scale(iSc, iSc);
-            ctx.drawItem(stack, 0, 0);
-            ctx.getMatrices().popMatrix();
-
-            String label = truncate(cleanName(stack.getName().getString()), 24);
-            drawOverlayCenteredText(label, bx + bw / 2f + px(14), by + bh / 2f,
-                    CustomColor.fromHexString("FFFFFF"), 3f);
-            idx++;
-        }
-
-        // Back button (clicks slot 0 = return to character selector)
-        float backWPx = 80;
-        float backXPx = panelXPx + (panelWPx - backWPx) / 2f;
-        float backYPx = btnStartYPx + idx * (btnHPx + gapPx) + 8;
-        backLX = px(backXPx); backLY = px(backYPx); backLW = px(backWPx); backLH = px(backHPx);
-        hoveredBack = isInBounds(mouseX, mouseY, backLX, backLY, backLW, backLH);
-        ui.drawButton(backLX, backLY, backLW, backLH, hoveredBack);
-        drawOverlayCenteredText("\u00A7c\u2190 Back", backLX + backLW / 2f, backLY + backLH / 2f,
-                CustomColor.fromHexString("FF6666"), 2.5f);
+        return interpolateColor(0xE6D34A, 0x55AA55, (clamped - 50f) / 50f);
     }
 
-    // ==================== ICON EDIT ====================
-
-    private void drawIconEdit(DrawContext ctx, int mouseX, int mouseY) {
-        List<ItemStack> stacks = getStacks();
-        if (stacks == null || stacks.isEmpty()) return;
-
-        float colorBtnPx = 56, gapPx = 8;
-        float subBtnPx = 50;
-        float titleHPx = 36, marginPx = 16, backHPx = 28, previewPx = 72;
-
-        // Count visible subcategories
-        int subCount = 0;
-        for (int s : ICON_SUB_SLOTS) {
-            if (s < stacks.size() && stacks.get(s) != null && !stacks.get(s).isEmpty() && stacks.get(s).getItem() != Items.AIR)
-                subCount++;
-        }
-        float subRowHPx = subCount > 0 ? subBtnPx + gapPx + 8 : 0;
-
-        float gridWPx = ICON_COLS * colorBtnPx + (ICON_COLS - 1) * gapPx;
-        float gridHPx = 3 * colorBtnPx + 2 * gapPx;
-
-        float panelWPx = gridWPx + previewPx + marginPx * 3 + gapPx;
-        float panelHPx = titleHPx + gridHPx + subRowHPx + backHPx + marginPx * 3 + 8;
-        float panelXPx = (screenWidth - panelWPx) / 2f;
-        float panelYPx = (screenHeight - panelHPx) / 2f;
-
-        drawPanel(panelXPx, panelYPx, panelWPx, panelHPx);
-
-        // Title
-        float titleYPx = panelYPx + marginPx;
-        ui.drawRect(px(panelXPx + marginPx), px(titleYPx) - px(2),
-                px(panelWPx - marginPx * 2), px(titleHPx), CustomColor.fromHexString("2e251c"));
-        drawOverlayCenteredText("Choose Icon Color",
-                px(panelXPx + panelWPx / 2f), px(titleYPx + titleHPx / 2f),
-                CustomColor.fromHexString("FFAA00"), 4.5f);
-
-        float sepYPx = titleYPx + titleHPx + 4;
-        ui.drawRect(px(panelXPx + marginPx + 10), px(sepYPx),
-                px(panelWPx - (marginPx + 10) * 2), px(1), CustomColor.fromHexString("5d4736"));
-
-        // Color grid (3x3)
-        float gridStartXPx = panelXPx + marginPx;
-        float gridStartYPx = sepYPx + 8;
-
-        for (int i = 0; i < ICON_COLOR_SLOTS.length; i++) {
-            int slot = ICON_COLOR_SLOTS[i];
-            if (slot >= stacks.size()) continue;
-            ItemStack stack = stacks.get(slot);
-
-            int col = i % ICON_COLS;
-            int row = i / ICON_COLS;
-            float bxPx = gridStartXPx + col * (colorBtnPx + gapPx);
-            float byPx = gridStartYPx + row * (colorBtnPx + gapPx);
-            float bx = px(bxPx), by = px(byPx), bw = px(colorBtnPx), bh = px(colorBtnPx);
-
-            boolean empty = stack == null || stack.isEmpty() || stack.getItem() == Items.AIR;
-            boolean hovered = !empty && isInBounds(mouseX, mouseY, bx, by, bw, bh);
-            if (hovered) {
-                hoveredIconColor = i;
-                hoveredTooltip = getTooltipLines(stack);
-            }
-
-            ui.drawButton(bx, by, bw, bh, hovered);
-
-            if (!empty) {
-                // Item icon centered in button
-                float iSc = (colorBtnPx - 22) / 16f;
-                float itemRenderSize = 16 * iSc;
-                ctx.getMatrices().pushMatrix();
-                float sIX = ui.sx(bx + bw / 2f) - itemRenderSize / 2f;
-                float sIY = ui.sy(by + bh / 2f) - itemRenderSize / 2f - 2;
-                ctx.getMatrices().translate(sIX, sIY);
-                ctx.getMatrices().scale(iSc, iSc);
-                ctx.drawItem(stack, 0, 0);
-                ctx.getMatrices().popMatrix();
-
-                // Color label
-                String name = i < ICON_COLOR_NAMES.length ? ICON_COLOR_NAMES[i] : cleanName(stack.getName().getString());
-                drawOverlayCenteredText(truncate(name, 10), bx + bw / 2f, by + bh - px(4),
-                        CustomColor.fromHexString("CCCCCC"), 1.6f);
-            }
-        }
-
-        // Preview (slot 43) - right side
-        float previewXPx = gridStartXPx + ICON_COLS * (colorBtnPx + gapPx) + gapPx;
-        float previewYPx = gridStartYPx;
-        float pvx = px(previewXPx), pvy = px(previewYPx), pvw = px(previewPx), pvh = px(previewPx);
-        ui.drawRect(pvx, pvy, pvw, pvh, CustomColor.fromHexString("2e251c"));
-
-        if (ICON_PREVIEW_SLOT < stacks.size()) {
-            ItemStack previewStack = stacks.get(ICON_PREVIEW_SLOT);
-            if (previewStack != null && !previewStack.isEmpty() && previewStack.getItem() != Items.AIR) {
-                ctx.getMatrices().pushMatrix();
-                float sIX = ui.sx(pvx + pvw / 2f - px(20));
-                float sIY = ui.sy(pvy + pvh / 2f - px(20));
-                ctx.getMatrices().translate(sIX, sIY);
-                float iSc = (previewPx - 16) / 16f;
-                ctx.getMatrices().scale(iSc, iSc);
-                ctx.drawItem(previewStack, 0, 0);
-                ctx.getMatrices().popMatrix();
-            }
-        }
-        drawOverlayCenteredText("Preview", pvx + pvw / 2f, pvy + pvh + px(4),
-                CustomColor.fromHexString("888888"), 2f);
-
-        // Subcategory row
-        if (subCount > 0) {
-            float subStartYPx = gridStartYPx + 3 * (colorBtnPx + gapPx) + 4;
-            int subIdx = 0;
-            for (int i = 0; i < ICON_SUB_SLOTS.length; i++) {
-                int slot = ICON_SUB_SLOTS[i];
-                if (slot >= stacks.size()) continue;
-                ItemStack stack = stacks.get(slot);
-                if (stack == null || stack.isEmpty() || stack.getItem() == Items.AIR) continue;
-
-                float bxPx = gridStartXPx + subIdx * (subBtnPx + gapPx);
-                float bx = px(bxPx), by = px(subStartYPx), bw = px(subBtnPx), bh = px(subBtnPx);
-
-                boolean hovered = isInBounds(mouseX, mouseY, bx, by, bw, bh);
-                if (hovered) {
-                    hoveredIconSub = i;
-                    hoveredTooltip = getTooltipLines(stack);
-                }
-
-                ui.drawButton(bx, by, bw, bh, hovered);
-
-                // Item icon centered
-                float iSc = (subBtnPx - 18) / 16f;
-                float itemRenderSize = 16 * iSc;
-                ctx.getMatrices().pushMatrix();
-                float sIX = ui.sx(bx + bw / 2f) - itemRenderSize / 2f;
-                float sIY = ui.sy(by + bh / 2f) - itemRenderSize / 2f - 2;
-                ctx.getMatrices().translate(sIX, sIY);
-                ctx.getMatrices().scale(iSc, iSc);
-                ctx.drawItem(stack, 0, 0);
-                ctx.getMatrices().popMatrix();
-
-                // Label
-                String label = truncate(cleanName(stack.getName().getString()), 8);
-                drawOverlayCenteredText(label, bx + bw / 2f, by + bh - px(3),
-                        CustomColor.fromHexString("CCCCCC"), 1.4f);
-                subIdx++;
-            }
-        }
-
-        // Back button (slot 10 = back to edit character)
-        float backWPx = 80;
-        float backYOffset = gridHPx + subRowHPx + 8;
-        float backXPx = panelXPx + (panelWPx - backWPx) / 2f;
-        float backYPx = gridStartYPx + backYOffset;
-        backLX = px(backXPx); backLY = px(backYPx); backLW = px(backWPx); backLH = px(backHPx);
-        hoveredBack = isInBounds(mouseX, mouseY, backLX, backLY, backLW, backLH);
-        ui.drawButton(backLX, backLY, backLW, backLH, hoveredBack);
-        drawOverlayCenteredText("\u00A7c\u2190 Back", backLX + backLW / 2f, backLY + backLH / 2f,
-                CustomColor.fromHexString("FF6666"), 2.5f);
+    private int interpolateColor(int from, int to, float t) {
+        int fr = (from >> 16) & 0xFF;
+        int fg = (from >> 8) & 0xFF;
+        int fb = from & 0xFF;
+        int tr = (to >> 16) & 0xFF;
+        int tg = (to >> 8) & 0xFF;
+        int tb = to & 0xFF;
+        int r = Math.round(fr + (tr - fr) * t);
+        int g = Math.round(fg + (tg - fg) * t);
+        int b = Math.round(fb + (tb - fb) * t);
+        return (r << 16) | (g << 8) | b;
     }
 
     // ==================== SHARED RENDERING ====================
@@ -1225,22 +1114,12 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     public boolean mouseClicked(double x, double y, int button) {
         x /= matrixScale;
         y /= matrixScale;
-        // If nickname input is active, consume all clicks (Escape/Enter to close)
-        if (nicknameInputActive) return true;
+        // If a text input is active, consume all clicks (Escape/Enter to close)
+        if (isTextInputActive()) return true;
 
         if (mode == ScreenMode.CLASS_SELECTION
                 && !WynnExtrasConfig.INSTANCE.hideClassSelectionQuickToggleButton
                 && overlayToggleWidget.mouseClicked(x, y, button)) {
-            return true;
-        }
-
-        // Back button
-        if (hoveredBack) {
-            if (mode == ScreenMode.CLASS_EDIT) {
-                clickSlot(0, 0);
-            } else if (mode == ScreenMode.ICON_EDIT) {
-                clickSlot(ICON_BACK_SLOT, 0);
-            }
             return true;
         }
 
@@ -1255,28 +1134,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             }
             if (hoveredSettingSlot >= 0) {
                 clickSlot(hoveredSettingSlot, 0);
-                return true;
-            }
-        } else if (mode == ScreenMode.CLASS_EDIT) {
-            if (hoveredEditOption >= 0) {
-                int[] editSlots = {SLOT_EDIT_NICKNAME, SLOT_FAVORITE, SLOT_CHANGE_SCENE, SLOT_RESKIN_CLASS, SLOT_EDIT_ICON};
-                if (hoveredEditOption < editSlots.length) {
-                    if (hoveredEditOption == 0) {
-                        // Edit Nickname - open custom input
-                        openNicknameInput(editingCharId);
-                        return true;
-                    }
-                    clickSlot(editSlots[hoveredEditOption], 0);
-                    return true;
-                }
-            }
-        } else if (mode == ScreenMode.ICON_EDIT) {
-            if (hoveredIconColor >= 0) {
-                clickSlot(ICON_COLOR_SLOTS[hoveredIconColor], 0);
-                return true;
-            }
-            if (hoveredIconSub >= 0) {
-                clickSlot(ICON_SUB_SLOTS[hoveredIconSub], 0);
                 return true;
             }
         }
@@ -1314,15 +1171,21 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 }
             } else {
                 int slotIndex = CHARACTER_SLOTS[visOrder[pressedVisIdx]];
-                // If right-click (edit), remember which character we're editing
-                if (pressedButton == 1) {
-                    editingCharId = visCharId[pressedVisIdx];
+                if (pressedButton == 2 || (pressedButton == 1 && isShiftDown())) {
+                    openDescriptionInput(visCharId[pressedVisIdx]);
+                } else {
+                    clickSlot(slotIndex, pressedButton);
                 }
-                clickSlot(slotIndex, pressedButton);
             }
             pressedVisIdx = -1;
             isDragging = false;
         }
+    }
+
+    private boolean isShiftDown() {
+        long handle = MinecraftClient.getInstance().getWindow().getHandle();
+        return GLFW.glfwGetKey(handle, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(handle, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
     }
 
     private int findVisualSlotAt(double mx, double my) {
@@ -1409,167 +1272,127 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         }
     }
 
-    // ==================== NICKNAME INPUT ====================
+    // ==================== DESCRIPTION INPUT ====================
 
     /** Called from BankOverlay onInput (KeyInputEvent). Returns true if consumed. */
     public static boolean handleKeyInput(KeyInputEvent event) {
-        if (!nicknameInputActive) return false;
-        if (event.getAction() != GLFW.GLFW_PRESS && event.getAction() != GLFW.GLFW_REPEAT) return true;
-        int key = event.getKey();
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
-            nicknameInputActive = false;
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
-            confirmNickname();
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_BACKSPACE) {
-            if (nicknameCursor > 0) {
-                nicknameText = nicknameText.substring(0, nicknameCursor - 1) + nicknameText.substring(nicknameCursor);
-                nicknameCursor--;
-            }
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_DELETE) {
-            if (nicknameCursor < nicknameText.length()) {
-                nicknameText = nicknameText.substring(0, nicknameCursor) + nicknameText.substring(nicknameCursor + 1);
-            }
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_LEFT) {
-            if (nicknameCursor > 0) nicknameCursor--;
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_RIGHT) {
-            if (nicknameCursor < nicknameText.length()) nicknameCursor++;
-            return true;
-        }
-        return true; // consume all keys when input active
+        return descriptionInputActive;
     }
 
     /** Called from BankOverlay onChar (CharInputEvent). Returns true if consumed. */
     public static boolean handleCharInput(CharInputEvent event) {
-        if (!nicknameInputActive) return false;
-        char c = event.getCharacter();
-        if (c < 32) return true; // ignore control chars
-        if (nicknameText.length() < 30) {
-            nicknameText = nicknameText.substring(0, nicknameCursor) + c + nicknameText.substring(nicknameCursor);
-            nicknameCursor++;
+        return descriptionInputActive && handleDescriptionCharInput(event);
+    }
+
+    public static boolean isTextInputActive() {
+        return descriptionInputActive;
+    }
+
+    public static boolean handleScreenKeyInput(int keyCode, int scanCode, int modifiers) {
+        if (!descriptionInputActive) return false;
+        return handleDescriptionKey(keyCode);
+    }
+
+    private static boolean handleDescriptionKey(int key) {
+        if (key == GLFW.GLFW_KEY_ESCAPE) {
+            descriptionInputActive = false;
+            return true;
+        }
+        if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+            confirmDescription();
+            return true;
+        }
+        if (key == GLFW.GLFW_KEY_BACKSPACE) {
+            if (descriptionCursor > 0) {
+                descriptionText = descriptionText.substring(0, descriptionCursor - 1) + descriptionText.substring(descriptionCursor);
+                descriptionCursor--;
+            }
+            return true;
+        }
+        if (key == GLFW.GLFW_KEY_DELETE) {
+            if (descriptionCursor < descriptionText.length()) {
+                descriptionText = descriptionText.substring(0, descriptionCursor) + descriptionText.substring(descriptionCursor + 1);
+            }
+            return true;
+        }
+        if (key == GLFW.GLFW_KEY_LEFT) {
+            if (descriptionCursor > 0) descriptionCursor--;
+            return true;
+        }
+        if (key == GLFW.GLFW_KEY_RIGHT) {
+            if (descriptionCursor < descriptionText.length()) descriptionCursor++;
+            return true;
         }
         return true;
     }
 
-    private static void confirmNickname() {
-        nicknameInputActive = false;
-        String name = nicknameText.trim();
-        if (name.isEmpty()) return;
-
-        // Save client-side nickname keyed by character identifier
-        WynnExtrasConfig.INSTANCE.clientNicknames.put(nicknameCharId, name);
-        WynnExtrasConfig.save();
-
-        if (nicknameHasRank) {
-            // Click the nickname slot first to open chat input
-            try {
-                ContainerUtils.clickOnSlot(SLOT_EDIT_NICKNAME, McUtils.containerMenu().syncId,
-                        0, McUtils.containerMenu().getStacks());
-            } catch (Exception e) {}
-            // Send the nickname in chat after a short delay
-            TickScheduler.runAfterTicks(10, () -> {
-                if (McUtils.player() != null) {
-                    McUtils.player().networkHandler.sendChatMessage(name);
-                }
-            });
+    private static boolean handleDescriptionCharInput(CharInputEvent event) {
+        char c = event.getCharacter();
+        if (c < 32) return true;
+        if (descriptionText.length() < DESCRIPTION_MAX_LENGTH) {
+            descriptionText = descriptionText.substring(0, descriptionCursor) + c + descriptionText.substring(descriptionCursor);
+            descriptionCursor++;
         }
+        return true;
     }
 
-    private void openNicknameInput(String charId) {
-        // Check if the player has the rank by examining the edit nickname slot
-        List<ItemStack> stacks = getStacks();
-        nicknameHasRank = false;
-        if (stacks != null && SLOT_EDIT_NICKNAME < stacks.size()) {
-            ItemStack nickStack = stacks.get(SLOT_EDIT_NICKNAME);
-            if (nickStack != null && !nickStack.isEmpty()) {
-                // If the item is not a barrier/red item, player has rank
-                // Check tooltip for "rank" or similar text
-                for (Text line : getTooltipLines(nickStack)) {
-                    String s = line.getString().toLowerCase();
-                    if (s.contains("champion") || s.contains("hero") || s.contains("vip") || s.contains("rename")) {
-                        nicknameHasRank = true;
-                        break;
-                    }
-                }
-                // Also check if item is not a barrier (barriers = no rank)
-                if (nickStack.getItem() != Items.BARRIER) {
-                    nicknameHasRank = true;
-                }
-            }
-        }
-        nicknameCharId = charId;
-        // Pre-fill with existing client nickname if any
-        String existing = WynnExtrasConfig.INSTANCE.clientNicknames.get(charId);
-        nicknameText = existing != null ? existing : "";
-        nicknameCursor = nicknameText.length();
-        nicknameInputActive = true;
+    private static void confirmDescription() {
+        descriptionInputActive = false;
+        String description = descriptionText.trim();
+        ClassSelectionData.setClassDescription(descriptionCharId, description);
     }
 
-    private void drawNicknameInput(DrawContext ctx, int mouseX, int mouseY) {
-        if (!nicknameInputActive) return;
+    private void openDescriptionInput(String charId) {
+        descriptionCharId = charId;
+        String existing = ClassSelectionData.getClassDescription(charId);
+        descriptionText = existing != null ? existing : "";
+        descriptionCursor = descriptionText.length();
+        descriptionInputActive = true;
+    }
 
-        // Dim background
+    private void drawDescriptionInput(DrawContext ctx, int mouseX, int mouseY) {
+        if (!descriptionInputActive) return;
+
         ctx.fill(0, 0, screenWidth, screenHeight, 0x88000000);
 
-        // Modal box
-        float boxWPx = 280, boxHPx = 100;
+        float boxWPx = 416, boxHPx = 146;
         float boxXPx = (screenWidth - boxWPx) / 2f;
         float boxYPx = (screenHeight - boxHPx) / 2f;
 
-        // Border
         ctx.fill((int)(boxXPx - 2), (int)(boxYPx - 2),
                 (int)(boxXPx + boxWPx + 2), (int)(boxYPx + boxHPx + 2), 0xFF5d4736);
-        // Background
         ctx.fill((int)boxXPx, (int)boxYPx,
                 (int)(boxXPx + boxWPx), (int)(boxYPx + boxHPx), 0xFF1a1410);
 
         MinecraftClient mc = MinecraftClient.getInstance();
-
-        // Title
-        String title = nicknameHasRank ? "Set Nickname (Server + Client)" : "Set Nickname (Client-Side Only)";
+        String title = "Set Class Description";
         int titleW = mc.textRenderer.getWidth(title);
         ctx.drawText(mc.textRenderer, title,
-                (int)(boxXPx + (boxWPx - titleW) / 2f), (int)(boxYPx + 8), 0xFFFFAA00, true);
+                (int)(boxXPx + (boxWPx - titleW) / 2f), (int)(boxYPx + 14), 0xFFFFAA00, true);
 
-        // Text input field
-        float fieldX = boxXPx + 16, fieldY = boxYPx + 28;
-        float fieldW = boxWPx - 32, fieldH = 20;
+        float fieldX = boxXPx + 22, fieldY = boxYPx + 46;
+        float fieldW = boxWPx - 44, fieldH = 31;
         ctx.fill((int)fieldX, (int)fieldY, (int)(fieldX + fieldW), (int)(fieldY + fieldH), 0xFF333333);
         ctx.fill((int)(fieldX + 1), (int)(fieldY + 1), (int)(fieldX + fieldW - 1), (int)(fieldY + fieldH - 1), 0xFF111111);
 
-        // Text with cursor
-        String displayText = nicknameText;
-        String beforeCursor = nicknameText.substring(0, nicknameCursor);
-        int cursorX = mc.textRenderer.getWidth(beforeCursor);
-        ctx.drawText(mc.textRenderer, displayText, (int)(fieldX + 4), (int)(fieldY + 6), 0xFFFFFFFF, false);
+        String displayText = truncate(descriptionText, DESCRIPTION_MAX_LENGTH);
+        String beforeCursor = descriptionText.substring(0, descriptionCursor);
+        int cursorX = mc.textRenderer.getWidth(truncate(beforeCursor, DESCRIPTION_MAX_LENGTH));
+        ctx.drawText(mc.textRenderer, displayText, (int)(fieldX + 6), (int)(fieldY + 11), 0xFFFFFFFF, false);
 
-        // Blinking cursor
         if ((System.currentTimeMillis() / 500) % 2 == 0) {
-            ctx.fill((int)(fieldX + 4 + cursorX), (int)(fieldY + 4),
-                    (int)(fieldX + 5 + cursorX), (int)(fieldY + fieldH - 4), 0xFFFFFFFF);
+            ctx.fill((int)(fieldX + 6 + cursorX), (int)(fieldY + 7),
+                    (int)(fieldX + 7 + cursorX), (int)(fieldY + fieldH - 7), 0xFFFFFFFF);
         }
 
-        // Hint text
+        String counter = descriptionText.length() + "/" + DESCRIPTION_MAX_LENGTH;
+        ctx.drawText(mc.textRenderer, counter,
+                (int)(fieldX + fieldW - mc.textRenderer.getWidth(counter)), (int)(fieldY + fieldH + 6), 0xFF888888, false);
+
         String hint = "Enter to confirm  |  Escape to cancel";
         int hintW = mc.textRenderer.getWidth(hint);
         ctx.drawText(mc.textRenderer, hint,
-                (int)(boxXPx + (boxWPx - hintW) / 2f), (int)(boxYPx + boxHPx - 18), 0xFF666666, false);
-
-        if (!nicknameHasRank) {
-            String note = "\u00A7eNote: This rename is only visible to you";
-            int noteW = mc.textRenderer.getWidth(note);
-            ctx.drawText(mc.textRenderer, note,
-                    (int)(boxXPx + (boxWPx - noteW) / 2f), (int)(fieldY + fieldH + 6), 0xFFFFFF55, false);
-        }
+                (int)(boxXPx + (boxWPx - hintW) / 2f), (int)(boxYPx + boxHPx - 24), 0xFF666666, false);
     }
 
     // ==================== CUSTOM BACKGROUND ====================
@@ -1736,21 +1559,183 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return "";
     }
 
-    private List<String> extractClassDetails(ItemStack stack) {
-        List<String> details = new ArrayList<>();
+    private Text extractGamemodeIcons(ItemStack stack) {
+        for (Text line : getTooltipLines(stack)) {
+            String raw = stripFormattingCodes(line.getString());
+            String cleaned = cleanTooltipLine(line);
+            if (!cleaned.contains("Class")) continue;
+
+            int classLabelIdx = raw.indexOf("Class: ");
+            if (classLabelIdx < 0) continue;
+            String afterLabel = raw.substring(classLabelIdx + "Class:".length());
+            int classNameIdx = findClassNameIndex(afterLabel);
+            if (classNameIdx <= 0) continue;
+
+            return sliceStyledText(line, classLabelIdx + "Class: ".length() + 1, classLabelIdx + "Class:".length() + classNameIdx + 1);
+        }
+        return Text.empty();
+    }
+
+    private int findClassNameIndex(String text) {
+        String[] classNames = {"Warrior", "Knight", "Mage", "Dark Wizard", "Assassin", "Ninja",
+                "Archer", "Hunter", "Shaman", "Skyseer"};
+        int bestIdx = -1;
+        for (String className : classNames) {
+            int idx = text.indexOf(className);
+            if (idx >= 0 && (bestIdx < 0 || idx < bestIdx)) bestIdx = idx;
+        }
+        return bestIdx;
+    }
+
+    private List<String> extractClassDetails(ItemStack stack, ContentProgress progress,
+                                             WynnExtrasConfig.ClassSelectionContentProgressStyle progressStyle) {
+        List<String> detectedDetails = new ArrayList<>();
         boolean afterClassLine = false;
+        boolean skippingContentProgress = false;
         for (Text line : getTooltipLines(stack)) {
             String str = cleanTooltipLine(line);
             if (str.isEmpty()) continue;
 
+            if (str.equalsIgnoreCase("Content Progress")) {
+                skippingContentProgress = true;
+                continue;
+            }
+            if (skippingContentProgress) {
+                if (PERCENT_PATTERN.matcher(str).find()) continue;
+                if (CONTENT_COUNT_PATTERN.matcher(str).find()) {
+                    skippingContentProgress = false;
+                    continue;
+                }
+                skippingContentProgress = false;
+            }
+
             if (afterClassLine) {
-                details.add(truncate(formatClassDetail(str), 25));
-                if (details.size() >= 3) break;
+                detectedDetails.add(truncate(formatClassDetail(str), 30));
+                if (detectedDetails.size() >= WynnExtrasConfig.CLASS_SELECTION_BASE_LINE_IDS.size()) break;
             } else if (str.contains("Class")) {
                 afterClassLine = true;
             }
         }
+
+        WynnExtrasConfig.INSTANCE.syncClassSelectionLines();
+        Map<String, String> detectedById = classifyClassDetails(detectedDetails);
+        List<String> details = new ArrayList<>();
+        for (String lineId : WynnExtrasConfig.INSTANCE.classSelectionActiveLines) {
+            if (WynnExtrasConfig.CLASS_SELECTION_LINE_CONTENT_PROGRESS.equals(lineId)) {
+                if (progressStyle == WynnExtrasConfig.ClassSelectionContentProgressStyle.LINE && progress.found) {
+                    details.add("- Content Progress: " + Math.round(progress.percent) + "%");
+                }
+                continue;
+            }
+
+            String detail = detectedById.get(lineId);
+            if (detail != null) {
+                details.add(detail);
+            }
+        }
         return details;
+    }
+
+    private Map<String, String> classifyClassDetails(List<String> detectedDetails) {
+        Map<String, String> detectedById = new HashMap<>();
+        boolean[] assigned = new boolean[detectedDetails.size()];
+
+        for (int i = 0; i < detectedDetails.size(); i++) {
+            String lineId = classifyClassDetail(detectedDetails.get(i));
+            if (lineId == null || detectedById.containsKey(lineId)) continue;
+            detectedById.put(lineId, detectedDetails.get(i));
+            assigned[i] = true;
+        }
+
+        for (int i = 0; i < detectedDetails.size(); i++) {
+            if (assigned[i]) continue;
+            for (String fallbackId : WynnExtrasConfig.CLASS_SELECTION_BASE_LINE_IDS) {
+                if (!detectedById.containsKey(fallbackId)) {
+                    detectedById.put(fallbackId, detectedDetails.get(i));
+                    break;
+                }
+            }
+        }
+        return detectedById;
+    }
+
+    private String classifyClassDetail(String detail) {
+        String lower = detail.toLowerCase(Locale.ROOT);
+        if (lower.contains("playtime") || lower.contains("time played")) return WynnExtrasConfig.CLASS_SELECTION_LINE_PLAYTIME;
+        if (lower.contains("location") || lower.contains("world") || lower.contains("server")) return WynnExtrasConfig.CLASS_SELECTION_LINE_LOCATION;
+        if (lower.contains("level") || lower.contains("lvl")) return WynnExtrasConfig.CLASS_SELECTION_LINE_LEVEL;
+        return null;
+    }
+
+    private Text sliceStyledText(Text text, int start, int end) {
+        List<StyledTextSegment> segments = new ArrayList<>();
+        int[] pos = {0};
+        text.visit((style, string) -> {
+            int segmentStart = pos[0];
+            int segmentEnd = segmentStart + string.length();
+            int from = Math.max(start, segmentStart);
+            int to = Math.min(end, segmentEnd);
+            if (from < to) {
+                segments.add(new StyledTextSegment(string.substring(from - segmentStart, to - segmentStart), style));
+            }
+            pos[0] = segmentEnd;
+            return Optional.empty();
+        }, Style.EMPTY);
+
+        trimStyledSegments(segments);
+        MutableText result = Text.empty();
+        int remainingChars = 0;
+        for (StyledTextSegment segment : segments) {
+            remainingChars += segment.text.codePointCount(0, segment.text.length());
+        }
+
+        for (StyledTextSegment segment : segments) {
+            for (int offset = 0; offset < segment.text.length();) {
+                int codePoint = segment.text.codePointAt(offset);
+                String glyph = new String(Character.toChars(codePoint));
+                result.append(Text.literal(glyph).setStyle(segment.style));
+                remainingChars--;
+                if (remainingChars > 0) {
+                    result.append(Text.literal(" ").setStyle(segment.style));
+                }
+                offset += Character.charCount(codePoint);
+            }
+        }
+        return result;
+    }
+
+    private void trimStyledSegments(List<StyledTextSegment> segments) {
+        while (!segments.isEmpty()) {
+            StyledTextSegment first = segments.get(0);
+            String trimmed = first.text.replaceFirst("^[\\s-]+", "");
+            first.text = trimmed;
+            if (first.text.isEmpty()) {
+                segments.remove(0);
+                continue;
+            }
+            break;
+        }
+
+        while (!segments.isEmpty()) {
+            StyledTextSegment last = segments.get(segments.size() - 1);
+            String trimmed = last.text.replaceFirst("[\\s-]+$", "");
+            last.text = trimmed;
+            if (last.text.isEmpty()) {
+                segments.remove(segments.size() - 1);
+                continue;
+            }
+            break;
+        }
+    }
+
+    private static class StyledTextSegment {
+        String text;
+        Style style;
+
+        StyledTextSegment(String text, Style style) {
+            this.text = text;
+            this.style = style;
+        }
     }
 
     private String formatClassDetail(String detail) {
@@ -1771,6 +1756,49 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     private String cleanTooltipLine(Text line) {
         return cleanName(line.getString().replaceAll("\u00A7[0-9a-fk-or]", ""));
+    }
+
+    private String stripFormattingCodes(String raw) {
+        return raw.replaceAll("\u00A7[0-9a-fk-or]", "");
+    }
+
+    private ContentProgress extractContentProgress(ItemStack stack) {
+        List<Text> lines = getTooltipLines(stack);
+        for (int i = 0; i < lines.size(); i++) {
+            String str = cleanTooltipLine(lines.get(i));
+            if (!str.equalsIgnoreCase("Content Progress")) continue;
+
+            ContentProgress progress = new ContentProgress();
+            progress.found = true;
+            for (int j = i + 1; j < Math.min(lines.size(), i + 5); j++) {
+                String progressLine = cleanTooltipLine(lines.get(j));
+                Matcher percentMatcher = PERCENT_PATTERN.matcher(progressLine);
+                if (percentMatcher.find()) {
+                    try { progress.percent = Float.parseFloat(percentMatcher.group(1)); }
+                    catch (NumberFormatException e) { progress.percent = 0; }
+                }
+
+                Matcher countMatcher = CONTENT_COUNT_PATTERN.matcher(progressLine);
+                if (countMatcher.find()) {
+                    try {
+                        progress.completed = Integer.parseInt(countMatcher.group(1));
+                        progress.total = Integer.parseInt(countMatcher.group(2));
+                    } catch (NumberFormatException e) {
+                        progress.completed = 0;
+                        progress.total = 0;
+                    }
+                }
+            }
+            return progress;
+        }
+        return new ContentProgress();
+    }
+
+    private static class ContentProgress {
+        boolean found = false;
+        float percent = 0;
+        int completed = 0;
+        int total = 0;
     }
 
     private CustomColor getClassColor(String classInfo) {

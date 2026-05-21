@@ -53,7 +53,7 @@ public abstract class DropdownOption<T> extends ConfigOption {
     @Override
     public boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
         if (mx >= btnX && mx < btnX + btnW && my >= btnY && my < btnY + btnH) {
-            this.ctx.openDropdown(this, btnX, btnY + btnH, btnW);
+            this.ctx.openDropdown(this, btnX, btnY + btnH, btnW, w);
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
