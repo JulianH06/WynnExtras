@@ -488,40 +488,210 @@ public class LootrunLootPoolPage extends PageWidget {
                     ui.drawText("§7" + item.shinyStat.replace(": §f0", ""), x + 20, textY + 45, CustomColor.fromInt(0xFFFFFF), 2.2f);
                 }
 
-                if (hovering && WynncraftApiHandler.getCachedItemDatabase() != null && mouseY * ui.getScaleFactorF() > y + 80) {
-                    JsonObject jsonItem = WynncraftApiHandler.getCachedItemDatabase().get(item.name.replace("Unidentified ", "").replace("⬡ ", "").replace("Shiny ", ""));
-                    List<Text> tooltip = new ArrayList<>();
-                    if(rarityColor.startsWith("§#")) {
-                        String hex = rarityColor.substring(2); // "12345678"
-                        int r = Integer.parseInt(hex.substring(0, 2), 16);
-                        int g = Integer.parseInt(hex.substring(2, 4), 16);
-                        int b = Integer.parseInt(hex.substring(4, 6), 16);
-
-                        tooltip.add(Text.literal(displayName)
-                                .styled(style -> style.withColor(net.minecraft.util.math.ColorHelper.getArgb(255, r, g, b))));
-                    } else {
-                        tooltip.add(Text.of(rarityColor + item.name.replace("Unidentified ", "")));
-                    }
-
-                    if(jsonItem != null && item.name.contains("Tome")) tooltip.addAll(buildTooltipFromApi(jsonItem));
-                    hoveredTooltip = tooltip;
+                if (hovering && mouseY * ui.getScaleFactorF() > y + 80) {
+                    JsonObject jsonItem = findApiItem(item.name);
+                    hoveredTooltip = jsonItem == null
+                            ? buildFallbackTooltip(item, rarityColor, displayName)
+                            : buildTooltipFromApi(item, jsonItem, rarityColor, displayName);
                 }
             }
             int extraSpacing = (item.type.equals("shiny") && item.shinyStat != null && !item.shinyStat.isEmpty()) ? 40 : 0;
             return textY + itemSpacing + extraSpacing;
         }
 
-        private static List<Text> buildTooltipFromApi(JsonObject item) {
+        private static JsonObject findApiItem(String itemName) {
+            Map<String, JsonObject> database = WynncraftApiHandler.getCachedItemDatabase();
+            if (database == null) return null;
+
+            String cleanName = cleanItemName(itemName);
+            JsonObject direct = database.get(cleanName);
+            if (direct != null) return direct;
+
+            for (JsonObject candidate : database.values()) {
+                if (jsonString(candidate, "displayName").equalsIgnoreCase(cleanName)
+                        || jsonString(candidate, "internalName").equalsIgnoreCase(cleanName)) {
+                    return candidate;
+                }
+            }
+            return null;
+        }
+
+        private static String cleanItemName(String itemName) {
+            return itemName
+                    .replace("Unidentified ", "")
+                    .replace("⬡ ", "")
+                    .replace("Shiny ", "")
+                    .trim();
+        }
+
+        private static List<Text> buildTooltipFromApi(LootrunLootPoolData.LootrunItem lootrunItem, JsonObject apiItem,
+                                                      String rarityColor, String displayName) {
             List<Text> tooltip = new ArrayList<>();
+            tooltip.add(coloredName(displayName.replace("⬡ ", ""), rarityColor));
 
-            JsonObject ids = item.getAsJsonObject("identifications");
-            if (ids == null) return tooltip;
+            String tier = capitalize(jsonString(apiItem, "tier"));
+            String subType = formatCamelName(jsonString(apiItem, "subType"));
+            if (!tier.isEmpty() || !subType.isEmpty()) {
+                tooltip.add(Text.of("§7" + (tier + " " + subType).trim()));
+            }
 
-            for (Map.Entry<String, JsonElement> entry : ids.entrySet()) {
-                tooltip.add(Text.literal("§7" + formatLine(entry.getKey())));
+            String attackSpeed = formatCamelName(jsonString(apiItem, "attackSpeed"));
+            if (!attackSpeed.isEmpty()) {
+                tooltip.add(Text.of("§7" + attackSpeed + " Attack Speed"));
+            }
+
+            addBaseStats(tooltip, apiItem);
+            addRequirements(tooltip, apiItem);
+            addIdentifications(tooltip, apiItem);
+
+            if (apiItem.has("powderSlots")) {
+                tooltip.add(Text.of("§7Powder Slots: §f" + apiItem.get("powderSlots").getAsInt()));
+            }
+
+            if (lootrunItem.shinyStat != null && !lootrunItem.shinyStat.isEmpty()) {
+                tooltip.add(Text.of("§7" + lootrunItem.shinyStat.replace(": §f0", "")));
             }
 
             return tooltip;
+        }
+
+        private static List<Text> buildFallbackTooltip(LootrunLootPoolData.LootrunItem item, String rarityColor, String displayName) {
+            List<Text> tooltip = new ArrayList<>();
+            tooltip.add(coloredName(displayName.replace("⬡ ", ""), rarityColor));
+
+            if (item.tooltip != null && !item.tooltip.isEmpty()) {
+                for (String line : item.tooltip.split("\\R")) {
+                    if (!line.isBlank()) tooltip.add(Text.of("§7" + line));
+                }
+            }
+
+            if (item.shinyStat != null && !item.shinyStat.isEmpty()) {
+                tooltip.add(Text.of("§7" + item.shinyStat.replace(": §f0", "")));
+            }
+
+            return tooltip;
+        }
+
+        private static Text coloredName(String name, String rarityColor) {
+            if(rarityColor.startsWith("§#")) {
+                String hex = rarityColor.substring(2);
+                int r = Integer.parseInt(hex.substring(0, 2), 16);
+                int g = Integer.parseInt(hex.substring(2, 4), 16);
+                int b = Integer.parseInt(hex.substring(4, 6), 16);
+
+                return Text.literal(name)
+                        .styled(style -> style.withColor(net.minecraft.util.math.ColorHelper.getArgb(255, r, g, b)));
+            }
+            return Text.of(rarityColor + name);
+        }
+
+        private static void addBaseStats(List<Text> tooltip, JsonObject item) {
+            JsonObject base = item.getAsJsonObject("base");
+            if (base == null || base.isEmpty()) return;
+
+            tooltip.add(Text.empty());
+
+            addBaseLine(tooltip, base, "baseHealth", "§cHealth");
+            addBaseLine(tooltip, base, "baseDamage", "§6✣ Neutral Damage");
+            addBaseLine(tooltip, base, "baseEarthDamage", "§2✤ Earth Damage");
+            addBaseLine(tooltip, base, "baseThunderDamage", "§e✦ Thunder Damage");
+            addBaseLine(tooltip, base, "baseWaterDamage", "§b❉ Water Damage");
+            addBaseLine(tooltip, base, "baseFireDamage", "§c✹ Fire Damage");
+            addBaseLine(tooltip, base, "baseAirDamage", "§f❋ Air Damage");
+            addBaseLine(tooltip, base, "baseEarthDefence", "§2✤ Earth Defence");
+            addBaseLine(tooltip, base, "baseThunderDefence", "§e✦ Thunder Defence");
+            addBaseLine(tooltip, base, "baseWaterDefence", "§b❉ Water Defence");
+            addBaseLine(tooltip, base, "baseFireDefence", "§c✹ Fire Defence");
+            addBaseLine(tooltip, base, "baseAirDefence", "§f❋ Air Defence");
+        }
+
+        private static void addBaseLine(List<Text> tooltip, JsonObject base, String key, String label) {
+            if (!base.has(key) || base.get(key).isJsonNull()) return;
+            tooltip.add(Text.of(label + ": §f" + formatJsonValue(base.get(key), false)));
+        }
+
+        private static void addRequirements(List<Text> tooltip, JsonObject item) {
+            JsonObject requirements = item.getAsJsonObject("requirements");
+            if (requirements == null || requirements.isEmpty()) return;
+
+            tooltip.add(Text.empty());
+
+            addRequirementLine(tooltip, requirements, "level", "Combat Lv. Min");
+            addRequirementLine(tooltip, requirements, "classRequirement", "Class Req");
+            addRequirementLine(tooltip, requirements, "strength", "Strength Min");
+            addRequirementLine(tooltip, requirements, "dexterity", "Dexterity Min");
+            addRequirementLine(tooltip, requirements, "intelligence", "Intelligence Min");
+            addRequirementLine(tooltip, requirements, "defence", "Defence Min");
+            addRequirementLine(tooltip, requirements, "agility", "Agility Min");
+        }
+
+        private static void addRequirementLine(List<Text> tooltip, JsonObject requirements, String key, String label) {
+            if (!requirements.has(key) || requirements.get(key).isJsonNull()) return;
+            String value = requirements.get(key).getAsString();
+            if (key.equals("classRequirement")) value = capitalize(value);
+            tooltip.add(Text.of("§7" + label + ": §f" + value));
+        }
+
+        private static void addIdentifications(List<Text> tooltip, JsonObject item) {
+            JsonObject ids = item.getAsJsonObject("identifications");
+            if (ids == null || ids.isEmpty()) return;
+
+            tooltip.add(Text.empty());
+
+            for (Map.Entry<String, JsonElement> entry : ids.entrySet()) {
+                String value = formatJsonValue(entry.getValue(), isPercentIdentification(entry.getKey()));
+                String color = value.startsWith("-") ? "§c" : "§a";
+                tooltip.add(Text.of(color + value + " §7" + formatLine(entry.getKey())));
+            }
+        }
+
+        private static String formatJsonValue(JsonElement value, boolean percent) {
+            String suffix = percent ? "%" : "";
+            if (value == null || value.isJsonNull()) return "";
+
+            if (value.isJsonPrimitive()) {
+                return formatNumber(value.getAsInt()) + suffix;
+            }
+
+            JsonObject range = value.getAsJsonObject();
+            if (range.has("min") && range.has("max")) {
+                return formatNumber(range.get("min").getAsInt()) + suffix + " to "
+                        + formatNumber(range.get("max").getAsInt()) + suffix;
+            }
+
+            if (range.has("raw")) {
+                return formatNumber(range.get("raw").getAsInt()) + suffix;
+            }
+
+            return "";
+        }
+
+        private static String formatNumber(int value) {
+            return value > 0 ? "+" + value : String.valueOf(value);
+        }
+
+        private static boolean isPercentIdentification(String key) {
+            return !key.startsWith("raw")
+                    && !key.equals("manaSteal")
+                    && !key.equals("lifeSteal")
+                    && !key.equals("healthRegenRaw")
+                    && !key.equals("poison");
+        }
+
+        private static String jsonString(JsonObject object, String key) {
+            if (object == null || !object.has(key) || object.get(key).isJsonNull()) return "";
+            return object.get(key).getAsString();
+        }
+
+        private static String formatCamelName(String value) {
+            if (value == null || value.isEmpty()) return "";
+            String withSpaces = value.replaceAll("([a-z])([A-Z])", "$1 $2")
+                    .replace("_", " ")
+                    .replace("-", " ");
+            return Arrays.stream(withSpaces.split(" "))
+                    .filter(part -> !part.isBlank())
+                    .map(LootPoolWidget::capitalize)
+                    .collect(Collectors.joining(" "));
         }
 
         private static String formatLine(String key) {
@@ -575,7 +745,7 @@ public class LootrunLootPoolPage extends PageWidget {
             return text;
         }
 
-        private String capitalize(String text) {
+        private static String capitalize(String text) {
             if (text == null || text.isEmpty()) return text;
             return text.substring(0, 1).toUpperCase() + text.substring(1);
         }
