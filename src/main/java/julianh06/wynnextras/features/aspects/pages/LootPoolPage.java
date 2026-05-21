@@ -599,9 +599,7 @@ public class LootPoolPage extends PageWidget {
                 }
 
                 // Parse tierInfo: "Tier I >>>>>> Tier II [10/14]"
-                int remaining = 0;
-                String currentTierStr = "";
-                String targetTierStr = "";
+                String currentTierStr;
 
                 // Extract remaining count [X/Y]
                 java.util.regex.Pattern progressPattern = java.util.regex.Pattern.compile("\\[(\\d+)/(\\d+)\\]");
@@ -612,37 +610,33 @@ public class LootPoolPage extends PageWidget {
 
                 int current = Integer.parseInt(progressMatcher.group(1));
                 int max = Integer.parseInt(progressMatcher.group(2));
-                remaining = max - current;
+                int remainingToNext = max - current;
 
                 // Extract tiers (match I, II, III, IV properly)
                 java.util.regex.Pattern tierPattern = java.util.regex.Pattern.compile("Tier\\s+(IV|III|II|I)");
                 java.util.regex.Matcher tierMatcher = tierPattern.matcher(tierInfo);
                 if (tierMatcher.find()) {
-                    currentTierStr = tierMatcher.group(1); // First match = current tier
-                    if (tierMatcher.find()) {
-                        targetTierStr = tierMatcher.group(1); // Second match = target tier
-                    } else {
-                        // No target tier found - working to max out current tier
-                        targetTierStr = currentTierStr;
-                    }
+                    currentTierStr = tierMatcher.group(1);
                 } else {
                     continue; // Can't parse tiers, skip this aspect
                 }
 
                 int currentTier = romanToInt(currentTierStr);
-                int targetTier = romanToInt(targetTierStr);
 
-                if (currentTier == 0 || targetTier == 0) {
+                if (currentTier == 0) {
                     continue; // Invalid tier, skip
                 }
 
                 // Apply tier-based weights
-                double weight = getTierWeight(aspect.rarity, currentTier, targetTier);
-                double contribution = remaining * weight;
+                double remainingToMax = getRemainingToMax(remainingToNext, aspect.rarity, currentTier);
+                double quantity = switch (WynnExtrasConfig.INSTANCE.aspectScoringMode) {
+                    case MAX -> remainingToMax;
+                };
+                double contribution = quantity * getRarityMultiplier(aspect.rarity);
 
                 // Favorite aspects count 3x more
                 if (FavoriteAspectsData.INSTANCE.isFavorite(aspect.name)) {
-                    contribution *= 3.0;
+                    contribution *= WynnExtrasConfig.INSTANCE.favoriteMultiplier;
                 }
 
                 score += contribution;

@@ -3,7 +3,6 @@ package julianh06.wynnextras.config;
 import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screen.Screen;
@@ -14,7 +13,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Consumer;
 
 public class WynnExtrasConfig {
     public enum Align { LEFT, CENTER, RIGHT }
@@ -210,6 +208,13 @@ public class WynnExtrasConfig {
     public int treeMapY = 5;
     public float treeMapScale = 1.0f;
 
+    // ==================== ASPECTS SCORING ====================
+    public AspectScoringMode aspectScoringMode = AspectScoringMode.MAX;
+    public float mythicAspectMultiplier = 26;
+    public float fabledAspectMultiplier = 1;
+    public float legendaryAspectMultiplier = 0.4F;
+    public float favoriteMultiplier = 3;
+
     // ==================== CHAT CLICK ====================
     public boolean chatClickPV = false;
     public boolean bombShareSuggestion = false;
@@ -320,6 +325,10 @@ public class WynnExtrasConfig {
     public boolean pvDarkmodeToggle = false;
 
     // ==================== ENUMS ====================
+    public enum AspectScoringMode {
+        MAX
+    }
+
     public enum TextColor {
         WHITE(Formatting.WHITE),
         BLACK(Formatting.BLACK),

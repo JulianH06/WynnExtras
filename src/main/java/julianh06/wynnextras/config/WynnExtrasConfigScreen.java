@@ -250,6 +250,15 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 () -> config.showTreeMapEverywhere, v -> config.showTreeMapEverywhere = v),
                         () -> config.tnaTreeMap))
                 .add(visibleWhen(text("The Map is movable", "To change its position open your inventory and drag it where you want"), () -> config.tnaTreeMap))
+            .sub("Aspect Scoring")
+                .add(sliderF("Mythic Multiplier", "Multiplier applied to mythic aspects for scoring", 0.f, 200.f, 0.1f,
+                        () -> config.mythicAspectMultiplier, v -> config.mythicAspectMultiplier = v))
+                .add(sliderF("Fabled Multiplier", "Multiplier applied to fabled aspects for scoring", 0.f, 20.f, 0.1f,
+                        () -> config.fabledAspectMultiplier, v -> config.fabledAspectMultiplier = v))
+                .add(sliderF("Legendary Multiplier", "Multiplier applied to legendary aspects for scoring", 0.f, 2.f, 0.1f,
+                        () -> config.legendaryAspectMultiplier, v -> config.legendaryAspectMultiplier = v))
+                .add(sliderF("Favorite Multiplier", "Multiplier applied to favorite aspects for scoring (applies on top of rarity multiplier)", 0.f, 10.f, 0.1f,
+                        () -> config.favoriteMultiplier, v -> config.favoriteMultiplier = v))
             .endSub()
                 .add(toggle("Timestamps", "Show timestamps during raids",
                         () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
