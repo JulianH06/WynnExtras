@@ -1,8 +1,11 @@
 package julianh06.wynnextras.features.aspects;
 
+import com.wynntils.models.gear.type.GearTier;
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
+import julianh06.wynnextras.utils.ItemUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -14,10 +17,7 @@ import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 
-import java.time.DayOfWeek;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -91,7 +91,7 @@ public class LootrunScanning {
 
                 if (pendingUploadAllowed.getOrDefault(camp, false)) {
                     WynncraftApiHandler.uploadLootrunLootPool(camp, combined);
-                    lastLootrunUploadReset.put(camp, getCurrentLootrunReset());
+                    lastLootrunUploadReset.put(camp, ResetTimeConfig.INSTANCE.getCurrentLootrunReset());
                 }
 
                 pendingItems.remove(camp);
@@ -113,7 +113,7 @@ public class LootrunScanning {
                     waitingForPageLoad = true;
                 } else {
                     WynncraftApiHandler.uploadLootrunLootPool(camp, items);
-                    lastLootrunUploadReset.put(camp, getCurrentLootrunReset());
+                    lastLootrunUploadReset.put(camp, ResetTimeConfig.INSTANCE.getCurrentLootrunReset());
                 }
             }
         } catch (Exception e) {
@@ -144,22 +144,39 @@ public class LootrunScanning {
         return items;
     }
 
+    private static Text getDisplayName(ItemStack stack) {
+        if (stack.getCustomName() != null) return stack.getCustomName();
+        return stack.get(DataComponentTypes.ITEM_NAME);
+    }
+
+    private static String cleanName(ItemStack stack) {
+        Text nameText = getDisplayName(stack);
+        if (nameText == null) return "";
+        String raw = nameText.getString();
+        StringBuilder sb = new StringBuilder(raw.length());
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+
+            if (c >= 0x20 && c < 0xD800) {
+                sb.append(c);
+            }
+        }
+        return sb.toString().replaceAll("§.", "").trim();
+    }
+
     private static LootrunLootPoolData.LootrunItem parseLootrunItem(ItemStack stack, List<Text> tooltips) {
-        String name = stack.getName().getString().replaceAll("§.", "").trim();
+        String name = cleanName(stack);
         if (name.isEmpty()) {
             return null;
         }
 
         String rarity = detectRarity(stack, tooltips);
         if (rarity == null) {
-            return null;
+            rarity = "Unknown";
         }
 
-        String shinyStat = extractShinyTracker(tooltips);
         String type = LootrunLootPoolData.LootrunItem.determineType(name);
-        if (!shinyStat.isEmpty()) {
-            type = "shiny";
-        }
+        String shinyStat = type.equals("shiny") ? extractShinyTracker(stack) : "";
 
         String tooltipText = buildTooltipText(name, tooltips);
 
@@ -167,104 +184,63 @@ public class LootrunScanning {
     }
 
     private static String detectRarity(ItemStack stack, List<Text> tooltips) {
-        String loreRarity = detectRarityFromLore(stack);
-        if (loreRarity != null) {
-            return loreRarity;
+        GearTier tier = ItemUtils.getTier(stack);
+        if (tier != null) {
+            return switch (tier) {
+                case MYTHIC -> "Mythic";
+                case FABLED -> "Fabled";
+                case LEGENDARY -> "Legendary";
+                case RARE -> "Rare";
+                case SET -> "Set";
+                case UNIQUE -> "Unique";
+                default -> null;
+            };
         }
-
-        for (Text tooltip : tooltips) {
-            String line = tooltip.getString().replaceAll("§.", "").trim();
-            String rarity = rarityFromLine(line);
-            if (rarity != null) {
-                return rarity;
-            }
-        }
-
-        if (stack.getCustomName() != null &&
-                stack.getCustomName().getStyle() != null &&
-                stack.getCustomName().getStyle().getColor() != null) {
-            String hexCode = stack.getCustomName().getStyle().getColor().getHexCode();
-            return rarityFromColor(hexCode);
-        }
-
-        String rawName = stack.getName().getString();
-        if (rawName.contains("§e")) return "Unique";
-        if (rawName.contains("§a")) return "Set";
 
         return null;
     }
 
-    private static String detectRarityFromLore(ItemStack stack) {
-        try {
-            if (stack.getComponents() == null) return null;
-            LoreComponent loreComponent = stack.getComponents().get(DataComponentTypes.LORE);
-            if (loreComponent == null) return null;
+    private static String cleanString(String raw) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (c >= 0x20 && c < 0xD800) sb.append(c);
+        }
+        return sb.toString().replaceAll("§.", "").trim();
+    }
 
-            for (Text line : loreComponent.lines()) {
-                String rarity = rarityFromLine(line.getString().replaceAll("§.", "").trim());
-                if (rarity != null) {
-                    return rarity;
+    private static final java.util.regex.Pattern TRACKER_PATTERN =
+        java.util.regex.Pattern.compile("^([A-Za-z][A-Za-z ]+?)\\s*(\\d[\\d,]*)$");
+
+    private static String extractShinyTracker(ItemStack stack) {
+        try {
+            LoreComponent lore = stack.getComponents().get(DataComponentTypes.LORE);
+            if (lore == null) return "";
+            for (Text line : lore.lines()) {
+                String stripped = cleanString(line.getString());
+                if (stripped.isEmpty()) continue;
+                if (stripped.contains("+") || stripped.contains("%") || stripped.contains("/") ||
+                    stripped.contains("-") || stripped.contains("(") || stripped.contains(":")) continue;
+                String lower = stripped.toLowerCase();
+                if (lower.contains("combat level") || lower.contains("class type") ||
+                    lower.contains("dps") || lower.contains("item") || lower.contains("hits")) continue;
+                java.util.regex.Matcher m = TRACKER_PATTERN.matcher(stripped);
+                if (m.matches()) {
+                    return m.group(1).trim() + ": " + m.group(2).trim();
                 }
             }
-        } catch (Exception ignored) {
-        }
-        return null;
-    }
-
-    private static String rarityFromLine(String line) {
-        String lower = line.toLowerCase();
-        if (lower.contains("mythic") && (lower.contains("item") || lower.equals("mythic"))) {
-            return "Mythic";
-        }
-        if (lower.contains("fabled") && (lower.contains("item") || lower.equals("fabled"))) {
-            return "Fabled";
-        }
-        if (lower.contains("legendary") && (lower.contains("item") || lower.equals("legendary"))) {
-            return "Legendary";
-        }
-        if (lower.contains("rare") && (lower.contains("item") || lower.equals("rare"))) {
-            return "Rare";
-        }
-        if (lower.contains("set") && (lower.contains("item") || lower.equals("set"))) {
-            return "Set";
-        }
-        if (lower.contains("unique") && (lower.contains("item") || lower.equals("unique"))) {
-            return "Unique";
-        }
-        return null;
-    }
-
-    private static String rarityFromColor(String hexCode) {
-        if (hexCode == null) return null;
-        return switch (hexCode.toUpperCase()) {
-            case "#AA00AA" -> "Mythic";
-            case "#FF5555" -> "Fabled";
-            case "#55FFFF" -> "Legendary";
-            case "#FF55FF" -> "Rare";
-            case "#55FF55" -> "Set";
-            case "#FFFF55" -> "Unique";
-            default -> null;
-        };
-    }
-
-    private static String extractShinyTracker(List<Text> tooltips) {
-        for (Text tooltip : tooltips) {
-            if (!tooltip.getString().contains("⬡") || !tooltip.getString().contains(":")) {
-                continue;
-            }
-            return tooltip.getString();
-        }
+        } catch (Exception ignored) {}
         return "";
     }
 
     private static String buildTooltipText(String name, List<Text> tooltips) {
         StringBuilder builder = new StringBuilder();
         for (Text tooltip : tooltips) {
-            String line = tooltip.getString().replaceAll("§.", "").trim();
+            String line = tooltip.getString();
             if (line.isEmpty() || line.equals(name)) {
                 continue;
             }
-            if (builder.length() > 0) {
+            if (!builder.isEmpty()) {
                 builder.append("\n");
             }
             builder.append(line);
@@ -275,7 +251,7 @@ public class LootrunScanning {
     private static boolean hasNextPage(HandledScreen<?> screen) {
         for (Slot slot : screen.getScreenHandler().slots) {
             if (!slot.hasStack()) continue;
-            String name = slot.getStack().getName().getString().replaceAll("§.", "").trim();
+            String name = cleanName(slot.getStack());
             if (name.equalsIgnoreCase("Next Page")) {
                 return true;
             }
@@ -284,33 +260,19 @@ public class LootrunScanning {
     }
 
     private static void clickNextPage(HandledScreen<?> screen) {
-        System.out.println("[WynnExtras] Lootrun preview: clicking next page");
+        WynnExtras.LOGGER.info("[WynnExtras] Lootrun preview: clicking next page");
         TreeLoader.clickOnNameInInventory("Next Page", screen, MinecraftClient.getInstance());
         settleTicks = 0;
     }
 
     private static void clickPreviousPage(HandledScreen<?> screen) {
-        System.out.println("[WynnExtras] Lootrun preview: clicking previous page");
+        WynnExtras.LOGGER.info("[WynnExtras] Lootrun preview: clicking previous page");
         TreeLoader.clickOnNameInInventory("Previous Page", screen, MinecraftClient.getInstance());
         settleTicks = 0;
     }
 
-    public static ZonedDateTime getCurrentLootrunReset() {
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-
-        ZonedDateTime thisFriday =
-                now.with(TemporalAdjusters.previousOrSame(DayOfWeek.FRIDAY))
-                        .withHour(20).withMinute(0).withSecond(0).withNano(0);
-
-        if (now.isBefore(thisFriday)) {
-            thisFriday = thisFriday.minusWeeks(1);
-        }
-
-        return thisFriday;
-    }
-
     private static boolean canUploadLootrun(String camp) {
-        ZonedDateTime currentReset = getCurrentLootrunReset();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentLootrunReset();
         ZonedDateTime lastUploaded = lastLootrunUploadReset.get(camp);
 
         return lastUploaded == null || currentReset.isAfter(lastUploaded);

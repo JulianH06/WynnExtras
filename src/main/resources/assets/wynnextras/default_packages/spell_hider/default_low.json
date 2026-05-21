@@ -1,0 +1,72 @@
+{
+  "warrior:war_scream:tempest": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:meteor:explosion": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:main_attack:pyrokinesis": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "shaman:totem:totemic_shatter": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "archer:arrow_bomb:trap:chilling_snare": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:war_scream:cyclone": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:meteor:thunderstorm": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "archer:arrow_storm:bryophite_roots": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:smoke_bomb:black_hole": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "archer:arrow_bomb": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "assassin:ripple": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "warrior:war_scream:air_shout": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:ice_snake:frozen_tornado": {
+    "values": {
+      "VISIBLE": false
+    }
+  },
+  "mage:meteor:burning_sigil": {
+    "values": {
+      "VISIBLE": false
+    }
+  }
+}

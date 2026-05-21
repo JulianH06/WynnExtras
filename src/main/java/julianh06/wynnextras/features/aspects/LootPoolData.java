@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -40,6 +41,7 @@ public class LootPoolData {
         lootPools.put("NOL", new ArrayList<>());
         lootPools.put("TCC", new ArrayList<>());
         lootPools.put("TNA", new ArrayList<>());
+        lootPools.put("TWP", new ArrayList<>());
     }
 
     public static class AspectEntry {
@@ -47,6 +49,7 @@ public class LootPoolData {
         public String rarity; // MYTHIC, FABLED, LEGENDARY
         public String tierInfo; // "Tier II [8/10]" or "[MAX]"
         public String description; // What the aspect does (if available)
+        public double score = 0;
 
         public AspectEntry(String name, String rarity) {
             this.name = name;
@@ -148,7 +151,7 @@ public class LootPoolData {
                 GSON.toJson(this, writer);
             }
         } catch (Exception e) {
-            System.err.println("Failed to save loot pool data: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to save loot pool data: " + e.getMessage());
         }
     }
 
@@ -172,7 +175,7 @@ public class LootPoolData {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to load loot pool data: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to load loot pool data: " + e.getMessage());
         }
     }
 
@@ -185,6 +188,7 @@ public class LootPoolData {
         lootPools.put("NOL", new ArrayList<>());
         lootPools.put("TCC", new ArrayList<>());
         lootPools.put("TNA", new ArrayList<>());
+        lootPools.put("TWP", new ArrayList<>());
         save();
     }
 }

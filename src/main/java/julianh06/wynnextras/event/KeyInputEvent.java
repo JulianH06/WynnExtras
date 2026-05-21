@@ -1,5 +1,6 @@
 package julianh06.wynnextras.event;
 
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.api.WEEvent;
 
 public class KeyInputEvent extends WEEvent {
@@ -33,7 +34,7 @@ public class KeyInputEvent extends WEEvent {
     }
 
     public static void init() {
-        System.out.println("Initialized WynnExtras KeyInputEvent");
+        WynnExtras.LOGGER.info("Initialized WynnExtras KeyInputEvent");
         initialized = true;
     }
 }

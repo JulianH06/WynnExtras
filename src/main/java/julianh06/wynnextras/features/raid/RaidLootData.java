@@ -13,6 +13,7 @@ public class RaidLootData {
     public int amplifierTier1 = 0;
     public int amplifierTier2 = 0;
     public int amplifierTier3 = 0;
+    public int amplifierTier4 = 0;
 
     // ===== Crafter Bags =====
     public int totalBags = 0;
@@ -34,9 +35,9 @@ public class RaidLootData {
     public int fabledAspects = 0;
     public int legendaryAspects = 0;
 
-    /* =========================
-       Emerald Normalisierung
-       ========================= */
+    // ===== Wards =====
+    public int totalWards = 0;
+
     public long getTotalLiquidEmeralds() {
         return liquidEmeralds + (emeraldBlocks / 64);
     }
@@ -53,46 +54,30 @@ public class RaidLootData {
         return getTotalLiquidEmeralds() % 64;
     }
 
-    /* =========================
-       Amplifier Totals
-       ========================= */
     public int getTotalAmplifiers() {
-        return amplifierTier1 + amplifierTier2 + amplifierTier3;
+        return amplifierTier1 + amplifierTier2 + amplifierTier3 + amplifierTier4;
     }
 
-    /* =========================
-       Crafter Bag Totals
-       ========================= */
     public int getTotalCrafterBags() {
         return totalBags;
     }
 
-    /* =========================
-       Tome Totals
-       ========================= */
     public int getTotalTomesCount() {
         return totalTomes;
     }
 
-    /* =========================
-       Charms Totals
-       ========================= */
     public int getTotalCharmsCount() {
         return totalCharms;
     }
 
-    /* =========================
-       Per-Raid Tracking
-       ========================= */
     public Map<String, RaidSpecificLoot> perRaidData = new HashMap<>();
+
+    public transient RaidSpecificLoot latestData = new RaidSpecificLoot();
 
     public RaidSpecificLoot getOrCreateRaidData(String raidName) {
         return perRaidData.computeIfAbsent(raidName, k -> new RaidSpecificLoot());
     }
 
-    /* =========================
-       Session Tracking (transient - not saved)
-       ========================= */
     public transient RaidSpecificLoot sessionData = new RaidSpecificLoot();
     public transient Map<String, RaidSpecificLoot> sessionPerRaidData = new HashMap<>();
 
@@ -104,11 +89,13 @@ public class RaidLootData {
     public void initSession() {
         if (sessionData == null) sessionData = new RaidSpecificLoot();
         if (sessionPerRaidData == null) sessionPerRaidData = new HashMap<>();
+        if (latestData == null) latestData = new RaidSpecificLoot();
     }
 
     public void resetSession() {
         sessionData = new RaidSpecificLoot();
         sessionPerRaidData = new HashMap<>();
+        latestData = new RaidSpecificLoot();
     }
 
     public void resetAll() {
@@ -117,6 +104,7 @@ public class RaidLootData {
         amplifierTier1 = 0;
         amplifierTier2 = 0;
         amplifierTier3 = 0;
+        amplifierTier4 = 0;
         totalBags = 0;
         stuffedBags = 0;
         packedBags = 0;
@@ -129,6 +117,7 @@ public class RaidLootData {
         mythicAspects = 0;
         fabledAspects = 0;
         legendaryAspects = 0;
+        totalWards = 0;
         perRaidData = new HashMap<>();
         resetSession();
     }
@@ -144,6 +133,7 @@ public class RaidLootData {
         public int amplifierTier1 = 0;
         public int amplifierTier2 = 0;
         public int amplifierTier3 = 0;
+        public int amplifierTier4 = 0;
         public int totalBags = 0;
         public int stuffedBags = 0;
         public int packedBags = 0;
@@ -156,6 +146,7 @@ public class RaidLootData {
         public int mythicAspects = 0;
         public int fabledAspects = 0;
         public int legendaryAspects = 0;
+        public int totalWards = 0;
         public int completionCount = 0;
 
         public long getTotalLiquidEmeralds() {
@@ -163,7 +154,32 @@ public class RaidLootData {
         }
 
         public int getTotalAmplifiers() {
-            return amplifierTier1 + amplifierTier2 + amplifierTier3;
+            return amplifierTier1 + amplifierTier2 + amplifierTier3 + amplifierTier4;
+        }
+
+        /** Adds every counter from {@code other} into this instance (in-place). */
+        public void mergeFrom(RaidSpecificLoot other) {
+            if (other == null) return;
+            this.emeraldBlocks      += other.emeraldBlocks;
+            this.liquidEmeralds     += other.liquidEmeralds;
+            this.amplifierTier1     += other.amplifierTier1;
+            this.amplifierTier2     += other.amplifierTier2;
+            this.amplifierTier3     += other.amplifierTier3;
+            this.amplifierTier4     += other.amplifierTier4;
+            this.totalBags          += other.totalBags;
+            this.stuffedBags        += other.stuffedBags;
+            this.packedBags         += other.packedBags;
+            this.variedBags         += other.variedBags;
+            this.totalTomes         += other.totalTomes;
+            this.mythicTomes        += other.mythicTomes;
+            this.fabledTomes        += other.fabledTomes;
+            this.totalCharms        += other.totalCharms;
+            this.totalAspects       += other.totalAspects;
+            this.mythicAspects      += other.mythicAspects;
+            this.fabledAspects      += other.fabledAspects;
+            this.legendaryAspects   += other.legendaryAspects;
+            this.totalWards         += other.totalWards;
+            this.completionCount    += other.completionCount;
         }
     }
 }

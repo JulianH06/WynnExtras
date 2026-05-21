@@ -12,6 +12,7 @@ base {
 }
 
 repositories {
+	mavenCentral()
 	// Add repositories to retrieve artifacts from in here.
 	// You should only use this when depending on other mods because
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
@@ -27,6 +28,8 @@ repositories {
 		name = "Cloth Config"
 		url = "https://maven.shedaniel.me/"
 	}
+
+	maven { url = "https://repo.maven.apache.org/maven2" }
 }
 
 configurations {
@@ -49,6 +52,12 @@ dependencies {
 	implementation 'org.apache.httpcomponents:httpclient:4.5.14'
 
 	modRuntimeOnly "me.djtheredstoner:DevAuth-fabric:1.2.1"
+
+//	modRuntimeOnly "maven.modrinth:wynnmod:2.0.1"
+//
+//	shadowImpl 'tools.jackson.core:jackson-core:3.0.0'
+//	shadowImpl 'tools.jackson.core:jackson-databind:3.0.0'
+//	shadowImpl 'com.fasterxml.jackson.core:jackson-annotations:2.20'
 
 	modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
@@ -74,7 +83,7 @@ java {
 	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
 	// if it is present.
 	// If you remove this line, sources will not be generated.
-	withSourcesJar()
+	//withSourcesJar()
 
 	sourceCompatibility = JavaVersion.VERSION_21
 	targetCompatibility = JavaVersion.VERSION_21
@@ -100,6 +109,7 @@ remapJar {
 tasks.named("shadowJar").configure {
 	configurations = [project.configurations.shadowImpl, project.configurations.shadowModImpl]
 	archiveClassifier.set('all')
+	exclude 'javassist/tools/rmi/AppletServer.class'
 }
 
 // configure the maven publication

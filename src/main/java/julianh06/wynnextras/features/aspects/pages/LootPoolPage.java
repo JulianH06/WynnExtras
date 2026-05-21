@@ -1,14 +1,15 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import com.wynntils.utils.colors.CommonColors;
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
-import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.*;
+import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -21,6 +22,7 @@ import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.lwjgl.glfw.GLFW;
 
 import java.text.DecimalFormat;
 import java.time.Duration;
@@ -42,7 +44,7 @@ public class LootPoolPage extends PageWidget {
     private final static java.util.Map<String, com.mojang.datafixers.util.Pair<Integer, String>> personalAspectProgress = new java.util.HashMap<>();
     private static boolean fetchedPersonalProgress = false;
 
-    private enum Raid { NOTG, NOL, TCC, TNA }
+    private enum Raid { NOTG, NOL, TCC, TNA, TWP }
 
     static List<LootPoolWidget> lootPoolWidgets = new ArrayList<>();
 
@@ -59,15 +61,23 @@ public class LootPoolPage extends PageWidget {
     private static boolean hideMax = false;
     private static boolean onlyFavorites = false;
 
-    private enum corwdSourceStatus { Loading, Found, Null }
-    private final static List<corwdSourceStatus> hasCrowdSourcedData = new ArrayList<>(List.of(corwdSourceStatus.Loading, corwdSourceStatus.Loading, corwdSourceStatus.Loading, corwdSourceStatus.Loading));
+    private enum crowdSourceStatus { Loading, Found, Null }
+    private final static List<crowdSourceStatus> hasCrowdSourcedData = new ArrayList<>(List.of(crowdSourceStatus.Loading, crowdSourceStatus.Loading, crowdSourceStatus.Loading, crowdSourceStatus.Loading, crowdSourceStatus.Loading));
 
     private final static String[] raidNames = {
             "Nest of the Grootslangs",
             "Orphion's Nexus of Light",
             "The Canyon Colossus",
-            "The Nameless Anomaly"
+            "The Nameless Anomaly",
+            "The Wartorn Palace"
     };
+
+    private static float hScrollOffset = 0f;
+    private static float hScrollTarget = 0f;
+    private static float hScrollMax = 0f;
+    private static final int FIXED_WIDGET_WIDTH = 550;
+    private static final int H_WIDGET_SPACING = 40;
+    private static HorizontalScrollBarWidget hScrollBarWidget;
 
     public LootPoolPage(AspectScreen parent) {
         super(parent);
@@ -80,6 +90,14 @@ public class LootPoolPage extends PageWidget {
         hideMaxButton = new HideMaxButton();
         onlyFavoritesButton = new OnlyFavoritesButton();
         refreshButton = new RefreshButton();
+
+        hScrollBarWidget = new HorizontalScrollBarWidget(
+                () -> hScrollTarget,
+                v -> hScrollTarget = v,
+                () -> hScrollOffset,
+                v -> hScrollOffset = v,
+                () -> hScrollMax
+        );
     }
 
     @Override
@@ -96,7 +114,7 @@ public class LootPoolPage extends PageWidget {
 
             fetchRunning.put(raidType, true);
 
-            System.out.println("starting fetch for " + raidType);
+            WynnExtras.LOGGER.info("starting fetch for " + raidType);
             lastCrowdsourceFetch.put(raidType, now);
             WynncraftApiHandler.fetchCrowdsourcedLootPool(raidType.name()).thenAccept(result -> {
                 fetchRunning.put(raidType, false);
@@ -107,12 +125,12 @@ public class LootPoolPage extends PageWidget {
 
                 lastCrowdsourceFetch.put(raidType, now);
                 if (isSamePool(oldItems, result)) {
-                    System.out.println("still old pool, retry in 30s");
+                    WynnExtras.LOGGER.info("still old pool, retry in 30s");
                     hasOldLootpool.put(raidType, true);
                     return;
                 }
 
-                System.out.println("NEW POOL for " + raidType);
+                WynnExtras.LOGGER.info("NEW POOL for " + raidType);
                 crowdsourcedLootPools.put(raidType.name(), result);
                 hasOldLootpool.put(raidType, false);
 
@@ -142,12 +160,11 @@ public class LootPoolPage extends PageWidget {
 
         ui.drawCenteredText("§6§lWeekly Aspect Lootpools", centerX, 60);
 
-        ZonedDateTime nextReset = now.with(java.time.DayOfWeek.FRIDAY).withHour(19).withMinute(0).withSecond(0).withNano(0);
+        ZonedDateTime nextReset = ResetTimeConfig.INSTANCE.getNextLootpoolReset();
         if (nextReset.isBefore(now) || nextReset.isEqual(now)) {
             nextReset = nextReset.plusWeeks(1);
         }
 
-        // Calculate time difference
         Duration duration = Duration.between(now, nextReset);
         long days = duration.toDays();
         long hours = duration.toHours() % 24;
@@ -164,27 +181,46 @@ public class LootPoolPage extends PageWidget {
 
         ui.drawCenteredText(countdown, centerX, 100);
 
-        int spacing = 40;
-        int widgetX = spacing;
-        int widgetY = 175;
-        int widgets = 4;
-        int totalSpacing = spacing * (widgets + 1);
         float scaledWidth = width * ui.getScaleFactorF();
-        int widgetWidth = (int) ((scaledWidth - totalSpacing) / widgets);
+        int totalContentWidth = lootPoolWidgets.size() * (FIXED_WIDGET_WIDTH + H_WIDGET_SPACING) + H_WIDGET_SPACING;
+        hScrollMax = Math.max(0, totalContentWidth - scaledWidth);
 
-        int widgetHeight = (int) (height * ui.getScaleFactorF() * 0.9f - widgetY);
+        if (hScrollTarget > hScrollMax) hScrollTarget = hScrollMax;
 
-        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
-            lootPoolWidget.setBounds(widgetX, widgetY, widgetWidth, widgetHeight);
+        float snapValue = 0.5f;
+        float speed = 0.3f;
+        float hDiff = hScrollTarget - hScrollOffset;
+        if (Math.abs(hDiff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) hScrollOffset = hScrollTarget;
+        else hScrollOffset += hDiff * speed * tickDelta;
+
+        int widgetY = 175;
+        int scrollBarHeight = 30;
+        int widgetHeight = (int) (height * ui.getScaleFactorF() * 0.9f - widgetY - scrollBarHeight - 5);
+
+        ctx.enableScissor(
+                0,
+                0,
+                (int) (scaledWidth / ui.getScaleFactor()),
+                (int) ((widgetY + widgetHeight) / ui.getScaleFactor())
+        );
+
+        int widgetX = H_WIDGET_SPACING - (int) hScrollOffset;
+        for (LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+            lootPoolWidget.setBounds(widgetX, widgetY, FIXED_WIDGET_WIDTH, widgetHeight);
             lootPoolWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
-            widgetX += widgetWidth + spacing;
+            widgetX += FIXED_WIDGET_WIDTH + H_WIDGET_SPACING;
         }
+        ctx.disableScissor();
 
-        importFromWynntilsButton.setBounds(0, 0, 500, 60);
-        importFromWynntilsButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
+        int scrollBarY = widgetY + widgetHeight + 5;
+        hScrollBarWidget.setBounds(40, scrollBarY, (int) scaledWidth - 80, scrollBarHeight);
+        hScrollBarWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
 
-        refreshButton.setBounds(0, 65, 350, 60);
+        refreshButton.setBounds(0, 0, 525, 60);
         refreshButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
+
+        importFromWynntilsButton.setBounds(0, 65, 500, 60);
+        importFromWynntilsButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
 
         onlyFavoritesButton.setBounds((int) (width * ui.getScaleFactorF()) - 400, 0, 400, 60);
         onlyFavoritesButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
@@ -216,7 +252,9 @@ public class LootPoolPage extends PageWidget {
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(hoveredTooltip.isEmpty()) return;
-        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), mouseX - 5, mouseY + 20);
+        int absX = (int)(mouseX * parent.getMatrixScale());
+        int absY = (int)(mouseY * parent.getMatrixScale());
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), absX, absY + 20);
     }
 
     @Override
@@ -253,6 +291,11 @@ public class LootPoolPage extends PageWidget {
             return true;
         }
 
+        if (hScrollBarWidget.isHovered()) {
+            hScrollBarWidget.onClick(button);
+            return true;
+        }
+
         return false;
     }
 
@@ -261,15 +304,28 @@ public class LootPoolPage extends PageWidget {
         for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
             lootPoolWidget.mouseReleased(mx, my, button);
         }
+
+        hScrollBarWidget.scrollBarButtonWidget.isHold = false;
         return false;
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
-            if(lootPoolWidget.mouseScrolled(mx, my, delta)) return true;
+        long window = MinecraftClient.getInstance().getWindow().getHandle();
+        boolean shiftHeld = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
+
+        if (shiftHeld) {
+            if (delta > 0) hScrollTarget -= 60f;
+            else hScrollTarget += 60f;
+            if (hScrollTarget < 0) hScrollTarget = 0;
+            if (hScrollTarget > hScrollMax) hScrollTarget = hScrollMax;
+            return true;
         }
 
+        for (LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+            if (lootPoolWidget.mouseScrolled(mx, my, delta)) return true;
+        }
         return false;
     }
 
@@ -278,6 +334,7 @@ public class LootPoolPage extends PageWidget {
         static Identifier NOLTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/nol.png");
         static Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tcc.png");
         static Identifier TNATexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tna.png");
+        static Identifier TWPTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/twp.png");
 
         Identifier ltop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/ltop.png");
         Identifier rtop = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/light/rtop.png");
@@ -334,27 +391,10 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            int topHeight = 202;
+            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 192, 21);
 
-            if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
-                ui.drawNineSlice((int) (x),
-                        (int) (y), width,
-                        (int) (topHeight + 1), 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
-
-                ui.drawNineSlice((int) (x),
-                        (int) (y + topHeight), width,
-                        (int) (height - topHeight), 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
-            } else {
-                ui.drawNineSlice((int) (x),
-                        (int) (y), width,
-                        (int) (topHeight + 1), 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
-
-                ui.drawNineSlice((int) (x),
-                        (int) (y + topHeight), width,
-                        (int) (height - topHeight), 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
-            }
-
-            ui.drawImage(getTextureForRaid(raid), x + (width - textureWidth) / 2f, y - textureWidth / 4f, textureWidth, textureWidth);
+            Identifier raidIcon = getTextureForRaid(raid);
+            if(raidIcon != null) ui.drawImage(raidIcon, x + (width - textureWidth) / 2f, y - textureWidth / 4f, textureWidth, textureWidth);
 
             // Calculate and show score
             DecimalFormat df = new DecimalFormat("#.00");
@@ -362,7 +402,7 @@ public class LootPoolPage extends PageWidget {
             List<LootPoolData.AspectEntry> lootPool = getLootPoolForRaid(raid.name());
 
             if(!lootPool.isEmpty()) {
-                hasCrowdSourcedData.set(raid.ordinal(), corwdSourceStatus.Found);
+                hasCrowdSourcedData.set(raid.ordinal(), crowdSourceStatus.Found);
             }
 
             List<LootPoolData.AspectEntry> mythicAspects = lootPool.stream().filter(a -> a.rarity.equalsIgnoreCase("mythic")).toList();
@@ -372,24 +412,24 @@ public class LootPoolPage extends PageWidget {
             //aspectWidgets.clear();
             if(aspectWidgets.isEmpty()) {
                 for (LootPoolData.AspectEntry entry : mythicAspects) {
-                    if(hideMax && entry.tierInfo.contains("MAX")) continue;
+                    if(hideMax && entry.tierInfo != null && entry.tierInfo.contains("MAX")) continue;
                     if(onlyFavorites && !FavoriteAspectsData.INSTANCE.isFavorite(entry.name)) continue;
                     aspectWidgets.add(new AspectWidget(entry, this));
                 }
                 for (LootPoolData.AspectEntry entry : fabledAspects) {
-                    if(hideMax && entry.tierInfo.contains("MAX")) continue;
+                    if(hideMax && entry.tierInfo != null && entry.tierInfo.contains("MAX")) continue;
                     if(onlyFavorites && !FavoriteAspectsData.INSTANCE.isFavorite(entry.name)) continue;
                     aspectWidgets.add(new AspectWidget(entry, this));
                 }
                 for (LootPoolData.AspectEntry entry : legendaryAspects) {
-                    if(hideMax && entry.tierInfo.contains("MAX")) continue;
+                    if(hideMax && entry.tierInfo != null && entry.tierInfo.contains("MAX")) continue;
                     if(onlyFavorites && !FavoriteAspectsData.INSTANCE.isFavorite(entry.name)) continue;
                     aspectWidgets.add(new AspectWidget(entry, this));
                 }
             }
 
             for(LootPoolData.AspectEntry aspectEntry : lootPool) {
-                if(aspectEntry.tierInfo.isEmpty()) continue;
+                if(aspectEntry.tierInfo == null || aspectEntry.tierInfo.isEmpty()) continue;
 
                 for(AspectWidget aspectWidget : aspectWidgets) {
                     if(!aspectWidget.aspect.tierInfo.isEmpty()) continue;
@@ -397,7 +437,7 @@ public class LootPoolPage extends PageWidget {
                 }
             }
 
-            double score = calculateRaidScore(lootPool);
+            double score = calculateRaidScore(aspectWidgets);
             String scoreString = "Personal Score: " + df.format(score);
 
             boolean max = score == 0;
@@ -405,13 +445,13 @@ public class LootPoolPage extends PageWidget {
                 scoreString = "MAXED";
             }
 
-            ui.drawCenteredText(raidNames[raid.ordinal()], x + width / 2f, y + textureWidth - 20, (max && !WynnExtrasConfig.INSTANCE.removeChroma) ? CommonColors.RAINBOW : CustomColor.fromHexString("FFFFFF"));
+            ui.drawCenteredText(raidNames[raid.ordinal()], x + width / 2f, y + textureWidth - 20, (max && !WynnExtrasConfig.INSTANCE.removeChroma) ? WynncraftShaderColor.RAINBOW.color : CustomColor.fromHexString("FFFFFF"));
 
             scoreWidget.scoreString = scoreString;
             int scoreWidth = MinecraftClient.getInstance().textRenderer.getWidth(scoreString);
-            if(hasCrowdSourcedData.get(raid.ordinal()) != corwdSourceStatus.Found) {
+            if(hasCrowdSourcedData.get(raid.ordinal()) != crowdSourceStatus.Found) {
                 scoreWidget.setBounds(0, 0, 0, 0);
-                if(hasCrowdSourcedData.get(raid.ordinal()) == corwdSourceStatus.Loading) {
+                if(hasCrowdSourcedData.get(raid.ordinal()) == crowdSourceStatus.Loading) {
                     ui.drawCenteredText("Loading lootpool data...", x + width / 2f, y + textureWidth + 14, CustomColor.fromHexString("FF0000"));
                 } else {
                     ui.drawCenteredText("There is data for this raid yet!", x + width / 2f, y + textureWidth + 14, CustomColor.fromHexString("FF0000"));
@@ -420,11 +460,12 @@ public class LootPoolPage extends PageWidget {
                 scoreWidget.setBounds((int) (x + (width - scoreWidth * 3) / 2f), y + textureWidth, scoreWidth * 3, 30);
                 scoreWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
             }
+
             ctx.enableScissor(
                     (int) (x / ui.getScaleFactor()),
                     (int) ((y + 195) / ui.getScaleFactor()),
                     (int) ((x + width - 7) / ui.getScaleFactor()),
-                    (int) ((y + height - 20) / ui.getScaleFactor()));
+                    (int) ((y + height - 24) / ui.getScaleFactor()));
 
             float snapValue = 0.5f;
             float speed = 0.3f;
@@ -462,9 +503,7 @@ public class LootPoolPage extends PageWidget {
                         x + width - 20,
                         aspectY - spacing * 2,
                         3,
-                        WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode
-                            ? CustomColor.fromHexString("1b1b1c")
-                            : CustomColor.fromHexString("5d4736")
+                        UIUtils.getVanillaDarkSeparatorColor(false)
                     );
                 }
             }
@@ -491,6 +530,7 @@ public class LootPoolPage extends PageWidget {
                 scrollBarWidget.onClick(button);
                 return true;
             }
+
             return super.mouseClicked(mx, my, button);
         }
 
@@ -533,26 +573,35 @@ public class LootPoolPage extends PageWidget {
                 case NOL -> NOLTexture;
                 case TCC -> TCCTexture;
                 case TNA -> TNATexture;
+                case TWP -> TWPTexture;
                 case null, default -> null;
             };
         }
 
-        private double calculateRaidScore(List<LootPoolData.AspectEntry> aspects) {
+        private double calculateRaidScore(List<AspectWidget> aspects) {
             if(aspects.isEmpty()) return -1;
 
             double score = 0.0;
 
-            for (LootPoolData.AspectEntry aspect : aspects) {
+            for (AspectWidget aspectWidget : aspects) {
+                LootPoolData.AspectEntry aspect = aspectWidget.aspect;
                 String tierInfo = aspect.tierInfo;
 
-                if (tierInfo == null || tierInfo.isEmpty() || tierInfo.contains("[MAX]")) {
-                    continue; // Already maxed or no data, no score contribution
+                if (tierInfo != null && tierInfo.contains("[MAX]")) {
+                    aspect.score = 0;
+                    continue; // Already maxed, no score contribution
+                }
+
+                // Not unlocked / no progress yet: treat as start of Tier I
+                if (tierInfo == null || tierInfo.isEmpty()) {
+                    String rarityCapitalized = aspect.rarity == null || aspect.rarity.isEmpty() ? "" :
+                            Character.toUpperCase(aspect.rarity.charAt(0)) + aspect.rarity.substring(1).toLowerCase();
+                    tierInfo = AspectUtils.convertAmountToTierInfo(1, rarityCapitalized);
+                    if (tierInfo == null || tierInfo.isEmpty()) continue; // Unknown rarity
                 }
 
                 // Parse tierInfo: "Tier I >>>>>> Tier II [10/14]"
-                int remaining = 0;
-                String currentTierStr = "";
-                String targetTierStr = "";
+                String currentTierStr;
 
                 // Extract remaining count [X/Y]
                 java.util.regex.Pattern progressPattern = java.util.regex.Pattern.compile("\\[(\\d+)/(\\d+)\\]");
@@ -563,40 +612,37 @@ public class LootPoolPage extends PageWidget {
 
                 int current = Integer.parseInt(progressMatcher.group(1));
                 int max = Integer.parseInt(progressMatcher.group(2));
-                remaining = max - current;
+                int remainingToNext = max - current;
 
                 // Extract tiers (match I, II, III, IV properly)
                 java.util.regex.Pattern tierPattern = java.util.regex.Pattern.compile("Tier\\s+(IV|III|II|I)");
                 java.util.regex.Matcher tierMatcher = tierPattern.matcher(tierInfo);
                 if (tierMatcher.find()) {
-                    currentTierStr = tierMatcher.group(1); // First match = current tier
-                    if (tierMatcher.find()) {
-                        targetTierStr = tierMatcher.group(1); // Second match = target tier
-                    } else {
-                        // No target tier found - working to max out current tier
-                        targetTierStr = currentTierStr;
-                    }
+                    currentTierStr = tierMatcher.group(1);
                 } else {
                     continue; // Can't parse tiers, skip this aspect
                 }
 
                 int currentTier = romanToInt(currentTierStr);
-                int targetTier = romanToInt(targetTierStr);
 
-                if (currentTier == 0 || targetTier == 0) {
+                if (currentTier == 0) {
                     continue; // Invalid tier, skip
                 }
 
                 // Apply tier-based weights
-                double weight = getTierWeight(aspect.rarity, currentTier, targetTier);
-                double contribution = remaining * weight;
+                double remainingToMax = getRemainingToMax(remainingToNext, aspect.rarity, currentTier);
+                double quantity = switch (WynnExtrasConfig.INSTANCE.aspectScoringMode) {
+                    case MAX -> remainingToMax;
+                };
+                double contribution = quantity * getRarityMultiplier(aspect.rarity);
 
                 // Favorite aspects count 3x more
                 if (FavoriteAspectsData.INSTANCE.isFavorite(aspect.name)) {
-                    contribution *= 3.0;
+                    contribution *= WynnExtrasConfig.INSTANCE.favoriteMultiplier;
                 }
 
                 score += contribution;
+                aspect.score = contribution;
             }
 
             return score;
@@ -617,7 +663,7 @@ public class LootPoolPage extends PageWidget {
                             String rarity = progress.getSecond();
 
                             // Convert amount to tier info string
-                            String tierInfo = convertAmountToTierInfo(amount, rarity);
+                            String tierInfo = amount < 1 ? null : convertAmountToTierInfo(amount, rarity);
 
                             // Create new entry with personal tier info
                             withProgress.add(new LootPoolData.AspectEntry(aspect.name, rarity, tierInfo, aspect.description));
@@ -707,7 +753,7 @@ public class LootPoolPage extends PageWidget {
 
                 @Override
                 protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                    ui.drawRect(x, y, width, height, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? CustomColor.fromInt(0xFF707070) : CustomColor.fromInt(0xFF674439));
+                    ui.drawRect(x, y, width, height, UIUtils.getVanillaSeparatorColor(hovered || isHold));
                 }
 
                 @Override
@@ -738,7 +784,7 @@ public class LootPoolPage extends PageWidget {
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 if(scoreString.isEmpty()) return;
 
-                if(scoreString.equals("MAXED") && !WynnExtrasConfig.INSTANCE.removeChroma) ui.drawText(scoreString, x, y, CommonColors.RAINBOW);
+                if(scoreString.equals("MAXED") && !WynnExtrasConfig.INSTANCE.removeChroma) ui.drawText(scoreString, x, y, WynncraftShaderColor.RAINBOW.color);
                 else ui.drawText((hovered ? "§n" : "") + scoreString, x, y, CustomColor.fromHexString("c0c0c0"));
 
                 if(hovered) {
@@ -781,24 +827,25 @@ public class LootPoolPage extends PageWidget {
                 String displayName = aspect.name;
                 TextRenderer tr = MinecraftClient.getInstance().textRenderer;
 
-                int availableWidth = (int)(maxWidth) - extra;
+                int availableWidth = (int) (maxWidth) - extra;
 
                 if (tr.getWidth(displayName) > availableWidth) {
                     displayName = tr.trimToWidth(displayName, availableWidth - tr.getWidth("...")) + "...";
                 }
 
 
-                boolean isMax = aspect.tierInfo != null && aspect.tierInfo.contains("MAX");
-                CustomColor textColor = CustomColor.fromHexString("FFFFFF");
+                boolean isNotOwned = aspect.tierInfo == null || aspect.tierInfo.isEmpty();
+                boolean isMax = !isNotOwned && aspect.tierInfo.contains("MAX");
+                CustomColor textColor = isNotOwned ? CustomColor.fromHexString("808080") : CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
-                if(isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
-                    textColor = CommonColors.RAINBOW;
-                } else {
+                if (isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
+                    textColor = WynncraftShaderColor.RAINBOW.color;
+                } else if (!isNotOwned) {
                     rarityColorCode = getAspectColorCode(aspect);
                 }
 
-                ui.drawText(rarityColorCode + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 87, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
-
+                String namePrefix = isNotOwned ? "§8" : rarityColorCode;
+                ui.drawText(namePrefix + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 87, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
 
                 ApiAspect apiAspect = findApiAspectByName(aspect.name);
                 ItemStack flameItem = createAspectFlameIcon(apiAspect, isMax);
@@ -808,21 +855,25 @@ public class LootPoolPage extends PageWidget {
                     float flameScale = 2.1f;
                     ctx.getMatrices().pushMatrix();
                     ctx.getMatrices().scale(flameScale / ui.getScaleFactorF(), flameScale / ui.getScaleFactorF());
-                    ctx.drawItem(flameItem, (int)(screenX / (flameScale / ui.getScaleFactorF())), (int)(screenY / (flameScale / ui.getScaleFactorF())));
+                    ctx.drawItem(flameItem, (int) (screenX / (flameScale / ui.getScaleFactorF())), (int) (screenY / (flameScale / ui.getScaleFactorF())));
                     ctx.getMatrices().popMatrix();
                 }
 
-                if(hovered && parent.isHovered() && mouseY * ui.getScaleFactorF() > parent.y + 190) {
+                if (ui != null && WynnExtrasConfig.INSTANCE.showIndividualAspectScore) {
+                    ui.drawText(Text.literal(new DecimalFormat("0.##").format(aspect.score)), x + 56, y + 26 + height / 2f, CustomColor.fromHexString("c0c0c0"), HorizontalAlignment.CENTER, VerticalAlignment.BOTTOM, 1.9f);
+                }
+
+                if (hovered && parent.isHovered() && mouseY * ui.getScaleFactorF() > parent.y + 190) {
                     List<Text> tooltip = new ArrayList<>();
-                    if(apiAspect == null) return;
-                    int tier = 0;
-                    if(isMax) {
-                        if(aspect.rarity.equalsIgnoreCase("Legendary")) tier = 4;
+                    if (apiAspect == null) return;
+                    int tier = 1;
+                    if (isMax) {
+                        if (aspect.rarity.equalsIgnoreCase("Legendary")) tier = 4;
                         else tier = 3;
                     }
 
                     Pattern pattern = Pattern.compile("Tier ([IVXLCDM]+)");
-                    if(aspect.tierInfo != null) {
+                    if (aspect.tierInfo != null) {
                         Matcher matcher = pattern.matcher(aspect.tierInfo);
 
                         if (matcher.find()) {
@@ -835,13 +886,14 @@ public class LootPoolPage extends PageWidget {
                     tooltip = aspectItemStack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
 
                     int longestTextWidth = 0;
-                    for(Text text : tooltip) {
-                        if(MinecraftClient.getInstance().textRenderer.getWidth(text) > longestTextWidth) longestTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(text);
+                    for (Text text : tooltip) {
+                        if (MinecraftClient.getInstance().textRenderer.getWidth(text) > longestTextWidth)
+                            longestTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(text);
                     }
 
                     String name = tooltip.getFirst().getString();
-
-                    tooltip.set(0, Text.of(name + (aspect.tierInfo == null ? " " : " §7" + aspect.tierInfo)));
+                    String tierSuffix = isNotOwned ? "Not unlocked" : aspect.tierInfo;
+                    tooltip.set(0, Text.of(name + " §7" + tierSuffix));
 
                     hoveredTooltip = tooltip;
                 }
@@ -864,7 +916,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Import favorites from Wynntils", x + width / 2f, y + height / 2f);
         }
 
@@ -889,7 +941,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Hide max aspects", x + width / 2f, y + height / 2f);
         }
 
@@ -912,7 +964,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Only favorite aspects", x + width / 2f, y + height / 2f);
         }
 
@@ -935,14 +987,27 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
-            ui.drawCenteredText("Reload your aspects", x + width / 2f, y + height / 2f);
+            ui.drawButton(x, y, width, height, hovered);
+            ui.drawCenteredText("Reload your aspects & lootpools", x + width / 2f, y + height / 2f);
         }
 
         @Override
         protected boolean onClick(int button) {
+            lootPoolWidgets.clear();
+
+            for(Raid raid : Raid.values()) {
+                lootPoolWidgets.add(new LootPoolWidget(raid));
+            }
+
+            crowdsourcedLootPools.clear();
+            lastCrowdsourceFetch.clear();
+            fetchRunning.clear();
+            hasOldLootpool.clear();
             personalAspectProgress.clear();
             fetchedPersonalProgress = false;
+
+            ResetTimeConfig.INSTANCE.refetch();
+
             for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
                 lootPoolWidget.aspectWidgets.clear();
             }
@@ -952,8 +1017,106 @@ public class LootPoolPage extends PageWidget {
         }
     }
 
+    private static class HorizontalScrollBarWidget extends Widget {
+        private HorizontalScrollBarButtonWidget scrollBarButtonWidget;
+        int currentMouseX = 0;
+
+        private final java.util.function.Supplier<Float> getTarget;
+        private final java.util.function.Consumer<Float> setTarget;
+        private final java.util.function.Supplier<Float> getActual;
+        private final java.util.function.Consumer<Float> setActual;
+        private final java.util.function.Supplier<Float> getMax;
+
+        public HorizontalScrollBarWidget(
+                java.util.function.Supplier<Float> getTarget,
+                java.util.function.Consumer<Float> setTarget,
+                java.util.function.Supplier<Float> getActual,
+                java.util.function.Consumer<Float> setActual,
+                java.util.function.Supplier<Float> getMax) {
+            super(0, 0, 0, 0);
+            this.getTarget = getTarget;
+            this.setTarget = setTarget;
+            this.getActual = getActual;
+            this.setActual = setActual;
+            this.getMax = getMax;
+            this.scrollBarButtonWidget = new HorizontalScrollBarButtonWidget();
+            addChild(scrollBarButtonWidget);
+        }
+
+        private void setOffset(int mouseX, float maxOffset, int scrollAreaWidth) {
+            float relativeX = mouseX - x - scrollBarButtonWidget.getWidth() / 2f;
+            relativeX = Math.max(0, Math.min(relativeX, scrollAreaWidth));
+
+            float scrollPercent = relativeX / scrollAreaWidth;
+            setTarget.accept(scrollPercent * maxOffset);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            currentMouseX = mouseX;
+            ui.drawSliderBackground(x, y, width, height);
+
+            float maxOffset = getMax.get();
+            int buttonWidth = maxOffset == 0 ? width : 750;
+            int scrollAreaWidth = width - buttonWidth;
+
+            if (scrollBarButtonWidget.isHold) {
+                setOffset((int) (mouseX * ui.getScaleFactor()), maxOffset, scrollAreaWidth);
+                setActual.accept(getTarget.get());
+            }
+
+            int xPos = maxOffset == 0 ? x : (int) (x + scrollAreaWidth * Math.min((getActual.get() / maxOffset), 1));
+            scrollBarButtonWidget.setBounds(xPos, y, buttonWidth, height);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            float maxOffset = getMax.get();
+            int buttonWidth = Math.max(40, (int) (width * (width / (width + maxOffset))));
+            int scrollAreaWidth = width - buttonWidth;
+
+            if (scrollBarButtonWidget.isHovered()) scrollBarButtonWidget.isHold = true;
+            setOffset((int) (currentMouseX * ui.getScaleFactor()), maxOffset, scrollAreaWidth);
+            return false;
+        }
+
+        @Override
+        public boolean mouseReleased(double mx, double my, int button) {
+            scrollBarButtonWidget.mouseReleased(mx, my, button);
+            return true;
+        }
+
+        private static class HorizontalScrollBarButtonWidget extends Widget {
+            public boolean isHold;
+
+            public HorizontalScrollBarButtonWidget() {
+                super(0, 0, 0, 0);
+                isHold = false;
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                ui.drawButton(x, y, width, height, hovered || isHold);
+            }
+
+            @Override
+            protected boolean onClick(int button) {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                isHold = true;
+                return true;
+            }
+
+            @Override
+            public boolean mouseReleased(double mx, double my, int button) {
+                isHold = false;
+                return true;
+            }
+        }
+    }
+
     private static boolean shouldFetchRaid(Raid raid) {
-        ZonedDateTime currentReset = AspectScanning.getCurrentLootpoolReset();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentLootpoolReset();
         ZonedDateTime lastFetch = lastCrowdsourceFetch.get(raid);
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
 

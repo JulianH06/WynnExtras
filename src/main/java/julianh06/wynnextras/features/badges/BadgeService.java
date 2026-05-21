@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.badges;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -44,14 +45,14 @@ public class BadgeService {
     private static int tickCounter = 0;
     private static boolean initialSyncDone = false;
 
-    private Command sendHeartbeat = new Command(
-            "heartbeat",
-            "",
-            context -> {
-                syncWithServer();
-                return 1;
-            }, null, null
-    );
+//    private Command sendHeartbeat = new Command(
+//            "heartbeat",
+//            "",
+//            context -> {
+//                syncWithServer();
+//                return 1;
+//            }, null, null
+//    );
 
     /**
      * Check if a player UUID is a WynnExtras user
@@ -67,6 +68,10 @@ public class BadgeService {
     public void onTick(TickEvent event) {
         if (!Models.WorldState.onWorld()) return;
 
+        handleTick();
+    }
+
+    private static void handleTick() {
         if (initialSyncDone) return;
 
         tickCounter++;
@@ -82,14 +87,14 @@ public class BadgeService {
         // Get authentication data
         MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
             if (wynnextrasToken == null) {
-                System.err.println("[WynnExtras] Failed to get auth data for badge sync");
+                WynnExtras.LOGGER.error("[WynnExtras] Failed to get auth data for badge sync");
                 return;
             }
 
             sendHeartbeat(wynnextrasToken);
             getActiveUsers();
         }).exceptionally(e -> {
-            System.err.println("[WynnExtras] Error getting auth data: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error getting auth data: " + e.getMessage());
             return null;
         });
     }
@@ -106,10 +111,10 @@ public class BadgeService {
                 if (response.statusCode() == 200) {
                     parseResponse(response.body());
                 } else {
-                    System.err.println("[WynnExtras] Badge fetching failed: " + response.statusCode());
+                    WynnExtras.LOGGER.error("[WynnExtras] Badge fetching failed: " + response.statusCode());
                 }
             } catch (Exception e) {
-                System.err.println("[WynnExtras] Badge fetching error: " + e.getMessage());
+                WynnExtras.LOGGER.error("[WynnExtras] Badge fetching error: " + e.getMessage());
             }
         });
     }
@@ -130,11 +135,11 @@ public class BadgeService {
 
                 ApiRequestHelper.sendWithAuthRetry(request, body).thenAccept(response -> {
                     if (response.statusCode() != 200) {
-                        System.err.println("[WynnExtras] Badge heartbeat failed: " + response.statusCode());
+                        WynnExtras.LOGGER.error("[WynnExtras] Badge heartbeat failed: " + response.statusCode());
                     }
                 });
             } catch (Exception e) {
-                System.err.println("[WynnExtras] Badge heartbeat error: " + e.getMessage());
+                WynnExtras.LOGGER.error("[WynnExtras] Badge heartbeat error: " + e.getMessage());
             }
         });
     }
@@ -150,15 +155,15 @@ public class BadgeService {
                     String uuid = uuids.get(i).getAsString().replace("-", "").toLowerCase();
                     wynnextrasUsers.add(uuid);
                 }
-                System.out.println("[WynnExtras] Synced " + wynnextrasUsers.size() + " active badge users");
+                WynnExtras.LOGGER.info("[WynnExtras] Synced " + wynnextrasUsers.size() + " active badge users");
             }
 
             if (json.has("count")) {
                 int count = json.get("count").getAsInt();
-                System.out.println("[WynnExtras] Server reports " + count + " active users");
+                WynnExtras.LOGGER.info("[WynnExtras] Server reports " + count + " active users");
             }
         } catch (Exception e) {
-            System.err.println("[WynnExtras] Error parsing badge response: " + e.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Error parsing badge response: " + e.getMessage());
         }
     }
 }

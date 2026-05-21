@@ -1,5 +1,6 @@
 package julianh06.wynnextras.core.loader;
 
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.api.WEEventBus;
 import org.reflections.Reflections;
 
@@ -16,7 +17,7 @@ public interface WELoader {
                 WELoader loader = clazz.getDeclaredConstructor().newInstance();
                 WEEventBus.registerEventListener(loader);
             } catch (Exception e) {
-                System.err.println("Failed to load WELoader: " + clazz.getName());
+                WynnExtras.LOGGER.error("Failed to load WELoader: " + clazz.getName());
                 e.printStackTrace();
             }
         }

@@ -1,5 +1,6 @@
 package julianh06.wynnextras.mixin;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.core.components.Models;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.models.marker.MarkerModel;
@@ -68,7 +69,7 @@ public class GuildMapScreenMixin extends AbstractMapScreen {
             }
         }
 
-        if (fixes > 0) System.out.println("Applied " + fixes + " trade route fixes");
+        if (fixes > 0) WynnExtras.LOGGER.info("Applied " + fixes + " trade route fixes");
     }
 
 

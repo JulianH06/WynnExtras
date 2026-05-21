@@ -31,10 +31,10 @@ public class CurrentVersionData {
                 if (loaded != null) {
                     INSTANCE = loaded;
                 } else {
-                    System.err.println("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");
+                    WynnExtras.LOGGER.error("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");
                 }
             } catch (IOException e) {
-                System.err.println("[WynnExtras] Couldn't read the version file:");
+                WynnExtras.LOGGER.error("[WynnExtras] Couldn't read the version file:");
                 e.printStackTrace();
             }
         }
@@ -44,7 +44,7 @@ public class CurrentVersionData {
         try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
             gson.toJson(INSTANCE, writer);
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't write the version file:");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't write the version file:");
             e.printStackTrace();
         }
     }

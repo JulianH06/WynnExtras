@@ -96,6 +96,7 @@ public class RaidLootPage extends PageWidget {
 
         amplifiersPerRunTooltip = List.of(
                 Text.of("§e§lAmplifiers/Run Breakdown:"),
+                Text.of("§6Tier IV: §f" + String.format("%.3f", (double) currentStats.amplifierTier4 / currentTotalRuns) + "/run"),
                 Text.of("§6Tier III: §f" + String.format("%.3f", (double) currentStats.amplifierTier3 / currentTotalRuns) + "/run"),
                 Text.of("§eTier II: §f" + String.format("%.3f", (double) currentStats.amplifierTier2 / currentTotalRuns) + "/run"),
                 Text.of("§fTier I: §f" + String.format("%.3f", (double) currentStats.amplifierTier1 / currentTotalRuns) + "/run")
@@ -129,6 +130,7 @@ public class RaidLootPage extends PageWidget {
                     combinedStats.amplifierTier1 += raidStats.amplifierTier1;
                     combinedStats.amplifierTier2 += raidStats.amplifierTier2;
                     combinedStats.amplifierTier3 += raidStats.amplifierTier3;
+                    combinedStats.amplifierTier4 += raidStats.amplifierTier4;
                     combinedStats.totalBags += raidStats.totalBags;
                     combinedStats.stuffedBags += raidStats.stuffedBags;
                     combinedStats.packedBags += raidStats.packedBags;
@@ -264,7 +266,7 @@ public class RaidLootPage extends PageWidget {
         ui.drawCenteredText("§a§lEmeralds: §f" + emeraldText.toString(), centerX, startY);
         startY += lineHeight;
 
-        ui.drawCenteredText("§e§lAmplifiers: §f" + stats.getTotalAmplifiers() + " §7(I: " + stats.amplifierTier1 + " | II: " + stats.amplifierTier2 + " | III: " + stats.amplifierTier3 + ")", centerX, startY);
+        ui.drawCenteredText("§e§lAmplifiers: §f" + stats.getTotalAmplifiers() + " §7(I: " + stats.amplifierTier1 + " | II: " + stats.amplifierTier2 + " | III: " + stats.amplifierTier3 + " | IV: " + stats.amplifierTier4 + ")", centerX, startY);
         startY += lineHeight + 8;
 
         ui.drawCenteredText("§b§lBags: §f" + stats.totalBags + " §7(Stuffed: " + stats.stuffedBags + " | Packed: " + stats.packedBags + " | Varied: " + stats.variedBags + ")", centerX, startY);
@@ -297,7 +299,7 @@ public class RaidLootPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
 
             String textColor = "";
             if(!toggled) textColor = "§7";
@@ -316,7 +318,7 @@ public class RaidLootPage extends PageWidget {
     private static class ShowTotalWidget extends Widget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
 
             ui.drawCenteredText(showRates ? "§a§lShowing: Average/Run" : "§e§lShowing: Totals", x + width / 2f, y + height / 2f);
         }

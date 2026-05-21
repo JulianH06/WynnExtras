@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
@@ -43,6 +43,8 @@ public class ClassWidget extends Widget {
     private final Runnable action;
     private final boolean isAtiveCharacter;
 
+    private static final int MAX_CONTENT_COMPLETION = 1289;
+
     public ClassWidget(CharacterData characterData, boolean isAtiveCharacter) {
         super(0, 0, 0, 0);
         this.characterData = characterData;
@@ -69,7 +71,7 @@ public class ClassWidget extends Widget {
         if(x == 0) return;
 
         Identifier classTexture;
-        if(characterData.getLevel() == 106) {
+        if(characterData.getLevel() == 121) {
             classTexture = getGoldClassTexture(characterData.getType());
         } else {
             classTexture = getClassTexture(characterData.getType());
@@ -78,13 +80,17 @@ public class ClassWidget extends Widget {
         if(selectedCharacter == characterData) {
             if(hovered) {
                 DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureActiveHoveredDark, classBackgroundTextureActiveHovered,  x, y, 390, 132, ui);
-           } else {
+            } else {
                 DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureActiveDark, classBackgroundTextureActive,  x, y, 390, 132, ui);
             }
         } else if(hovered) {
-            DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered,  x, y, 390, 132, ui);
+            float fade = DarkModeToggleWidget.fade;
+            ui.drawImage(classBackgroundTextureHovered, x, y, 390, 132, 0, 10, 130, 44, 130, 54, 1f - fade);
+            ui.drawImage(classBackgroundTextureHoveredDark, x, y, 390, 132, 0, 10, 130, 44, 130, 54, fade);
         } else if(characterData.getTotalLevel() != 1690) {
-            DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture,  x, y, 390, 132, ui);
+            float fade = DarkModeToggleWidget.fade;
+            ui.drawImage(classBackgroundTexture, x, y, 390, 132, 0, 10, 130, 44, 130, 54, 1f - fade);
+            ui.drawImage(classBackgroundTextureDark, x, y, 390, 132, 0, 10, 130, 44, 130, 54, fade);
         } else {
             DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureGoldDark, classBackgroundTextureGold,  x, y, 390, 132, ui);
         }
@@ -93,8 +99,8 @@ public class ClassWidget extends Widget {
             int level = characterData.getLevel();
             int totalLevel = characterData.getTotalLevel();
             CustomColor levelColor;
-            if (characterData.getContentCompletion() == 1133 && !WynnExtrasConfig.INSTANCE.removeChroma) {
-                levelColor = CommonColors.RAINBOW;
+            if (characterData.getContentCompletion() >= MAX_CONTENT_COMPLETION && !WynnExtrasConfig.INSTANCE.removeChroma) {
+                levelColor = WynncraftShaderColor.RAINBOW.color;
             } else {
                 levelColor = CustomColor.fromHexString("FFFFFF");
             }
@@ -103,7 +109,7 @@ public class ClassWidget extends Widget {
             ui.drawText(getClassName(characterData), x + 111, y + 18, levelColor, 2.1f);
             ui.drawText("Level " + level, x + 111, y + 42, levelColor, 2.1f);
             ui.drawText("Total Level " + totalLevel, x + 111, y + 66, levelColor, 2.1f);
-            ui.drawText("Completion " + (characterData.getContentCompletion() * 100/1133) + "%", x + 111, y + 90, levelColor, 2.1f);
+            ui.drawText("Completion " + Math.min(100, characterData.getContentCompletion() * 100 / MAX_CONTENT_COMPLETION) + "%", x + 111, y + 90, levelColor, 2.1f);
         }
 
         List<String> gamemodes = characterData.getGamemode();

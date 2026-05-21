@@ -1,7 +1,9 @@
 package julianh06.wynnextras.mixin;
 
 import julianh06.wynnextras.features.chat.ChatManager;
+import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,9 +14,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ChatScreen.class)
 public class ChatScreenMixin {
 
+    @Inject(method = "render", at = @At("TAIL"))
+    private void renderProfessionOverlay(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        ProfessionOverlay.renderOnScreen(context);
+    }
+
     @Inject(method = "sendMessage", at = @At("HEAD"), cancellable = true)
     private void onSendMessage(String message, boolean addToHistory, CallbackInfo ci) {
-        if (message == null || message.isEmpty() || ChatManager.currentChannel == ChatManager.ChatChannel.ALL) return;
+        if (message == null || message.isEmpty() || ChatManager.getCurrentChannel() == ChatManager.ChatChannel.ALL) return;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         ClientPlayerEntity player = mc.player;

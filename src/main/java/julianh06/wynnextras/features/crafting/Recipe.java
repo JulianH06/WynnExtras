@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.crafting;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.models.character.type.ClassType;
 import com.wynntils.models.elements.type.Skill;
 import com.wynntils.models.gear.type.GearAttackSpeed;
@@ -80,10 +81,10 @@ public class Recipe {
 
     public Recipe(String[] ingredients, Materials materials, Vector2i level, CraftableType type) {
         this(
-                Arrays.stream(ingredients).map(CraftingUtils::getIng).toArray(IngredientInfo[]::new),
-                materials,
-                level,
-                type
+                Arrays.stream(ingredients)
+                    .map(CraftingUtils::getIng)
+                    .toArray(IngredientInfo[]::new),
+                materials, level, type
         );
     }
 
@@ -120,7 +121,7 @@ public class Recipe {
         this.level = level;
         RecipeLoader.RecipeData ranges = RecipeLoader.getRecipe(type, level);
         if (ranges == null) {
-            System.err.println("cannot set recipe to lvl " + this.level + " no constant found");
+            WynnExtras.LOGGER.error("cannot set recipe to lvl " + this.level + " no constant found");
             return;
         }
         this.dura = ranges.durability();
@@ -153,7 +154,7 @@ public class Recipe {
         // 30 and 70 are technically 1 & 2 respectively
         if (level.y <= 29) return 1;
         else if (level.y <= 69) return 2;
-        else return 3; // TODO fruma
+        else return 3;
     }
 
     public Vector2i getDurability(int durabilityModifier) {
@@ -162,13 +163,18 @@ public class Recipe {
         Vector2d durabilityBase = new Vector2d(this.dura);
         durabilityBase = durabilityBase.mul(materials.getMultiplier());
         Vector2d finalDura = durabilityBase.add(durabilityModifier, durabilityModifier);
+        if(finalDura.x < 10) finalDura.x = 1;
+        if(finalDura.y < 10) finalDura.y = 1;
         return new Vector2i((int) Math.round(finalDura.x), (int) Math.round(finalDura.y));
     }
 
     public Vector2i getDuration(int modifier) {
         Vector2d base = new Vector2d(this.dura);
         if (!getType().isConsumable()) return null;
+        base = base.mul(materials.getMultiplier());
         Vector2d finalDuration = base.add(modifier, modifier);
+        if(finalDuration.x < 10) finalDuration.x = 10;
+        if(finalDuration.y < 10) finalDuration.y = 10;
         return new Vector2i((int) finalDuration.x, (int) finalDuration.y);
     }
 
@@ -232,17 +238,17 @@ public class Recipe {
 
     private boolean checkValidity() {
         if (this.materials == null) {
-            System.out.println("Invalid material tier");
+            WynnExtras.LOGGER.info("Invalid material tier");
             return false;
         }
 
         if (dura == null) {
-            System.out.println("Invalid dura");
+            WynnExtras.LOGGER.info("Invalid dura");
             return false;
         }
 
         if (ingredients.length != 6) {
-            System.err.println("cannot create recipe without 6 ingredients");
+            WynnExtras.LOGGER.error("cannot create recipe without 6 ingredients");
             return false;
         }
         for (IngredientInfo ing : ingredients) {
@@ -251,13 +257,13 @@ public class Recipe {
             }
 
             if (!ing.professions().contains(getType().getStation())) {
-                System.out.println("cannot use " + ing.name() + " for " + getType().getStation());
+                WynnExtras.LOGGER.info("cannot use " + ing.name() + " for " + getType().getStation());
                 return false;
             }
 
             int levelReq = ing.level();
             if (levelReq > getLevel().y) {
-                System.out.println("cannot use ingredient " + ing.name() + " for lvl range "
+                WynnExtras.LOGGER.info("cannot use ingredient " + ing.name() + " for lvl range "
                         + getLevel().x + "-" + getLevel().y
                         + " requires lvl " + levelReq);
                 return false;

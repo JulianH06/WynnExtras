@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import julianh06.wynnextras.features.aspects.pages.LootrunLootPoolPage;
@@ -53,17 +54,33 @@ public class LootrunLootPoolData {
         public LootrunItem(String name, String rarity, String type) {
             this.name = name;
             this.rarity = rarity;
-            this.type = type;
+            this.type = type != null ? type : "normal";
             this.tooltip = "";
             this.shinyStat = "";
+            normalizeShinyType();
         }
 
         public LootrunItem(String name, String rarity, String type, String tooltip, String shinyStat) {
             this.name = name;
             this.rarity = rarity;
-            this.type = type;
+            this.type = type != null ? type : "normal";
             this.tooltip = tooltip != null ? tooltip : "";
             this.shinyStat = shinyStat != null ? shinyStat : "";
+            normalizeShinyType();
+        }
+
+        public void normalizeShinyType() {
+            if (!"shiny".equals(type)) {
+                shinyStat = "";
+                return;
+            }
+
+            if (!hasShinyName(name)) {
+                type = determineType(name);
+                if (!"shiny".equals(type)) {
+                    shinyStat = "";
+                }
+            }
         }
 
         /**
@@ -74,10 +91,16 @@ public class LootrunLootPoolData {
             String lower = name.toLowerCase();
             if (lower.contains("tome")) {
                 return "tome";
+            } else if (lower.contains("ward")) {
+                return "ward";
             } else if (lower.contains("shiny")) {
                 return "shiny";
             }
             return "normal";
+        }
+
+        public static boolean hasShinyName(String name) {
+            return name != null && name.toLowerCase().contains("shiny");
         }
     }
 
@@ -119,6 +142,9 @@ public class LootrunLootPoolData {
      * Save a camp's loot pool with items
      */
     public void saveLootPool(String camp, List<LootrunItem> items) {
+        for (LootrunItem item : items) {
+            item.normalizeShinyType();
+        }
         lootPools.put(camp, new ArrayList<>(items));
         savedTimestamp = System.currentTimeMillis();
         save();
@@ -134,7 +160,11 @@ public class LootrunLootPoolData {
             clear();
             return new ArrayList<>();
         }
-        return lootPools.getOrDefault(camp, new ArrayList<>());
+        List<LootrunItem> pool = lootPools.getOrDefault(camp, new ArrayList<>());
+        for (LootrunItem item : pool) {
+            item.normalizeShinyType();
+        }
+        return pool;
     }
 
     /**
@@ -164,7 +194,7 @@ public class LootrunLootPoolData {
                 GSON.toJson(this, writer);
             }
         } catch (Exception e) {
-            System.err.println("Failed to save lootrun loot pool data: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to save lootrun loot pool data: " + e.getMessage());
         }
     }
 
@@ -188,7 +218,7 @@ public class LootrunLootPoolData {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Failed to load lootrun loot pool data: " + e.getMessage());
+            WynnExtras.LOGGER.error("Failed to load lootrun loot pool data: " + e.getMessage());
         }
     }
 
@@ -218,6 +248,10 @@ public class LootrunLootPoolData {
             return "CORK";
         } else if (screenTitle.endsWith("\uF006")) {
             return "COTL";
+        } else if (screenTitle.endsWith("\uF04A")) {
+            return "WFF";
+        } else if (screenTitle.endsWith("\uF049")) {
+            return "EFF";
         }
         return null;
     }
@@ -230,6 +264,8 @@ public class LootrunLootPoolData {
                screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF009") || // Sky Islands
                screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF008") || // Molten Heights
                screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF007") || // Corkus
-               screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF006");   // Canyon of the Lost
+               screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF006") || // Canyon of the Lost
+               screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF04A") || // West Fruma Foray
+               screenTitle.equals("\uDAFF\uDFF2\uE00A\uDAFF\uDF6F\uF049"); // East Fruma Foray
     }
 }

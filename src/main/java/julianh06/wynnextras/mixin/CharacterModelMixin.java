@@ -1,12 +1,16 @@
 package julianh06.wynnextras.mixin;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.core.components.Models;
 import com.wynntils.models.character.CharacterModel;
 import com.wynntils.models.worlds.event.WorldStateEvent;
+import com.wynntils.models.worlds.type.WorldState;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.features.inventory.BankOverlay;
+import julianh06.wynnextras.features.misc.HuntedModeTracker;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.data.CharacterBankData;
+import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.utils.TickScheduler;
@@ -26,6 +30,13 @@ public class CharacterModelMixin {
     @Shadow
     private int level;
 
+    @Inject(method = "onWorldStateChanged", at = @At("HEAD"))
+    private void resetHuntedOnStateChange(WorldStateEvent e, CallbackInfo ci) {
+        if (e.getNewState() == WorldState.CHARACTER_SELECTION) {
+            HuntedModeTracker.huntedMode = false;
+        }
+    }
+
     @Inject(
             method = "onWorldStateChanged",
             at = @At(
@@ -38,6 +49,12 @@ public class CharacterModelMixin {
         String id = this.id;
 
         if (id == null || id.isEmpty() || id.equals("-")) {
+            BankOverlay.currentCharacterID = null;
+            BankOverlay.Pages = null;
+            BankOverlay.currentData = null;
+            BankOverlay.activeInvSlots.clear();
+            BankOverlay.annotationCache.clear();
+            BankOverlay.expectedOverlayType = BankOverlayType.NONE;
             return;
         }
 
@@ -50,6 +67,9 @@ public class CharacterModelMixin {
         BankOverlay.currentCharacterID = id;
         CharacterBankData.INSTANCE.load();
 
+        // Reset profession overlay state on character swap
+        ProfessionOverlay.onCharacterSwap();
+
         // Delay to allow Wynntils to finish populating character data
         final String characterId = id;
         TickScheduler.runAfterTicks(40, () -> {
@@ -59,27 +79,27 @@ public class CharacterModelMixin {
 
     private void updateCharacterInfo(String characterId) {
         try {
+            if (!characterId.equals(BankOverlay.currentCharacterID)) return;
             // First try Wynntils local data
             String actualName = Models.Character.getActualName();
             int combatLevel = this.level;
 
-            System.out.println("[WynnExtras] Wynntils data - Name: " + actualName + ", Level: " + combatLevel);
+            WynnExtras.LOGGER.info("[WynnExtras] Wynntils data - Name: " + actualName + ", Level: " + combatLevel);
 
             // If level is 0 or name is basic, try Wynncraft API for better data
             if (combatLevel == 0 || actualName == null || actualName.isEmpty()) {
                 fetchCharacterFromApi(characterId);
             } else {
                 // Save Wynntils data
-                CharacterBankData.INSTANCE.characterNickname = actualName;
-                CharacterBankData.INSTANCE.characterLevel = combatLevel;
+                CharacterBankData.INSTANCE.setCharacterInfo(actualName, combatLevel);
                 CharacterBankData.INSTANCE.save();
-                System.out.println("[WynnExtras] Saved character: " + actualName + " Lv." + combatLevel + " for ID: " + characterId);
+                WynnExtras.LOGGER.info("[WynnExtras] Saved character: " + actualName + " Lv." + combatLevel + " for ID: " + characterId);
 
                 // Also try API to get Champion nickname if available
                 fetchCharacterFromApi(characterId);
             }
         } catch (Exception ex) {
-            System.err.println("[WynnExtras] Failed to get character info: " + ex.getMessage());
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to get character info: " + ex.getMessage());
         }
     }
 
@@ -88,6 +108,7 @@ public class CharacterModelMixin {
 
         String playerName = McUtils.player().getName().getString();
         WynncraftApiHandler.fetchPlayerData(playerName).thenAccept(playerData -> {
+            if (!characterId.equals(BankOverlay.currentCharacterID)) return;
             if (playerData == null) return;
 
             Map<String, CharacterData> characters = playerData.getCharacters();
@@ -118,11 +139,19 @@ public class CharacterModelMixin {
                     int apiLevel = charData.getLevel();
 
                     if (displayName != null && !displayName.isEmpty()) {
-                        CharacterBankData.INSTANCE.characterNickname = displayName;
-                        CharacterBankData.INSTANCE.characterLevel = apiLevel;
+                        CharacterBankData.INSTANCE.setCharacterInfo(displayName, apiLevel);
                         CharacterBankData.INSTANCE.save();
-                        System.out.println("[WynnExtras] API updated character: " + displayName + " Lv." + apiLevel + " for ID: " + characterId);
+                        WynnExtras.LOGGER.info("[WynnExtras] API updated character: " + displayName + " Lv." + apiLevel + " for ID: " + characterId);
                     }
+
+                    // Initialize profession overflow XP from API
+                    ProfessionOverlay.initOverflowFromApi(characterId, charData);
+
+                    // Fetch leaderboard data for max-level professions
+                    // Delay slightly to let Wynntils profession levels load
+                    julianh06.wynnextras.utils.TickScheduler.runAfterTicks(60, () -> {
+                        ProfessionOverlay.fetchLeaderboardForAllProfessions();
+                    });
                     break;
                 }
             }

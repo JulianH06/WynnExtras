@@ -12,7 +12,7 @@ public class NecklaceRecipes implements IRecipeData {
     public static NecklaceRecipes INSTANCE = new NecklaceRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Gem.COPPER, 3), new Pair<>(Oil.GUDGEON, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Gem.GRANITE, 6), new Pair<>(Oil.TROUT, 2));
@@ -32,10 +32,14 @@ public class NecklaceRecipes implements IRecipeData {
             return List.of(new Pair<>(Gem.DIAMOND, 15), new Pair<>(Oil.BASS, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Gem.MOLTEN, 18), new Pair<>(Oil.MOLTEN, 6));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Gem.VOIDSTONE, 18), new Pair<>(Oil.STARFISH, 6));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Gem.DERNIC, 18), new Pair<>(Oil.DERNIC, 6));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Gem.TITANIUM, 21), new Pair<>(Oil.STURGEON, 7));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Gem.CINNABAR, 21), new Pair<>(Oil.MAHSEER, 7));
         } else {
             return List.of();
         }

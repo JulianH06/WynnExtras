@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.guildviewer;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.RenderUtils;
@@ -52,6 +53,9 @@ import java.util.*;
 import static julianh06.wynnextras.utils.UI.UIUtils.*;
 
 public class GVScreen extends WEScreen {
+    @Override protected double getTargetScaleFactor() { return 2.5; }
+    @Override protected int getMinLogicalWidth()  { return 1900; }
+    @Override protected int getMinLogicalHeight() { return 870; }
     static Identifier onlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle_dark.png");
     static Identifier onlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle.png");
 
@@ -126,15 +130,22 @@ public class GVScreen extends WEScreen {
     //im drawing the tab stuff in updateValues so the background has to be rendered first that's why this override exists
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         mouseInMenu = false;
-        PVScreen.mouseX = mouseX;
-        PVScreen.mouseY = mouseY;
 
         this.drawContext = context;
         computeScaleAndOffsets();
         if (ui == null) ui = new UIUtils(context, scaleFactor, xStart, yStart);
         else ui.updateContext(context, scaleFactor, xStart, yStart);
 
+        mouseX = (int)(mouseX / matrixScale);
+        mouseY = (int)(mouseY / matrixScale);
+        PVScreen.mouseX = mouseX;
+        PVScreen.mouseY = mouseY;
+
         ui.drawBackground();
+
+        context.getMatrices().pushMatrix();
+        context.getMatrices().scale((float) matrixScale, (float) matrixScale);
+
         backgroundImageWidget.draw(context, mouseX, mouseY, delta, ui);
         updateValues();
         updateVisibleListRange();
@@ -161,6 +172,8 @@ public class GVScreen extends WEScreen {
         if (openInBrowserButton != null) {
             openInBrowserButton.setX((int) (xStart / scaleFactor));
             openInBrowserButton.setY((int) ((yStart + backgroundImageWidget.getHeight()) / scaleFactor) + 1);
+            openInBrowserButton.setWidth((float) (260 / scaleFactor));
+            openInBrowserButton.setHeight((float) (60 / scaleFactor));
             openInBrowserButton.buttonText = "Open in browser";
 
             PVScreen.DarkModeToggleWidget.drawImageWithFade(openInBrowserButtonTextureDark, openInBrowserButtonTexture, xStart, yStart + backgroundImageWidget.getHeight(), 260, 60, ui);
@@ -184,14 +197,14 @@ public class GVScreen extends WEScreen {
         if (searchBar != null) {
             searchBar.setX((int) ((xStart + 89 * 3) / ui.getScaleFactor()));
             searchBar.setY((int) ((yStart + backgroundImageWidget.getHeight() + 20) / scaleFactor) + 1);
-            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"));
+            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"), (float) ui.getScaleFactor());
         }
 
         if (GV.currentGuildData == null) return;
         if (GV.currentGuildData.members == null) return;
 
         int textX = xStart + 1180;
-        int spacing = 150;
+        int spacing = 160;
 
         int contentHeight = 100;
 
@@ -208,8 +221,7 @@ public class GVScreen extends WEScreen {
         ui.drawCenteredText("Level " + GV.currentGuildData.level, xStart + 285, yStart + 590);
         PVScreen.DarkModeToggleWidget.drawImageWithFade(xpbarbackground_dark, xpbarbackground, xStart + 66, yStart + 540, 435, 30, ui);
 
-        context.enableScissor((int) ui.sx(xStart + 66), (int) ui.sy(yStart + 540), (int) ui.sx(xStart + 66 + 435 * (GV.currentGuildData.xpPercent / 100f)), (int) ui.sy(yStart + 540 + 35));
-        ui.drawImage(xpbarprogress, xStart + 66, yStart + 540, 435, 30);
+        context.enableScissor((int) ui.sx(xStart + 66), (int) ui.sy(yStart + 540), (int) ui.sx(xStart + 66 + 435 * (GV.currentGuildData.xpPercent / 100f)), (int) ui.sy(yStart + 540 + 35));ui.drawImage(xpbarprogress, xStart + 66, yStart + 540, 435, 30);
         context.disableScissor();
 
         PVScreen.DarkModeToggleWidget.drawImageWithFade(xpbarborder_dark, xpbarborder, xStart + 66, yStart + 540, 435, 30, ui);
@@ -241,10 +253,10 @@ public class GVScreen extends WEScreen {
         if (bannerBlockEntity != null) {
             bannerGuiState = new BannerGuiElementState(
                     new BannerFlagBlockModel(MinecraftClient.getInstance().getLoadedEntityModels().getModelPart(EntityModelLayers.STANDING_BANNER_FLAG)), bannerBlockEntity.getColorForState(), bannerBlockEntity.getPatterns(),
-                    (int) (x1 / scaleFactor), (int) (y1 / scaleFactor),
-                    (int) (x2 / scaleFactor), (int) (y2 / scaleFactor),
+                    (int) (x1 * matrixScale / scaleFactor), (int) (y1 * matrixScale / scaleFactor),
+                    (int) (x2 * matrixScale / scaleFactor), (int) (y2 * matrixScale / scaleFactor),
                     context.scissorStack.peekLast(),
-                    48 * 3 / ui.getScaleFactorF()
+                    (float)(48 * 3 * matrixScale / scaleFactor)
             );
 
             ui.drawImage(
@@ -303,7 +315,7 @@ public class GVScreen extends WEScreen {
 
         ui.drawCenteredText("★★★★★ OWNER ★★★★★", textX, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.owner != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,
@@ -321,7 +333,7 @@ public class GVScreen extends WEScreen {
         contentHeight += 25;
         ui.drawCenteredText("★★★★ CHIEF ★★★★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.chief != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,
@@ -339,7 +351,7 @@ public class GVScreen extends WEScreen {
         contentHeight += 25;
         ui.drawCenteredText("★★★ STRATEGIST ★★★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.strategist != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,
@@ -357,7 +369,7 @@ public class GVScreen extends WEScreen {
         contentHeight += 25;
         ui.drawCenteredText("★★ CAPTAIN ★★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.captain != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,
@@ -375,7 +387,7 @@ public class GVScreen extends WEScreen {
         contentHeight += 25;
         ui.drawCenteredText("★ RECRUITER ★", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.recruiter != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,
@@ -393,7 +405,7 @@ public class GVScreen extends WEScreen {
         contentHeight += 25;
         ui.drawCenteredText("RECRUIT", xStart + 1180, yStart + yOffset + contentHeight, CustomColor.fromHexString("00FFFF"));
         contentHeight += 50;
-        {
+        if(GV.currentGuildData.members.recruit != null) {
             Pair<Integer, Integer> result = setWidgetBounds(
                     memeberWidgets,
                     count,
@@ -429,6 +441,8 @@ public class GVScreen extends WEScreen {
 
         scrollBarWidget.setBounds(xStart + 1820, yStart, 30, 750);
         scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
+
+        context.getMatrices().popMatrix();
     }
 
     @Override
@@ -443,8 +457,8 @@ public class GVScreen extends WEScreen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubleClick) {
-        double mouseX = click.x();
-        double mouseY = click.y();
+        double mouseX = click.x() / matrixScale;
+        double mouseY = click.y() / matrixScale;
         int button = click.button();
 
         if(scrollBarWidget != null) scrollBarWidget.mouseClicked(mouseX, mouseY, button);
@@ -478,8 +492,8 @@ public class GVScreen extends WEScreen {
 
     @Override
     public boolean mouseReleased(Click click) {
-        double mouseX = click.x();
-        double mouseY = click.y();
+        double mouseX = click.x() / matrixScale;
+        double mouseY = click.y() / matrixScale;
         int button = click.button();
 
         if(scrollBarWidget != null) scrollBarWidget.mouseReleased(mouseX, mouseY, button);
@@ -571,7 +585,7 @@ public class GVScreen extends WEScreen {
             case "TRIANGLES_BOTTOM" -> lookup.getOrThrow(BannerPatterns.TRIANGLES_BOTTOM);
             case "TRIANGLES_TOP" -> lookup.getOrThrow(BannerPatterns.TRIANGLES_TOP);
             default -> {
-                System.err.println("[WynnExtras] Unknown banner pattern: " + patternName);
+                WynnExtras.LOGGER.error("[WynnExtras] Unknown banner pattern: " + patternName);
                 yield null;
             }
         };
@@ -586,7 +600,7 @@ public class GVScreen extends WEScreen {
             int yOffset,
             int spacing
     ) {
-        int widgetHeight = 120;
+        int widgetHeight = 150;
         int widgetWidth = 350;
 
         int index = 0;
@@ -648,13 +662,21 @@ public class GVScreen extends WEScreen {
 
     private static class GuildMemeberWidget extends Widget {
         static Identifier classBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive.png");
+        static Identifier classBackgroundTextureOnline = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive_online.png");
         static Identifier classBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive_dark.png");
+        static Identifier classBackgroundTextureDarkOnline = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive_dark_online.png");
 
         static Identifier classBackgroundTextureHovered = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered.png");
+        static Identifier classBackgroundTextureHoveredOnline = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered_online.png");
         static Identifier classBackgroundTextureHoveredDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered_dark.png");
+        static Identifier classBackgroundTextureHoveredDarkOnline = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundhovered_dark_online.png");
 
         static Identifier onlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle_dark.png");
         static Identifier onlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle.png");
+        private static final float SERVER_TEXT_SCALE = 2.25f;
+        private static final float SERVER_TEXT_X = 40f;
+        private static final float FOUR_CHARACTER_SERVER_TEXT_WIDTH =
+                MinecraftClient.getInstance().textRenderer.getWidth("eu34") * SERVER_TEXT_SCALE;
 
         private final Runnable action;
 
@@ -681,12 +703,14 @@ public class GVScreen extends WEScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(hovered && mouseInMenu) {
-                PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered, x, y, width, height, ui);
+                if(member.online) PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDarkOnline, classBackgroundTextureHoveredOnline, x, y, width, height, ui);
+                else PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered, x, y, width, height, ui);
             } else {
-                PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture,  x, y, width, height, ui);
+                if(member.online) PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDarkOnline, classBackgroundTextureOnline, x, y, width, height, ui);
+                else PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture,  x, y, width, height, ui);
             }
             //ui.drawRect(x, y, width, height);
-            ui.drawCenteredText(member.username, x + 175, y + 25);
+            ui.drawCenteredText(member.username, x + 175, y + 60);
 
             Instant instant = Instant.parse(member.joined);
             ZoneId zone = ZoneId.systemDefault();
@@ -696,12 +720,17 @@ public class GVScreen extends WEScreen {
                     .withZone(zone);
 
             String formatted = formatter.format(instant);
-            ui.drawCenteredText("Joined: " + formatted, x + 175, y + 55);
+            ui.drawCenteredText("Joined: " + formatted, x + 175, y + 90);
 
-            ui.drawCenteredText("Contributed: " + formatLong(member.contributed), x + 175, y + 85);
+            ui.drawCenteredText("Contributed: " + formatLong(member.contributed), x + 175, y + 120);
 
             if(member.online) {
-                PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, x + 5, y + 5, 20, 20, ui);
+                PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, x + 18, y + 6, 18, 18, ui);
+                if (member.server != null && !member.server.isEmpty()) {
+                    float serverTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(member.server) * SERVER_TEXT_SCALE;
+                    float serverTextX = x + SERVER_TEXT_X + Math.max(0f, (FOUR_CHARACTER_SERVER_TEXT_WIDTH - serverTextWidth) / 2f);
+                    ui.drawText("§a" + member.server, serverTextX, y + 8, CustomColor.fromHexString("FFFFFF"), SERVER_TEXT_SCALE);
+                }
             }
         }
 
@@ -745,31 +774,7 @@ public class GVScreen extends WEScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             currentMouseY = mouseY;
-
-            int scale = 5;
-
-            ui.drawSliderBackground(x, y, width, height, scale, false);
-
-            if (PVScreen.DarkModeToggleWidget.fade > 0.001f) {
-                RenderUtils.drawRect(
-                        ctx,
-                        CustomColor.fromHexString("1b1b1c").withAlpha(PVScreen.DarkModeToggleWidget.fade),
-                        ui.sx(x + scale) - 1,
-                        ui.sy(y + scale) - 1,
-                        ui.sw(width - scale * 2) + 2,
-                        ui.sh(height - scale * 2) + 2
-                );
-            }
-
-            ui.drawButtonTextures(
-                    x, y, width, height, scale,
-                    WynnExtrasConfig.INSTANCE.pvDarkmodeToggle,
-                    sliderButtontlDark, sliderButtontrDark, sliderButtonblDark, sliderButtonbrDark,
-                    sliderButtontopDark, sliderButtonbotDark, sliderButtonleftDark, sliderButtonrightDark,
-                    sliderButtontl, sliderButtontr, sliderButtonbl, sliderButtonbr,
-                    sliderButtontop, sliderButtonbot, sliderButtonleft, sliderButtonright, 1
-            );
-
+            ui.drawSliderFade(x, y, width, height, 5, PVScreen.DarkModeToggleWidget.fade);
             updateScrollButton(mouseY);
         }
 
@@ -834,4 +839,3 @@ public class GVScreen extends WEScreen {
         }
     }
 }
-

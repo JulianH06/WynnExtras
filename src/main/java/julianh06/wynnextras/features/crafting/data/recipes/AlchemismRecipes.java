@@ -2,8 +2,8 @@ package julianh06.wynnextras.features.crafting.data.recipes;
 
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
-import julianh06.wynnextras.features.crafting.data.materials.Oil;
 import julianh06.wynnextras.features.crafting.data.materials.Grains;
+import julianh06.wynnextras.features.crafting.data.materials.Oil;
 import julianh06.wynnextras.utils.Pair;
 
 import java.util.List;
@@ -12,7 +12,7 @@ public class AlchemismRecipes implements IRecipeData {
     public static AlchemismRecipes INSTANCE = new AlchemismRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Grains.WHEAT, 2), new Pair<>(Oil.GUDGEON, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Grains.BARLEY, 4), new Pair<>(Oil.TROUT, 2));
@@ -32,10 +32,14 @@ public class AlchemismRecipes implements IRecipeData {
             return List.of(new Pair<>(Grains.RICE, 10), new Pair<>(Oil.BASS, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Grains.SORGHUM, 12), new Pair<>(Oil.MOLTEN, 6));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Grains.HEMP, 12), new Pair<>(Oil.STARFISH, 6));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Grains.DERNIC, 12), new Pair<>(Oil.DERNIC, 6));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Grains.JUTE, 14), new Pair<>(Oil.STURGEON, 7));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Grains.HEATHER, 14), new Pair<>(Oil.MAHSEER, 7));
         } else {
             return List.of();
         }

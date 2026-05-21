@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.crafting.data;
 
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.utils.UI.UIUtils;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.client.MinecraftClient;
@@ -45,6 +46,7 @@ public final class MaterialTextureResolver implements SimpleSynchronousResourceR
     public void reload(ResourceManager manager) {
         this.manager = manager;
         resolved.clear();
+        UIUtils.clearSeparatorCache();
     }
 
     private Identifier resolveInternal(Identifier serverTexture, Identifier fallbackTexture) {

@@ -1,52 +1,25 @@
 package julianh06.wynnextras.features.abilitytree;
 
-import com.wynntils.core.WynntilsMod;
-import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
-import com.wynntils.handlers.container.scriptedquery.QueryStep;
-import com.wynntils.handlers.container.scriptedquery.ScriptedContainerQuery;
-import com.wynntils.handlers.container.type.ContainerContent;
-import com.wynntils.handlers.container.type.ContainerContentChangeType;
-import com.wynntils.models.character.CharacterModel;
 import com.wynntils.models.character.type.ClassType;
 import com.wynntils.models.character.type.SavableSkillPointSet;
-import com.wynntils.models.containers.ContainerModel;
-import com.wynntils.models.elements.type.Skill;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.items.game.CraftedGearItem;
-import com.wynntils.models.items.items.game.GearItem;
-import com.wynntils.models.items.items.game.TomeItem;
-import com.wynntils.models.items.items.gui.SkillPointItem;
-import com.wynntils.models.stats.type.SkillStatType;
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.LoreUtils;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
-import com.wynntils.utils.wynn.ContainerUtils;
-import com.wynntils.utils.wynn.InventoryUtils;
-import it.unimi.dsi.fastutil.ints.Int2ObjectFunction;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
-import julianh06.wynnextras.features.profileviewer.Searchbar;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeData;
 import julianh06.wynnextras.features.profileviewer.tabs.TreeTabWidget;
 import julianh06.wynnextras.utils.UI.*;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static julianh06.wynnextras.features.profileviewer.PVScreen.*;
-import static julianh06.wynnextras.features.profileviewer.PVScreen.treeSearchBar;
 
 public class TreeScreen extends WEScreen {
     private Map<String, TreeData> trees = new HashMap<>();
@@ -279,7 +252,7 @@ public class TreeScreen extends WEScreen {
             rootWidgets.add(treeSearchBar);
             //treeSearchBar.draw(ctx, mouseX, mouseY, tickDelta, ui);
         } else {
-            ui.drawButton(x + sectionWidth + 40, getLogicalHeight() - 50, sectionWidth, 50, 17, treeSearchBar.isHovered());
+            ui.drawButton(x + sectionWidth + 40, getLogicalHeight() - 50, sectionWidth, 50, treeSearchBar.isHovered());
             treeSearchBar.setBounds(x + sectionWidth + 43, getLogicalHeight() - 50, sectionWidth, 40);
             treeSearchBar.draw(ctx, mouseX, mouseY, tickDelta, ui);
         }
@@ -383,7 +356,7 @@ public class TreeScreen extends WEScreen {
                 if(element.nameInput == null) continue;
 
                 element.nameInput.setFocused(false);
-                element.nameInput.blinkToggle = false;
+                element.nameInput.setBlinkToggle(false);
             }
             return super.mouseClicked(mx, my, button);
         }
@@ -455,7 +428,7 @@ public class TreeScreen extends WEScreen {
             int iconSize = 75;
             int spacing = 18;
 
-            ui.drawButton(x + width / 2f - 20, y + 55, width / 2f + 20, iconSize + 50, 17, false);
+            ui.drawButton(x + width / 2f - 20, y + 55, width / 2f + 20, iconSize + 50, false);
 
             if(!pendingDeletion) {
                 if(yesButton != null) {
@@ -497,7 +470,7 @@ public class TreeScreen extends WEScreen {
                 noButton.setBounds((int) (x + width * 3/4f + 72.5f) - 50, y + 110, 100, 50);
             }
 
-            ui.drawButton(x, y, width - 60, 50, 17, nameInput.isHovered());
+            ui.drawButton(x, y, width - 60, 50, nameInput.isHovered());
 
             //ui.drawText(data.name, x, y);
             //ui.drawRect(x, y, width, height);
@@ -531,37 +504,52 @@ public class TreeScreen extends WEScreen {
                 this.withSkillpoints = withSkillpoints;
                 this.action = () -> {
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    TreeData tree = TreeData.getTree(treeName);
-                    if (tree == null) {
+                    TreeData tree1 = TreeData.getTree(treeName);
+                    if (tree1 == null) {
                         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("This tree doesn't exist.")));
                         return;
                     }
+
+                    String classKey = tree1.className.toLowerCase(Locale.ROOT);
+
+                    // If the live API data isn't cached yet, trigger the load and tell the user to retry.
+                    if (AbilityTreeCache.getClassTree(classKey) == null || AbilityTreeCache.getClassMap(classKey) == null) {
+                        AbilityTreeCache.loadClassTree(classKey);
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                Text.of("Loading ability data for " + tree1.className + " from the Wynn API, please click Load again in a moment.")
+                        ));
+                        return;  // <-- do NOT proceed, data isn't ready
+                    }
+
+                    // Data is ready — plan and start loading.
+                    List<AbilityMapData.Node> nodes = ApiAbilityPlanner.planFromSavedTree(tree1);
+                    if (nodes.isEmpty()) {
+                        return; // planner already printed the reason
+                    }
+
                     McUtils.mc().setScreen(null);
                     TreeLoader.resetAll();
                     TreeLoader.wasStarted = true;
                     TreeLoader.resetTree = true;
-                    List<AbilityTreeData.Ability> abilities = TreeLoader.calculateNodeOrder(tree.playerTree.archetypes, TreeLoader.convertNodeMapToList(tree.playerMap), new ArrayList<>(), tree.playerTree);
-
-                    List<AbilityMapData.Node> nodes = new ArrayList<>();
-                    for(AbilityTreeData.Ability ability : abilities) {
-                        nodes.add(TreeLoader.getNodeFromAbility(ability, tree.playerMap));
-                    }
                     TreeLoader.abilitiesToClick2 = nodes;
                     TreeLoader.loadSkillpoints = withSkillpoints;
+
                     int[] points = new int[5];
-                    points[0] = tree.strength;
-                    points[1] = tree.dexterity;
-                    points[2] = tree.intelligence;
-                    points[3] = tree.defence;
-                    points[4] = tree.agility;
+                    points[0] = tree1.strength;
+                    points[1] = tree1.dexterity;
+                    points[2] = tree1.intelligence;
+                    points[3] = tree1.defence;
+                    points[4] = tree1.agility;
                     TreeLoader.skillPointSet = withSkillpoints ? new SavableSkillPointSet(points) : null;
-                    TreeLoader.classTree = tree.playerTree;
+
+                    AbilityTreeData liveClassTree = AbilityTreeCache.getClassTree(classKey);
+                    TreeLoader.classTree = liveClassTree != null ? liveClassTree : tree1.playerTree;
                 };
             }
 
-            @Override
+                @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 17, hovered);
+                ui.drawButton(x, y, width, height, hovered);
                 //ui.drawRect(x, y, width, height);
                 ui.drawCenteredText("Load Tree" + (withSkillpoints ? " and Skillpoints" : ""), x + width / 2f, y + height / 2f);
             }
@@ -591,7 +579,7 @@ public class TreeScreen extends WEScreen {
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
 
-                ui.drawButton(x, y, width, height, 17, hovered);
+                ui.drawButton(x, y, width, height, hovered);
                 //ui.drawRect(x, y, width, height);
                 ui.drawCenteredText("View Tree", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), (height == 60 ? 3f : 4f));
             }
@@ -617,7 +605,7 @@ public class TreeScreen extends WEScreen {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 17, hovered);
+                ui.drawButton(x, y, width, height, hovered);
                 //ui.drawText("DELETE", x + width - 65, y + 12, CustomColor.fromHexString("FF0000"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, 3f);
                 ui.drawImage(trashcan, x + 10, y + 10, 30, 30);
             }
@@ -659,7 +647,7 @@ public class TreeScreen extends WEScreen {
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawButton(x, y, width, height, 17, hovered);
+                ui.drawButton(x, y, width, height, hovered);
                 ui.drawCenteredText(yesno ? "YES" : "NO", x + 50, y + 25, CustomColor.fromHexString("FFFFFF"), 2.75f);
                 //ui.drawImage(trashcan, x + 10, y + 10, 30, 30);
             }

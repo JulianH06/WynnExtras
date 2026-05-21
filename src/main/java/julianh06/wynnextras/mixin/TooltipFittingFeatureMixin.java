@@ -1,19 +1,16 @@
 package julianh06.wynnextras.mixin;
 
 import com.wynntils.features.tooltips.TooltipFittingFeature;
-import com.wynntils.models.gear.type.GearTier;
-import com.wynntils.models.items.WynnItem;
 import com.wynntils.utils.mc.TooltipUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.inventory.WeightDisplay;
-import julianh06.wynnextras.utils.ItemUtils;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Mixin (value = TooltipFittingFeature.class, remap = false)
@@ -26,15 +23,35 @@ public class TooltipFittingFeatureMixin {
             )
     )
     private List<TooltipComponent> redirectGetClientTooltipComponent(List<Text> components) {
-        if (!WynnExtrasConfig.INSTANCE.showWeight) {
+        var currentHoveredStack = WeightDisplay.getCurrentHoveredStack();
+        if (!WynnExtrasConfig.INSTANCE.showWeight || currentHoveredStack == null)
             return TooltipUtils.getClientTooltipComponent(components);
-        }
 
-        if (!ItemUtils.isTier(WeightDisplay.currentHoveredStack, GearTier.MYTHIC)) {
+        if (!WeightDisplay.isTrackedMythic(currentHoveredStack))
             return TooltipUtils.getClientTooltipComponent(components);
-        }
-        List<Text> modified = TooltipUtils.getWynnItemTooltip(WeightDisplay.currentHoveredStack, WeightDisplay.currentHoveredWynnitem);
-        return TooltipUtils.getClientTooltipComponent(modified);
 
+        String cleanName = WeightDisplay.extractCleanName(currentHoveredStack);
+        WeightDisplay.ItemData scaleData = WeightDisplay.weightCacheByHash.get(currentHoveredStack.getComponents().hashCode());
+        WeightDisplay.ItemData itemData = WeightDisplay.itemCache.get(cleanName);
+        if (scaleData == null || scaleData.data().isEmpty() || itemData == null) return TooltipUtils.getClientTooltipComponent(components);
+
+        int idx = Math.min(itemData.index(), scaleData.data().size() - 1);
+
+        List<Text> expanded = new ArrayList<>(components);
+        for (int i = 0; i < scaleData.data().size(); i++) expanded.add(Text.empty());
+        if (scaleData.data().size() > 1) expanded.add(Text.empty());
+        // per-stat weight lines
+        if (WynnExtrasConfig.INSTANCE.showScales) {
+            WeightDisplay.WeightData profile = itemData.data().get(idx);
+            for (Text line : components) {
+                String[] parts = WeightDisplay.extractStatFromLine(line.getString());
+                if (parts == null) continue;
+                String apiName = WeightDisplay.resolveIdentKey(parts[0], parts[1])[0];
+                if (profile.identifications().getOrDefault(apiName, 0f) != 0f) expanded.add(Text.empty());
+            }
+        }
+        return TooltipUtils.getClientTooltipComponent(expanded);
+
+        //this is still not perfect but better than the tooltip being cut off
     }
 }

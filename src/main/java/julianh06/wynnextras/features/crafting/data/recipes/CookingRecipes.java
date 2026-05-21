@@ -12,7 +12,7 @@ public class CookingRecipes implements IRecipeData {
     public static CookingRecipes INSTANCE = new CookingRecipes();
 
     public List<Pair<IMaterial, Integer>> getMaterials(int level) {
-        if(level < 10) {
+        if (level < 10) {
             return List.of(new Pair<>(Meat.GUDGEON, 2), new Pair<>(Grains.WHEAT, 1));
         } else if (level < 20) {
             return List.of(new Pair<>(Meat.TROUT, 4), new Pair<>(Grains.BARLEY, 2));
@@ -32,10 +32,14 @@ public class CookingRecipes implements IRecipeData {
             return List.of(new Pair<>(Meat.BASS, 10), new Pair<>(Grains.RICE, 5));
         } else if (level < 100) {
             return List.of(new Pair<>(Meat.MOLTEN, 12), new Pair<>(Grains.SORGHUM, 6));
-        } else if (level < 103) {
+        } else if (level < 105) {
             return List.of(new Pair<>(Meat.STARFISH, 12), new Pair<>(Grains.HEMP, 6));
-        } else if (level < 106) {
+        } else if (level < 110) {
             return List.of(new Pair<>(Meat.DERNIC, 12), new Pair<>(Grains.DERNIC, 6));
+        } else if (level < 115) {
+            return List.of(new Pair<>(Meat.STURGEON, 14), new Pair<>(Grains.JUTE, 7));
+        } else if (level < 120) {
+            return List.of(new Pair<>(Meat.MAHSEER, 14), new Pair<>(Grains.HEATHER, 7));
         } else {
             return List.of();
         }

@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.raid;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
@@ -53,12 +54,13 @@ public class RaidListData {
             try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
                 RaidListData loaded = gson.fromJson(reader, RaidListData.class);
                 if (loaded != null) {
+                    loaded.raids.removeIf(raid -> raid == null || raid.raidInfo.getRaidKind() == null);
                     INSTANCE = loaded;
                 } else {
-                    System.err.println("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");
+                    WynnExtras.LOGGER.error("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");
                 }
             } catch (IOException e) {
-                System.err.println("[WynnExtras] Couldn't read the raidlist file:");
+                WynnExtras.LOGGER.error("[WynnExtras] Couldn't read the raidlist file:");
                 e.printStackTrace();
             }
         }
@@ -68,7 +70,7 @@ public class RaidListData {
         try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
             gson.toJson(INSTANCE, writer);
         } catch (IOException e) {
-            System.err.println("[WynnExtras] Couldn't write the raidlist file:");
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't write the raidlist file:");
             e.printStackTrace();
         }
     }

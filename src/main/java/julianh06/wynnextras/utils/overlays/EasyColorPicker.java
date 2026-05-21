@@ -10,7 +10,7 @@ import static julianh06.wynnextras.features.waypoints.old.WaypointScreen.scaleFa
 import java.awt.*;
 
 public class EasyColorPicker extends EasyElement{
-    public boolean expanded = false;
+    private boolean expanded = false;
     int mouseX = 0;
     int mouseY = 0;
     private CustomColor selectedColor;
@@ -75,6 +75,14 @@ public class EasyColorPicker extends EasyElement{
     public CustomColor getSelectedColor() {
         if(selectedColor == null) selectedColor = CustomColor.fromHexString("ffffff");
         return selectedColor;
+    }
+
+    public boolean isExpanded() {
+        return expanded;
+    }
+
+    public void setExpanded(boolean expanded) {
+        this.expanded = expanded;
     }
 
     public void setSelectedColor(CustomColor color) {

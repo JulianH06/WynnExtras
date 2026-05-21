@@ -10,11 +10,16 @@ import java.util.List;
 public abstract class WEHandledScreen {
     protected DrawContext drawContext;
     protected double scaleFactor;
+    protected double matrixScale = 1.0;
     protected int xStart;
     protected int yStart;
     protected int screenWidth;
     protected int screenHeight;
     protected UIUtils ui;
+
+    protected double getTargetScaleFactor() { return -1; }
+    protected int getMinScreenWidth()  { return 0; }
+    protected int getMinScreenHeight() { return 0; }
 
     protected final List<Widget> rootWidgets = new ArrayList<>();
     protected final List<WEElement<?>> listElements = new ArrayList<>();
@@ -39,21 +44,29 @@ public abstract class WEHandledScreen {
         else
             ui.updateContext(ctx, scaleFactor, xStart, yStart);
 
-        drawBackground(ctx, mouseX, mouseY, delta);
-        drawContent(ctx, mouseX, mouseY, delta);
+        int mx = (int)(mouseX / matrixScale);
+        int my = (int)(mouseY / matrixScale);
+
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().scale((float) matrixScale, (float) matrixScale);
+
+        drawBackground(ctx, mx, my, delta);
+        drawContent(ctx, mx, my, delta);
 
         for (Widget w : rootWidgets) {
-            w.draw(ctx, mouseX, mouseY, delta, ui);
+            w.draw(ctx, mx, my, delta, ui);
         }
 
         updateVisibleListRange();
         layoutListElements();
 
         for (int i = firstVisibleIndex; i <= lastVisibleIndex; i++) {
-            listElements.get(i).draw(ctx, mouseX, mouseY, delta, ui);
+            listElements.get(i).draw(ctx, mx, my, delta, ui);
         }
 
-        drawForeground(ctx, mouseX, mouseY, delta);
+        drawForeground(ctx, mx, my, delta);
+
+        ctx.getMatrices().popMatrix();
     }
 
 
@@ -100,6 +113,8 @@ public abstract class WEHandledScreen {
 
 
     public boolean mouseClicked(double x, double y, int button) {
+        x /= matrixScale;
+        y /= matrixScale;
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             if (rootWidgets.get(i).mouseClicked(x, y, button)) {
                 setFocusedWidget(rootWidgets.get(i));
@@ -123,6 +138,8 @@ public abstract class WEHandledScreen {
     }
 
     public boolean mouseReleased(double x, double y, int button) {
+        x /= matrixScale;
+        y /= matrixScale;
         for (Widget w : rootWidgets)
             if (w.mouseReleased(x, y, button))
                 return true;
@@ -130,6 +147,8 @@ public abstract class WEHandledScreen {
     }
 
     public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        x /= matrixScale;
+        y /= matrixScale;
         for (Widget w : rootWidgets)
             if (w.mouseDragged(x, y, button, dx, dy))
                 return true;
@@ -178,9 +197,29 @@ public abstract class WEHandledScreen {
 
     public void computeScale() {
         Window w = MinecraftClient.getInstance().getWindow();
-        this.scaleFactor = Math.max(1.0, w.getScaleFactor());
-        this.screenWidth = w.getScaledWidth();
-        this.screenHeight = w.getScaledHeight();
+        double actualScale = Math.max(1.0, w.getScaleFactor());
+        double target = getTargetScaleFactor();
+        if (target > 1.0 && actualScale > target) {
+            this.matrixScale = target / actualScale;
+            this.scaleFactor = target;
+        } else {
+            this.matrixScale = 1.0;
+            this.scaleFactor = actualScale;
+        }
+        this.screenWidth = (int) Math.round(w.getScaledWidth() / matrixScale);
+        this.screenHeight = (int) Math.round(w.getScaledHeight() / matrixScale);
+
+        int minSW = getMinScreenWidth();
+        int minSH = getMinScreenHeight();
+        double extraScale = 1.0;
+        if (minSW > 0 && screenWidth < minSW) extraScale = Math.min(extraScale, (double) screenWidth / minSW);
+        if (minSH > 0 && screenHeight < minSH) extraScale = Math.min(extraScale, (double) screenHeight / minSH);
+        if (extraScale < 1.0) {
+            matrixScale *= extraScale;
+            scaleFactor *= extraScale;
+            screenWidth = (int) Math.round(w.getScaledWidth() / matrixScale);
+            screenHeight = (int) Math.round(w.getScaledHeight() / matrixScale);
+        }
     }
 
 

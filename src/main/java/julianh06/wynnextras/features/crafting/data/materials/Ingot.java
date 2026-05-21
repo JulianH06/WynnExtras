@@ -40,6 +40,12 @@ public enum Ingot implements IMaterial {
             Identifier.of("wynnextras", "textures/materials/ingot/voidstone.png")),
     DERNIC("Dernic",
             Identifier.of("minecraft", "textures/wynn/economy/mining/ingot_dernic.png"),
+            Identifier.of("wynnextras", "textures/materials/ingot/dernic.png")),
+    TITANIUM("Titanium",
+            Identifier.of("minecraft", "textures/wynn/economy/mining/ingot_titanium.png"),
+            Identifier.of("wynnextras", "textures/materials/ingot/dernic.png")),
+    CINNABAR("Cinnabar",
+            Identifier.of("minecraft", "textures/wynn/economy/mining/ingot_cinnabar.png"),
             Identifier.of("wynnextras", "textures/materials/ingot/dernic.png"));
 
     private final String name;

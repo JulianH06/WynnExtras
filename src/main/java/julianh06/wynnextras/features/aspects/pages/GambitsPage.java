@@ -1,12 +1,16 @@
 package julianh06.wynnextras.features.aspects.pages;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.*;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 
 import java.time.Duration;
@@ -52,18 +56,21 @@ public class GambitsPage extends PageWidget{
     Identifier bld = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/bl.png");
     Identifier brd = Identifier.of("wynnextras", "textures/gui/lootpoolscreen/dark/br.png");
 
-    private boolean fetchedCrowdsourcedGambits = false;
-    private List<GambitData.GambitEntry> crowdsourcedGambits = null;
+    private static boolean fetchedCrowdsourcedGambits = false;
+    private static List<GambitData.GambitEntry> crowdsourcedGambits = null;
     private static ZonedDateTime lastCrowdsourceFetch = null;
     private static Boolean fetchRunning = false;
     private static Boolean hasOldData = false;
 
     private final OpenPartyFinderWidget openPartyFinderWidget;
 
+    private final RefreshButton refreshButton;
+
     public GambitsPage(AspectScreen parent) {
         super(parent);
 
         openPartyFinderWidget = new OpenPartyFinderWidget();
+        refreshButton = new RefreshButton();
     }
 
     @Override
@@ -73,9 +80,9 @@ public class GambitsPage extends PageWidget{
         ui.drawCenteredText("§6§lToday's Gambits", centerX, 60);
 
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-        ZonedDateTime nextReset = now.withHour(19).withMinute(0).withSecond(0).withNano(0);
+        ZonedDateTime nextReset = ResetTimeConfig.INSTANCE.getNextGambitReset();
         if (nextReset.isBefore(now) || nextReset.isEqual(now)) {
-            nextReset = nextReset.plusWeeks(1);
+            nextReset = nextReset.plusDays(1);
         }
 
         // Calculate time difference
@@ -103,7 +110,7 @@ public class GambitsPage extends PageWidget{
 
                     lastCrowdsourceFetch = now;
                     if(isSamePool(oldGambits, result)) {
-                        System.out.println("still old pool, retry in 30s");
+                        WynnExtras.LOGGER.info("still old pool, retry in 30s");
                         hasOldData = true;
                     } else {
                         hasOldData = false;
@@ -156,6 +163,9 @@ public class GambitsPage extends PageWidget{
                 drawGambitPanel(x, y, panelWidth, panelHeight, gambit);
             }
         }
+
+        refreshButton.setBounds(0, 0, 260, 60);
+        refreshButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
     }
 
     private static boolean isSamePool(List<GambitData.GambitEntry> oldGambits, List<GambitData.GambitEntry> newGambits) {
@@ -174,25 +184,16 @@ public class GambitsPage extends PageWidget{
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if(refreshButton.isHovered()) {
+            refreshButton.onClick(button);
+            return true;
+        }
+
         return openPartyFinderWidget.mouseClicked(mx, my, button);
     }
 
     private void drawGambitPanel(int x, int y, int panelWidth, int panelHeight, GambitData.GambitEntry gambit) {
-        int topHeight = 60;
-
-        if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
-            ui.drawNineSlice(x, y, panelWidth,
-                    topHeight, 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
-
-            ui.drawNineSlice(x, y + topHeight, panelWidth,
-                    panelHeight - topHeight, 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
-        } else {
-            ui.drawNineSlice(x, y, panelWidth,
-                    topHeight, 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
-
-            ui.drawNineSlice(x, y + topHeight, panelWidth,
-                    panelHeight - topHeight, 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
-        }
+        ui.drawVanillaPanel(x, y, panelWidth, panelHeight, 12, 15, 15, 50, 20);
 
         // Name
         String truncatedName = gambit.name;
@@ -274,7 +275,7 @@ public class GambitsPage extends PageWidget{
     }
 
     private static boolean shouldFetchGambits() {
-        ZonedDateTime currentReset = GambitData.getLastResetTime();
+        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentGambitReset();
         ZonedDateTime lastFetch = lastCrowdsourceFetch;
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
 
@@ -283,5 +284,31 @@ public class GambitsPage extends PageWidget{
         if (lastFetch != null && lastFetch.plusSeconds(30).isAfter(now)) return false;
 
         return lastFetch == null || currentReset.isAfter(lastFetch);
+    }
+
+    private static class RefreshButton extends Widget {
+        public RefreshButton() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, hovered);
+            ui.drawCenteredText("Reload gambits", x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            fetchedCrowdsourcedGambits = false;
+            crowdsourcedGambits = null;
+            lastCrowdsourceFetch = null;
+            fetchRunning = false;
+            hasOldData = false;
+
+            ResetTimeConfig.INSTANCE.refetch();
+
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
+        }
     }
 }

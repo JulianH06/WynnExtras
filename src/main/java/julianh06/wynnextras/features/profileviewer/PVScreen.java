@@ -10,13 +10,13 @@ import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.mc.SkinUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import julianh06.wynnextras.features.profileviewer.tabs.*;
 import julianh06.wynnextras.utils.UI.UIUtils;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.WEElement;
 import julianh06.wynnextras.utils.UI.Widget;
 import julianh06.wynnextras.utils.UI.WEScreen;
@@ -25,17 +25,13 @@ import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.EntityPose;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerModelPart;
 import net.minecraft.entity.player.SkinTextures;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import org.joml.Quaternionf;
 
 
 import java.io.IOException;
@@ -45,11 +41,15 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 public class PVScreen extends WEScreen {
+    @Override protected double getTargetScaleFactor() { return 2.5; }
+    @Override protected int getMinLogicalWidth()  { return 2100; }
+    @Override protected int getMinLogicalHeight() { return 870; }
+
     public static int mouseX = 0;
     public static int mouseY = 0;
+    public static double currentMatrixScale = 1.0;
 
     public enum Rank {NONE, VIP, VIPPLUS, HERO, HEROPLUS, CHAMPION, MEDIA, WYNN, MOD, ADMIN}
 
@@ -57,9 +57,8 @@ public class PVScreen extends WEScreen {
     public static List<TabButton> tabButtons = new ArrayList<>();
     public static List<CharacterButton> characterButtons = new ArrayList<>();
 
-    public static List<String> WETeam = List.of("JulianH06", "Teslanator", "Mikecraft1224", "LegendaryVirus", "elwood24", "BaltrazYT", "pat_crafter07");
-
-    List<String> allQuests = Arrays.asList("???", "A Grave Mistake", "A Hunter's Calling", "A Journey Beyond", "A Journey Further", "A Marauder's Dues", "A Sandy Scandal", "Acquiring Credentials", "Aldorei's Secret Part I", "Aldorei's Secret Part II", "All Roads To Peace", "An Iron Heart Part I", "An Iron Heart Part II", "Arachnids' Ascent", "Beneath the Depths", "Beyond the Grave", "Blazing Retribution", "Bob's Lost Soul", "Canyon Condor", "Clearing the Camps", "Cluck Cluck", "Cook Assistant", "Corrupted Betrayal", "Cowfusion", "Creeper Infiltration", "Crop Failure", "Death Whistle", "Deja Vu", "Desperate Metal", "Dwarves and Doguns Part I", "Dwarves and Doguns Part II", "Dwarves and Doguns Part III", "Dwarves and Doguns Part IV", "Dwelling Walls", "Elemental Exercise", "Enter the Dojo", "Enzan's Brother", "Fallen Delivery", "Fantastic Voyage", "Fate of the Fallen", "Flight in Distress", "Forbidden Prison", "From the Bottom", "From the Mountains", "Frost Bite", "General's Orders", "Grand Youth", "Grave Digger", "Green Gloop", "Haven Antiquity", "Heart of Llevigar", "Hollow Serenity", "Hunger of the Gerts Part I", "Hunger of the Gerts Part II", "Ice Nations", "Infested Plants", "Jungle Fever", "King's Recruit", "Kingdom of Sand", "Lava Springs", "Lazarus Pit", "Lexdale Witch Trials", "Lost in the Jungle", "Lost Royalty", "Lost Soles", "Lost Tower", "Maltic's Well", "Master Piece", "Meaningful Holiday", "Memory Paranoia", "Mini-Quest - Gather Acacia Logs", "Mini-Quest - Gather Acacia Logs II", "Mini-Quest - Gather Avo Logs", "Mini-Quest - Gather Avo Logs II", "Mini-Quest - Gather Avo Logs III", "Mini-Quest - Gather Avo Logs IV", "Mini-Quest - Gather Bamboo", "Mini-Quest - Gather Barley", "Mini-Quest - Gather Bass", "Mini-Quest - Gather Bass II", "Mini-Quest - Gather Bass III", "Mini-Quest - Gather Bass IV", "Mini-Quest - Gather Birch Logs", "Mini-Quest - Gather Carp", "Mini-Quest - Gather Carp II", "Mini-Quest - Gather Cobalt", "Mini-Quest - Gather Cobalt II", "Mini-Quest - Gather Cobalt III", "Mini-Quest - Gather Copper", "Mini-Quest - Gather Dark Logs", "Mini-Quest - Gather Dark Logs II", "Mini-Quest - Gather Dark Logs III", "Mini-Quest - Gather Decay Roots", "Mini-Quest - Gather Decay Roots II", "Mini-Quest - Gather Decay Roots III", "Mini-Quest - Gather Diamonds", "Mini-Quest - Gather Diamonds II", "Mini-Quest - Gather Diamonds III", "Mini-Quest - Gather Diamonds IV", "Mini-Quest - Gather Gold", "Mini-Quest - Gather Gold II", "Mini-Quest - Gather Granite", "Mini-Quest - Gather Gudgeon", "Mini-Quest - Gather Gylia Fish", "Mini-Quest - Gather Gylia Fish II", "Mini-Quest - Gather Gylia Fish III", "Mini-Quest - Gather Hops", "Mini-Quest - Gather Hops II", "Mini-Quest - Gather Icefish", "Mini-Quest - Gather Icefish II", "Mini-Quest - Gather Iron", "Mini-Quest - Gather Iron II", "Mini-Quest - Gather Jungle Logs", "Mini-Quest - Gather Jungle Logs II", "Mini-Quest - Gather Kanderstone", "Mini-Quest - Gather Kanderstone II", "Mini-Quest - Gather Kanderstone III", "Mini-Quest - Gather Koi", "Mini-Quest - Gather Koi II", "Mini-Quest - Gather Koi III", "Mini-Quest - Gather Light Logs", "Mini-Quest - Gather Light Logs II", "Mini-Quest - Gather Light Logs III", "Mini-Quest - Gather Malt", "Mini-Quest - Gather Malt II", "Mini-Quest - Gather Millet", "Mini-Quest - Gather Millet II", "Mini-Quest - Gather Millet III", "Mini-Quest - Gather Molten Eel", "Mini-Quest - Gather Molten Eel II", "Mini-Quest - Gather Molten Eel III", "Mini-Quest - Gather Molten Eel IV", "Mini-Quest - Gather Molten Ore", "Mini-Quest - Gather Molten Ore II", "Mini-Quest - Gather Molten Ore III", "Mini-Quest - Gather Molten Ore IV", "Mini-Quest - Gather Oak Logs", "Mini-Quest - Gather Oats", "Mini-Quest - Gather Oats II", "Mini-Quest - Gather Pine Logs", "Mini-Quest - Gather Pine Logs II", "Mini-Quest - Gather Pine Logs III", "Mini-Quest - Gather Piranhas", "Mini-Quest - Gather Piranhas II", "Mini-Quest - Gather Rice", "Mini-Quest - Gather Rice II", "Mini-Quest - Gather Rice III", "Mini-Quest - Gather Rice IV", "Mini-Quest - Gather Rye", "Mini-Quest - Gather Rye II", "Mini-Quest - Gather Salmon", "Mini-Quest - Gather Salmon II", "Mini-Quest - Gather Sandstone", "Mini-Quest - Gather Sandstone II", "Mini-Quest - Gather Silver", "Mini-Quest - Gather Silver II", "Mini-Quest - Gather Sorghum", "Mini-Quest - Gather Sorghum II", "Mini-Quest - Gather Sorghum III", "Mini-Quest - Gather Sorghum IV", "Mini-Quest - Gather Spruce Logs", "Mini-Quest - Gather Spruce Logs II", "Mini-Quest - Gather Trout", "Mini-Quest - Gather Wheat", "Mini-Quest - Gather Willow Logs", "Mini-Quest - Gather Willow Logs II", "Mini-Quest - Slay Ailuropodas", "Mini-Quest - Slay Angels", "Mini-Quest - Slay Astrochelys Manis", "Mini-Quest - Slay Azers", "Mini-Quest - Slay Conures", "Mini-Quest - Slay Coyotes", "Mini-Quest - Slay Creatures of Nesaak Forest", "Mini-Quest - Slay Creatures of the Void", "Mini-Quest - Slay Dead Villagers", "Mini-Quest - Slay Dragonlings", "Mini-Quest - Slay Felrocs", "Mini-Quest - Slay Frosted Guards & Cryostone Golems", "Mini-Quest - Slay Hobgoblins", "Mini-Quest - Slay Idols", "Mini-Quest - Slay Ifrits", "Mini-Quest - Slay Jinkos", "Mini-Quest - Slay Lizardmen", "Mini-Quest - Slay Magma Entities", "Mini-Quest - Slay Mooshrooms", "Mini-Quest - Slay Myconids", "Mini-Quest - Slay Orcs", "Mini-Quest - Slay Pernix Monkeys", "Mini-Quest - Slay Robots", "Mini-Quest - Slay Scarabs", "Mini-Quest - Slay Skeletons", "Mini-Quest - Slay Slimes", "Mini-Quest - Slay Spiders", "Mini-Quest - Slay Weirds", "Mini-Quest - Slay Wraiths & Phantasms", "Misadventure on the Sea", "Mixed Feelings", "Murder Mystery", "Mushroom Man", "One Thousand Meters Under", "Out of my Mind", "Pirate's Trove", "Pit of the Dead", "Point of No Return", "Poisoning the Pest", "Potion Making", "Purple and Blue", "Realm of Light I - The Worm Holes", "Realm of Light II - Taproot", "Realm of Light III - A Headless History", "Realm of Light IV - Finding the Light", "Realm of Light V - The Realm of Light", "Recipe For Disaster", "Reclaiming the House", "Recover the Past", "Redbeard's Booty", "Reincarnation", "Rise of the Quartron", "Royal Trials", "Shattered Minds", "Stable Story", "Star Thief", "Supply and Delivery", "Taking the Tower", "Temple of the Legends", "Tempo Town Trouble", "The Bigger Picture", "The Breaking Point", "The Canary Calls", "The Canyon Guides", "The Corrupted Village", "The Dark Descent", "The Envoy Part I", "The Envoy Part II", "The Feathers Fly Part I", "The Feathers Fly Part II", "The Hero of Gavel", "The Hidden City", "The House of Twain", "The Lost", "The Maiden Tower", "The Mercenary", "The Olmic Rune", "The Order of the Grook", "The Passage", "The Qira Hive", "The Sewers of Ragni", "The Shadow of the Beast", "The Thanos Depository", "The Ultimate Weapon", "Tower of Ascension", "Tribal Aggression", "Troubled Tribesmen", "Tunnel Trouble", "UndericeÀ", "Underwater", "Wrath of the Mummy", "WynnExcavation Site A", "WynnExcavation Site B", "WynnExcavation Site C", "WynnExcavation Site D", "Zhight Island");
+    public static List<String> WETeam = List.of("JulianH06", "Teslanator", "pat_crafter07");
+    public static List<String> WEContributors = List.of("Mikecraft1224", "elwood24", "LegendaryVirus", "BaltrazYT", "LookingForSleep", "SidOfThe7Cs", "drzxm", "theoplegends", "Tabytac", "Zatzou");
 
     static Identifier tabLeft = Identifier.of("wynnextras", "textures/gui/profileviewer/tableft.png");
     static Identifier tabMid = Identifier.of("wynnextras", "textures/gui/profileviewer/tabmid.png");
@@ -69,34 +68,16 @@ public class PVScreen extends WEScreen {
     static Identifier tabMidDark = Identifier.of("wynnextras", "textures/gui/profileviewer/tabmid_dark.png");
     static Identifier tagRightDark = Identifier.of("wynnextras", "textures/gui/profileviewer/tabright_dark.png");
 
-    static Identifier NOTGTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/notg.png");
-    static Identifier NOLTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/nol.png");
-    static Identifier TCCTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tcc.png");
-    static Identifier TNATexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/tna.png");
-
     static Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/profileviewerbackground.png");
     static Identifier alsobackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/alsoprofileviewerbackground.png");
-    static Identifier raidBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/raidbackground.png");
     static Identifier openInBrowserButtonTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexture.png");
     static Identifier openInBrowserButtonTextureW = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexturewide.png");
-    static Identifier classBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive.png");
-    static Identifier classBackgroundTextureGold = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactivegold.png");
-    static Identifier classBackgroundTextureActive = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactive.png");
-    static Identifier onlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle.png");
-    static Identifier offlineCircleTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/offlinecircle.png");
-
 
 
     static Identifier backgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/profileviewerbackground_dark.png");
     static Identifier alsobackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/alsoprofileviewerbackground_dark.png");
-    static Identifier raidBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/raidbackground_dark.png");
     static Identifier openInBrowserButtonTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexture_dark.png");
     static Identifier openInBrowserButtonTextureWDark = Identifier.of("wynnextras", "textures/gui/profileviewer/openinbrowserbuttontexturewide_dark.png");
-    static Identifier classBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive_dark.png");
-    static Identifier classBackgroundTextureGoldDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactivegold_dark.png");
-    static Identifier classBackgroundTextureActiveDark = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactive_dark.png");
-    static Identifier onlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/onlinecircle_dark.png");
-    static Identifier offlineCircleTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/offlinecircle_dark.png");
 
 
     static Identifier vip = Identifier.of("wynnextras", "textures/gui/profileviewer/ranks/vip.png");
@@ -119,28 +100,6 @@ public class PVScreen extends WEScreen {
     static Identifier archerTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/archer.png");
     static Identifier archerGoldTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/archergold.png");
 
-
-    static Identifier decrepitSewersTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/decrepitsewers.png");
-    static Identifier infestedPitTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/infestedpit.png");
-    static Identifier underworldCryptTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/underworldcrypt.png");
-    static Identifier timelostSanctumTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/timelostsanctum.png");
-    static Identifier sandSweptTombTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/sandswepttomb.png");
-    static Identifier iceBarrowsTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/icebarrows.png");
-    static Identifier undergrowthRuinsTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/undergrowthruins.png");
-    static Identifier galleonsGraveyardTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/galleonsgraveyard.png");
-    static Identifier fallenFactoryTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/fallenfactory.png");
-    static Identifier eldritchOutlookTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/eldritchoutlook.png");
-
-    static List<Identifier> dungeonTextures = List.of(decrepitSewersTexture, infestedPitTexture, underworldCryptTexture, timelostSanctumTexture, sandSweptTombTexture, iceBarrowsTexture, undergrowthRuinsTexture, galleonsGraveyardTexture, fallenFactoryTexture, eldritchOutlookTexture);
-
-    static Identifier dungeonKeyTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/dungeonkey.png");
-    static Identifier corruptedDungeonKeyTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/corrupteddungeonkey.png");
-    static Identifier dungeonBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/dungeonpagebackground.png");
-    static Identifier miscBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/miscpagebackground.png");
-
-    static Identifier dungeonBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/dungeons/dungeonpagebackground_dark.png");
-    static Identifier miscBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/miscpagebackground_dark.png");
-
     static Identifier miningTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/mining.png");
     static Identifier woodcuttingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/woodcutting.png");
     static Identifier farmingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/farming.png");
@@ -153,37 +112,8 @@ public class PVScreen extends WEScreen {
     static Identifier alchemismTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/alchemism.png");
     static Identifier scribingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/scribing.png");
     static Identifier cookingTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/cooking.png");
-    static Identifier profBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/profs/profbackground.png");
-    static Identifier profBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/profs/profbackground_dark.png");
 
-    static Identifier questBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackground.png");
-    static Identifier questBackgroundBorderTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackgroundborders.png");
-    static Identifier questSearchbarTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questsearchbar.png");
-
-    static Identifier questBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackground_dark.png");
-    static Identifier questBackgroundBorderTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questbackgroundborders_dark.png");
-    static Identifier questSearchbarTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/quests/questsearchbar_dark.png");
-
-    static Identifier warsCompletionTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/warscompletion.png");
-    static Identifier playerContentTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/playercontent.png");
-    static Identifier globalPlayerContent = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/globalplayercontent.png");
-    static Identifier combatLevelTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/combatlevel.png");
-    static Identifier totalLevelTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/totallevel.png");
-    static Identifier professionLevelTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/professionlevel.png");
-    static Identifier rankingBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackground.png");
-    static Identifier rankingBackgroundWideTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackgroundwide.png");
-
-    static Identifier ironmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ironman.png");
-    static Identifier ultimateIronmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/ultimateironman.png");
-    static Identifier huntedTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hunted.png");
-    static Identifier hardcoreTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hardcore.png");
-    static Identifier hardcoreFailedTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/hardcorefailed.png");
-    static Identifier craftsmanTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/gamemodes/craftsman.png");
-
-    static Identifier rankingBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackground_dark.png");
-    static Identifier rankingBackgroundWideTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackgroundwide_dark.png");
-
-    static OpenInBrowserButton openInBrowserButton;
+   static OpenInBrowserButton openInBrowserButton;
     public static Searchbar searchBar;
     public static Searchbar questSearchBar;
     public static Searchbar treeSearchBar;
@@ -196,6 +126,10 @@ public class PVScreen extends WEScreen {
     public static CharacterData selectedCharacter;
 
     public static int scrollOffset = 0;
+    public static float targetScrollOffset = 0;
+    public static float actualScrollOffset = 0;
+    public static float maxScrollOffset = 0;
+    public static boolean scrollbarHeld = false;
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 0; // in ms
 
@@ -312,8 +246,8 @@ public class PVScreen extends WEScreen {
 
     @Override
     protected void scrollList(float delta) {
-        scrollOffset -= (int) (delta);
-        if(scrollOffset < 0) scrollOffset = 0;
+        targetScrollOffset -= (int) (delta);
+        if(targetScrollOffset < 0) targetScrollOffset = 0;
     }
 
     @Override
@@ -323,7 +257,7 @@ public class PVScreen extends WEScreen {
             lastViewedPlayersSkins.put(PV.currentPlayerData.getUsername(), dummyTexture);
         }
 
-        int xStart = getLogicalWidth() / 2 - 900 - (getLogicalWidth() - 1800 < 200 ? 50 : 0);
+        int xStart = getLogicalWidth() / 2 - 900;
         int yStart = getLogicalHeight() / 2 - 375;
 
         backgroundImageWidget.setBounds(xStart, yStart, 1800, 750);
@@ -351,7 +285,7 @@ public class PVScreen extends WEScreen {
         for(PlayerWidget playerWidget : lastViewedPlayersWidget) {
             playerWidget.draw(super.drawContext, xStart + currentTabWidget.getWidth(), yStart + 100 * playerWidget.index + 30);
         }
-        //System.out.println(rootWidgets);
+        //WynnExtras.LOGGER.info(rootWidgets);
 //        for(int i = 0; i < lastViewedPlayers.size(); i++) {
 //            ui.drawText(lastViewedPlayers.get(i),  + 110, yStart + 100 * i + 55);
 //
@@ -371,13 +305,21 @@ public class PVScreen extends WEScreen {
 
     @Override //im drawing the tab stuff in updateValues so the background has to be rendered first that's why this override exists
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        PVScreen.mouseX = mouseX;
-        PVScreen.mouseY = mouseY;
-
         this.drawContext = context;
         computeScaleAndOffsets();
         if (ui == null) ui = new UIUtils(context, scaleFactor, xStart, yStart);
         else ui.updateContext(context, scaleFactor, xStart, yStart);
+
+        mouseX = (int)(mouseX / matrixScale);
+        mouseY = (int)(mouseY / matrixScale);
+        PVScreen.mouseX = mouseX;
+        PVScreen.mouseY = mouseY;
+        PVScreen.currentMatrixScale = matrixScale;
+
+        ui.drawBackground();
+
+        context.getMatrices().pushMatrix();
+        context.getMatrices().scale((float) matrixScale, (float) matrixScale);
 
         if(PV.currentPlayerData != null && !addedNewest) {
             if(PV.currentPlayerData.getUsername() != null) {
@@ -406,13 +348,22 @@ public class PVScreen extends WEScreen {
             }
         }
 
-        ui.drawBackground();
         backgroundImageWidget.draw(context, mouseX, mouseY, delta, ui);
         updateValues();
         updateVisibleListRange();
         layoutListElements();
 
-
+        targetScrollOffset = Math.min(targetScrollOffset, maxScrollOffset);
+        float snapValue = 0.5f;
+        float speed = 0.3f;
+        float diff = targetScrollOffset - actualScrollOffset;
+        if (Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle || scrollbarHeld) {
+            actualScrollOffset = targetScrollOffset;
+        } else {
+            actualScrollOffset += diff * speed * delta;
+        }
+        if (actualScrollOffset < 0) actualScrollOffset = 0;
+        scrollOffset = (int) actualScrollOffset;
 
         //this still uses the old system, needs to be updated some day
 
@@ -425,6 +376,8 @@ public class PVScreen extends WEScreen {
         if (openInBrowserButton != null) {
             openInBrowserButton.setX((int) (xStart / scaleFactor));
             openInBrowserButton.setY((int) ((yStart + currentTabWidget.getHeight()) / scaleFactor) + 1);
+            openInBrowserButton.setWidth((float) (260 / scaleFactor));
+            openInBrowserButton.setHeight((float) (60 / scaleFactor));
             openInBrowserButton.buttonText = "Open in browser";
             DarkModeToggleWidget.drawImageWithFade(openInBrowserButtonTextureDark, openInBrowserButtonTexture, xStart, yStart + currentTabWidget.getHeight(), 260, 60, ui);
             openInBrowserButton.drawWithTexture(context, null);
@@ -447,7 +400,7 @@ public class PVScreen extends WEScreen {
         if (searchBar != null) {
             searchBar.setX((int) ((xStart + 89 * 3) / ui.getScaleFactor()));
             searchBar.setY((int) ((yStart + currentTabWidget.getHeight() + 8 * 3) / ui.getScaleFactor()));
-            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"));
+            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"), (float) ui.getScaleFactor());
             //searchBar.draw(context);
         }
 
@@ -468,6 +421,8 @@ public class PVScreen extends WEScreen {
             WEElement<?> e = listElements.get(i);
             e.draw(context, mouseX, mouseY, delta, ui);
         }
+
+        context.getMatrices().popMatrix();
     }
 
     @Override
@@ -564,6 +519,9 @@ public class PVScreen extends WEScreen {
         searchBar = null;
         questSearchBar = null;
         treeSearchBar = null;
+        scrollOffset = 0;
+        targetScrollOffset = 0;
+        actualScrollOffset = 0;
         super.close();
     }
 
@@ -694,6 +652,94 @@ public class PVScreen extends WEScreen {
         };
     }
 
+    public static class PVScrollBarWidget extends Widget {
+        private final ScrollThumbWidget thumbWidget;
+        int currentMouseY = 0;
+
+        public PVScrollBarWidget() {
+            super(0, 0, 0, 0);
+            thumbWidget = new ScrollThumbWidget();
+            addChild(thumbWidget);
+        }
+
+        private void setOffset(int mouseY, int scrollAreaHeight) {
+            float relativeY = mouseY * ui.getScaleFactorF() - y - thumbWidget.getHeight() / 2f;
+            relativeY = Math.max(0, Math.min(relativeY, scrollAreaHeight));
+            float scrollPercent = relativeY / scrollAreaHeight;
+            targetScrollOffset = scrollPercent * maxScrollOffset;
+            targetScrollOffset = Math.max(0, Math.min(targetScrollOffset, maxScrollOffset));
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            currentMouseY = mouseY;
+            ui.drawSliderFade(x, y, width, height, 5, DarkModeToggleWidget.fade);
+            updateThumb(mouseY);
+        }
+
+        private void updateThumb(int mouseY) {
+            int thumbHeight = 50;
+            int scrollAreaHeight = height - thumbHeight;
+            if (scrollAreaHeight <= 0) return;
+
+            if (thumbWidget.isHeld) {
+                setOffset(mouseY, scrollAreaHeight);
+                actualScrollOffset = targetScrollOffset;
+                scrollbarHeld = true;
+            } else {
+                scrollbarHeld = false;
+            }
+
+            float percent = maxScrollOffset == 0 ? 0 : actualScrollOffset / maxScrollOffset;
+            percent = Math.clamp(percent, 0f, 1f);
+            int yPos = y + (int) (scrollAreaHeight * percent);
+            thumbWidget.setBounds(x, yPos, width, thumbHeight);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            int thumbHeight = 30;
+            int scrollAreaHeight = height - thumbHeight;
+            if (scrollAreaHeight > 0) setOffset(currentMouseY, scrollAreaHeight);
+            return false;
+        }
+
+        @Override
+        public boolean mouseReleased(double mx, double my, int button) {
+            thumbWidget.mouseReleased(mx, my, button);
+            scrollbarHeld = false;
+            return true;
+        }
+
+        private static class ScrollThumbWidget extends Widget {
+            public boolean isHeld;
+
+            public ScrollThumbWidget() {
+                super(0, 0, 0, 0);
+                isHeld = false;
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                ui.drawButtonFade(x, y, width, height, 5, hovered || isHeld);
+            }
+
+            @Override
+            protected boolean onClick(int button) {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                isHeld = true;
+                return true;
+            }
+
+            @Override
+            public boolean mouseReleased(double mx, double my, int button) {
+                isHeld = false;
+                return true;
+            }
+        }
+    }
+
     public static void onClick() {
         if(openInBrowserButton == null || searchBar == null || (currentTab == Tab.Quests && questSearchBar == null) || (currentTab == Tab.Tree && treeSearchBar == null)) return;
         if(openInBrowserButton.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
@@ -800,6 +846,8 @@ public class PVScreen extends WEScreen {
                     parent.removeRootWidget(currentTabWidget);
                     currentTabWidget = tabWidget;
                     scrollOffset = 0;
+                    targetScrollOffset = 0;
+                    actualScrollOffset = 0;
                     if (!parent.rootWidgets.contains(tabWidget)) {
                         parent.addRootWidget(tabWidget);
                     }

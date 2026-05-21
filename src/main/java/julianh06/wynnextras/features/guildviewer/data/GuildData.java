@@ -34,6 +34,7 @@ public class GuildData {
         public String joined;
         public long contributed;
         public boolean online;
+        public String server;
     }
 
     public static class Banner {

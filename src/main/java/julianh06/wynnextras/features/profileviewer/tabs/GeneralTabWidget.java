@@ -1,13 +1,14 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CommonColors;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.utils.UI.Widget;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
@@ -134,10 +135,29 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
                     Comparator.comparing(CharacterData::getLevel).thenComparing(CharacterData::getTotalLevel).thenComparing(CharacterData::getContentCompletion).thenComparing(CharacterData::getPlaytime)
             );
         } else {
+            List<String> apiKeyInfo = new ArrayList<>();
+            if(MinecraftClient.getInstance().player != null && WynncraftApiHandler.INSTANCE.API_KEY == null || WynncraftApiHandler.INSTANCE.API_KEY.isEmpty()) {
+                if(PV.currentPlayer.equalsIgnoreCase(MinecraftClient.getInstance().player.getName().getString())) {
+                    apiKeyInfo.add("To get access to your private stats you need to set an api-key.");
+                    apiKeyInfo.add("You can find more info by using \"/we apikey\"");
+                } else {
+                    apiKeyInfo.add("You might be able to see them if you set an api-key.");
+                    apiKeyInfo.add("You can find more info by using \"/we apikey\"");
+                }
+            }
+
+
+            int apiKeyInfoY = y + 385;
+            for(String line : apiKeyInfo) {
+                ui.drawCenteredText(line, x + 1185, apiKeyInfoY, CustomColor.fromHexString("FF0000"));
+                apiKeyInfoY += 30;
+            }
+
             ui.drawText("This player has their classes private.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 3f);
         }
 
-        if (PV.currentPlayerData.getGuild() != null) {
+        boolean hasGuild = PV.currentPlayerData.getGuild() != null;
+        if (hasGuild) {
             String guildString = "[" + PV.currentPlayerData.getGuild().getPrefix() + "] " + PV.currentPlayerData.getGuild().getName();
             String stars = PV.currentPlayerData.getGuild().getRankStars();
             String rankString = (stars == null  ? "" : stars) + " " + PV.currentPlayerData.getGuild().getRank() + " of " + (stars == null  ? "" : stars);
@@ -149,6 +169,8 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             int widgetWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(guildString) * ui.getScaleFactor() * 1.2);
             guildButtonWidget.setBounds(x + 285 - widgetWidth / 2, y + 590, widgetWidth, 20);
             //ui.drawCenteredText(guildString, x + 285, y + 600, CustomColor.fromHexString("FFFFFF"), 3f);
+        } else {
+            ui.drawCenteredText("Not part of a Guild", x + 285, y + 570, CustomColor.fromHexString("FFFFFF"), 3f);
         }
 
         if (PV.currentPlayerData.getFirstJoin() != null) {
@@ -161,22 +183,28 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
 
             String formatted = "First joined: ";
             formatted += formatter.format(PV.currentPlayerData.getFirstJoin());
-            ui.drawCenteredText(formatted, x + 285, y + 630, CustomColor.fromHexString("FFFFFF"), 3f);
+            ui.drawCenteredText(formatted, x + 285, y + (hasGuild ? 630 : 600), CustomColor.fromHexString("FFFFFF"), 3f);
         }
 
         if (PV.currentPlayerData.getPlaytime() != 0) {
-            ui.drawCenteredText("Total Playtime: " + Math.round(PV.currentPlayerData.getPlaytime()) + "h", x + 285, y + 660, CustomColor.fromHexString("FFFFFF"), 3f);
+            ui.drawCenteredText("Total Playtime: " + Math.round(PV.currentPlayerData.getPlaytime()) + "h", x + 285, y + (hasGuild ? 660 : 630), CustomColor.fromHexString("FFFFFF"), 3f);
         }
 
         if(selectedCharacter != null) {
             if(selectedCharacter.getPlaytime() != 0) {
-                ui.drawCenteredText("Class Playtime: " + Math.round(selectedCharacter.getPlaytime()) + "h", x + 285, y + 690, CustomColor.fromHexString("FFFFFF"), 3f);
+                ui.drawCenteredText("Class Playtime: " + Math.round(selectedCharacter.getPlaytime()) + "h", x + 285, y + (hasGuild ? 690 : 660), CustomColor.fromHexString("FFFFFF"), 3f);
             }
         }
 
         if(WETeam != null && PV.currentPlayerData.getUsername() != null) {
             if (WETeam.contains(PV.currentPlayerData.getUsername())) {
-                ui.drawCenteredText("★★★ WynnExtras Team Member ★★★", x + 285, y + 720, CommonColors.SHINE, 3f);
+                ui.drawCenteredText("★★★ WynnExtras Team Member ★★★", x + 285, y + 720, WynncraftShaderColor.SHINE.color, 3f);
+            }
+        }
+
+        if(WEContributors != null && PV.currentPlayerData.getUsername() != null) {
+            if (WEContributors.contains(PV.currentPlayerData.getUsername())) {
+                ui.drawCenteredText("★★★ WynnExtras Contributor ★★★", x + 285, y + 720, WynncraftShaderColor.SHINE.color, 3f);
             }
         }
     }
@@ -220,8 +248,9 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
         int y1 = y + 99;
         int y2 = y1 + 435;
 
-        context.addEntity(state, (int) (215 / scaleFactor), offset, rotation.rotateY(180), null,
-                (int) (x1 / scaleFactor), (int) (y1 / scaleFactor), (int) (x2 / scaleFactor), (int) (y2 / scaleFactor));
+        double m = pvScreen != null ? pvScreen.getMatrixScale() : 1.0;
+        context.addEntity(state, (int) (215 * m / scaleFactor), offset, rotation.rotateY(180), null,
+                (int) (x1 * m / scaleFactor), (int) (y1 * m / scaleFactor), (int) (x2 * m / scaleFactor), (int) (y2 * m / scaleFactor));
     }
 
     @Override

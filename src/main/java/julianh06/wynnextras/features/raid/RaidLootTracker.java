@@ -29,10 +29,11 @@ public class RaidLootTracker {
             "NOTG", new double[]{10342, 41, 3111},
             "NOL",  new double[]{11005, 58, 2909},
             "TCC",  new double[]{10817, 45, 3901},
-            "TNA",  new double[]{24489, 8, -23878}
+            "TNA",  new double[]{24489, 8, -23878},
+            "TWP",  new double[]{-19065, 125, -1819}
     );
 
-    private static boolean loggedThisChest = false;
+    public static boolean loggedThisChest = false;
 
     public static void register() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -82,6 +83,7 @@ public class RaidLootTracker {
         String currentRaid = detectRaid();
         RaidLootData.RaidSpecificLoot raidData = data.getOrCreateRaidData(currentRaid);
         RaidLootData.RaidSpecificLoot sessionRaidData = data.getOrCreateSessionRaidData(currentRaid);
+        RaidLootData.RaidSpecificLoot latestRun = new RaidLootData.RaidSpecificLoot();
         raidData.completionCount++;
         sessionRaidData.completionCount++;
         data.sessionData.completionCount++;
@@ -102,31 +104,42 @@ public class RaidLootTracker {
                 raidData.emeraldBlocks += count;
                 data.sessionData.emeraldBlocks += count;
                 sessionRaidData.emeraldBlocks += count;
+                latestRun.emeraldBlocks += count;
             }
             if (name.equals("Liquid Emerald")) {
                 data.liquidEmeralds += count;
                 raidData.liquidEmeralds += count;
                 data.sessionData.liquidEmeralds += count;
                 sessionRaidData.liquidEmeralds += count;
+                latestRun.liquidEmeralds += count;
             }
 
             // ===== Amplifiers =====
             if (name.contains("Amplifier")) {
-                if (name.contains(" III")) {
+                if (name.contains(" IV")) {
+                    data.amplifierTier4 += count;
+                    raidData.amplifierTier4 += count;
+                    data.sessionData.amplifierTier4 += count;
+                    sessionRaidData.amplifierTier4 += count;
+                    latestRun.amplifierTier4 += count;
+                } else if (name.contains(" III")) {
                     data.amplifierTier3 += count;
                     raidData.amplifierTier3 += count;
                     data.sessionData.amplifierTier3 += count;
                     sessionRaidData.amplifierTier3 += count;
+                    latestRun.amplifierTier3 += count;
                 } else if (name.contains(" II")) {
                     data.amplifierTier2 += count;
                     raidData.amplifierTier2 += count;
                     data.sessionData.amplifierTier2 += count;
                     sessionRaidData.amplifierTier2 += count;
+                    latestRun.amplifierTier2 += count;
                 } else if (name.contains(" I")) {
                     data.amplifierTier1 += count;
                     raidData.amplifierTier1 += count;
                     data.sessionData.amplifierTier1 += count;
                     sessionRaidData.amplifierTier1 += count;
+                    latestRun.amplifierTier1 += count;
                 }
             }
 
@@ -136,21 +149,25 @@ public class RaidLootTracker {
                 raidData.totalBags += count;
                 data.sessionData.totalBags += count;
                 sessionRaidData.totalBags += count;
+                latestRun.totalBags += count;
                 if (name.startsWith("Stuffed")) {
                     data.stuffedBags += count;
                     raidData.stuffedBags += count;
                     data.sessionData.stuffedBags += count;
                     sessionRaidData.stuffedBags += count;
+                    latestRun.stuffedBags += count;
                 } else if (name.startsWith("Packed")) {
                     data.packedBags += count;
                     raidData.packedBags += count;
                     data.sessionData.packedBags += count;
                     sessionRaidData.packedBags += count;
+                    latestRun.packedBags += count;
                 } else if (name.startsWith("Varied")) {
                     data.variedBags += count;
                     raidData.variedBags += count;
                     data.sessionData.variedBags += count;
                     sessionRaidData.variedBags += count;
+                    latestRun.variedBags += count;
                 }
             }
 
@@ -160,6 +177,7 @@ public class RaidLootTracker {
                 raidData.totalTomes += count;
                 data.sessionData.totalTomes += count;
                 sessionRaidData.totalTomes += count;
+                latestRun.totalTomes += count;
                 // Check tooltip for "Mythic" to determine rarity
                 boolean isMythic = checkTooltipForMythic(stack);
                 if (isMythic) {
@@ -167,11 +185,13 @@ public class RaidLootTracker {
                     raidData.mythicTomes += count;
                     data.sessionData.mythicTomes += count;
                     sessionRaidData.mythicTomes += count;
+                    latestRun.mythicTomes += count;
                 } else {
                     data.fabledTomes += count;
                     raidData.fabledTomes += count;
                     data.sessionData.fabledTomes += count;
                     sessionRaidData.fabledTomes += count;
+                    latestRun.fabledTomes += count;
                 }
             }
 
@@ -181,9 +201,20 @@ public class RaidLootTracker {
                 raidData.totalCharms += count;
                 data.sessionData.totalCharms += count;
                 sessionRaidData.totalCharms += count;
+                latestRun.totalCharms += count;
+            }
+
+            // ===== Wards =====
+            if (name.contains("Ward")) {
+                data.totalWards += count;
+                raidData.totalWards += count;
+                data.sessionData.totalWards += count;
+                sessionRaidData.totalWards += count;
+                latestRun.totalWards += count;
             }
         }
 
+        data.latestData = latestRun;
         RaidLootConfig.INSTANCE.save();
         lastParse = Time.now().timestamp();
     }
@@ -237,7 +268,8 @@ public class RaidLootTracker {
                                 d.getTotalAmplifiers() +
                                 " §7(I: " + d.amplifierTier1 +
                                 " | II: " + d.amplifierTier2 +
-                                " | III: " + d.amplifierTier3 + ")"
+                                " | III: " + d.amplifierTier3 +
+                                " | IV: " + d.amplifierTier4 + ")"
                 ),
                 false
         );

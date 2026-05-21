@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.raid;
 
+import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.*;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
@@ -16,33 +17,31 @@ public class RaidKindAdapter extends TypeAdapter<RaidKind> {
     }
 
     @Override
-    public void write(JsonWriter out, RaidKind value) throws IOException {
+    public void write(JsonWriter out, RaidKind value) {
         JsonObject obj = gson.toJsonTree(value).getAsJsonObject();
 
-        // Optional: explizit Typ hinzufügen
         obj.addProperty("type", value.getAbbreviation());
 
         gson.toJson(obj, out);
     }
 
     @Override
-    public RaidKind read(JsonReader in) throws IOException {
+    public RaidKind read(JsonReader in) {
         JsonObject obj = JsonParser.parseReader(in).getAsJsonObject();
 
         String abbreviation = obj.get("abbreviation").getAsString();
 
-        switch (abbreviation) {
-            case "TNA":
-                return gson.fromJson(obj, TheNamelessAnomalyRaid.class);
-            case "TCC":
-                return gson.fromJson(obj, TheCanyonColossusRaid.class);
-            case "NOL":
-                return gson.fromJson(obj, OrphionsNexusOfLightRaid.class);
-            case "NOG":
-                return gson.fromJson(obj, NestOfTheGrootslangsRaid.class);
-            default:
-                throw new JsonParseException("Unknown raid: " + abbreviation);
-        }
+        return switch (abbreviation) {
+            case "TNA" -> gson.fromJson(obj, TheNamelessAnomalyRaid.class);
+            case "TCC" -> gson.fromJson(obj, TheCanyonColossusRaid.class);
+            case "NOL" -> gson.fromJson(obj, OrphionsNexusOfLightRaid.class);
+            case "NOG" -> gson.fromJson(obj, NestOfTheGrootslangsRaid.class);
+            case "TWP", "WTP" -> gson.fromJson(obj, TheWartornPalaceRaid.class);
+            default -> {
+                WynnExtras.LOGGER.error("Unknown raid: " + abbreviation);
+                yield null;
+            }
+        };
     }
 }
 

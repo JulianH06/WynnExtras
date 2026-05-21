@@ -19,14 +19,14 @@ import net.minecraft.text.Text;
 import java.util.*;
 
 public class RaidLootTrackerOverlay {
-
-    private static final List<String> RAID_FILTERS = Arrays.asList("All", "NOTG", "NOL", "TCC", "TNA");
+    private static final List<String> RAID_FILTERS = Arrays.asList("All", "NOTG", "NOL", "TCC", "TNA", "TWP");
     private static int selectedFilterIndex = 0;
 
     // Position - loaded from config
     private static int xPos = 5;
     private static int yPos = 5;
     private static final int WIDTH = 165;
+    private static int effectiveWidth = WIDTH;
     private static final int LINE_HEIGHT = 10;
     private static final float TEXT_SCALE = 1.0f;
 
@@ -53,6 +53,7 @@ public class RaidLootTrackerOverlay {
     public static final String LINE_TOMES_MYTHIC = "tomes_mythic";
     public static final String LINE_TOMES_FABLED = "tomes_fabled";
     public static final String LINE_CHARMS = "charms";
+    public static final String LINE_WARDS = "wards";
     public static final String LINE_ASPECTS = "aspects";
     public static final String LINE_ASPECTS_MYTHIC = "aspects_mythic";
     public static final String LINE_ASPECTS_FABLED = "aspects_fabled";
@@ -74,9 +75,10 @@ public class RaidLootTrackerOverlay {
     // Reward chest coordinates for proximity check
     private static final Map<String, double[]> REWARD_CHEST_COORDS = Map.of(
             "NOTG", new double[]{10342, 41, 3111},
-            "NOL",  new double[]{11005, 58, 2909},
-            "TCC",  new double[]{10817, 45, 3901},
-            "TNA",  new double[]{24489, 8, -23878}
+            "NOL", new double[]{11005, 58, 2909},
+            "TCC", new double[]{10817, 45, 3901},
+            "TNA", new double[]{24489, 8, -23878},
+            "TWP", new double[]{-19065, 125, -1819}
     );
 
     // Colors
@@ -91,9 +93,15 @@ public class RaidLootTrackerOverlay {
     private static final CustomColor BAG_COLOR = CustomColor.fromHexString("55FFFF");
     private static final CustomColor TOME_COLOR = CustomColor.fromHexString("FF55FF");
     private static final CustomColor CHARM_COLOR = CustomColor.fromHexString("FF5555");
+    private static final CustomColor WARD_COLOR = CustomColor.fromHexString("f9508e");
     private static final CustomColor ASPECT_COLOR = CustomColor.fromHexString("AA55FF");
     private static final CustomColor HIDDEN_COLOR = CustomColor.fromHexString("555555");
     private static final CustomColor SESSION_COLOR = CustomColor.fromHexString("55FF55");
+
+    public enum mode { ALL, SESSION, LATEST }
+
+    private static final String[] MODES = {"All-Time", "Session", "Latest"};
+    private static final CustomColor[] MODE_COLORS = {AMPLIFIER_COLOR, SESSION_COLOR, FILTER_COLOR};
 
     public static void register() {
         HudRenderCallback.EVENT.register(RaidLootTrackerOverlay::render);
@@ -137,6 +145,7 @@ public class RaidLootTrackerOverlay {
 
         // Don't render via HUD callback when screen is open
         if (mc.currentScreen != null) return;
+        if (mc.options.hudHidden) return;
 
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         if (!config.toggleRaidLootTracker) return;
@@ -176,18 +185,18 @@ public class RaidLootTrackerOverlay {
         RaidLootData data = RaidLootConfig.INSTANCE.data;
         data.initSession();
 
-        boolean showSession = config.raidLootTrackerShowSession;
         boolean compact = config.raidLootTrackerCompact;
         String selectedFilter = RAID_FILTERS.get(selectedFilterIndex);
 
-        // Draw background
+        // Compute effective width (background + layout) so long labels/values don't overflow
+        effectiveWidth = Math.max(WIDTH, calculateMaxContentWidth(config, compact, selectedFilter));
         if (config.raidLootTrackerBackground) {
             int contentHeight = calculateContentHeight(compact, inInventory) + LINE_HEIGHT; // +1 line for safety
             int padX = 4;
             int padY = 3;
             int bgX = xPos - padX;
             int bgY = yPos - padY;
-            int bgWidth = WIDTH + padX * 2;
+            int bgWidth = effectiveWidth + padX * 2;
             int bgHeight = contentHeight + padY * 2;
             int bgColor = 0xCC1a1a1a; // Dark gray with transparency
             drawBackground(context, bgX, bgY, bgX + bgWidth, bgY + bgHeight, bgColor);
@@ -205,7 +214,8 @@ public class RaidLootTrackerOverlay {
         y += LINE_HEIGHT + 2;
 
         // Raid selector - nicer design with clickable arrows
-        String modeText = showSession ? "Session" : "All-Time";
+        String modeText = MODES[config.raidLootTrackerMode.ordinal()];
+        CustomColor modeColor = MODE_COLORS[config.raidLootTrackerMode.ordinal()];
 
         // Left arrow [◀
         String leftArrowText = "[\u25C0";
@@ -231,17 +241,17 @@ public class RaidLootTrackerOverlay {
         // Mode selector on right with arrows [◀ Session ▶]
         String modeRightArrow = "\u25B6]";
         float modeRightArrowWidth = getTextWidth(modeRightArrow);
-        drawTextRight(context, modeRightArrow, xPos + WIDTH, y, FILTER_ARROW_COLOR);
-        modeRightArrowBounds = new int[]{(int)(xPos + WIDTH - modeRightArrowWidth), y, xPos + WIDTH, y + LINE_HEIGHT};
+        drawTextRight(context, modeRightArrow, xPos + effectiveWidth, y, FILTER_ARROW_COLOR);
+        modeRightArrowBounds = new int[]{(int)(xPos + effectiveWidth - modeRightArrowWidth), y, xPos + WIDTH, y + LINE_HEIGHT};
 
         float modeNameWidth = getTextWidth(modeText);
-        float modeNameEndX = xPos + WIDTH - modeRightArrowWidth - getTextWidth(" ");
-        drawTextRight(context, modeText, modeNameEndX, y, showSession ? SESSION_COLOR : AMPLIFIER_COLOR);
+        float modeNameEndX = xPos + effectiveWidth - modeRightArrowWidth - getTextWidth(" ");
+        drawTextRight(context, modeText, modeNameEndX, y, modeColor);
         modeNameBounds = new int[]{(int)(modeNameEndX - modeNameWidth), y, (int)modeNameEndX, y + LINE_HEIGHT};
 
         String modeLeftArrow = "[\u25C0 ";
         float modeLeftArrowWidth = getTextWidth(modeLeftArrow);
-        float modeLeftArrowX = modeNameEndX - modeNameWidth - getTextWidth(" ");
+        float modeLeftArrowX = modeNameEndX - modeNameWidth;
         drawTextRight(context, modeLeftArrow, modeLeftArrowX, y, FILTER_ARROW_COLOR);
         modeLeftArrowBounds = new int[]{(int)(modeLeftArrowX - modeLeftArrowWidth), y, (int)modeLeftArrowX, y + LINE_HEIGHT};
         y += LINE_HEIGHT + 3;
@@ -250,23 +260,28 @@ public class RaidLootTrackerOverlay {
         RaidLootData.RaidSpecificLoot displayData;
         int completions;
 
-        if (selectedFilter.equals("All")) {
-            if (showSession) {
-                displayData = data.sessionData;
-                completions = data.sessionData.completionCount;
-            } else {
-                displayData = createAggregateData(data);
-                completions = data.perRaidData.values().stream().mapToInt(r -> r.completionCount).sum();
-            }
+        if(config.raidLootTrackerMode == mode.LATEST) {
+            displayData = data.latestData;
+            completions = 1;
         } else {
-            if (showSession) {
-                displayData = data.sessionPerRaidData != null ?
-                        data.sessionPerRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot()) :
-                        new RaidLootData.RaidSpecificLoot();
+            if (selectedFilter.equals("All")) {
+                if (config.raidLootTrackerMode == mode.SESSION) {
+                    displayData = data.sessionData;
+                    completions = data.sessionData.completionCount;
+                } else {
+                    displayData = createAggregateData(data);
+                    completions = data.perRaidData.values().stream().mapToInt(r -> r.completionCount).sum();
+                }
             } else {
-                displayData = data.perRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot());
+                if (config.raidLootTrackerMode == mode.SESSION) {
+                    displayData = data.sessionPerRaidData != null ?
+                            data.sessionPerRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot()) :
+                            new RaidLootData.RaidSpecificLoot();
+                } else {
+                    displayData = data.perRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot());
+                }
+                completions = displayData.completionCount;
             }
-            completions = displayData.completionCount;
         }
 
         // Calculate emerald totals
@@ -287,8 +302,9 @@ public class RaidLootTrackerOverlay {
             y = drawCompactLine(context, LINE_BAGS, "Bags", String.valueOf(displayData.totalBags), BAG_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_TOMES, "Tomes", String.valueOf(displayData.totalTomes), TOME_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_CHARMS, "Charms", String.valueOf(displayData.totalCharms), CHARM_COLOR, y, inInventory);
+            y = drawCompactLine(context, LINE_WARDS, "Wards", String.valueOf(displayData.totalWards), WARD_COLOR, y, inInventory);
             y = drawCompactLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), ASPECT_COLOR, y, inInventory);
-            drawCompactLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
+            if(config.raidLootTrackerMode != mode.LATEST) drawCompactLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
         } else {
             // Full mode
             String emeraldVal = formatEmeralds(stacks, le, eb);
@@ -299,6 +315,7 @@ public class RaidLootTrackerOverlay {
             y = drawLine(context, LINE_AMP_T1, "  Tier I", String.valueOf(displayData.amplifierTier1), AMPLIFIER_COLOR, y, inInventory);
             y = drawLine(context, LINE_AMP_T2, "  Tier II", String.valueOf(displayData.amplifierTier2), AMPLIFIER_COLOR, y, inInventory);
             y = drawLine(context, LINE_AMP_T3, "  Tier III", String.valueOf(displayData.amplifierTier3), AMPLIFIER_COLOR, y, inInventory);
+            y = drawLine(context, LINE_AMP_T3, "  Tier IV", String.valueOf(displayData.amplifierTier4), AMPLIFIER_COLOR, y, inInventory);
 
             y = drawLine(context, LINE_BAGS, "Crafter Bags", String.valueOf(displayData.totalBags), BAG_COLOR, y, inInventory);
             y = drawLine(context, LINE_BAGS_STUFFED, "  Stuffed", String.valueOf(displayData.stuffedBags), BAG_COLOR, y, inInventory);
@@ -310,6 +327,7 @@ public class RaidLootTrackerOverlay {
             y = drawLine(context, LINE_TOMES_FABLED, "  Fabled", String.valueOf(displayData.fabledTomes), TOME_COLOR, y, inInventory);
 
             y = drawLine(context, LINE_CHARMS, "Charms", String.valueOf(displayData.totalCharms), CHARM_COLOR, y, inInventory);
+            y = drawLine(context, LINE_WARDS, "Wards", String.valueOf(displayData.totalWards), WARD_COLOR, y, inInventory);
 
             y = drawLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), ASPECT_COLOR, y, inInventory);
             y = drawLine(context, LINE_ASPECTS_MYTHIC, "  Mythic", String.valueOf(displayData.mythicAspects), ASPECT_COLOR, y, inInventory);
@@ -317,7 +335,7 @@ public class RaidLootTrackerOverlay {
             y = drawLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), ASPECT_COLOR, y, inInventory);
 
             y += 2;
-            drawLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
+            if(config.raidLootTrackerMode != mode.LATEST) drawLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, inInventory);
         }
     }
 
@@ -328,6 +346,7 @@ public class RaidLootTrackerOverlay {
         agg.amplifierTier1 = data.amplifierTier1;
         agg.amplifierTier2 = data.amplifierTier2;
         agg.amplifierTier3 = data.amplifierTier3;
+        agg.amplifierTier4 = data.amplifierTier4;
         agg.totalBags = data.totalBags;
         agg.stuffedBags = data.stuffedBags;
         agg.packedBags = data.packedBags;
@@ -336,6 +355,7 @@ public class RaidLootTrackerOverlay {
         agg.mythicTomes = data.mythicTomes;
         agg.fabledTomes = data.fabledTomes;
         agg.totalCharms = data.totalCharms;
+        agg.totalWards = data.totalWards;
         agg.mythicAspects = data.mythicAspects;
         agg.fabledAspects = data.fabledAspects;
         agg.legendaryAspects = data.legendaryAspects;
@@ -354,7 +374,7 @@ public class RaidLootTrackerOverlay {
             drawTextStrikethrough(context, label + ": " + value, xPos, y, HIDDEN_COLOR);
         } else {
             drawText(context, label + ":", xPos, y, color);
-            drawTextRight(context, value, xPos + WIDTH, y, VALUE_COLOR);
+            drawTextRight(context, value, xPos + effectiveWidth, y, VALUE_COLOR);
         }
 
         return y + LINE_HEIGHT;
@@ -371,10 +391,83 @@ public class RaidLootTrackerOverlay {
             drawTextStrikethrough(context, label + ":" + value, xPos, y, HIDDEN_COLOR);
         } else {
             drawText(context, label + ":", xPos, y, color);
-            drawTextRight(context, value, xPos + WIDTH, y, VALUE_COLOR);
+            drawTextRight(context, value, xPos + effectiveWidth, y, VALUE_COLOR);
         }
 
         return y + LINE_HEIGHT;
+    }
+
+    /** Compute the widest label+value pair needed so the background hugs the content. */
+    private static int calculateMaxContentWidth(WynnExtrasConfig config, boolean compact, String selectedFilter) {
+        RaidLootData data = RaidLootConfig.INSTANCE.data;
+        RaidLootData.RaidSpecificLoot d;
+        int completions;
+        if (config.raidLootTrackerMode == mode.LATEST) {
+            d = data.latestData;
+            completions = 1;
+        } else if (selectedFilter.equals("All")) {
+            if (config.raidLootTrackerMode == mode.SESSION) {
+                d = data.sessionData;
+                completions = data.sessionData.completionCount;
+            } else {
+                d = createAggregateData(data);
+                completions = data.perRaidData.values().stream().mapToInt(r -> r.completionCount).sum();
+            }
+        } else {
+            if (config.raidLootTrackerMode == mode.SESSION) {
+                d = data.sessionPerRaidData != null
+                        ? data.sessionPerRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot())
+                        : new RaidLootData.RaidSpecificLoot();
+            } else {
+                d = data.perRaidData.getOrDefault(selectedFilter, new RaidLootData.RaidSpecificLoot());
+            }
+            completions = d.completionCount;
+        }
+
+        long totalEmeralds = (d.liquidEmeralds * 64L * 64L) + (d.emeraldBlocks * 64L);
+        long stacks = totalEmeralds / 262144;
+        long rem1 = totalEmeralds % 262144;
+        long le = rem1 / 4096;
+        long rem2 = rem1 % 4096;
+        long eb = rem2 / 64;
+
+        String emVal = compact ? formatEmeraldsCompact(stacks, le, eb) : formatEmeralds(stacks, le, eb);
+        String[][] pairs;
+        if (compact) {
+            pairs = new String[][]{
+                {"Ems", emVal}, {"Amps", String.valueOf(d.getTotalAmplifiers())},
+                {"Bags", String.valueOf(d.totalBags)}, {"Tomes", String.valueOf(d.totalTomes)},
+                {"Charms", String.valueOf(d.totalCharms)}, {"Wards", String.valueOf(d.totalWards)},
+                {"Aspects", String.valueOf(d.mythicAspects + d.fabledAspects + d.legendaryAspects)},
+                {"Runs", String.valueOf(completions)}
+            };
+        } else {
+            pairs = new String[][]{
+                {"Emeralds", emVal},
+                {"Amplifiers", String.valueOf(d.getTotalAmplifiers())},
+                {"Crafter Bags", String.valueOf(d.totalBags)},
+                {"Tomes", String.valueOf(d.totalTomes)},
+                {"Charms", String.valueOf(d.totalCharms)},
+                {"Wards", String.valueOf(d.totalWards)},
+                {"Aspects", String.valueOf(d.mythicAspects + d.fabledAspects + d.legendaryAspects)},
+                {"Runs", String.valueOf(completions)}
+            };
+        }
+
+        float max = 0;
+        float gap = getTextWidth("  ");
+        for (String[] p : pairs) {
+            float w = getTextWidth(p[0] + ":") + gap + getTextWidth(p[1]);
+            if (w > max) max = w;
+        }
+
+        // Also account for the filter/mode header row
+        String modeText = MODES[config.raidLootTrackerMode.ordinal()];
+        float headerW = getTextWidth("[\u25C0 " + selectedFilter + " \u25B6]") + gap +
+                        getTextWidth("[\u25C0 " + modeText + " \u25B6]");
+        if (headerW > max) max = headerW;
+
+        return (int) Math.ceil(max);
     }
 
     private static int calculateContentHeight(boolean compact, boolean inInventory) {
@@ -384,12 +477,17 @@ public class RaidLootTrackerOverlay {
 
         int dataLines;
         if (compact) {
-            dataLines = 7; // Ems, Amps, Bags, Tomes, Charms, Aspects, Runs
+            dataLines = 8; // Ems, Amps, Bags, Tomes, Charms, Wards, Aspects, Runs
         } else {
-            dataLines = 17; // Emeralds, Amplifiers(4), Bags(4), Tomes(3), Charms, Aspects(4), Runs
+            // Emeralds(1) + Amps header + 4 tiers (5) + Bags header + 3 sub (4)
+            // + Tomes header + 2 sub (3) + Charms(1) + Wards(1)
+            // + Aspects header + 3 sub (4) + Runs(1) = 20
+            dataLines = 20;
         }
 
-        // Subtract hidden lines when not showing them (not in inventory)
+        if(WynnExtrasConfig.INSTANCE.raidLootTrackerMode == mode.LATEST) dataLines--;
+
+            // Subtract hidden lines when not showing them (not in inventory)
         if (!inInventory) {
             dataLines -= (int) hiddenLines.size();
         }
@@ -480,7 +578,7 @@ public class RaidLootTrackerOverlay {
         MinecraftClient mc = MinecraftClient.getInstance();
         int contentHeight = calculateContentHeight(config.raidLootTrackerCompact);
 
-        boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + WIDTH + 2 &&
+        boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + effectiveWidth + 2 &&
                 mouseY >= yPos - 2 && mouseY <= yPos + contentHeight + 4;
 
         if (action == 0) {
@@ -516,14 +614,14 @@ public class RaidLootTrackerOverlay {
 
                 // Check if clicked on mode left arrow (toggle to other mode)
                 if (isInBounds(mouseX, mouseY, modeLeftArrowBounds)) {
-                    config.raidLootTrackerShowSession = !config.raidLootTrackerShowSession;
+                    config.raidLootTrackerMode = mode.values()[(config.raidLootTrackerMode.ordinal() - 1 + mode.values().length) % mode.values().length];
                     WynnExtrasConfig.save();
                     return true;
                 }
 
                 // Check if clicked on mode right arrow or mode name (toggle to other mode)
                 if (isInBounds(mouseX, mouseY, modeRightArrowBounds) || isInBounds(mouseX, mouseY, modeNameBounds)) {
-                    config.raidLootTrackerShowSession = !config.raidLootTrackerShowSession;
+                    config.raidLootTrackerMode = mode.values()[(config.raidLootTrackerMode.ordinal() + 1) % mode.values().length];
                     WynnExtrasConfig.save();
                     return true;
                 }
@@ -554,7 +652,7 @@ public class RaidLootTrackerOverlay {
 
             // Right click on mode area = toggle mode (check before drag)
             if (button == 1 && (isInBounds(mouseX, mouseY, modeNameBounds) || isInBounds(mouseX, mouseY, modeLeftArrowBounds))) {
-                config.raidLootTrackerShowSession = !config.raidLootTrackerShowSession;
+                config.raidLootTrackerMode = mode.values()[(config.raidLootTrackerMode.ordinal() + 1) % mode.values().length];
                 WynnExtrasConfig.save();
                 return true;
             }
@@ -586,7 +684,7 @@ public class RaidLootTrackerOverlay {
         if (mc.getWindow() != null) {
             int screenWidth = mc.getWindow().getScaledWidth();
             int screenHeight = mc.getWindow().getScaledHeight();
-            xPos = Math.max(0, Math.min(xPos, screenWidth - WIDTH));
+            xPos = Math.max(0, Math.min(xPos, screenWidth - effectiveWidth));
             yPos = Math.max(0, Math.min(yPos, screenHeight - 100));
         }
     }

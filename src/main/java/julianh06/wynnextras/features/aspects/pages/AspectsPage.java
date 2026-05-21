@@ -1,7 +1,8 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import com.wynntils.utils.colors.CommonColors;
+import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
@@ -9,6 +10,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.aspects.FavoriteAspectsData;
+import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.features.profileviewer.data.Aspect;
@@ -55,10 +57,10 @@ public class AspectsPage extends PageWidget {
     private static User searchedPlayerData = null;
     private static WynncraftApiHandler.FetchStatus searchedPlayerStatus = null;
 
-    private User myAspectsData = null;
-    private WynncraftApiHandler.FetchStatus myAspectsFetchStatus = null;
-    private boolean fetchedMyAspects = false;
-    private int myAspectsFetchGeneration = 0;
+    private static User myAspectsData = null;
+    private static WynncraftApiHandler.FetchStatus myAspectsFetchStatus = null;
+    private static boolean fetchedMyAspects = false;
+    private static int myAspectsFetchGeneration = 0;
 
     private static String classFilter = "Warrior";
 
@@ -80,6 +82,7 @@ public class AspectsPage extends PageWidget {
 
     private static LootPoolWidget mythicAndFabledWidget;
     private static LootPoolWidget legendaryWidget;
+    private static RefreshButton refreshButton;
 
     public AspectsPage(AspectScreen parent) {
         super(parent);
@@ -90,6 +93,7 @@ public class AspectsPage extends PageWidget {
 
         progressBarShowMaxWidget = new ProgressBarShowMaxWidget();
         resetToOwnAspectsWidget = new ResetToOwnAspectsWidget();
+        refreshButton = new RefreshButton();
         mythicAndFabledWidget = new LootPoolWidget();
         legendaryWidget = new LootPoolWidget();
     }
@@ -142,7 +146,7 @@ public class AspectsPage extends PageWidget {
                         .exceptionally(ex -> {
                             // Only log if this is still the current request
                             if (fetchGen == myAspectsFetchGeneration) {
-                                System.err.println("Failed to fetch aspects: " + ex.getMessage());
+                                WynnExtras.LOGGER.error("Failed to fetch aspects: " + ex.getMessage());
                             }
                             return null;
                         });
@@ -162,6 +166,9 @@ public class AspectsPage extends PageWidget {
             resetToOwnAspectsWidget.setBounds(logicalW - 400, 0, 400, 50);
             resetToOwnAspectsWidget.draw(context, mouseX, mouseY, tickDelta, ui);
         }
+
+        refreshButton.setBounds(0, 0, 300, 50);
+        refreshButton.draw(context, mouseX, mouseY, tickDelta, ui);
 
         switch (activeStatus) {
             case NOKEYSET:
@@ -204,6 +211,7 @@ public class AspectsPage extends PageWidget {
         int maxedForClass = 0;
 
         for (Aspect playerAspect : activeAspectsData.getAspects()) {
+            if (playerAspect.getAmount() <= 0) continue;
             ApiAspect apiAspect = allAspects.stream()
                     .filter(a -> a.getName().equals(playerAspect.getName()))
                     .findFirst()
@@ -318,13 +326,25 @@ public class AspectsPage extends PageWidget {
             List<Aspect> mythicAndFabledAspects = new ArrayList<>();
             List<Aspect> legendaryAspects = new ArrayList<>();
 
-            for(Aspect aspect : activeAspectsData.getAspects()) {
-                for(ApiAspect apiAspect : allAspects) {
-                    if(!apiAspect.getRequiredClass().equalsIgnoreCase(currentTab.name())) continue;
-                    if(!apiAspect.getName().equalsIgnoreCase(aspect.getName())) continue;
-                    if(apiAspect.getRarity().equalsIgnoreCase("legendary")) legendaryAspects.add(aspect);
-                    else mythicAndFabledAspects.add(aspect);
+            for(ApiAspect apiAspect : allAspects) {
+                if(!apiAspect.getRequiredClass().equalsIgnoreCase(currentTab.name())) continue;
+                Aspect playerAspect = null;
+                for(Aspect a : activeAspectsData.getAspects()) {
+                    if(a.getName().equalsIgnoreCase(apiAspect.getName())) {
+                        playerAspect = a;
+                        break;
+                    }
                 }
+                if(playerAspect == null || playerAspect.getAmount() <= 0) {
+                    Aspect stub = new Aspect();
+                    stub.setName(apiAspect.getName());
+                    stub.setRarity(apiAspect.getRarity());
+                    stub.setRequiredClass(apiAspect.getRequiredClass());
+                    stub.setAmount(0);
+                    playerAspect = stub;
+                }
+                if(apiAspect.getRarity().equalsIgnoreCase("legendary")) legendaryAspects.add(playerAspect);
+                else mythicAndFabledAspects.add(playerAspect);
             }
 
             mythicAndFabledWidget.aspectEntries = mythicAndFabledAspects;
@@ -353,7 +373,9 @@ public class AspectsPage extends PageWidget {
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(hoveredTooltip.isEmpty()) return;
-        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), mouseX - 5, mouseY + 20);
+        int absX = (int)(mouseX * parent.getMatrixScale());
+        int absY = (int)(mouseY * parent.getMatrixScale());
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, Optional.empty(), absX, absY + 20);
     }
 
     @Override
@@ -421,11 +443,6 @@ public class AspectsPage extends PageWidget {
 
         String className = classFilter;
 
-        int allTotal = (int) allAspects.stream().filter(a -> a.getRequiredClass().equalsIgnoreCase(className)).count();
-        int allCount = progressBarShowMax
-                ? countMaxedForClassAndRarity(allAspects, playerAspects, className, null)
-                : countUnlockedForClassAndRarity(allAspects, playerAspects, className, null);
-
         int mythicTotal = (int) allAspects.stream().filter(a -> a.getRequiredClass().equalsIgnoreCase(className) && a.getRarity().equalsIgnoreCase("mythic")).count();
         int mythicCount = progressBarShowMax
                 ? countMaxedForClassAndRarity(allAspects, playerAspects, className, "mythic")
@@ -441,30 +458,33 @@ public class AspectsPage extends PageWidget {
                 ? countMaxedForClassAndRarity(allAspects, playerAspects, className, "legendary")
                 : countUnlockedForClassAndRarity(allAspects, playerAspects, className, "legendary");
 
+        int allTotal = mythicTotal + fabledTotal + legendaryTotal;
+        int allCount = mythicCount + fabledCount + legendaryCount;
+
         int y = startY;
 
         boolean allMax = allCount == allTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawText("§6§lAll " + className, barX - 350, y + 20);
         ui.drawText("§7" + allCount + "§8/§7" + allTotal, barX + barWidth + 20, y + 20);
-        ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) allCount / allTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, allMax ? progress_white : progress_green, context, allMax);
+        ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) allCount / allTotal, UIUtils.isVanillaPanelDark() ? border_dark : border, UIUtils.isVanillaPanelDark() ? barBackground_dark : barBackground, allMax ? progress_white : progress_green, context, allMax);
         y += 70;
 
         boolean mythicMax = mythicCount == mythicTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawText("§5Mythic " + className, barX - 350, y + 20);
         ui.drawText("§7" + mythicCount + "§8/§7" + mythicTotal, barX + barWidth + 20, y + 20);
-        ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) mythicCount / mythicTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, mythicMax ? progress_white : progress_green, context, mythicMax);
+        ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) mythicCount / mythicTotal, UIUtils.isVanillaPanelDark() ? border_dark : border, UIUtils.isVanillaPanelDark() ? barBackground_dark : barBackground, mythicMax ? progress_white : progress_green, context, mythicMax);
         y += 70;
 
         boolean fabledMax = fabledCount == fabledTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawText("§cFabled " + className, barX - 350, y + 20);
         ui.drawText("§7" + fabledCount + "§8/§7" + fabledTotal, barX + barWidth + 20, y + 20);
-        ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) fabledCount / fabledTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, fabledMax ? progress_white : progress_green, context, fabledMax);
+        ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) fabledCount / fabledTotal, UIUtils.isVanillaPanelDark() ? border_dark : border, UIUtils.isVanillaPanelDark() ? barBackground_dark : barBackground, fabledMax ? progress_white : progress_green, context, fabledMax);
         y += 70;
 
         boolean legendaryMax = legendaryCount == legendaryTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
         ui.drawText("§bLegendary " + className, barX - 350, y + 20);
         ui.drawText("§7" + legendaryCount + "§8/§7" + legendaryTotal, barX + barWidth + 20, y + 20);
-        ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) legendaryCount / legendaryTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, legendaryMax ? progress_white : progress_green, context, legendaryMax);
+        ui.drawProgressBar(barX, y, barWidth, 60, 5, (float) legendaryCount / legendaryTotal, UIUtils.isVanillaPanelDark() ? border_dark : border, UIUtils.isVanillaPanelDark() ? barBackground_dark : barBackground, legendaryMax ? progress_white : progress_green, context, legendaryMax);
         y += 70;
 
         return y;
@@ -479,9 +499,6 @@ public class AspectsPage extends PageWidget {
         int barWidth = Math.min(800, logicalW - 600);
         int barX = centerX - barWidth / 2;
 
-        int totalAspects = allAspects.size();
-        int totalCount = progressBarShowMax ? countMaxedAspects(allAspects, playerAspects) : playerAspects.size();
-
         int mythicTotal = (int) allAspects.stream().filter(a -> a.getRarity().equalsIgnoreCase("mythic")).count();
         int mythicCount = progressBarShowMax ? countMaxedByRarity(allAspects, playerAspects, "mythic") : countUnlockedByRarity(allAspects, playerAspects, "mythic");
 
@@ -491,30 +508,33 @@ public class AspectsPage extends PageWidget {
         int legendaryTotal = (int) allAspects.stream().filter(a -> a.getRarity().equalsIgnoreCase("legendary")).count();
         int legendaryCount = progressBarShowMax ? countMaxedByRarity(allAspects, playerAspects, "legendary") : countUnlockedByRarity(allAspects, playerAspects, "legendary");
 
+        int totalAspects = mythicTotal + fabledTotal + legendaryTotal;
+        int totalCount = mythicCount + fabledCount + legendaryCount;
+
         String suffix = progressBarShowMax ? " Max" : " unlocked";
 
         ui.drawText("§6§lTotal" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + totalCount + "§8/§7" + totalAspects, barX + barWidth + 20, barStartY + 20);
         boolean totalMax = totalCount == totalAspects && !WynnExtrasConfig.INSTANCE.removeChroma;
-        ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) totalCount / totalAspects, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, totalMax ? progress_white : progress_green, context, totalMax);
+        ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) totalCount / totalAspects, UIUtils.isVanillaPanelDark() ? border_dark : border, UIUtils.isVanillaPanelDark() ? barBackground_dark : barBackground, totalMax ? progress_white : progress_green, context, totalMax);
         barStartY += 70;
 
         ui.drawText("§5Mythic" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + mythicCount + "§8/§7" + mythicTotal, barX + barWidth + 20, barStartY + 20);
         boolean mythicMax = mythicCount == mythicTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
-        ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) mythicCount / mythicTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, mythicMax ? progress_white : progress_mythic, context, mythicMax);
+        ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) mythicCount / mythicTotal, UIUtils.isVanillaPanelDark() ? border_dark : border, UIUtils.isVanillaPanelDark() ? barBackground_dark : barBackground, mythicMax ? progress_white : progress_mythic, context, mythicMax);
         barStartY += 70;
 
         ui.drawText("§cFabled" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + fabledCount + "§8/§7" + fabledTotal, barX + barWidth + 20, barStartY + 20);
         boolean fabledMax = fabledCount == fabledTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
-        ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) fabledCount / fabledTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, fabledMax ? progress_white : progress_fabled, context, fabledMax);
+        ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) fabledCount / fabledTotal, UIUtils.isVanillaPanelDark() ? border_dark : border, UIUtils.isVanillaPanelDark() ? barBackground_dark : barBackground, fabledMax ? progress_white : progress_fabled, context, fabledMax);
         barStartY += 70;
 
         ui.drawText("§bLegendary" + suffix, barX - 350, barStartY + 20);
         ui.drawText("§7" + legendaryCount + "§8/§7" + legendaryTotal, barX + barWidth + 20, barStartY + 20);
         boolean legendaryMax = legendaryCount == legendaryTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
-        ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) legendaryCount / legendaryTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, legendaryMax ? progress_white : progress_legendary, context, legendaryMax);
+        ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) legendaryCount / legendaryTotal, UIUtils.isVanillaPanelDark() ? border_dark : border, UIUtils.isVanillaPanelDark() ? barBackground_dark : barBackground, legendaryMax ? progress_white : progress_legendary, context, legendaryMax);
         barStartY += 90;
 
         ui.drawCenteredText("§e§lPER CLASS", centerX, barStartY);
@@ -548,8 +568,8 @@ public class AspectsPage extends PageWidget {
 
             ui.drawText(className + suffix, barX - 350, barStartY + 20, classColor);
             ui.drawText("§7" + classCount + "§8/§7" + classTotal, barX + barWidth + 20, barStartY + 20);
-            boolean classMax = fabledCount == fabledTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
-            ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) classCount / classTotal, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? border_dark : border, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode ? barBackground_dark : barBackground, classMax ? progress_white : progressTexture, context, classMax);
+            boolean classMax = classCount == classTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
+            ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) classCount / classTotal, UIUtils.isVanillaPanelDark() ? border_dark : border, UIUtils.isVanillaPanelDark() ? barBackground_dark : barBackground, classMax ? progress_white : progressTexture, context, classMax);
             barStartY += 70;
         }
     }
@@ -564,6 +584,7 @@ public class AspectsPage extends PageWidget {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if(resetToOwnAspectsWidget.mouseClicked(mx, my, button)) return true;
+        if(refreshButton.mouseClicked(mx, my, button)) return true;
 
         if(currentTab == Tab.Overview) {
             int logicalW = (int) (width * ui.getScaleFactorF());
@@ -619,7 +640,7 @@ public class AspectsPage extends PageWidget {
             if(mythicAndFabledWidget.mouseClicked(mx, my, button)) return true;
             if(legendaryWidget.mouseClicked(mx, my, button)) return true;
         }
-        
+
         for(TabSwitchButton tabSwitchButton : tabSwitchButtons) {
             if(tabSwitchButton.mouseClicked(mx, my, button)) return true;
         }
@@ -666,7 +687,7 @@ public class AspectsPage extends PageWidget {
         }).exceptionally(ex -> {
             // Only log/update if we're still searching for the same player
             if (expectedPlayer.equals(searchedPlayer)) {
-                System.err.println("[WynnExtras] Error fetching aspects for " + playerName + ": " + ex.getMessage());
+                WynnExtras.LOGGER.error("[WynnExtras] Error fetching aspects for " + playerName + ": " + ex.getMessage());
                 searchedPlayerStatus = WynncraftApiHandler.FetchStatus.UNKNOWN_ERROR;
             }
             return null;
@@ -683,6 +704,7 @@ public class AspectsPage extends PageWidget {
     private int countMaxedAspects(List<ApiAspect> allAspects, List<Aspect> playerAspects) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
+            if (playerAspect.getAmount() <= 0) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
 
@@ -705,6 +727,7 @@ public class AspectsPage extends PageWidget {
     private int countMaxedByRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
+            if (playerAspect.getAmount() <= 0) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (!apiAspect.getRarity().equalsIgnoreCase(rarity)) continue;
@@ -728,6 +751,7 @@ public class AspectsPage extends PageWidget {
     private int countUnlockedByRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
+            if (playerAspect.getAmount() <= 0) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (apiAspect.getRarity().equalsIgnoreCase(rarity)) {
@@ -742,6 +766,7 @@ public class AspectsPage extends PageWidget {
     private int countMaxedForClassAndRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String className, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
+            if (playerAspect.getAmount() <= 0) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (!apiAspect.getRequiredClass().equalsIgnoreCase(className)) continue;
@@ -766,6 +791,7 @@ public class AspectsPage extends PageWidget {
     private int countUnlockedForClassAndRarity(List<ApiAspect> allAspects, List<Aspect> playerAspects, String className, String rarity) {
         int count = 0;
         for (Aspect playerAspect : playerAspects) {
+            if (playerAspect.getAmount() <= 0) continue;
             for (ApiAspect apiAspect : allAspects) {
                 if (!apiAspect.getName().equals(playerAspect.getName())) continue;
                 if (!apiAspect.getRequiredClass().equalsIgnoreCase(className)) continue;
@@ -786,7 +812,7 @@ public class AspectsPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
 
             CustomColor textColor = CustomColor.fromHexString("FFFFFF");
             if(currentTab == tab) textColor = CustomColor.fromHexString("fca800");
@@ -805,7 +831,7 @@ public class AspectsPage extends PageWidget {
     private static class ProgressBarShowMaxWidget extends Widget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
 
             String modeText = progressBarShowMax ? "§a§lMax" : "§e§lUnlocked";
             ui.drawCenteredText(modeText, x + width / 2f, y + height / 2f);
@@ -823,7 +849,7 @@ public class AspectsPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButton(x, y, width, height, 13, hovered, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+            ui.drawButton(x, y, width, height, hovered);
             ui.drawCenteredText("Back to My Aspects", x + width / 2f, y + height / 2f);
         }
 
@@ -891,19 +917,7 @@ public class AspectsPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            int topHeight = 80;
-
-            if(WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode) {
-                ui.drawNineSlice(x, y, width, topHeight, 33, ltopd, rtopd, ttopd, btopd, tltopd, trtopd, bltopd, brtopd, CustomColor.fromHexString("2c2d2f"));
-
-                ui.drawNineSlice(x,y + topHeight, width, height - topHeight, 33, ld, rd, td, bd, tld, trd, bld, brd, CustomColor.fromHexString("444448"));
-            } else {
-                ui.drawNineSlice(x,
-                        y, width,
-                        topHeight, 33, ltop, rtop, ttop, btop, tltop, trtop, bltop, brtop, CustomColor.fromHexString("81644b"));
-
-                ui.drawNineSlice(x,y + topHeight, width, height - topHeight, 33, l, r, t, b, tl, tr, bl, br, CustomColor.fromHexString("cca76f"));
-            }
+            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 65, 21);
 
             List<Aspect> mythicAspects = aspectEntries.stream().filter(a -> a.getRarity().equalsIgnoreCase("mythic")).toList();
             List<Aspect> fabledAspects = aspectEntries.stream().filter(a -> a.getRarity().equalsIgnoreCase("fabled")).toList();
@@ -970,9 +984,7 @@ public class AspectsPage extends PageWidget {
                             x + width - 20,
                             aspectY - spacing * 2,
                             3,
-                            WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode
-                                    ? CustomColor.fromHexString("1b1b1c")
-                                    : CustomColor.fromHexString("5d4736")
+                            UIUtils.getVanillaDarkSeparatorColor(false)
                     );
                 }
             }
@@ -1058,7 +1070,7 @@ public class AspectsPage extends PageWidget {
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 currentMouseY = mouseY;
-                ui.drawSliderBackground(x, y, width, height, 5, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+                ui.drawSliderBackground(x, y, width, height);
 
                 int buttonHeight = 75;
                 int scrollAreaHeight = height - buttonHeight;
@@ -1100,7 +1112,7 @@ public class AspectsPage extends PageWidget {
 
                 @Override
                 protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                    ui.drawButton(x, y, width, height, 5, hovered || isHold, WynnExtrasConfig.INSTANCE.lootPoolPagesDarkMode);
+                    ui.drawButton(x, y, width, height, hovered || isHold);
                 }
 
                 @Override
@@ -1139,21 +1151,22 @@ public class AspectsPage extends PageWidget {
                     displayName = displayName.substring(0, maxChars - ((hovered || isFavorite) ? 5 : 3)) + "...";
                 }
 
-                String tierInfo = AspectUtils.convertAmountToTierInfo(aspect.getAmount(), aspect.getRarity());
+                boolean isNotUnlocked = aspect.getAmount() <= 0;
+                String tierInfo = isNotUnlocked ? "Not unlocked" : AspectUtils.convertAmountToTierInfo(aspect.getAmount(), aspect.getRarity());
 
                 boolean isMax = tierInfo.contains("MAX");
-                CustomColor textColor = CustomColor.fromHexString("FFFFFF");
+                CustomColor textColor = isNotUnlocked ? CustomColor.fromHexString("808080") : CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
                 if(isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
-                    textColor = CommonColors.RAINBOW;
-                } else {
+                    textColor = WynncraftShaderColor.RAINBOW.color;
+                } else if(!isNotUnlocked) {
                     if(aspect.getRarity().equalsIgnoreCase("mythic")) rarityColorCode = "§5";
                     else if(aspect.getRarity().equalsIgnoreCase("fabled")) rarityColorCode = "§c";
                     else if(aspect.getRarity().equalsIgnoreCase("legendary")) rarityColorCode = "§b";
                 }
 
-                ui.drawText(rarityColorCode + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 90, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
-
+                String namePrefix = isNotUnlocked ? "§8" : rarityColorCode;
+                ui.drawText(namePrefix + displayName + (isFavorite ? " §e⭐" : ((hovered && parent.isHovered()) ? " §7☆" : "")), x + 90, y + 3 + height / 2f, textColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
 
                 ApiAspect apiAspect = findApiAspectByName(aspect.getName());
                 ItemStack flameItem = createAspectFlameIcon(apiAspect, isMax);
@@ -1170,7 +1183,7 @@ public class AspectsPage extends PageWidget {
                 if(hovered && parent.isHovered()) {
                     List<Text> tooltip = new ArrayList<>();
                     if(apiAspect == null) return;
-                    int tier = 0;
+                    int tier = 1;
                     if(isMax) {
                         if(aspect.getRarity().equalsIgnoreCase("legendary")) tier = 4;
                         else tier = 3;
@@ -1207,6 +1220,47 @@ public class AspectsPage extends PageWidget {
                 FavoriteAspectsData.INSTANCE.toggleFavorite(aspect.getName());
                 return true;
             }
+        }
+    }
+
+    private static class RefreshButton extends Widget {
+        public RefreshButton() {
+            super(0, 0, 0, 0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawButton(x, y, width, height, hovered);
+            ui.drawCenteredText("Reload aspects", x + width / 2f, y + height / 2f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            WynncraftApiHandler.INSTANCE.aspectFetchGeneration.incrementAndGet();
+            WynncraftApiHandler.INSTANCE.isFetchingAspects.set(false);
+
+            synchronized (WynncraftApiHandler.INSTANCE.aspectLock) {
+                for (int j = 0; j < 5; j++) {
+                    WynncraftApiHandler.INSTANCE.waitingForAspectResponse[j] = false;
+                }
+            }
+
+            searchedPlayerData = null;
+            myAspectsData = null;
+            searchedPlayerStatus = null;
+            myAspectsFetchStatus = null;
+
+            fetchedMyAspects = false;
+            myAspectsFetchGeneration = 0;
+
+            mythicAndFabledWidget.aspectWidgets.clear();
+            legendaryWidget.aspectWidgets.clear();
+            WynncraftApiHandler.INSTANCE.aspectList.clear();
+
+            if(!searchedPlayer.isEmpty()) performPlayerSearch(searchedPlayer);
+
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
         }
     }
 }

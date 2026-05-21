@@ -15,7 +15,7 @@ public class RenderEvents {
 
             MatrixStack stack = event.matrices();
 
-            new RenderWorldEvent(stack, event.gameRenderer().getCamera(), immediateVertexConsumers, event.worldState().time).post();
+            new RenderWorldEvent(stack, event.gameRenderer().getCamera(), immediateVertexConsumers, event.worldState().time, event.commandQueue()).post();
         });
     }
 }

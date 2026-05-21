@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.aspects;
 
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;

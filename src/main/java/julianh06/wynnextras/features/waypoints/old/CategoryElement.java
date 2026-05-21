@@ -222,10 +222,10 @@ public class CategoryElement {
     }
 
     public void draw(int x, int y, int width, int height, DrawContext context) {
-        if (GLFW.glfwGetMouseButton(MinecraftClient.getInstance().getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_1) == GLFW.GLFW_PRESS && alphaSlider.dragging) {
+        if (GLFW.glfwGetMouseButton(MinecraftClient.getInstance().getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_1) == GLFW.GLFW_PRESS && alphaSlider.isDragging()) {
             alphaSlider.updateValueFromMouse(mouseX);
         } else {
-            alphaSlider.dragging = false;
+            alphaSlider.setDragging(false);
         }
 
         this.width = width;
@@ -386,7 +386,7 @@ public class CategoryElement {
         if(colorPicker.isClickInBounds(mouseX, mouseY)) {
             colorPicker.click(mouseX, mouseY);
         } else {
-            colorPicker.expanded = false;
+            colorPicker.setExpanded(false);
         }
 
         if(alphaSlider.isClickInBounds(mouseX, mouseY)) {

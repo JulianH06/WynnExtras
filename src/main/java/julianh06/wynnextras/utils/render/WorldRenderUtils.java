@@ -39,7 +39,6 @@ import java.util.Set;
 
 public class WorldRenderUtils {
     public static WorldRenderUtils INSTANCE_WAYPOINTS = new WorldRenderUtils();
-    public static WorldRenderUtils INSTANCE_SHAMANTOTEM = new WorldRenderUtils();
 
     public static final RenderPipeline FILLED_BOX = RenderPipelines.register(RenderPipeline.builder(RenderPipelines.POSITION_COLOR_SNIPPET)
             .withLocation(Identifier.of(WynnExtras.MOD_ID, "pipeline/debug_filled_box"))
