@@ -617,7 +617,8 @@ public final class UIUtils {
     public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier progressTexture, DrawContext context, boolean chroma) {
         drawRect(x, y, width, height, getVanillaPanelBgColor());
 
-        context.enableScissor((int) sx(x), (int) sy(y), (int) sx(x + width * (progress)), (int) sy(y + height));
+        float clampedProgress = Math.max(0f, Math.min(1f, progress));
+        context.enableScissor((int) sx(x), (int) sy(y), getProgressScissorRight(x, width, clampedProgress), (int) sy(y + height));
         if(chroma) {
             RenderUtils.drawTexturedRect(
                     drawContext,
@@ -633,7 +634,7 @@ public final class UIUtils {
         context.disableScissor();
 
         drawRectBorders(x, y, width, height, getVanillaPanelBorderColor());
-        drawCenteredText(String.format("%.2f%%", progress * 100), x + width / 2f, y + height / 2f + 2, CustomColor.fromHexString("FFFFFF"), textScale);
+        drawCenteredText(String.format("%.2f%%", clampedProgress * 100), x + width / 2f, y + height / 2f + 2, CustomColor.fromHexString("FFFFFF"), textScale);
     }
 
     public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier border, Identifier background, Identifier progressTexture, DrawContext context) {
@@ -643,7 +644,8 @@ public final class UIUtils {
     public void drawProgressBar(float x, float y, float width, float height, float textScale, float progress, Identifier border, Identifier background, Identifier progressTexture, DrawContext context, boolean chroma) {
         drawImage(background, x, y, width, height);
 
-        context.enableScissor((int) sx(x), (int) sy(y), (int) sx(x + width * (progress)), (int) sy(y + height));
+        float clampedProgress = Math.max(0f, Math.min(1f, progress));
+        context.enableScissor((int) sx(x), (int) sy(y), getProgressScissorRight(x, width, clampedProgress), (int) sy(y + height));
         if(chroma) {
             RenderUtils.drawTexturedRect(
                     drawContext,
@@ -659,7 +661,14 @@ public final class UIUtils {
         context.disableScissor();
 
         drawImage(border, x, y, width, height);
-        drawCenteredText(String.format("%.2f%%", progress * 100), x + width / 2f, y + height / 2f + 2, CustomColor.fromHexString("FFFFFF"), textScale);
+        drawCenteredText(String.format("%.2f%%", clampedProgress * 100), x + width / 2f, y + height / 2f + 2, CustomColor.fromHexString("FFFFFF"), textScale);
+    }
+
+    private int getProgressScissorRight(float x, float width, float progress) {
+        float left = sx(x);
+        int drawnWidth = sw(width);
+        if (progress >= 1f) return (int) Math.ceil(left + drawnWidth);
+        return (int) Math.round(left + drawnWidth * progress);
     }
 
     public static CustomColor getRainbowColor(float speed, float offset) {

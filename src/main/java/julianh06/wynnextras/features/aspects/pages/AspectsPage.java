@@ -443,11 +443,6 @@ public class AspectsPage extends PageWidget {
 
         String className = classFilter;
 
-        int allTotal = (int) allAspects.stream().filter(a -> a.getRequiredClass().equalsIgnoreCase(className)).count();
-        int allCount = progressBarShowMax
-                ? countMaxedForClassAndRarity(allAspects, playerAspects, className, null)
-                : countUnlockedForClassAndRarity(allAspects, playerAspects, className, null);
-
         int mythicTotal = (int) allAspects.stream().filter(a -> a.getRequiredClass().equalsIgnoreCase(className) && a.getRarity().equalsIgnoreCase("mythic")).count();
         int mythicCount = progressBarShowMax
                 ? countMaxedForClassAndRarity(allAspects, playerAspects, className, "mythic")
@@ -462,6 +457,9 @@ public class AspectsPage extends PageWidget {
         int legendaryCount = progressBarShowMax
                 ? countMaxedForClassAndRarity(allAspects, playerAspects, className, "legendary")
                 : countUnlockedForClassAndRarity(allAspects, playerAspects, className, "legendary");
+
+        int allTotal = mythicTotal + fabledTotal + legendaryTotal;
+        int allCount = mythicCount + fabledCount + legendaryCount;
 
         int y = startY;
 
@@ -501,9 +499,6 @@ public class AspectsPage extends PageWidget {
         int barWidth = Math.min(800, logicalW - 600);
         int barX = centerX - barWidth / 2;
 
-        int totalAspects = allAspects.size();
-        int totalCount = progressBarShowMax ? countMaxedAspects(allAspects, playerAspects) : (int) playerAspects.stream().filter(a -> a.getAmount() > 1).count();
-
         int mythicTotal = (int) allAspects.stream().filter(a -> a.getRarity().equalsIgnoreCase("mythic")).count();
         int mythicCount = progressBarShowMax ? countMaxedByRarity(allAspects, playerAspects, "mythic") : countUnlockedByRarity(allAspects, playerAspects, "mythic");
 
@@ -512,6 +507,9 @@ public class AspectsPage extends PageWidget {
 
         int legendaryTotal = (int) allAspects.stream().filter(a -> a.getRarity().equalsIgnoreCase("legendary")).count();
         int legendaryCount = progressBarShowMax ? countMaxedByRarity(allAspects, playerAspects, "legendary") : countUnlockedByRarity(allAspects, playerAspects, "legendary");
+
+        int totalAspects = mythicTotal + fabledTotal + legendaryTotal;
+        int totalCount = mythicCount + fabledCount + legendaryCount;
 
         String suffix = progressBarShowMax ? " Max" : " unlocked";
 
@@ -570,7 +568,7 @@ public class AspectsPage extends PageWidget {
 
             ui.drawText(className + suffix, barX - 350, barStartY + 20, classColor);
             ui.drawText("§7" + classCount + "§8/§7" + classTotal, barX + barWidth + 20, barStartY + 20);
-            boolean classMax = fabledCount == fabledTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
+            boolean classMax = classCount == classTotal && !WynnExtrasConfig.INSTANCE.removeChroma;
             ui.drawProgressBar(barX, barStartY, barWidth, 60, 5, (float) classCount / classTotal, UIUtils.isVanillaPanelDark() ? border_dark : border, UIUtils.isVanillaPanelDark() ? barBackground_dark : barBackground, classMax ? progress_white : progressTexture, context, classMax);
             barStartY += 70;
         }

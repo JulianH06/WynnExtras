@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.aspects;
 
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -253,30 +254,32 @@ public class AspectUtils {
         }
     }
 
-    public static double getTierWeight(String rarity, int currentTier, int targetTier) {
-        String key = rarity.toLowerCase() + "_" + currentTier + "_" + targetTier;
+    public static double getRemainingToMax(int remainingToNext, String rarity, int currentTier) {
+        String key = rarity.toLowerCase() + "_" + (currentTier + 1);
+        int toMax = switch (key) {
+            case "mythic_1" -> 14;
+            case "mythic_2" -> 10;
 
-        return switch (key) {
-            // Tier progressions
-            case "mythic_1_2" -> 13.55;
-            case "mythic_2_3" -> 10.00;
-            case "fabled_1_2" -> 0.65;
-            case "fabled_2_3" -> 0.5;
-            case "legendary_1_2" -> 13.0;
-            case "legendary_2_3" -> 1.5;
-            case "legendary_3_4" -> 0.905;
+            case "fabled_1" -> 74;
+            case "fabled_2" -> 60;
 
-            // Same-tier progression (finishing current tier)
-            case "mythic_1_1" -> 13.55;
-            case "mythic_2_2" -> 10.0;
-            case "fabled_1_1" -> 6.05;
-            case "fabled_2_2" -> 0.50;
-            case "legendary_1_1" -> 13.0;
-            case "legendary_2_2" -> 5.0;
-            case "legendary_3_3" -> 1.5;
-            case "legendary_4_4" -> 0.905;
+            case "legendary_1" -> 149;
+            case "legendary_2" -> 145;
+            case "legendary_3" -> 120;
 
-            default -> 1.0;
+            default -> 0;
+        };
+
+        if (currentTier == 0) return toMax + 1;
+        else return toMax + remainingToNext;
+    }
+
+    public static double getRarityMultiplier(String rarity) {
+        return switch (rarity.toLowerCase()) {
+            case "mythic" -> WynnExtrasConfig.INSTANCE.mythicAspectMultiplier;
+            case "fabled" -> WynnExtrasConfig.INSTANCE.fabledAspectMultiplier;
+            case "legendary" -> WynnExtrasConfig.INSTANCE.legendaryAspectMultiplier;
+            default -> 1;
         };
     }
 }

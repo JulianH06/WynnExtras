@@ -49,6 +49,7 @@ public class LootPoolData {
         public String rarity; // MYTHIC, FABLED, LEGENDARY
         public String tierInfo; // "Tier II [8/10]" or "[MAX]"
         public String description; // What the aspect does (if available)
+        public double score = 0;
 
         public AspectEntry(String name, String rarity) {
             this.name = name;
