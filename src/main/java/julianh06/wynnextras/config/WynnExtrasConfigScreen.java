@@ -434,6 +434,12 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
                         () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
                 .add(text("The preview is movable", "To change its position just drag it where you want"))
+            .sub("Profession Overlay")
+                .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
+                        () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))
+                .add(visibleWhen(toggle("Show Exact XP", "Show exact XP values instead of percentages",
+                                () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
+                        () -> config.professionOverlayEnabled))
             .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
                         () -> config.showWeight, v -> {
@@ -553,12 +559,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
         // ===== MISC =====
         category("Misc", 0xFF0872bc)
-            .sub("Profession Overlay")
-                .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
-                        () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))
-                .add(visibleWhen(toggle("Show Exact XP", "Show exact XP values instead of percentages",
-                                () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
-                        () -> config.professionOverlayEnabled))
             .sub("Auto Actions")
                 .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
@@ -698,11 +698,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                             config.classSelectionContentProgressStyle = v;
                             config.syncClassSelectionLines();
                         }))
+                .add(classSelectionLines("Class Card Lines", "Choose which current stat lines are shown and in which order"))
                 .add(dropdown("Completion Chroma", "Where rainbow text is used for classes with 100% content completion",
                         WynnExtrasConfig.ClassSelectionCompletionChromaMode.class,
                         () -> config.classSelectionCompletionChromaMode,
                         v -> config.classSelectionCompletionChromaMode = v))
-                .add(classSelectionLines("Class Card Lines", "Choose which current stat lines are shown and in which order"))
                 .add(toggle("Use custom class colors", "Configure the accent color for each class and reskin",
                         () -> config.useCustomClassColors, v -> config.useCustomClassColors = v))
                 .add(visibleWhen(classColor("Warrior Color", "Accent color for Warrior class cards", "warrior", 0xCC4444),
@@ -1628,6 +1628,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     @Override
     public boolean keyPressed(KeyInput input) {
+        for (ConfigOption opt : getCurrentOptions()) {
+            if (opt.keyPressed(input.key(), input.scancode(), input.modifiers())) return true;
+        }
+
         // Relay to any listening KeybindOption
         for (Category cat : categories) {
             for (Object item : cat.items) {
@@ -1684,6 +1688,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     @Override
     public boolean charTyped(CharInput charInput) {
+        char c = (char) charInput.codepoint();
+        for (ConfigOption opt : getCurrentOptions()) {
+            if (opt.charTyped(c, charInput.modifiers())) return true;
+        }
+
         // Block character input when Ctrl is held (Ctrl+V etc.)
         long window = net.minecraft.client.MinecraftClient.getInstance().getWindow().getHandle();
         boolean ctrlHeld = org.lwjgl.glfw.GLFW.glfwGetKey(window, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS
@@ -1691,7 +1700,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         if (ctrlHeld) return true;
 
         if (searchFocused) {
-            char c = (char) charInput.codepoint();
             if (c >= 32 && c < 127) {
                 searchQuery += c;
                 onSearchQueryChanged();
@@ -1699,6 +1707,26 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             }
         }
         return super.charTyped(charInput);
+    }
+
+    private List<ConfigOption> getCurrentOptions() {
+        List<ConfigOption> options = new ArrayList<>();
+        if (selectedCategory < 0 || selectedCategory >= categories.size()) return options;
+
+        Category cat = categories.get(selectedCategory);
+        if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) return options;
+
+        for (Object item : cat.items) {
+            if (item instanceof SubCategory sub) {
+                if (!subHasMatches(sub) || !sub.isExpanded()) continue;
+                for (ConfigOption opt : sub.options) {
+                    if (matchesSearch(opt)) options.add(opt);
+                }
+            } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
+                options.add(opt);
+            }
+        }
+        return options;
     }
 
     private void onSearchQueryChanged() {

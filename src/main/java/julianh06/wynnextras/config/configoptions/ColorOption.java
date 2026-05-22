@@ -4,6 +4,7 @@ import com.wynntils.utils.mc.McUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -32,6 +33,10 @@ public class ColorOption extends ConfigOption {
     private int svCacheCols = 0, svCacheRows = 0;
     private int[] hueCacheColors = null;
     private int hueCacheRows = 0;
+    private boolean hexFocused = false;
+    private String hexInput = "";
+    private int hexCursor = 0;
+    private boolean hexSelectAll = false;
 
     public ColorOption(String name, String desc, Supplier<Integer> get, Consumer<Integer> set, int resetValue, int fallbackColor) {
         super(name, desc);
@@ -82,6 +87,7 @@ public class ColorOption extends ConfigOption {
         if (isIn(mx, my, swatchX, swatchY, 126, 22)) {
             open = !open;
             if (open) setPickerColor(getter.get() < 0 ? fallbackColor : getter.get());
+            else hexFocused = false;
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
@@ -92,14 +98,27 @@ public class ColorOption extends ConfigOption {
         int py = y + closedH + 2;
         if (!isIn(mx, my, px, py, PICKER_W, PICKER_H)) {
             open = false;
+            hexFocused = false;
             return true;
         }
 
         int[] cb = closeButtonBounds(px, py);
         if (isIn(mx, my, cb[0], cb[1], cb[2], cb[3])) {
             open = false;
+            hexFocused = false;
             return true;
         }
+
+        int[] hf = hexFieldBounds(px, py);
+        if (isIn(mx, my, hf[0], hf[1], hf[2], hf[3])) {
+            boolean wasFocused = hexFocused;
+            hexFocused = true;
+            hexCursor = cursorForMouse(mx, hf[0] + 4);
+            hexSelectAll = !wasFocused;
+            return true;
+        }
+        hexFocused = false;
+        hexSelectAll = false;
 
         int[] sv = svBoxBounds(px, py);
         if (isIn(mx, my, sv[0], sv[1], sv[2], sv[3])) {
@@ -153,6 +172,104 @@ public class ColorOption extends ConfigOption {
         return true;
     }
 
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (!open || !hexFocused) return false;
+
+        boolean ctrl = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
+        MinecraftClient client = MinecraftClient.getInstance();
+
+        if (ctrl && keyCode == GLFW.GLFW_KEY_V) {
+            String clipboard = client.keyboard.getClipboard();
+            if (clipboard != null && !clipboard.isEmpty()) {
+                insertHexText(clipboard);
+                applyHexInput();
+            }
+            return true;
+        }
+        if (ctrl && keyCode == GLFW.GLFW_KEY_C) {
+            client.keyboard.setClipboard(hexInput);
+            return true;
+        }
+        if (ctrl && keyCode == GLFW.GLFW_KEY_X) {
+            client.keyboard.setClipboard(hexInput);
+            hexInput = "";
+            hexCursor = 0;
+            hexSelectAll = false;
+            return true;
+        }
+        if (ctrl && keyCode == GLFW.GLFW_KEY_A) {
+            hexCursor = hexInput.length();
+            hexSelectAll = true;
+            return true;
+        }
+
+        if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
+            if (hexSelectAll) {
+                hexInput = "";
+                hexCursor = 0;
+                hexSelectAll = false;
+            } else if (hexCursor > 0) {
+                hexInput = hexInput.substring(0, hexCursor - 1) + hexInput.substring(hexCursor);
+                hexCursor--;
+                applyHexInput();
+            }
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_DELETE) {
+            if (hexSelectAll) {
+                hexInput = "";
+                hexCursor = 0;
+                hexSelectAll = false;
+            } else if (hexCursor < hexInput.length()) {
+                hexInput = hexInput.substring(0, hexCursor) + hexInput.substring(hexCursor + 1);
+                applyHexInput();
+            }
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_LEFT) {
+            hexSelectAll = false;
+            if (hexCursor > 0) hexCursor--;
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_RIGHT) {
+            hexSelectAll = false;
+            if (hexCursor < hexInput.length()) hexCursor++;
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_HOME) {
+            hexSelectAll = false;
+            hexCursor = 0;
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_END) {
+            hexSelectAll = false;
+            hexCursor = hexInput.length();
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+            hexFocused = false;
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            hexFocused = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean charTyped(char chr, int modifiers) {
+        if (!open || !hexFocused || Character.isISOControl(chr)) return false;
+
+        if (chr == '#' || isHexChar(chr)) {
+            insertHexText(String.valueOf(chr));
+            applyHexInput();
+        }
+        return true;
+    }
+
     private void renderPicker(DrawContext ctx, int px, int py) {
         var tr = MinecraftClient.getInstance().textRenderer;
         ctx.fill(px, py, px + PICKER_W, py + PICKER_H, 0xFF222222);
@@ -194,7 +311,20 @@ public class ColorOption extends ConfigOption {
         ctx.fill(previewX - 1, sv[1] + 30, previewX + previewW + 1, sv[1] + 31, 0xFFAAAAAA);
         ctx.fill(previewX - 1, sv[1], previewX, sv[1] + 30, 0xFFAAAAAA);
         ctx.fill(previewX + previewW, sv[1], previewX + previewW + 1, sv[1] + 30, 0xFFAAAAAA);
-        ctx.drawTextWithShadow(tr, String.format("#%06X", currentRgb & 0xFFFFFF), previewX, sv[1] + 36, 0xFFFFFFFF);
+        int[] hf = hexFieldBounds(px, py);
+        boolean validHex = parseHexInput() != null;
+        ctx.fill(hf[0], hf[1], hf[0] + hf[2], hf[1] + hf[3], hexFocused ? 0xFFFFAA00 : 0xFFAAAAAA);
+        ctx.fill(hf[0] + 1, hf[1] + 1, hf[0] + hf[2] - 1, hf[1] + hf[3] - 1, 0xFF111111);
+        if (hexFocused && hexSelectAll && !hexInput.isEmpty()) {
+            ctx.fill(hf[0] + 3, hf[1] + 3, hf[0] + 5 + tr.getWidth(hexInput), hf[1] + hf[3] - 3, 0xFF335577);
+        }
+        int textColor = validHex ? 0xFFFFFFFF : 0xFFFF6666;
+        ctx.drawTextWithShadow(tr, hexInput, hf[0] + 4, hf[1] + 4, textColor);
+        if (hexFocused && !hexSelectAll && (System.currentTimeMillis() / 500) % 2 == 0) {
+            int cursor = Math.max(0, Math.min(hexCursor, hexInput.length()));
+            int cx = hf[0] + 4 + tr.getWidth(hexInput.substring(0, cursor));
+            ctx.fill(cx, hf[1] + 3, cx + 1, hf[1] + hf[3] - 3, 0xFFFFFFFF);
+        }
 
         for (int i = 0; i < PRESET_COLORS.length; i++) {
             int[] pb = presetBounds(px, py, i);
@@ -232,6 +362,14 @@ public class ColorOption extends ConfigOption {
     private int[] hueBarBounds(int px, int py) {
         int[] sv = svBoxBounds(px, py);
         return new int[]{sv[0] + sv[2] + 10, sv[1], 14, sv[3]};
+    }
+
+    private int[] hexFieldBounds(int px, int py) {
+        int[] sv = svBoxBounds(px, py);
+        int[] hb = hueBarBounds(px, py);
+        int fieldX = hb[0] + hb[2] + 10;
+        int fieldW = Math.min(66, px + PICKER_W - fieldX - 8);
+        return new int[]{fieldX, sv[1] + 34, fieldW, 16};
     }
 
     private int[] presetBounds(int px, int py, int presetIdx) {
@@ -278,12 +416,14 @@ public class ColorOption extends ConfigOption {
     }
 
     private void updateSv(double mx, double my, int[] sv) {
-        colorS = Math.max(0f, Math.min(1f, (float) (mx - sv[0]) / (sv[2] - 1)));
-        colorV = Math.max(0f, Math.min(1f, 1f - (float) (my - sv[1]) / (sv[3] - 1)));
+        colorS = Math.clamp((float) (mx - sv[0]) / (sv[2] - 1), 0f, 1f);
+        colorV = Math.clamp(1f - (float) (my - sv[1]) / (sv[3] - 1), 0f, 1f);
+        syncHexInput();
     }
 
     private void updateHue(double my, int[] hb) {
-        colorH = Math.max(0f, Math.min(360f, (float) (my - hb[1]) / (hb[3] - 1) * 360f));
+        colorH = Math.clamp((float) (my - hb[1]) / (hb[3] - 1) * 360f, 0f, 360f);
+        syncHexInput();
     }
 
     private void setPickerColor(int color) {
@@ -292,6 +432,65 @@ public class ColorOption extends ConfigOption {
         colorH = hsv[0];
         colorS = hsv[1];
         colorV = hsv[2];
+        syncHexInput();
+    }
+
+    private void syncHexInput() {
+        hexInput = String.format("#%06X", hsvToRgb(colorH, colorS, colorV) & 0xFFFFFF);
+        hexCursor = hexInput.length();
+        hexSelectAll = false;
+    }
+
+    private void insertHexText(String value) {
+        String clean = value.replaceAll("[^#0-9a-fA-F]", "");
+        if (clean.isEmpty()) return;
+
+        if (hexSelectAll) {
+            hexInput = "";
+            hexCursor = 0;
+            hexSelectAll = false;
+        }
+        hexCursor = Math.max(0, Math.min(hexCursor, hexInput.length()));
+        hexInput = hexInput.substring(0, hexCursor) + clean + hexInput.substring(hexCursor);
+        if (hexInput.length() > 7) {
+            hexInput = hexInput.substring(0, 7);
+        }
+        hexCursor = Math.min(hexInput.length(), hexCursor + clean.length());
+    }
+
+    private void applyHexInput() {
+        Integer parsed = parseHexInput();
+        if (parsed == null) return;
+        int oldCursor = hexCursor;
+        setPickerColor(parsed);
+        hexCursor = Math.min(hexInput.length(), oldCursor);
+    }
+
+    private Integer parseHexInput() {
+        String value = hexInput.trim();
+        if (value.startsWith("#")) value = value.substring(1);
+        if (value.length() != 6) return null;
+        for (int i = 0; i < value.length(); i++) {
+            if (!isHexChar(value.charAt(i))) return null;
+        }
+        return Integer.parseInt(value, 16);
+    }
+
+    private int cursorForMouse(double mx, int textX) {
+        var tr = MinecraftClient.getInstance().textRenderer;
+        int cursor = 0;
+        while (cursor < hexInput.length()) {
+            int charMid = textX + tr.getWidth(hexInput.substring(0, cursor + 1)) - tr.getWidth(String.valueOf(hexInput.charAt(cursor))) / 2;
+            if (mx < charMid) break;
+            cursor++;
+        }
+        return cursor;
+    }
+
+    private static boolean isHexChar(char chr) {
+        return (chr >= '0' && chr <= '9')
+                || (chr >= 'a' && chr <= 'f')
+                || (chr >= 'A' && chr <= 'F');
     }
 
     private static void drawColorCursor(DrawContext ctx, int cx, int cy) {
