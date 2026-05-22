@@ -3,9 +3,9 @@ package julianh06.wynnextras.features.waypoints.old;
 public class Waypoint {
     public String id;
     public String name;
-    public float x;
-    public float y;
-    public float z;
+    public int x;
+    public int y;
+    public int z;
     public boolean show;
     public boolean showName;
     public boolean showDistance;
@@ -31,7 +31,7 @@ public class Waypoint {
         categoryName = "";
     }
 
-    public Waypoint(float x, float y, float z) {
+    public Waypoint(int x, int y, int z) {
         name = "Waypoint";
         this.x = x;
         this.y = y;

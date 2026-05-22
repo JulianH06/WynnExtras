@@ -52,7 +52,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ClassSelectionOverlay extends WEHandledScreen {
-
     @Override protected double getTargetScaleFactor() { return 4.0; }
     @Override protected int getMinScreenWidth() { return 800; }
     @Override protected int getMinScreenHeight() { return Math.round(getClassSelectionPanelHeightPx(5) + 72); }

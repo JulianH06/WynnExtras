@@ -40,8 +40,6 @@ import julianh06.wynnextras.features.raid.RaidLootTracker;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.waypoints.old.WaypointData;
 import julianh06.wynnextras.features.waypoints.old.Waypoints;
-import julianh06.wynnextras.features.waypoints.WaypointData;
-import julianh06.wynnextras.features.waypoints.Waypoints;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
 import julianh06.wynnextras.utils.MinecraftUtils;
