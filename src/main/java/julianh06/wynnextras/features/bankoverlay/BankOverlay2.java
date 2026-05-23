@@ -840,7 +840,7 @@ public class BankOverlay2 extends WEHandledScreen {
         shownPages = pageAmount;
         int currentMaxOffset = getMaxScrollOffset(shownPages);
         if (currentMaxOffset > 0) {
-            int scrollBarHeight = (yFitAmount - 1) * 104 + (xFitAmount == 2 ? 0 : 12);
+            int scrollBarHeight = (yFitAmount - 1) * 104 + (xFitAmount <= 2 ? 0 : 12);
             scrollBarWidget.setBounds(xStart + xFitAmount * 170, yStart - 13, 15, scrollBarHeight);
             scrollBarWidget.draw(context, mouseX, mouseY, delta, ui);
         } else {
@@ -896,7 +896,7 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private int getButtonWidgetsX(int xStart) {
-        if (xFitAmount == 2) {
+        if (xFitAmount <= 2) {
             int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
             float virtualThreeColumnWidth = 3 * (162 + 4) - 4;
             float virtualXStart = (screenWidth - virtualThreeColumnWidth) / 2f - 2;
@@ -913,7 +913,7 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private void drawDetachedButtonPanelBarsIfNeeded(int leftButtonWidgetsX, int rightButtonWidgetsX, int panelY, int xStart) {
-        if (xFitAmount != 2) return;
+        if (xFitAmount > 2) return;
 
         CustomColor barColor = WynnExtrasConfig.INSTANCE.darkmodeToggle ? DARK_BACKGROUND_COLOR : LIGHT_BACKGROUND_COLOR;
         CustomColor borderColor = WynnExtrasConfig.INSTANCE.darkmodeToggle ? DARK_BORDER_COLOR : LIGHT_BORDER_COLOR;
@@ -2158,6 +2158,7 @@ public class BankOverlay2 extends WEHandledScreen {
         ItemStack heldItem = Items.AIR.getDefaultStack();
 
         if (player == null || player.currentScreenHandler == null) return heldItem;
+        if (type == SlotActionType.QUICK_MOVE) return heldItem;
 
         ItemStack clickedStack = player.currentScreenHandler.slots.get(index).getStack().copy();
         ItemStack currentHeld = BankOverlay.heldItem;
@@ -3604,6 +3605,7 @@ public class BankOverlay2 extends WEHandledScreen {
         private SlotActionType determineActionType(int mouseButton) {
             SlotActionType actionType = SlotActionType.PICKUP;
 
+            if (isShiftHeld()) return SlotActionType.QUICK_MOVE;
             if(mouseButton == 1) return actionType;
 
             long now = System.currentTimeMillis();
@@ -3614,10 +3616,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             }
             lastClickTime = now;
-
-            if (InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow(), InputUtil.GLFW_KEY_LEFT_SHIFT)) {
-                actionType = SlotActionType.QUICK_MOVE;
-            }
 
             return actionType;
         }

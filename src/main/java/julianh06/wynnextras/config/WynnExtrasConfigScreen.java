@@ -369,9 +369,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Dark Mode", "Dark bank theme",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
                 .add(slider("Max Rows", "The maximum amount of rows (lower can reduce lag)",
-                        2, 24, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
+                        1, 24, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
                 .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
-                        2, 24, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
+                        1, 24, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
                 .add(toggle("Hide empty rows", "Hides rows that only have locked pages",
                         () -> config.bankOverlayHideEmptyRows, v -> config.bankOverlayHideEmptyRows = v))
                 .add(toggle("Bag Overlay", "Show crafter bag counts by raid/tier on bank screens",
