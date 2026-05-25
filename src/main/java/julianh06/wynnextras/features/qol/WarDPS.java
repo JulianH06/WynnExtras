@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.qol;
 
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.mixin.Accessor.BossBarHudAccessor;
+import julianh06.wynnextras.utils.BossBarUtils;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -37,7 +37,7 @@ public class WarDPS {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (!WynnExtrasConfig.INSTANCE.warDpsEnabled) return;
             if (client.player == null) return;
-            for (ClientBossBar bar : ((BossBarHudAccessor) client.inGameHud.getBossBarHud()).getBossBars().values()) {
+            for (ClientBossBar bar : BossBarUtils.getBossBars(client.inGameHud.getBossBarHud())) {
                 String text = bar.getName().getString();
                 if (text != null && text.contains("Tower")) {
                     processBossBar(text);

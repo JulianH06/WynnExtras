@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.qol;
 
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.mixin.Accessor.BossBarHudAccessor;
+import julianh06.wynnextras.utils.BossBarUtils;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -30,7 +30,7 @@ public class WeeklyWarCount {
     }
 
     private static void checkBossBars(MinecraftClient client) {
-        for (ClientBossBar bar : ((BossBarHudAccessor) client.inGameHud.getBossBarHud()).getBossBars().values()) {
+        for (ClientBossBar bar : BossBarUtils.getBossBars(client.inGameHud.getBossBarHud())) {
             String name = bar.getName().getString();
             if (name == null) continue;
             String clean = name.replaceAll("§[0-9a-fk-or]", "");
