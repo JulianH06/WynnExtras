@@ -132,7 +132,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Quick Access")
                 .add(button("Loot Pools", "Open the Loot Pools screen", (x) -> {
                     WEScreen.open(AspectScreen::new);
-                    AspectScreen.currentPage = AspectScreen.Page.LootPools;
+                    AspectScreen.currentPage = AspectScreen.Page.AspectLootpool;
                 }, "Open"))
                 .add(button("Profile Viewer", "View your stats", (x) -> {
                     PV.open(McUtils.playerName());
@@ -581,10 +581,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
                         0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
             .sub("Crowd sourcing")
-                .add(toggle("Lootrun lootpools", "Help gather the current lootrun lootpool so others can see it with /we lootruns",
-                        () -> config.crowdSourceLootrunLootpools, v -> config.crowdSourceLootrunLootpools = v))
-                .add(toggle("Raid lootpools", "Help gather the current raid lootpool so others can see it with /we lootpool",
-                        () -> config.crowdSourceRaidLootpools, v -> config.crowdSourceRaidLootpools = v))
                 .add(toggle("Gambits", "Help gather the current gambits so others can see them with /we gambits",
                         () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v))
             .sub("Quick Repair")

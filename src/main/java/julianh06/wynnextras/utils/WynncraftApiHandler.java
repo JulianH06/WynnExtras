@@ -15,7 +15,6 @@ import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.features.aspects.LocalAspectStorage;
-import julianh06.wynnextras.features.aspects.pages.LootrunLootPoolPage;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -63,6 +62,8 @@ public class WynncraftApiHandler {
     public transient final Object aspectLock = new Object();
 
     private static Map<String, JsonObject> cachedItemDatabase;
+    private static CompletableFuture<List<ApiLootPool>> officialLootPoolsFuture;
+    private static List<ApiLootPool> officialLootPoolsCache;
 
     public static Map<String, JsonObject> getCachedItemDatabase() {
         return cachedItemDatabase;
@@ -70,6 +71,121 @@ public class WynncraftApiHandler {
 
     public static void setCachedItemDatabase(Map<String, JsonObject> itemDatabase) {
         cachedItemDatabase = itemDatabase;
+    }
+
+    public static class ApiLootPool {
+        public String name;
+        public String internalName;
+        public String type;
+        public List<ApiLootPoolReward> rewards = new ArrayList<>();
+    }
+
+    public static class ApiLootPoolReward {
+        public String name;
+        public String type;
+        public int amount;
+        public boolean always;
+        public String tier;
+        public boolean shiny;
+        public String tooltip;
+    }
+
+    public static synchronized CompletableFuture<List<ApiLootPool>> fetchOfficialLootPools(boolean forceRefresh) {
+        if (!forceRefresh && officialLootPoolsCache != null) {
+            return CompletableFuture.completedFuture(officialLootPoolsCache);
+        }
+
+        if (!forceRefresh && officialLootPoolsFuture != null) {
+            return officialLootPoolsFuture;
+        }
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.wynncraft.com/v3/map/loot-pools"))
+                .timeout(Duration.ofSeconds(8))
+                .GET()
+                .build();
+
+        officialLootPoolsFuture = HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    if (response.statusCode() != 200) {
+                        WynnExtras.LOGGER.error("Failed to fetch official loot pools: " + response.statusCode());
+                        return null;
+                    }
+
+                    try {
+                        JsonArray pools = JsonParser.parseString(response.body()).getAsJsonArray();
+                        List<ApiLootPool> result = new ArrayList<>();
+
+                        for (JsonElement poolElement : pools) {
+                            JsonObject poolJson = poolElement.getAsJsonObject();
+                            ApiLootPool pool = new ApiLootPool();
+                            pool.name = jsonString(poolJson, "name");
+                            pool.internalName = jsonString(poolJson, "internalName");
+                            pool.type = jsonString(poolJson, "type");
+
+                            JsonArray rewards = poolJson.getAsJsonArray("rewards");
+                            if (rewards != null) {
+                                for (JsonElement rewardElement : rewards) {
+                                    JsonObject rewardJson = rewardElement.getAsJsonObject();
+                                    ApiLootPoolReward reward = new ApiLootPoolReward();
+                                    reward.name = jsonString(rewardJson, "name");
+                                    reward.type = jsonString(rewardJson, "type");
+                                    reward.amount = rewardJson.has("amount") && !rewardJson.get("amount").isJsonNull()
+                                            ? rewardJson.get("amount").getAsInt() : 1;
+                                    reward.always = rewardJson.has("always") && !rewardJson.get("always").isJsonNull()
+                                            && rewardJson.get("always").getAsBoolean();
+                                    reward.tier = rewardJson.has("tier") && !rewardJson.get("tier").isJsonNull()
+                                            ? rewardJson.get("tier").getAsString() : "";
+                                    reward.shiny = rewardJson.has("shiny") && !rewardJson.get("shiny").isJsonNull()
+                                            && rewardJson.get("shiny").getAsBoolean();
+                                    reward.tooltip = jsonTextBlock(rewardJson, "lore");
+                                    if (reward.tooltip.isEmpty()) {
+                                        reward.tooltip = jsonTextBlock(rewardJson, "tooltip");
+                                    }
+                                    pool.rewards.add(reward);
+                                }
+                            }
+
+                            result.add(pool);
+                        }
+
+                        officialLootPoolsCache = result;
+                        return result;
+                    } catch (Exception e) {
+                        WynnExtras.LOGGER.error("Error parsing official loot pools: " + e.getMessage());
+                        return null;
+                    }
+                })
+                .exceptionally(ex -> {
+                    WynnExtras.LOGGER.error("Failed to fetch official loot pools: " + ex.getMessage());
+                    return null;
+                });
+
+        return officialLootPoolsFuture;
+    }
+
+    public static synchronized void clearOfficialLootPoolsCache() {
+        officialLootPoolsCache = null;
+        officialLootPoolsFuture = null;
+    }
+
+    private static String jsonString(JsonObject json, String key) {
+        return json.has(key) && !json.get(key).isJsonNull() ? json.get(key).getAsString() : "";
+    }
+
+    private static String jsonTextBlock(JsonObject json, String key) {
+        if (!json.has(key) || json.get(key).isJsonNull()) return "";
+
+        JsonElement value = json.get(key);
+        if (value.isJsonArray()) {
+            List<String> lines = new ArrayList<>();
+            for (JsonElement line : value.getAsJsonArray()) {
+                if (!line.isJsonNull()) lines.add(line.getAsString());
+            }
+            return String.join("\n", lines);
+        }
+
+        return value.getAsString();
     }
 
     private static Command apiKeyCmd = new Command(
@@ -489,78 +605,6 @@ public class WynncraftApiHandler {
     }
 
     /**
-     * Upload loot pool to crowdsourcing API (without personal progress)
-     * NO API KEY REQUIRED - uses player UUID from authenticated Minecraft session
-     * @param raidType NOTG, NOL, TCC, TNA
-     * @param aspects List of aspects with name, rarity (no amount/tier)
-     */
-    public static void uploadLootPool(String raidType, List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry> aspects) {
-        if (McUtils.player() == null) {
-            WynnExtras.LOGGER.error("Cannot upload loot pool - player not loaded");
-            return;
-        }
-
-        if(!WynnExtrasConfig.INSTANCE.crowdSourceRaidLootpools) return;
-
-        // Validate raid type (short codes only)
-        if (!raidType.equals("NOTG") && !raidType.equals("NOL") &&
-            !raidType.equals("TCC") && !raidType.equals("TNA") && !raidType.equals("TWP")) {
-            WynnExtras.LOGGER.error("Unknown raid type: " + raidType);
-            return;
-        }
-
-        // Authenticate with Mojang first
-        MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
-            if (wynnextrasToken == null) {
-                WynnExtras.LOGGER.error("Failed to authenticate with Mojang");
-                return;
-            }
-
-            try {
-                // Build JSON payload matching backend spec (send short codes)
-                JsonObject payload = new JsonObject();
-                payload.addProperty("raidType", raidType);
-
-                JsonArray aspectsArray = new JsonArray();
-                for (julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry aspect : aspects) {
-                    JsonObject aspectJson = new JsonObject();
-                    aspectJson.addProperty("name", aspect.name);
-                    aspectJson.addProperty("rarity", aspect.rarity);
-                    aspectsArray.add(aspectJson);
-                }
-
-                payload.add("aspects", aspectsArray);
-
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("https://wynnextras.com/raid/loot-pool"))
-                        .header("Content-Type", "application/json")
-                        .header("Authorization", wynnextrasToken)
-                        .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
-                        .timeout(Duration.ofSeconds(8))
-                        .build();
-
-                ApiRequestHelper.sendWithAuthRetry(request, payload)
-                        .thenAccept(response -> {
-                            int code = response.statusCode();
-                            if (code == 401) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
-                            } else if(code != 200) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading loot pool: " + code));
-                            }
-                        })
-                        .exceptionally(ex -> {
-                            WynnExtras.LOGGER.error("Failed to upload loot pool: " + ex.getMessage());
-                            return null;
-                        });
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError preparing loot pool upload"));
-            }
-        });
-    }
-
-    /**
      * Upload gambits to crowdsourcing API
      * Uses Mojang sessionserver authentication - secure and automatic
      * @param gambits List of gambits with name and description
@@ -688,72 +732,6 @@ public class WynncraftApiHandler {
     }
 
     /**
-     * Fetch crowdsourced loot pool from API
-     * @param raidType NOTG, NOL, TCC, TNA, TWP
-     * @return CompletableFuture with list of aspects or null if not available
-     */
-    public static CompletableFuture<List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry>> fetchCrowdsourcedLootPool(String raidType) {
-        try {
-            // Validate raid type (short codes only)
-            if (!raidType.equals("NOTG") && !raidType.equals("NOL") &&
-                !raidType.equals("TCC") && !raidType.equals("TNA") && !raidType.equals("TWP")) {
-                WynnExtras.LOGGER.error("Unknown raid type: " + raidType);
-                return CompletableFuture.completedFuture(null);
-            }
-
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(3))
-                    .build();
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://wynnextras.com/raid/loot-pool?raidType=" + raidType))
-                    .timeout(Duration.ofSeconds(5))
-                    .GET()
-                    .build();
-
-            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(response -> {
-                        if (response.statusCode() != 200) {
-                            WynnExtras.LOGGER.info("No crowdsourced loot pool for " + raidType + ": " + response.statusCode());
-                            return null;
-                        }
-
-                        try {
-                            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
-                            JsonArray aspects = json.getAsJsonArray("aspects");
-
-                            List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry> result = new ArrayList<>();
-                            for (int i = 0; i < aspects.size(); i++) {
-                                JsonObject aspect = aspects.get(i).getAsJsonObject();
-                                String name = aspect.get("name").getAsString();
-                                String rarity = aspect.get("rarity").getAsString();
-                                String requiredClass = aspect.has("requiredClass") && !aspect.get("requiredClass").isJsonNull()
-                                        ? aspect.get("requiredClass").getAsString() : null;
-
-                                result.add(new julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry(
-                                        name, rarity, "", ""
-                                ));
-                            }
-
-                            WynnExtras.LOGGER.info("Fetched " + result.size() + " aspects from crowdsourced pool for " + raidType);
-                            return result;
-                        } catch (Exception e) {
-                            WynnExtras.LOGGER.error("Error parsing crowdsourced loot pool: " + e.getMessage());
-                            return null;
-                        }
-                    })
-                    .exceptionally(ex -> {
-                        WynnExtras.LOGGER.error("Failed to fetch crowdsourced loot pool: " + ex.getMessage());
-                        return null;
-                    });
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return CompletableFuture.completedFuture(null);
-        }
-    }
-
-    /**
      * Fetch crowdsourced gambits from API
      * @return CompletableFuture with list of gambits or null if not available
      */
@@ -798,177 +776,6 @@ public class WynncraftApiHandler {
                     })
                     .exceptionally(ex -> {
                         WynnExtras.LOGGER.error("Failed to fetch crowdsourced gambits: " + ex.getMessage());
-                        return null;
-                    });
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return CompletableFuture.completedFuture(null);
-        }
-    }
-
-    /**
-     * Upload lootrun loot pool to crowdsourcing API
-     * NO API KEY REQUIRED - uses player UUID from authenticated Minecraft session
-     * @param camp SE, SI, MH, C, COTL
-     * @param items List of items with name, rarity, type (normal, shiny, tome)
-     */
-    public static void uploadLootrunLootPool(String camp, List<julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem> items) {
-        if (McUtils.player() == null) {
-            WynnExtras.LOGGER.error("Cannot upload lootrun loot pool - player not loaded");
-            return;
-        }
-
-        if(WynnExtras.isOnBeta()) {
-            return;
-        }
-
-        if(!WynnExtrasConfig.INSTANCE.crowdSourceLootrunLootpools) return;
-
-        // Validate camp code
-        boolean validCamp = false;
-        for (LootrunLootPoolPage.Camp c : LootrunLootPoolPage.Camp.values()) {
-            if (c.name().equals(camp)) {
-                validCamp = true;
-                break;
-            }
-        }
-        if (!validCamp) {
-            WynnExtras.LOGGER.error("Unknown camp type: " + camp);
-            return;
-        }
-
-        // Authenticate with Mojang first
-        julianh06.wynnextras.utils.MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
-            if (wynnextrasToken == null) {
-                WynnExtras.LOGGER.error("Failed to authenticate with Mojang");
-                return;
-            }
-
-            try {
-                // Build JSON payload matching backend spec
-                JsonObject payload = new JsonObject();
-                payload.addProperty("lootrunType", camp);
-
-                JsonArray itemsArray = new JsonArray();
-                for (julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem item : items) {
-                    JsonObject itemJson = new JsonObject();
-                    itemJson.addProperty("name", item.name);
-                    itemJson.addProperty("rarity", item.rarity);
-                    itemJson.addProperty("type", item.type);
-                    // Include shiny stat if present
-                    if (item.shinyStat != null && !item.shinyStat.isEmpty()) {
-                        itemJson.addProperty("shinyStat", item.shinyStat);
-                    }
-                    itemsArray.add(itemJson);
-                }
-
-                payload.add("items", itemsArray);
-
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("https://wynnextras.com/lootrun/loot-pool"))
-                        .header("Content-Type", "application/json")
-                        .header("Authorization", wynnextrasToken)
-                        .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
-                        .timeout(Duration.ofSeconds(8))
-                        .build();
-
-                ApiRequestHelper.sendWithAuthRetry(request, payload)
-                        .thenAccept(response -> {
-                            int code = response.statusCode();
-                            if (code == 200) {
-                                JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
-                                String status = result.get("status").getAsString();
-
-                                if (status.equals("approved")) {
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aLootrun pool for §e" + camp + " §aapproved!"));
-                                } else {
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Lootrun pool submitted. Waiting for more confirmations."));
-                                }
-                            } else if (code == 401) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
-                            } else {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading lootrun pool: " + code));
-                            }
-                        })
-                        .exceptionally(ex -> {
-                            WynnExtras.LOGGER.error("Failed to upload lootrun loot pool: " + ex.getMessage());
-                            return null;
-                        });
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError preparing lootrun pool upload"));
-            }
-        });
-    }
-
-    /**
-     * Fetch crowdsourced lootrun loot pool from API
-     * @param camp SE, SI, MH, C, COTL
-     * @return CompletableFuture with list of items or null if not available
-     */
-    public static CompletableFuture<List<julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem>> fetchCrowdsourcedLootrunLootPool(String camp) {
-        try {
-            // Validate camp code
-            boolean validCamp = false;
-            for (LootrunLootPoolPage.Camp c : LootrunLootPoolPage.Camp.values()) {
-                if (c.name().equals(camp)) {
-                    validCamp = true;
-                    break;
-                }
-            }
-            if (!validCamp) {
-                WynnExtras.LOGGER.error("Unknown camp type: " + camp);
-                return CompletableFuture.completedFuture(null);
-            }
-
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(3))
-                    .build();
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://wynnextras.com/lootrun/loot-pool?lootrunType=" + camp))
-                    .timeout(Duration.ofSeconds(5))
-                    .GET()
-                    .build();
-
-            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenApply(response -> {
-                        if (response.statusCode() != 200) {
-                            WynnExtras.LOGGER.info("No crowdsourced lootrun pool for " + camp + ": " + response.statusCode());
-                            return null;
-                        }
-
-                        try {
-                            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
-                            JsonArray items = json.getAsJsonArray("items");
-
-                            List<julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem> result = new ArrayList<>();
-                            for (int i = 0; i < items.size(); i++) {
-                                JsonObject item = items.get(i).getAsJsonObject();
-                                String name = item.get("name").getAsString();
-                                String rarity = item.get("rarity").getAsString();
-                                String type = item.has("type") && !item.get("type").isJsonNull()
-                                        ? item.get("type").getAsString() : "normal";
-                                String shinyStat = item.has("shinyStat") && !item.get("shinyStat").isJsonNull()
-                                        ? item.get("shinyStat").getAsString()
-                                        : null;
-
-                                result.add(new julianh06.wynnextras.features.aspects.LootrunLootPoolData.LootrunItem(
-                                        name, rarity, type, "", shinyStat
-                                ));
-                            }
-
-                            WynnExtras.LOGGER.info("Fetched " + result.size() + " items from crowdsourced lootrun pool for " + camp);
-                            return result;
-                        } catch (Exception e) {
-                            WynnExtras.LOGGER.error("Error parsing crowdsourced lootrun pool: " + e.getMessage());
-                            return null;
-                        }
-                    })
-                    .exceptionally(ex -> {
-                        WynnExtras.LOGGER.error("Failed to fetch crowdsourced lootrun pool: " + ex.getMessage());
                         return null;
                     });
 

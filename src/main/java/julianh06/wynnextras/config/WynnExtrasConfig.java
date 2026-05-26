@@ -270,8 +270,6 @@ public class WynnExtrasConfig {
     public boolean bombShareSuggestion = false;
 
     // ==================== Crowd Sourcing ================
-    public boolean crowdSourceRaidLootpools = true;
-    public boolean crowdSourceLootrunLootpools = true;
     public boolean crowdSourceGambits = true;
 
     // ==================== MISC ====================

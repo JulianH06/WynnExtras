@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
  * - In-game chat (when debug mode is enabled)
  *
  * Used to discover Unicode identifiers for:
- * - Preview chest (for loot pool crowdsourcing)
+ * - Preview chest menus
  * - Party Finder menu (for gambit detection)
  *
  * Enable/disable via /we aspects debug command.

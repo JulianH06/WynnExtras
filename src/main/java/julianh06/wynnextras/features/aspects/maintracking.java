@@ -54,7 +54,7 @@ public class maintracking {
             (ctx) -> {
                 MinecraftUtils.mc().send(() -> {
                     WEScreen.open(AspectScreen::new);
-                    AspectScreen.currentPage = AspectScreen.Page.LootPools;
+                    AspectScreen.currentPage = AspectScreen.Page.AspectLootpool;
                 });
                 return 1;
             },
@@ -69,7 +69,7 @@ public class maintracking {
             (ctx) -> {
                 MinecraftUtils.mc().send(() -> {
                     WEScreen.open(AspectScreen::new);
-                    AspectScreen.currentPage = AspectScreen.Page.LootPools;
+                    AspectScreen.currentPage = AspectScreen.Page.AspectLootpool;
                 });
                 return 1;
             },
@@ -162,7 +162,7 @@ public class maintracking {
             (ctx) -> {
                 MinecraftUtils.mc().send(() -> {
                     WEScreen.open(AspectScreen::new);
-                    AspectScreen.currentPage = AspectScreen.Page.LootPools;
+                    AspectScreen.currentPage = AspectScreen.Page.AspectLootpool;
                 });
                 return 1;
             },
@@ -199,16 +199,11 @@ public class maintracking {
     public static int pagesToGoBack = 0;
     static boolean gambitDetected = false;
     static String lastPreviewChestTitle = "";
-    static String lastLootrunPreviewTitle = "";
     static boolean needToClickAbilityTree = false;
     static boolean inCharacterMenu = false;
     static int characterMenuWaitTicks = 0;
-    static boolean inLootrunPreviewChest = false;
 
     public static void init(){
-        // Load saved loot pool data
-        LootPoolData.INSTANCE.load();
-        LootrunLootPoolData.INSTANCE.load();
         GambitData.INSTANCE.load();
         FavoriteAspectsData.INSTANCE.load();
 
@@ -238,7 +233,6 @@ public class maintracking {
                 aspectsInChest = new ItemStack[5];
                 gambitDetected = false;
                 lastPreviewChestTitle = "";
-                lastLootrunPreviewTitle = "";
                 pagesToGoBack = 0;
                 AspectScanning.resetRewardAspects();
                 // DON'T reset needToClickAbilityTree - it needs to persist across screen changes
@@ -263,8 +257,6 @@ public class maintracking {
                     InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00D") || // TCC
                     InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF00E") || // TNA
                     InventoryTitle.equals("\uDAFF\uDFEA\uE00D\uDAFF\uDF6F\uF04B"); // TWP
-
-            inLootrunPreviewChest = LootrunLootPoolData.isLootrunChest(InventoryTitle);
 
             // Character menu: wait 5 ticks then click slot 9 (Ability Tree) to open the tree menu
             if(inCharacterMenu && needToClickAbilityTree){
@@ -347,12 +339,6 @@ public class maintracking {
                     lastPreviewChestTitle = currentTitle;
                     AspectScanning.scanPreviewChest(screen, currentTitle);
                 }
-                return;
-            }
-
-            if(inLootrunPreviewChest){
-                String currentTitle = currScreen.getTitle().getString();
-                LootrunScanning.handleLootrunPreviewChest(screen, currentTitle);
                 return;
             }
 
