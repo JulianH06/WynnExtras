@@ -8,7 +8,7 @@ import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
-import julianh06.wynnextras.utils.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftAuthManager;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -952,12 +952,10 @@ public class TreeLoader {
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setRequestProperty("User-Agent", "WynnExtras-Mod/1.0");
-            if(WynncraftApiHandler.INSTANCE.API_KEY != null) {
-                if (!WynncraftApiHandler.INSTANCE.API_KEY.isEmpty()) {
-                    connection.setRequestProperty("Authorization", "Bearer " + WynncraftApiHandler.INSTANCE.API_KEY);
-                }
-            }
+            String authHeader = WynncraftAuthManager.getAuthorizationHeaderValue();
+            if (authHeader != null) connection.setRequestProperty("Authorization", authHeader);
             int responseCode = connection.getResponseCode();
+            WynncraftAuthManager.handleWynncraftUnauthorized(responseCode);
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                 StringBuilder response = new StringBuilder();

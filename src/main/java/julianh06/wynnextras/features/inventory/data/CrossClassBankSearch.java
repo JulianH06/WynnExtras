@@ -51,20 +51,33 @@ public class CrossClassBankSearch {
      * Result of a cross-class search
      */
     public static class SearchResult {
+        public enum Type {
+            BANK_PAGE,
+            PLAYER_INVENTORY
+        }
+
         public final String characterId;
         public final String characterNickname; // e.g., "Dark Wizard", "Archer", etc.
         public final int characterLevel; // Combat level of the character
         public final int pageNumber;
         public final List<ItemStack> matchingItems;
         public final List<ItemStack> pageItems;
+        public final List<ItemStack> armorItems;
+        public final Type type;
 
         public SearchResult(String characterId, String characterNickname, int characterLevel, int pageNumber, List<ItemStack> matchingItems, List<ItemStack> pageItems) {
+            this(characterId, characterNickname, characterLevel, pageNumber, matchingItems, pageItems, Collections.emptyList(), Type.BANK_PAGE);
+        }
+
+        public SearchResult(String characterId, String characterNickname, int characterLevel, int pageNumber, List<ItemStack> matchingItems, List<ItemStack> pageItems, List<ItemStack> armorItems, Type type) {
             this.characterId = characterId;
             this.characterNickname = characterNickname;
             this.characterLevel = characterLevel;
             this.pageNumber = pageNumber;
             this.matchingItems = matchingItems;
             this.pageItems = pageItems;
+            this.armorItems = armorItems;
+            this.type = type;
         }
     }
 
@@ -147,7 +160,7 @@ public class CrossClassBankSearch {
     /**
      * Load a character bank file and search for matching items
      */
-    private static List<SearchResult> searchCharacterBank(Path file, String characterId, SearchQueryParser.ParsedQuery query) {
+    private static List<SearchResult> searchCharacterBank(Path file, String characterId, SearchQueryParser.ParsedQuery query, String currentCharacterId) {
         List<SearchResult> results = new ArrayList<>();
 
         try (Reader reader = Files.newBufferedReader(file)) {
@@ -184,6 +197,11 @@ public class CrossClassBankSearch {
                 if (!matchingItems.isEmpty()) {
                     results.add(new SearchResult(characterId, nickname, level, pageNum, matchingItems, pageItems));
                 }
+            }
+
+            if (!characterId.equals(currentCharacterId)) {
+                SearchResult inventoryResult = searchPlayerInventory(characterId, nickname, level, data, query);
+                if (inventoryResult != null) results.add(inventoryResult);
             }
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
@@ -312,8 +330,8 @@ public class CrossClassBankSearch {
         }
 
         return request.allPages()
-                ? loadAllPagesFromCharacter(file, characterId)
-                : searchCharacterBank(file, characterId, parsedQuery);
+                ? loadAllPagesFromCharacter(file, characterId, request.currentCharacterId())
+                : searchCharacterBank(file, characterId, parsedQuery, request.currentCharacterId());
     }
 
     private static List<Path> listCharacterBankFiles(Path configDir) {
@@ -357,7 +375,7 @@ public class CrossClassBankSearch {
     /**
      * Load ALL pages from a character bank file (no filtering)
      */
-    private static List<SearchResult> loadAllPagesFromCharacter(Path file, String characterId) {
+    private static List<SearchResult> loadAllPagesFromCharacter(Path file, String characterId, String currentCharacterId) {
         List<SearchResult> results = new ArrayList<>();
 
         try (Reader reader = Files.newBufferedReader(file)) {
@@ -381,6 +399,18 @@ public class CrossClassBankSearch {
                 if (pageItems == null) pageItems = Collections.emptyList();
                 results.add(new SearchResult(characterId, nickname, level, pageNum, pageItems, pageItems));
             }
+            if (!characterId.equals(currentCharacterId) && hasSavedPlayerInventory(data)) {
+                results.add(new SearchResult(
+                        characterId,
+                        nickname,
+                        level,
+                        -1,
+                        data.getPlayerInventory(),
+                        data.getPlayerInventory(),
+                        data.getPlayerArmor(),
+                        SearchResult.Type.PLAYER_INVENTORY
+                ));
+            }
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
         } catch (Exception e) {
@@ -389,6 +419,52 @@ public class CrossClassBankSearch {
         }
 
         return results;
+    }
+
+    private static SearchResult searchPlayerInventory(String characterId, String nickname, int level, BankData data, SearchQueryParser.ParsedQuery query) {
+        if (!hasSavedPlayerInventory(data)) return null;
+
+        List<ItemStack> matchingItems = new ArrayList<>();
+        for (ItemStack stack : data.getPlayerInventory()) {
+            if (matchesStack(stack, query)) matchingItems.add(stack);
+        }
+        for (ItemStack stack : data.getPlayerArmor()) {
+            if (matchesStack(stack, query)) matchingItems.add(stack);
+        }
+
+        if (matchingItems.isEmpty()) return null;
+        return new SearchResult(
+                characterId,
+                nickname,
+                level,
+                -1,
+                matchingItems,
+                data.getPlayerInventory(),
+                data.getPlayerArmor(),
+                SearchResult.Type.PLAYER_INVENTORY
+        );
+    }
+
+    private static boolean matchesStack(ItemStack stack, SearchQueryParser.ParsedQuery query) {
+        if (stack == null || stack.isEmpty()) return false;
+        WynnItem wynnItem = null;
+        Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(stack);
+        if (optWynnItem.isPresent()) {
+            wynnItem = optWynnItem.get();
+        }
+        return SearchQueryParser.matches(stack, wynnItem, query);
+    }
+
+    private static boolean hasSavedPlayerInventory(BankData data) {
+        return hasAnyItem(data.getPlayerInventory()) || hasAnyItem(data.getPlayerArmor());
+    }
+
+    private static boolean hasAnyItem(List<ItemStack> items) {
+        if (items == null) return false;
+        for (ItemStack stack : items) {
+            if (stack != null && !stack.isEmpty()) return true;
+        }
+        return false;
     }
 
     private static boolean isCharacterBankFile(Path path) {
