@@ -31,6 +31,8 @@ public abstract class BankData {
     private HashMap<Integer, String> bankPageNames = new HashMap<>();
     private String characterNickname = null; // For character banks - stores the character's class name (e.g., "Dark Wizard")
     private int characterLevel = 0; // For character banks - stores the character's combat level
+    private List<ItemStack> playerInventory = List.of();
+    private List<ItemStack> playerArmor = List.of();
     /** Per-page bag counts keyed by "RAID|TIER" (e.g. "NOG|LEGENDARY" -> 3). Stored as plain
      *  numbers so they survive serialization without depending on Wynntils item annotations. */
     private HashMap<Integer, HashMap<String, Integer>> bagCounts = new HashMap<>();
@@ -69,6 +71,8 @@ public abstract class BankData {
                     this.bankPageNames = loaded.bankPageNames != null ? loaded.bankPageNames : new HashMap<>();
                     this.characterNickname = loaded.characterNickname;
                     this.characterLevel = loaded.characterLevel;
+                    this.playerInventory = loaded.playerInventory != null ? loaded.playerInventory : List.of();
+                    this.playerArmor = loaded.playerArmor != null ? loaded.playerArmor : List.of();
                     this.bagCounts = loaded.bagCounts != null ? loaded.bagCounts : new HashMap<>();
                 }
             } catch (IOException e) {
@@ -83,6 +87,8 @@ public abstract class BankData {
             this.bankPageNames = new HashMap<>();
             this.characterNickname = null;
             this.characterLevel = 0;
+            this.playerInventory = List.of();
+            this.playerArmor = List.of();
             this.bagCounts = new HashMap<>();
         }
     }
@@ -120,8 +126,28 @@ public abstract class BankData {
         this.characterLevel = characterLevel;
     }
 
+    public List<ItemStack> getPlayerInventory() {
+        return playerInventory;
+    }
+
+    public List<ItemStack> getPlayerArmor() {
+        return playerArmor;
+    }
+
+    public void setPlayerInventorySnapshot(List<ItemStack> playerInventory, List<ItemStack> playerArmor) {
+        this.playerInventory = copyItemList(playerInventory);
+        this.playerArmor = copyItemList(playerArmor);
+    }
+
     public HashMap<Integer, HashMap<String, Integer>> getBagCounts() {
         return bagCounts;
+    }
+
+    private static List<ItemStack> copyItemList(List<ItemStack> items) {
+        if (items == null) return List.of();
+        return items.stream()
+                .map(stack -> stack == null ? null : stack.copy())
+                .toList();
     }
 
     private static final Gson GSON = new GsonBuilder()
