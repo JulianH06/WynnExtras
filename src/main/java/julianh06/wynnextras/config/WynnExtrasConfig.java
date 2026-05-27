@@ -256,6 +256,7 @@ public class WynnExtrasConfig {
     public int treeMapX = 5;
     public int treeMapY = 5;
     public float treeMapScale = 1.0f;
+    public boolean drawPathInTree = true;
 
     // ==================== ASPECTS SCORING ====================
     public AspectScoringMode aspectScoringMode = AspectScoringMode.MAX;
