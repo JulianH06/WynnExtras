@@ -1289,7 +1289,7 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         CharacterBankData.INSTANCE.setPlayerInventorySnapshot(inventory, armor);
-        CharacterBankData.INSTANCE.save();
+        CharacterBankData.INSTANCE.saveAsyncDebounced();
     }
 
     private static List<ItemStack> snapshotCurrentPlayerInventory(PlayerEntity player) {
