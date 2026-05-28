@@ -16,6 +16,12 @@ public class CharacterBankData extends BankData {
     }
 
     @Override
+    public void saveAsyncDebounced() {
+        if (!BankOverlay.hasValidCurrentCharacterId()) return;
+        super.saveAsyncDebounced();
+    }
+
+    @Override
     public void load() {
         if (!BankOverlay.hasValidCurrentCharacterId()) return;
         super.load();

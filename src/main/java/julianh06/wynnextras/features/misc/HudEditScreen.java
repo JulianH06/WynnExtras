@@ -26,6 +26,8 @@ public class HudEditScreen extends Screen {
         int customH = -1; // -1 = use default H
         boolean fixedSize = false; // true = don't allow scaling, don't center-shift in init
         boolean topLeft = false;  // true = position stored as top-left (not center)
+        boolean preserveDefaultScale = false;
+        boolean scaleChanged = false;
         float scale;
         boolean dragging;
         int dragOffX, dragOffY;
@@ -135,10 +137,11 @@ public class HudEditScreen extends Screen {
         }
         if (c.tnaTreeMap) {
             HudElement treemap = new HudElement("treemap", "Tree Minimap",
-                    c.treeMapX, c.treeMapY, c.tnaTreeMapScale, WynnExtrasConfig.Align.LEFT);
+                    c.treeMapX, c.treeMapY, TreeRoomMinimap.getEffectiveScale(c.tnaTreeMapScale), WynnExtrasConfig.Align.LEFT);
             treemap.customH = 130;
             treemap.w = 130;
             treemap.fixedSize = true;
+            treemap.preserveDefaultScale = TreeRoomMinimap.usesDefaultScale(c.tnaTreeMapScale);
             elements.add(treemap);
         }
 
@@ -654,7 +657,11 @@ public class HudEditScreen extends Screen {
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         for (HudElement e : elements) {
             if (e.hovered(mouseX, mouseY)) {
-                e.scale = Math.max(0.5f, Math.min(4.0f, e.scale + (float) verticalAmount * 0.1f));
+                float newScale = e.scale + (float) verticalAmount * 0.1f;
+                e.scale = e.id.equals("treemap")
+                        ? TreeRoomMinimap.clampScale(newScale)
+                        : Math.max(0.5f, Math.min(4.0f, newScale));
+                e.scaleChanged = true;
                 return true;
             }
         }
@@ -736,7 +743,11 @@ public class HudEditScreen extends Screen {
                     c.notifierX = e.x + e.sw() / 2; c.notifierY = e.y + e.sh() / 2; c.notifierScale = e.scale; c.notifierAlignment = e.alignment;
                 }
                 case "treemap" -> {
-                    c.treeMapX = e.x; c.treeMapY = e.y; c.tnaTreeMapScale = e.scale;
+                    c.treeMapX = e.x;
+                    c.treeMapY = e.y;
+                    if (!e.preserveDefaultScale || e.scaleChanged) {
+                        c.tnaTreeMapScale = e.scale;
+                    }
                 }
                 case "weeklyWars" -> {
                     c.weeklyWarCountX = e.x; c.weeklyWarCountY = e.y;

@@ -31,6 +31,11 @@ import static julianh06.wynnextras.features.raid.tna.TnaApi.reset;
 @WEModule
 public class TreeRoomMinimap {
     private static final int DEFAULT_SIZE = 130;
+    private static final float OLD_DEFAULT_SCALE = 1.75f;
+    private static final float DEFAULT_SCREEN_HEIGHT_RATIO = 0.20f;
+    private static final float DEFAULT_SCALE_EPSILON = 0.0001f;
+    private static final float MIN_SCALE = 0.3f;
+    private static final float MAX_SCALE = 3.0f;
     private static final Texture mapTexture = Texture.WYNN_MAP_TEXTURES;
     private static final Identifier background = Identifier.of("wynnextras", "textures/treeroomminimap/treeroomminimap.png");
     private static final Identifier heart = Identifier.of("wynnextras", "textures/treeroomminimap/heart.png");
@@ -97,6 +102,29 @@ public class TreeRoomMinimap {
         WynnExtrasConfig.save();
     }
 
+    public static boolean usesDefaultScale(float scale) {
+        return Math.abs(scale - OLD_DEFAULT_SCALE) < DEFAULT_SCALE_EPSILON;
+    }
+
+    public static float clampScale(float scale) {
+        return Math.clamp(scale, MIN_SCALE, MAX_SCALE);
+    }
+
+    public static float getEffectiveScale() {
+        return getEffectiveScale(WynnExtrasConfig.INSTANCE.tnaTreeMapScale);
+    }
+
+    public static float getEffectiveScale(float configScale) {
+        float scale = configScale;
+        if (usesDefaultScale(configScale)) {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc.getWindow() != null) {
+                scale = mc.getWindow().getScaledHeight() * DEFAULT_SCREEN_HEIGHT_RATIO / DEFAULT_SIZE;
+            }
+        }
+        return clampScale(scale);
+    }
+
     public static void register() {
         HudRenderCallback.EVENT.register((context, renderTickCounter) -> {
             MinecraftClient mc = MinecraftClient.getInstance();
@@ -129,7 +157,7 @@ public class TreeRoomMinimap {
             return;
         }
 
-        float scale = Math.clamp(config.tnaTreeMapScale, 0.3f, 3.0f);
+        float scale = getEffectiveScale();
         context.getMatrices().pushMatrix();
         context.getMatrices().translate(xPos, yPos);
         context.getMatrices().scale(scale, scale);
@@ -365,7 +393,7 @@ public class TreeRoomMinimap {
         loadConfig();
         MinecraftClient mc = MinecraftClient.getInstance();
 
-        float scale = Math.clamp(config.tnaTreeMapScale, 0.3f, 3.0f);
+        float scale = getEffectiveScale();
         int scaledW = (int) (WIDTH * scale);
         boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + scaledW + 2 &&
                 mouseY >= yPos - 2 && mouseY <= yPos + scaledW + 4;
@@ -413,8 +441,9 @@ public class TreeRoomMinimap {
         if (mc.getWindow() != null) {
             int screenWidth = mc.getWindow().getScaledWidth();
             int screenHeight = mc.getWindow().getScaledHeight();
-            xPos = Math.clamp(xPos, 0, screenWidth - WIDTH);
-            yPos = Math.clamp(yPos, 0, screenHeight - 100);
+            int scaledW = (int) (WIDTH * getEffectiveScale());
+            xPos = Math.clamp(xPos, 0, screenWidth - scaledW);
+            yPos = Math.clamp(yPos, 0, screenHeight - scaledW);
         }
     }
 
@@ -429,13 +458,14 @@ public class TreeRoomMinimap {
         boolean inEditScreen = mc.currentScreen instanceof InventoryScreen || mc.currentScreen instanceof ChatScreen;
         if (!inEditScreen) return false;
 
-        float scale = Math.clamp(config.tnaTreeMapScale, 0.3f, 3.0f);
+        float scale = getEffectiveScale();
         int scaledW = (int) (WIDTH * scale);
         boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + scaledW + 2 &&
                 mouseY >= yPos - 2 && mouseY <= yPos + scaledW + 4;
         if (!inBounds) return false;
 
-        config.tnaTreeMapScale = (float) Math.clamp(scale + verticalAmount * 0.1, 0.3, 3.0);
+        float newScale = clampScale(scale + (float) verticalAmount * 0.1f);
+        config.tnaTreeMapScale = newScale;
         WynnExtrasConfig.save();
         return true;
     }

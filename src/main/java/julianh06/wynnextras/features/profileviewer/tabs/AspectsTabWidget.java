@@ -438,10 +438,13 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            float fade = PVScreen.DarkModeToggleWidget.fade;
             if(hovered) {
-                PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered, x, y, width, height, ui);
+                ui.drawImage(classBackgroundTextureHovered, x, y, width, height, 0, 10, 130, 44, 130, 54, 1f - fade);
+                ui.drawImage(classBackgroundTextureHoveredDark, x, y, width, height, 0, 10, 130, 44, 130, 54, fade);
             } else {
-                PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture, x, y, width, height, ui);
+                ui.drawImage(classBackgroundTexture, x, y, width, height, 0, 10, 130, 44, 130, 54, 1f - fade);
+                ui.drawImage(classBackgroundTextureDark, x, y, width, height, 0, 10, 130, 44, 130, 54, fade);
             }
 
             CustomColor textColor = currentPage == page ? CustomColor.fromHexString("FFFF00") : CustomColor.fromHexString("FFFFFF");
