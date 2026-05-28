@@ -22,7 +22,6 @@ import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
 
 import java.util.Map;
 
@@ -151,8 +150,7 @@ public class TreeRoomMinimap {
             return;
         }
 
-        BlockPos playerPos = mc.player.getBlockPos();
-        if(!config.showTreeMapEverywhere && (playerPos == null || playerPos.getX() < 24100 || playerPos.getX() > 24300 || playerPos.getZ() > -22100 || playerPos.getZ() < -22400)) {
+        if(!config.showTreeMapEverywhere && !TnaApi.inTreeRoom()) {
             reset();
             return;
         }

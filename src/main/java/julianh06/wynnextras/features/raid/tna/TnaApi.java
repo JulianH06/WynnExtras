@@ -21,11 +21,30 @@ public class TnaApi {
     private static Grotto playerGrotto = Grotto.None;
     private static Grotto heartGrotto = Grotto.None;
 
+    private static Path path = null;
+    private static boolean collectedHeartLast = false;
+    private static boolean inTreeLastFrame = false;
+
+
+    public static boolean inTreeRoom() {
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (player == null || player.getEntityPos().getX() < 24100 ||
+                player.getEntityPos().getX() > 24300 ||
+                player.getEntityPos().getZ() > -22100 ||
+                player.getEntityPos().getZ() < -22400
+        ) {
+            path = null;
+            return false;
+        }
+        return true;
+    }
+
     public static boolean inTree() {
         if (MinecraftClient.getInstance().player == null) {
             reset();
             return false;
         }
+        if (!inTreeRoom()) return false;
         return playerInTree.equals(MinecraftClient.getInstance().player.getName().getString());
     }
 
@@ -57,15 +76,26 @@ public class TnaApi {
 
     @SubscribeEvent
     public void onWorldRedner(RenderWorldEvent event) {
-        ClientPlayerEntity player = MinecraftClient.getInstance().player;;
-        if (player == null) return;
-        else if (player.getEntityPos().getX() < 24100 || player.getEntityPos().getX() > 24300 || player.getEntityPos().getZ() > -22100 || player.getEntityPos().getZ() < -22400) return;
+        boolean inTree = inTree();
+        if (!inTree) path = null;
+        else if (collectedHeart && !collectedHeartLast) recalcPath();
+        else if (!inTreeLastFrame) recalcPath();
 
-        if (!inTree()) return;
+        collectedHeartLast = collectedHeart;
+        inTreeLastFrame = inTree;
+
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (path != null && player != null) path.draw(event, Color.green, player.getEntityPos());
+    }
+
+    private void recalcPath() {
+        if (!inTree()) {
+            path = null;
+            return;
+        }
         Grotto target = getTargetGrotto();
-        if (target == Grotto.None) return;
-        Path path = TreeGraph.TreeGraph.findPath(player.getEntityPos(), target);
-        if (path != null && WynnExtrasConfig.INSTANCE.drawPathInTree) path.draw(event, Color.green);
+        if (target == Grotto.None || !WynnExtrasConfig.INSTANCE.drawPathInTree) return;
+        path = TreeGraph.TreeGraph.findPath(MinecraftClient.getInstance().player.getEntityPos(), target);
     }
 
     public static void reset() {
