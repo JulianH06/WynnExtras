@@ -34,7 +34,7 @@ public record Path(List<Node> nodes) {
                 double playToNext = playerPos.squaredDistanceTo(next.getCenterPos());
                 double currToNext = curr.getCenterPos().squaredDistanceTo(next.getCenterPos());
 
-                if (playToNext < currToNext) {
+                if (playToNext < currToNext && curr.getDistance(next) != 0.) {
                     startIndex = startIndex + 1;
                 }
             }

@@ -57,7 +57,7 @@ public class TnaApi {
     }
 
     public static Grotto getTargetGrotto() {
-        return hasHeart() ? Grotto.Entrance : getHeartGrotto();
+        return hasHeart() ? Grotto.Outside : getHeartGrotto();
     }
 
     public static Grotto getPlayerGrotto() {
