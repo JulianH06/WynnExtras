@@ -4,7 +4,6 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.event.RenderWorldEvent;
-import julianh06.wynnextras.features.raid.tna.graphs.GrottoGraph;
 import julianh06.wynnextras.utils.path.Path;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -50,18 +49,6 @@ public class TnaApi {
         return playerInTree;
     }
 
-    private GrottoGraph getGraph() {
-        return switch (playerGrotto) {
-            case Entrance -> GrottoGraph.EntranceGraph;
-            case Gray -> GrottoGraph.GrayGraph;
-            case Blue -> GrottoGraph.BlueGraph;
-            case White -> GrottoGraph.WhiteGraph;
-            case Orange -> GrottoGraph.OrangeGraph;
-            case Black -> GrottoGraph.BlackGraph;
-            case None, Outside -> null;
-        };
-    }
-
     @SubscribeEvent
     public void onChat(ChatEvent event) {
         String raw = event.message.getString().replaceAll("\u00a7[0-9a-fk-orx]", "");
@@ -71,22 +58,14 @@ public class TnaApi {
     @SubscribeEvent
     public void onWorldRedner(RenderWorldEvent event) {
         ClientPlayerEntity player = MinecraftClient.getInstance().player;;
-        if (player == null || heartGrotto == Grotto.None) return;
+        if (player == null) return;
         else if (player.getEntityPos().getX() < 24100 || player.getEntityPos().getX() > 24300 || player.getEntityPos().getZ() > -22100 || player.getEntityPos().getZ() < -22400) return;
 
         if (!inTree()) return;
-        GrottoGraph graph = getGraph();
-        if (graph == null) return;
-        Path path = graph.pathTo(getTargetGrotto());
+        Grotto target = getTargetGrotto();
+        if (target == Grotto.None) return;
+        Path path = TreeGraph.TreeGraph.findPath(player.getEntityPos(), target);
         if (path != null && WynnExtrasConfig.INSTANCE.drawPathInTree) path.draw(event, Color.green);
-        /*
-        GrottoGraph.EntranceGraph.drawFullGraph(event, Color.GREEN);
-        GrottoGraph.BlackGraph.drawFullGraph(event, Color.BLACK);
-        GrottoGraph.GrayGraph.drawFullGraph(event, Color.GRAY);
-        GrottoGraph.OrangeGraph.drawFullGraph(event, Color.ORANGE);
-        GrottoGraph.BlueGraph.drawFullGraph(event, Color.BLUE);
-        GrottoGraph.WhiteGraph.drawFullGraph(event, Color.WHITE);
-         */
     }
 
     public static void reset() {

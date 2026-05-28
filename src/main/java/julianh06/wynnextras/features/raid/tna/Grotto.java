@@ -1,8 +1,10 @@
 package julianh06.wynnextras.features.raid.tna;
 
+import julianh06.wynnextras.utils.path.Node;
+
 import java.util.Arrays;
 
-public enum Grotto {
+public enum Grotto implements Node.Group {
     Entrance,
     Gray,
     Blue,
