@@ -10,12 +10,12 @@ import java.util.List;
 
 public record Path(List<Node> nodes) {
     public void draw(RenderWorldEvent event, Color color, Vec3d playerPos) {
-        if (nodes == null || nodes.size() < 2) return;
+        if (nodes == null || nodes.isEmpty()) return;
 
         int startIndex = 0;
 
-        // Find the closest node to player
         if (playerPos != null) {
+            // Find the closest node to player
             double closestDistSq = Double.MAX_VALUE;
             for (int i = 0; i < nodes.size(); i++) {
                 double distSq = nodes.get(i).getCenterPos().squaredDistanceTo(playerPos);
@@ -38,6 +38,14 @@ public record Path(List<Node> nodes) {
                     startIndex = startIndex + 1;
                 }
             }
+
+            WorldRenderUtils.drawLineToEye(
+                    event,
+                    new WEVec(nodes.get(startIndex).getCenterPos()),
+                    color,
+                    2,
+                    false
+            );
         }
 
         // Draw from startIndex to the end

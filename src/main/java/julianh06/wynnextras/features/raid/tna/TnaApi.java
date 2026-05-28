@@ -158,7 +158,6 @@ public class TnaApi {
         Matcher isoMatcher = ISOPTERA_PATTERN.matcher(message);
         if (isoMatcher.matches()) {
             heartGrotto = Grotto.from(isoMatcher.group(1));
-            return;
         }
     }
 }
