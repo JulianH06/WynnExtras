@@ -42,7 +42,7 @@
   "mixins": [
     "CharacterModelMixin",
     "ChatScreenMixin",
-    "Accessor.EventAccessor",
+    "FunctionManagerMixin",
     "ItemFavoriteFeatureAccessor",
     "ItemGuessFeatureAccessor",
     "ItemStatInfoFeatureMixin",
@@ -56,6 +56,7 @@
     "Accessor.BannerBlockEntityAccessor",
     "Accessor.BossBarHudAccessor",
     "Accessor.ChatHudAccessor",
+    "Accessor.EventAccessor",
     "Accessor.InGameHudAccessor",
     "Accessor.PersonalStorageUtilitiesFeatureAccessor",
     "Accessor.SlotAccessor",

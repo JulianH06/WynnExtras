@@ -1,0 +1,7 @@
+{
+  "wynnextrasfunction.wynnextras.raidDropFunction.name": "Raid Drops",
+  "wynnextrasfunction.wynnextras.raidDropFunction.description": "Returns your raid drops by specified filters",
+  "wynnextrasfunction.wynnextras.raidDropFunction.argument.raid": "Available values: %1$s",
+  "wynnextrasfunction.wynnextras.raidDropFunction.argument.mode": "Available values: %2$s",
+  "wynnextrasfunction.wynnextras.raidDropFunction.argument.type": "Available values: %3$s"
+}
