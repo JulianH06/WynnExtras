@@ -1,17 +1,15 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.core.persisted.config.Config;
-import com.wynntils.features.inventory.ItemHighlightFeature;
 import com.wynntils.handlers.item.ItemAnnotation;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.Texture;
 import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynntilsHighlightUtils;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.features.profileviewer.data.Aspect;
 import julianh06.wynnextras.features.profileviewer.data.User;
@@ -50,6 +48,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
     static Identifier dungeonBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/aspecttabbackground_dark.png");
 
     private static ItemStack currentHovered;
+    private static Texture highlightTexture = Texture.HIGHLIGHT_WYNN;
 
     public static User currentPlayerAspectData;
     public static WynncraftApiHandler.FetchStatus fetchStatus;
@@ -76,6 +75,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         if (!openedAspectPage) {
             openedAspectPage = true;
+            highlightTexture = WynntilsHighlightUtils.getConfiguredHighlightTexture();
             currentPlayerAspectData = null;
             fetchStatus = null;
             currentPage = Page.Overview;
@@ -453,7 +453,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
     }
 
     private static class AspectWidget extends Widget {
-        public final Config<ItemHighlightFeature.HighlightTexture> highlightTexture = new Config<>(ItemHighlightFeature.HighlightTexture.CIRCLE_TRANSPARENT);
         ApiAspect aspect;
         int i;
         List<ApiAspect> warriorAspects;
@@ -561,14 +560,10 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             }
 
             if (!Objects.equals(color, CustomColor.NONE)) {
-                RenderUtils.drawTexturedRect(
+                WynntilsHighlightUtils.drawHighlightTexture(
                     ctx,
-                    Texture.HIGHLIGHT.identifier(),
-                    color, x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
-                    highlightTexture.get().ordinal() * 18,
-                    0.0F, 18.0F, 18.0F,
-                    Texture.HIGHLIGHT.width(),
-                    Texture.HIGHLIGHT.height());
+                    highlightTexture,
+                    color, x / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF());
             }
             ItemStack stack;
 
@@ -586,14 +581,10 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             ctx.getMatrices().popMatrix();
 
             if(playerAspect == null || playerAspect.getAmount() <= 1) {
-                RenderUtils.drawTexturedRect(
+                WynntilsHighlightUtils.drawHighlightTexture(
                     ctx,
-                    Texture.HIGHLIGHT.identifier(),
-                    CustomColor.fromHexString("000000"), x / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(), 18 * 6 / ui.getScaleFactorF(),
-                    highlightTexture.get().ordinal() * 18,
-                    0.0F, 18.0F, 18.0F,
-                    Texture.HIGHLIGHT.width(),
-                    Texture.HIGHLIGHT.height());
+                    highlightTexture,
+                    CustomColor.fromHexString("000000"), x / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF());
                 ui.drawCenteredText("Not", x + 50, y, CustomColor.fromHexString("808080"));
                 ui.drawCenteredText("Unlocked", x + 50, y + 100, CustomColor.fromHexString("808080"), 2.5f);
             } else {

@@ -51,9 +51,9 @@ import julianh06.wynnextras.mixin.ItemFavoriteFeatureAccessor;
 import julianh06.wynnextras.mixin.ItemGuessFeatureAccessor;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.SearchQueryParser;
+import julianh06.wynnextras.utils.WynntilsHighlightUtils;
 import julianh06.wynnextras.utils.UI.*;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -1867,14 +1867,16 @@ public class BankOverlay2 extends WEHandledScreen {
 
     // Cached highlight-texture config so we don't reflect into Wynntils config options
     // on every slot draw (was 1 lookup per highlighted slot per frame).
-    private static int highlightTextureOrdinal = 0;
+    private static Texture highlightTexture = Texture.HIGHLIGHT_WYNN;
 
     private static void refreshHighlightCfg() {
         try {
             if (itemHighlightFeature == null)
                 itemHighlightFeature = Managers.Feature.getFeatureInstance(ItemHighlightFeature.class);
-            highlightTextureOrdinal = ((ItemHighlightFeature.HighlightTexture) itemHighlightFeature.getConfigOptionFromString("highlightTexture").get().get()).ordinal();
-        } catch (Exception ignored) {}
+            highlightTexture = WynntilsHighlightUtils.getConfiguredHighlightTexture(itemHighlightFeature);
+        } catch (Exception ignored) {
+            highlightTexture = Texture.HIGHLIGHT_WYNN;
+        }
     }
 
     private static void refreshFrameFeatureStates() {
@@ -1986,14 +1988,10 @@ public class BankOverlay2 extends WEHandledScreen {
     private static void renderHighlightOverlay(DrawContext context, CustomColor color, int x, int y) {
          if (!Objects.equals(color, CustomColor.NONE)) {
              try {
-                 RenderUtils.drawTexturedRect(
+                 WynntilsHighlightUtils.drawHighlightTexture(
                      context,
-                     Texture.HIGHLIGHT.identifier(),
-                     color, (float)(x - 1), (float)(y - 1), 18.0F, 18.0F,
-                     highlightTextureOrdinal * 18,
-                     0.0F, 18.0F, 18.0F,
-                     Texture.HIGHLIGHT.width(),
-                     Texture.HIGHLIGHT.height());
+                     highlightTexture,
+                     color, (float)(x - 8), (float)(y - 8), 32.0F, 32.0F);
              } catch (Exception ignored) {}
          }
     }
