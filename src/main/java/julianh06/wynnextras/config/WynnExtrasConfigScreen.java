@@ -613,6 +613,12 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
             .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
                     () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
+            .add(keybind("Waypoint Edit Return Key", "Return from waypoint free move mode to waypoint edit mode",
+                    () -> config.waypointEditReturnKey, v -> config.waypointEditReturnKey = v))
+            .add(keybind("Waypoint Edit Add Key", "Add a waypoint at the preview position in waypoint edit mode",
+                    () -> config.waypointEditAddKey, v -> config.waypointEditAddKey = v))
+            .add(keybind("Waypoint Edit Remove Key", "Remove waypoints at the preview position in the active package",
+                    () -> config.waypointEditRemoveKey, v -> config.waypointEditRemoveKey = v))
             .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
                     () -> config.badgesEnabled, v -> config.badgesEnabled = v))
             .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",

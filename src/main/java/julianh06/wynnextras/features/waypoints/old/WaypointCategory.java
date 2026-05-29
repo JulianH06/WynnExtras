@@ -7,12 +7,18 @@ public class WaypointCategory {
     public String name;
     public CustomColor color;
     public float alpha;
+    public boolean showBlockByDefault;
+    public boolean showNameByDefault;
+    public boolean showDistanceByDefault;
 
     public WaypointCategory() {
         this.id = java.util.UUID.randomUUID().toString();
         name = "New Category";
         color = CustomColor.fromHexString("FFFFFF");
         alpha = 1.0f;
+        showBlockByDefault = true;
+        showNameByDefault = true;
+        showDistanceByDefault = true;
     }
 
     public WaypointCategory(String name) {
@@ -20,6 +26,9 @@ public class WaypointCategory {
         this.name = name;
         color = CustomColor.fromHexString("FFFFFF");
         alpha = 0.5f;
+        showBlockByDefault = true;
+        showNameByDefault = true;
+        showDistanceByDefault = true;
     }
 
     public WaypointCategory(String name, CustomColor color) {
@@ -27,5 +36,8 @@ public class WaypointCategory {
         this.name = name;
         this.color = color;
         alpha = 0.5f;
+        showBlockByDefault = true;
+        showNameByDefault = true;
+        showDistanceByDefault = true;
     }
 }

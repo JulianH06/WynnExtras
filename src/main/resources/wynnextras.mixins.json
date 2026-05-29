@@ -35,6 +35,7 @@
     "Accessor.KeybindingAccessor",
     "BankOverlay.DrawContextMixin",
     "BankOverlay.HandledScreenMixin",
+    "Invoker.GameRendererInvoker",
     "Invoker.GetTransformationInvoker",
     "Invoker.HandledScreenInvoker",
     "Invoker.NativeImageInvoker"

@@ -63,8 +63,8 @@ public class WaypointElement {
 
             @Override
             public void click() {
-                waypoint.show = !waypoint.show;
-                isActive = waypoint.show;
+                waypoint.setShowOverride(!waypoint.shouldShowBlock());
+                isActive = waypoint.shouldShowBlock();
             }
         };
 
@@ -73,8 +73,8 @@ public class WaypointElement {
 
             @Override
             public void click() {
-                waypoint.showName = !waypoint.showName;
-                isActive = waypoint.showName;
+                waypoint.setShowNameOverride(!waypoint.shouldShowName());
+                isActive = waypoint.shouldShowName();
             }
         };
 
@@ -83,8 +83,8 @@ public class WaypointElement {
 
             @Override
             public void click() {
-                waypoint.showDistance = !waypoint.showDistance;
-                isActive = waypoint.showDistance;
+                waypoint.setShowDistanceOverride(!waypoint.shouldShowDistance());
+                isActive = waypoint.shouldShowDistance();
             }
         };
 
@@ -180,7 +180,7 @@ public class WaypointElement {
         showButton.setY(y + 33 * 3 / scaleFactor);
         showButton.setWidth((float) (15 * 3) / scaleFactor);
         showButton.setHeight((float) (15 * 3) / scaleFactor);
-        if(waypoint.show) {
+        if(waypoint.shouldShowBlock()) {
             showButton.drawWithTexture(context, activeTexture);
         } else {
             showButton.drawWithTexture(context, inavtiveTexture);
@@ -192,7 +192,7 @@ public class WaypointElement {
         showNameButton.setY(y + 33 * 3 / scaleFactor);
         showNameButton.setWidth((float) (15 * 3) / scaleFactor);
         showNameButton.setHeight((float) (15 * 3) / scaleFactor);
-        if(waypoint.showName) {
+        if(waypoint.shouldShowName()) {
             showNameButton.drawWithTexture(context, activeTexture);
         } else {
             showNameButton.drawWithTexture(context, inavtiveTexture);
@@ -204,7 +204,7 @@ public class WaypointElement {
         showDistanceButton.setY(y + 33 * 3 / scaleFactor);
         showDistanceButton.setWidth((float) (15 * 3) / scaleFactor);
         showDistanceButton.setHeight((float) (15 * 3) / scaleFactor);
-        if(waypoint.showDistance) {
+        if(waypoint.shouldShowDistance()) {
             showDistanceButton.drawWithTexture(context, activeTexture);
         } else {
             showDistanceButton.drawWithTexture(context, inavtiveTexture);

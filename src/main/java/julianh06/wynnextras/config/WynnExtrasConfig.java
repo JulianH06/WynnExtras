@@ -243,6 +243,9 @@ public class WynnExtrasConfig {
     public int territoryMenuKey = org.lwjgl.glfw.GLFW.GLFW_KEY_I;
     public boolean guildBankKeyEnabled = false;
     public int guildBankKey = org.lwjgl.glfw.GLFW.GLFW_KEY_Y;
+    public int waypointEditReturnKey = GLFW.GLFW_KEY_I;
+    public int waypointEditAddKey = GLFW.GLFW_KEY_ENTER;
+    public int waypointEditRemoveKey = GLFW.GLFW_KEY_BACKSPACE;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
     public boolean chiropTimer = false;

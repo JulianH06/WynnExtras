@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.waypoints.old;
 
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.RenderWorldEvent;
+import julianh06.wynnextras.features.waypoints.WaypointEditMode;
 import julianh06.wynnextras.utils.WEVec;
 import julianh06.wynnextras.utils.render.WorldRenderUtils;
 import net.minecraft.block.Blocks;
@@ -26,10 +27,11 @@ public class WaypointRenderer {
         for(WaypointPackage pkg : WaypointData.INSTANCE.packages) {
             if(!pkg.enabled) continue;
             for(Waypoint waypoint : pkg.waypoints) {
+                if(WaypointEditMode.isEditing(waypoint)) continue;
                 if(isOnBarrier(waypoint)) continue;
 
                 WEVec pos = new WEVec(waypoint.x + 0.5f, waypoint.y + 1.5f, waypoint.z + 0.5f);
-                if(MinecraftClient.getInstance().player != null && waypoint.showDistance) {
+                if(MinecraftClient.getInstance().player != null && waypoint.shouldShowDistance()) {
                     WEVec playerPos = new WEVec(MinecraftClient.getInstance().player.getBlockPos().toBottomCenterPos());
                     WorldRenderUtils.drawText(event, pos, Text.of((int) pos.distanceTo(playerPos) + "m"), 0.75f, !waypoint.seeThrough);
                 }
@@ -40,7 +42,7 @@ public class WaypointRenderer {
                     color = Color.getHSBColor(hsb[0], hsb[1], hsb[2]);
                 }
 
-                if(waypoint.show) {
+                if(waypoint.shouldShowBlock()) {
                     float alpha = 0.5f;
                     if(waypoint.getCategory() != null) {
                         alpha = waypoint.getCategory().alpha;
@@ -48,7 +50,7 @@ public class WaypointRenderer {
                     WorldRenderUtils.INSTANCE_WAYPOINTS.drawFilledBoundingBox(event, new Box(waypoint.x, waypoint.y, waypoint.z, waypoint.x + 1, waypoint.y + 1, waypoint.z + 1), color, alpha);
                     renderedAny = true;
                 }
-                if(!waypoint.showName) continue;
+                if(!waypoint.shouldShowName()) continue;
                 WorldRenderUtils.drawText(event, namePos, Text.of(waypoint.name), 0.75f, !waypoint.seeThrough);
             }
         }

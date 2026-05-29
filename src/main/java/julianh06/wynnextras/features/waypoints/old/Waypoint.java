@@ -10,6 +10,9 @@ public class Waypoint {
     public boolean showName;
     public boolean showDistance;
     public boolean seeThrough;
+    public Boolean showOverride;
+    public Boolean showNameOverride;
+    public Boolean showDistanceOverride;
 
     public String categoryId;
     private transient WaypointCategory category;
@@ -26,6 +29,9 @@ public class Waypoint {
         this.showName = true;
         this.showDistance = true;
         this.seeThrough = false;
+        showOverride = null;
+        showNameOverride = null;
+        showDistanceOverride = null;
         category = null;
         categoryId = null;
         categoryName = "";
@@ -40,6 +46,9 @@ public class Waypoint {
         this.showName = true;
         this.showDistance = true;
         this.seeThrough = false;
+        showOverride = null;
+        showNameOverride = null;
+        showDistanceOverride = null;
         category = null;
         categoryName = "";
     }
@@ -49,6 +58,44 @@ public class Waypoint {
     public void setCategory(WaypointCategory category) {
         this.category = category;
         this.categoryId = category != null ? category.id : null;
+    }
+
+    public boolean shouldShowBlock() {
+        return resolveVisibility(showOverride, show, category == null || category.showBlockByDefault);
+    }
+
+    public boolean shouldShowName() {
+        return resolveVisibility(showNameOverride, showName, category == null || category.showNameByDefault);
+    }
+
+    public boolean shouldShowDistance() {
+        return resolveVisibility(showDistanceOverride, showDistance, category == null || category.showDistanceByDefault);
+    }
+
+    public void setShowOverride(Boolean showOverride) {
+        this.showOverride = showOverride;
+        if (showOverride != null) show = showOverride;
+    }
+
+    public void setShowNameOverride(Boolean showNameOverride) {
+        this.showNameOverride = showNameOverride;
+        if (showNameOverride != null) showName = showNameOverride;
+    }
+
+    public void setShowDistanceOverride(Boolean showDistanceOverride) {
+        this.showDistanceOverride = showDistanceOverride;
+        if (showDistanceOverride != null) showDistance = showDistanceOverride;
+    }
+
+    public void migrateVisibilityOverridesFromLegacy() {
+        if (showOverride == null) showOverride = show;
+        if (showNameOverride == null) showNameOverride = showName;
+        if (showDistanceOverride == null) showDistanceOverride = showDistance;
+    }
+
+    private boolean resolveVisibility(Boolean override, boolean waypointValue, boolean categoryValue) {
+        if (override != null) return override;
+        return category != null ? categoryValue : waypointValue;
     }
 
     public String getLegacyCategoryName() { return categoryName; }

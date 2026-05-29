@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 public class WaypointData {
+    public static final int CURRENT_PACKAGE_VERSION = 2;
     public static WaypointData INSTANCE = new WaypointData();
 
     public List<WaypointPackage> packages = new ArrayList<>();
@@ -124,6 +125,9 @@ public class WaypointData {
                     newCat.name = oldCat.name;
                     newCat.color = oldCat.color;
                     newCat.alpha = oldCat.alpha;
+                    newCat.showBlockByDefault = true;
+                    newCat.showNameByDefault = true;
+                    newCat.showDistanceByDefault = true;
                     migrated.categories.add(newCat);
                 }
 
@@ -136,6 +140,7 @@ public class WaypointData {
                 // Migrate waypoints
                 for (Waypoint wp : legacy.waypoints) {
                     wp.id = java.util.UUID.randomUUID().toString();
+                    wp.migrateVisibilityOverridesFromLegacy();
                     if (wp.getLegacyCategoryName() != null && !wp.getLegacyCategoryName().isEmpty() && nameToId.containsKey(wp.getLegacyCategoryName())) {
                         wp.categoryId = nameToId.get(wp.getLegacyCategoryName());
                         wp.categoryName = null;
@@ -146,7 +151,7 @@ public class WaypointData {
                     migrated.waypoints.add(wp);
                 }
 
-                migrated.packageVersion = 1;
+                migrated.packageVersion = CURRENT_PACKAGE_VERSION;
                 migrated.description = "";
 
                 migrated.saveToFile(file.getParent());
@@ -167,13 +172,28 @@ public class WaypointData {
                 // New format -> parse normally
                 WaypointPackage pkg = WaypointData.gson.fromJson(obj, WaypointPackage.class);
                 if (pkg == null) return null;
+                int loadedVersion = pkg.packageVersion;
                 // Ensure transient runtime pointers: match categoryId -> category object
                 Map<String, WaypointCategory> idToCat = new HashMap<>();
-                for (WaypointCategory c : pkg.categories) idToCat.put(c.id, c);
+                for (WaypointCategory c : pkg.categories) {
+                    if (loadedVersion < CURRENT_PACKAGE_VERSION) {
+                        c.showBlockByDefault = true;
+                        c.showNameByDefault = true;
+                        c.showDistanceByDefault = true;
+                    }
+                    idToCat.put(c.id, c);
+                }
                 for (Waypoint w : pkg.waypoints) {
                     if (w.categoryId != null && idToCat.containsKey(w.categoryId)) {
                         w.setCategory(idToCat.get(w.categoryId));
                     }
+                    if (loadedVersion < CURRENT_PACKAGE_VERSION) {
+                        w.migrateVisibilityOverridesFromLegacy();
+                    }
+                }
+                if (loadedVersion < CURRENT_PACKAGE_VERSION) {
+                    pkg.packageVersion = CURRENT_PACKAGE_VERSION;
+                    pkg.saveToFile(file.getParent());
                 }
                 return pkg;
             }
@@ -219,8 +239,15 @@ public class WaypointData {
         if (original == null) return null;
 
         WaypointPackage copy = new WaypointPackage(generateUniqueName(original.name));
+        Map<String, WaypointCategory> categoryCopies = new HashMap<>();
         for (WaypointCategory cat : original.categories) {
-            copy.categories.add(new WaypointCategory(cat.name, cat.color));
+            WaypointCategory newCategory = new WaypointCategory(cat.name, cat.color);
+            newCategory.alpha = cat.alpha;
+            newCategory.showBlockByDefault = cat.showBlockByDefault;
+            newCategory.showNameByDefault = cat.showNameByDefault;
+            newCategory.showDistanceByDefault = cat.showDistanceByDefault;
+            copy.categories.add(newCategory);
+            categoryCopies.put(cat.id, newCategory);
         }
 
         for (Waypoint waypoint : original.waypoints) {
@@ -230,13 +257,11 @@ public class WaypointData {
             newWaypoint.showName = waypoint.showName;
             newWaypoint.showDistance = waypoint.showDistance;
             newWaypoint.seeThrough = waypoint.seeThrough;
+            newWaypoint.showOverride = waypoint.showOverride;
+            newWaypoint.showNameOverride = waypoint.showNameOverride;
+            newWaypoint.showDistanceOverride = waypoint.showDistanceOverride;
 
-            for (WaypointCategory cat : copy.categories) {
-                if (cat.id.equals(waypoint.categoryId)) {
-                    newWaypoint.setCategory(cat);
-                    break;
-                }
-            }
+            newWaypoint.setCategory(categoryCopies.get(waypoint.categoryId));
 
             copy.waypoints.add(newWaypoint);
         }

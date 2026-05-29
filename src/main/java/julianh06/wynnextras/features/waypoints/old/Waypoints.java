@@ -9,6 +9,7 @@ import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.event.ClickEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
+import julianh06.wynnextras.features.waypoints.WaypointEditMode;
 import julianh06.wynnextras.utils.WEVec;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -28,6 +29,7 @@ public class Waypoints {
     private static SubCommand addCmd;
     private static SubCommand addCmdNoArgs;
     private static SubCommand removeCmd;
+    private static SubCommand editCmd;
     private static Command waypointsCmd;
 
     public static boolean inScreen = false;
@@ -112,6 +114,17 @@ public class Waypoints {
                     null
             );
 
+            editCmd = new SubCommand(
+                    "edit",
+                    "toggles waypoint edit mode",
+                    context -> {
+                        WaypointEditMode.toggleFromCommand();
+                        return 1;
+                    },
+                    null,
+                    null
+            );
+
             waypointsCmd = new Command(
                     "waypoints",
                     "",
@@ -121,7 +134,7 @@ public class Waypoints {
                         inScreen = true;
                         return 1;
                     },
-                    List.of(addCmd, addCmdNoArgs, removeCmd),
+                    List.of(addCmd, addCmdNoArgs, removeCmd, editCmd),
                     null
             );
             commandsInitialized = true;

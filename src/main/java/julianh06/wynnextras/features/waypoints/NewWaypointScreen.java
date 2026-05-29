@@ -991,9 +991,9 @@ public class NewWaypointScreen extends WEScreen {
 
                     int visibilityY = contentY + 108;
                     ui.drawText("Visibility", contentX, visibilityY + 15, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
-                    drawToggle(contentX + 135, visibilityY, 150, 38, "Name", waypoint.showName);
-                    drawToggle(contentX + 305, visibilityY, 150, 38, "Block", waypoint.show);
-                    drawToggle(contentX + 475, visibilityY, 180, 38, "Distance", waypoint.showDistance);
+                    drawOverrideToggle(contentX + 135, visibilityY, 150, 38, "Name", waypoint.showNameOverride, waypoint.shouldShowName());
+                    drawOverrideToggle(contentX + 305, visibilityY, 150, 38, "Block", waypoint.showOverride, waypoint.shouldShowBlock());
+                    drawOverrideToggle(contentX + 475, visibilityY, 180, 38, "Distance", waypoint.showDistanceOverride, waypoint.shouldShowDistance());
 
                     int categoryY = contentY + 162;
                     ui.drawText("Category", contentX, categoryY + 15, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
@@ -1032,6 +1032,13 @@ public class NewWaypointScreen extends WEScreen {
                     ui.drawCenteredText(label + ": " + (enabled ? "On" : "Off"), x + width / 2f, y + height / 2f, enabled ? CustomColor.fromInt(TOGGLE_ON) : CustomColor.fromInt(TEXT_DIM), 2.4f);
                 }
 
+                private void drawOverrideToggle(int x, int y, int width, int height, String label, Boolean override, boolean effective) {
+                    boolean enabled = override != null ? override : effective;
+                    drawConfigRow(ui, x, y, width, height, enabled, enabled, TOGGLE_ON);
+                    String state = override == null ? "Default " + (effective ? "On" : "Off") : (override ? "On" : "Off");
+                    ui.drawCenteredText(label + ": " + state, x + width / 2f, y + height / 2f, enabled ? CustomColor.fromInt(TOGGLE_ON) : CustomColor.fromInt(TEXT_DIM), 2.2f);
+                }
+
                 private void drawCategoryOption(int x, int y, int width, int height, WaypointCategory category) {
                     boolean selected = waypoint.getCategory() == category;
                     drawConfigRow(ui, x, y, width, height, selected, selected, category == null ? GOLD_DARK : category.color.asInt());
@@ -1060,19 +1067,19 @@ public class NewWaypointScreen extends WEScreen {
                         int visibilityY = y + COLLAPSED_HEIGHT + 18 + 108;
                         int contentX = x + 25;
                         if (isIn(mx, my, contentX + 135, visibilityY, 150, 38)) {
-                            waypoint.showName = !waypoint.showName;
+                            waypoint.setShowNameOverride(nextOverride(waypoint.showNameOverride));
                             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             saveWaypoint();
                             return true;
                         }
                         if (isIn(mx, my, contentX + 305, visibilityY, 150, 38)) {
-                            waypoint.show = !waypoint.show;
+                            waypoint.setShowOverride(nextOverride(waypoint.showOverride));
                             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             saveWaypoint();
                             return true;
                         }
                         if (isIn(mx, my, contentX + 475, visibilityY, 180, 38)) {
-                            waypoint.showDistance = !waypoint.showDistance;
+                            waypoint.setShowDistanceOverride(nextOverride(waypoint.showDistanceOverride));
                             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             saveWaypoint();
                             return true;
@@ -1125,6 +1132,12 @@ public class NewWaypointScreen extends WEScreen {
 
                 private boolean isIn(double mx, double my, int x, int y, int width, int height) {
                     return mx >= ui.sx(x) && my >= ui.sy(y) && mx < ui.sx(x) + ui.sw(width) && my < ui.sy(y) + ui.sh(height);
+                }
+
+                private Boolean nextOverride(Boolean override) {
+                    if (override == null) return true;
+                    if (override) return false;
+                    return null;
                 }
 
                 private void applyName(String name) {
@@ -1205,8 +1218,58 @@ public class NewWaypointScreen extends WEScreen {
                     ui.drawRect(x + 35, rowY, width - 80, 44, CustomColor.fromInt(BG_MEDIUM));
                     ui.drawRect(x + 50, rowY + 12, 20, 20, category.color);
                     ui.drawText(category.name, x + 85, rowY + 22, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.8f);
+                    int toggleY = rowY + 6;
+                    drawCategoryDefaultToggle(x + width - 445, toggleY, 120, 32, "Block", category.showBlockByDefault);
+                    drawCategoryDefaultToggle(x + width - 315, toggleY, 120, 32, "Text", category.showNameByDefault);
+                    drawCategoryDefaultToggle(x + width - 185, toggleY, 140, 32, "Distance", category.showDistanceByDefault);
                     rowY += 54;
                 }
+            }
+
+            private void drawCategoryDefaultToggle(int x, int y, int width, int height, String label, boolean enabled) {
+                drawConfigRow(ui, x, y, width, height, enabled, enabled, TOGGLE_ON);
+                ui.drawCenteredText(label + ": " + (enabled ? "On" : "Off"), x + width / 2f, y + height / 2f, enabled ? CustomColor.fromInt(TOGGLE_ON) : CustomColor.fromInt(TEXT_DIM), 2.2f);
+            }
+
+            @Override
+            public boolean mouseClicked(double mx, double my, int button) {
+                if (!visible || !enabled) return false;
+                for (int i = children.size() - 1; i >= 0; i--) {
+                    if (children.get(i).mouseClicked(mx, my, button)) return true;
+                }
+                if (button != 0 || activePackage == null || !contains((int) mx, (int) my)) return false;
+
+                int rowY = y + 75;
+                for (WaypointCategory category : activePackage.categories) {
+                    int toggleY = rowY + 6;
+                    if (isIn(mx, my, x + width - 445, toggleY, 120, 32)) {
+                        category.showBlockByDefault = !category.showBlockByDefault;
+                        saveCategoryDefaults();
+                        return true;
+                    }
+                    if (isIn(mx, my, x + width - 315, toggleY, 120, 32)) {
+                        category.showNameByDefault = !category.showNameByDefault;
+                        saveCategoryDefaults();
+                        return true;
+                    }
+                    if (isIn(mx, my, x + width - 185, toggleY, 140, 32)) {
+                        category.showDistanceByDefault = !category.showDistanceByDefault;
+                        saveCategoryDefaults();
+                        return true;
+                    }
+                    rowY += 54;
+                }
+                return false;
+            }
+
+            private boolean isIn(double mx, double my, int x, int y, int width, int height) {
+                return mx >= ui.sx(x) && my >= ui.sy(y) && mx < ui.sx(x) + ui.sw(width) && my < ui.sy(y) + ui.sh(height);
+            }
+
+            private void saveCategoryDefaults() {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                WaypointData.save();
+                WaypointsTabContent.categoryWidgets.clear();
             }
 
             private void addCategory() {
