@@ -19,6 +19,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -61,7 +62,8 @@ public class ItemComponentsDebugOverlay {
             ScreenEvents.afterRender(screen).register((s, context, mouseX, mouseY, tickDelta) ->
                     render(context, mouseX, mouseY));
             ScreenKeyboardEvents.allowKeyPress(screen).register((s, input) -> {
-                if (input.key() != WynnExtrasConfig.INSTANCE.debugItemComponentsKey) return true;
+                int debugKey = WynnExtrasConfig.INSTANCE.debugItemComponentsKey;
+                if (debugKey == GLFW.GLFW_KEY_UNKNOWN || input.key() != debugKey) return true;
                 return !openHoveredStack(inventoryScreen);
             });
             ScreenMouseEvents.allowMouseClick(screen).register((s, click) ->

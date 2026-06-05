@@ -50,6 +50,45 @@ public class WynnExtrasConfig {
         }
     }
 
+    public enum ChatMediaPreviewLoadPolicy {
+        HOVER("Hover"),
+        CLICK_TO_LOAD("Click to load");
+
+        private final String displayName;
+
+        ChatMediaPreviewLoadPolicy(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
+    public enum ChatMediaPreviewPosition {
+        TOP_LEFT("Top left"),
+        TOP("Top"),
+        TOP_RIGHT("Top right"),
+        LEFT("Left"),
+        CENTER("Center"),
+        RIGHT("Right"),
+        BOTTOM_LEFT("Bottom left"),
+        BOTTOM("Bottom"),
+        BOTTOM_RIGHT("Bottom right");
+
+        private final String displayName;
+
+        ChatMediaPreviewPosition(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
     public static final String CLASS_SELECTION_LINE_LEVEL = "level";
     public static final String CLASS_SELECTION_LINE_LOCATION = "location";
     public static final String CLASS_SELECTION_LINE_PLAYTIME = "playtime";
@@ -177,15 +216,15 @@ public class WynnExtrasConfig {
     public boolean craftingPreviewBackground = true;
     public int craftingPreviewOverlayX = 20;
     public int craftingPreviewOverlayY = 20;
-    public boolean craftingDynamicTextures = true;
+    public boolean craftingDynamicTextures = false;
     public boolean craftingHelperReverseOrder = false;
     public float craftingHelperHeightPercent = 0.6f;
     public boolean skillpointHelper = true;
-    public boolean tradeMarketOverlay = true;
+    public boolean tradeMarketOverlay = false;
     public int tradeMarketOverlayX = 10;
     public int tradeMarketOverlayY = 10;
     public boolean tradeMarketOverlayBackground = true;
-    public boolean showMountHelper = true;
+    public boolean showMountHelper = false;
 
     // ==================== RAID ====================
     public boolean toggleRaidTimestamps = true;
@@ -268,6 +307,15 @@ public class WynnExtrasConfig {
     // ==================== CHAT CLICK ====================
     public boolean chatClickPV = false;
     public boolean bombShareSuggestion = false;
+    public boolean chatMediaPreviewEnabled = false;
+    public ChatMediaPreviewLoadPolicy chatMediaPreviewLoadPolicy = ChatMediaPreviewLoadPolicy.CLICK_TO_LOAD;
+    public boolean chatMediaPreviewAutoDisplay = false;
+    public ChatMediaPreviewPosition chatMediaPreviewPosition = ChatMediaPreviewPosition.TOP_RIGHT;
+    public ChatMediaPreviewPosition chatMediaPreviewHoverPosition = ChatMediaPreviewPosition.CENTER;
+    public int chatMediaPreviewMaxScreenPercent = 50;
+    public int chatMediaPreviewMaxDownloadMb = 8;
+    public int chatMediaPreviewMaxPixels = 4194304;
+    public int chatMediaPreviewMaxGifFrames = 120;
 
     // ==================== Crowd Sourcing ================
     public boolean crowdSourceGambits = true;

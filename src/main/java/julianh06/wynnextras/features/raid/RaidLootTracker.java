@@ -1,18 +1,19 @@
 package julianh06.wynnextras.features.raid;
 
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
+import net.minecraft.text.TextColor;
+import net.minecraft.util.Identifier;
 
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,7 @@ public class RaidLootTracker {
                 return;
             }
 
-            if (!loggedThisChest && Time.now().timestamp() > lastParse + 60_000) {
+            if (!loggedThisChest && System.currentTimeMillis() > lastParse + 60_000) {
                 parseChest();
                 loggedThisChest = true;
             }
@@ -73,8 +74,9 @@ public class RaidLootTracker {
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
         if (!config.toggleRaidLootTracker) return;
 
-        ScreenHandler handler = McUtils.containerMenu();
-        if (handler == null) return;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player == null) return;
+        ScreenHandler handler = mc.player.currentScreenHandler;
 
         RaidLootData data = RaidLootConfig.INSTANCE.data;
         data.initSession();
@@ -178,8 +180,7 @@ public class RaidLootTracker {
                 data.sessionData.totalTomes += count;
                 sessionRaidData.totalTomes += count;
                 latestRun.totalTomes += count;
-                // Check tooltip for "Mythic" to determine rarity
-                boolean isMythic = checkTooltipForMythic(stack);
+                boolean isMythic = isMythicTome(stack);
                 if (isMythic) {
                     data.mythicTomes += count;
                     raidData.mythicTomes += count;
@@ -216,7 +217,7 @@ public class RaidLootTracker {
 
         data.latestData = latestRun;
         RaidLootConfig.INSTANCE.save();
-        lastParse = Time.now().timestamp();
+        lastParse = System.currentTimeMillis();
     }
 
     private static String detectRaid() {
@@ -315,20 +316,35 @@ public class RaidLootTracker {
         return name.replaceAll("§.", "").trim();
     }
 
-    private static boolean checkTooltipForMythic(ItemStack stack) {
+    private static boolean isMythicTome(ItemStack stack) {
         try {
-            if (stack.getComponents() == null) return false;
-            LoreComponent loreComponent = stack.getComponents().get(DataComponentTypes.LORE);
-            if (loreComponent == null) return false;
+            CustomModelDataComponent customModelData = stack.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA);
+            if (customModelData != null && customModelData.strings().contains("item_tier_mythic")) {
+                return true;
+            }
 
-            List<Text> loreLines = loreComponent.lines();
-            for (Text line : loreLines) {
-                String lineStr = line.getString().toLowerCase();
-                if (lineStr.contains("mythic")) {
-                    return true;
-                }
+            Identifier tooltipStyle = stack.getComponents().get(DataComponentTypes.TOOLTIP_STYLE);
+            if (tooltipStyle != null && "mythic".equals(tooltipStyle.getPath())) {
+                return true;
             }
         } catch (Exception ignored) {}
+        return false;
+    }
+
+    private static boolean hasTextColor(Text text, String hexCode) {
+        if (text == null) return false;
+
+        TextColor color = text.getStyle().getColor();
+        if (color != null && hexCode.equalsIgnoreCase(color.getHexCode())) {
+            return true;
+        }
+
+        for (Text sibling : text.getSiblings()) {
+            if (hasTextColor(sibling, hexCode)) {
+                return true;
+            }
+        }
+
         return false;
     }
 }
