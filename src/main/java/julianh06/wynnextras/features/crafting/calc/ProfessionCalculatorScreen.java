@@ -120,11 +120,19 @@ public class ProfessionCalculatorScreen extends WEScreen {
         currentOverflowInput = createStyledInput("e.g. 200M");
         overflowGoalInput = createStyledInput("e.g. 500M");
         topNInput = createStyledInput("All");
+        fromLevelInput.setCharacterFilter(Character::isDigit);
+        toLevelInput.setCharacterFilter(Character::isDigit);
+        topNInput.setCharacterFilter(Character::isDigit);
+        currentOverflowInput.setCharacterFilter(this::isNumberSuffixInputChar);
+        overflowGoalInput.setCharacterFilter(this::isNumberSuffixInputChar);
 
         for (int t = 0; t < 3; t++) {
             ingPriceInputs[t] = createStyledInput("Price (eb)");
             mat1PriceInputs[t] = createStyledInput("Price (eb)");
             mat2PriceInputs[t] = createStyledInput("Price (eb)");
+            ingPriceInputs[t].setCharacterFilter(this::isNumberSuffixInputChar);
+            mat1PriceInputs[t].setCharacterFilter(this::isNumberSuffixInputChar);
+            mat2PriceInputs[t].setCharacterFilter(this::isNumberSuffixInputChar);
         }
 
         addRootWidget(professionButton);
@@ -156,6 +164,18 @@ public class ProfessionCalculatorScreen extends WEScreen {
         input.setFocusedColor(CustomColor.fromHexString("40555555"));
         input.setTextColor(CustomColor.fromHexString("FFFFFF"));
         return input;
+    }
+
+    private boolean isNumberSuffixInputChar(char character) {
+        return Character.isDigit(character)
+                || character == '.'
+                || character == ','
+                || character == 'k'
+                || character == 'K'
+                || character == 'm'
+                || character == 'M'
+                || character == 'b'
+                || character == 'B';
     }
 
     private void onProfessionChanged() {

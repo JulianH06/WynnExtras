@@ -94,6 +94,14 @@ public class AspectScreen extends WEScreen {
     }
 
     @Override
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        double mx = click.x() / matrixScale;
+        double my = click.y() / matrixScale;
+        if(currentWidget != null && currentWidget.mouseDragged(mx, my, click.button(), dx, dy)) return true;
+        return super.mouseDragged(click, dx, dy);
+    }
+
+    @Override
     public boolean keyPressed(KeyInput input) {
         if(currentWidget != null) currentWidget.keyPressed(input.key(), input.scancode(), input.modifiers());
         return super.keyPressed(input);

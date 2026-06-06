@@ -141,7 +141,13 @@ public abstract class Widget {
         return false;
     }
 
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) { return false; }
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (!visible || !enabled) return false;
+        for (int i = children.size() - 1; i >= 0; i--) {
+            if (children.get(i).mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) return true;
+        }
+        return false;
+    }
 
     public boolean mouseScrolled(double mx, double my, double delta) {
         if (!visible) return false;

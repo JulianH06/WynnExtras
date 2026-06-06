@@ -4,6 +4,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.waypoints.old.WaypointCategory;
 import julianh06.wynnextras.features.waypoints.old.WaypointData;
 import julianh06.wynnextras.features.waypoints.old.WaypointPackage;
+import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -133,6 +134,7 @@ public class WaypointEditModeUI extends WEScreen {
         ensureSelectionDefaults();
         syncNameInput();
         syncCategoryNameInput();
+        syncCoordinateWidgets();
         lastPreviewStats = statsAt(previewPos);
         updateDropdownScroll(delta);
         updateEditorWidgets();
@@ -178,54 +180,41 @@ public class WaypointEditModeUI extends WEScreen {
     @Override
     public boolean keyPressed(KeyInput input) {
         int key = input.key();
-        if (categoryNameFocused) {
-            if (handleCategoryNameKey(input)) return true;
-            if (isWaypointMovementKey(key)) return true;
+        if (selectedWaypoint != null && key == GLFW.GLFW_KEY_ESCAPE) {
+            saveEditedWaypoint();
+            return true;
         }
-        if (nameFocused) {
-            if (handleNameKey(input)) return true;
-            if (isWaypointMovementKey(key)) return true;
+        if (categoryNameField.isFocused()) {
+            if (key == GLFW.GLFW_KEY_ESCAPE || key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+                applyCategoryNameInput();
+                setFocusedWidget(null);
+                return true;
+            }
+            categoryNameField.keyPressed(key, input.scancode(), input.modifiers());
+            return true;
+        }
+        if (nameField.isFocused()) {
+            nameField.keyPressed(key, input.scancode(), input.modifiers());
+            return true;
         }
 
         if (selectedWaypoint != null) {
-            if (key == GLFW.GLFW_KEY_ESCAPE) {
-                nameFocused = false;
-                categoryNameFocused = false;
-                discardChanges();
-                return true;
-            }
             if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
-                applyNameInput();
-                applyCategoryNameInput();
-                applyCoordinateInputs();
-                activeDropdown = Dropdown.NONE;
-                activeDropdownField = null;
-                searchFocused = false;
-                focusedCoordinate = -1;
-                nameFocused = false;
-                categoryNameFocused = false;
-                syncCoordinateInputs();
-                saveChanges();
+                saveEditedWaypoint();
                 return true;
             }
         }
 
         if (focusedCoordinate >= 0) {
+            CoordinateInputWidget coordinateField = currentCoordinateField();
             if (key == GLFW.GLFW_KEY_ESCAPE || key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
                 applyCoordinateInputs();
                 focusedCoordinate = -1;
+                setFocusedWidget(null);
                 syncCoordinateInputs();
                 return true;
             }
-            if (key == GLFW.GLFW_KEY_BACKSPACE) {
-                setCoordinateInput(currentCoordinateInput().isEmpty() ? "" : currentCoordinateInput().substring(0, currentCoordinateInput().length() - 1));
-                applyCoordinateInputs();
-                return true;
-            }
-            if (key == GLFW.GLFW_KEY_DELETE) {
-                setCoordinateInput("");
-                return true;
-            }
+            if (coordinateField != null && coordinateField.keyPressed(key, input.scancode(), input.modifiers())) return true;
             return true;
         }
 
@@ -236,10 +225,7 @@ public class WaypointEditModeUI extends WEScreen {
                 searchFocused = false;
                 return true;
             }
-            if (key == GLFW.GLFW_KEY_BACKSPACE) {
-                setSearchText(currentSearchText().isEmpty() ? "" : currentSearchText().substring(0, currentSearchText().length() - 1));
-                return true;
-            }
+            if (dropdownWidget.keyPressed(key, input.scancode(), input.modifiers())) return true;
             return true;
         }
 
@@ -286,34 +272,21 @@ public class WaypointEditModeUI extends WEScreen {
 
     @Override
     public boolean charTyped(CharInput input) {
-        if (nameFocused) {
-            char chr = (char) input.codepoint();
-            if (!Character.isISOControl(chr)) {
-                nameInput += chr;
-                setPreviewName(nameInput);
-            }
+        if (nameField.isFocused()) {
+            nameField.charTyped((char) input.codepoint(), input.modifiers());
             return true;
         }
-        if (categoryNameFocused) {
-            char chr = (char) input.codepoint();
-            if (!Character.isISOControl(chr)) {
-                categoryNameInput += chr;
-                applyCategoryNameInput();
-            }
+        if (categoryNameField.isFocused()) {
+            categoryNameField.charTyped((char) input.codepoint(), input.modifiers());
             return true;
         }
         if (focusedCoordinate >= 0) {
-            char chr = (char) input.codepoint();
-            if ((chr >= '0' && chr <= '9') || chr == '-') {
-                setCoordinateInput(currentCoordinateInput() + chr);
-                applyCoordinateInputs();
-            }
+            CoordinateInputWidget coordinateField = currentCoordinateField();
+            if (coordinateField != null) coordinateField.charTyped((char) input.codepoint(), input.modifiers());
             return true;
         }
         if (!searchFocused || activeDropdown == Dropdown.NONE) return true;
-        char chr = (char) input.codepoint();
-        if (Character.isISOControl(chr)) return true;
-        setSearchText(currentSearchText() + chr);
+        dropdownWidget.charTyped((char) input.codepoint(), input.modifiers());
         return true;
     }
 
@@ -411,6 +384,7 @@ public class WaypointEditModeUI extends WEScreen {
             secondaryButton.setLogicalBounds(panelX + p(14) + (buttonW + p(10)) * 2, buttonY, buttonW, p(ACTION_H));
         } else {
             nameFocused = false;
+            nameField.setFocused(false);
             packageField.setLogicalBounds(panelX + p(14), panelY + p(80), panelW - p(28), p(FIELD_H));
             categoryField.setLogicalBounds(panelX + p(14), panelY + p(160), panelW - p(28), p(FIELD_H));
             int coordY = panelY + p(252);
@@ -460,6 +434,7 @@ public class WaypointEditModeUI extends WEScreen {
             categoryColorPicker.setLogicalBounds(categoryPanelX + p(14), categoryPanelY + p(210), panelW - p(28), p(32));
         } else {
             categoryNameFocused = false;
+            categoryNameField.setFocused(false);
             categoryNameField.setLogicalBounds(0, 0, 0, 0);
             categoryShowNameButton.setLogicalBounds(0, 0, 0, 0);
             categoryShowBlockButton.setLogicalBounds(0, 0, 0, 0);
@@ -505,17 +480,28 @@ public class WaypointEditModeUI extends WEScreen {
         nameFocused = false;
         categoryNameFocused = false;
         focusedCoordinate = coordinate;
+        setFocusedWidget(currentCoordinateField());
     }
 
     private void handlePrimaryAction() {
         applyCategoryNameInput();
         if (selectedWaypoint == null) addWaypoint();
-        else {
-            applyNameInput();
-            saveChanges();
-            nameFocused = false;
-            categoryNameFocused = false;
-        }
+        else saveEditedWaypoint();
+    }
+
+    private void saveEditedWaypoint() {
+        applyNameInput();
+        applyCategoryNameInput();
+        applyCoordinateInputs();
+        activeDropdown = Dropdown.NONE;
+        activeDropdownField = null;
+        searchFocused = false;
+        focusedCoordinate = -1;
+        nameFocused = false;
+        categoryNameFocused = false;
+        setFocusedWidget(null);
+        syncCoordinateInputs();
+        saveChanges();
     }
 
     private void handleSecondaryAction() {
@@ -603,6 +589,7 @@ public class WaypointEditModeUI extends WEScreen {
         syncCoordinateInputs();
         categoryNameFocused = false;
         nameFocused = true;
+        setFocusedWidget(nameField);
     }
 
     private void focusCategoryName() {
@@ -614,85 +601,14 @@ public class WaypointEditModeUI extends WEScreen {
         applyNameInput();
         nameFocused = false;
         categoryNameFocused = activeCategory != null;
-    }
-
-    private boolean handleNameKey(KeyInput input) {
-        int key = input.key();
-        int modifiers = input.modifiers();
-        boolean ctrl = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
-
-        if (ctrl && key == GLFW.GLFW_KEY_V) {
-            String clip = MinecraftClient.getInstance().keyboard.getClipboard();
-            if (clip != null && !clip.isEmpty()) {
-                nameInput += clip.replaceAll("[\\r\\n\\t]", " ");
-                setPreviewName(nameInput);
-            }
-            return true;
-        }
-        if (ctrl && (key == GLFW.GLFW_KEY_C || key == GLFW.GLFW_KEY_X)) {
-            MinecraftClient.getInstance().keyboard.setClipboard(nameInput);
-            if (key == GLFW.GLFW_KEY_X) {
-                nameInput = "";
-                setPreviewName(nameInput);
-            }
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_BACKSPACE) {
-            if (!nameInput.isEmpty()) nameInput = nameInput.substring(0, nameInput.length() - 1);
-            setPreviewName(nameInput);
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_DELETE) {
-            nameInput = "";
-            setPreviewName(nameInput);
-            return true;
-        }
-        return false;
-    }
-
-    private boolean handleCategoryNameKey(KeyInput input) {
-        int key = input.key();
-        int modifiers = input.modifiers();
-        boolean ctrl = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
-
-        if (key == GLFW.GLFW_KEY_ESCAPE || key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
-            applyCategoryNameInput();
-            categoryNameFocused = false;
-            return true;
-        }
-        if (ctrl && key == GLFW.GLFW_KEY_V) {
-            String clip = MinecraftClient.getInstance().keyboard.getClipboard();
-            if (clip != null && !clip.isEmpty()) {
-                categoryNameInput += clip.replaceAll("[\\r\\n\\t]", " ");
-                applyCategoryNameInput();
-            }
-            return true;
-        }
-        if (ctrl && (key == GLFW.GLFW_KEY_C || key == GLFW.GLFW_KEY_X)) {
-            MinecraftClient.getInstance().keyboard.setClipboard(categoryNameInput);
-            if (key == GLFW.GLFW_KEY_X) {
-                categoryNameInput = "";
-                applyCategoryNameInput();
-            }
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_BACKSPACE) {
-            if (!categoryNameInput.isEmpty()) categoryNameInput = categoryNameInput.substring(0, categoryNameInput.length() - 1);
-            applyCategoryNameInput();
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_DELETE) {
-            categoryNameInput = "";
-            applyCategoryNameInput();
-            return true;
-        }
-        return false;
+        setFocusedWidget(activeCategory == null ? null : categoryNameField);
     }
 
     private void syncNameInput() {
         if (selectedWaypoint == nameInputWaypoint) return;
         nameInputWaypoint = selectedWaypoint;
         nameInput = selectedWaypoint == null || selectedWaypoint.name == null ? "" : selectedWaypoint.name;
+        nameField.setInputAndMoveCursorToEnd(nameInput);
         setPreviewName(nameInput);
         nameFocused = false;
     }
@@ -701,6 +617,7 @@ public class WaypointEditModeUI extends WEScreen {
         if (selectedWaypoint == null) return;
         selectedWaypoint.name = nameInput == null || nameInput.isBlank() ? "Waypoint" : nameInput.trim();
         nameInput = selectedWaypoint.name;
+        nameField.setInputAndMoveCursorToEnd(nameInput);
         setPreviewName(nameInput);
     }
 
@@ -708,6 +625,7 @@ public class WaypointEditModeUI extends WEScreen {
         if (activeCategory == categoryNameInputCategory) return;
         categoryNameInputCategory = activeCategory;
         categoryNameInput = activeCategory == null || activeCategory.name == null ? "" : activeCategory.name;
+        categoryNameField.setInputAndMoveCursorToEnd(categoryNameInput);
         categoryNameFocused = false;
     }
 
@@ -719,6 +637,16 @@ public class WaypointEditModeUI extends WEScreen {
             WaypointData.save();
         }
         categoryNameInput = value;
+        categoryNameField.setInputAndMoveCursorToEnd(value);
+    }
+
+    private CoordinateInputWidget currentCoordinateField() {
+        return switch (focusedCoordinate) {
+            case 0 -> xCoordinateField;
+            case 1 -> yCoordinateField;
+            case 2 -> zCoordinateField;
+            default -> null;
+        };
     }
 
     private void toggleVisibility(VisibilityTarget target, boolean reverse) {
@@ -984,21 +912,18 @@ public class WaypointEditModeUI extends WEScreen {
         }
     }
 
-    private String currentCoordinateInput() {
-        return switch (focusedCoordinate) {
-            case 0 -> xInput;
-            case 1 -> yInput;
-            case 2 -> zInput;
-            default -> "";
-        };
-    }
-
-    private void setCoordinateInput(String value) {
-        switch (focusedCoordinate) {
+    private void setCoordinateInput(int coordinate, String value) {
+        switch (coordinate) {
             case 0 -> xInput = value;
             case 1 -> yInput = value;
             case 2 -> zInput = value;
         }
+    }
+
+    private void syncCoordinateWidgets() {
+        if (focusedCoordinate != 0) xCoordinateField.setInput(xInput);
+        if (focusedCoordinate != 1) yCoordinateField.setInput(yInput);
+        if (focusedCoordinate != 2) zCoordinateField.setInput(zInput);
     }
 
     private String trimToWidth(TextRenderer tr, String text, int maxWidth) {
@@ -1147,7 +1072,7 @@ public class WaypointEditModeUI extends WEScreen {
         }
     }
 
-    private static class NameInputWidget extends Widget {
+    private static class NameInputWidget extends TextInputWidget {
         private final WaypointEditModeUI screen;
         private int logicalX;
         private int logicalY;
@@ -1155,7 +1080,19 @@ public class WaypointEditModeUI extends WEScreen {
         private int logicalH;
 
         private NameInputWidget(WaypointEditModeUI screen) {
+            super(0, 0, 0, 0, 9, 9, 2.5f);
             this.screen = screen;
+            setPlaceholder("Waypoint");
+            setTextColor(screen.color(TEXT));
+            setPlaceholderColor(screen.color(TEXT_DIM));
+            setCursorColor(screen.color(TEXT));
+            setSelectionColor(screen.color(0xAA3366CC));
+            setOnChange(value -> {
+                screen.nameInput = value;
+                setPreviewName(value);
+            });
+            setOnFocus(widget -> screen.nameFocused = true);
+            setOnBlur(widget -> screen.nameFocused = false);
         }
 
         private void setLogicalBounds(int x, int y, int w, int h) {
@@ -1167,24 +1104,20 @@ public class WaypointEditModeUI extends WEScreen {
         }
 
         @Override
-        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            TextRenderer tr = MinecraftClient.getInstance().textRenderer;
-            screen.ui.drawRect(logicalX, logicalY, logicalW, logicalH, screen.color(screen.nameFocused || hovered ? FIELD_HOVER : FIELD_BG));
-            screen.ui.drawRect(logicalX, logicalY + logicalH - screen.p(2), logicalW, screen.p(2), screen.color(screen.nameFocused ? GOLD : 0x882E251C));
-            String value = screen.nameInput.isEmpty() && !screen.nameFocused ? "Waypoint" : screen.nameInput;
-            int maxWidth = screen.textMaxWidth(logicalW - screen.p(18), 2.5f);
-            screen.ui.drawText(screen.trimToWidthEnd(tr, value, maxWidth), logicalX + screen.p(9), logicalY + screen.p(9), screen.color(screen.nameInput.isEmpty() ? TEXT_DIM : TEXT), screen.ts(2.5f));
+        protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            screen.ui.drawRect(logicalX, logicalY, logicalW, logicalH, screen.color(isFocused() || hovered ? FIELD_HOVER : FIELD_BG));
+            screen.ui.drawRect(logicalX, logicalY + logicalH - screen.p(2), logicalW, screen.p(2), screen.color(isFocused() ? GOLD : 0x882E251C));
         }
 
         @Override
-        protected boolean onClick(int button) {
+        public boolean mouseClicked(double mx, double my, int button) {
             if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
             screen.focusName();
-            return true;
+            return super.mouseClicked(mx, my, button);
         }
     }
 
-    private static class CategoryNameInputWidget extends Widget {
+    private static class CategoryNameInputWidget extends TextInputWidget {
         private final WaypointEditModeUI screen;
         private int logicalX;
         private int logicalY;
@@ -1192,7 +1125,16 @@ public class WaypointEditModeUI extends WEScreen {
         private int logicalH;
 
         private CategoryNameInputWidget(WaypointEditModeUI screen) {
+            super(0, 0, 0, 0, 9, 9, 2.5f);
             this.screen = screen;
+            setPlaceholder("New Category");
+            setTextColor(screen.color(TEXT));
+            setPlaceholderColor(screen.color(TEXT_DIM));
+            setCursorColor(screen.color(TEXT));
+            setSelectionColor(screen.color(0xAA3366CC));
+            setOnChange(value -> screen.categoryNameInput = value);
+            setOnFocus(widget -> screen.categoryNameFocused = true);
+            setOnBlur(widget -> screen.categoryNameFocused = false);
         }
 
         private void setLogicalBounds(int x, int y, int w, int h) {
@@ -1204,20 +1146,16 @@ public class WaypointEditModeUI extends WEScreen {
         }
 
         @Override
-        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            TextRenderer tr = MinecraftClient.getInstance().textRenderer;
-            screen.ui.drawRect(logicalX, logicalY, logicalW, logicalH, screen.color(screen.categoryNameFocused || hovered ? FIELD_HOVER : FIELD_BG));
-            screen.ui.drawRect(logicalX, logicalY + logicalH - screen.p(2), logicalW, screen.p(2), screen.color(screen.categoryNameFocused ? GOLD : 0x882E251C));
-            String value = screen.categoryNameInput.isEmpty() && !screen.categoryNameFocused ? "New Category" : screen.categoryNameInput;
-            int maxWidth = screen.textMaxWidth(logicalW - screen.p(18), 2.5f);
-            screen.ui.drawText(screen.trimToWidthEnd(tr, value, maxWidth), logicalX + screen.p(9), logicalY + screen.p(9), screen.color(screen.categoryNameInput.isEmpty() ? TEXT_DIM : TEXT), screen.ts(2.5f));
+        protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            screen.ui.drawRect(logicalX, logicalY, logicalW, logicalH, screen.color(isFocused() || hovered ? FIELD_HOVER : FIELD_BG));
+            screen.ui.drawRect(logicalX, logicalY + logicalH - screen.p(2), logicalW, screen.p(2), screen.color(isFocused() ? GOLD : 0x882E251C));
         }
 
         @Override
-        protected boolean onClick(int button) {
+        public boolean mouseClicked(double mx, double my, int button) {
             if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
             screen.focusCategoryName();
-            return true;
+            return super.mouseClicked(mx, my, button);
         }
     }
 
@@ -1568,7 +1506,7 @@ public class WaypointEditModeUI extends WEScreen {
         }
     }
 
-    private static class CoordinateInputWidget extends Widget {
+    private static class CoordinateInputWidget extends TextInputWidget {
         private final WaypointEditModeUI screen;
         private final int coordinate;
         private final String label;
@@ -1578,9 +1516,19 @@ public class WaypointEditModeUI extends WEScreen {
         private int logicalH;
 
         private CoordinateInputWidget(WaypointEditModeUI screen, int coordinate, String label) {
+            super(0, 0, 0, 0, 27, 9, 2.3f);
             this.screen = screen;
             this.coordinate = coordinate;
             this.label = label;
+            setTextColor(screen.color(TEXT));
+            setPlaceholderColor(screen.color(TEXT_DIM));
+            setCursorColor(screen.color(TEXT));
+            setSelectionColor(screen.color(0xAA3366CC));
+            setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '-');
+            setOnChange(value -> {
+                screen.setCoordinateInput(coordinate, value);
+                applyCoordinateInputs();
+            });
         }
 
         private void setLogicalBounds(int x, int y, int w, int h) {
@@ -1592,26 +1540,23 @@ public class WaypointEditModeUI extends WEScreen {
         }
 
         @Override
-        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            TextRenderer tr = MinecraftClient.getInstance().textRenderer;
+        protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             boolean focused = focusedCoordinate == coordinate;
-            String value = switch (coordinate) {
-                case 0 -> xInput;
-                case 1 -> yInput;
-                default -> zInput;
-            };
             screen.ui.drawRect(logicalX, logicalY, logicalW, logicalH, screen.color(focused || hovered ? FIELD_HOVER : FIELD_BG));
             screen.ui.drawRect(logicalX, logicalY + logicalH - screen.p(2), logicalW, screen.p(2), screen.color(focused ? GOLD : 0x882E251C));
-            screen.ui.drawText(label, logicalX + screen.p(7), logicalY + screen.p(9), screen.color(TEXT_DIM), screen.ts(2.3f));
-            String clipped = screen.trimToWidth(tr, value, screen.textMaxWidth(logicalW - screen.p(31), 2.3f));
-            screen.ui.drawText(clipped, logicalX + screen.p(27), logicalY + screen.p(9), screen.color(TEXT), screen.ts(2.3f));
         }
 
         @Override
-        protected boolean onClick(int button) {
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            screen.ui.drawText(label, logicalX + screen.p(7), logicalY + screen.p(9), screen.color(TEXT_DIM), screen.ts(2.3f));
+            super.drawContent(ctx, mouseX, mouseY, tickDelta);
+        }
+
+        @Override
+        public boolean mouseClicked(double mx, double my, int button) {
             if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
             screen.focusCoordinate(coordinate);
-            return true;
+            return super.mouseClicked(mx, my, button);
         }
     }
 
@@ -1750,6 +1695,8 @@ public class WaypointEditModeUI extends WEScreen {
             clearChildren();
             DropdownSearchWidget searchWidget = new DropdownSearchWidget(screen);
             searchWidget.setLogicalBounds(x + screen.p(5), y + screen.p(5), w - screen.p(10), screen.p(22));
+            searchWidget.setInput(screen.currentSearchText());
+            searchWidget.setFocused(searchFocused);
             addDropdownChild(searchWidget);
 
             int listY = y + screen.p(30);
@@ -1882,7 +1829,7 @@ public class WaypointEditModeUI extends WEScreen {
         }
     }
 
-    private static class DropdownSearchWidget extends Widget {
+    private static class DropdownSearchWidget extends TextInputWidget {
         private final WaypointEditModeUI screen;
         private int logicalX;
         private int logicalY;
@@ -1890,7 +1837,16 @@ public class WaypointEditModeUI extends WEScreen {
         private int logicalH;
 
         private DropdownSearchWidget(WaypointEditModeUI screen) {
+            super(0, 0, 0, 0, 5, 5, 2.2f);
             this.screen = screen;
+            setPlaceholder("Search...");
+            setTextColor(screen.color(TEXT));
+            setPlaceholderColor(screen.color(TEXT_DIM));
+            setCursorColor(screen.color(TEXT));
+            setSelectionColor(screen.color(0xAA3366CC));
+            setOnChange(screen::setSearchText);
+            setOnFocus(widget -> searchFocused = true);
+            setOnBlur(widget -> searchFocused = false);
         }
 
         private void setLogicalBounds(int x, int y, int w, int h) {
@@ -1902,17 +1858,15 @@ public class WaypointEditModeUI extends WEScreen {
         }
 
         @Override
-        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            String search = screen.currentSearchText();
+        protected void drawBackground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             screen.ui.drawRect(logicalX, logicalY, logicalW, logicalH, screen.color(searchFocused || hovered ? FIELD_HOVER : FIELD_BG));
-            screen.ui.drawText(search.isEmpty() ? "Search..." : search, logicalX + screen.p(5), logicalY + screen.p(5), screen.color(search.isEmpty() ? TEXT_DIM : TEXT), screen.ts(2.2f));
         }
 
         @Override
-        protected boolean onClick(int button) {
+        public boolean mouseClicked(double mx, double my, int button) {
             if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
             searchFocused = true;
-            return true;
+            return super.mouseClicked(mx, my, button);
         }
     }
 

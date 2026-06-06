@@ -240,14 +240,11 @@ public abstract class WEScreen extends Screen {
         double mouseY = click.y() / matrixScale;
         int button = click.button();
 
-
         if(ui == null) return false;
+        if (focusedWidget != null && focusedWidget.mouseDragged(mouseX, mouseY, button, dx, dy)) return true;
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             Widget w = rootWidgets.get(i);
-            if (w.contains((int) mouseX, (int) mouseY)) {
-                w.mouseDragged(mouseX, mouseY, button, dx, dy);
-                return true;
-            }
+            if (w.mouseDragged(mouseX, mouseY, button, dx, dy)) return true;
         }
         return super.mouseDragged(click, dx, dy);
     }

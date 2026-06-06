@@ -10,6 +10,7 @@ import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.WEHandledScreen;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -124,9 +125,9 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     private static boolean descriptionInputActive = false;
     private static String descriptionText = "";
-    private static int descriptionCursor = 0;
     private static String descriptionCharId = "";
     private static final int DESCRIPTION_MAX_LENGTH = 40;
+    private static TextInputWidget descriptionInputWidget = null;
     private static final Pattern PERCENT_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)?)%");
     private static final Pattern CONTENT_COUNT_PATTERN = Pattern.compile("(\\d+)\\s+of\\s+(\\d+)", Pattern.CASE_INSENSITIVE);
 
@@ -1118,8 +1119,13 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     public boolean mouseClicked(double x, double y, int button) {
         x /= matrixScale;
         y /= matrixScale;
-        // If a text input is active, consume all clicks (Escape/Enter to close)
-        if (isTextInputActive()) return true;
+        if (isTextInputActive()) {
+            ensureDescriptionInputWidget();
+            if (!descriptionInputWidget.mouseClicked(x, y, button)) {
+                descriptionInputWidget.setFocused(true);
+            }
+            return true;
+        }
 
         if (mode == ScreenMode.CLASS_SELECTION
                 && !WynnExtrasConfig.INSTANCE.hideClassSelectionQuickToggleButton
@@ -1145,9 +1151,14 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     /** Called from mixin on mouseDragged */
-    public void onMouseDragged(double x, double y) {
+    public void onMouseDragged(double x, double y, int button, double dx, double dy) {
         x /= matrixScale;
         y /= matrixScale;
+        if (isTextInputActive()) {
+            ensureDescriptionInputWidget();
+            descriptionInputWidget.mouseDragged(x, y, button, dx / matrixScale, dy / matrixScale);
+            return;
+        }
         if (pressedVisIdx >= 0 && mode == ScreenMode.CLASS_SELECTION) {
             double dist = Math.sqrt(Math.pow(x - pressStartX, 2) + Math.pow(y - pressStartY, 2));
             if (dist > DRAG_THRESHOLD) {
@@ -1160,6 +1171,11 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     public void onMouseReleased(double x, double y, int button) {
         x /= matrixScale;
         y /= matrixScale;
+        if (isTextInputActive()) {
+            ensureDescriptionInputWidget();
+            descriptionInputWidget.mouseReleased(x, y, button);
+            return;
+        }
         if (pressedVisIdx >= 0 && mode == ScreenMode.CLASS_SELECTION) {
             if (isDragging) {
                 int targetVis = findVisualSlotAt(x, y);
@@ -1294,64 +1310,57 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     public static boolean handleScreenKeyInput(int keyCode, int scanCode, int modifiers) {
         if (!descriptionInputActive) return false;
-        return handleDescriptionKey(keyCode);
+        return handleDescriptionKey(keyCode, scanCode, modifiers);
     }
 
-    private static boolean handleDescriptionKey(int key) {
+    private static boolean handleDescriptionKey(int key, int scanCode, int modifiers) {
+        ensureDescriptionInputWidget();
         if (key == GLFW.GLFW_KEY_ESCAPE) {
             descriptionInputActive = false;
+            descriptionInputWidget.setFocused(false);
             return true;
         }
         if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
             confirmDescription();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_BACKSPACE) {
-            if (descriptionCursor > 0) {
-                descriptionText = descriptionText.substring(0, descriptionCursor - 1) + descriptionText.substring(descriptionCursor);
-                descriptionCursor--;
-            }
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_DELETE) {
-            if (descriptionCursor < descriptionText.length()) {
-                descriptionText = descriptionText.substring(0, descriptionCursor) + descriptionText.substring(descriptionCursor + 1);
-            }
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_LEFT) {
-            if (descriptionCursor > 0) descriptionCursor--;
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_RIGHT) {
-            if (descriptionCursor < descriptionText.length()) descriptionCursor++;
-            return true;
-        }
+        descriptionInputWidget.keyPressed(key, scanCode, modifiers);
         return true;
     }
 
     private static boolean handleDescriptionCharInput(CharInputEvent event) {
-        char c = event.getCharacter();
-        if (c < 32) return true;
-        if (descriptionText.length() < DESCRIPTION_MAX_LENGTH) {
-            descriptionText = descriptionText.substring(0, descriptionCursor) + c + descriptionText.substring(descriptionCursor);
-            descriptionCursor++;
-        }
+        ensureDescriptionInputWidget();
+        descriptionInputWidget.charTyped(event.getCharacter(), 0);
         return true;
     }
 
     private static void confirmDescription() {
         descriptionInputActive = false;
-        String description = descriptionText.trim();
+        ensureDescriptionInputWidget();
+        descriptionInputWidget.setFocused(false);
+        String description = descriptionInputWidget.getInput().trim();
         ClassSelectionData.setClassDescription(descriptionCharId, description);
     }
 
     private void openDescriptionInput(String charId) {
+        ensureDescriptionInputWidget();
         descriptionCharId = charId;
         String existing = ClassSelectionData.getClassDescription(charId);
         descriptionText = existing != null ? existing : "";
-        descriptionCursor = descriptionText.length();
+        descriptionInputWidget.setInputAndMoveCursorToEnd(descriptionText);
+        descriptionInputWidget.setFocused(true);
         descriptionInputActive = true;
+    }
+
+    private static void ensureDescriptionInputWidget() {
+        if (descriptionInputWidget != null) return;
+        descriptionInputWidget = new TextInputWidget(0, 0, 0, 0, 6, 11, 4f);
+        descriptionInputWidget.setMaxLength(DESCRIPTION_MAX_LENGTH);
+        descriptionInputWidget.setTextColor(CustomColor.fromHexString("FFFFFF"));
+        descriptionInputWidget.setPlaceholderColor(CustomColor.fromHexString("777777"));
+        descriptionInputWidget.setCursorColor(CustomColor.fromHexString("FFFFFF"));
+        descriptionInputWidget.setSelectionColor(CustomColor.fromInt(0xAA3366CC));
+        descriptionInputWidget.setOnChange(value -> descriptionText = value);
     }
 
     private void drawDescriptionInput(DrawContext ctx, int mouseX, int mouseY) {
@@ -1378,16 +1387,9 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         float fieldW = boxWPx - 44, fieldH = 31;
         ctx.fill((int)fieldX, (int)fieldY, (int)(fieldX + fieldW), (int)(fieldY + fieldH), 0xFF333333);
         ctx.fill((int)(fieldX + 1), (int)(fieldY + 1), (int)(fieldX + fieldW - 1), (int)(fieldY + fieldH - 1), 0xFF111111);
-
-        String displayText = truncate(descriptionText, DESCRIPTION_MAX_LENGTH);
-        String beforeCursor = descriptionText.substring(0, descriptionCursor);
-        int cursorX = mc.textRenderer.getWidth(truncate(beforeCursor, DESCRIPTION_MAX_LENGTH));
-        ctx.drawText(mc.textRenderer, displayText, (int)(fieldX + 6), (int)(fieldY + 11), 0xFFFFFFFF, false);
-
-        if ((System.currentTimeMillis() / 500) % 2 == 0) {
-            ctx.fill((int)(fieldX + 6 + cursorX), (int)(fieldY + 7),
-                    (int)(fieldX + 7 + cursorX), (int)(fieldY + fieldH - 7), 0xFFFFFFFF);
-        }
+        ensureDescriptionInputWidget();
+        descriptionInputWidget.setBounds((int) px(fieldX), (int) px(fieldY + 2), (int) px(fieldW), (int) px(fieldH));
+        descriptionInputWidget.draw(ctx, mouseX, mouseY, 0, ui);
 
         String counter = descriptionText.length() + "/" + DESCRIPTION_MAX_LENGTH;
         ctx.drawText(mc.textRenderer, counter,

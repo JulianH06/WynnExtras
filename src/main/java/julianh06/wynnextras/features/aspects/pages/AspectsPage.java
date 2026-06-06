@@ -15,6 +15,7 @@ import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.features.profileviewer.data.Aspect;
 import julianh06.wynnextras.features.profileviewer.data.User;
+import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -66,8 +67,8 @@ public class AspectsPage extends PageWidget {
 
     private static String searchInput = "";
     private static boolean searchInputFocused = false;
-    private static int searchCursorPos = 0;
     private static final int MAX_RECENT_SEARCHES = 5;
+    private static TextInputWidget searchInputWidget = null;
 
     private enum Tab { Overview, Warrior, Shaman, Mage, Archer, Assassin }
     private static Tab currentTab = Tab.Overview;
@@ -96,6 +97,16 @@ public class AspectsPage extends PageWidget {
         refreshButton = new RefreshButton();
         mythicAndFabledWidget = new LootPoolWidget();
         legendaryWidget = new LootPoolWidget();
+        if (searchInputWidget == null) {
+            searchInputWidget = new TextInputWidget(0, 0, 0, 0, 8, 6, 3f);
+            searchInputWidget.setPlaceholder("Search player...");
+            searchInputWidget.setTextColor(CustomColor.fromHexString("FFFFFF"));
+            searchInputWidget.setPlaceholderColor(CustomColor.fromHexString("777777"));
+            searchInputWidget.setCursorColor(CustomColor.fromHexString("FFFFFF"));
+            searchInputWidget.setSelectionColor(CustomColor.fromInt(0xAA3366CC));
+            searchInputWidget.setOnChange(value -> searchInput = value);
+        }
+        addChild(searchInputWidget);
     }
 
     @Override
@@ -258,27 +269,11 @@ public class AspectsPage extends PageWidget {
             int boxColor = searchInputFocused ? 0xFFFFAA00 : 0xFFAAAAAA;
             ui.drawRect(searchBoxX - 2, searchBoxY - 2, searchBoxWidth + 4, searchBoxHeight + 4, CustomColor.fromInt(boxColor));
             ui.drawRect(searchBoxX, searchBoxY, searchBoxWidth, searchBoxHeight, CustomColor.fromInt(0xFF000000));
-
-            // Draw search text or placeholder
-            if (searchInput.isEmpty() && !searchInputFocused) {
-                ui.drawText("§7Search player...", searchBoxX + 8, searchBoxY + 6);
-            } else {
-                String displayText = searchInput;
-                // Truncate if too long
-                int maxChars = (searchBoxWidth - 20) / 12;
-                if (displayText.length() > maxChars) {
-                    displayText = displayText.substring(displayText.length() - maxChars);
-                }
-                ui.drawText(displayText, searchBoxX + 8, searchBoxY + 6);
-
-                // Draw cursor if focused - put at end of text
-                if (searchInputFocused) {
-                    // drawLeftText uses scale 3f, so multiply text width by 3 to get logical units
-                    int textWidthPixels = MinecraftClient.getInstance().textRenderer.getWidth(displayText.substring(0, searchCursorPos));
-                    int cursorOffset = textWidthPixels * 3; // Scale 3f used in drawLeftText
-                    ui.drawRect(searchBoxX + 8 + cursorOffset, searchBoxY + 4, 2, searchBoxHeight - 8, CustomColor.fromInt(0xFFFFFFFF));
-                }
+            searchInputWidget.setBounds(searchBoxX, searchBoxY, searchBoxWidth, searchBoxHeight);
+            if (!searchInputWidget.isFocused() && !searchInputWidget.getInput().equals(searchInput)) {
+                searchInputWidget.setInput(searchInput);
             }
+            searchInputFocused = searchInputWidget.isFocused();
 
             // Show recent searches dropdown when focused and search is empty (RENDER LAST so it's on top)
             if (searchInputFocused && searchInput.isEmpty() && !FavoriteAspectsData.INSTANCE.getRecentSearches().isEmpty()) {
@@ -380,50 +375,22 @@ public class AspectsPage extends PageWidget {
 
     @Override
     public boolean charTyped(char chr, int modifiers) {
-        if (searchInputFocused) {
-            // Insert character at cursor position
-            searchInput = searchInput.substring(0, searchCursorPos) + chr + searchInput.substring(searchCursorPos);
-            searchCursorPos++;
-            return true;
-        }
         return super.charTyped(chr, modifiers);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (searchInputFocused) {
-            if (keyCode == 259) { // Backspace
-                if (searchCursorPos > 0) {
-                    searchInput = searchInput.substring(0, searchCursorPos - 1) + searchInput.substring(searchCursorPos);
-                    searchCursorPos--;
-                }
-                return true;
-            } else if (keyCode == 261) { // Delete
-                if (searchCursorPos < searchInput.length()) {
-                    searchInput = searchInput.substring(0, searchCursorPos) + searchInput.substring(searchCursorPos + 1);
-                }
-                return true;
-            } else if (keyCode == 263) {
-                if (searchCursorPos > 0) {
-                    searchCursorPos--;
-                }
-                return true;
-            } else if (keyCode == 262) {
-                if (searchCursorPos < searchInput.length()) {
-                    searchCursorPos++;
-                }
-                return true;
-            } else if (keyCode == 257 || keyCode == 335) {
+        if (searchInputWidget != null && searchInputWidget.isFocused()) {
+            if (keyCode == 257 || keyCode == 335) {
                 if (!searchInput.isEmpty()) {
                     performPlayerSearch(searchInput);
-                    searchInputFocused = false;
+                    searchInputWidget.setFocused(false);
                 }
                 return true;
             } else if (keyCode == 256) { // Escape
-                searchInputFocused = false;
-                return false;
+                searchInputWidget.setFocused(false);
+                return true;
             }
-            return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
@@ -597,14 +564,6 @@ public class AspectsPage extends PageWidget {
             float logicalMX = (float) (mx * ui.getScaleFactorF());
             float logicalMY = (float) (my * ui.getScaleFactorF());
 
-            // Right-click to clear search box
-            if (button == 1 && logicalMX >= searchBoxX && logicalMX <= searchBoxX + searchBoxWidth &&
-                    logicalMY >= searchBoxY && logicalMY <= searchBoxY + searchBoxHeight) {
-                searchInput = "";
-                searchCursorPos = 0;
-                return true;
-            }
-
             // Click on recent searches dropdown
             if (button == 0 && searchInputFocused && searchInput.isEmpty() && !FavoriteAspectsData.INSTANCE.getRecentSearches().isEmpty()) {
                 int dropdownY = searchBoxY + searchBoxHeight + 4;
@@ -617,9 +576,9 @@ public class AspectsPage extends PageWidget {
                         // Clicked on this recent search
                         String selectedSearch = FavoriteAspectsData.INSTANCE.getRecentSearches().get(i);
                         searchInput = selectedSearch;
-                        searchCursorPos = selectedSearch.length();
+                        searchInputWidget.setInputAndMoveCursorToEnd(selectedSearch);
                         performPlayerSearch(selectedSearch);
-                        searchInputFocused = false;
+                        searchInputWidget.setFocused(false);
                         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }
@@ -627,15 +586,8 @@ public class AspectsPage extends PageWidget {
                 }
             }
 
-            // Left-click on search box
-            if (button == 0 && logicalMX >= searchBoxX && logicalMX <= searchBoxX + searchBoxWidth &&
-                    logicalMY >= searchBoxY && logicalMY <= searchBoxY + searchBoxHeight) {
-                searchInputFocused = true;
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                return true;
-            } else {
-                searchInputFocused = false;
-            }
+            if (super.mouseClicked(mx, my, button)) return true;
+            searchInputFocused = searchInputWidget != null && searchInputWidget.isFocused();
         } else {
             if(mythicAndFabledWidget.mouseClicked(mx, my, button)) return true;
             if(legendaryWidget.mouseClicked(mx, my, button)) return true;
@@ -859,7 +811,7 @@ public class AspectsPage extends PageWidget {
             searchedPlayerData = null;
             searchedPlayerStatus = null;
             searchInput = "";
-            searchCursorPos = 0;
+            if (searchInputWidget != null) searchInputWidget.clearInput();
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }

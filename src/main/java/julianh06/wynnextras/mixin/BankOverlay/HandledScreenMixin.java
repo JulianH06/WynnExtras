@@ -422,7 +422,7 @@ public abstract class HandledScreenMixin {
 
         // Class Selection Overlay dragging (for drag-to-reorder)
         if (classSelectionOverlay != null) {
-            classSelectionOverlay.onMouseDragged(mouseX, mouseY);
+            classSelectionOverlay.onMouseDragged(mouseX, mouseY, click.button(), deltaX, deltaY);
             cir.setReturnValue(true);
             return;
         }
@@ -435,6 +435,12 @@ public abstract class HandledScreenMixin {
         // Handle Trade Market Overlay dragging
         if (TradeMarketOverlay.isDragging()) {
             TradeMarketOverlay.handleMouseMove(mouseX, mouseY);
+        }
+
+        if(bankOverlay != null) {
+            if (bankOverlay.mouseDragged(mouseX, mouseY, click.button(), deltaX, deltaY)) {
+                cir.setReturnValue(true);
+            }
         }
     }
 

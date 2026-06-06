@@ -52,7 +52,6 @@ import julianh06.wynnextras.mixin.ItemGuessFeatureAccessor;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.SearchQueryParser;
 import julianh06.wynnextras.utils.UI.*;
-import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -180,8 +179,6 @@ public class BankOverlay2 extends WEHandledScreen {
     private static final List<PageWidget> pages = new ArrayList<>();
     private static final Map<Integer, List<ItemStack>> annotationStackCache = new HashMap<>();
     private static final Map<Integer, List<Object>> annotationComponentCache = new HashMap<>();
-    private static final EnumMap<BankOverlayType, HashMap<Integer, EasyTextInput>> BANK_PAGE_NAME_INPUTS_BY_TYPE =
-            new EnumMap<>(BankOverlayType.class);
     private static InventoryWidget inventoryWidget = null;
     private static SwitchButtonWidget switchButtonWidget = null;
     private static QuickActionWidget quickActionWidget = null;
@@ -553,47 +550,18 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         if(searchbar2 == null) {
-            searchbar2 = new TextInputWidget(0, 0, 0, 0, 0, 0, 1) {
-                @Override
-                protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                    MinecraftClient client = MinecraftClient.getInstance();
-                    TextRenderer font = client.textRenderer;
-
-                    if (input.isEmpty() && !isFocused()) {
-                        ui.drawText(placeholder, x + 50, y + 7, WHITE_TEXT_COLOR, 1.25f);
-                    } else {
-                        if (cursorPos > input.length()) cursorPos = input.length();
-                        ui.drawText(input, x + 7, y + 7, textColor, 1.25f);
-
-                        long now = System.currentTimeMillis();
-                        if (now - lastBlink > 500) {
-                            blinkToggle = !blinkToggle;
-                            lastBlink = now;
-                        }
-
-                        if (blinkToggle && isFocused()) {
-                            int cursorX = (int) (x + 8 + (font.getWidth(input.substring(0, cursorPos))) * 1.25f * ui.getScaleFactor());
-                            ui.drawLine(cursorX, y + 4, cursorX, y + 20, 1.25f, textColor);
-                        }
-                    }
+            searchbar2 = new TextInputWidget(0, 0, 0, 0, 7, 7, 1.25f);
+            searchbar2.setPlaceholder("Search...");
+            searchbar2.setPlaceholderColor(WHITE_TEXT_COLOR);
+            searchbar2.setTextColor(WHITE_TEXT_COLOR);
+            searchbar2.setCursorColor(WHITE_TEXT_COLOR);
+            searchbar2.setSelectionColor(CustomColor.fromInt(0xAA3366CC));
+            searchbar2.setOnChange(value -> {
+                for (PageWidget page : pages) {
+                    page.setEnabled(true);
+                    page.invalidateSearchCache();
                 }
-
-                @Override
-                public boolean onClick(int button) {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    if(button == 1) {
-                        input = "";
-                        for (PageWidget page : pages) {
-                            page.setEnabled(true);
-                            page.invalidateSearchCache();
-                        }
-                    }
-                    setFocused(true);
-
-                    cursorPos = input.length();
-                    return true;
-                }
-            };
+            });
             rootWidgets.add(searchbar2);
 
             // Restore saved search from cross-class swap if still valid
@@ -1510,14 +1478,20 @@ public class BankOverlay2 extends WEHandledScreen {
         return super.mouseReleased(x, y, button);
     }
 
+    @Override
+    public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        if(searchbar2 != null && searchbar2.mouseDragged(x, y, button, dx, dy)) return true;
+        for(PageWidget page : pages) {
+            if(page.mouseDragged(x, y, button, dx, dy)) return true;
+        }
+        for(CrossClassPageWidget page : crossClassPages) {
+            if(page.mouseDragged(x, y, button, dx, dy)) return true;
+        }
+        return super.mouseDragged(x, y, button, dx, dy);
+    }
+
     private void initializeOverlayState() {
         if (!initializedTypes.contains(currentOverlayType)) {
-            BANK_PAGE_NAME_INPUTS_BY_TYPE.putIfAbsent(currentOverlayType, new HashMap<>());
-
-            for (int i = 0; i < BankOverlay.getCurrentMaxPages(); i++) {
-                BANK_PAGE_NAME_INPUTS_BY_TYPE.get(currentOverlayType).put(i, new EasyTextInput(-1000, -1000, 13, 162 + 4));
-            }
-
             initializedTypes.add(currentOverlayType);
         }
 
@@ -3705,20 +3679,21 @@ public class BankOverlay2 extends WEHandledScreen {
             ctx.enableScissor(scissorx1, scissory1 - 12, scissorx2, scissory2);
             ui.updateContext(ctx, ui.getScaleFactor(), 0, 0);
 
-            drawDynamicNameSign(ctx, textInputWidget.getInput(), x, y + 12);
+            String defaultPageName = Pages.getBankPageNames().getOrDefault(index, "Page " + (index + 1));
+            boolean editingEmptyName = textInputWidget.isFocused() && textInputWidget.getInput().isEmpty();
+            String pageName = textInputWidget.getInput().isEmpty() ? defaultPageName : textInputWidget.getInput();
+            String visiblePageName = editingEmptyName ? "" : pageName;
 
-            String pageName = textInputWidget.getInput().isEmpty()
-                    ? Pages.getBankPageNames().getOrDefault(index, "Page " + (index + 1))
-                    : textInputWidget.getInput();
+            drawDynamicNameSign(ctx, visiblePageName, x, y + 12);
 
-            if (!Objects.equals(lastSavedPageName, pageName)) {
+            if (!editingEmptyName && !Objects.equals(lastSavedPageName, pageName)) {
                 Pages.getBankPageNames().put(index, pageName);
                 lastSavedPageName = pageName;
             }
 
             textInputWidget.setTextColor((activeInv == index && !shouldWait) ? GOLD_TEXT_COLOR : WHITE_TEXT_COLOR);
             textInputWidget.setBounds(x, y, width, height);
-            if (!Objects.equals(textInputWidget.getInput(), pageName)) {
+            if (!editingEmptyName && !Objects.equals(textInputWidget.getInput(), pageName)) {
                 textInputWidget.setInput(pageName);
             }
             textInputWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
@@ -3730,7 +3705,6 @@ public class BankOverlay2 extends WEHandledScreen {
         @Override
         protected boolean onClick(int button) {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-            textInputWidget.onClick(button);
             return true;
         }
 
@@ -3739,13 +3713,24 @@ public class BankOverlay2 extends WEHandledScreen {
             if (!visible || !enabled) return false;
             if (contains((int) mx, (int) my)) {
                 setFocused(true);
-                return onClick(button);
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return textInputWidget != null && textInputWidget.mouseClicked(mx, my, button);
             }
             setFocused(false);
             if (textInputWidget != null) {
                 textInputWidget.setFocused(false);
             }
             return false;
+        }
+
+        @Override
+        public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+            return textInputWidget != null && textInputWidget.mouseDragged(mx, my, button, dx, dy);
+        }
+
+        @Override
+        public boolean mouseReleased(double mx, double my, int button) {
+            return textInputWidget != null && textInputWidget.mouseReleased(mx, my, button);
         }
 
         public boolean isInputFocused() {

@@ -942,6 +942,9 @@ public class NewWaypointScreen extends WEScreen {
                         xInput = new WaypointTextInput(String.valueOf(waypoint.x), ignored -> applyCoordinates());
                         yInput = new WaypointTextInput(String.valueOf(waypoint.y), ignored -> applyCoordinates());
                         zInput = new WaypointTextInput(String.valueOf(waypoint.z), ignored -> applyCoordinates());
+                        xInput.setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '-');
+                        yInput.setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '-');
+                        zInput.setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '-');
 
                         addChild(nameInput);
                         addChild(xInput);
@@ -1167,30 +1170,14 @@ public class NewWaypointScreen extends WEScreen {
                 }
 
                 private static class WaypointTextInput extends TextInputWidget {
-                    private final java.util.function.Consumer<String> changeConsumer;
-
                     private WaypointTextInput(String input, java.util.function.Consumer<String> changeConsumer) {
                         super(0, 0, 0, 0, 10, 11, 2);
-                        this.changeConsumer = changeConsumer;
                         setInput(input);
                         setBackgroundColor(CustomColor.fromInt(BG_LIGHT));
                         setFocusedColor(CustomColor.fromInt(PARCHMENT_LIGHT));
                         setTextColor(CustomColor.fromInt(TEXT_LIGHT));
                         setPlaceholderColor(CustomColor.fromInt(TEXT_DIM));
-                    }
-
-                    @Override
-                    protected boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
-                        boolean handled = super.onKeyPressed(keyCode, scanCode, modifiers);
-                        if (handled) changeConsumer.accept(getInput());
-                        return handled;
-                    }
-
-                    @Override
-                    protected boolean onCharTyped(char chr, int modifiers) {
-                        boolean handled = super.onCharTyped(chr, modifiers);
-                        if (handled) changeConsumer.accept(getInput());
-                        return handled;
+                        setOnChange(changeConsumer);
                     }
                 }
             }
