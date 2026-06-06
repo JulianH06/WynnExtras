@@ -179,6 +179,7 @@ public class BankOverlay2 extends WEHandledScreen {
     private static final List<PageWidget> pages = new ArrayList<>();
     private static final Map<Integer, List<ItemStack>> annotationStackCache = new HashMap<>();
     private static final Map<Integer, List<Object>> annotationComponentCache = new HashMap<>();
+    private static int annotationCalculationsThisFrame = 0;
     private static InventoryWidget inventoryWidget = null;
     private static SwitchButtonWidget switchButtonWidget = null;
     private static QuickActionWidget quickActionWidget = null;
@@ -381,6 +382,7 @@ public class BankOverlay2 extends WEHandledScreen {
         if(mc.player == null || mc.currentScreen == null) return;
         frameTextRenderer = mc.textRenderer;
         clearHoverState(screen);
+        annotationCalculationsThisFrame = 0;
         refreshFrameFeatureStates();
 
         if(ui == null) {
@@ -1098,7 +1100,7 @@ public class BankOverlay2 extends WEHandledScreen {
         annotationComponentCache.keySet().removeIf(pageIndex -> pageIndex >= validPageCount);
         reloadTotalPages = Math.min(reloadTotalPages, validPageCount);
         invalidateBagTotalCache();
-        currentData.save();
+        currentData.saveAsync();
     }
 
     private static void resetReloadPageReadiness() {
@@ -1124,7 +1126,7 @@ public class BankOverlay2 extends WEHandledScreen {
             BankOverlay.getPersonalStorageUtils().jumpToDestination(activeInv + 1);
         } catch (Exception ignored) {}
         retryLoad();
-        if (Pages != null) Pages.save();
+        if (Pages != null) Pages.saveAsync();
     }
 
     private static boolean canReloadNextPage() {
@@ -1401,8 +1403,8 @@ public class BankOverlay2 extends WEHandledScreen {
         annotationCache.clear();
         annotationStackCache.clear();
         annotationComponentCache.clear();
-        if (!BankOverlay.isCharacterBankMissingCharacterId() && currentData != null) currentData.save();
-        if (!BankOverlay.isCharacterBankMissingCharacterId() && Pages != null) Pages.save();
+        if (!BankOverlay.isCharacterBankMissingCharacterId() && currentData != null) currentData.saveAsync();
+        if (!BankOverlay.isCharacterBankMissingCharacterId() && Pages != null) Pages.saveAsync();
 
         expectedOverlayType = targetType;
 
@@ -1715,6 +1717,13 @@ public class BankOverlay2 extends WEHandledScreen {
         ItemAnnotation annotation = annotations.get(index);
         Object components = stack.getComponents();
         if(annotation == null || annotationStacks.get(index) != stack || annotationComponents.get(index) != components) {
+            if (annotationCalculationsThisFrame >= WynnExtrasConfig.INSTANCE.maxAnnotationCalculationsPerFrame) {
+                annotations.set(index, null);
+                annotationStacks.set(index, null);
+                annotationComponents.set(index, null);
+                return;
+            }
+            annotationCalculationsThisFrame++;
             StyledText originalName = ensureWynntilsOriginalName(stack);
             annotation = ((ItemHandlerInvoker) (Object) Handlers.Item).invokeCalculateAnnotation(stack, originalName);
             annotations.set(index, annotation);
@@ -2744,7 +2753,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         long now = System.currentTimeMillis();
         if (now - lastBagCacheSaveMs > BAG_CACHE_SAVE_DEBOUNCE_MS) {
-            data.save();
+            data.saveAsync();
             lastBagCacheSaveMs = now;
         }
     }
@@ -2760,7 +2769,7 @@ public class BankOverlay2 extends WEHandledScreen {
     public static void saveCurrentBankData() {
         if (BankOverlay.isCharacterBankMissingCharacterId()) return;
         BankData data = getBankDataForCurrentContainer();
-        if (data != null) data.save();
+        if (data != null) data.saveAsync();
     }
 
     private static Map<String, Integer> collectAccountAndCharacterBagCounts() {
@@ -3384,6 +3393,8 @@ public class BankOverlay2 extends WEHandledScreen {
         final boolean isInventorySlot;
         final int inventoryIndex;
         private Optional<WynnItem> cachedWynnItem = null;
+        private ItemAnnotation cachedAnnotation = null;
+        private boolean cachedAnnotationInitialized = false;
         private String cachedSearchInput = null;
         private boolean cachedSearchMatch = false;
         private CustomColor cachedHighlightColor = null;
@@ -3438,6 +3449,21 @@ public class BankOverlay2 extends WEHandledScreen {
                 setHoveredSlot(stack, index, inventoryIndex, itemX, itemY);
             }
 
+            ItemAnnotation currentAnnotation = ((ItemStackExtension) (Object) stack).getAnnotation();
+            if (!cachedAnnotationInitialized || cachedAnnotation != currentAnnotation) {
+                cachedAnnotation = currentAnnotation;
+                cachedAnnotationInitialized = true;
+                cachedWynnItem = null;
+                cachedSearchInput = null;
+                cachedSearchMatch = false;
+                cachedHighlightColor = null;
+                cachedRenderStateInput = null;
+                cachedRenderStateComponents = null;
+                cachedRenderStateCount = -1;
+                cachedRenderStateStack = null;
+                cachedRenderStateOne = false;
+            }
+
             if (cachedWynnItem == null) cachedWynnItem = asWynnItem(stack);
             Optional<WynnItem> item = cachedWynnItem;
             ItemStack renderStack = getCachedRenderStack(item);
@@ -3488,6 +3514,8 @@ public class BankOverlay2 extends WEHandledScreen {
             if (stack != this.stack) {
                 this.stack = stack;
                 this.cachedWynnItem = null;
+                this.cachedAnnotation = null;
+                this.cachedAnnotationInitialized = false;
                 this.cachedSearchInput = null;
                 this.cachedHighlightColor = null;
                 this.cachedDurabilityModelInput = null;
@@ -3815,14 +3843,14 @@ public class BankOverlay2 extends WEHandledScreen {
             activeInv = 0;
             actualOffset = 0;
             targetOffset = 0;
-            if (!BankOverlay.isCharacterBankMissingCharacterId()) currentData.save();
+            if (!BankOverlay.isCharacterBankMissingCharacterId()) currentData.saveAsync();
             BankOverlay2.pages.clear();
             heldItem = Items.AIR.getDefaultStack();
             BankOverlay.activeInvSlots.clear();
             annotationCache.clear();
             annotationStackCache.clear();
             annotationComponentCache.clear();
-            if (!BankOverlay.isCharacterBankMissingCharacterId()) Pages.save();
+            if (!BankOverlay.isCharacterBankMissingCharacterId()) Pages.saveAsync();
 
             if(currentOverlayType == BankOverlayType.CHARACTER) expectedOverlayType = BankOverlayType.ACCOUNT;
             else if(currentOverlayType == BankOverlayType.ACCOUNT) expectedOverlayType = BankOverlayType.CHARACTER;
@@ -4039,6 +4067,9 @@ public class BankOverlay2 extends WEHandledScreen {
         private final int pageNumber;
         private final List<ItemStack> items;
         private final List<SlotWidget> slots = new ArrayList<>();
+        private final List<ItemAnnotation> annotations = new ArrayList<>();
+        private final List<ItemStack> annotationStacks = new ArrayList<>();
+        private final List<Object> annotationComponents = new ArrayList<>();
         private int topBorder;
         private int botBorder;
         private boolean slotsVisible = true;
@@ -4098,9 +4129,14 @@ public class BankOverlay2 extends WEHandledScreen {
                 updateValues();
             }
 
+            ensureCacheSize(annotations, slots.size(), null);
+            ensureCacheSize(annotationStacks, slots.size(), null);
+            ensureCacheSize(annotationComponents, slots.size(), null);
+
             int i = 0;
             for (SlotWidget slot : slots) {
                 if (i >= items.size()) break;
+                applyAnnotation(items.get(i), annotations, annotationStacks, annotationComponents, i);
                 slot.setStack(items.get(i));
                 slot.drawDirect(ctx, mouseX, mouseY, tickDelta, ui);
                 i++;

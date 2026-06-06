@@ -520,7 +520,7 @@ public abstract class HandledScreenMixin {
                     stacks.add(activeInvSlots.get(j).getStack());
                 }
                 Pages.getBankPages().put(activeInv, stacks);
-                Pages.save();
+                Pages.saveAsync();
             }
 
             activeInvSlots.clear();

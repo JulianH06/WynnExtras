@@ -380,6 +380,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.bankBagOverlay, v -> config.bankBagOverlay = v))
                 .add(visibleWhen(toggle("Show total bag count in bank overlay", "Shows you a breakdown of all crafter bags you have across all pages of your bank",
                         () -> config.showTotalBagsInBankOverlay, v -> config.showTotalBagsInBankOverlay = v), () -> config.bankBagOverlay))
+                .add(visibleWhen(slider("Max Wynntils annotation calculations per frame", "Limits the amount of Wynntils item annotation calculations being done each frame to reduce lag", 10, 200,
+                        () -> config.maxAnnotationCalculationsPerFrame, v -> config.maxAnnotationCalculationsPerFrame = v), () -> config.toggleBankOverlay))
                 .endSub()
             .sub("Class Selection")
                 .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",

@@ -163,6 +163,7 @@ public class WynnExtrasConfig {
     public boolean bankOverlayHideEmptyRows = false;
     public boolean bankBagOverlay = false;
     public boolean showTotalBagsInBankOverlay = false;
+    public int maxAnnotationCalculationsPerFrame = 75;
     public boolean showWeight = false;
     public boolean showScales = false;
     public boolean scaleBackgroundEnabled = false;

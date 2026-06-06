@@ -119,7 +119,7 @@ public class BankOverlay {
         Pages = null;
         activeInvSlots.clear();
         annotationCache.clear();
-        CharacterBankData.INSTANCE.load();
+        CharacterBankData.INSTANCE.loadAsync();
         if (currentOverlayType == BankOverlayType.CHARACTER) {
             currentData = CharacterBankData.INSTANCE;
         }

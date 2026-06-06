@@ -65,7 +65,7 @@ public class CharacterModelMixin {
         BankOverlay.expectedOverlayType = BankOverlayType.NONE;
 
         BankOverlay.currentCharacterID = id;
-        CharacterBankData.INSTANCE.load();
+        CharacterBankData.INSTANCE.loadAsync();
 
         // Reset profession overlay state on character swap
         ProfessionOverlay.onCharacterSwap();
