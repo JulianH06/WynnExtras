@@ -21,6 +21,8 @@ public abstract class ConfigOption {
     public boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) { return false; }
     public boolean mouseReleased(double mx, double my, int btn) { return false; }
     public boolean mouseDragged(double mx, double my, int x, int y, int w, int h) { return false; }
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) { return false; }
+    public boolean charTyped(char chr, int modifiers) { return false; }
 
     public ConfigOption visibleWhen(BooleanSupplier condition) {
         this.visibilityCondition = condition;

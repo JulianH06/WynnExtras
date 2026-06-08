@@ -14,16 +14,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LeadboardPage extends PageWidget {
+    private static final int LEADERBOARD_LIMIT = 25;
+    private static final int ENTRY_WIDTH = 800;
+    private static final int ENTRY_HEIGHT = 50;
+    private static final int ENTRY_SPACING = 10;
+    private static final int SCROLL_PADDING = 16;
+
     private static List<LeaderboardEntry> leaderboardList = null;
     private static List<LeaderBoardEntryWidget> leaderBoardEntryWidgets = new ArrayList<>();
     private static boolean fetchedLeaderboard = false;
 
     private final RefreshButton refreshButton;
+    private final ScrollBarWidget scrollBarWidget;
+    private float targetOffset = 0;
+    private float actualOffset = 0;
+    private float maxOffset = 0;
+    private int listTop = 150;
+    private int listBottom = 700;
 
     public LeadboardPage(AspectScreen parent) {
         super(parent);
 
         refreshButton = new RefreshButton();
+        scrollBarWidget = new ScrollBarWidget();
     }
 
     @Override
@@ -33,11 +46,11 @@ public class LeadboardPage extends PageWidget {
         int centerX = logicalW / 2;
 
         ui.drawCenteredText("§6§lLEADERBOARD", centerX, 60);
-        ui.drawCenteredText("§7Top 15 players with the most maxed aspects", centerX, 95);
+        ui.drawCenteredText("§7Top " + LEADERBOARD_LIMIT + " players with the most maxed aspects", centerX, 95);
 
         if (!fetchedLeaderboard) {
             fetchedLeaderboard = true;
-            WynncraftApiHandler.fetchLeaderboard(15).thenAccept(result -> {
+            WynncraftApiHandler.fetchLeaderboard(LEADERBOARD_LIMIT).thenAccept(result -> {
                 leaderboardList = result;
             });
         }
@@ -59,18 +72,41 @@ public class LeadboardPage extends PageWidget {
             }
         }
 
-        boolean compact = 58 * 15 > logicalH - 150;
+        int startX = centerX - ENTRY_WIDTH / 2;
+        listTop = 150;
+        listBottom = Math.max(listTop + 80, logicalH - 120);
+        int visibleHeight = listBottom - listTop;
+        int contentHeight = leaderBoardEntryWidgets.size() * ENTRY_HEIGHT
+                + Math.max(0, leaderBoardEntryWidgets.size() - 1) * ENTRY_SPACING;
+        maxOffset = Math.max(0, contentHeight - visibleHeight + SCROLL_PADDING);
+        targetOffset = Math.min(targetOffset, maxOffset);
+        actualOffset = Math.min(actualOffset, maxOffset);
 
-        int entryWidth = 800;
-        int entryHeight = compact ? 47 : 50;
-        int spacing = compact ? 5 : 10;
-        int startY = compact ? 120 : 150;
-        int startX = centerX - entryWidth / 2;
+        float snapValue = 0.5f;
+        float speed = 0.3f;
+        float diff = targetOffset - actualOffset;
+        if(Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffset = targetOffset;
+        else actualOffset += diff * speed * tickDelta;
 
+        int startY = listTop - (int) actualOffset;
+
+        ctx.enableScissor(
+                (int) (startX / ui.getScaleFactor()),
+                (int) (listTop / ui.getScaleFactor()),
+                (int) ((startX + ENTRY_WIDTH + 8) / ui.getScaleFactor()),
+                (int) (listBottom / ui.getScaleFactor()));
         for (LeaderBoardEntryWidget leaderBoardEntryWidget : leaderBoardEntryWidgets) {
-            leaderBoardEntryWidget.setBounds(startX, startY, entryWidth, entryHeight);
+            leaderBoardEntryWidget.setBounds(startX, startY, ENTRY_WIDTH, ENTRY_HEIGHT);
             leaderBoardEntryWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
-            startY += entryHeight + spacing;
+            startY += ENTRY_HEIGHT + ENTRY_SPACING;
+        }
+        ctx.disableScissor();
+
+        if(maxOffset > 0) {
+            scrollBarWidget.setBounds(startX + ENTRY_WIDTH + 20, listTop, 25, visibleHeight);
+            scrollBarWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+        } else {
+            scrollBarWidget.setBounds(0, 0, 0, 0);
         }
 
         ui.drawCenteredText("§7Click on a player to view their aspects", centerX, logicalH - 95);
@@ -86,11 +122,50 @@ public class LeadboardPage extends PageWidget {
             return true;
         }
 
+        if(scrollBarWidget.isHovered()) {
+            scrollBarWidget.onClick(button);
+            return true;
+        }
+
+        if(!isInListViewport(mx, my)) return false;
+
         for(LeaderBoardEntryWidget leaderBoardEntryWidget : leaderBoardEntryWidgets) {
             if(leaderBoardEntryWidget.mouseClicked(mx, my, button)) return true;
         }
 
         return false;
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        scrollBarWidget.scrollBarButtonWidget.isHold = false;
+        return super.mouseReleased(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        return scrollBarWidget.dragTo(my);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double delta) {
+        if(maxOffset <= 0 || !isInListViewport(mx, my)) return false;
+        if(delta > 0) targetOffset -= 60f;
+        else targetOffset += 60f;
+        targetOffset = Math.max(0, Math.min(targetOffset, maxOffset));
+        return true;
+    }
+
+    private boolean isInListViewport(double mx, double my) {
+        if(ui == null) return false;
+        return mx >= ui.sx(centeredListX())
+                && mx < ui.sx(centeredListX() + ENTRY_WIDTH)
+                && my >= ui.sy(listTop)
+                && my < ui.sy(listBottom);
+    }
+
+    private int centeredListX() {
+        return (int) (width * ui.getScaleFactorF()) / 2 - ENTRY_WIDTH / 2;
     }
 
     private static class LeaderBoardEntryWidget extends Widget {
@@ -147,7 +222,82 @@ public class LeadboardPage extends PageWidget {
         }
     }
 
-    private static class RefreshButton extends Widget {
+    private class ScrollBarWidget extends Widget {
+        final ScrollBarButtonWidget scrollBarButtonWidget;
+        int currentMouseY = 0;
+
+        public ScrollBarWidget() {
+            super(0, 0, 0, 0);
+            this.scrollBarButtonWidget = new ScrollBarButtonWidget();
+            addChild(scrollBarButtonWidget);
+        }
+
+        private void setOffset(int mouseY, int maxOffset, int scrollAreaHeight) {
+            if(maxOffset <= 0 || scrollAreaHeight <= 0) {
+                targetOffset = 0;
+                return;
+            }
+
+            float relativeY = mouseY - y - scrollBarButtonWidget.getHeight() / 2f;
+            relativeY = Math.max(0, Math.min(relativeY, scrollAreaHeight));
+
+            targetOffset = relativeY / scrollAreaHeight * maxOffset;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            currentMouseY = mouseY;
+            ui.drawSliderBackground(x, y, width, height);
+
+            int buttonHeight = Math.max(30, (int) (height * (height / (float) (height + maxOffset))));
+            int scrollAreaHeight = height - buttonHeight;
+
+            if(scrollBarButtonWidget.isHold) {
+                setOffset((int) (mouseY * ui.getScaleFactor()), (int) maxOffset, scrollAreaHeight);
+                actualOffset = targetOffset;
+            }
+
+            int yPos = maxOffset == 0 ? y : (int) (y + scrollAreaHeight * Math.min(actualOffset / maxOffset, 1));
+            scrollBarButtonWidget.setBounds(x, yPos, width, buttonHeight);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+
+            int buttonHeight = scrollBarButtonWidget.getHeight();
+            int scrollAreaHeight = height - buttonHeight;
+
+            if(scrollBarButtonWidget.isHovered()) scrollBarButtonWidget.isHold = true;
+            setOffset((int) (currentMouseY * ui.getScaleFactor() + buttonHeight / 2f), (int) maxOffset, scrollAreaHeight);
+
+            return true;
+        }
+
+        private boolean dragTo(double mouseY) {
+            if(!scrollBarButtonWidget.isHold) return false;
+
+            int buttonHeight = scrollBarButtonWidget.getHeight();
+            setOffset((int) (mouseY * ui.getScaleFactor()), (int) maxOffset, height - buttonHeight);
+            actualOffset = targetOffset;
+            return true;
+        }
+
+        private static class ScrollBarButtonWidget extends Widget {
+            public boolean isHold = false;
+
+            public ScrollBarButtonWidget() {
+                super(0, 0, 0, 0);
+            }
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                ui.drawButton(x, y, width, height, hovered || isHold);
+            }
+        }
+    }
+
+    private class RefreshButton extends Widget {
         public RefreshButton() {
             super(0, 0, 0, 0);
         }
@@ -163,6 +313,9 @@ public class LeadboardPage extends PageWidget {
             leaderboardList = null;
             leaderBoardEntryWidgets = new ArrayList<>();
             fetchedLeaderboard = false;
+            targetOffset = 0;
+            actualOffset = 0;
+            maxOffset = 0;
 
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;

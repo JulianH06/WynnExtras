@@ -4,15 +4,12 @@ import com.wynntils.core.components.Models;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.mixin.Accessor.BossBarHudAccessor;
+import julianh06.wynnextras.utils.BossBarUtils;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.BossBarHud;
 import net.minecraft.client.gui.hud.ClientBossBar;
 import net.minecraft.text.Text;
-
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * Watches the boss-bar HUD for "X/6 Chains" texts and emits a PB-style chat
@@ -37,10 +34,9 @@ public class ChainsAttachedTracker {
 
         BossBarHud hud = client.inGameHud.getBossBarHud();
         if (hud == null) return;
-        Map<UUID, ClientBossBar> bars = ((BossBarHudAccessor) hud).getBossBars();
-        if (bars == null || bars.isEmpty()) return;
+        Iterable<ClientBossBar> bars = BossBarUtils.getBossBars(hud);
 
-        for (ClientBossBar bar : bars.values()) {
+        for (ClientBossBar bar : bars) {
             Text n = bar.getName();
             if (n == null) continue;
             String s = n.getString();

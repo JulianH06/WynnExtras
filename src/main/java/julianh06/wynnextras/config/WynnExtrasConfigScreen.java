@@ -134,7 +134,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Quick Access")
                 .add(button("Loot Pools", "Open the Loot Pools screen", (x) -> {
                     WEScreen.open(AspectScreen::new);
-                    AspectScreen.currentPage = AspectScreen.Page.LootPools;
+                    AspectScreen.currentPage = AspectScreen.Page.AspectLootpool;
                 }, "Open"))
                 .add(button("Profile Viewer", "View your stats", (x) -> {
                     PV.open(McUtils.playerName());
@@ -371,9 +371,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Dark Mode", "Dark bank theme",
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
                 .add(slider("Max Rows", "The maximum amount of rows (lower can reduce lag)",
-                        2, 24, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
+                        1, 24, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
                 .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
-                        2, 24, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
+                        1, 24, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
                 .add(toggle("Hide empty rows", "Hides rows that only have locked pages",
                         () -> config.bankOverlayHideEmptyRows, v -> config.bankOverlayHideEmptyRows = v))
                 .add(toggle("Bag Overlay", "Show crafter bag counts by raid/tier on bank screens",
@@ -438,6 +438,12 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
                         () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
                 .add(text("The preview is movable", "To change its position just drag it where you want"))
+            .sub("Profession Overlay")
+                .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
+                        () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))
+                .add(visibleWhen(toggle("Show Exact XP", "Show exact XP values instead of percentages",
+                                () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
+                        () -> config.professionOverlayEnabled))
             .sub("Tooltips")
                 .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
                         () -> config.showWeight, v -> {
@@ -512,6 +518,38 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.artifactRestored, v -> config.artifactRestored = v))
                 .add(toggle("Item broke (0 durability)", "Show 'ITEM BROKE' when one of your items reaches zero durability",
                         () -> config.itemZeroDurability, v -> config.itemZeroDurability = v)).endSub()
+            .sub("Media Preview (Experimental)")
+                .add(text("Warning", "We have restricted media downloads to only download from trusted sites (Discord, Imgur and Tenor). We have implemented these and other measures to minimize potential vulnerabilities, but they can never be completely ruled out. Use at your own risk."))
+                .add(toggle("Chat Media Preview", "Preview trusted Discord CDN, Imgur, and Tenor PNG, JPEG, and GIF links",
+                        () -> config.chatMediaPreviewEnabled, v -> config.chatMediaPreviewEnabled = v))
+                .add(visibleWhen(dropdown("Media Preview Loading", "When media previews are downloaded",
+                                WynnExtrasConfig.ChatMediaPreviewLoadPolicy.class,
+                                () -> config.chatMediaPreviewLoadPolicy,
+                                v -> config.chatMediaPreviewLoadPolicy = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(dropdown("Hover-preview Position", "Where media previews appear while hovering links",
+                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
+                                () -> config.chatMediaPreviewHoverPosition,
+                                v -> config.chatMediaPreviewHoverPosition = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(toggle("Auto-show Media Preview", "Automatically download trusted media when its link appears in chat. This contacts an external service.",
+                                () -> config.chatMediaPreviewAutoDisplay, v -> config.chatMediaPreviewAutoDisplay = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(dropdown("Auto-preview Position", "Where automatic media previews appear",
+                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
+                                () -> config.chatMediaPreviewPosition,
+                                v -> config.chatMediaPreviewPosition = v),
+                        () -> config.chatMediaPreviewEnabled && config.chatMediaPreviewAutoDisplay))
+                .add(visibleWhen(slider("Preview Max Screen %", "Maximum percentage of screen width and height used by previews",
+                                10, 50, () -> config.chatMediaPreviewMaxScreenPercent, v -> config.chatMediaPreviewMaxScreenPercent = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(slider("Preview Max MB", "Maximum media download size",
+                                1, 25, () -> config.chatMediaPreviewMaxDownloadMb, v -> config.chatMediaPreviewMaxDownloadMb = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(slider("Preview Max GIF Frames", "Maximum decoded GIF frames",
+                                1, 240, () -> config.chatMediaPreviewMaxGifFrames, v -> config.chatMediaPreviewMaxGifFrames = v),
+                        () -> config.chatMediaPreviewEnabled))
+            .endSub()
             .sub("Tree Room Grotto Announcements")
                 .add(toggle("Isoptera in Gray Grotto", "Show 'GRAY' when the Interdimensional Isoptera is in the Gray Grotto",
                         () -> config.isopteraGray, v -> config.isopteraGray = v))
@@ -557,12 +595,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
         // ===== MISC =====
         category("Misc", 0xFF0872bc)
-            .sub("Profession Overlay")
-                .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
-                        () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))
-                .add(visibleWhen(toggle("Show Exact XP", "Show exact XP values instead of percentages",
-                                () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
-                        () -> config.professionOverlayEnabled))
             .sub("Auto Actions")
                 .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
@@ -585,10 +617,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
                         0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
             .sub("Crowd sourcing")
-                .add(toggle("Lootrun lootpools", "Help gather the current lootrun lootpool so others can see it with /we lootruns",
-                        () -> config.crowdSourceLootrunLootpools, v -> config.crowdSourceLootrunLootpools = v))
-                .add(toggle("Raid lootpools", "Help gather the current raid lootpool so others can see it with /we lootpool",
-                        () -> config.crowdSourceRaidLootpools, v -> config.crowdSourceRaidLootpools = v))
                 .add(toggle("Gambits", "Help gather the current gambits so others can see them with /we gambits",
                         () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v))
             .sub("Quick Repair")
@@ -669,6 +697,36 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
                 .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs with your guild when someone asks about them in chat",
                         () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
+                .add(toggle("Chat Media Preview (Experimental)", "Preview trusted Discord CDN, Imgur, and Tenor PNG, JPEG, and GIF links",
+                        () -> config.chatMediaPreviewEnabled, v -> config.chatMediaPreviewEnabled = v))
+                .add(text("Warning", "We have restricted media downloads to only download from trusted sites (Discord, Imgur and Tenor). We have implemented these and other measures to minimize potential vulnerabilities, but they can never be completely ruled out. Use at your own risk."))
+                .add(visibleWhen(dropdown("Media Preview Loading", "When media previews are downloaded",
+                                WynnExtrasConfig.ChatMediaPreviewLoadPolicy.class,
+                                () -> config.chatMediaPreviewLoadPolicy,
+                                v -> config.chatMediaPreviewLoadPolicy = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(dropdown("Hover-preview Position", "Where media previews appear while hovering links",
+                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
+                                () -> config.chatMediaPreviewHoverPosition,
+                                v -> config.chatMediaPreviewHoverPosition = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(toggle("Auto-show Media Preview", "Automatically download trusted media when its link appears in chat. This contacts an external service.",
+                                () -> config.chatMediaPreviewAutoDisplay, v -> config.chatMediaPreviewAutoDisplay = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(dropdown("Auto-preview Position", "Where automatic media previews appear",
+                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
+                                () -> config.chatMediaPreviewPosition,
+                                v -> config.chatMediaPreviewPosition = v),
+                        () -> config.chatMediaPreviewEnabled && config.chatMediaPreviewAutoDisplay))
+                .add(visibleWhen(slider("Preview Max Screen %", "Maximum percentage of screen width and height used by previews",
+                                10, 50, () -> config.chatMediaPreviewMaxScreenPercent, v -> config.chatMediaPreviewMaxScreenPercent = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(slider("Preview Max MB", "Maximum media download size",
+                                1, 25, () -> config.chatMediaPreviewMaxDownloadMb, v -> config.chatMediaPreviewMaxDownloadMb = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(slider("Preview Max GIF Frames", "Maximum decoded GIF frames",
+                                1, 240, () -> config.chatMediaPreviewMaxGifFrames, v -> config.chatMediaPreviewMaxGifFrames = v),
+                        () -> config.chatMediaPreviewEnabled))
             .sub("Automation")
                 .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
@@ -708,11 +766,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                             config.classSelectionContentProgressStyle = v;
                             config.syncClassSelectionLines();
                         }))
+                .add(classSelectionLines("Class Card Lines", "Choose which current stat lines are shown and in which order"))
                 .add(dropdown("Completion Chroma", "Where rainbow text is used for classes with 100% content completion",
                         WynnExtrasConfig.ClassSelectionCompletionChromaMode.class,
                         () -> config.classSelectionCompletionChromaMode,
                         v -> config.classSelectionCompletionChromaMode = v))
-                .add(classSelectionLines("Class Card Lines", "Choose which current stat lines are shown and in which order"))
                 .add(toggle("Use custom class colors", "Configure the accent color for each class and reskin",
                         () -> config.useCustomClassColors, v -> config.useCustomClassColors = v))
                 .add(visibleWhen(classColor("Warrior Color", "Accent color for Warrior class cards", "warrior", 0xCC4444),
@@ -1638,6 +1696,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     @Override
     public boolean keyPressed(KeyInput input) {
+        for (ConfigOption opt : getCurrentOptions()) {
+            if (opt.keyPressed(input.key(), input.scancode(), input.modifiers())) return true;
+        }
+
         // Relay to any listening KeybindOption
         for (Category cat : categories) {
             for (Object item : cat.items) {
@@ -1694,6 +1756,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     @Override
     public boolean charTyped(CharInput charInput) {
+        char c = (char) charInput.codepoint();
+        for (ConfigOption opt : getCurrentOptions()) {
+            if (opt.charTyped(c, charInput.modifiers())) return true;
+        }
+
         // Block character input when Ctrl is held (Ctrl+V etc.)
         long window = net.minecraft.client.MinecraftClient.getInstance().getWindow().getHandle();
         boolean ctrlHeld = org.lwjgl.glfw.GLFW.glfwGetKey(window, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS
@@ -1701,7 +1768,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         if (ctrlHeld) return true;
 
         if (searchFocused) {
-            char c = (char) charInput.codepoint();
             if (c >= 32 && c < 127) {
                 searchQuery += c;
                 onSearchQueryChanged();
@@ -1709,6 +1775,26 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             }
         }
         return super.charTyped(charInput);
+    }
+
+    private List<ConfigOption> getCurrentOptions() {
+        List<ConfigOption> options = new ArrayList<>();
+        if (selectedCategory < 0 || selectedCategory >= categories.size()) return options;
+
+        Category cat = categories.get(selectedCategory);
+        if (!searchQuery.isEmpty() && !categoryHasMatches(cat)) return options;
+
+        for (Object item : cat.items) {
+            if (item instanceof SubCategory sub) {
+                if (!subHasMatches(sub) || !sub.isExpanded()) continue;
+                for (ConfigOption opt : sub.options) {
+                    if (matchesSearch(opt)) options.add(opt);
+                }
+            } else if (item instanceof ConfigOption opt && matchesSearch(opt)) {
+                options.add(opt);
+            }
+        }
+        return options;
     }
 
     private void onSearchQueryChanged() {

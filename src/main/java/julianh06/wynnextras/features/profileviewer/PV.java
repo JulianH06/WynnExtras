@@ -11,6 +11,7 @@ import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.profileviewer.data.PlayerData;
 import julianh06.wynnextras.features.profileviewer.tabs.AspectsTabWidget;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
+import julianh06.wynnextras.utils.WynncraftAuthManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
@@ -31,6 +32,33 @@ public class PV {
     public static PlayerData currentPlayerData;
 
     public static Boolean openedAspectPage;
+
+    public static List<String> getApiKeyInfo() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null || WynncraftAuthManager.hasApiKey()) return List.of();
+
+        boolean ownProfile = currentPlayer.equalsIgnoreCase(client.player.getName().getString());
+        if (WynncraftAuthManager.hasOAuthToken()) {
+            if (ownProfile) return List.of();
+
+            return List.of(
+                    "A classic API key may unlock more of this player's stats.",
+                    "Use \"/we apikey\" for more information."
+            );
+        }
+
+        if (ownProfile) {
+            return List.of(
+                    "To access your private stats, authorize WynnExtras.",
+                    "Use \"/we oauth\" or \"/we apikey\" for more information."
+            );
+        }
+
+        return List.of(
+                "Authorization may allow access if this player permits it.",
+                "Use \"/we oauth\" or \"/we apikey\" for more information."
+        );
+    }
 
     public static void register() {
         ClientTickEvents.END_CLIENT_TICK.register((client) -> {

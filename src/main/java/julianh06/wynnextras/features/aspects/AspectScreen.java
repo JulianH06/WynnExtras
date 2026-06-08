@@ -25,9 +25,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AspectScreen extends WEScreen {
-    public enum Page {LootPools, Lootruns, Aspects, Gambits, RaidLoot, Leaderboard}
+    public enum Page {AspectLootpool, RaidItems, Lootruns, Aspects, Gambits, RaidLoot, Leaderboard}
 
     static LootPoolPage lootPoolPage;
+    static RaidItemsPage raidItemsPage;
     static LootrunLootPoolPage lootrunLootPoolPage;
     static AspectsPage aspectsPage;
     static GambitsPage gambitsPage;
@@ -35,7 +36,7 @@ public class AspectScreen extends WEScreen {
     //static ExplorePage explorePage;
     static LeadboardPage leadboardPage;
 
-    public static Page currentPage = Page.LootPools;
+    public static Page currentPage = Page.AspectLootpool;
     private static PageWidget currentWidget;
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 0; // in ms
@@ -172,14 +173,15 @@ public class AspectScreen extends WEScreen {
 
             if(currentWidget == null) return false;
 
-            return currentWidget.mouseScrolled(mX, mY, verticalAmount);
+            return currentWidget.mouseScrolled(mX / matrixScale, mY / matrixScale, verticalAmount);
         });
         registeredScroll = true;
     }
 
     private PageWidget getTabWidget(Page page) {
         return switch (page) {
-            case LootPools -> lootPoolPage == null ? lootPoolPage = new LootPoolPage(this) : lootPoolPage;
+            case AspectLootpool -> lootPoolPage == null ? lootPoolPage = new LootPoolPage(this) : lootPoolPage;
+            case RaidItems -> raidItemsPage == null ? raidItemsPage = new RaidItemsPage(this) : raidItemsPage;
             case Lootruns -> lootrunLootPoolPage == null ? lootrunLootPoolPage = new LootrunLootPoolPage(this) : lootrunLootPoolPage;
             case Aspects -> aspectsPage == null ? aspectsPage = new AspectsPage(this) : aspectsPage;
             case Gambits -> gambitsPage == null ? gambitsPage = new GambitsPage(this) : gambitsPage;
@@ -210,9 +212,11 @@ public class AspectScreen extends WEScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             ui.drawButton(x, y, width, height, hovered || currentPage == page);
             String name = page.name();
-            if(page == Page.LootPools) name = "Loot Pools";
+            if(page == Page.AspectLootpool) name = "Aspects";
+            if(page == Page.RaidItems) name = "Raids";
             if(page == Page.Lootruns) name = "Lootruns";
             if(page == Page.RaidLoot) name = "Raid Loot";
+            if(page == Page.Aspects) name = "Player";
             ui.drawCenteredText(name, x + width / 2f, y + height / 2f, currentPage == page ? CustomColor.fromHexString("FFFF00") : CustomColor.fromHexString("FFFFFF"));
         }
 

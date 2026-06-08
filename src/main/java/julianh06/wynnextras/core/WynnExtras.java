@@ -213,6 +213,7 @@ public class WynnExtras implements ClientModInitializer {
         julianh06.wynnextras.features.qol.AttackTimer.register();
         julianh06.wynnextras.features.qol.WarBeacon.register();
         julianh06.wynnextras.features.qol.TerritoryMenuKey.register();
+        julianh06.wynnextras.features.chat.mediapreview.ChatMediaPreview.register();
         RaidLootConfig.INSTANCE.load();
 		MaterialTextureResolver.register();
 		RecipeLoader.loadRecipes();

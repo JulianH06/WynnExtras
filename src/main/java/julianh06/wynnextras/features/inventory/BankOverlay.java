@@ -177,6 +177,7 @@ public class BankOverlay {
 
     @SubscribeEvent
     public void onTick(TickEvent event) {
+        BankOverlay2.saveCurrentPlayerInventorySnapshot();
         if(expectedOverlayType == BankOverlayType.NONE) return;
         if(expectedOverlayType == currentOverlayType) {
             activeInvSlots.clear();

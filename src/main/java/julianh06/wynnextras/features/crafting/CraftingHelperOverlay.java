@@ -261,6 +261,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         if (profSpeedBombWidget == null) profSpeedBombWidget = new ProfBombWidget(BombType.PROFESSION_SPEED);
         if (profXpBombWidget == null) profXpBombWidget = new ProfBombWidget(BombType.PROFESSION_XP);
+        profSpeedBombWidget.refresh();
+        profXpBombWidget.refresh();
 
         var textRenderer = MinecraftClient.getInstance().textRenderer;
         int menuWidth = ((HandledScreenAccessor) screen).getBackgroundWidth();
@@ -1638,7 +1640,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         final BombType type;
         public BombInfo bomb;
         public boolean isActive;
-        public String text;
+        public String text = "";
 
         public ProfBombWidget(BombType type) {
             super(0, 0, 0, 0);
@@ -1647,6 +1649,15 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            if (isActive) ui.drawCenteredText(text, x + width / 2f, y + height / 2f, 1f);
+        }
+
+        @Override
+        protected void updateValues() {
+            refresh();
+        }
+
+        public void refresh() {
             try {
                 if (bomb != null) {
                     if (bomb.server().equals(Models.WorldState.getCurrentWorldName())) hovered = false;
@@ -1655,6 +1666,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
                 String currentWorld = Models.WorldState.getCurrentWorldName();
                 isActive = false;
                 bomb = null;
+                text = "";
 
                 for (BombInfo bomb : Models.Bomb.getBombBells()) {
                     if (bomb.bomb() == type) {
@@ -1688,8 +1700,6 @@ public class CraftingHelperOverlay extends WEMenuExtension {
                                 + bomb.server()
                                 + " (" + bomb.getRemainingString() + ") (EXPIRING SOON)";
                     }
-
-                    ui.drawCenteredText(text, x + width / 2f, y + height / 2f, 1f);
                 }
             } catch (Exception ignored) {
             }
@@ -1697,10 +1707,10 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         @Override
         protected boolean onClick(int button) {
+            if (bomb == null) return true;
             if (bomb.server().equals(Models.WorldState.getCurrentWorldName())) return true;
 
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-            if (bomb == null) return true;
             MinecraftClient client = MinecraftClient.getInstance();
 
             if (client.player != null) {

@@ -50,6 +50,10 @@ public class LootrunLootPoolData {
         public String type;   // normal, shiny, tome
         public String tooltip; // Full tooltip text
         public String shinyStat; // For shiny items: the stat they have (e.g., "Health", "Mana Regen")
+        public int amount = 1;
+        public String rewardType = "ITEM";
+        public boolean always = false;
+        public boolean shiny = false;
 
         public LootrunItem(String name, String rarity, String type) {
             this.name = name;
@@ -69,11 +73,27 @@ public class LootrunLootPoolData {
             normalizeShinyType();
         }
 
+        public LootrunItem(String name, String rarity, String type, String tooltip, String shinyStat,
+                           int amount, String rewardType, boolean always, boolean shiny) {
+            this.name = name;
+            this.rarity = rarity != null ? rarity : "";
+            this.type = type != null ? type : "normal";
+            this.tooltip = tooltip != null ? tooltip : "";
+            this.shinyStat = shinyStat != null ? shinyStat : "";
+            this.amount = Math.max(amount, 1);
+            this.rewardType = rewardType != null && !rewardType.isEmpty() ? rewardType : "ITEM";
+            this.always = always;
+            this.shiny = shiny;
+            normalizeShinyType();
+        }
+
         public void normalizeShinyType() {
             if (!"shiny".equals(type)) {
-                shinyStat = "";
+                if (!shiny) shinyStat = "";
                 return;
             }
+
+            if (shiny) return;
 
             if (!hasShinyName(name)) {
                 type = determineType(name);

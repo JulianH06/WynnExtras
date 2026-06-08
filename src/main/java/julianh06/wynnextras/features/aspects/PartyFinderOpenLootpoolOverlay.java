@@ -59,7 +59,7 @@ public class PartyFinderOpenLootpoolOverlay extends WEHandledScreen {
         protected boolean onClick(int button) {
             if(MinecraftClient.getInstance().currentScreen != null) MinecraftClient.getInstance().currentScreen.close();
             WEScreen.open(AspectScreen::new);
-            AspectScreen.currentPage = AspectScreen.Page.LootPools;
+            AspectScreen.currentPage = AspectScreen.Page.AspectLootpool;
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }

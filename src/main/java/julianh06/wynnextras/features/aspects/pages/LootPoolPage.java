@@ -1,6 +1,5 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import julianh06.wynnextras.core.WynnExtras;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.colors.WynncraftShaderColor;
 import com.wynntils.utils.mc.McUtils;
@@ -31,15 +30,13 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static julianh06.wynnextras.features.aspects.AspectUtils.*;
 
 public class LootPoolPage extends PageWidget {
-    private final static java.util.Map<String, List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry>> crowdsourcedLootPools = new java.util.HashMap<>();
-    private final static Map<Raid, ZonedDateTime> lastCrowdsourceFetch = new HashMap<>();
-    private static final Map<Raid, Boolean> fetchRunning = new HashMap<>();
-    private final static Map<Raid, Boolean> hasOldLootpool = new HashMap<>();
+    private final static java.util.Map<String, List<julianh06.wynnextras.features.aspects.LootPoolData.AspectEntry>> officialLootPools = new java.util.HashMap<>();
+    private static boolean officialLootPoolsFetchStarted = false;
+    private static boolean officialLootPoolsLoading = false;
 
     private final static java.util.Map<String, com.mojang.datafixers.util.Pair<Integer, String>> personalAspectProgress = new java.util.HashMap<>();
     private static boolean fetchedPersonalProgress = false;
@@ -61,8 +58,8 @@ public class LootPoolPage extends PageWidget {
     private static boolean hideMax = false;
     private static boolean onlyFavorites = false;
 
-    private enum crowdSourceStatus { Loading, Found, Null }
-    private final static List<crowdSourceStatus> hasCrowdSourcedData = new ArrayList<>(List.of(crowdSourceStatus.Loading, crowdSourceStatus.Loading, crowdSourceStatus.Loading, crowdSourceStatus.Loading, crowdSourceStatus.Loading));
+    private enum lootPoolStatus { Loading, Found, Null }
+    private final static List<lootPoolStatus> lootPoolStatuses = new ArrayList<>(List.of(lootPoolStatus.Loading, lootPoolStatus.Loading, lootPoolStatus.Loading, lootPoolStatus.Loading, lootPoolStatus.Loading));
 
     private final static String[] raidNames = {
             "Nest of the Grootslangs",
@@ -72,10 +69,19 @@ public class LootPoolPage extends PageWidget {
             "The Wartorn Palace"
     };
 
+    private final static Map<Raid, String> raidInternalNames = Map.of(
+            Raid.NOTG, "grootslang",
+            Raid.NOL, "orphion",
+            Raid.TCC, "colossus",
+            Raid.TNA, "nameless",
+            Raid.TWP, "fruma"
+    );
+
     private static float hScrollOffset = 0f;
     private static float hScrollTarget = 0f;
     private static float hScrollMax = 0f;
     private static final int FIXED_WIDGET_WIDTH = 550;
+    private static final int MAX_WIDGET_WIDTH = 650;
     private static final int H_WIDGET_SPACING = 40;
     private static HorizontalScrollBarWidget hScrollBarWidget;
 
@@ -105,38 +111,7 @@ public class LootPoolPage extends PageWidget {
         hoveredTooltip.clear();
 
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-        for (Raid raidType : Raid.values()) {
-            if (!shouldFetchRaid(raidType)) {
-                continue;
-            }
-
-            if (fetchRunning.getOrDefault(raidType, false)) continue;
-
-            fetchRunning.put(raidType, true);
-
-            WynnExtras.LOGGER.info("starting fetch for " + raidType);
-            lastCrowdsourceFetch.put(raidType, now);
-            WynncraftApiHandler.fetchCrowdsourcedLootPool(raidType.name()).thenAccept(result -> {
-                fetchRunning.put(raidType, false);
-
-                if (result == null || result.isEmpty()) return;
-
-                List<LootPoolData.AspectEntry> oldItems = crowdsourcedLootPools.get(raidType.name());
-
-                lastCrowdsourceFetch.put(raidType, now);
-                if (isSamePool(oldItems, result)) {
-                    WynnExtras.LOGGER.info("still old pool, retry in 30s");
-                    hasOldLootpool.put(raidType, true);
-                    return;
-                }
-
-                WynnExtras.LOGGER.info("NEW POOL for " + raidType);
-                crowdsourcedLootPools.put(raidType.name(), result);
-                hasOldLootpool.put(raidType, false);
-
-                julianh06.wynnextras.features.aspects.LootPoolData.INSTANCE.saveLootPoolFull(raidType.name(), result);
-            });
-        }
+        fetchOfficialLootPools(false);
 
         if (!fetchedPersonalProgress && McUtils.player() != null) {
             fetchedPersonalProgress = true;
@@ -182,10 +157,21 @@ public class LootPoolPage extends PageWidget {
         ui.drawCenteredText(countdown, centerX, 100);
 
         float scaledWidth = width * ui.getScaleFactorF();
-        int totalContentWidth = lootPoolWidgets.size() * (FIXED_WIDGET_WIDTH + H_WIDGET_SPACING) + H_WIDGET_SPACING;
-        hScrollMax = Math.max(0, totalContentWidth - scaledWidth);
+        int widgetCount = lootPoolWidgets.size();
+        int minContentWidth = getTotalContentWidth(FIXED_WIDGET_WIDTH, widgetCount);
+        boolean showHorizontalScrollBar = widgetCount > 0 && minContentWidth > scaledWidth;
+        int widgetWidth = FIXED_WIDGET_WIDTH;
+        if (!showHorizontalScrollBar && widgetCount > 0) {
+            widgetWidth = Math.min(MAX_WIDGET_WIDTH, Math.max(FIXED_WIDGET_WIDTH, (int) ((scaledWidth - (widgetCount + 1) * H_WIDGET_SPACING) / widgetCount)));
+        }
+
+        hScrollMax = showHorizontalScrollBar ? Math.max(0, minContentWidth - scaledWidth) : 0;
 
         if (hScrollTarget > hScrollMax) hScrollTarget = hScrollMax;
+        if (hScrollMax == 0) {
+            hScrollTarget = 0;
+            hScrollOffset = 0;
+        }
 
         float snapValue = 0.5f;
         float speed = 0.3f;
@@ -195,7 +181,7 @@ public class LootPoolPage extends PageWidget {
 
         int widgetY = 175;
         int scrollBarHeight = 30;
-        int widgetHeight = (int) (height * ui.getScaleFactorF() * 0.9f - widgetY - scrollBarHeight - 5);
+        int widgetHeight = (int) (height * ui.getScaleFactorF() * 0.9f - widgetY - (showHorizontalScrollBar ? scrollBarHeight + 5 : 0));
 
         ctx.enableScissor(
                 0,
@@ -204,17 +190,22 @@ public class LootPoolPage extends PageWidget {
                 (int) ((widgetY + widgetHeight) / ui.getScaleFactor())
         );
 
-        int widgetX = H_WIDGET_SPACING - (int) hScrollOffset;
+        int widgetsWidth = widgetCount * widgetWidth + Math.max(0, widgetCount - 1) * H_WIDGET_SPACING;
+        int widgetX = showHorizontalScrollBar ? H_WIDGET_SPACING - (int) hScrollOffset : (int) ((scaledWidth - widgetsWidth) / 2f);
         for (LootPoolWidget lootPoolWidget : lootPoolWidgets) {
-            lootPoolWidget.setBounds(widgetX, widgetY, FIXED_WIDGET_WIDTH, widgetHeight);
+            lootPoolWidget.setBounds(widgetX, widgetY, widgetWidth, widgetHeight);
             lootPoolWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
-            widgetX += FIXED_WIDGET_WIDTH + H_WIDGET_SPACING;
+            widgetX += widgetWidth + H_WIDGET_SPACING;
         }
         ctx.disableScissor();
 
-        int scrollBarY = widgetY + widgetHeight + 5;
-        hScrollBarWidget.setBounds(40, scrollBarY, (int) scaledWidth - 80, scrollBarHeight);
-        hScrollBarWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+        if (showHorizontalScrollBar) {
+            int scrollBarY = widgetY + widgetHeight + 5;
+            hScrollBarWidget.setBounds(40, scrollBarY, (int) scaledWidth - 80, scrollBarHeight);
+            hScrollBarWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+        } else {
+            hScrollBarWidget.setBounds(0, 0, 0, 0);
+        }
 
         refreshButton.setBounds(0, 0, 525, 60);
         refreshButton.draw(ctx, mouseX, mouseY, tickDelta, ui);
@@ -235,18 +226,52 @@ public class LootPoolPage extends PageWidget {
         }
     }
 
-    private static boolean isSamePool(List<LootPoolData.AspectEntry> oldItems, List<LootPoolData.AspectEntry> newItems) {
-        if (oldItems == null || newItems == null) return false;
-        if (oldItems.size() != newItems.size()) return false;
+    private static int getTotalContentWidth(int widgetWidth, int widgetCount) {
+        if (widgetCount <= 0) return 0;
+        return widgetCount * widgetWidth + (widgetCount + 1) * H_WIDGET_SPACING;
+    }
 
-        Set<String> oldNames = oldItems.stream().map(i -> i.name).collect(Collectors.toSet());
+    private static void fetchOfficialLootPools(boolean forceRefresh) {
+        if (officialLootPoolsFetchStarted && !forceRefresh) return;
 
-        for (LootPoolData.AspectEntry item : newItems) {
-            if (!oldNames.contains(item.name)) {
-                return false;
+        officialLootPoolsFetchStarted = true;
+        officialLootPoolsLoading = true;
+
+        WynncraftApiHandler.fetchOfficialLootPools(forceRefresh).thenAccept(result -> {
+            officialLootPools.clear();
+
+            if (result != null) {
+                for (WynncraftApiHandler.ApiLootPool pool : result) {
+                    if (!"RAID".equalsIgnoreCase(pool.type)) continue;
+
+                    Raid raid = getRaidByInternalName(pool.internalName);
+                    if (raid == null) continue;
+
+                    List<LootPoolData.AspectEntry> aspects = pool.rewards.stream()
+                            .filter(reward -> "ASPECT".equalsIgnoreCase(reward.type))
+                            .map(reward -> new LootPoolData.AspectEntry(reward.name, capitalize(reward.tier), "", ""))
+                            .toList();
+                    officialLootPools.put(raid.name(), aspects);
+                }
             }
+
+            for (LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+                lootPoolWidget.aspectWidgets.clear();
+            }
+
+            officialLootPoolsLoading = false;
+        });
+    }
+
+    private static Raid getRaidByInternalName(String internalName) {
+        for (Map.Entry<Raid, String> entry : raidInternalNames.entrySet()) {
+            if (entry.getValue().equalsIgnoreCase(internalName)) return entry.getKey();
         }
-        return true;
+        return null;
+    }
+
+    private static String capitalize(String text) {
+        return LootrunLootPoolPage.capitalize(text);
     }
 
     @Override
@@ -291,7 +316,7 @@ public class LootPoolPage extends PageWidget {
             return true;
         }
 
-        if (hScrollBarWidget.isHovered()) {
+        if (hScrollMax > 0 && hScrollBarWidget.isHovered()) {
             hScrollBarWidget.onClick(button);
             return true;
         }
@@ -315,7 +340,7 @@ public class LootPoolPage extends PageWidget {
         boolean shiftHeld = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
                 || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
 
-        if (shiftHeld) {
+        if (shiftHeld && hScrollMax > 0) {
             if (delta > 0) hScrollTarget -= 60f;
             else hScrollTarget += 60f;
             if (hScrollTarget < 0) hScrollTarget = 0;
@@ -402,7 +427,11 @@ public class LootPoolPage extends PageWidget {
             List<LootPoolData.AspectEntry> lootPool = getLootPoolForRaid(raid.name());
 
             if(!lootPool.isEmpty()) {
-                hasCrowdSourcedData.set(raid.ordinal(), crowdSourceStatus.Found);
+                lootPoolStatuses.set(raid.ordinal(), lootPoolStatus.Found);
+            } else if (officialLootPoolsLoading) {
+                lootPoolStatuses.set(raid.ordinal(), lootPoolStatus.Loading);
+            } else {
+                lootPoolStatuses.set(raid.ordinal(), lootPoolStatus.Null);
             }
 
             List<LootPoolData.AspectEntry> mythicAspects = lootPool.stream().filter(a -> a.rarity.equalsIgnoreCase("mythic")).toList();
@@ -449,12 +478,12 @@ public class LootPoolPage extends PageWidget {
 
             scoreWidget.scoreString = scoreString;
             int scoreWidth = MinecraftClient.getInstance().textRenderer.getWidth(scoreString);
-            if(hasCrowdSourcedData.get(raid.ordinal()) != crowdSourceStatus.Found) {
+            if(lootPoolStatuses.get(raid.ordinal()) == lootPoolStatus.Loading || lootPoolStatuses.get(raid.ordinal()) == lootPoolStatus.Null) {
                 scoreWidget.setBounds(0, 0, 0, 0);
-                if(hasCrowdSourcedData.get(raid.ordinal()) == crowdSourceStatus.Loading) {
+                if(lootPoolStatuses.get(raid.ordinal()) == lootPoolStatus.Loading) {
                     ui.drawCenteredText("Loading lootpool data...", x + width / 2f, y + textureWidth + 14, CustomColor.fromHexString("FF0000"));
                 } else {
-                    ui.drawCenteredText("There is data for this raid yet!", x + width / 2f, y + textureWidth + 14, CustomColor.fromHexString("FF0000"));
+                    ui.drawCenteredText("There is no data for this raid yet!", x + width / 2f, y + textureWidth + 14, CustomColor.fromHexString("FF0000"));
                 }
             } else {
                 scoreWidget.setBounds((int) (x + (width - scoreWidth * 3) / 2f), y + textureWidth, scoreWidth * 3, 30);
@@ -649,13 +678,11 @@ public class LootPoolPage extends PageWidget {
         }
 
         private List<LootPoolData.AspectEntry> getLootPoolForRaid(String raidCode) {
-            // Use crowdsourced data if available
-            if (crowdsourcedLootPools.containsKey(raidCode)) {
-                List<LootPoolData.AspectEntry> crowdsourced = crowdsourcedLootPools.get(raidCode);
-                if (crowdsourced != null && !crowdsourced.isEmpty()) {
-                    // Overlay personal progress on crowdsourced data
+            if (officialLootPools.containsKey(raidCode)) {
+                List<LootPoolData.AspectEntry> official = officialLootPools.get(raidCode);
+                if (official != null && !official.isEmpty()) {
                     List<LootPoolData.AspectEntry> withProgress = new java.util.ArrayList<>();
-                    for (LootPoolData.AspectEntry aspect : crowdsourced) {
+                    for (LootPoolData.AspectEntry aspect : official) {
                         // Check if we have personal progress for this aspect
                         if (personalAspectProgress.containsKey(aspect.name)) {
                             com.mojang.datafixers.util.Pair<Integer, String> progress = personalAspectProgress.get(aspect.name);
@@ -668,15 +695,14 @@ public class LootPoolPage extends PageWidget {
                             // Create new entry with personal tier info
                             withProgress.add(new LootPoolData.AspectEntry(aspect.name, rarity, tierInfo, aspect.description));
                         } else {
-                            // No personal data, use crowdsourced as-is (will show without tier)
+                            // No personal data, use official rarity without tier progress.
                             withProgress.add(new LootPoolData.AspectEntry(aspect.name, aspect.rarity, null, aspect.description));
                         }
                     }
                     return withProgress;
                 }
             }
-            // Fall back to local data
-            return LootPoolData.INSTANCE.getLootPool(raidCode);
+            return new ArrayList<>();
         }
 
 
@@ -999,12 +1025,12 @@ public class LootPoolPage extends PageWidget {
                 lootPoolWidgets.add(new LootPoolWidget(raid));
             }
 
-            crowdsourcedLootPools.clear();
-            lastCrowdsourceFetch.clear();
-            fetchRunning.clear();
-            hasOldLootpool.clear();
+            officialLootPools.clear();
+            officialLootPoolsFetchStarted = false;
+            officialLootPoolsLoading = false;
             personalAspectProgress.clear();
             fetchedPersonalProgress = false;
+            WynncraftApiHandler.clearOfficialLootPoolsCache();
 
             ResetTimeConfig.INSTANCE.refetch();
 
@@ -1044,6 +1070,10 @@ public class LootPoolPage extends PageWidget {
         }
 
         private void setOffset(int mouseX, float maxOffset, int scrollAreaWidth) {
+            if (maxOffset <= 0 || scrollAreaWidth <= 0) {
+                setTarget.accept(0f);
+                return;
+            }
             float relativeX = mouseX - x - scrollBarButtonWidget.getWidth() / 2f;
             relativeX = Math.max(0, Math.min(relativeX, scrollAreaWidth));
 
@@ -1057,7 +1087,7 @@ public class LootPoolPage extends PageWidget {
             ui.drawSliderBackground(x, y, width, height);
 
             float maxOffset = getMax.get();
-            int buttonWidth = maxOffset == 0 ? width : 750;
+            int buttonWidth = maxOffset == 0 ? width : Math.max(40, (int) (width * (width / (width + maxOffset))));
             int scrollAreaWidth = width - buttonWidth;
 
             if (scrollBarButtonWidget.isHold) {
@@ -1113,17 +1143,5 @@ public class LootPoolPage extends PageWidget {
                 return true;
             }
         }
-    }
-
-    private static boolean shouldFetchRaid(Raid raid) {
-        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentLootpoolReset();
-        ZonedDateTime lastFetch = lastCrowdsourceFetch.get(raid);
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
-
-        if(hasOldLootpool.get(raid) != null && hasOldLootpool.get(raid)) return lastFetch.plusSeconds(30).isBefore(now);
-
-        if (lastFetch != null && lastFetch.plusSeconds(30).isAfter(now)) return false;
-
-        return lastFetch == null || currentReset.isAfter(lastFetch);
     }
 }

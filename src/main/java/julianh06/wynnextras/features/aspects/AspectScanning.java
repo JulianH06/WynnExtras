@@ -35,7 +35,6 @@ public class AspectScanning {
     private static final Map<String, Long> lastPersonalUploadTime = new HashMap<>();
     private static final long PERSONAL_UPLOAD_COOLDOWN_MS = 60_000;
 
-    private static final Map<String, ZonedDateTime> lastLootpoolUploadReset = new HashMap<>();
     private static ZonedDateTime lastGambitUploadReset = null;
 
     // Reward chest AspectScanning collection
@@ -648,7 +647,6 @@ public class AspectScanning {
             }
 
             Map<String, Pair<String, String>> foundAspects = new HashMap<>();
-            List<LootPoolData.AspectEntry> lootPoolDataFull = new ArrayList<>(); // For saving with full data
 
             // Collect all aspects with their progress
             for (Slot slot : screen.getScreenHandler().slots) {
@@ -719,17 +717,7 @@ public class AspectScanning {
                     bestTierLine = bestTierLine.replaceAll("^[^A-Za-z0-9]*", "");
                     bestTierLine = bestTierLine.replaceAll("(\\[MAX])\\1+", "$1");
                     foundAspects.put(aspectName, new Pair<>(bestTierLine, rarity));
-
-                    // Save for loot pool data with full info
-                    if (!rarity.isEmpty()) {
-                        lootPoolDataFull.add(new LootPoolData.AspectEntry(aspectName, rarity, bestTierLine, description.toString()));
-                    }
                 }
-            }
-
-            // Save loot pool data to local storage with full info
-            if (!selectedRaid.equals("Unknown") && !lootPoolDataFull.isEmpty()) {
-                LootPoolData.INSTANCE.saveLootPoolFull(selectedRaid, lootPoolDataFull);
             }
 
             // Upload aspects
@@ -741,32 +729,11 @@ public class AspectScanning {
                 } else {
                     WynnExtras.LOGGER.info("[WynnExtras] Personal progress upload skipped (cooldown)");
                 }
-
-                if (!lootPoolDataFull.isEmpty() && canUploadLootpool(selectedRaid)) {
-                    WynnExtras.LOGGER.info("[WynnExtras] Uploading loot pool for " + selectedRaid);
-
-                    WynncraftApiHandler.uploadLootPool(selectedRaid, lootPoolDataFull);
-
-                    // Mark reset as uploaded
-                    lastLootpoolUploadReset.put(
-                        selectedRaid,
-                            ResetTimeConfig.INSTANCE.getCurrentLootpoolReset()
-                    );
-                } else {
-                    WynnExtras.LOGGER.info("[WynnExtras] Loot pool already uploaded for this reset (" + selectedRaid + ")");
-                }
             }
         } catch (Exception e) {
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError scanning preview chest: " + e.getMessage()));
             e.printStackTrace();
         }
-    }
-
-    private static boolean canUploadLootpool(String raid) {
-        ZonedDateTime currentReset = ResetTimeConfig.INSTANCE.getCurrentLootpoolReset();
-        ZonedDateTime lastUploaded = lastLootpoolUploadReset.get(raid);
-
-        return lastUploaded == null || currentReset.isAfter(lastUploaded);
     }
 
     private static boolean canUploadGambits() {
@@ -779,4 +746,3 @@ public class AspectScanning {
         return last == null || System.currentTimeMillis() - last >= PERSONAL_UPLOAD_COOLDOWN_MS;
     }
 }
-
