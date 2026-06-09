@@ -42,6 +42,7 @@ public abstract class BankData {
     private HashMap<Integer, String> bankPageNames = new HashMap<>();
     private String characterNickname = null; // For character banks - stores the character's class name (e.g., "Dark Wizard")
     private int characterLevel = 0; // For character banks - stores the character's combat level
+    private ItemStack lastHeldWeapon = ItemStack.EMPTY;
     private List<ItemStack> playerInventory = List.of();
     private List<ItemStack> playerArmor = List.of();
     /** Per-page bag counts keyed by "RAID|TIER" (e.g. "NOG|LEGENDARY" -> 3). Stored as plain
@@ -97,6 +98,7 @@ public abstract class BankData {
                     this.bankPageNames = loaded.bankPageNames != null ? loaded.bankPageNames : new HashMap<>();
                     this.characterNickname = loaded.characterNickname;
                     this.characterLevel = loaded.characterLevel;
+                    this.lastHeldWeapon = loaded.lastHeldWeapon == null ? ItemStack.EMPTY : loaded.lastHeldWeapon.copy();
                     this.playerInventory = loaded.playerInventory != null ? loaded.playerInventory : List.of();
                     this.playerArmor = loaded.playerArmor != null ? loaded.playerArmor : List.of();
                     this.bagCounts = loaded.bagCounts != null ? loaded.bagCounts : new HashMap<>();
@@ -113,6 +115,7 @@ public abstract class BankData {
             this.bankPageNames = new HashMap<>();
             this.characterNickname = null;
             this.characterLevel = 0;
+            this.lastHeldWeapon = ItemStack.EMPTY;
             this.playerInventory = List.of();
             this.playerArmor = List.of();
             this.bagCounts = new HashMap<>();
@@ -152,6 +155,14 @@ public abstract class BankData {
         this.characterLevel = characterLevel;
     }
 
+    public ItemStack getLastHeldWeapon() {
+        return lastHeldWeapon == null ? ItemStack.EMPTY : lastHeldWeapon;
+    }
+
+    public void setLastHeldWeapon(ItemStack lastHeldWeapon) {
+        this.lastHeldWeapon = lastHeldWeapon == null ? ItemStack.EMPTY : lastHeldWeapon.copy();
+    }
+
     public List<ItemStack> getPlayerInventory() {
         return playerInventory;
     }
@@ -183,6 +194,7 @@ public abstract class BankData {
         snapshot.bankPageNames = bankPageNames == null ? new HashMap<>() : new HashMap<>(bankPageNames);
         snapshot.characterNickname = characterNickname;
         snapshot.characterLevel = characterLevel;
+        snapshot.lastHeldWeapon = lastHeldWeapon == null ? ItemStack.EMPTY : lastHeldWeapon.copy();
         snapshot.playerInventory = copyItemList(playerInventory);
         snapshot.playerArmor = copyItemList(playerArmor);
         snapshot.bagCounts = copyBagCounts(bagCounts);
@@ -211,6 +223,7 @@ public abstract class BankData {
         private HashMap<Integer, String> bankPageNames = new HashMap<>();
         private String characterNickname = null;
         private int characterLevel = 0;
+        private ItemStack lastHeldWeapon = ItemStack.EMPTY;
         private List<ItemStack> playerInventory = List.of();
         private List<ItemStack> playerArmor = List.of();
         private HashMap<Integer, HashMap<String, Integer>> bagCounts = new HashMap<>();

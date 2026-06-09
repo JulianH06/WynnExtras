@@ -93,16 +93,16 @@ public class WynnExtrasConfig {
     public static final String CLASS_SELECTION_LINE_LOCATION = "location";
     public static final String CLASS_SELECTION_LINE_PLAYTIME = "playtime";
     public static final String CLASS_SELECTION_LINE_CONTENT_PROGRESS = "content_progress";
+    public static final String CLASS_SELECTION_LINE_LAST_HELD_WEAPON = "last_held_weapon";
     public static final List<String> CLASS_SELECTION_BASE_LINE_IDS = List.of(
             CLASS_SELECTION_LINE_LEVEL,
-            CLASS_SELECTION_LINE_PLAYTIME,
-            CLASS_SELECTION_LINE_LOCATION,
-            CLASS_SELECTION_LINE_CONTENT_PROGRESS);
+            CLASS_SELECTION_LINE_PLAYTIME);
     public static final List<String> CLASS_SELECTION_LINE_IDS = List.of(
             CLASS_SELECTION_LINE_LEVEL,
             CLASS_SELECTION_LINE_LOCATION,
             CLASS_SELECTION_LINE_PLAYTIME,
-            CLASS_SELECTION_LINE_CONTENT_PROGRESS);
+            CLASS_SELECTION_LINE_CONTENT_PROGRESS,
+            CLASS_SELECTION_LINE_LAST_HELD_WEAPON);
     public static final Map<String, String> CLASS_SELECTION_LINE_NAMES = createClassSelectionLineNames();
 
     private static final Path CONFIG_PATH = FabricLoader.getInstance()
@@ -618,6 +618,7 @@ public class WynnExtrasConfig {
         names.put(CLASS_SELECTION_LINE_LOCATION, "Location");
         names.put(CLASS_SELECTION_LINE_PLAYTIME, "Playtime");
         names.put(CLASS_SELECTION_LINE_CONTENT_PROGRESS, "Content Progress");
+        names.put(CLASS_SELECTION_LINE_LAST_HELD_WEAPON, "Last Held Weapon");
         return Collections.unmodifiableMap(names);
     }
 
@@ -632,8 +633,11 @@ public class WynnExtrasConfig {
         boolean showContentProgressLine = classSelectionContentProgressStyle == ClassSelectionContentProgressStyle.LINE;
         Set<String> configuredIds = new HashSet<>(classSelectionActiveLines);
         configuredIds.addAll(classSelectionAvailableLines);
-        for (String id : CLASS_SELECTION_BASE_LINE_IDS) {
-            if (!configuredIds.contains(id)) classSelectionAvailableLines.add(id);
+        for (String id : CLASS_SELECTION_LINE_IDS) {
+            if (!configuredIds.contains(id)) {
+                classSelectionAvailableLines.add(id);
+                configuredIds.add(id);
+            }
         }
         if (showContentProgressLine && !configuredIds.contains(CLASS_SELECTION_LINE_CONTENT_PROGRESS)) {
             classSelectionAvailableLines.add(CLASS_SELECTION_LINE_CONTENT_PROGRESS);

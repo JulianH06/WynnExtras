@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -33,8 +34,10 @@ public class CrossClassBankSearch {
     private static final int ACCOUNT_BANK_MAX_PAGES = 21;
     private static final int CHARACTER_BANK_MAX_PAGES = 12;
     private static final int SEARCH_THREADS = Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors() - 1));
+    private static final long CLASS_SELECTION_WEAPON_CACHE_MS = 30000L;
     private static final ExecutorService SEARCH_COORDINATOR = Executors.newSingleThreadExecutor(daemonThreadFactory("WynnExtras Bank Search Coordinator"));
     private static final ExecutorService SEARCH_EXECUTOR = Executors.newFixedThreadPool(SEARCH_THREADS, daemonThreadFactory("WynnExtras Bank Search"));
+    private static final Map<Path, CachedWeaponData> CLASS_SELECTION_WEAPON_CACHE = new ConcurrentHashMap<>();
 
     public record SearchRequest(
             Path configDir,
@@ -46,6 +49,9 @@ public class CrossClassBankSearch {
             Map<Integer, List<ItemStack>> accountBankPages,
             int accountLastPage
     ) {}
+
+    private record CachedWeaponData(List<CharacterWeaponData> characters, long loadedAtMs) {}
+    private record CharacterWeaponData(String characterId, String nickname, int level, ItemStack weapon, boolean weaponInInventory) {}
 
     /**
      * Result of a cross-class search
@@ -239,6 +245,20 @@ public class CrossClassBankSearch {
         return ids;
     }
 
+    public static ItemStack findLastHeldWeaponForClassSelection(String stableId, String name, String classType, int level) {
+        if (McUtils.player() == null) return ItemStack.EMPTY;
+
+        Path configDir = FabricLoader.getInstance().getConfigDir()
+                .resolve("wynnextras/" + McUtils.player().getUuid().toString());
+        if (!Files.exists(configDir)) return ItemStack.EMPTY;
+
+        return findLastHeldWeapon(configDir, stableId, name, classType, level);
+    }
+
+    public static void invalidateClassSelectionWeaponCache() {
+        CLASS_SELECTION_WEAPON_CACHE.clear();
+    }
+
     /**
      * Get ALL pages from ALL other characters (for just @ search with no filter)
      */
@@ -282,6 +302,96 @@ public class CrossClassBankSearch {
             WynnExtras.LOGGER.error("[WynnExtras] Error loading account bank pages: " + e.getMessage());
         }
         return results;
+    }
+
+    private static ItemStack findLastHeldWeapon(Path configDir, String stableId, String name, String classType, int level) {
+        List<CharacterWeaponData> bankCharacters = getClassSelectionWeaponData(configDir);
+        int bestScore = 0;
+        int bestCount = 0;
+        ItemStack bestWeapon = ItemStack.EMPTY;
+
+        for (CharacterWeaponData character : bankCharacters) {
+            int score = scoreClassSelectionBankMatch(character.characterId(), character.nickname(), character.level(),
+                    stableId, name, classType, level);
+            if (score <= 0) continue;
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestCount = 1;
+                bestWeapon = character.weaponInInventory() ? character.weapon().copy() : ItemStack.EMPTY;
+            } else if (score == bestScore) {
+                bestCount++;
+            }
+        }
+
+        return bestScore >= 70 && bestCount == 1 ? bestWeapon : ItemStack.EMPTY;
+    }
+
+    private static List<CharacterWeaponData> getClassSelectionWeaponData(Path configDir) {
+        long now = System.currentTimeMillis();
+        CachedWeaponData cached = CLASS_SELECTION_WEAPON_CACHE.get(configDir);
+        if (cached != null && now - cached.loadedAtMs() < CLASS_SELECTION_WEAPON_CACHE_MS) {
+            return cached.characters();
+        }
+
+        List<CharacterWeaponData> characters = new ArrayList<>();
+        for (Path file : listCharacterBankFiles(configDir)) {
+            String characterId = getCharacterId(file);
+            if (isNullClassName(characterId)) continue;
+
+            try (Reader reader = Files.newBufferedReader(file)) {
+                BankData data = BankData.getGson().fromJson(reader, CharacterBankData.class);
+                if (data == null || isInvalidCharacterBank(characterId, data)) continue;
+
+                ItemStack weapon = data.getLastHeldWeapon();
+                boolean weaponInInventory = weapon != null && !weapon.isEmpty()
+                        && hasSavedPlayerInventory(data)
+                        && containsStack(data.getPlayerInventory(), weapon);
+                characters.add(new CharacterWeaponData(
+                        characterId,
+                        data.getCharacterNickname(),
+                        data.getCharacterLevel(),
+                        weapon == null ? ItemStack.EMPTY : weapon.copy(),
+                        weaponInInventory
+                ));
+            } catch (IOException e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
+            } catch (Exception e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Error parsing character bank file " + file + ": " + e.getMessage());
+            }
+        }
+
+        CLASS_SELECTION_WEAPON_CACHE.put(configDir, new CachedWeaponData(characters, now));
+        return characters;
+    }
+
+    private static int scoreClassSelectionBankMatch(String characterId, String nickname, int bankLevel, String stableId,
+                                                    String name, String classType, int level) {
+        String normalizedStableId = safeLower(stableId).replace("-", "");
+        String normalizedCharacterId = safeLower(characterId).replace("-", "");
+        if (normalizedStableId.isEmpty() || normalizedCharacterId.isEmpty()) return 0;
+        if (normalizedStableId.equals(normalizedCharacterId)
+                || normalizedStableId.contains(normalizedCharacterId)
+                || normalizedCharacterId.contains(normalizedStableId)) return 100;
+
+        if (level > 0 && bankLevel == level) {
+            String normalizedNickname = normalizeClassSelectionMatchText(nickname);
+            String normalizedName = normalizeClassSelectionMatchText(name);
+            String normalizedClassType = normalizeClassSelectionMatchText(classType);
+            if (!normalizedNickname.isEmpty()
+                    && (normalizedNickname.equals(normalizedName) || normalizedNickname.equals(normalizedClassType))) {
+                return 70;
+            }
+        }
+        return 0;
+    }
+
+    private static String safeLower(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String normalizeClassSelectionMatchText(String value) {
+        return safeLower(value).replaceAll("[^a-z0-9]", "");
     }
 
     /**
@@ -467,6 +577,15 @@ public class CrossClassBankSearch {
         return false;
     }
 
+    private static boolean containsStack(List<ItemStack> items, ItemStack target) {
+        if (items == null || target == null || target.isEmpty()) return false;
+        for (ItemStack stack : items) {
+            if (stack == null || stack.isEmpty()) continue;
+            if (stack.getCount() == target.getCount() && ItemStack.areItemsAndComponentsEqual(stack, target)) return true;
+        }
+        return false;
+    }
+
     private static boolean isCharacterBankFile(Path path) {
         String fileName = path.getFileName().toString();
         return fileName.startsWith(CHARACTER_BANK_PREFIX) && fileName.endsWith(JSON_SUFFIX);
@@ -478,7 +597,7 @@ public class CrossClassBankSearch {
     }
 
     private static boolean isInvalidCharacterBank(String characterId, BankData data) {
-        return isNullClassName(characterId) || isNullClassName(data.getCharacterNickname());
+        return isNullClassName(characterId);
     }
 
     private static boolean isNullClassName(String value) {

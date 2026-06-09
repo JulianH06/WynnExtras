@@ -31,8 +31,8 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.input.KeyInput;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.ScreenHandler;
@@ -517,11 +517,22 @@ public abstract class HandledScreenMixin {
 
             if (Pages != null && activeInv != -1 && !shouldWait && !BankOverlay.isCharacterBankMissingCharacterId()) {
                 List<ItemStack> stacks = new ArrayList<>();
-                for (int j = 0; j < Math.min(45, activeInvSlots.size()); j++) {
-                    stacks.add(activeInvSlots.get(j).getStack());
+                Inventory playerInv = client.player.getInventory();
+                for (Slot slot : currScreenHandler.slots) {
+                    if (slot.inventory == playerInv) continue;
+                    stacks.add(slot.getStack().copy());
+                    if (stacks.size() >= 45) break;
                 }
-                Pages.getBankPages().put(activeInv, stacks);
-                Pages.saveAsync();
+                if (stacks.size() < 45) {
+                    stacks.clear();
+                    for (int j = 0; j < Math.min(45, activeInvSlots.size()); j++) {
+                        stacks.add(activeInvSlots.get(j).getStack().copy());
+                    }
+                }
+                if (stacks.size() >= 45) {
+                    Pages.getBankPages().put(activeInv, stacks);
+                    Pages.saveAsyncDebounced();
+                }
             }
 
             activeInvSlots.clear();

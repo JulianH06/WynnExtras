@@ -33,6 +33,7 @@ import net.minecraft.util.Identifier;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
+import julianh06.wynnextras.features.inventory.data.CrossClassBankSearch;
 import julianh06.wynnextras.features.misc.ClassSelectionData.CharIdentity;
 import julianh06.wynnextras.utils.TickScheduler;
 import net.minecraft.component.DataComponentTypes;
@@ -104,6 +105,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private int[] visOrder = new int[15];
     // visCharId[i] = the UUID for the i-th visible card
     private String[] visCharId = new String[15];
+    private final Map<String, String> lastHeldWeaponDetailCache = new HashMap<>();
     // Only run identity matching once per screen open
     private boolean identityMatched = false;
 
@@ -893,7 +895,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         Text gamemodeIcons = extractGamemodeIcons(stack);
         ContentProgress progress = extractContentProgress(stack);
         WynnExtrasConfig.ClassSelectionContentProgressStyle progressStyle = getContentProgressStyle();
-        List<String> details = extractClassDetails(stack, progress, progressStyle);
+        List<String> details = extractClassDetails(stack, charId, progress, progressStyle);
         String description = ClassSelectionData.getClassDescription(charId);
         boolean hasDescription = description != null && !description.isBlank();
         int detailStartYPx = hasDescription ? 23 : 24;
@@ -1593,7 +1595,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return bestIdx;
     }
 
-    private List<String> extractClassDetails(ItemStack stack, ContentProgress progress,
+    private List<String> extractClassDetails(ItemStack stack, String charId, ContentProgress progress,
                                              WynnExtrasConfig.ClassSelectionContentProgressStyle progressStyle) {
         List<String> detectedDetails = new ArrayList<>();
         boolean afterClassLine = false;
@@ -1633,13 +1635,57 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 }
                 continue;
             }
+            if (WynnExtrasConfig.CLASS_SELECTION_LINE_LAST_HELD_WEAPON.equals(lineId)) {
+                String weaponDetail = getLastHeldWeaponDetail(charId);
+                if (weaponDetail != null) details.add(weaponDetail);
+                continue;
+            }
 
             String detail = detectedById.get(lineId);
+            if (detail == null && WynnExtrasConfig.CLASS_SELECTION_LINE_LEVEL.equals(lineId)) {
+                detail = extractLevelDetail(stack);
+            }
             if (detail != null) {
                 details.add(detail);
             }
         }
         return details;
+    }
+
+    private String extractLevelDetail(ItemStack stack) {
+        for (Text line : getTooltipLines(stack)) {
+            String str = cleanTooltipLine(line);
+            if (!str.contains("Level:")) continue;
+            String after = str.substring(str.indexOf("Level:") + "Level:".length()).trim();
+            if (after.isEmpty()) continue;
+            return truncate("- Level: " + after, 30);
+        }
+        return null;
+    }
+
+    private String getLastHeldWeaponDetail(String charId) {
+        if (lastHeldWeaponDetailCache.containsKey(charId)) {
+            String cached = lastHeldWeaponDetailCache.get(charId);
+            return cached == null || cached.isEmpty() ? "- Weapon: unknown" : cached;
+        }
+
+        CharIdentity identity = ClassSelectionData.getCharIdentities().get(charId);
+        if (identity != null) {
+            ItemStack weapon = CrossClassBankSearch.findLastHeldWeaponForClassSelection(
+                    identity.stableId,
+                    identity.name,
+                    identity.classType,
+                    identity.level
+            );
+            if (weapon != null && !weapon.isEmpty()) {
+                String detail = truncate("- Weapon: " + cleanName(weapon.getName().getString()), 30);
+                lastHeldWeaponDetailCache.put(charId, detail);
+                return detail;
+            }
+        }
+
+        lastHeldWeaponDetailCache.put(charId, "");
+        return "- Weapon: unknown";
     }
 
     private Map<String, String> classifyClassDetails(List<String> detectedDetails) {

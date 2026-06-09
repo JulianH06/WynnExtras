@@ -8,6 +8,10 @@ import com.wynntils.models.containers.containers.personal.AccountBankContainer;
 import com.wynntils.models.containers.containers.personal.BookshelfContainer;
 import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
 import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
+import com.wynntils.models.gear.type.GearType;
+import com.wynntils.models.items.WynnItem;
+import com.wynntils.models.items.items.game.CraftedGearItem;
+import com.wynntils.models.items.items.game.GearItem;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.annotations.WEModule;
@@ -38,6 +42,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 @WEModule
@@ -73,6 +78,8 @@ public class BankOverlay {
     private static final boolean FORCE_MISSING_CHARACTER_ID_FOR_TESTING = false;
 
     private static boolean registeredScroll = false;
+    private static long lastHeldWeaponCheckMs = 0;
+    private static String lastPersistedHeldWeaponKey = "";
 
     public static PersonalStorageUtilitiesFeature getPersonalStorageUtils() {
         return personalStorageUtils;
@@ -103,7 +110,7 @@ public class BankOverlay {
         return currentOverlayType == BankOverlayType.CHARACTER && !hasValidCurrentCharacterId();
     }
 
-    public static boolean syncCurrentCharacterIdFromWynntils() {
+    public static boolean syncCurrentCharacterId() {
         String characterId = getCurrentCharacterIdFromCompass();
         if (characterId == null) {
             characterId = Models.Character.getId();
@@ -119,11 +126,11 @@ public class BankOverlay {
         Pages = null;
         activeInvSlots.clear();
         annotationCache.clear();
-        CharacterBankData.INSTANCE.loadAsync();
+        CharacterBankData.INSTANCE.load();
         if (currentOverlayType == BankOverlayType.CHARACTER) {
             currentData = CharacterBankData.INSTANCE;
         }
-        WynnExtras.LOGGER.info("[WynnExtras] Synced character bank id from Wynntils: " + characterId);
+        WynnExtras.LOGGER.info("[WynnExtras] Synced character bank id: " + characterId);
         return true;
     }
 
@@ -178,6 +185,8 @@ public class BankOverlay {
     @SubscribeEvent
     public void onTick(TickEvent event) {
         BankOverlay2.saveCurrentPlayerInventorySnapshot();
+        updateLastHeldWeapon();
+
         if(expectedOverlayType == BankOverlayType.NONE) return;
         if(expectedOverlayType == currentOverlayType) {
             activeInvSlots.clear();
@@ -186,6 +195,54 @@ public class BankOverlay {
             return;
         }
         updateOverlayType();
+    }
+
+    private static void updateLastHeldWeapon() {
+        long now = System.currentTimeMillis();
+        if (now - lastHeldWeaponCheckMs < 1000) return;
+        lastHeldWeaponCheckMs = now;
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.player == null) return;
+        if (!Models.WorldState.onWorld()) return;
+        boolean syncedCharacterId = syncCurrentCharacterId();
+        if (!syncedCharacterId && !hasValidCurrentCharacterId()) return;
+
+        ItemStack held = client.player.getMainHandStack();
+        ItemStack weapon = isWeapon(held) ? held : Items.AIR.getDefaultStack();
+
+        String key = currentCharacterID + "|" + getStackKey(weapon);
+        if (key.equals(lastPersistedHeldWeaponKey)) return;
+
+        CharacterBankData.saveLastHeldWeaponAsync(currentCharacterID, weapon);
+        CrossClassBankSearch.invalidateClassSelectionWeaponCache();
+        lastPersistedHeldWeaponKey = key;
+    }
+
+    private static boolean isWeapon(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+
+        Optional<WynnItem> item = Models.Item.getWynnItem(stack);
+        if (item.isEmpty()) return false;
+
+        GearType gearType = null;
+        WynnItem wynnItem = item.get();
+        if (wynnItem instanceof GearItem gearItem) {
+            gearType = gearItem.getGearType();
+        } else if (wynnItem instanceof CraftedGearItem craftedGearItem) {
+            gearType = craftedGearItem.getGearType();
+        }
+
+        return gearType == GearType.SPEAR
+                || gearType == GearType.DAGGER
+                || gearType == GearType.BOW
+                || gearType == GearType.WAND
+                || gearType == GearType.RELIK;
+    }
+
+    private static String getStackKey(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return "empty";
+        return stack.getItem() + "|" + stack.getName().getString() + "|" + stack.getComponents().hashCode();
     }
 
     public static void updateOverlayType() {
@@ -198,7 +255,7 @@ public class BankOverlay {
             }
             case CharacterBankContainer characterBankContainer -> {
                 BankOverlay.currentOverlayType = BankOverlayType.CHARACTER;
-                BankOverlay.syncCurrentCharacterIdFromWynntils();
+                BankOverlay.syncCurrentCharacterId();
                 BankOverlay.currentData = CharacterBankData.INSTANCE;
                 currentMaxPages = 12;
             }
@@ -284,6 +341,8 @@ public class BankOverlay {
         annotationCache.clear();
         heldItem = Items.AIR.getDefaultStack();
         registeredScroll = false;
+        lastHeldWeaponCheckMs = 0;
+        lastPersistedHeldWeaponKey = "";
         BankOverlay2.invalidateBagTotalCache();
         BankOverlaySlotBridge.restoreAll();
     }
