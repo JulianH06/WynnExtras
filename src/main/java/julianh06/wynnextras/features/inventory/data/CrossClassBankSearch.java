@@ -51,7 +51,8 @@ public class CrossClassBankSearch {
     ) {}
 
     private record CachedWeaponData(List<CharacterWeaponData> characters, long loadedAtMs) {}
-    private record CharacterWeaponData(String characterId, String nickname, int level, ItemStack weapon, boolean weaponInInventory) {}
+    private record CharacterWeaponData(String characterId, String nickname, int level, ItemStack weapon,
+                                       boolean weaponInInventory, long modifiedAtMs) {}
 
     /**
      * Result of a cross-class search
@@ -245,14 +246,15 @@ public class CrossClassBankSearch {
         return ids;
     }
 
-    public static ItemStack findLastHeldWeaponForClassSelection(String stableId, String name, String classType, int level) {
+    public static ItemStack findLastHeldWeaponForClassSelection(String stableId, String name, String classType, int level,
+                                                                boolean requireUniqueBankMatch) {
         if (McUtils.player() == null) return ItemStack.EMPTY;
 
         Path configDir = FabricLoader.getInstance().getConfigDir()
                 .resolve("wynnextras/" + McUtils.player().getUuid().toString());
         if (!Files.exists(configDir)) return ItemStack.EMPTY;
 
-        return findLastHeldWeapon(configDir, stableId, name, classType, level);
+        return findLastHeldWeapon(configDir, stableId, name, classType, level, requireUniqueBankMatch);
     }
 
     public static void invalidateClassSelectionWeaponCache() {
@@ -304,11 +306,13 @@ public class CrossClassBankSearch {
         return results;
     }
 
-    private static ItemStack findLastHeldWeapon(Path configDir, String stableId, String name, String classType, int level) {
+    private static ItemStack findLastHeldWeapon(Path configDir, String stableId, String name, String classType, int level,
+                                                boolean requireUniqueBankMatch) {
         List<CharacterWeaponData> bankCharacters = getClassSelectionWeaponData(configDir);
         int bestScore = 0;
         int bestCount = 0;
         ItemStack bestWeapon = ItemStack.EMPTY;
+        long bestModifiedAtMs = Long.MIN_VALUE;
 
         for (CharacterWeaponData character : bankCharacters) {
             int score = scoreClassSelectionBankMatch(character.characterId(), character.nickname(), character.level(),
@@ -319,12 +323,25 @@ public class CrossClassBankSearch {
                 bestScore = score;
                 bestCount = 1;
                 bestWeapon = character.weaponInInventory() ? character.weapon().copy() : ItemStack.EMPTY;
+                bestModifiedAtMs = character.modifiedAtMs();
             } else if (score == bestScore) {
                 bestCount++;
+                if (!requireUniqueBankMatch && shouldPreferHeldWeaponCandidate(character, bestWeapon, bestModifiedAtMs)) {
+                    bestWeapon = character.weapon().copy();
+                    bestModifiedAtMs = character.modifiedAtMs();
+                }
             }
         }
 
-        return bestScore >= 70 && bestCount == 1 ? bestWeapon : ItemStack.EMPTY;
+        if (bestScore < 70) return ItemStack.EMPTY;
+        if (requireUniqueBankMatch && bestCount != 1) return ItemStack.EMPTY;
+        return bestWeapon;
+    }
+
+    private static boolean shouldPreferHeldWeaponCandidate(CharacterWeaponData candidate, ItemStack bestWeapon, long bestModifiedAtMs) {
+        if (!candidate.weaponInInventory()) return false;
+        if (bestWeapon == null || bestWeapon.isEmpty()) return true;
+        return candidate.modifiedAtMs() > bestModifiedAtMs;
     }
 
     private static List<CharacterWeaponData> getClassSelectionWeaponData(Path configDir) {
@@ -347,12 +364,14 @@ public class CrossClassBankSearch {
                 boolean weaponInInventory = weapon != null && !weapon.isEmpty()
                         && hasSavedPlayerInventory(data)
                         && containsStack(data.getPlayerInventory(), weapon);
+                long modifiedAtMs = Files.getLastModifiedTime(file).toMillis();
                 characters.add(new CharacterWeaponData(
                         characterId,
                         data.getCharacterNickname(),
                         data.getCharacterLevel(),
                         weapon == null ? ItemStack.EMPTY : weapon.copy(),
-                        weaponInInventory
+                        weaponInInventory,
+                        modifiedAtMs
                 ));
             } catch (IOException e) {
                 WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
@@ -369,10 +388,10 @@ public class CrossClassBankSearch {
                                                     String name, String classType, int level) {
         String normalizedStableId = safeLower(stableId).replace("-", "");
         String normalizedCharacterId = safeLower(characterId).replace("-", "");
-        if (normalizedStableId.isEmpty() || normalizedCharacterId.isEmpty()) return 0;
-        if (normalizedStableId.equals(normalizedCharacterId)
+        if (!normalizedStableId.isEmpty() && !normalizedCharacterId.isEmpty()
+                && (normalizedStableId.equals(normalizedCharacterId)
                 || normalizedStableId.contains(normalizedCharacterId)
-                || normalizedCharacterId.contains(normalizedStableId)) return 100;
+                || normalizedCharacterId.contains(normalizedStableId))) return 100;
 
         if (level > 0 && bankLevel == level) {
             String normalizedNickname = normalizeClassSelectionMatchText(nickname);

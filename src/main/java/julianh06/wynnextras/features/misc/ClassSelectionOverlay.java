@@ -1675,7 +1675,8 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                     identity.stableId,
                     identity.name,
                     identity.classType,
-                    identity.level
+                    identity.level,
+                    hasVisibleDuplicateClassCard(identity)
             );
             if (weapon != null && !weapon.isEmpty()) {
                 String detail = truncate("- Weapon: " + cleanName(weapon.getName().getString()), 30);
@@ -1686,6 +1687,41 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
         lastHeldWeaponDetailCache.put(charId, "");
         return "- Weapon: unknown";
+    }
+
+    private boolean hasVisibleDuplicateClassCard(CharIdentity identity) {
+        if (identity == null || identity.level <= 0) return true;
+
+        int matches = 0;
+        for (int i = 0; i < visibleCardCount; i++) {
+            String visibleCharId = visCharId[i];
+            if (visibleCharId == null || visibleCharId.isBlank()) continue;
+
+            CharIdentity visibleIdentity = ClassSelectionData.getCharIdentities().get(visibleCharId);
+            if (!isSameVisibleClass(identity, visibleIdentity)) continue;
+
+            matches++;
+            if (matches > 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isSameVisibleClass(CharIdentity left, CharIdentity right) {
+        if (left == null || right == null) return false;
+        if (left.level <= 0 || right.level <= 0 || left.level != right.level) return false;
+
+        String leftName = normalizeClassIdentityText(left.name);
+        String leftClass = normalizeClassIdentityText(left.classType);
+        String rightName = normalizeClassIdentityText(right.name);
+        String rightClass = normalizeClassIdentityText(right.classType);
+        return (!leftName.isEmpty() && (leftName.equals(rightName) || leftName.equals(rightClass)))
+                || (!leftClass.isEmpty() && (leftClass.equals(rightName) || leftClass.equals(rightClass)));
+    }
+
+    private String normalizeClassIdentityText(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 
     private Map<String, String> classifyClassDetails(List<String> detectedDetails) {
