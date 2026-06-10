@@ -1423,6 +1423,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         if (my >= btnY && my < btnY + 24) {
             //======== Save & Close =========
             if (mx >= width - 115 && mx < width - 15) {
+                saveCurrentScreenState();
                 WynnExtrasConfig.save();
                 WynnExtrasConfig.load();
                 client.setScreen(parent);
@@ -1431,6 +1432,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             }
             //======== Cancel =========
             if (mx >= width - 225 && mx < width - 125) {
+                saveCurrentScreenState();
                 WynnExtrasConfig.load();
                 client.setScreen(parent);
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
@@ -1865,9 +1867,13 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     @Override
     public void close() {
+        saveCurrentScreenState();
+        client.setScreen(parent);
+    }
+
+    private void saveCurrentScreenState() {
         restoreExpandedSubsBeforeSearch();
         saveLastScreenState(selectedCategory, scrollTarget, categories);
-        client.setScreen(parent);
     }
 
     private static void saveLastScreenState(int selectedCategory, double scrollTarget, List<Category> categories) {
