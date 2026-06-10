@@ -73,7 +73,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private static final int SLOT_BACKUPS = 25;
     private static final int SLOT_MUSIC = 51;
     private static final int SLOT_AUTO_OPEN = 53;
-    private static final float CARD_W_PX = 247;
+    private static final float CARD_W_PX = 230;
     private static final float CARD_GAP_X_PX = 12;
     private static final float CARD_GAP_Y_PX = 7;
     private static final float TITLE_H_PX = 30;
@@ -136,15 +136,54 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private static float getClassSelectionCardHeightPx() {
         WynnExtrasConfig.ClassSelectionContentProgressStyle progressStyle = getContentProgressStyle();
         int lineCount = getVisibleConfiguredLineCount(progressStyle);
+        return getClassSelectionCardHeightPx(lineCount, true,
+                progressStyle == WynnExtrasConfig.ClassSelectionContentProgressStyle.PROGRESS_BAR);
+    }
 
-        int detailStart = 24;
-        int detailSpacing = 14;
-        float descY = Math.max(66, detailStart + lineCount * detailSpacing + 6);
-        if (progressStyle == WynnExtrasConfig.ClassSelectionContentProgressStyle.PROGRESS_BAR) {
-            float progressLabelY = Math.max(68, detailStart + lineCount * detailSpacing + 20);
-            return Math.max(90, progressLabelY + 39);
+    private float getClassSelectionCardHeightPx(List<ItemStack> stacks) {
+        WynnExtrasConfig.ClassSelectionContentProgressStyle progressStyle = getContentProgressStyle();
+        float cardHeightPx = 0;
+        for (int vis = 0; vis < visibleCardCount; vis++) {
+            int slotIdx = CHARACTER_SLOTS[visOrder[vis]];
+            if (slotIdx >= stacks.size()) continue;
+            ItemStack stack = stacks.get(slotIdx);
+            if (stack == null || stack.isEmpty()) continue;
+
+            ContentProgress progress = extractContentProgress(stack);
+            List<String> details = extractClassDetails(stack, visCharId[vis], progress, progressStyle);
+            String description = ClassSelectionData.getClassDescription(visCharId[vis]);
+            boolean hasDescription = description != null && !description.isBlank();
+            boolean hasGamemodeIcons = hasGamemodeIcons(stack);
+            boolean hasProgressBar = progressStyle == WynnExtrasConfig.ClassSelectionContentProgressStyle.PROGRESS_BAR && progress.found;
+            cardHeightPx = Math.max(cardHeightPx,
+                    getClassSelectionCardHeightPx(details.size(), hasDescription || hasGamemodeIcons, hasProgressBar));
         }
-        return Math.max(72, descY + 9);
+        return cardHeightPx > 0 ? cardHeightPx : getClassSelectionCardHeightPx();
+    }
+
+    private static float getClassSelectionCardHeightPx(int detailCount, boolean hasBottomContent, boolean hasProgressBar) {
+        int visibleTextLineCount = Math.max(1, detailCount + 1);
+        float textHeightPx = (visibleTextLineCount - 1) * getPreferredTextLineSpacingPx(visibleTextLineCount) + 10;
+        float heightPx = 7 + textHeightPx + 8;
+        float minHeightPx = 36;
+
+        if (hasBottomContent) {
+            heightPx += 13;
+            minHeightPx = 44;
+        }
+        if (hasProgressBar) {
+            heightPx += hasBottomContent ? 38 : 34;
+            minHeightPx = hasBottomContent ? 82 : 72;
+        }
+
+        return Math.max(minHeightPx, heightPx);
+    }
+
+    private static float getPreferredTextLineSpacingPx(int visibleTextLineCount) {
+        if (visibleTextLineCount <= 1) return 16;
+        if (visibleTextLineCount == 2) return 13;
+        if (visibleTextLineCount == 3) return 13.5f;
+        return 14;
     }
 
     private static int getVisibleConfiguredLineCount(WynnExtrasConfig.ClassSelectionContentProgressStyle progressStyle) {
@@ -413,10 +452,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             if (storedIdx < 0) continue;
             int currentIdx = fuzzyCurrentIndices.get(localCurrent);
             String uuid = fuzzyStoredUuids.get(storedIdx);
-            int score = fuzzyScores[localCurrent][storedIdx];
             if (isAmbiguousFuzzyMatch(localCurrent, storedIdx, fuzzyScores)) {
-                WynnExtras.LOGGER.info("[WynnExtras] Skipping ambiguous class identity match for "
-                        + describeChar(currentChars.get(currentIdx)) + " (score " + score + ")");
                 continue;
             }
 
@@ -570,15 +606,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null || client.player == null) return "";
         return client.player.getUuidAsString();
-    }
-
-    private String describeChar(CharIdentity data) {
-        String name = safeString(data.name);
-        String classType = safeString(data.classType);
-        if (!name.isEmpty() && !classType.isEmpty()) return name + "/" + classType;
-        if (!name.isEmpty()) return name;
-        if (!classType.isEmpty()) return classType;
-        return "unknown";
     }
 
     private class FuzzySearch {
@@ -746,7 +773,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         List<ItemStack> stacks = getStacks();
         if (stacks == null || stacks.isEmpty()) return;
 
-        float cardWPx = CARD_W_PX, cardHPx = getClassSelectionCardHeightPx(), gapXPx = CARD_GAP_X_PX, gapYPx = CARD_GAP_Y_PX;
+        float cardWPx = CARD_W_PX, gapXPx = CARD_GAP_X_PX, gapYPx = CARD_GAP_Y_PX;
         float titleHPx = TITLE_H_PX, settingsHPx = SETTINGS_H_PX, marginPx = PANEL_MARGIN_PX;
 
         // Build visible card list with fuzzy identity matching
@@ -807,6 +834,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             }
         }
 
+        float cardHPx = getClassSelectionCardHeightPx(stacks);
         int rows = (visibleCardCount + COLS - 1) / COLS;
         float gridWPx = COLS * cardWPx + (COLS - 1) * gapXPx;
         float gridHPx = rows * cardHPx + (rows - 1) * gapYPx;
@@ -882,6 +910,51 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 CustomColor.fromHexString("666666"), 2.5f);
     }
 
+    private boolean hasGamemodeIcons(ItemStack stack) {
+        Text gamemodeIcons = extractGamemodeIcons(stack);
+        return gamemodeIcons != null && !gamemodeIcons.getString().isBlank();
+    }
+
+    private ClassCardTextLayout getClassCardTextLayout(int detailCount, boolean hasBottomContent, boolean hasProgressBar) {
+        float cardHPx = cardLH / (float) scaleFactor;
+        float bottomContentYPx = cardHPx - 14;
+        float progressLabelYPx = cardHPx - (hasBottomContent ? 54 : 37);
+
+        float textAreaTopPx = 7;
+        float textAreaBottomPx;
+        if (hasProgressBar) {
+            textAreaBottomPx = progressLabelYPx - 5;
+        } else if (hasBottomContent) {
+            textAreaBottomPx = bottomContentYPx - 4;
+        } else {
+            textAreaBottomPx = cardHPx - 8;
+        }
+
+        int visibleTextLineCount = Math.max(1, detailCount + 1);
+        float detailTextScale = getDetailTextScale(visibleTextLineCount);
+        float textSpacingPx = getPreferredTextLineSpacingPx(visibleTextLineCount);
+        float availablePx = Math.max(0, textAreaBottomPx - textAreaTopPx);
+
+        float detailsHeightPx = (visibleTextLineCount - 1) * textSpacingPx + 10;
+        float textStartYPx = textAreaTopPx;
+        if (availablePx > detailsHeightPx) {
+            textStartYPx += (availablePx - detailsHeightPx) / 2f;
+        }
+
+        return new ClassCardTextLayout(textStartYPx, textSpacingPx, detailTextScale,
+                bottomContentYPx, progressLabelYPx, textAreaBottomPx);
+    }
+
+    private float getDetailTextScale(int visibleTextLineCount) {
+        if (visibleTextLineCount <= 1) return 3.0f;
+        if (visibleTextLineCount == 2) return 2.9f;
+        if (visibleTextLineCount == 3) return 2.65f;
+        return 2.25f;
+    }
+
+    private record ClassCardTextLayout(float textStartYPx, float textSpacingPx, float detailTextScale,
+                                       float bottomContentYPx, float progressLabelYPx, float textAreaBottomYPx) {}
+
     private void drawCharCard(DrawContext ctx, ItemStack stack, String charId, float cx, float cy,
                                boolean hovered, boolean dropTarget) {
         CustomColor bgColor;
@@ -898,9 +971,9 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         List<String> details = extractClassDetails(stack, charId, progress, progressStyle);
         String description = ClassSelectionData.getClassDescription(charId);
         boolean hasDescription = description != null && !description.isBlank();
-        int detailStartYPx = hasDescription ? 23 : 24;
-        int detailSpacingPx = hasDescription ? 12 : 14;
-        float descriptionStartYPx = Math.max(66, detailStartYPx + details.size() * detailSpacingPx + 6);
+        boolean hasGamemodeIcons = gamemodeIcons != null && !gamemodeIcons.getString().isBlank();
+        boolean hasProgressBar = progressStyle == WynnExtrasConfig.ClassSelectionContentProgressStyle.PROGRESS_BAR && progress.found;
+        ClassCardTextLayout textLayout = getClassCardTextLayout(details.size(), hasDescription || hasGamemodeIcons, hasProgressBar);
 
         // Left accent bar
         ui.drawRect(cx, cy, px(3), cardLH, accent);
@@ -912,10 +985,16 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         }
 
         // Item icon
-        float iconAreaPx = 44;
-        float iconYPx = Math.max(6, (descriptionStartYPx - iconAreaPx) / 2f);
+        float cardHPx = cardLH / (float) scaleFactor;
+        float iconXPx = 10;
+        float iconAreaTopYPx = 6;
+        float iconAreaBottomYPx = textLayout.textAreaBottomYPx;
+        float iconAvailableHPx = Math.max(16, iconAreaBottomYPx - iconAreaTopYPx);
+        float maxIconSizePx = Math.min(cardHPx, iconAvailableHPx) * 0.95f;
+        float iconAreaPx = Math.min(Math.clamp(maxIconSizePx, 14, 48), cardHPx * 0.95f);
+        float iconYPx = iconAreaTopYPx + (iconAvailableHPx - iconAreaPx) / 2f;
         ctx.getMatrices().pushMatrix();
-        float sIX = ui.sx(cx + px(10));
+        float sIX = ui.sx(cx + px(iconXPx));
         float sIY = ui.sy(cy + px(iconYPx));
         ctx.getMatrices().translate(sIX, sIY);
         float iScale = iconAreaPx / 16f;
@@ -923,8 +1002,8 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         ctx.drawItem(stack, 0, 0);
         ctx.getMatrices().popMatrix();
 
-        if (gamemodeIcons != null && !gamemodeIcons.getString().isBlank()) {
-            drawOverlayText(gamemodeIcons, cx + cardLW - px(8), cy + cardLH - px(16),
+        if (hasGamemodeIcons) {
+            drawOverlayText(gamemodeIcons, cx + cardLW - px(8), cy + px(textLayout.bottomContentYPx),
                     CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.75f);
         }
 
@@ -941,30 +1020,35 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         CustomColor charNameColor = completionChroma && usesCompletionChromaForName()
                 ? WynncraftShaderColor.RAINBOW.color
                 : CustomColor.fromHexString("FFFFFF");
-        charName = truncate(charName, 24);
-        float textX = cx + px(iconAreaPx + 21);
-        float textNameY = cy + px(7);
-        drawOverlayText(charName, textX, textNameY, charNameColor, 2.55f);
+        float textX = cx + px(iconXPx + iconAreaPx + 16);
+        float textMaxWPx = cardLW / (float) scaleFactor - (textX - cx) / (float) scaleFactor - 8;
+        float nameTextScale = Math.max(2.55f, textLayout.detailTextScale);
+        charName = truncateToWidth(charName, textMaxWPx, nameTextScale);
+        float textNameY = cy + px(textLayout.textStartYPx);
+        drawOverlayText(charName, textX, textNameY, charNameColor, nameTextScale);
 
         for (int i = 0; i < details.size(); i++) {
-            drawOverlayText(details.get(i), textX, cy + px(detailStartYPx + i * detailSpacingPx),
+            String detail = truncateToWidth(details.get(i), textMaxWPx, textLayout.detailTextScale);
+            drawOverlayText(detail, textX, cy + px(textLayout.textStartYPx + (i + 1) * textLayout.textSpacingPx),
                     completionChroma && usesCompletionChromaForLines()
                             ? WynncraftShaderColor.RAINBOW.color
-                            : accent, 2.25f);
+                            : accent, textLayout.detailTextScale);
         }
 
         if (hasDescription) {
-            drawOverlayText(truncate(description.trim(), DESCRIPTION_MAX_LENGTH), cx + px(10), cy + px(descriptionStartYPx),
+            float descriptionMaxWPx = cardLW / (float) scaleFactor - 18;
+            if (hasGamemodeIcons) {
+                descriptionMaxWPx -= getTextWidthPx(gamemodeIcons.getString(), 2.75f) + 8;
+            }
+            String displayDescription = truncateToWidth(description.trim(), descriptionMaxWPx, 2.1f);
+            drawOverlayText(displayDescription, cx + px(10), cy + px(textLayout.bottomContentYPx),
                     CustomColor.fromHexString("BBBBBB"), 2.1f);
         }
 
-        if (progressStyle == WynnExtrasConfig.ClassSelectionContentProgressStyle.PROGRESS_BAR && progress.found) {
+        if (hasProgressBar) {
             float progressX = cx + px(10);
             float progressW = cardLW - px(20);
-            float progressLabelYPx = hasDescription
-                    ? descriptionStartYPx + 20
-                    : Math.max(68, detailStartYPx + details.size() * detailSpacingPx + 20);
-            float progressLabelY = cy + px(progressLabelYPx);
+            float progressLabelY = cy + px(textLayout.progressLabelYPx);
             drawOverlayCenteredText("Content Progress", cx + cardLW / 2f, progressLabelY,
                     CustomColor.fromHexString("CCCCCC"), 1.95f);
             drawContentProgress(progress, progressX, progressLabelY + px(8), progressW);
@@ -1419,9 +1503,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                     break; // use first image found
                 }
             }
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Failed to scan custom backgrounds: " + e.getMessage());
-        }
+        } catch (Exception ignored) { }
     }
 
     private static void loadBgTexture(String path) {
@@ -1445,9 +1527,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             NativeImageBackedTexture texture = new NativeImageBackedTexture(() -> "wynnextras_class_bg", image);
             bgTexture = Identifier.of("wynnextras", "class_bg_" + System.currentTimeMillis());
             MinecraftClient.getInstance().getTextureManager().registerTexture(bgTexture, texture);
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Failed to load custom background: " + e.getMessage());
-        }
+        } catch (Exception ignored) { }
     }
 
     public static void invalidateBackground() {
@@ -1557,6 +1637,24 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private String truncate(String text, int maxLen) {
         if (text.length() > maxLen) return text.substring(0, maxLen - 2) + "..";
         return text;
+    }
+
+    private String truncateToWidth(String text, float maxWidthPx, float textScale) {
+        if (getTextWidthPx(text, textScale) <= maxWidthPx) return text;
+
+        String suffix = "..";
+        int maxLen = text.length();
+        while (maxLen > suffix.length()) {
+            String truncated = text.substring(0, maxLen - suffix.length()) + suffix;
+            if (getTextWidthPx(truncated, textScale) <= maxWidthPx) return truncated;
+            maxLen--;
+        }
+        return suffix;
+    }
+
+    private float getTextWidthPx(String text, float textScale) {
+        return MinecraftClient.getInstance().textRenderer.getWidth(text)
+                * getOverlayTextScale(textScale) / (float) scaleFactor;
     }
 
     private String extractClassInfo(ItemStack stack) {
