@@ -4185,12 +4185,11 @@ public class BankOverlay2 extends WEHandledScreen {
             ui.drawImage(texture, x, y, width, height);
 
             // Draw character label above the page
-            String name = (characterNickname != null && !characterNickname.isEmpty())
-                    ? characterNickname
-                    : (characterId.length() > 8 ? characterId.substring(0, 8) + "..." : characterId);
-            String levelStr = characterLevel > 0 ? " Lv." + characterLevel : "";
+            String name = getDisplayName();
+            String levelStr = !isStaticStoragePage() && characterLevel > 0 ? " Lv." + characterLevel : "";
             String pageLabel = isPlayerInventoryPage() ? "Inventory" : "Page " + (pageNumber + 1);
-            ui.drawText("§e@" + name + levelStr + " §7" + pageLabel, x + 2, y - 9, YELLOW_TEXT_COLOR, 0.9f);
+            String prefix = isStaticStoragePage() ? "§e" : "§e@";
+            ui.drawText(prefix + name + levelStr + " §7" + pageLabel, x + 2, y - 9, YELLOW_TEXT_COLOR, 0.9f);
 
             if (items.isEmpty() && !hasAnyArmorItem()) {
                 setSlotsVisible(false);
@@ -4238,6 +4237,26 @@ public class BankOverlay2 extends WEHandledScreen {
             return type == CrossClassBankSearch.SearchResult.Type.PLAYER_INVENTORY;
         }
 
+        private boolean isMiscBucketPage() {
+            return type == CrossClassBankSearch.SearchResult.Type.MISC_BUCKET;
+        }
+
+        private boolean isTomeBookshelfPage() {
+            return type == CrossClassBankSearch.SearchResult.Type.TOME_BOOKSHELF;
+        }
+
+        private boolean isStaticStoragePage() {
+            return isMiscBucketPage() || isTomeBookshelfPage();
+        }
+
+        private String getDisplayName() {
+            if (isMiscBucketPage()) return "Misc Bucket";
+            if (isTomeBookshelfPage()) return "Tome Bookshelf";
+            if (characterNickname != null && !characterNickname.isEmpty()) return characterNickname;
+            if (characterId == null) return "Unknown";
+            return characterId.length() > 8 ? characterId.substring(0, 8) + "..." : characterId;
+        }
+
         private boolean hasAnyArmorItem() {
             for (ItemStack stack : armorItems) {
                 if (stack != null && !stack.isEmpty()) return true;
@@ -4261,13 +4280,19 @@ public class BankOverlay2 extends WEHandledScreen {
             // Dim overlay
             ui.drawRect(x, y, width, height, CustomColor.fromHSV(40, 0.4f, 0.8f, 0.2f));
 
-            // Border color: green for current character, blue for account, orange for others
-            String borderColor = isCurrentCharacter() ? "55FF55" : isAccountBank() ? "5555FF" : "FFAA00";
+            String borderColor = isCurrentCharacter()
+                    ? "55FF55"
+                    : isAccountBank() ? "5555FF"
+                    : isMiscBucketPage() ? "55FFFF"
+                    : isTomeBookshelfPage() ? "AA55FF"
+                    : "FFAA00";
             ui.drawRectBorders(x, y + 0.5f, x + 164, y + 92, CustomColor.fromHexString(borderColor));
 
             // Hint text
             String hint;
-            if (isCurrentCharacter()) {
+            if (isStaticStoragePage()) {
+                hint = "";
+            } else if (isCurrentCharacter()) {
                 hint = currentOverlayType == BankOverlayType.CHARACTER ? "§7Click to go to page" : "§7Click to switch to character bank";
             } else if (isAccountBank()) {
                 hint = currentOverlayType == BankOverlayType.ACCOUNT ? "§7Click to go to page" : "§7Click to switch to account bank";
@@ -4279,6 +4304,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            if (isStaticStoragePage()) return true;
             if (button == 0) {
                 McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 
@@ -4353,6 +4379,7 @@ public class BankOverlay2 extends WEHandledScreen {
         @Override
         public boolean mouseClicked(double mx, double my, int button) {
             if (!visible || !enabled) return false;
+            if (isStaticStoragePage() && contains((int) mx, (int) my)) return true;
             for (int i = slots.size() - 1; i >= 0; i--) {
                 if (slots.get(i).mouseClicked(mx, my, button)) return true;
             }

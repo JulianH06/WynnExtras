@@ -47,7 +47,11 @@ public class CrossClassBankSearch {
             boolean includeAccountBank,
             boolean allPages,
             Map<Integer, List<ItemStack>> accountBankPages,
-            int accountLastPage
+            int accountLastPage,
+            Map<Integer, List<ItemStack>> miscBucketPages,
+            int miscBucketLastPage,
+            Map<Integer, List<ItemStack>> bookshelfPages,
+            int bookshelfLastPage
     ) {}
 
     private record CachedWeaponData(List<CharacterWeaponData> characters, long loadedAtMs) {}
@@ -60,7 +64,9 @@ public class CrossClassBankSearch {
     public static class SearchResult {
         public enum Type {
             BANK_PAGE,
-            PLAYER_INVENTORY
+            PLAYER_INVENTORY,
+            MISC_BUCKET,
+            TOME_BOOKSHELF
         }
 
         public final String characterId;
@@ -109,6 +115,18 @@ public class CrossClassBankSearch {
         int accountLastPage = includeAccountBank && AccountBankData.INSTANCE != null
                 ? AccountBankData.INSTANCE.getLastPage()
                 : 0;
+        Map<Integer, List<ItemStack>> miscBucketPages = includeAccountBank
+                ? snapshotBankPages(MiscBucketData.INSTANCE)
+                : Collections.emptyMap();
+        int miscBucketLastPage = includeAccountBank && MiscBucketData.INSTANCE != null
+                ? MiscBucketData.INSTANCE.getLastPage()
+                : 0;
+        Map<Integer, List<ItemStack>> bookshelfPages = includeAccountBank
+                ? snapshotBankPages(BookshelfData.INSTANCE)
+                : Collections.emptyMap();
+        int bookshelfLastPage = includeAccountBank && BookshelfData.INSTANCE != null
+                ? BookshelfData.INSTANCE.getLastPage()
+                : 0;
 
         return new SearchRequest(
                 configDir,
@@ -118,7 +136,11 @@ public class CrossClassBankSearch {
                 includeAccountBank,
                 allPages,
                 accountBankPages,
-                accountLastPage
+                accountLastPage,
+                miscBucketPages,
+                miscBucketLastPage,
+                bookshelfPages,
+                bookshelfLastPage
         );
     }
 
@@ -138,29 +160,26 @@ public class CrossClassBankSearch {
                 ? null
                 : SearchQueryParser.parse(request.query());
 
+        List<SearchResult> miscBucketResults = Collections.emptyList();
+        List<SearchResult> bookshelfResults = Collections.emptyList();
         if (request.includeAccountBank()) {
             results.addAll(request.allPages()
                     ? getAccountBankPages(request.accountBankPages(), request.accountLastPage())
                     : searchAccountBank(request.accountBankPages(), parsedQuery));
+            miscBucketResults = request.allPages()
+                    ? getStoragePages(request.miscBucketPages(), request.miscBucketLastPage(), "__misc_bucket__", "Misc Bucket", SearchResult.Type.MISC_BUCKET)
+                    : searchStoragePages(request.miscBucketPages(), parsedQuery, "__misc_bucket__", "Misc Bucket", SearchResult.Type.MISC_BUCKET);
+            bookshelfResults = request.allPages()
+                    ? getStoragePages(request.bookshelfPages(), request.bookshelfLastPage(), "__tome_bookshelf__", "Tome Bookshelf", SearchResult.Type.TOME_BOOKSHELF)
+                    : searchStoragePages(request.bookshelfPages(), parsedQuery, "__tome_bookshelf__", "Tome Bookshelf", SearchResult.Type.TOME_BOOKSHELF);
         }
 
-        if (request.configDir() == null || !Files.exists(request.configDir())) return results;
-
-        List<Path> bankFiles = listCharacterBankFiles(request.configDir());
-        if (bankFiles.isEmpty()) return results;
-
-        List<CompletableFuture<List<SearchResult>>> futures = bankFiles.stream()
-                .map(file -> CompletableFuture.supplyAsync(() -> searchCharacterFile(file, request, parsedQuery), SEARCH_EXECUTOR))
-                .toList();
-
-        for (CompletableFuture<List<SearchResult>> future : futures) {
-            try {
-                results.addAll(future.join());
-            } catch (CompletionException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Error searching character bank file: " + e.getMessage());
-            }
+        if (request.configDir() != null && Files.exists(request.configDir())) {
+            results.addAll(searchCharacterFiles(listCharacterBankFiles(request.configDir()), request, parsedQuery));
         }
 
+        results.addAll(miscBucketResults);
+        results.addAll(bookshelfResults);
         return results;
     }
 
@@ -303,6 +322,21 @@ public class CrossClassBankSearch {
         } catch (Exception e) {
             WynnExtras.LOGGER.error("[WynnExtras] Error loading account bank pages: " + e.getMessage());
         }
+        return results;
+    }
+
+    private static List<SearchResult> getStoragePages(Map<Integer, List<ItemStack>> pages, int lastPage, String storageId, String storageName, SearchResult.Type type) {
+        List<SearchResult> results = new ArrayList<>();
+        try {
+            if (pages == null) return results;
+
+            int pageCount = Math.clamp(lastPage, pages.size(), CHARACTER_BANK_MAX_PAGES);
+            for (int pageNum = 0; pageNum < pageCount; pageNum++) {
+                List<ItemStack> pageItems = pages.get(pageNum);
+                if (pageItems == null) pageItems = Collections.emptyList();
+                results.add(new SearchResult(storageId, storageName, 0, pageNum, pageItems, pageItems, Collections.emptyList(), type));
+            }
+        } catch (Exception ignored) { }
         return results;
     }
 
@@ -450,6 +484,28 @@ public class CrossClassBankSearch {
         return results;
     }
 
+    private static List<SearchResult> searchStoragePages(Map<Integer, List<ItemStack>> pages, SearchQueryParser.ParsedQuery query, String storageId, String storageName, SearchResult.Type type) {
+        List<SearchResult> results = new ArrayList<>();
+        try {
+            if (pages == null) return results;
+
+            for (Map.Entry<Integer, List<ItemStack>> entry : pages.entrySet()) {
+                int pageNum = entry.getKey();
+                List<ItemStack> pageItems = entry.getValue();
+                if (pageItems == null) continue;
+
+                List<ItemStack> matchingItems = new ArrayList<>();
+                for (ItemStack stack : pageItems) {
+                    if (matchesStack(stack, query)) matchingItems.add(stack);
+                }
+                if (!matchingItems.isEmpty()) {
+                    results.add(new SearchResult(storageId, storageName, 0, pageNum, matchingItems, pageItems, Collections.emptyList(), type));
+                }
+            }
+        } catch (Exception ignored) { }
+        return results;
+    }
+
     private static List<SearchResult> searchCharacterFile(Path file, SearchRequest request, SearchQueryParser.ParsedQuery parsedQuery) {
         String characterId = getCharacterId(file);
 
@@ -461,6 +517,36 @@ public class CrossClassBankSearch {
         return request.allPages()
                 ? loadAllPagesFromCharacter(file, characterId, request.currentCharacterId())
                 : searchCharacterBank(file, characterId, parsedQuery, request.currentCharacterId());
+    }
+
+    private static List<SearchResult> searchCharacterFiles(List<Path> bankFiles, SearchRequest request, SearchQueryParser.ParsedQuery parsedQuery) {
+        List<SearchResult> results = new ArrayList<>();
+        if (bankFiles.isEmpty()) return results;
+
+        String currentCharacterId = request.currentCharacterId();
+        if (request.includeCurrentCharacter() && currentCharacterId != null) {
+            for (Path file : bankFiles) {
+                if (Objects.equals(getCharacterId(file), currentCharacterId)) {
+                    results.addAll(searchCharacterFile(file, request, parsedQuery));
+                    break;
+                }
+            }
+        }
+
+        List<CompletableFuture<List<SearchResult>>> futures = bankFiles.stream()
+                .filter(file -> !Objects.equals(getCharacterId(file), currentCharacterId))
+                .map(file -> CompletableFuture.supplyAsync(() -> searchCharacterFile(file, request, parsedQuery), SEARCH_EXECUTOR))
+                .toList();
+
+        for (CompletableFuture<List<SearchResult>> future : futures) {
+            try {
+                results.addAll(future.join());
+            } catch (CompletionException e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Error searching character bank file: " + e.getMessage());
+            }
+        }
+
+        return results;
     }
 
     private static List<Path> listCharacterBankFiles(Path configDir) {
@@ -475,7 +561,10 @@ public class CrossClassBankSearch {
     }
 
     private static Map<Integer, List<ItemStack>> snapshotAccountBankPages() {
-        AccountBankData data = AccountBankData.INSTANCE;
+        return snapshotBankPages(AccountBankData.INSTANCE);
+    }
+
+    private static Map<Integer, List<ItemStack>> snapshotBankPages(BankData data) {
         if (data == null || data.getBankPages() == null) return Collections.emptyMap();
 
         return data.getBankPages().entrySet().stream()
