@@ -229,40 +229,9 @@ public class CrossClassBankSearch {
                 SearchResult inventoryResult = searchPlayerInventory(characterId, nickname, level, data, query);
                 if (inventoryResult != null) results.add(inventoryResult);
             }
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error parsing character bank file " + file + ": " + e.getMessage());
-        }
+        } catch (Exception ignored) { }
 
         return results;
-    }
-
-    /**
-     * Get all character IDs that have bank data saved
-     */
-    public static List<String> getAllCharacterIds() {
-        List<String> ids = new ArrayList<>();
-
-        if (McUtils.player() == null) return ids;
-
-        Path configDir = FabricLoader.getInstance().getConfigDir()
-                .resolve("wynnextras/" + McUtils.player().getUuid().toString());
-
-        if (!Files.exists(configDir)) return ids;
-
-        try (Stream<Path> files = Files.list(configDir)) {
-            files.filter(CrossClassBankSearch::isCharacterBankFile)
-                 .forEach(file -> {
-                     String characterId = getCharacterId(file);
-                     if (isNullClassName(characterId)) return;
-                     ids.add(characterId);
-                 });
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error listing character bank files: " + e.getMessage());
-        }
-
-        return ids;
     }
 
     public static ItemStack findLastHeldWeaponForClassSelection(String stableId, String name, String classType, int level,
@@ -319,9 +288,7 @@ public class CrossClassBankSearch {
                 if (pageItems == null) pageItems = Collections.emptyList();
                 results.add(new SearchResult("__account__", "Account Bank", 0, pageNum, pageItems, pageItems));
             }
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error loading account bank pages: " + e.getMessage());
-        }
+        } catch (Exception ignored) { }
         return results;
     }
 
@@ -407,11 +374,7 @@ public class CrossClassBankSearch {
                         weaponInInventory,
                         modifiedAtMs
                 ));
-            } catch (IOException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
-            } catch (Exception e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Error parsing character bank file " + file + ": " + e.getMessage());
-            }
+            } catch (Exception ignored) { }
         }
 
         CLASS_SELECTION_WEAPON_CACHE.put(configDir, new CachedWeaponData(characters, now));
@@ -478,9 +441,7 @@ public class CrossClassBankSearch {
                     results.add(new SearchResult("__account__", "Account Bank", 0, pageNum, matchingItems, pageItems));
                 }
             }
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error searching account bank: " + e.getMessage());
-        }
+        } catch (Exception ignored) { }
         return results;
     }
 
@@ -541,9 +502,7 @@ public class CrossClassBankSearch {
         for (CompletableFuture<List<SearchResult>> future : futures) {
             try {
                 results.addAll(future.join());
-            } catch (CompletionException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Error searching character bank file: " + e.getMessage());
-            }
+            } catch (CompletionException ignored) { }
         }
 
         return results;
@@ -555,7 +514,6 @@ public class CrossClassBankSearch {
                     .filter(CrossClassBankSearch::isCharacterBankFile)
                     .toList();
         } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error listing character bank files: " + e.getMessage());
             return Collections.emptyList();
         }
     }
@@ -599,17 +557,14 @@ public class CrossClassBankSearch {
         try (Reader reader = Files.newBufferedReader(file)) {
             BankData data = BankData.getGson().fromJson(reader, CharacterBankData.class);
             if (data == null || data.getBankPages() == null) {
-                WynnExtras.LOGGER.info("[WynnExtras] No bank data for character: " + characterId);
                 return results;
             }
             if (isInvalidCharacterBank(characterId, data)) {
-                WynnExtras.LOGGER.info("[WynnExtras] Skipping invalid character bank: " + characterId);
                 return results;
             }
 
             String nickname = data.getCharacterNickname();
             int level = data.getCharacterLevel();
-            WynnExtras.LOGGER.info("[WynnExtras] Character " + characterId + " (" + nickname + " Lv." + level + ") has " + data.getBankPages().size() + " pages");
 
             int pageCount = Math.min(Math.max(data.getLastPage(), data.getBankPages().size()), CHARACTER_BANK_MAX_PAGES);
             for (int pageNum = 0; pageNum < pageCount; pageNum++) {
@@ -629,12 +584,7 @@ public class CrossClassBankSearch {
                         SearchResult.Type.PLAYER_INVENTORY
                 ));
             }
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error parsing character bank file " + file + ": " + e.getMessage());
-            e.printStackTrace();
-        }
+        } catch (Exception ignored) { }
 
         return results;
     }

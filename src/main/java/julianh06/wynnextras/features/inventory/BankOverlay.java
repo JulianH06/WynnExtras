@@ -78,6 +78,8 @@ public class BankOverlay {
     private static final boolean FORCE_MISSING_CHARACTER_ID_FOR_TESTING = false;
 
     private static boolean registeredScroll = false;
+    private static Screen registeredScrollScreen = null;
+    private static int registeredScrollSyncId = -1;
     private static long lastHeldWeaponCheckMs = 0;
     private static String lastPersistedHeldWeaponKey = "";
 
@@ -95,6 +97,8 @@ public class BankOverlay {
 
     public static void resetScrollRegistration() {
         registeredScroll = false;
+        registeredScrollScreen = null;
+        registeredScrollSyncId = -1;
     }
 
     public static int getCurrentMaxPages() {
@@ -287,8 +291,17 @@ public class BankOverlay {
 
             Screen currScreen = McUtils.mc().currentScreen;
             if(currScreen == null) {
-                registeredScroll = false;
+                resetScrollRegistration();
                 return;
+            }
+
+            if(currScreenHandler == null) {
+                resetScrollRegistration();
+                return;
+            }
+
+            if(registeredScroll && (registeredScrollScreen != currScreen || registeredScrollSyncId != currScreenHandler.syncId)) {
+                resetScrollRegistration();
             }
 
             if(registeredScroll) return;
@@ -299,6 +312,8 @@ public class BankOverlay {
 
             if(BankOverlay.currentOverlayType != BankOverlayType.NONE) {
                 registeredScroll = true;
+                registeredScrollScreen = currScreen;
+                registeredScrollSyncId = currScreenHandler.syncId;
                 ScreenMouseEvents.afterMouseScroll(MinecraftClient.getInstance().currentScreen).register((
                         screen,
                         mX,
@@ -340,10 +355,11 @@ public class BankOverlay {
         activeInvSlots.clear();
         annotationCache.clear();
         heldItem = Items.AIR.getDefaultStack();
-        registeredScroll = false;
+        resetScrollRegistration();
         lastHeldWeaponCheckMs = 0;
         lastPersistedHeldWeaponKey = "";
         BankOverlay2.invalidateBagTotalCache();
+        BankOverlay2.resetInteractionBlockers();
         BankOverlaySlotBridge.restoreAll();
     }
 }

@@ -197,6 +197,7 @@ public class WynnExtrasConfig {
     public boolean toggleBankOverlay = true;
     public boolean smoothScrollToggle = true;
     public boolean bankQuickToggle = true;
+    public boolean bankAllCharactersBrowseMode = false;
     public int bankOverlayMaxRows = 3;
     public int bankOverlayMaxColumns = 3;
     public boolean bankOverlayHideEmptyRows = false;

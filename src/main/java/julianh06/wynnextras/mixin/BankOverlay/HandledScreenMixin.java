@@ -248,12 +248,14 @@ public abstract class HandledScreenMixin {
         // Auto-click if exactly one match \u2014 clear targets first to prevent re-queuing
         if (matchCount == 1 && matchSlot != null) {
             julianh06.wynnextras.features.bankoverlay.BankOverlay2.clearTargetCharacterForClassMenu();
-            final int syncId = handler.syncId;
             final int slotId = matchSlot.id;
             julianh06.wynnextras.utils.TickScheduler.runAfterTicks(3, () -> {
                 MinecraftClient mc = MinecraftClient.getInstance();
-                if (mc.interactionManager != null && mc.player != null) {
-                    mc.interactionManager.clickSlot(syncId, slotId, 0, net.minecraft.screen.slot.SlotActionType.PICKUP, mc.player);
+                if (mc.interactionManager != null && mc.player != null && mc.player.currentScreenHandler != null) {
+                    ScreenHandler liveHandler = mc.player.currentScreenHandler;
+                    if (slotId >= 0 && slotId < liveHandler.slots.size()) {
+                        mc.interactionManager.clickSlot(liveHandler.syncId, slotId, 0, net.minecraft.screen.slot.SlotActionType.PICKUP, mc.player);
+                    }
                 }
             });
         }
@@ -476,6 +478,9 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "close", at = @At("HEAD"))
     public void onClose(CallbackInfo ci) {
+        boolean wasWaiting = shouldWait;
+        boolean wasBankTypeSwitching = BankOverlay2.isBankTypeSwitchInProgress();
+        BankOverlay2.resetInteractionBlockers();
         BankOverlaySlotBridge.restoreAll();
         craftingHelperOverlay = null;
         classSelectionOverlay = null;
@@ -515,7 +520,8 @@ public abstract class HandledScreenMixin {
         if (currentOverlayType != BankOverlayType.NONE) {
             heldItem = Items.AIR.getDefaultStack();
 
-            if (Pages != null && activeInv != -1 && !shouldWait && !BankOverlay.isCharacterBankMissingCharacterId()) {
+            if (Pages != null && activeInv != -1 && !wasWaiting && !BankOverlay.isCharacterBankMissingCharacterId()
+                    && !wasBankTypeSwitching) {
                 List<ItemStack> stacks = new ArrayList<>();
                 Inventory playerInv = client.player.getInventory();
                 for (Slot slot : currScreenHandler.slots) {
