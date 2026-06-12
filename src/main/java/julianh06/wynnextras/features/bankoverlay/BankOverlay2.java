@@ -53,6 +53,7 @@ import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.SearchQueryParser;
 import julianh06.wynnextras.utils.WynntilsHighlightUtils;
 import julianh06.wynnextras.utils.UI.*;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -98,6 +99,7 @@ import static com.wynntils.utils.wynn.ContainerUtils.shiftClickOnSlot;
 import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 
 public class BankOverlay2 extends WEHandledScreen {
+    private static final boolean MOUSE_TWEAKS_LOADED = FabricLoader.getInstance().isModLoaded("mousetweaks");
     private static final Pattern POTIONS_USES_PATTERN = Pattern.compile("\\[(\\d+)/(\\d+)]");
     private static final Pattern MINECRAFT_FORMATTING_CODE_PATTERN = Pattern.compile("\u00a7[0-9a-fk-or]");
     private static final EmeraldUnits[] EMERALD_UNITS = EmeraldUnits.values();
@@ -255,8 +257,11 @@ public class BankOverlay2 extends WEHandledScreen {
     static int shownPages;
 
     private static boolean isMouseInOverlay = false;
+    private static PendingRightClick pendingMouseTweaksRightClick = null;
 
     private static int scissorx1, scissory1, scissorx2, scissory2;
+
+    private record PendingRightClick(SlotWidget slotWidget, Slot backingSlot, double startX, double startY) {}
 
     private static long lastClickTime = 0;
 
@@ -357,6 +362,7 @@ public class BankOverlay2 extends WEHandledScreen {
         resetReloadPageReadiness();
         reloadNextPageCustomModelData = null;
         reloadBankWidget = null;
+        pendingMouseTweaksRightClick = null;
         signMids.clear();
         inventoryWidget = null;
         switchButtonWidget = null;
@@ -1356,6 +1362,7 @@ public class BankOverlay2 extends WEHandledScreen {
         isReloading = false;
         resetReloadPageReadiness();
         reloadNextPageCustomModelData = null;
+        pendingMouseTweaksRightClick = null;
         BankOverlay.resetScrollRegistration();
         BankOverlaySlotBridge.restoreAll();
         clearHoverState(MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?> handledScreen ? handledScreen : null);
@@ -1844,6 +1851,67 @@ public class BankOverlay2 extends WEHandledScreen {
         );
     }
 
+    private boolean shouldDeferMouseTweaksRightClick(double x, double y, int button) {
+        if (!MOUSE_TWEAKS_LOADED || button != 1 || screen == null) return false;
+        ScreenHandler handler = screen.getScreenHandler();
+        return handler != null && !handler.getCursorStack().isEmpty() && BankOverlaySlotBridge.getExposedSlotAt(screen, x, y) != null;
+    }
+
+    private SlotWidget getLiveSlotWidgetAt(double x, double y) {
+        if (inventoryWidget != null) {
+            for (int i = inventoryWidget.slots.size() - 1; i >= 0; i--) {
+                SlotWidget slot = inventoryWidget.slots.get(i);
+                if (slot.isVisible() && slot.isEnabled() && slot.contains((int) x, (int) y)) return slot;
+            }
+        }
+
+        if (activeInv >= 0 && activeInv < pages.size()) {
+            PageWidget page = pages.get(activeInv);
+            for (int i = page.slots.size() - 1; i >= 0; i--) {
+                SlotWidget slot = page.slots.get(i);
+                if (slot.isVisible() && slot.isEnabled() && slot.contains((int) x, (int) y)) return slot;
+            }
+        }
+
+        return null;
+    }
+
+    private boolean deferMouseTweaksRightClickIfNeeded(double x, double y, int button) {
+        if (!shouldDeferMouseTweaksRightClick(x, y, button)) return false;
+
+        SlotWidget slotWidget = getLiveSlotWidgetAt(x, y);
+        Slot backingSlot = BankOverlaySlotBridge.getExposedSlotAt(screen, x, y);
+        if (slotWidget == null || backingSlot == null) return false;
+
+        pendingMouseTweaksRightClick = new PendingRightClick(slotWidget, backingSlot, x, y);
+        return true;
+    }
+
+    private void updatePendingMouseTweaksRightClick(double x, double y) {
+        if (pendingMouseTweaksRightClick == null || screen == null) return;
+
+        Slot currentSlot = BankOverlaySlotBridge.getExposedSlotAt(screen, x, y);
+        if (currentSlot != pendingMouseTweaksRightClick.backingSlot()) {
+            pendingMouseTweaksRightClick = null;
+        }
+    }
+
+    private boolean releasePendingMouseTweaksRightClick(double x, double y, int button) {
+        if (button != 1 || pendingMouseTweaksRightClick == null) return false;
+
+        PendingRightClick pending = pendingMouseTweaksRightClick;
+        pendingMouseTweaksRightClick = null;
+
+        double movedX = Math.abs(x - pending.startX());
+        double movedY = Math.abs(y - pending.startY());
+        if (screen == null || movedX > 4 || movedY > 4 || BankOverlaySlotBridge.getExposedSlotAt(screen, x, y) != pending.backingSlot()) {
+            return true;
+        }
+
+        pending.slotWidget().clickLiveSlot(button);
+        return true;
+    }
+
     @Override
     public boolean mouseClicked(double x, double y, int button) {
         Container container = Models.Container.getCurrentContainer();
@@ -1864,6 +1932,8 @@ public class BankOverlay2 extends WEHandledScreen {
         if(reloadBankWidget != null && reloadBankWidget.mouseClicked(x, y, button)) return true;
         if(switchButtonWidget != null && switchButtonWidget.mouseClicked(x, y, button)) return true;
         if(quickActionWidget != null && quickActionWidget.mouseClicked(x, y, button)) return true;
+
+        if (deferMouseTweaksRightClickIfNeeded(x, y, button)) return true;
 
         boolean characterBankUnavailable = BankOverlay.isCharacterBankMissingCharacterId();
         if (!characterBankUnavailable) {
@@ -1889,11 +1959,13 @@ public class BankOverlay2 extends WEHandledScreen {
     @Override
     public boolean mouseReleased(double x, double y, int button) {
         if(scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
+        if (releasePendingMouseTweaksRightClick(x, y, button)) return true;
         return super.mouseReleased(x, y, button);
     }
 
     @Override
     public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        if (button == 1) updatePendingMouseTweaksRightClick(x, y);
         if(searchbar2 != null && searchbar2.mouseDragged(x, y, button, dx, dy)) return true;
         for(PageWidget page : pages) {
             if(page.mouseDragged(x, y, button, dx, dy)) return true;
@@ -2531,6 +2603,7 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private void renderHeldItemOverlay(DrawContext context, int mouseX, int mouseY) {
+        syncHeldItemFromCursorStack();
         if (heldItem == null) return;
 
         int guiScale = MinecraftClient.getInstance().options.getGuiScale().getValue() + 1;
@@ -2538,6 +2611,13 @@ public class BankOverlay2 extends WEHandledScreen {
 
         context.drawItem(heldItem, mouseX - 2 * guiScale, mouseY - 2 * guiScale);
         context.drawStackOverlay(MinecraftClient.getInstance().textRenderer, heldItem, mouseX - 2 * guiScale, mouseY - 2 * guiScale, amountString);
+    }
+
+    private void syncHeldItemFromCursorStack() {
+        if (screen == null || screen.getScreenHandler() == null) return;
+
+        ItemStack cursorStack = screen.getScreenHandler().getCursorStack();
+        heldItem = cursorStack.isEmpty() ? Items.AIR.getDefaultStack() : cursorStack.copy();
     }
 
     private static boolean shouldCancelEmeraldPouch(ItemStack oldHeld, ItemStack newHeld) {
@@ -4036,6 +4116,43 @@ public class BankOverlay2 extends WEHandledScreen {
             return actionType;
         }
 
+        private boolean clickLiveSlot(int button) {
+            if(index == 4 && isInventorySlot) return false; //Ingredient pouch, clicking it within the bank overlay crashes the game
+            if(index == 34 && isInventorySlot) return false; //Compass, clicking it within the bank overlay crashes the game
+            if(index == 35 && isInventorySlot) return false; //Content book, clicking it within the bank overlay crashes the game
+
+            ScreenHandler liveHandler = getLiveScreenHandlerForClick();
+            int slotIndex = index + (isInventorySlot ? 54 : 0);
+            if (liveHandler == null || slotIndex < 0 || slotIndex >= liveHandler.slots.size()) {
+                resetInteractionBlockers();
+                return false;
+            }
+
+            SlotActionType action = determineActionType(button);
+
+            ItemStack oldHeld = heldItem;
+            heldItem = getHeldItem(slotIndex, action, button);
+
+            if(heldItem.getCustomName() != null) {
+                if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
+                    heldItem = oldHeld == null ? Items.AIR.getDefaultStack() : oldHeld;
+                    return false;
+                }
+            }
+
+            if (shouldCancelEmeraldPouch(oldHeld, heldItem)) {
+                heldItem = Items.AIR.getDefaultStack();
+            }
+
+            if (MinecraftClient.getInstance().interactionManager == null) return false;
+
+            MinecraftClient.getInstance().interactionManager.clickSlot(liveHandler.syncId, slotIndex, button, action, MinecraftClient.getInstance().player);
+            bankSyncid = liveHandler.syncId;
+            clearAnnotationCache(inventoryIndex);
+            lastClickedSlot = new Pair<>(inventoryIndex, index);
+            return true;
+        }
+
         @Override
         protected boolean onClick(int button) {
             if (button == 2) {
@@ -4054,39 +4171,7 @@ public class BankOverlay2 extends WEHandledScreen {
             if(inventoryIndex >= currentData.getLastPage() && !isInventorySlot) return false;
 
             if(activeInv == inventoryIndex || isInventorySlot) {
-                if(index == 4 && isInventorySlot) return false; //Ingredient pouch, clicking it within the bank overlay crashes the game
-                if(index == 34 && isInventorySlot) return false; //Compass, clicking it within the bank overlay crashes the game
-                if(index == 35 && isInventorySlot) return false; //Content book, clicking it within the bank overlay crashes the game
-
-                ScreenHandler liveHandler = getLiveScreenHandlerForClick();
-                int slotIndex = index + (isInventorySlot ? 54 : 0);
-                if (liveHandler == null || slotIndex < 0 || slotIndex >= liveHandler.slots.size()) {
-                    resetInteractionBlockers();
-                    return false;
-                }
-
-                SlotActionType action = determineActionType(button);
-
-                ItemStack oldHeld = heldItem;
-                heldItem = getHeldItem(slotIndex, action, button);
-
-                if(heldItem.getCustomName() != null) {
-                    if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
-                        heldItem = oldHeld == null ? Items.AIR.getDefaultStack() : oldHeld;
-                        return false;
-                    }
-                }
-
-                if (shouldCancelEmeraldPouch(oldHeld, heldItem)) {
-                    heldItem = Items.AIR.getDefaultStack();
-                }
-
-                if (MinecraftClient.getInstance().interactionManager == null) return false;
-
-                MinecraftClient.getInstance().interactionManager.clickSlot(liveHandler.syncId, slotIndex, button, action, MinecraftClient.getInstance().player);
-                bankSyncid = liveHandler.syncId;
-                clearAnnotationCache(inventoryIndex);
-                lastClickedSlot = new Pair<>(inventoryIndex, index);
+                clickLiveSlot(button);
             } else if(!hasHeldItem()) {
                 if (isJumpInProgress()) return true;
                 if (BankOverlay.isCharacterBankMissingCharacterId()) return false;
