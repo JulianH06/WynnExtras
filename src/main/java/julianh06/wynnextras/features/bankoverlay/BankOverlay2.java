@@ -264,8 +264,14 @@ public class BankOverlay2 extends WEHandledScreen {
     private record PendingRightClick(SlotWidget slotWidget, Slot backingSlot, double startX, double startY) {}
 
     private static long lastClickTime = 0;
+    private static final long DOUBLE_CLICK_INTERVAL_MS = 500L;
 
     private static Pair<Integer, Integer> lastClickedSlot = new Pair<>(-1, -1);
+    private static ItemStack lastQuickMoved = ItemStack.EMPTY;
+    private static boolean dragSplitting = false;
+    private static int dragSplittingButton = -1;
+    private static final Set<Integer> dragSplittingSlots = new LinkedHashSet<>();
+    private static SlotWidget dragSplittingFallbackSlot = null;
 
     private static final List<ItemStack> EMPTY_BANK_PAGE = Collections.nCopies(45, Items.AIR.getDefaultStack());
     private static final List<ItemStack> EMPTY_PLAYER_INVENTORY = Collections.nCopies(36, Items.AIR.getDefaultStack());
@@ -363,6 +369,7 @@ public class BankOverlay2 extends WEHandledScreen {
         reloadNextPageCustomModelData = null;
         reloadBankWidget = null;
         pendingMouseTweaksRightClick = null;
+        resetDragSplitting();
         signMids.clear();
         inventoryWidget = null;
         switchButtonWidget = null;
@@ -1914,6 +1921,10 @@ public class BankOverlay2 extends WEHandledScreen {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
+        return mouseClicked(x, y, button, false);
+    }
+
+    public boolean mouseClicked(double x, double y, int button, boolean doubleClick) {
         Container container = Models.Container.getCurrentContainer();
         boolean inBank = container instanceof AccountBankContainer ||
                 container instanceof CharacterBankContainer ||
@@ -1939,7 +1950,7 @@ public class BankOverlay2 extends WEHandledScreen {
         if (!characterBankUnavailable) {
             int regularPageCount = getRenderableRegularPageCount();
             for(int i = 0; i < regularPageCount; i++) {
-                pages.get(i).mouseClicked(x, y, button);
+                pages.get(i).mouseClicked(x, y, button, doubleClick);
             }
         }
         // Handle clicks on cross-class search results
@@ -1952,13 +1963,14 @@ public class BankOverlay2 extends WEHandledScreen {
             }
         }
         if (characterBankUnavailable) return true;
-        if(inventoryWidget != null) inventoryWidget.mouseClicked(x, y, button);
+        if(inventoryWidget != null) inventoryWidget.mouseClicked(x, y, button, doubleClick);
         return true;
     }
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
         if(scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
+        if (finishDragSplitting(x, y, button)) return true;
         if (releasePendingMouseTweaksRightClick(x, y, button)) return true;
         return super.mouseReleased(x, y, button);
     }
@@ -1966,6 +1978,10 @@ public class BankOverlay2 extends WEHandledScreen {
     @Override
     public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
         if (button == 1) updatePendingMouseTweaksRightClick(x, y);
+        if (dragSplitting && button == dragSplittingButton) {
+            addDragSplittingSlotAt(x, y);
+            return true;
+        }
         if(searchbar2 != null && searchbar2.mouseDragged(x, y, button, dx, dy)) return true;
         for(PageWidget page : pages) {
             if(page.mouseDragged(x, y, button, dx, dy)) return true;
@@ -1974,6 +1990,167 @@ public class BankOverlay2 extends WEHandledScreen {
             if(page.mouseDragged(x, y, button, dx, dy)) return true;
         }
         return super.mouseDragged(x, y, button, dx, dy);
+    }
+
+    private static void resetDragSplitting() {
+        dragSplitting = false;
+        dragSplittingButton = -1;
+        dragSplittingSlots.clear();
+        dragSplittingFallbackSlot = null;
+    }
+
+    private static boolean beginDragSplitting(SlotWidget slotWidget, int button) {
+        if (button != 0 && button != 1) return false;
+        if (!hasHeldItem()) return false;
+        if (slotWidget == null || !slotWidget.canUseLiveSlot()) return false;
+        if (getLiveScreenHandlerForClick() == null) return false;
+
+        dragSplitting = true;
+        dragSplittingButton = button;
+        dragSplittingSlots.clear();
+        dragSplittingFallbackSlot = slotWidget;
+        return true;
+    }
+
+    private static void addDragSplittingSlotAt(double x, double y) {
+        SlotWidget slotWidget = getLiveSlotWidgetAtStatic(x, y);
+        if (slotWidget == null || !slotWidget.canUseLiveSlot()) return;
+
+        int slotIndex = slotWidget.getLiveSlotIndex();
+        ScreenHandler liveHandler = getLiveScreenHandlerForClick();
+        if (liveHandler == null || slotIndex < 0 || slotIndex >= liveHandler.slots.size()) return;
+
+        Slot liveSlot = liveHandler.slots.get(slotIndex);
+        if (!canDragSplitIntoSlot(liveSlot)) return;
+        dragSplittingSlots.add(slotIndex);
+    }
+
+    private static boolean finishDragSplitting(double x, double y, int button) {
+        if (!dragSplitting) return false;
+        if (button != dragSplittingButton) {
+            resetDragSplitting();
+            return true;
+        }
+
+        ScreenHandler liveHandler = getLiveScreenHandlerForClick();
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (liveHandler != null && mc.interactionManager != null && mc.player != null && !dragSplittingSlots.isEmpty()) {
+            int syncId = liveHandler.syncId;
+            mc.interactionManager.clickSlot(syncId, -999, ScreenHandler.packQuickCraftData(0, dragSplittingButton), SlotActionType.QUICK_CRAFT, mc.player);
+            for (int slotIndex : dragSplittingSlots) {
+                if (slotIndex >= 0 && slotIndex < liveHandler.slots.size()) {
+                    mc.interactionManager.clickSlot(syncId, slotIndex, ScreenHandler.packQuickCraftData(1, dragSplittingButton), SlotActionType.QUICK_CRAFT, mc.player);
+                }
+            }
+            mc.interactionManager.clickSlot(syncId, -999, ScreenHandler.packQuickCraftData(2, dragSplittingButton), SlotActionType.QUICK_CRAFT, mc.player);
+            syncHeldItemFromLiveHandler(liveHandler);
+            bankSyncid = syncId;
+        } else {
+            SlotWidget releaseSlot = getLiveSlotWidgetAtStatic(x, y);
+            SlotWidget slotToClick = releaseSlot != null ? releaseSlot : dragSplittingFallbackSlot;
+            if (slotToClick != null) slotToClick.clickLiveSlot(button);
+        }
+
+        resetDragSplitting();
+        return true;
+    }
+
+    private static SlotWidget getLiveSlotWidgetAtStatic(double x, double y) {
+        if (inventoryWidget != null) {
+            for (int i = inventoryWidget.slots.size() - 1; i >= 0; i--) {
+                SlotWidget slot = inventoryWidget.slots.get(i);
+                if (slot.isVisible() && slot.isEnabled() && slot.contains((int) x, (int) y)) return slot;
+            }
+        }
+
+        if (activeInv >= 0 && activeInv < pages.size()) {
+            PageWidget page = pages.get(activeInv);
+            for (int i = page.slots.size() - 1; i >= 0; i--) {
+                SlotWidget slot = page.slots.get(i);
+                if (slot.isVisible() && slot.isEnabled() && slot.contains((int) x, (int) y)) return slot;
+            }
+        }
+
+        return null;
+    }
+
+    private static void syncHeldItemFromLiveHandler(ScreenHandler liveHandler) {
+        if (liveHandler == null) return;
+        ItemStack cursorStack = liveHandler.getCursorStack();
+        heldItem = cursorStack.isEmpty() ? Items.AIR.getDefaultStack() : cursorStack.copy();
+    }
+
+    private static ItemStack getDragSplittingPreviewStack(int liveSlotIndex) {
+        if (!dragSplitting || !dragSplittingSlots.contains(liveSlotIndex) || heldItem == null || heldItem.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+
+        ScreenHandler liveHandler = getLiveScreenHandlerForClick();
+        if (liveHandler == null || liveSlotIndex < 0 || liveSlotIndex >= liveHandler.slots.size()) return ItemStack.EMPTY;
+
+        Slot liveSlot = liveHandler.slots.get(liveSlotIndex);
+        if (!canDragSplitIntoSlot(liveSlot)) return ItemStack.EMPTY;
+
+        Set<Slot> liveDragSplittingSlots = new LinkedHashSet<>();
+        for (int slotIndex : dragSplittingSlots) {
+            if (slotIndex >= 0 && slotIndex < liveHandler.slots.size()) {
+                Slot slot = liveHandler.slots.get(slotIndex);
+                if (canDragSplitIntoSlot(slot)) liveDragSplittingSlots.add(slot);
+            }
+        }
+        if (liveDragSplittingSlots.size() <= 1) return ItemStack.EMPTY;
+
+        ItemStack existing = liveSlot.getStack();
+        int existingCount = existing.isEmpty() ? 0 : existing.getCount();
+        int maxCount = Math.min(heldItem.getMaxCount(), liveSlot.getMaxItemCount(heldItem));
+        int previewCount = ScreenHandler.calculateStackSize(liveDragSplittingSlots, dragSplittingButton, heldItem) + existingCount;
+        previewCount = Math.min(previewCount, maxCount);
+        if (previewCount <= existingCount) return ItemStack.EMPTY;
+
+        ItemStack preview = heldItem.copy();
+        preview.setCount(previewCount);
+        return preview;
+    }
+
+    private static boolean canDragSplitIntoSlot(Slot slot) {
+        if (slot == null || heldItem == null || heldItem.isEmpty()) return false;
+        if (!slot.canInsert(heldItem)) return false;
+        if (!ScreenHandler.canInsertItemIntoSlot(slot, heldItem, true)) return false;
+
+        ItemStack existing = slot.getStack();
+        if (!existing.isEmpty() && !ItemStack.areItemsAndComponentsEqual(existing, heldItem)) return false;
+
+        int maxCount = Math.min(heldItem.getMaxCount(), slot.getMaxItemCount(heldItem));
+        return existing.getCount() < maxCount;
+    }
+
+    private static int getDragSplittingRemainingCount() {
+        if (!dragSplitting || heldItem == null || heldItem.isEmpty() || dragSplittingSlots.isEmpty()) {
+            return heldItem == null ? 0 : heldItem.getCount();
+        }
+
+        ScreenHandler liveHandler = getLiveScreenHandlerForClick();
+        if (liveHandler == null) return heldItem.getCount();
+
+        Set<Slot> liveDragSplittingSlots = new LinkedHashSet<>();
+        for (int slotIndex : dragSplittingSlots) {
+            if (slotIndex >= 0 && slotIndex < liveHandler.slots.size()) {
+                liveDragSplittingSlots.add(liveHandler.slots.get(slotIndex));
+            }
+        }
+
+        int remaining = heldItem.getCount();
+        for (Slot slot : liveDragSplittingSlots) {
+            if (!canDragSplitIntoSlot(slot)) continue;
+
+            int existingCount = slot.getStack().isEmpty() ? 0 : slot.getStack().getCount();
+            int maxCount = Math.min(heldItem.getMaxCount(), slot.getMaxItemCount(heldItem));
+            int previewCount = ScreenHandler.calculateStackSize(liveDragSplittingSlots, dragSplittingButton, heldItem) + existingCount;
+            previewCount = Math.min(previewCount, maxCount);
+            remaining -= Math.max(0, previewCount - existingCount);
+        }
+
+        return Math.max(0, remaining);
     }
 
     private void initializeOverlayState() {
@@ -2607,7 +2784,8 @@ public class BankOverlay2 extends WEHandledScreen {
         if (heldItem == null) return;
 
         int guiScale = MinecraftClient.getInstance().options.getGuiScale().getValue() + 1;
-        String amountString = heldItem.getCount() == 1 ? "" : String.valueOf(heldItem.getCount());
+        int count = dragSplitting ? getDragSplittingRemainingCount() : heldItem.getCount();
+        String amountString = count == 1 ? "" : String.valueOf(count);
 
         context.drawItem(heldItem, mouseX - 2 * guiScale, mouseY - 2 * guiScale);
         context.drawStackOverlay(MinecraftClient.getInstance().textRenderer, heldItem, mouseX - 2 * guiScale, mouseY - 2 * guiScale, amountString);
@@ -2635,10 +2813,9 @@ public class BankOverlay2 extends WEHandledScreen {
         ItemStack heldItem = Items.AIR.getDefaultStack();
 
         if (player == null || player.currentScreenHandler == null) return heldItem;
-        if (type == SlotActionType.QUICK_MOVE) return heldItem;
-
         ItemStack clickedStack = player.currentScreenHandler.slots.get(index).getStack().copy();
         ItemStack currentHeld = BankOverlay.heldItem;
+        if (type == SlotActionType.QUICK_MOVE) return currentHeld == null ? Items.AIR.getDefaultStack() : currentHeld.copy();
 
         if (mouseButton == 0) { // Left Click
             switch (type) {
@@ -3489,10 +3666,14 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         public boolean mouseClicked(double mx, double my, int button) {
+            return mouseClicked(mx, my, button, false);
+        }
+
+        public boolean mouseClicked(double mx, double my, int button, boolean doubleClick) {
             if (!visible || !enabled) return false;
             if (isJumpInProgress()) return contains((int) mx, (int) my);
             for (int i = slots.size() - 1; i >= 0; i--) {
-                if (slots.get(i).mouseClicked(mx, my, button)) return true;
+                if (slots.get(i).mouseClicked(mx, my, button, doubleClick)) return true;
             }
             return super.mouseClicked(mx, my, button);
         }
@@ -3643,10 +3824,14 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         public boolean mouseClicked(double mx, double my, int button) {
+            return mouseClicked(mx, my, button, false);
+        }
+
+        public boolean mouseClicked(double mx, double my, int button, boolean doubleClick) {
             if (!visible || !enabled) return false;
             if (isJumpInProgress()) return contains((int) mx, (int) my);
             for (int i = slots.size() - 1; i >= 0; i--) {
-                if (slots.get(i).mouseClicked(mx, my, button)) return true;
+                if (slots.get(i).mouseClicked(mx, my, button, doubleClick)) return true;
             }
             return super.mouseClicked(mx, my, button);
         }
@@ -3935,6 +4120,23 @@ public class BankOverlay2 extends WEHandledScreen {
                 ui.drawRect(x, y, width, height, SLOT_HOVER_COLOR);
             }
 
+            ItemStack dragSplittingPreviewStack = canUseLiveSlot() ? getDragSplittingPreviewStack(getLiveSlotIndex()) : ItemStack.EMPTY;
+            if (!dragSplittingPreviewStack.isEmpty()) {
+                ctx.drawItem(dragSplittingPreviewStack, itemX, itemY);
+                try {
+                    ctx.drawStackOverlay(
+                            frameTextRenderer != null ? frameTextRenderer : MinecraftClient.getInstance().textRenderer,
+                            dragSplittingPreviewStack,
+                            itemX,
+                            itemY
+                    );
+                } catch (Exception ignored) {}
+                if(slotHovered) {
+                    setHoveredSlot(dragSplittingPreviewStack, index, inventoryIndex, itemX, itemY);
+                }
+                return;
+            }
+
             if(isEmptyStack(stack)) {
                 renderSearchOverlay(ctx, stack, null, x + 1, y + 1);
                 return;
@@ -4098,15 +4300,23 @@ public class BankOverlay2 extends WEHandledScreen {
             return output;
         }
 
-        private SlotActionType determineActionType(int mouseButton) {
+        private boolean canPickupAll(int mouseButton, boolean doubleClick) {
+            if (mouseButton != 0 || !doubleClick) return false;
+            if (heldItem == null || heldItem.isEmpty() || heldItem.getItem() == Items.AIR) return false;
+            if (stack == null || stack.isEmpty()) return false;
+            return ItemStack.areItemsAndComponentsEqual(stack, heldItem);
+        }
+
+        private SlotActionType determineActionType(int mouseButton, boolean doubleClick) {
             SlotActionType actionType = SlotActionType.PICKUP;
 
+            if (canPickupAll(mouseButton, doubleClick)) return SlotActionType.PICKUP_ALL;
             if (isShiftHeld()) return SlotActionType.QUICK_MOVE;
             if(mouseButton == 1) return actionType;
 
             long now = System.currentTimeMillis();
             if (heldItem != null && heldItem.getItem() != Items.AIR) {
-                if (now - lastClickTime < 250 && lastClickedSlot != null &&
+                if (now - lastClickTime < DOUBLE_CLICK_INTERVAL_MS && lastClickedSlot != null &&
                         lastClickedSlot.first() == inventoryIndex && lastClickedSlot.second() == index) {
                     actionType = SlotActionType.PICKUP_ALL;
                 }
@@ -4116,7 +4326,51 @@ public class BankOverlay2 extends WEHandledScreen {
             return actionType;
         }
 
+        private boolean isOverlayDoubleClick(int button, boolean vanillaDoubleClick) {
+            if (button != 0) return false;
+            if (vanillaDoubleClick) return true;
+
+            long now = System.currentTimeMillis();
+            return now - lastClickTime < DOUBLE_CLICK_INTERVAL_MS
+                    && lastClickedSlot != null
+                    && lastClickedSlot.first() == inventoryIndex
+                    && lastClickedSlot.second() == index;
+        }
+
+        private boolean canBulkQuickMove(int button, boolean doubleClick) {
+            return button == 0 && doubleClick && isShiftHeld() && lastQuickMoved != null && !lastQuickMoved.isEmpty();
+        }
+
+        private boolean bulkQuickMoveMatchingStacks(ScreenHandler liveHandler, int clickedSlotIndex, int button) {
+            if (MinecraftClient.getInstance().interactionManager == null || MinecraftClient.getInstance().player == null) return false;
+            if (clickedSlotIndex < 0 || clickedSlotIndex >= liveHandler.slots.size()) return false;
+
+            Slot clickedSlot = liveHandler.slots.get(clickedSlotIndex);
+            ItemStack targetStack = lastQuickMoved;
+            if (targetStack.isEmpty()) return false;
+            boolean movedAny = false;
+            for (Slot slot : liveHandler.slots) {
+                if (slot == null || slot.inventory != clickedSlot.inventory || !slot.hasStack()) continue;
+                if (!slot.canTakeItems(MinecraftClient.getInstance().player)) continue;
+                if (!ItemStack.areItemsAndComponentsEqual(slot.getStack(), targetStack)) continue;
+
+                MinecraftClient.getInstance().interactionManager.clickSlot(
+                        liveHandler.syncId,
+                        slot.id,
+                        button,
+                        SlotActionType.QUICK_MOVE,
+                        MinecraftClient.getInstance().player
+                );
+                movedAny = true;
+            }
+            return movedAny;
+        }
+
         private boolean clickLiveSlot(int button) {
+            return clickLiveSlot(button, false);
+        }
+
+        private boolean clickLiveSlot(int button, boolean doubleClick) {
             if(index == 4 && isInventorySlot) return false; //Ingredient pouch, clicking it within the bank overlay crashes the game
             if(index == 34 && isInventorySlot) return false; //Compass, clicking it within the bank overlay crashes the game
             if(index == 35 && isInventorySlot) return false; //Content book, clicking it within the bank overlay crashes the game
@@ -4128,9 +4382,26 @@ public class BankOverlay2 extends WEHandledScreen {
                 return false;
             }
 
-            SlotActionType action = determineActionType(button);
+            boolean overlayDoubleClick = isOverlayDoubleClick(button, doubleClick);
+
+            if (canBulkQuickMove(button, overlayDoubleClick)) {
+                boolean moved = bulkQuickMoveMatchingStacks(liveHandler, slotIndex, button);
+                if (moved) {
+                    bankSyncid = liveHandler.syncId;
+                    clearAnnotationCache(inventoryIndex);
+                    lastClickedSlot = new Pair<>(inventoryIndex, index);
+                    lastClickTime = System.currentTimeMillis();
+                }
+                return moved;
+            }
+
+            SlotActionType action = determineActionType(button, overlayDoubleClick);
 
             ItemStack oldHeld = heldItem;
+            if (action == SlotActionType.QUICK_MOVE) {
+                ItemStack clickedStack = liveHandler.slots.get(slotIndex).getStack();
+                lastQuickMoved = clickedStack.isEmpty() ? ItemStack.EMPTY : clickedStack.copy();
+            }
             heldItem = getHeldItem(slotIndex, action, button);
 
             if(heldItem.getCustomName() != null) {
@@ -4150,7 +4421,24 @@ public class BankOverlay2 extends WEHandledScreen {
             bankSyncid = liveHandler.syncId;
             clearAnnotationCache(inventoryIndex);
             lastClickedSlot = new Pair<>(inventoryIndex, index);
+            lastClickTime = System.currentTimeMillis();
             return true;
+        }
+
+        private int getLiveSlotIndex() {
+            return index + (isInventorySlot ? 54 : 0);
+        }
+
+        private boolean canUseLiveSlot() {
+            if(index == 4 && isInventorySlot) return false;
+            if(index == 34 && isInventorySlot) return false;
+            if(index == 35 && isInventorySlot) return false;
+            if(!isInventorySlot && inventoryIndex != activeInv) return false;
+            if(inventoryIndex >= currentData.getLastPage() && !isInventorySlot) return false;
+
+            ScreenHandler liveHandler = getLiveScreenHandlerForClick();
+            int slotIndex = getLiveSlotIndex();
+            return liveHandler != null && slotIndex >= 0 && slotIndex < liveHandler.slots.size();
         }
 
         @Override
@@ -4186,6 +4474,40 @@ public class BankOverlay2 extends WEHandledScreen {
                 clearAnnotationCache(inventoryIndex);
             }
             return true;
+        }
+
+        public boolean mouseClicked(double mx, double my, int button, boolean doubleClick) {
+            if (!visible || !enabled) return false;
+            if (contains((int) mx, (int) my)) {
+                setFocused(true);
+                if (button == 2) {
+                    return onClick(button);
+                }
+                if (isReloading) return false;
+                if(shouldWait) return false;
+                if(!isMouseInOverlay && !isInventorySlot) return false;
+                if(inventoryIndex >= currentData.getLastPage() && !isInventorySlot) return false;
+
+                if(activeInv == inventoryIndex || isInventorySlot) {
+                    if (beginDragSplitting(this, button)) return true;
+                    clickLiveSlot(button, doubleClick);
+                } else if(!hasHeldItem()) {
+                    if (isJumpInProgress()) return true;
+                    if (BankOverlay.isCharacterBankMissingCharacterId()) return false;
+                    storeActivePageSnapshot();
+                    activeInv = inventoryIndex;
+                    try {
+                        BankOverlay.getPersonalStorageUtils().jumpToDestination(inventoryIndex + 1);
+                    } catch (Exception e) {
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils. Please create a bug report on discord if this still appears after you have enabled."));
+                        return true;
+                    }
+                    clearAnnotationCache(inventoryIndex);
+                }
+                return true;
+            }
+            setFocused(false);
+            return false;
         }
 
     }
