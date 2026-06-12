@@ -61,9 +61,7 @@ public class LootrunLootPoolPage extends PageWidget {
     public LootrunLootPoolPage(AspectScreen parent) {
         super(parent);
 
-        for(Camp camp : Camp.values()) {
-            lootPoolWidgets.add(new LootPoolWidget(camp));
-        }
+        if (lootPoolWidgets.isEmpty()) resetLootPoolWidgetsToDefaults();
 
         refreshButton = new RefreshButton();
 
@@ -74,6 +72,17 @@ public class LootrunLootPoolPage extends PageWidget {
                 v -> hScrollOffset = v,
                 () -> hScrollMax
         );
+    }
+
+    private static void resetLootPoolWidgetsToDefaults() {
+        lootPoolWidgets.clear();
+        for(Camp camp : Camp.values()) {
+            lootPoolWidgets.add(new LootPoolWidget(camp));
+        }
+    }
+
+    private static List<LootPoolWidget> getLootPoolWidgetsSnapshot() {
+        return new ArrayList<>(lootPoolWidgets);
     }
 
     @Override
@@ -147,7 +156,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
         int widgetsWidth = widgetCount * widgetWidth + Math.max(0, widgetCount - 1) * H_WIDGET_SPACING;
         int widgetX = showHorizontalScrollBar ? H_WIDGET_SPACING - (int) hScrollOffset : (int) ((scaledWidth - widgetsWidth) / 2f);
-        for (LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+        for (LootPoolWidget lootPoolWidget : getLootPoolWidgetsSnapshot()) {
             lootPoolWidget.setBounds(widgetX, widgetY, widgetWidth, widgetHeight);
             lootPoolWidget.draw(context, mouseX, mouseY, tickDelta, ui);
             widgetX += widgetWidth + H_WIDGET_SPACING;
@@ -178,23 +187,32 @@ public class LootrunLootPoolPage extends PageWidget {
         officialLootPoolsLoading = true;
 
         WynncraftApiHandler.fetchOfficialLootPools(forceRefresh).thenAccept(result -> {
-            officialLootPools.clear();
-
+            Map<String, List<LootrunLootPoolData.LootrunItem>> newOfficialLootPools = new HashMap<>();
+            List<LootPoolWidget> newLootPoolWidgets = new ArrayList<>();
             if (result != null) {
                 List<WynncraftApiHandler.ApiLootPool> camps = result.stream()
                         .filter(pool -> "CAMP".equalsIgnoreCase(pool.type))
                         .toList();
 
                 if (!camps.isEmpty()) {
-                    lootPoolWidgets.clear();
                     for (WynncraftApiHandler.ApiLootPool camp : camps) {
-                        officialLootPools.put(camp.internalName, toLootrunItems(camp.rewards));
-                        lootPoolWidgets.add(new LootPoolWidget(camp.name, camp.internalName));
+                        newOfficialLootPools.put(camp.internalName, toLootrunItems(camp.rewards));
+                        newLootPoolWidgets.add(new LootPoolWidget(camp.name, camp.internalName));
                     }
                 }
             }
 
-            officialLootPoolsLoading = false;
+            MinecraftClient.getInstance().execute(() -> {
+                officialLootPools.clear();
+                officialLootPools.putAll(newOfficialLootPools);
+
+                if (!newLootPoolWidgets.isEmpty()) {
+                    lootPoolWidgets.clear();
+                    lootPoolWidgets.addAll(newLootPoolWidgets);
+                }
+
+                officialLootPoolsLoading = false;
+            });
         });
     }
 
@@ -274,7 +292,7 @@ public class LootrunLootPoolPage extends PageWidget {
             return true;
         }
 
-        for (LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+        for (LootPoolWidget lootPoolWidget : getLootPoolWidgetsSnapshot()) {
             if (lootPoolWidget.mouseScrolled(mx, my, delta)) return true;
         }
         return false;
@@ -282,7 +300,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+        for(LootPoolWidget lootPoolWidget : getLootPoolWidgetsSnapshot()) {
             if(lootPoolWidget.mouseClicked(mx, my, button)) return true;
         }
 
@@ -301,7 +319,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
-        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+        for(LootPoolWidget lootPoolWidget : getLootPoolWidgetsSnapshot()) {
             lootPoolWidget.mouseReleased(mx, my, button);
         }
 
@@ -1005,11 +1023,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
-            lootPoolWidgets.clear();
-
-            for(Camp camp : Camp.values()) {
-                lootPoolWidgets.add(new LootPoolWidget(camp));
-            }
+            resetLootPoolWidgetsToDefaults();
 
             officialLootPools.clear();
             officialLootPoolsFetchStarted = false;

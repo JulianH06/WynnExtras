@@ -88,9 +88,7 @@ public class LootPoolPage extends PageWidget {
     public LootPoolPage(AspectScreen parent) {
         super(parent);
 
-        for(Raid raid : Raid.values()) {
-            lootPoolWidgets.add(new LootPoolWidget(raid));
-        }
+        if (lootPoolWidgets.isEmpty()) resetLootPoolWidgetsToDefaults();
 
         importFromWynntilsButton = new ImportFromWynntilsButton();
         hideMaxButton = new HideMaxButton();
@@ -106,6 +104,23 @@ public class LootPoolPage extends PageWidget {
         );
     }
 
+    private static void resetLootPoolWidgetsToDefaults() {
+        lootPoolWidgets.clear();
+        for(Raid raid : Raid.values()) {
+            lootPoolWidgets.add(new LootPoolWidget(raid));
+        }
+    }
+
+    private static List<LootPoolWidget> getLootPoolWidgetsSnapshot() {
+        return new ArrayList<>(lootPoolWidgets);
+    }
+
+    private static void clearLootPoolWidgetAspects() {
+        for(LootPoolWidget lootPoolWidget : getLootPoolWidgetsSnapshot()) {
+            lootPoolWidget.aspectWidgets.clear();
+        }
+    }
+
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         hoveredTooltip.clear();
@@ -117,17 +132,23 @@ public class LootPoolPage extends PageWidget {
             fetchedPersonalProgress = true;
             String playerUUID = McUtils.player().getUuidAsString();
             WynncraftApiHandler.fetchPlayerAspectData(playerUUID).thenAccept(result -> {
+                Map<String, com.mojang.datafixers.util.Pair<Integer, String>> newPersonalAspectProgress = new HashMap<>();
                 if (result != null && result.status() == WynncraftApiHandler.FetchStatus.OK && result.user() != null) {
                     julianh06.wynnextras.features.profileviewer.data.User userData = result.user();
                     // Convert aspect data to progress map (name -> (amount, rarity))
                     java.util.List<julianh06.wynnextras.features.profileviewer.data.Aspect> aspects = userData.getAspects();
                     if (aspects != null) {
                         for (julianh06.wynnextras.features.profileviewer.data.Aspect aspect : aspects) {
-                            personalAspectProgress.put(aspect.getName(),
+                            newPersonalAspectProgress.put(aspect.getName(),
                                     new com.mojang.datafixers.util.Pair<>(aspect.getAmount(), aspect.getRarity()));
                         }
                     }
                 }
+                MinecraftClient.getInstance().execute(() -> {
+                    personalAspectProgress.clear();
+                    personalAspectProgress.putAll(newPersonalAspectProgress);
+                    clearLootPoolWidgetAspects();
+                });
             });
         }
 
@@ -192,7 +213,7 @@ public class LootPoolPage extends PageWidget {
 
         int widgetsWidth = widgetCount * widgetWidth + Math.max(0, widgetCount - 1) * H_WIDGET_SPACING;
         int widgetX = showHorizontalScrollBar ? H_WIDGET_SPACING - (int) hScrollOffset : (int) ((scaledWidth - widgetsWidth) / 2f);
-        for (LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+        for (LootPoolWidget lootPoolWidget : getLootPoolWidgetsSnapshot()) {
             lootPoolWidget.setBounds(widgetX, widgetY, widgetWidth, widgetHeight);
             lootPoolWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
             widgetX += widgetWidth + H_WIDGET_SPACING;
@@ -238,7 +259,7 @@ public class LootPoolPage extends PageWidget {
         officialLootPoolsLoading = true;
 
         WynncraftApiHandler.fetchOfficialLootPools(forceRefresh).thenAccept(result -> {
-            officialLootPools.clear();
+            Map<String, List<LootPoolData.AspectEntry>> newOfficialLootPools = new HashMap<>();
 
             if (result != null) {
                 for (WynncraftApiHandler.ApiLootPool pool : result) {
@@ -251,15 +272,16 @@ public class LootPoolPage extends PageWidget {
                             .filter(reward -> "ASPECT".equalsIgnoreCase(reward.type))
                             .map(reward -> new LootPoolData.AspectEntry(reward.name, capitalize(reward.tier), "", ""))
                             .toList();
-                    officialLootPools.put(raid.name(), aspects);
+                    newOfficialLootPools.put(raid.name(), aspects);
                 }
             }
 
-            for (LootPoolWidget lootPoolWidget : lootPoolWidgets) {
-                lootPoolWidget.aspectWidgets.clear();
-            }
-
-            officialLootPoolsLoading = false;
+            MinecraftClient.getInstance().execute(() -> {
+                officialLootPools.clear();
+                officialLootPools.putAll(newOfficialLootPools);
+                clearLootPoolWidgetAspects();
+                officialLootPoolsLoading = false;
+            });
         });
     }
 
@@ -284,7 +306,7 @@ public class LootPoolPage extends PageWidget {
 
     @Override
     protected boolean onClick(int button) {
-        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+        for(LootPoolWidget lootPoolWidget : getLootPoolWidgetsSnapshot()) {
             if(lootPoolWidget.onClick(button)) return true;
         }
         return true;
@@ -292,7 +314,7 @@ public class LootPoolPage extends PageWidget {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+        for(LootPoolWidget lootPoolWidget : getLootPoolWidgetsSnapshot()) {
             if(lootPoolWidget.mouseClicked(mx, my, button)) return true;
         }
 
@@ -326,7 +348,7 @@ public class LootPoolPage extends PageWidget {
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
-        for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+        for(LootPoolWidget lootPoolWidget : getLootPoolWidgetsSnapshot()) {
             lootPoolWidget.mouseReleased(mx, my, button);
         }
 
@@ -348,7 +370,7 @@ public class LootPoolPage extends PageWidget {
             return true;
         }
 
-        for (LootPoolWidget lootPoolWidget : lootPoolWidgets) {
+        for (LootPoolWidget lootPoolWidget : getLootPoolWidgetsSnapshot()) {
             if (lootPoolWidget.mouseScrolled(mx, my, delta)) return true;
         }
         return false;
@@ -974,9 +996,7 @@ public class LootPoolPage extends PageWidget {
         @Override
         protected boolean onClick(int button) {
             hideMax = !hideMax;
-            for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
-                lootPoolWidget.aspectWidgets.clear();
-            }
+            clearLootPoolWidgetAspects();
 
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
@@ -997,9 +1017,7 @@ public class LootPoolPage extends PageWidget {
         @Override
         protected boolean onClick(int button) {
             onlyFavorites = !onlyFavorites;
-            for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
-                lootPoolWidget.aspectWidgets.clear();
-            }
+            clearLootPoolWidgetAspects();
 
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
@@ -1019,11 +1037,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
-            lootPoolWidgets.clear();
-
-            for(Raid raid : Raid.values()) {
-                lootPoolWidgets.add(new LootPoolWidget(raid));
-            }
+            resetLootPoolWidgetsToDefaults();
 
             officialLootPools.clear();
             officialLootPoolsFetchStarted = false;
@@ -1034,9 +1048,7 @@ public class LootPoolPage extends PageWidget {
 
             ResetTimeConfig.INSTANCE.refetch();
 
-            for(LootPoolWidget lootPoolWidget : lootPoolWidgets) {
-                lootPoolWidget.aspectWidgets.clear();
-            }
+            clearLootPoolWidgetAspects();
 
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
