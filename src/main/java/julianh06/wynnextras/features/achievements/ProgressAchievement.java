@@ -1,5 +1,7 @@
 package julianh06.wynnextras.features.achievements;
 
+import java.util.ArrayList;
+
 public abstract class ProgressAchievement extends Achievement{
     protected int current;
     protected int target;

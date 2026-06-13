@@ -7,6 +7,8 @@ import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.*;
 import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
+import julianh06.wynnextras.features.achievements.AchievementTracking;
+import julianh06.wynnextras.features.achievements.Achievements;
 import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
@@ -220,6 +222,7 @@ public class WynnExtras implements ClientModInitializer {
 
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+			Achievements.load();
 			AccountBankData.INSTANCE.load();
 			CharacterBankData.INSTANCE.load();
 			BookshelfData.INSTANCE.load();
@@ -240,7 +243,6 @@ public class WynnExtras implements ClientModInitializer {
 		}
 
 		ResetTimeConfig.INSTANCE.fetchIfNeeded();
-
 	}
 
 	private static void updateVersionData() {
