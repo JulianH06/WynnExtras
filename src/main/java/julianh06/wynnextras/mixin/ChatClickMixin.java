@@ -3,13 +3,10 @@ package julianh06.wynnextras.mixin;
 import com.wynntils.core.components.Models;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.features.chat.mediapreview.ChatMediaPreview;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.Style;
@@ -18,7 +15,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.regex.Matcher;
@@ -42,6 +38,10 @@ public abstract class ChatClickMixin {
     @Inject(method = "handleClickEvent", at = @At("HEAD"), cancellable = true)
     private void onHandleTextClick(Style style, boolean insert, CallbackInfoReturnable<Boolean> cir) {
         try {
+            if (ChatMediaPreview.handleClick(style)) {
+                cir.setReturnValue(true);
+                return;
+            }
             if (!WynnExtrasConfig.INSTANCE.chatClickPV) return;
             if (!Models.WorldState.onWorld()) return;
 

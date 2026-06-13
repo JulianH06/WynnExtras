@@ -514,6 +514,38 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.artifactRestored, v -> config.artifactRestored = v))
                 .add(toggle("Item broke (0 durability)", "Show 'ITEM BROKE' when one of your items reaches zero durability",
                         () -> config.itemZeroDurability, v -> config.itemZeroDurability = v)).endSub()
+            .sub("Media Preview (Experimental)")
+                .add(text("Warning", "We have restricted media downloads to only download from trusted sites (Discord, Imgur and Tenor). We have implemented these and other measures to minimize potential vulnerabilities, but they can never be completely ruled out. Use at your own risk."))
+                .add(toggle("Chat Media Preview", "Preview trusted Discord CDN, Imgur, and Tenor PNG, JPEG, and GIF links",
+                        () -> config.chatMediaPreviewEnabled, v -> config.chatMediaPreviewEnabled = v))
+                .add(visibleWhen(dropdown("Media Preview Loading", "When media previews are downloaded",
+                                WynnExtrasConfig.ChatMediaPreviewLoadPolicy.class,
+                                () -> config.chatMediaPreviewLoadPolicy,
+                                v -> config.chatMediaPreviewLoadPolicy = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(dropdown("Hover-preview Position", "Where media previews appear while hovering links",
+                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
+                                () -> config.chatMediaPreviewHoverPosition,
+                                v -> config.chatMediaPreviewHoverPosition = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(toggle("Auto-show Media Preview", "Automatically download trusted media when its link appears in chat. This contacts an external service.",
+                                () -> config.chatMediaPreviewAutoDisplay, v -> config.chatMediaPreviewAutoDisplay = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(dropdown("Auto-preview Position", "Where automatic media previews appear",
+                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
+                                () -> config.chatMediaPreviewPosition,
+                                v -> config.chatMediaPreviewPosition = v),
+                        () -> config.chatMediaPreviewEnabled && config.chatMediaPreviewAutoDisplay))
+                .add(visibleWhen(slider("Preview Max Screen %", "Maximum percentage of screen width and height used by previews",
+                                10, 50, () -> config.chatMediaPreviewMaxScreenPercent, v -> config.chatMediaPreviewMaxScreenPercent = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(slider("Preview Max MB", "Maximum media download size",
+                                1, 25, () -> config.chatMediaPreviewMaxDownloadMb, v -> config.chatMediaPreviewMaxDownloadMb = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(slider("Preview Max GIF Frames", "Maximum decoded GIF frames",
+                                1, 240, () -> config.chatMediaPreviewMaxGifFrames, v -> config.chatMediaPreviewMaxGifFrames = v),
+                        () -> config.chatMediaPreviewEnabled))
+            .endSub()
             .sub("Tree Room Grotto Announcements")
                 .add(toggle("Isoptera in Gray Grotto", "Show 'GRAY' when the Interdimensional Isoptera is in the Gray Grotto",
                         () -> config.isopteraGray, v -> config.isopteraGray = v))
@@ -655,6 +687,36 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
                 .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs with your guild when someone asks about them in chat",
                         () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
+                .add(toggle("Chat Media Preview (Experimental)", "Preview trusted Discord CDN, Imgur, and Tenor PNG, JPEG, and GIF links",
+                        () -> config.chatMediaPreviewEnabled, v -> config.chatMediaPreviewEnabled = v))
+                .add(text("Warning", "We have restricted media downloads to only download from trusted sites (Discord, Imgur and Tenor). We have implemented these and other measures to minimize potential vulnerabilities, but they can never be completely ruled out. Use at your own risk."))
+                .add(visibleWhen(dropdown("Media Preview Loading", "When media previews are downloaded",
+                                WynnExtrasConfig.ChatMediaPreviewLoadPolicy.class,
+                                () -> config.chatMediaPreviewLoadPolicy,
+                                v -> config.chatMediaPreviewLoadPolicy = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(dropdown("Hover-preview Position", "Where media previews appear while hovering links",
+                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
+                                () -> config.chatMediaPreviewHoverPosition,
+                                v -> config.chatMediaPreviewHoverPosition = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(toggle("Auto-show Media Preview", "Automatically download trusted media when its link appears in chat. This contacts an external service.",
+                                () -> config.chatMediaPreviewAutoDisplay, v -> config.chatMediaPreviewAutoDisplay = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(dropdown("Auto-preview Position", "Where automatic media previews appear",
+                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
+                                () -> config.chatMediaPreviewPosition,
+                                v -> config.chatMediaPreviewPosition = v),
+                        () -> config.chatMediaPreviewEnabled && config.chatMediaPreviewAutoDisplay))
+                .add(visibleWhen(slider("Preview Max Screen %", "Maximum percentage of screen width and height used by previews",
+                                10, 50, () -> config.chatMediaPreviewMaxScreenPercent, v -> config.chatMediaPreviewMaxScreenPercent = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(slider("Preview Max MB", "Maximum media download size",
+                                1, 25, () -> config.chatMediaPreviewMaxDownloadMb, v -> config.chatMediaPreviewMaxDownloadMb = v),
+                        () -> config.chatMediaPreviewEnabled))
+                .add(visibleWhen(slider("Preview Max GIF Frames", "Maximum decoded GIF frames",
+                                1, 240, () -> config.chatMediaPreviewMaxGifFrames, v -> config.chatMediaPreviewMaxGifFrames = v),
+                        () -> config.chatMediaPreviewEnabled))
             .sub("Automation")
                 .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
