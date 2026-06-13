@@ -20,6 +20,8 @@ import java.util.Map;
 
 public class WaypointData {
     public static final int CURRENT_PACKAGE_VERSION = 2;
+    public static final String UNCATEGORIZED_CATEGORY_ID = "uncategorized";
+    public static final String UNCATEGORIZED_CATEGORY_NAME = "uncategorized";
     public static WaypointData INSTANCE = new WaypointData();
 
     public List<WaypointPackage> packages = new ArrayList<>();
@@ -62,6 +64,7 @@ public class WaypointData {
         // Optional: Default-Package setzen
         if (INSTANCE.packages.isEmpty()) {
             WaypointPackage defaultPkg = new WaypointPackage("Default");
+            ensureUncategorizedCategory(defaultPkg);
             INSTANCE.packages.add(defaultPkg);
             INSTANCE.activePackage = defaultPkg;
         }
@@ -138,6 +141,7 @@ public class WaypointData {
                 }
 
                 // Migrate waypoints
+                WaypointCategory uncategorized = ensureUncategorizedCategory(migrated);
                 for (Waypoint wp : legacy.waypoints) {
                     wp.id = java.util.UUID.randomUUID().toString();
                     wp.migrateVisibilityOverridesFromLegacy();
@@ -145,11 +149,13 @@ public class WaypointData {
                         wp.categoryId = nameToId.get(wp.getLegacyCategoryName());
                         wp.categoryName = null;
                     } else {
-                        wp.categoryId = null;
+                        wp.setCategory(uncategorized);
                     }
 
                     migrated.waypoints.add(wp);
                 }
+
+                resolveWaypointCategories(migrated);
 
                 migrated.packageVersion = CURRENT_PACKAGE_VERSION;
                 migrated.description = "";
@@ -172,7 +178,12 @@ public class WaypointData {
                 // New format -> parse normally
                 WaypointPackage pkg = WaypointData.gson.fromJson(obj, WaypointPackage.class);
                 if (pkg == null) return null;
+                if (pkg.waypoints == null) pkg.waypoints = new ArrayList<>();
                 int loadedVersion = pkg.packageVersion;
+                boolean changed = pkg.categories == null
+                        || pkg.categories.stream().noneMatch(WaypointData::isUncategorizedCategory)
+                        || pkg.waypoints.stream().anyMatch(w -> w.categoryId == null);
+                WaypointCategory uncategorized = ensureUncategorizedCategory(pkg);
                 // Ensure transient runtime pointers: match categoryId -> category object
                 Map<String, WaypointCategory> idToCat = new HashMap<>();
                 for (WaypointCategory c : pkg.categories) {
@@ -186,12 +197,14 @@ public class WaypointData {
                 for (Waypoint w : pkg.waypoints) {
                     if (w.categoryId != null && idToCat.containsKey(w.categoryId)) {
                         w.setCategory(idToCat.get(w.categoryId));
+                    } else {
+                        w.setCategory(uncategorized);
                     }
                     if (loadedVersion < CURRENT_PACKAGE_VERSION) {
                         w.migrateVisibilityOverridesFromLegacy();
                     }
                 }
-                if (loadedVersion < CURRENT_PACKAGE_VERSION) {
+                if (changed || loadedVersion < CURRENT_PACKAGE_VERSION) {
                     pkg.packageVersion = CURRENT_PACKAGE_VERSION;
                     pkg.saveToFile(file.getParent());
                 }
@@ -204,6 +217,54 @@ public class WaypointData {
         }
     }
 
+    public static WaypointCategory ensureUncategorizedCategory(WaypointPackage pkg) {
+        if (pkg.categories == null) pkg.categories = new ArrayList<>();
+
+        WaypointCategory uncategorized = null;
+        for (WaypointCategory category : pkg.categories) {
+            if (isUncategorizedCategory(category)) {
+                uncategorized = category;
+                break;
+            }
+        }
+
+        if (uncategorized == null) {
+            for (WaypointCategory category : pkg.categories) {
+                if (category.name != null && category.name.equalsIgnoreCase(UNCATEGORIZED_CATEGORY_NAME)) {
+                    uncategorized = category;
+                    break;
+                }
+            }
+        }
+
+        if (uncategorized == null) {
+            uncategorized = new WaypointCategory(UNCATEGORIZED_CATEGORY_NAME);
+            pkg.categories.addFirst(uncategorized);
+        }
+
+        uncategorized.id = UNCATEGORIZED_CATEGORY_ID;
+        if (uncategorized.name == null || uncategorized.name.isBlank()) {
+            uncategorized.name = UNCATEGORIZED_CATEGORY_NAME;
+        }
+        return uncategorized;
+    }
+
+    public static boolean isUncategorizedCategory(WaypointCategory category) {
+        return category != null && UNCATEGORIZED_CATEGORY_ID.equals(category.id);
+    }
+
+    public static void resolveWaypointCategories(WaypointPackage pkg) {
+        WaypointCategory uncategorized = ensureUncategorizedCategory(pkg);
+        Map<String, WaypointCategory> idToCat = new HashMap<>();
+        for (WaypointCategory category : pkg.categories) {
+            idToCat.put(category.id, category);
+        }
+        for (Waypoint waypoint : pkg.waypoints) {
+            WaypointCategory category = waypoint.categoryId == null ? null : idToCat.get(waypoint.categoryId);
+            waypoint.setCategory(category == null ? uncategorized : category);
+        }
+    }
+
 
     public static void save() {
         try {
@@ -212,6 +273,7 @@ public class WaypointData {
             }
 
             for (WaypointPackage pkg : INSTANCE.packages) {
+                resolveWaypointCategories(pkg);
                 pkg.saveToFile(PACKAGE_FOLDER);
             }
         } catch (IOException e) {
@@ -239,9 +301,11 @@ public class WaypointData {
         if (original == null) return null;
 
         WaypointPackage copy = new WaypointPackage(generateUniqueName(original.name));
+        ensureUncategorizedCategory(original);
         Map<String, WaypointCategory> categoryCopies = new HashMap<>();
         for (WaypointCategory cat : original.categories) {
             WaypointCategory newCategory = new WaypointCategory(cat.name, cat.color);
+            newCategory.id = cat.id;
             newCategory.alpha = cat.alpha;
             newCategory.showBlockByDefault = cat.showBlockByDefault;
             newCategory.showNameByDefault = cat.showNameByDefault;
@@ -261,7 +325,8 @@ public class WaypointData {
             newWaypoint.showNameOverride = waypoint.showNameOverride;
             newWaypoint.showDistanceOverride = waypoint.showDistanceOverride;
 
-            newWaypoint.setCategory(categoryCopies.get(waypoint.categoryId));
+            WaypointCategory copiedCategory = categoryCopies.get(waypoint.categoryId);
+            newWaypoint.setCategory(copiedCategory != null ? copiedCategory : ensureUncategorizedCategory(copy));
 
             copy.waypoints.add(newWaypoint);
         }

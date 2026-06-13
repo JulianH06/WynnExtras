@@ -827,7 +827,7 @@ public class WaypointEditModeUI extends WEScreen {
         lines.add(Text.literal("§e" + (hoveredWaypoint.name == null || hoveredWaypoint.name.isBlank() ? "Waypoint" : hoveredWaypoint.name)));
         lines.add(Text.literal("§7x: §f" + hoveredWaypoint.x + " §7y: §f" + hoveredWaypoint.y + " §7z: §f" + hoveredWaypoint.z));
         lines.add(Text.literal("§7Package: §f" + (pkg == null ? "Unknown" : pkg.name)));
-        lines.add(Text.literal("§7Category: §f" + (category == null ? "No Category" : category.name)));
+        lines.add(Text.literal("§7Category: §f" + (category == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : category.name)));
         lines.add(Text.literal("§eClick to edit this waypoint"));
         if(stats.packages().size() > 1 || stats.categories().size() > 1) {
             lines.add(Text.literal(""));
@@ -880,7 +880,7 @@ public class WaypointEditModeUI extends WEScreen {
                     String waypointName = choice.waypoint().name == null || choice.waypoint().name.isBlank() ? "Waypoint" : choice.waypoint().name;
                     String packageName = choice.pkg().name == null ? "Unknown Package" : choice.pkg().name;
                     WaypointCategory category = choice.waypoint().getCategory();
-                    String categoryName = category == null || category.name == null ? "No Category" : category.name;
+                    String categoryName = category == null || category.name == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : category.name;
                     return q.isEmpty()
                             || waypointName.toLowerCase(Locale.ROOT).contains(q)
                             || packageName.toLowerCase(Locale.ROOT).contains(q)
@@ -1626,7 +1626,7 @@ public class WaypointEditModeUI extends WEScreen {
             String label = dropdown == Dropdown.PACKAGE ? "Package" : "Category";
             String value = dropdown == Dropdown.PACKAGE
                     ? activePackage == null ? "None" : activePackage.name
-                    : activeCategory == null ? "No Category" : activeCategory.name;
+                    : activeCategory == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : activeCategory.name;
             boolean open = activeDropdown == dropdown && screen.activeDropdownField == this;
             screen.ui.drawText(label, logicalX, logicalY - screen.p(25), screen.color(TEXT_DIM), screen.ts(2.7f));
             screen.ui.drawButton(logicalX, logicalY, logicalW, logicalH, hovered || open);
@@ -1927,7 +1927,7 @@ public class WaypointEditModeUI extends WEScreen {
 
     private int dropdownRowCount(Dropdown dropdown) {
         if (dropdown == Dropdown.PACKAGE) return filteredPackages().size();
-        if (dropdown == Dropdown.CATEGORY) return filteredCategories().size() + 1;
+        if (dropdown == Dropdown.CATEGORY) return filteredCategories().size();
         if (dropdown == Dropdown.WAYPOINT) return filteredWaypointChoices().size();
         return 0;
     }
@@ -1945,29 +1945,28 @@ public class WaypointEditModeUI extends WEScreen {
             return name == null || name.isBlank() ? "Unnamed Package" : name;
         }
         if (dropdown == Dropdown.CATEGORY) {
-            if (index == 0) return "No Category";
-            String name = filteredCategories().get(index - 1).name;
+            String name = filteredCategories().get(index).name;
             return name == null || name.isBlank() ? "Unnamed Category" : name;
         }
         WaypointChoice choice = filteredWaypointChoices().get(index);
         String waypointName = choice.waypoint().name == null || choice.waypoint().name.isBlank() ? "Waypoint" : choice.waypoint().name;
         String packageName = choice.pkg().name == null ? "Unknown Package" : choice.pkg().name;
         WaypointCategory category = choice.waypoint().getCategory();
-        String categoryName = category == null || category.name == null || category.name.isBlank() ? "No Category" : category.name;
+        String categoryName = category == null || category.name == null || category.name.isBlank() ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : category.name;
         return waypointName + "  |  " + packageName + "  |  " + categoryName;
     }
 
     private boolean isDropdownRowSelected(Dropdown dropdown, int index) {
         if (dropdown == Dropdown.PACKAGE) return activePackage == filteredPackages().get(index);
         if (dropdown == Dropdown.CATEGORY) {
-            return index == 0 ? activeCategory == null : activeCategory == filteredCategories().get(index - 1);
+            return activeCategory == filteredCategories().get(index);
         }
         return selectedWaypoint == filteredWaypointChoices().get(index).waypoint();
     }
 
     private int dropdownRowColor(Dropdown dropdown, int index) {
-        if (dropdown == Dropdown.PACKAGE || (dropdown == Dropdown.CATEGORY && index == 0)) return 0xFFFFFFFF;
-        if (dropdown == Dropdown.CATEGORY) return categoryColorInt(filteredCategories().get(index - 1));
+        if (dropdown == Dropdown.PACKAGE) return 0xFFFFFFFF;
+        if (dropdown == Dropdown.CATEGORY) return categoryColorInt(filteredCategories().get(index));
         return categoryColorInt(filteredWaypointChoices().get(index).waypoint().getCategory());
     }
 
@@ -1977,17 +1976,13 @@ public class WaypointEditModeUI extends WEScreen {
             List<WaypointPackage> packages = filteredPackages();
             if (index < 0 || index >= packages.size()) return;
             activePackage = packages.get(index);
-            if (activeCategory != null && !activePackage.categories.contains(activeCategory)) activeCategory = null;
-            if (activeCategory == null && !activePackage.categories.isEmpty()) activeCategory = activePackage.categories.getFirst();
+            WaypointData.resolveWaypointCategories(activePackage);
+            if (activeCategory != null && !activePackage.categories.contains(activeCategory)) activeCategory = WaypointData.ensureUncategorizedCategory(activePackage);
+            if (activeCategory == null) activeCategory = WaypointData.ensureUncategorizedCategory(activePackage);
         } else if (dropdown == Dropdown.CATEGORY) {
-            if (index == 0) {
-                activeCategory = null;
-            } else {
-                List<WaypointCategory> categories = filteredCategories();
-                int categoryIndex = index - 1;
-                if (categoryIndex < 0 || categoryIndex >= categories.size()) return;
-                activeCategory = categories.get(categoryIndex);
-            }
+            List<WaypointCategory> categories = filteredCategories();
+            if (index < 0 || index >= categories.size()) return;
+            activeCategory = categories.get(index);
         } else if (dropdown == Dropdown.WAYPOINT) {
             List<WaypointChoice> choices = filteredWaypointChoices();
             if (index < 0 || index >= choices.size()) return;

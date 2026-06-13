@@ -362,6 +362,7 @@ public class NewWaypointScreen extends WEScreen {
 
         private void addPackage() {
             WaypointPackage waypointPackage = new WaypointPackage(WaypointData.INSTANCE.generateUniqueName("New package"));
+            WaypointData.ensureUncategorizedCategory(waypointPackage);
             WaypointData.INSTANCE.packages.add(waypointPackage);
             OrderManager.saveOrder(WaypointData.INSTANCE.packages);
             WaypointData.save();
@@ -544,6 +545,7 @@ public class NewWaypointScreen extends WEScreen {
             ui.drawCenteredText("Waypoints", x + width / 2f, y + 110, CustomColor.fromInt(TEXT_DIM));
 
             if(activePackage == null) return;
+            WaypointData.resolveWaypointCategories(activePackage);
 
             boolean hasNoDescription = activePackage.description == null || activePackage.description.isEmpty();
             int topOffset = hasNoDescription ? 320 : 360;
@@ -701,10 +703,11 @@ public class NewWaypointScreen extends WEScreen {
                 clearChildren();
 
                 Map<WaypointCategory, List<Waypoint>> grouped = new LinkedHashMap<>();
+                WaypointData.resolveWaypointCategories(activePackage);
                 activePackage.waypoints.stream()
                         .sorted(Comparator.comparing(
-                                w -> w.getCategory() != null ? w.getCategory().name : null,
-                                Comparator.nullsLast(String::compareToIgnoreCase)
+                                w -> w.getCategory().name == null ? "" : w.getCategory().name,
+                                String.CASE_INSENSITIVE_ORDER
                         ))
                         .forEach(w -> grouped.computeIfAbsent(w.getCategory(), ignored -> new ArrayList<>()).add(w));
 
@@ -840,6 +843,7 @@ public class NewWaypointScreen extends WEScreen {
 
                 Waypoint waypoint = new Waypoint(x, y, z);
                 waypoint.id = UUID.randomUUID().toString();
+                waypoint.setCategory(WaypointData.ensureUncategorizedCategory(activePackage));
                 activePackage.waypoints.add(waypoint);
                 WaypointData.save();
 
@@ -888,7 +892,7 @@ public class NewWaypointScreen extends WEScreen {
                 protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                     drawConfigRow(ui, x, y, width, height, hovered, false, GOLD_DARK);
 
-                    String name = category == null ? "No Category" : category.name;
+                    String name = category == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : category.name;
                     String arrow = collapsed ? "▶ " : "▼ ";
                     CustomColor color = category == null ? CustomColor.fromHexString("FFFFFF") : category.color;
 
@@ -963,7 +967,7 @@ public class NewWaypointScreen extends WEScreen {
                         ui.drawRect(x + 12, y + COLLAPSED_HEIGHT, width - 24, 2, CustomColor.fromInt(BORDER_DARK));
                     }
                     if(waypoint != null) {
-                        String categoryName = waypoint.getCategory() == null ? "" : waypoint.getCategory().name;
+                        String categoryName = waypoint.getCategory() == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : waypoint.getCategory().name;
                         ui.drawText((expanded ? "▼ " : "▶ ") + waypoint.name, x + 20, y + 25, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
                         ui.drawText("x: " + waypoint.x + " y: " + waypoint.y + " z: " + waypoint.z, x + width - 25, y + 25, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 2.5f);
 
@@ -1002,12 +1006,10 @@ public class NewWaypointScreen extends WEScreen {
                     ui.drawText("Category", contentX, categoryY + 15, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
                     drawConfigRow(ui, fieldX, categoryY, fieldWidth, 38, categoryExpanded, categoryExpanded, GOLD_DARK);
                     CustomColor categoryColor = waypoint.getCategory() == null ? CustomColor.fromHexString("FFFFFF") : waypoint.getCategory().color;
-                    ui.drawText(categoryName.isEmpty() ? "No Category" : categoryName, fieldX + 15, categoryY + 19, categoryColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
+                    ui.drawText(categoryName, fieldX + 15, categoryY + 19, categoryColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
 
                     if (categoryExpanded) {
                         int optionY = categoryY + 43;
-                        drawCategoryOption(fieldX, optionY, fieldWidth, 34, null);
-                        optionY += 34;
                         if (MainWidget.activePackage != null) {
                             for (WaypointCategory category : MainWidget.activePackage.categories) {
                                 drawCategoryOption(fieldX, optionY, fieldWidth, 34, category);
@@ -1045,7 +1047,7 @@ public class NewWaypointScreen extends WEScreen {
                 private void drawCategoryOption(int x, int y, int width, int height, WaypointCategory category) {
                     boolean selected = waypoint.getCategory() == category;
                     drawConfigRow(ui, x, y, width, height, selected, selected, category == null ? GOLD_DARK : category.color.asInt());
-                    String name = category == null ? "No Category" : category.name;
+                    String name = category == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : category.name;
                     CustomColor color = category == null ? CustomColor.fromHexString("FFFFFF") : category.color;
                     ui.drawText(name, x + 12, y + height / 2f, color, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
                 }
@@ -1108,16 +1110,6 @@ public class NewWaypointScreen extends WEScreen {
                     int fieldWidth = Math.max(240, width - 185);
                     int optionY = y + COLLAPSED_HEIGHT + 18 + 162 + 43;
 
-                    if (isIn(mx, my, fieldX, optionY, fieldWidth, 34)) {
-                        waypoint.setCategory(null);
-                        categoryExpanded = false;
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                        saveWaypoint();
-                        WaypointsTabContent.categoryWidgets.clear();
-                        return true;
-                    }
-
-                    optionY += 34;
                     if (MainWidget.activePackage == null) return false;
                     for (WaypointCategory category : MainWidget.activePackage.categories) {
                         if (isIn(mx, my, fieldX, optionY, fieldWidth, 34)) {
@@ -1165,7 +1157,7 @@ public class NewWaypointScreen extends WEScreen {
 
                 public int getTotalHeight() {
                     if (!expanded) return COLLAPSED_HEIGHT;
-                    int categoryOptions = categoryExpanded && MainWidget.activePackage != null ? MainWidget.activePackage.categories.size() + 1 : 0;
+                    int categoryOptions = categoryExpanded && MainWidget.activePackage != null ? MainWidget.activePackage.categories.size() : 0;
                     return EXPANDED_HEIGHT + categoryOptions * 34;
                 }
 

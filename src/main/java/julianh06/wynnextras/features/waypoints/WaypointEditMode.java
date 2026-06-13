@@ -264,6 +264,7 @@ public class WaypointEditMode {
     static void ensureSelectionDefaults() {
         if (WaypointData.INSTANCE.packages.isEmpty()) {
             WaypointPackage pkg = new WaypointPackage("Default");
+            WaypointData.ensureUncategorizedCategory(pkg);
             WaypointData.INSTANCE.packages.add(pkg);
             activePackage = pkg;
             WaypointData.save();
@@ -275,11 +276,12 @@ public class WaypointEditMode {
                     : WaypointData.INSTANCE.packages.getFirst();
         }
 
+        WaypointData.resolveWaypointCategories(activePackage);
         if (activeCategory != null && !activePackage.categories.contains(activeCategory)) {
-            activeCategory = null;
+            activeCategory = WaypointData.ensureUncategorizedCategory(activePackage);
         }
-        if (activeCategory == null && !activePackage.categories.isEmpty()) {
-            activeCategory = activePackage.categories.getFirst();
+        if (activeCategory == null) {
+            activeCategory = WaypointData.ensureUncategorizedCategory(activePackage);
         }
     }
 
@@ -562,7 +564,7 @@ public class WaypointEditMode {
                 waypoints++;
                 packageHasWaypoint = true;
                 WaypointCategory category = waypoint.getCategory();
-                categories.add(category == null ? "No Category" : category.name);
+                categories.add(category == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : category.name);
             }
             if (packageHasWaypoint) packages.add(pkg.name);
         }

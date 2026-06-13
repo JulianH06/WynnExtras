@@ -49,7 +49,10 @@ public class Waypoints {
                         int z = IntegerArgumentType.getInteger(context, "z");
                         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                                 Text.of("Waypoint added at " + x + " " + y + " " + z + " in Package " + WaypointData.INSTANCE.packages.getFirst().name)));
-                        WaypointData.INSTANCE.packages.getFirst().waypoints.add(new Waypoint(x, y, z));
+                        WaypointPackage pkg = WaypointData.INSTANCE.packages.getFirst();
+                        Waypoint waypoint = new Waypoint(x, y, z);
+                        waypoint.setCategory(WaypointData.ensureUncategorizedCategory(pkg));
+                        pkg.waypoints.add(waypoint);
                         WaypointData.save();
                         return 1;
                     },
@@ -70,7 +73,10 @@ public class Waypoints {
                         int z = (int) Math.floor(MinecraftClient.getInstance().player.getZ());
                         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                                 Text.of("Waypoint added at " + x + " " + y + " " + z + " in Package " + WaypointData.INSTANCE.packages.getFirst().name)));
-                        WaypointData.INSTANCE.packages.getFirst().waypoints.add(new Waypoint(x, y, z));
+                        WaypointPackage pkg = WaypointData.INSTANCE.packages.getFirst();
+                        Waypoint waypoint = new Waypoint(x, y, z);
+                        waypoint.setCategory(WaypointData.ensureUncategorizedCategory(pkg));
+                        pkg.waypoints.add(waypoint);
                         WaypointData.save();
                         return 1;
                     },
