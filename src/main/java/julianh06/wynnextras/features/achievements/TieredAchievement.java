@@ -2,7 +2,7 @@ package julianh06.wynnextras.features.achievements;
 
 import java.util.List;
 
-public abstract class TieredAchievement extends ProgressAchievement {
+public class TieredAchievement extends ProgressAchievement {
     protected int currentLevel;
     protected List<Integer> levelTargets;
 

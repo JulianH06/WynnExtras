@@ -15,41 +15,42 @@ public class AchievementTracking {
 
     @SubscribeEvent
     private void onTick(TickEvent event) {
-        if(!init){
+        if (!init) {
             init = true;
-            if(getFromServer() !=null){
+            if (getFromServer() != null) {
                 achievements = getFromServer();
             }
         }
-        if(achievements == null){return;}
+        if (achievements == null) return;
+
         CappedValue combatLevel = Models.CombatXp.getCombatLevel();
         int currentLevel = combatLevel.current();
-//Tracking
-        if(currentLevel == 120){
-            boolean alr = achievements.isUnlocked("simple.level.120");
-            if(!alr) {
-                boolean check = achievements.setCompleted("simple.level.120");
-                if (check){ WynnExtras.addWynnExtrasPrefix(Text.of("Achievement Unlocked: Level 120"));
-                    save();
-                };
-            }
-        }
-        if(currentLevel == 121){
-            boolean alr = achievements.isUnlocked("simple.level.121");
-            if(!alr) {
-                boolean check = achievements.setCompleted("simple.level.121");
-                if (check){ WynnExtras.addWynnExtrasPrefix(Text.of("Achievement Unlocked: Level 121"));
-                    save();
-                };
-            }
+
+        unlockLevelAchievement(currentLevel, 120);
+        unlockLevelAchievement(currentLevel, 121);
+    }
+
+    private void unlockLevelAchievement(int currentLevel, int requiredLevel) {
+        if (currentLevel < requiredLevel) return;
+
+        String id = "simple.level." + requiredLevel;
+        if (achievements.isUnlocked(id)) return;
+
+        if (achievements.setCompleted(id)) {
+            WynnExtras.addWynnExtrasPrefix(Text.of("Achievement Unlocked: Level " + requiredLevel));
+            save();
         }
     }
-    private void save(){
+
+    private void save() {
         Achievements.save();
-    };
-    private Achievements getFromServer(){
+    }
+
+    private Achievements getFromServer() {
         return null;
     }
-    private Achievements loadFromClient(){return null;}
 
+    private Achievements loadFromClient() {
+        return null;
+    }
 }

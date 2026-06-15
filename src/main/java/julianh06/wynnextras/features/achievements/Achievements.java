@@ -26,86 +26,64 @@ public class Achievements {
     private final ArrayList<Achievement> achievements = new ArrayList<>();
     private final ArrayList<TieredAchievement> tieredAchievements = new ArrayList<>();
 
-    // zentrales Lookup nach id
-    private final Map<String, Achievement> byId = new HashMap<>();
+    private transient final Map<String, Achievement> byId = new HashMap<>();
 
-    public void populateAll(){
-        // Beispiel: lege deine Achievements hier an
-        register(simple("simple.level.120", "Reach Level 120", "Reach Combat Level 120", false));
-        register(simple("simple.level.121", "Reach Level 121", "Reach Combat Level 121", false));
-        register(progress("test.progress", "Test Progress", "fortschrittsbasiert", false, 100));
-        register(tiered("test.tiered", "Test Tiered", "mehrstufiger Test", false, List.of(10, 50, 200)));
-
+    public void populateAll() {
+        registerDefaultAchievements(false);
     }
 
-    // --- Factory-Methoden, erzeugen konkrete Instanzen als anonyme Unterklassen ---
     private Achievement simple(String id, String title, String description, boolean secret) {
-        String nid = id;
-        String ntitle = title;
-        String ndescription = description;
-        boolean nsecret = secret;
-
-        return new Achievement() {
-            {
-                this.id = nid;
-                this.title = ntitle;
-                this.description = ndescription;
-                this.secret = nsecret;
-            }
-
-            @Override
-            public float getProgress() {
-                return unlocked ? 1f : 0f;
-            }
-        };
+        Achievement achievement = new Achievement();
+        achievement.id = id;
+        achievement.title = title;
+        achievement.description = description;
+        achievement.secret = secret;
+        return achievement;
     }
 
     private ProgressAchievement progress(String id, String title, String description, boolean secret, int target) {
-        String nid = id;
-        String ntitle = title;
-        String ndescription = description;
-        boolean nsecret = secret;
-        int ntarget = target;
-
-        return new ProgressAchievement() {
-            {
-                this.id = nid;
-                this.title = ntitle;
-                this.description = ndescription;
-                this.secret = nsecret;
-                this.current = 0;
-                this.target = ntarget;
-            }
-            // getProgress() kommt aus ProgressAchievement
-        };
+        ProgressAchievement achievement = new ProgressAchievement();
+        achievement.id = id;
+        achievement.title = title;
+        achievement.description = description;
+        achievement.secret = secret;
+        achievement.current = 0;
+        achievement.target = target;
+        return achievement;
     }
 
     private TieredAchievement tiered(String id, String title, String description, boolean secret, List<Integer> levelTargets) {
-        String nid = id;
-        String ntitle = title;
-        String ndescription = description;
-        boolean nsecret = secret;
-        List<Integer> nlevelTargets = levelTargets;
-        return new TieredAchievement() {
-            {
-                this.id = nid;
-                this.title = ntitle;
-                this.description = ndescription;
-                this.secret = nsecret;
-                this.current = 0;
-                this.currentLevel = 0;
-                this.levelTargets = List.copyOf(nlevelTargets);
-            }
-            // TieredAchievement hat eigene progress()/getProgress()
-        };
+        TieredAchievement achievement = new TieredAchievement();
+        achievement.id = id;
+        achievement.title = title;
+        achievement.description = description;
+        achievement.secret = secret;
+        achievement.current = 0;
+        achievement.currentLevel = 0;
+        achievement.levelTargets = List.copyOf(levelTargets);
+        return achievement;
     }
 
-    // --- Registrierung / Verwaltung ---
+    private boolean registerDefaultAchievements(boolean onlyMissing) {
+        boolean changed = false;
+        changed |= registerDefault(simple("simple.level.120", "Reach Level 120", "Reach Combat Level 120", false), onlyMissing);
+        changed |= registerDefault(simple("simple.level.121", "Reach Level 121", "Reach Combat Level 121", false), onlyMissing);
+        changed |= registerDefault(progress("test.progress", "Test Progress", "progress", false, 100), onlyMissing);
+        changed |= registerDefault(tiered("test.tiered", "Test Tiered", "tiered", false, List.of(10, 50, 200)), onlyMissing);
+        return changed;
+    }
+
+    private boolean registerDefault(Achievement achievement, boolean onlyMissing) {
+        if (onlyMissing && byId.containsKey(achievement.id)) return false;
+
+        register(achievement);
+        return true;
+    }
+
     public void register(Achievement a) {
         if (a == null) throw new IllegalArgumentException("Achievement is null");
         if (a.id == null || a.id.isEmpty()) throw new IllegalArgumentException("Achievement id must not be null/empty");
 
-        // falls schon vorhanden: entferne alten Eintrag (wir überschreiben)
         Achievement old = byId.get(a.id);
         if (old != null) {
             removeFromLists(old);
@@ -124,7 +102,6 @@ public class Achievements {
         else achievements.remove(a);
     }
 
-    // --- Lookup / Getter ---
     public Achievement getById(String id) {
         return byId.get(id);
     }
@@ -141,12 +118,6 @@ public class Achievements {
         return Collections.unmodifiableList(tieredAchievements);
     }
 
-    // --- Bearbeiten / Abfragen von Status & Fortschritt ---
-
-    /**
-     * Setzt unlocked = true (unlock) oder false (reset) für ein Achievement.
-     * Gibt false zurück, wenn die ID nicht gefunden wurde.
-     */
     public boolean setUnlocked(String id, boolean unlocked) {
         Achievement a = byId.get(id);
         if (a == null) return false;
@@ -154,10 +125,9 @@ public class Achievements {
         if (unlocked) {
             a.unlock();
         } else {
-            // Zugriff auf geschützte Felder ist erlaubt, da wir im selben package sind
             a.unlocked = false;
             a.unlockedAt = null;
-            // Falls du auch progress zurücksetzen willst, kannst du das hier für Progress/Tiered tun:
+
             if (a instanceof ProgressAchievement) {
                 ((ProgressAchievement) a).current = 0;
             }
@@ -168,15 +138,10 @@ public class Achievements {
         return true;
     }
 
-    /** Shortcut um ein Achievement als abgeschlossen zu markieren */
     public boolean setCompleted(String id) {
         return setUnlocked(id, true);
     }
 
-    /**
-     * Fügt Fortschritt hinzu. Liefert true wenn das Achievement existiert und progress() aufgerufen wurde.
-     * Für Simple-Achievements passiert nichts und wird false zurückgegeben.
-     */
     public boolean addProgress(String id, int amount) {
         Achievement a = byId.get(id);
         if (a == null) return false;
@@ -187,29 +152,17 @@ public class Achievements {
         return false;
     }
 
-    /**
-     * Gibt zurück, ob Achievement für gegebene id unlocked ist.
-     * Returns null wenn id nicht gefunden wurde.
-     */
     public boolean isUnlocked(String id) {
         Achievement a = byId.get(id);
         return a != null && a.isUnlocked();
     }
 
-    /**
-     * Liefert progress als Prozent (0..100). Gibt null zurück, wenn ID nicht gefunden wurde.
-     * Hinweis: intern benutzt getProgress() 0..1; hier multipliziert nach 0..100.
-     */
     public Float getProgressPercent(String id) {
         Achievement a = byId.get(id);
         if (a == null) return null;
         return a.getProgress() * 100f;
     }
 
-    /**
-     * Liefert das aktuelle Tier (currentLevel) für Tiered-Achievements.
-     * Gibt null zurück, wenn ID nicht gefunden wurde oder das Achievement nicht tiered ist.
-     */
     public Integer getTier(String id) {
         Achievement a = byId.get(id);
         if (a == null) return null;
@@ -219,9 +172,6 @@ public class Achievements {
         return null;
     }
 
-    /**
-     * Weitere Helfer: nextTierTarget / currentTierTarget (null wenn nicht tiered)
-     */
     public Integer getCurrentTierTarget(String id) {
         Achievement a = byId.get(id);
         if (!(a instanceof TieredAchievement)) return null;
@@ -249,18 +199,19 @@ public class Achievements {
             .create();
 
 
-    private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir()
-            .resolve("wynnextras/"
-                    + MinecraftClient.getInstance().player.getUuid().toString()
-                    + "/achievemtns.json");
-
     public static void load() {
-        if (Files.exists(CONFIG_PATH)) {
-            try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
+        Path configPath = getConfigPath("achievements.json");
+
+        if (Files.exists(configPath)) {
+            try (Reader reader = Files.newBufferedReader(configPath)) {
                 Achievements loaded = gson.fromJson(reader, Achievements.class);
                 if (loaded != null) {
                     loaded.rebuildIndex();
+                    boolean changed = loaded.registerDefaultAchievements(true);
                     AchievementTracking.achievements = loaded;
+                    if (changed) {
+                        save();
+                    }
                 } else {
                     createDefaultAchievements();
                 }
@@ -279,12 +230,27 @@ public class Achievements {
     }
 
     public static void save() {
-        try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
+        Path configPath = getConfigPath("achievements.json");
+        try {
+            Files.createDirectories(configPath.getParent());
+        } catch (IOException e) {
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't create achievements config directory:", e);
+            return;
+        }
+
+        try (Writer writer = Files.newBufferedWriter(configPath)) {
             gson.toJson(AchievementTracking.achievements, writer);
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Couldn't write the achievements file:");
             e.printStackTrace();
         }
+    }
+
+    private static Path getConfigPath(String fileName) {
+        return FabricLoader.getInstance().getConfigDir()
+                .resolve("wynnextras/"
+                        + MinecraftClient.getInstance().player.getUuid()
+                        + "/" + fileName);
     }
     public void rebuildIndex() {
         byId.clear();
