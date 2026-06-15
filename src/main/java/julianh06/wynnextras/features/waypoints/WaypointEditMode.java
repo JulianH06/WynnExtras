@@ -141,6 +141,21 @@ public class WaypointEditMode {
         mc.send(() -> mc.setScreen(new WaypointEditModeUI()));
     }
 
+    public static void editWaypoint(WaypointPackage pkg, Waypoint waypoint) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player == null || pkg == null || waypoint == null) return;
+
+        ensureSelectionDefaults();
+        enabled = true;
+        mode = Mode.EDIT;
+        activeDropdown = Dropdown.NONE;
+        focusedCoordinate = -1;
+        closingForFreeMove = false;
+        selectWaypoint(pkg, waypoint);
+        syncCoordinateInputs();
+        mc.send(() -> mc.setScreen(new WaypointEditModeUI()));
+    }
+
     public static void enterFreeMoveMode() {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (!enabled) return;

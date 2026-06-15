@@ -14,7 +14,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class OrderManager {
@@ -47,15 +46,21 @@ public class OrderManager {
     public static void applyOrder(List<WaypointPackage> packages) {
         List<String> order = loadOrder();
         if (order.isEmpty()) return;
-        Map<String, WaypointPackage> byId = packages.stream().collect(Collectors.toMap(p -> p.id, p -> p));
+        List<WaypointPackage> remaining = new ArrayList<>(packages);
         List<WaypointPackage> reordered = new ArrayList<>();
         // add known in order
         for (String id : order) {
-            WaypointPackage p = byId.remove(id);
-            if (p != null) reordered.add(p);
+            if (id == null) continue;
+            for (int i = 0; i < remaining.size(); i++) {
+                WaypointPackage p = remaining.get(i);
+                if (id.equals(p.id)) {
+                    reordered.add(remaining.remove(i));
+                    break;
+                }
+            }
         }
         // append remaining (new packages)
-        reordered.addAll(byId.values());
+        reordered.addAll(remaining);
         packages.clear();
         packages.addAll(reordered);
     }

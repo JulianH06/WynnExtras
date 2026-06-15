@@ -15,8 +15,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class WaypointData {
     public static final int CURRENT_PACKAGE_VERSION = 2;
@@ -53,6 +55,10 @@ public class WaypointData {
                         INSTANCE.packages.add(pkg);
                     }
                 }
+            }
+
+            if (ensureUniquePackageIds()) {
+                save();
             }
 
             OrderManager.applyOrder(INSTANCE.packages);
@@ -280,6 +286,19 @@ public class WaypointData {
             System.err.println("[WynnExtras] Couldn't save packages:");
             e.printStackTrace();
         }
+    }
+
+    private static boolean ensureUniquePackageIds() {
+        Set<String> seenIds = new HashSet<>();
+        boolean changed = false;
+        for (WaypointPackage pkg : INSTANCE.packages) {
+            if (pkg.id == null || pkg.id.isBlank() || seenIds.contains(pkg.id)) {
+                pkg.id = java.util.UUID.randomUUID().toString();
+                changed = true;
+            }
+            seenIds.add(pkg.id);
+        }
+        return changed;
     }
 
     public void deletePackage(String name) {

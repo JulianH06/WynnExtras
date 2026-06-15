@@ -9,6 +9,7 @@ import julianh06.wynnextras.features.waypoints.old.Waypoint;
 import julianh06.wynnextras.features.waypoints.old.WaypointCategory;
 import julianh06.wynnextras.features.waypoints.old.WaypointData;
 import julianh06.wynnextras.features.waypoints.old.WaypointPackage;
+import julianh06.wynnextras.utils.UI.ColorPickerWidget;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
@@ -17,8 +18,12 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ConfirmScreen;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.BlockPos;
 
 import java.util.*;
 
@@ -66,12 +71,22 @@ public class NewWaypointScreen extends WEScreen {
     static Map<ScrollType, Float> actualOffsets = new HashMap<>();
 
     protected NewWaypointScreen() {
+        this(null, null);
+    }
+
+    protected NewWaypointScreen(WaypointPackage initialPackage, Waypoint initialWaypoint) {
         super(Text.of("WynnExtras Waypoint Screen"));
         sideBarWidget = new SideBarWidget();
         addRootWidget(sideBarWidget);
-        MainWidget.resetState();
+        MainWidget.resetState(initialPackage, initialWaypoint);
         mainWidget = new MainWidget();
         addRootWidget(mainWidget);
+    }
+
+    public static void open(WaypointPackage initialPackage, Waypoint initialWaypoint) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null) return;
+        client.send(() -> client.setScreen(new NewWaypointScreen(initialPackage, initialWaypoint)));
     }
 
     @Override
@@ -129,6 +144,13 @@ public class NewWaypointScreen extends WEScreen {
         }
     }
 
+    private static void drawButton(UIUtils ui, int x, int y, int width, int height, boolean hover, int accent) {
+        ui.drawRect(x, y, width, height, CustomColor.fromInt(hover ? PARCHMENT_HOVER : PARCHMENT));
+        ui.drawRect(x, y, width, 2, CustomColor.fromInt(hover ? GOLD : BORDER_LIGHT));
+        ui.drawRect(x, y + height - 2, width, 2, CustomColor.fromInt(BORDER_DARK));
+        ui.drawRect(x + 4, y + height - 5, width - 8, 2, CustomColor.fromInt(accent));
+    }
+
     private void drawFooter(DrawContext ctx, int mouseX, int mouseY) {
         int footerY = height - FOOTER_HEIGHT + 5;
 
@@ -176,6 +198,7 @@ public class NewWaypointScreen extends WEScreen {
         static int draggedIndex = -1;
         static int packageOverMouseIndex = -1;
         static int packageUnderMouseIndex = -1;
+        private float packageScrollTarget = 0;
         private float packageScrollOffset = 0;
 
         @Override
@@ -200,12 +223,15 @@ public class NewWaypointScreen extends WEScreen {
             int listEndY = addSeparatorY - 16;
             int listHeight = Math.max(0, listEndY - packageY);
             float maxScroll = Math.max(0, packageWidgets.size() * (packageHeight + spacing) - spacing - listHeight);
-            packageScrollOffset = Math.max(0, Math.min(packageScrollOffset, maxScroll));
+            packageScrollTarget = MathHelper.clamp(packageScrollTarget, 0, maxScroll);
+            float diff = packageScrollTarget - packageScrollOffset;
+            if (Math.abs(diff) < 0.5f || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) packageScrollOffset = packageScrollTarget;
+            else packageScrollOffset += diff * 0.3f * tickDelta;
 
             packageOverMouseIndex = -1;
             packageUnderMouseIndex = -1;
 
-            float mouseYScaled = mouseY * ui.getScaleFactorF() + packageScrollOffset;
+            float mouseYScaled = isInPackageList(mouseX, mouseY, packageY, listEndY) ? mouseY * ui.getScaleFactorF() + packageScrollOffset : -1;
 
             if (draggedIndex > -1) {
                 List<Integer> centers = new ArrayList<>(packageWidgets.size());
@@ -297,7 +323,7 @@ public class NewWaypointScreen extends WEScreen {
             }
 
             ui.drawRect(50, addSeparatorY, width - 100, 4, CustomColor.fromInt(GOLD_DARK));
-            drawConfigRow(ui, PACKAGE_X_PADDING, height - 72, packageWidth, ADD_BUTTON_HEIGHT, isAddPackageHovered(mouseX, mouseY), false, GOLD_DARK);
+            drawButton(ui, PACKAGE_X_PADDING, height - 72, packageWidth, ADD_BUTTON_HEIGHT, isAddPackageHovered(mouseX, mouseY), GOLD_DARK);
             ui.drawCenteredText("Add Package", PACKAGE_X_PADDING + packageWidth / 2f, height - 72 + ADD_BUTTON_HEIGHT / 2f, CustomColor.fromHexString("FFFFFF"), 2.6f);
         }
 
@@ -317,6 +343,7 @@ public class NewWaypointScreen extends WEScreen {
                 addPackage();
                 return true;
             }
+            if (!isInPackageList(mx, my)) return super.mouseClicked(mx, my, button);
             for(PackageWidget packageWidget : packageWidgets) {
                 if(packageWidget.contains((int) mx, (int) my)) {
                     return packageWidget.mouseClicked(mx, my, button);
@@ -328,7 +355,7 @@ public class NewWaypointScreen extends WEScreen {
         @Override
         public boolean mouseScrolled(double mx, double my, double delta) {
             if (!contains((int) mx, (int) my)) return false;
-            packageScrollOffset += delta > 0 ? -55 : 55;
+            packageScrollTarget += delta > 0 ? -55 : 55;
             return true;
         }
 
@@ -352,6 +379,18 @@ public class NewWaypointScreen extends WEScreen {
             }
         }
 
+        private boolean isInPackageList(double mx, double my) {
+            int addSeparatorY = height - ADD_SECTION_HEIGHT;
+            return isInPackageList(mx, my, LIST_START_Y, addSeparatorY - 16);
+        }
+
+        private boolean isInPackageList(double mx, double my, int listStartY, int listEndY) {
+            return mx >= ui.sx(PACKAGE_X_PADDING)
+                    && my >= ui.sy(listStartY)
+                    && mx < ui.sx(width - 5)
+                    && my < ui.sy(listEndY);
+        }
+
         private boolean isAddPackageHovered(double mx, double my) {
             int packageWidth = width - PACKAGE_X_PADDING * 2 - 5;
             return mx >= ui.sx(PACKAGE_X_PADDING)
@@ -361,12 +400,10 @@ public class NewWaypointScreen extends WEScreen {
         }
 
         private void addPackage() {
-            WaypointPackage waypointPackage = new WaypointPackage(WaypointData.INSTANCE.generateUniqueName("New package"));
-            WaypointData.ensureUncategorizedCategory(waypointPackage);
-            WaypointData.INSTANCE.packages.add(waypointPackage);
-            OrderManager.saveOrder(WaypointData.INSTANCE.packages);
-            WaypointData.save();
+            WaypointPackage waypointPackage = WaypointActions.createPackage("New Package");
+            MainWidget.activePackage = waypointPackage;
             rebuildPackageWidgetsFromData();
+            MainWidget.invalidateAllTabs();
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         }
 
@@ -425,10 +462,11 @@ public class NewWaypointScreen extends WEScreen {
                         MainWidget.activePackage = null;
                     } else {
                         MainWidget.activePackage = waypointPackage;
+                        WaypointData.INSTANCE.activePackage = waypointPackage;
                         targetOffsets.put(ScrollType.Waypoints, 0f);
                         actualOffsets.put(ScrollType.Waypoints, 0f);
                     }
-                    MainWidget.WaypointsTabContent.categoryWidgets.clear();
+                    MainWidget.invalidateAllTabs();
                 }
 
                 if (isDragging && draggedIndex >= 0 && packageUnderMouseIndex >= 0) {
@@ -446,8 +484,7 @@ public class NewWaypointScreen extends WEScreen {
                         WaypointPackage moved = WaypointData.INSTANCE.packages.remove(draggedIndex);
                         WaypointData.INSTANCE.packages.add(targetIndex, moved);
 
-                        OrderManager.saveOrder(WaypointData.INSTANCE.packages);
-                        WaypointData.save();
+                        WaypointActions.savePackagesAndOrder();
 
                         parent.rebuildPackageWidgetsFromData();
                     }
@@ -464,6 +501,7 @@ public class NewWaypointScreen extends WEScreen {
         private enum Tab { Waypoints, Categories, Settings }
 
         public static WaypointPackage activePackage = null;
+        private static Waypoint waypointToExpand = null;
 
         private static Tab activeTab = Tab.Waypoints;
         private static List<TabWidget> tabWidgets = new ArrayList<>();
@@ -476,8 +514,14 @@ public class NewWaypointScreen extends WEScreen {
         private static CategoriesTabContent categoriesTab;
         private static SettingsTabContent settingsTab;
 
-        private static void resetState() {
-            activePackage = null;
+        private static void resetState(WaypointPackage initialPackage, Waypoint initialWaypoint) {
+            activePackage = initialPackage != null && WaypointData.INSTANCE.packages.contains(initialPackage)
+                    ? initialPackage
+                    : null;
+            if (activePackage == null && initialWaypoint != null) {
+                activePackage = WaypointEditMode.packageOf(initialWaypoint);
+            }
+            waypointToExpand = initialWaypoint;
             activeTab = Tab.Waypoints;
             tabWidgets.clear();
             mainAreaWidget = null;
@@ -485,6 +529,12 @@ public class NewWaypointScreen extends WEScreen {
             waypointsTab = null;
             categoriesTab = null;
             settingsTab = null;
+        }
+
+        private static void invalidateAllTabs() {
+            if (waypointsTab != null) waypointsTab.invalidate();
+            if (categoriesTab != null) categoriesTab.invalidate();
+            if (settingsTab != null) settingsTab.invalidate();
         }
 
         @Override
@@ -582,10 +632,11 @@ public class NewWaypointScreen extends WEScreen {
 
         @Override
         public boolean mouseScrolled(double mx, double my, double delta) {
-            if (activeTab != Tab.Waypoints) return false;
-            if(delta > 0) targetOffsets.put(ScrollType.Waypoints, targetOffsets.getOrDefault(ScrollType.Waypoints, 0f) - 33f);
-            else targetOffsets.put(ScrollType.Waypoints, targetOffsets.getOrDefault(ScrollType.Waypoints, 0f) + 33f);
-            if(targetOffsets.getOrDefault(ScrollType.Waypoints, 0f) < 0) targetOffsets.put(ScrollType.Waypoints, 0f);
+            ScrollType scrollType = activeTab == Tab.Categories ? ScrollType.Categories : ScrollType.Waypoints;
+            if (activeTab == Tab.Settings) return false;
+            if(delta > 0) targetOffsets.put(scrollType, targetOffsets.getOrDefault(scrollType, 0f) - 33f);
+            else targetOffsets.put(scrollType, targetOffsets.getOrDefault(scrollType, 0f) + 33f);
+            if(targetOffsets.getOrDefault(scrollType, 0f) < 0) targetOffsets.put(scrollType, 0f);
             return true;
         }
 
@@ -668,6 +719,7 @@ public class NewWaypointScreen extends WEScreen {
 
         private static abstract class TabContentWidget extends Widget {
             public abstract float calculateTotalHeight();
+            public void invalidate() {}
         }
 
         private static class ActionButtonWidget extends Widget {
@@ -693,10 +745,30 @@ public class NewWaypointScreen extends WEScreen {
             }
         }
 
+        private static void openConfirm(String title, String message, Runnable confirmedAction) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            Screen parent = client.currentScreen;
+            client.setScreen(new ConfirmScreen(confirmed -> {
+                if (confirmed) confirmedAction.run();
+                client.setScreen(parent);
+            }, Text.of(title), Text.of(message), Text.of("Delete"), Text.of("Cancel")));
+        }
+
+        private static class ScreenTextInput extends TextInputWidget {
+            private ScreenTextInput(String input, java.util.function.Consumer<String> changeConsumer) {
+                super(0, 0, 0, 0, 10, 11, 2);
+                setInput(input);
+                setBackgroundColor(CustomColor.fromInt(BG_LIGHT));
+                setFocusedColor(CustomColor.fromInt(PARCHMENT_LIGHT));
+                setTextColor(CustomColor.fromInt(TEXT_LIGHT));
+                setPlaceholderColor(CustomColor.fromInt(TEXT_DIM));
+                setOnChange(changeConsumer);
+            }
+        }
+
         private static class WaypointsTabContent extends TabContentWidget {
             public static List<CategoryWidget> categoryWidgets = new ArrayList<>();
             private WaypointScrollBarWidget scrollBar;
-            private ActionButtonWidget addWaypointButton;
 
             private void rebuildCategoryWidgets() {
                 categoryWidgets.clear();
@@ -704,6 +776,9 @@ public class NewWaypointScreen extends WEScreen {
 
                 Map<WaypointCategory, List<Waypoint>> grouped = new LinkedHashMap<>();
                 WaypointData.resolveWaypointCategories(activePackage);
+                for (WaypointCategory category : activePackage.categories) {
+                    grouped.put(category, new ArrayList<>());
+                }
                 activePackage.waypoints.stream()
                         .sorted(Comparator.comparing(
                                 w -> w.getCategory().name == null ? "" : w.getCategory().name,
@@ -716,36 +791,31 @@ public class NewWaypointScreen extends WEScreen {
 
                     entry.getValue().stream()
                             .sorted(Comparator.comparing(w -> w.name, String.CASE_INSENSITIVE_ORDER))
-                            .forEach(w -> catWidget.addWaypoint(new WaypointWidget(w)));
+                            .forEach(w -> catWidget.addWaypoint(new WaypointWidget(w, w == waypointToExpand)));
 
                     categoryWidgets.add(catWidget);
                     addChild(catWidget);
                 }
+                waypointToExpand = null;
             }
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 if (scrollBar == null) {
-                    scrollBar = new WaypointScrollBarWidget();
+                    scrollBar = new WaypointScrollBarWidget(ScrollType.Waypoints);
                     addChild(scrollBar);
-                }
-                if (addWaypointButton == null) {
-                    addWaypointButton = new ActionButtonWidget("Add Waypoint", this::addWaypoint);
-                    addChild(addWaypointButton);
                 }
 
                 if (activePackage == null) {
                     categoryWidgets.clear();
                     clearChildren();
                     addChild(scrollBar);
-                    addChild(addWaypointButton);
                     return;
                 }
 
                 if (categoryWidgets.isEmpty()) {
                     rebuildCategoryWidgets();
                     addChild(scrollBar);
-                    addChild(addWaypointButton);
                 }
 
                 try {
@@ -775,7 +845,6 @@ public class NewWaypointScreen extends WEScreen {
                             (int) viewportHeight
                     );
                 }
-                addWaypointButton.setBounds(x + 30, y + 10, 260, 44);
 
                 if (maxOffset > 0) {
                     scrollBar.setVisible(true);
@@ -798,11 +867,17 @@ public class NewWaypointScreen extends WEScreen {
                 if (Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffsets.put(ScrollType.Waypoints, targetOffsets.getOrDefault(ScrollType.Waypoints, 0f));
                 else actualOffsets.put(ScrollType.Waypoints, actualOffsets.getOrDefault(ScrollType.Waypoints, 0f) + diff * speed * tickDelta);
 
-                float currentY = y + 65 - actualOffsets.getOrDefault(ScrollType.Waypoints, 0f);
+                float currentY = y + 10 - actualOffsets.getOrDefault(ScrollType.Waypoints, 0f);
 
+                boolean mouseInViewport = isInViewport(mouseX, mouseY);
+                int effectiveMouseX = mouseInViewport ? mouseX : -1;
+                int effectiveMouseY = mouseInViewport ? mouseY : -1;
                 for (CategoryWidget category : categoryWidgets) {
                     category.setBounds(x + 30, (int) currentY, width - 70, 50);
-                    category.draw(ctx, mouseX, mouseY, tickDelta, ui);
+                    boolean visibleInViewport = currentY + category.getTotalHeight() >= mainAreaWidget.getY()
+                            && currentY <= mainAreaWidget.getY() + mainAreaWidget.getHeight();
+                    category.setVisible(visibleInViewport);
+                    if (visibleInViewport) category.draw(ctx, effectiveMouseX, effectiveMouseY, tickDelta, ui);
 
                     currentY += category.getTotalHeight() + 10;
                 }
@@ -817,9 +892,9 @@ public class NewWaypointScreen extends WEScreen {
 
             @Override
             public float calculateTotalHeight() {
-                if(categoryWidgets.isEmpty()) return 65;
+                if(categoryWidgets.isEmpty()) return 10;
 
-                float result = 65;
+                float result = 10;
 
                 for (int i = 0; i < categoryWidgets.size(); i++) {
                     result += categoryWidgets.get(i).getTotalHeight() + 10;
@@ -828,31 +903,25 @@ public class NewWaypointScreen extends WEScreen {
                 return result;
             }
 
-            private void addWaypoint() {
-                if (activePackage == null) return;
+            @Override
+            public boolean mouseClicked(double mx, double my, int button) {
+                if (!isInViewport(mx, my)) return false;
+                return super.mouseClicked(mx, my, button);
+            }
 
-                MinecraftClient client = MinecraftClient.getInstance();
-                int x = 0;
-                int y = 0;
-                int z = 0;
-                if (client.player != null) {
-                    x = (int) Math.floor(client.player.getX());
-                    y = (int) Math.floor(client.player.getY()) - 1;
-                    z = (int) Math.floor(client.player.getZ());
-                }
+            private boolean isInViewport(double mx, double my) {
+                if (mainAreaWidget == null || ui == null) return false;
+                return mx >= ui.sx(x)
+                        && my >= ui.sy(mainAreaWidget.getY())
+                        && mx < ui.sx(x + width)
+                        && my < ui.sy(mainAreaWidget.getY() + mainAreaWidget.getHeight());
+            }
 
-                Waypoint waypoint = new Waypoint(x, y, z);
-                waypoint.id = UUID.randomUUID().toString();
-                waypoint.setCategory(WaypointData.ensureUncategorizedCategory(activePackage));
-                activePackage.waypoints.add(waypoint);
-                WaypointData.save();
-
+            @Override
+            public void invalidate() {
                 categoryWidgets.clear();
                 clearChildren();
-                addChild(scrollBar);
-                addChild(addWaypointButton);
-                targetOffsets.put(ScrollType.Waypoints, 0f);
-                actualOffsets.put(ScrollType.Waypoints, 0f);
+                if (scrollBar != null) addChild(scrollBar);
             }
 
             private static class CategoryWidget extends Widget {
@@ -873,8 +942,9 @@ public class NewWaypointScreen extends WEScreen {
                 public void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
                     this.ui = ui;
                     if(!visible || this.ui == null) return;
+                    boolean mouseInViewport = MainWidget.waypointsTab != null && MainWidget.waypointsTab.isInViewport(mouseX, mouseY);
                     // update hover state for this widget
-                    hovered = contains(mouseX, mouseY);
+                    hovered = mouseInViewport && contains(mouseX, mouseY);
                     updateValues();
                     drawBackground(ctx, mouseX, mouseY, tickDelta);
                     drawContent(ctx, mouseX, mouseY, tickDelta);
@@ -883,7 +953,7 @@ public class NewWaypointScreen extends WEScreen {
                         child.setUi(ui);
                         if(!child.isVisible() || child.getUi() == null) return;
                         // update hover state for this widget
-                        child.setHovered(child.contains(mouseX, mouseY));
+                        child.setHovered(mouseInViewport && child.contains(mouseX, mouseY));
                     }
                     drawForeground(ctx, mouseX, mouseY, tickDelta);
                 }
@@ -898,14 +968,26 @@ public class NewWaypointScreen extends WEScreen {
 
                     ui.drawText(arrow, x + 15, y + height / 2f, color, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
                     ui.drawText(name, x + 50, y + height / 2f, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
+                    int addButtonW = 145;
+                    int addButtonX = x + width - addButtonW - 18;
+                    ui.drawText(waypoints.size() + " waypoint" + (waypoints.size() == 1 ? "" : "s"), addButtonX - 24, y + height / 2f, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 2.35f);
+                    drawSmallHeaderButton(mouseX, mouseY, addButtonX, y + 6, addButtonW, 38, "Add Waypoint", TOGGLE_ON);
 
                     if (collapsed) return;
 
                     float offsetY = y + height + 10;
 
+                    if (waypoints.isEmpty()) {
+                        ui.drawText("No waypoints in this category", x + 22, offsetY + 12, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
+                        return;
+                    }
+
+                    boolean mouseInViewport = MainWidget.waypointsTab != null && MainWidget.waypointsTab.isInViewport(mouseX, mouseY);
+                    int childMouseX = mouseInViewport ? mouseX : -1;
+                    int childMouseY = mouseInViewport ? mouseY : -1;
                     for (WaypointWidget waypoint : waypoints) {
                         waypoint.setBounds(x + 20, (int) offsetY, width - 40, waypoint.getTotalHeight());
-                        waypoint.draw(ctx, mouseX, mouseY, tickDelta, ui);
+                        waypoint.draw(ctx, childMouseX, childMouseY, tickDelta, ui);
                         offsetY += waypoint.getTotalHeight() + 10;
                     }
                 }
@@ -917,9 +999,43 @@ public class NewWaypointScreen extends WEScreen {
                     return true;
                 }
 
+                @Override
+                public boolean mouseClicked(double mx, double my, int button) {
+                    if (!visible || !enabled) return false;
+                    int addButtonW = 145;
+                    int addButtonX = x + width - addButtonW - 18;
+                    if (button == 0 && isIn(mx, my, addButtonX, y + 6, addButtonW, 38)) {
+                        addWaypointInCategory();
+                        return true;
+                    }
+                    return super.mouseClicked(mx, my, button);
+                }
+
+                private void drawSmallHeaderButton(int mouseX, int mouseY, int x, int y, int width, int height, String label, int accent) {
+                    drawButton(ui, x, y, width, height, isIn(mouseX, mouseY, x, y, width, height), accent);
+                    ui.drawCenteredText(label, x + width / 2f, y + height / 2f, CustomColor.fromInt(TEXT_LIGHT), 2.2f);
+                }
+
+                private void addWaypointInCategory() {
+                    MinecraftClient client = MinecraftClient.getInstance();
+                    BlockPos pos = BlockPos.ORIGIN;
+                    if (client.player != null) {
+                        pos = new BlockPos((int) Math.floor(client.player.getX()), (int) Math.floor(client.player.getY()) - 1, (int) Math.floor(client.player.getZ()));
+                    }
+                    waypointToExpand = WaypointActions.createWaypoint(MainWidget.activePackage, category, pos);
+                    WaypointsTabContent tab = MainWidget.waypointsTab;
+                    if (tab != null) tab.invalidate();
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                }
+
+                private boolean isIn(double mx, double my, int x, int y, int width, int height) {
+                    return mx >= ui.sx(x) && my >= ui.sy(y) && mx < ui.sx(x) + ui.sw(width) && my < ui.sy(y) + ui.sh(height);
+                }
+
                 public float getTotalHeight() {
                     if (collapsed) return height;
                     float result = height + 10;
+                    if (waypoints.isEmpty()) return result + 34;
                     for (WaypointWidget waypoint : waypoints) {
                         result += waypoint.getTotalHeight() + 10;
                     }
@@ -929,7 +1045,7 @@ public class NewWaypointScreen extends WEScreen {
 
             private static class WaypointWidget extends Widget {
                 private static final int COLLAPSED_HEIGHT = 50;
-                private static final int EXPANDED_HEIGHT = 275;
+                private static final int EXPANDED_HEIGHT = 365;
 
                 final Waypoint waypoint;
                 private boolean expanded = false;
@@ -939,8 +1055,9 @@ public class NewWaypointScreen extends WEScreen {
                 private WaypointTextInput yInput;
                 private WaypointTextInput zInput;
 
-                public WaypointWidget(Waypoint waypoint) {
+                public WaypointWidget(Waypoint waypoint, boolean expand) {
                     this.waypoint = waypoint;
+                    expanded = expand;
                     if (waypoint != null) {
                         nameInput = new WaypointTextInput(waypoint.name == null ? "" : waypoint.name, this::applyName);
                         xInput = new WaypointTextInput(String.valueOf(waypoint.x), ignored -> applyCoordinates());
@@ -981,7 +1098,7 @@ public class NewWaypointScreen extends WEScreen {
                 private void drawExpandedContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta, String categoryName) {
                     int contentX = x + 25;
                     int contentY = y + COLLAPSED_HEIGHT + 18;
-                    int inputHeight = 38;
+                    int inputHeight = 44;
                     int labelY = contentY + 8;
                     int fieldX = contentX + 135;
                     int fieldWidth = Math.max(240, width - 185);
@@ -989,34 +1106,52 @@ public class NewWaypointScreen extends WEScreen {
                     ui.drawText("Text", contentX, labelY, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
                     setInputBounds(nameInput, fieldX, contentY, fieldWidth, inputHeight);
 
-                    int coordsY = contentY + 54;
-                    int coordFieldWidth = 150;
+                    int coordsY = contentY + 62;
+                    int coordFieldWidth = 170;
                     ui.drawText("Coordinates", contentX, coordsY + 8, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
                     setInputBounds(xInput, fieldX, coordsY, coordFieldWidth, inputHeight);
                     setInputBounds(yInput, fieldX + coordFieldWidth + 35, coordsY, coordFieldWidth, inputHeight);
                     setInputBounds(zInput, fieldX + (coordFieldWidth + 35) * 2, coordsY, coordFieldWidth, inputHeight);
 
-                    int visibilityY = contentY + 108;
+                    int visibilityY = contentY + 124;
                     ui.drawText("Visibility", contentX, visibilityY + 15, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
-                    drawOverrideToggle(contentX + 135, visibilityY, 150, 38, "Name", waypoint.showNameOverride, waypoint.shouldShowName());
-                    drawOverrideToggle(contentX + 305, visibilityY, 150, 38, "Block", waypoint.showOverride, waypoint.shouldShowBlock());
-                    drawOverrideToggle(contentX + 475, visibilityY, 180, 38, "Distance", waypoint.showDistanceOverride, waypoint.shouldShowDistance());
+                    int toggleGap = 12;
+                    int toggleWidth = Math.max(190, (fieldWidth - toggleGap * 2) / 3);
+                    drawOverrideToggle(fieldX, visibilityY, toggleWidth, 40, "Name", waypoint.showNameOverride, waypoint.shouldShowName());
+                    drawOverrideToggle(fieldX + toggleWidth + toggleGap, visibilityY, toggleWidth, 40, "Block", waypoint.showOverride, waypoint.shouldShowBlock());
+                    drawOverrideToggle(fieldX + (toggleWidth + toggleGap) * 2, visibilityY, toggleWidth, 40, "Distance", waypoint.showDistanceOverride, waypoint.shouldShowDistance());
 
-                    int categoryY = contentY + 162;
+                    int categoryY = contentY + 184;
                     ui.drawText("Category", contentX, categoryY + 15, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
-                    drawConfigRow(ui, fieldX, categoryY, fieldWidth, 38, categoryExpanded, categoryExpanded, GOLD_DARK);
+                    drawButton(ui, fieldX, categoryY, fieldWidth, 40, isIn(mouseX, mouseY, fieldX, categoryY, fieldWidth, 40), GOLD_DARK);
                     CustomColor categoryColor = waypoint.getCategory() == null ? CustomColor.fromHexString("FFFFFF") : waypoint.getCategory().color;
-                    ui.drawText(categoryName, fieldX + 15, categoryY + 19, categoryColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
+                    ui.drawText(categoryName, fieldX + 15, categoryY + 20, categoryColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
+                    ui.drawText(categoryExpanded ? "▲" : "▼", fieldX + fieldWidth - 24, categoryY + 20, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE, 2.4f);
 
+                    int categoryOptions = 0;
                     if (categoryExpanded) {
-                        int optionY = categoryY + 43;
+                        int optionY = categoryY + 45;
                         if (MainWidget.activePackage != null) {
                             for (WaypointCategory category : MainWidget.activePackage.categories) {
-                                drawCategoryOption(fieldX, optionY, fieldWidth, 34, category);
-                                optionY += 34;
+                                drawCategoryOption(mouseX, mouseY, fieldX, optionY, fieldWidth, 36, category);
+                                optionY += 36;
+                                categoryOptions++;
                             }
                         }
                     }
+
+                    int actionsY = categoryY + 62 + categoryOptions * 36;
+                    int actionGap = 15;
+                    int actionW = Math.max(175, (fieldWidth - actionGap * 2) / 3);
+                    drawSmallButton(mouseX, mouseY, fieldX, actionsY, actionW, 40, "Edit in World", false, GOLD_DARK);
+                    drawSmallButton(mouseX, mouseY, fieldX + actionW + actionGap, actionsY, actionW, 40, "Duplicate", false, TOGGLE_ON);
+                    drawSmallButton(mouseX, mouseY, fieldX + (actionW + actionGap) * 2, actionsY, actionW, 40, "Delete", false, ACCENT_RED);
+                }
+
+                private void drawSmallButton(int mouseX, int mouseY, int x, int y, int width, int height, String label, boolean selected, int accent) {
+                    boolean hover = isIn(mouseX, mouseY, x, y, width, height);
+                    drawButton(ui, x, y, width, height, hover, accent);
+                    ui.drawCenteredText(label, x + width / 2f, y + height / 2f, CustomColor.fromInt(TEXT_LIGHT), 2.3f);
                 }
 
                 private void setInputsVisible(boolean visible) {
@@ -1044,9 +1179,10 @@ public class NewWaypointScreen extends WEScreen {
                     ui.drawCenteredText(label + ": " + state, x + width / 2f, y + height / 2f, enabled ? CustomColor.fromInt(TOGGLE_ON) : CustomColor.fromInt(TEXT_DIM), 2.2f);
                 }
 
-                private void drawCategoryOption(int x, int y, int width, int height, WaypointCategory category) {
+                private void drawCategoryOption(int mouseX, int mouseY, int x, int y, int width, int height, WaypointCategory category) {
                     boolean selected = waypoint.getCategory() == category;
-                    drawConfigRow(ui, x, y, width, height, selected, selected, category == null ? GOLD_DARK : category.color.asInt());
+                    boolean hover = isIn(mouseX, mouseY, x, y, width, height);
+                    drawConfigRow(ui, x, y, width, height, hover, selected, category == null ? GOLD_DARK : category.color.asInt());
                     String name = category == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : category.name;
                     CustomColor color = category == null ? CustomColor.fromHexString("FFFFFF") : category.color;
                     ui.drawText(name, x + 12, y + height / 2f, color, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
@@ -1061,7 +1197,7 @@ public class NewWaypointScreen extends WEScreen {
                             if (children.get(i).mouseClicked(mx, my, button)) return true;
                         }
 
-                        if (isIn(mx, my, x + 25 + 135, y + COLLAPSED_HEIGHT + 18 + 162, Math.max(240, width - 185), 38)) {
+                        if (isIn(mx, my, x + 25 + 135, y + COLLAPSED_HEIGHT + 18 + 184, Math.max(240, width - 185), 40)) {
                             categoryExpanded = !categoryExpanded;
                             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             return true;
@@ -1069,24 +1205,48 @@ public class NewWaypointScreen extends WEScreen {
 
                         if (categoryExpanded && clickCategoryOption(mx, my)) return true;
 
-                        int visibilityY = y + COLLAPSED_HEIGHT + 18 + 108;
                         int contentX = x + 25;
-                        if (isIn(mx, my, contentX + 135, visibilityY, 150, 38)) {
-                            waypoint.setShowNameOverride(nextOverride(waypoint.showNameOverride));
-                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                            saveWaypoint();
+                        int fieldX = contentX + 135;
+                        int fieldWidth = Math.max(240, width - 185);
+                        int toggleGap = 12;
+                        int toggleWidth = Math.max(190, (fieldWidth - toggleGap * 2) / 3);
+                        int visibilityY = y + COLLAPSED_HEIGHT + 18 + 124;
+                        int categoryY = y + COLLAPSED_HEIGHT + 18 + 184;
+                        int categoryOptions = categoryExpanded && MainWidget.activePackage != null ? MainWidget.activePackage.categories.size() : 0;
+                        int actionsY = categoryY + 62 + categoryOptions * 36;
+                        int actionGap = 15;
+                        int actionW = Math.max(175, (fieldWidth - actionGap * 2) / 3);
+                        if (isIn(mx, my, fieldX, actionsY, actionW, 40)) {
+                            WaypointEditMode.editWaypoint(MainWidget.activePackage, waypoint);
                             return true;
                         }
-                        if (isIn(mx, my, contentX + 305, visibilityY, 150, 38)) {
-                            waypoint.setShowOverride(nextOverride(waypoint.showOverride));
+                        if (isIn(mx, my, fieldX + actionW + actionGap, actionsY, actionW, 40)) {
+                            waypointToExpand = WaypointActions.duplicateWaypoint(MainWidget.activePackage, waypoint);
                             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                            saveWaypoint();
+                            WaypointsTabContent tab = MainWidget.waypointsTab;
+                            if (tab != null) tab.invalidate();
                             return true;
                         }
-                        if (isIn(mx, my, contentX + 475, visibilityY, 180, 38)) {
-                            waypoint.setShowDistanceOverride(nextOverride(waypoint.showDistanceOverride));
+                        if (isIn(mx, my, fieldX + (actionW + actionGap) * 2, actionsY, actionW, 40)) {
+                            WaypointActions.deleteWaypoint(MainWidget.activePackage, waypoint);
                             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                            saveWaypoint();
+                            WaypointsTabContent tab = MainWidget.waypointsTab;
+                            if (tab != null) tab.invalidate();
+                            return true;
+                        }
+                        if (isIn(mx, my, fieldX, visibilityY, toggleWidth, 40)) {
+                            WaypointActions.setWaypointVisibility(waypoint, WaypointActions.VisibilityTarget.NAME, nextOverride(waypoint.showNameOverride));
+                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            return true;
+                        }
+                        if (isIn(mx, my, fieldX + toggleWidth + toggleGap, visibilityY, toggleWidth, 40)) {
+                            WaypointActions.setWaypointVisibility(waypoint, WaypointActions.VisibilityTarget.BLOCK, nextOverride(waypoint.showOverride));
+                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            return true;
+                        }
+                        if (isIn(mx, my, fieldX + (toggleWidth + toggleGap) * 2, visibilityY, toggleWidth, 40)) {
+                            WaypointActions.setWaypointVisibility(waypoint, WaypointActions.VisibilityTarget.DISTANCE, nextOverride(waypoint.showDistanceOverride));
+                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             return true;
                         }
                     }
@@ -1108,19 +1268,21 @@ public class NewWaypointScreen extends WEScreen {
                 private boolean clickCategoryOption(double mx, double my) {
                     int fieldX = x + 25 + 135;
                     int fieldWidth = Math.max(240, width - 185);
-                    int optionY = y + COLLAPSED_HEIGHT + 18 + 162 + 43;
+                    int optionY = y + COLLAPSED_HEIGHT + 18 + 184 + 45;
 
                     if (MainWidget.activePackage == null) return false;
                     for (WaypointCategory category : MainWidget.activePackage.categories) {
-                        if (isIn(mx, my, fieldX, optionY, fieldWidth, 34)) {
+                        if (isIn(mx, my, fieldX, optionY, fieldWidth, 36)) {
                             waypoint.setCategory(category);
                             categoryExpanded = false;
+                            waypointToExpand = waypoint;
                             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                            saveWaypoint();
-                            WaypointsTabContent.categoryWidgets.clear();
+                            WaypointActions.setWaypointCategory(waypoint, category);
+                            WaypointsTabContent tab = MainWidget.waypointsTab;
+                            if (tab != null) tab.invalidate();
                             return true;
                         }
-                        optionY += 34;
+                        optionY += 36;
                     }
                     return false;
                 }
@@ -1137,33 +1299,28 @@ public class NewWaypointScreen extends WEScreen {
 
                 private void applyName(String name) {
                     if (waypoint == null) return;
-                    waypoint.name = name == null || name.isBlank() ? "Waypoint" : name;
-                    saveWaypoint();
+                    WaypointActions.updateWaypoint(waypoint, name, null, null, null);
                 }
 
                 private void applyCoordinates() {
                     if (waypoint == null) return;
                     try {
-                        waypoint.x = Integer.parseInt(xInput.getInput().trim());
-                        waypoint.y = Integer.parseInt(yInput.getInput().trim());
-                        waypoint.z = Integer.parseInt(zInput.getInput().trim());
-                        saveWaypoint();
+                        WaypointActions.updateWaypoint(waypoint, waypoint.name,
+                                Integer.parseInt(xInput.getInput().trim()),
+                                Integer.parseInt(yInput.getInput().trim()),
+                                Integer.parseInt(zInput.getInput().trim()));
                     } catch (NumberFormatException ignored) {}
-                }
-
-                private void saveWaypoint() {
-                    WaypointData.save();
                 }
 
                 public int getTotalHeight() {
                     if (!expanded) return COLLAPSED_HEIGHT;
                     int categoryOptions = categoryExpanded && MainWidget.activePackage != null ? MainWidget.activePackage.categories.size() : 0;
-                    return EXPANDED_HEIGHT + categoryOptions * 34;
+                    return EXPANDED_HEIGHT + categoryOptions * 36;
                 }
 
                 private static class WaypointTextInput extends TextInputWidget {
                     private WaypointTextInput(String input, java.util.function.Consumer<String> changeConsumer) {
-                        super(0, 0, 0, 0, 10, 11, 2);
+                        super(0, 0, 0, 0, 12, 11, 2.6f);
                         setInput(input);
                         setBackgroundColor(CustomColor.fromInt(BG_LIGHT));
                         setFocusedColor(CustomColor.fromInt(PARCHMENT_LIGHT));
@@ -1177,6 +1334,8 @@ public class NewWaypointScreen extends WEScreen {
 
         private static class CategoriesTabContent extends TabContentWidget {
             private ActionButtonWidget addCategoryButton;
+            private WaypointScrollBarWidget scrollBar;
+            private final List<CategoryRowWidget> rows = new ArrayList<>();
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
@@ -1184,30 +1343,266 @@ public class NewWaypointScreen extends WEScreen {
                     addCategoryButton = new ActionButtonWidget("Add Category", this::addCategory);
                     addChild(addCategoryButton);
                 }
+                if (scrollBar == null) {
+                    scrollBar = new WaypointScrollBarWidget(ScrollType.Categories);
+                    addChild(scrollBar);
+                }
 
                 addCategoryButton.setBounds(x + 30, y + 10, 260, 44);
+                float viewportHeight = mainAreaWidget == null ? height : mainAreaWidget.getHeight();
+                float maxOffset = Math.max(0, calculateTotalHeight() - viewportHeight);
+                float currentTarget = Math.clamp(targetOffsets.getOrDefault(ScrollType.Categories, 0f), 0f, maxOffset);
+                targetOffsets.put(ScrollType.Categories, currentTarget);
+                float currentActual = actualOffsets.getOrDefault(ScrollType.Categories, 0f);
+                float diff = currentTarget - currentActual;
+                if (Math.abs(diff) < 0.5f || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffsets.put(ScrollType.Categories, currentTarget);
+                else actualOffsets.put(ScrollType.Categories, currentActual + diff * 0.3f * tickDelta);
 
-                int rowY = y + 75;
+                if(mainAreaWidget != null) {
+                    scrollBar.setBounds(
+                            x + width - 27,
+                            (int) mainAreaWidget.getY(),
+                            20,
+                            (int) viewportHeight
+                    );
+                }
+                scrollBar.setVisible(maxOffset > 0);
+
+                try {
+                    ctx.enableScissor(
+                            (int) ui.sx(x),
+                            (int) ui.sy(mainAreaWidget.getY()),
+                            (int) ui.sx(x + width),
+                            (int) ui.sy(mainAreaWidget.getY() + mainAreaWidget.getHeight())
+                    );
+                } catch (Exception ignored) {}
+
+                if (activePackage != null && rows.isEmpty()) rebuildRows();
+
+                int rowY = y + 75 - Math.round(actualOffsets.getOrDefault(ScrollType.Categories, 0f));
                 if (activePackage == null || activePackage.categories.isEmpty()) {
                     ui.drawText("No categories", x + 35, rowY, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.6f);
                     return;
                 }
 
-                for (WaypointCategory category : activePackage.categories) {
-                    ui.drawRect(x + 35, rowY, width - 80, 44, CustomColor.fromInt(BG_MEDIUM));
-                    ui.drawRect(x + 50, rowY + 12, 20, 20, category.color);
-                    ui.drawText(category.name, x + 85, rowY + 22, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.8f);
-                    int toggleY = rowY + 6;
-                    drawCategoryDefaultToggle(x + width - 445, toggleY, 120, 32, "Block", category.showBlockByDefault);
-                    drawCategoryDefaultToggle(x + width - 315, toggleY, 120, 32, "Text", category.showNameByDefault);
-                    drawCategoryDefaultToggle(x + width - 185, toggleY, 140, 32, "Distance", category.showDistanceByDefault);
-                    rowY += 54;
+                for (CategoryRowWidget row : rows) {
+                    int rowHeight = row.getTotalHeight();
+                    row.setBounds(x + 35, rowY, width - 80, rowHeight);
+                    row.setVisible(rowY + rowHeight >= mainAreaWidget.getY()
+                            && rowY <= mainAreaWidget.getY() + mainAreaWidget.getHeight());
+                    rowY += rowHeight + 10;
                 }
+            }
+
+            @Override
+            protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                try {
+                    ctx.disableScissor();
+                } catch (Exception ignored) {}
             }
 
             private void drawCategoryDefaultToggle(int x, int y, int width, int height, String label, boolean enabled) {
                 drawConfigRow(ui, x, y, width, height, enabled, enabled, TOGGLE_ON);
                 ui.drawCenteredText(label + ": " + (enabled ? "On" : "Off"), x + width / 2f, y + height / 2f, enabled ? CustomColor.fromInt(TOGGLE_ON) : CustomColor.fromInt(TEXT_DIM), 2.2f);
+            }
+
+            private boolean isIn(double mx, double my, int x, int y, int width, int height) {
+                return mx >= ui.sx(x) && my >= ui.sy(y) && mx < ui.sx(x) + ui.sw(width) && my < ui.sy(y) + ui.sh(height);
+            }
+
+            private void saveCategoryDefaults() {
+                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MainWidget.invalidateAllTabs();
+            }
+
+            private void addCategory() {
+                if (activePackage == null) return;
+
+                WaypointActions.createCategory(activePackage, "New Category");
+                invalidate();
+                saveCategoryDefaults();
+            }
+
+            private void rebuildRows() {
+                rows.clear();
+                clearChildren();
+                addChild(addCategoryButton);
+                if (activePackage == null) return;
+                WaypointData.resolveWaypointCategories(activePackage);
+                for (WaypointCategory category : activePackage.categories) {
+                    CategoryRowWidget row = new CategoryRowWidget(category);
+                    rows.add(row);
+                    addChild(row);
+                }
+                if (scrollBar != null) addChild(scrollBar);
+            }
+
+            @Override
+            public void invalidate() {
+                rows.clear();
+                clearChildren();
+                if (addCategoryButton != null) addChild(addCategoryButton);
+                if (scrollBar != null) addChild(scrollBar);
+            }
+
+            @Override
+            public boolean mouseClicked(double mx, double my, int button) {
+                if (!isInViewport(mx, my)) return false;
+                return super.mouseClicked(mx, my, button);
+            }
+
+            private boolean isInViewport(double mx, double my) {
+                if (mainAreaWidget == null || ui == null) return false;
+                return mx >= ui.sx(x)
+                        && my >= ui.sy(mainAreaWidget.getY())
+                        && mx < ui.sx(x + width)
+                        && my < ui.sy(mainAreaWidget.getY() + mainAreaWidget.getHeight());
+            }
+
+            @Override
+            public float calculateTotalHeight() {
+                if (activePackage == null) return 75;
+                if (!rows.isEmpty()) {
+                    int total = 75;
+                    for (CategoryRowWidget row : rows) total += row.getTotalHeight() + 10;
+                    return total;
+                }
+                return 75 + activePackage.categories.size() * 106;
+            }
+
+            private class CategoryRowWidget extends Widget {
+                private final WaypointCategory category;
+                private final ScreenTextInput nameInput;
+                private final ColorPickerWidget colorPicker;
+
+                private CategoryRowWidget(WaypointCategory category) {
+                    this.category = category;
+                    nameInput = new ScreenTextInput(category.name == null ? "" : category.name, value -> {
+                        WaypointActions.renameCategory(activePackage, category, value);
+                        if (waypointsTab != null) waypointsTab.invalidate();
+                    });
+                    colorPicker = new ColorPickerWidget(
+                            () -> category == null || category.color == null ? 0xFFFFFF : category.color.asInt() & 0xFFFFFF,
+                            rgb -> {
+                                WaypointActions.setCategoryColor(category, rgb);
+                                if (waypointsTab != null) waypointsTab.invalidate();
+                            },
+                            () -> category == null ? 1f : category.alpha,
+                            alpha -> {
+                                WaypointActions.setCategoryAlpha(category, alpha);
+                                if (waypointsTab != null) waypointsTab.invalidate();
+                            });
+                    addChild(nameInput);
+                    addChild(colorPicker);
+                }
+
+                @Override
+                public void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
+                    int effectiveMouseX = isInViewport(mouseX, mouseY) ? mouseX : -1;
+                    int effectiveMouseY = isInViewport(mouseX, mouseY) ? mouseY : -1;
+                    super.draw(ctx, effectiveMouseX, effectiveMouseY, tickDelta, ui);
+                }
+
+                @Override
+                protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                    boolean uncategorized = WaypointData.isUncategorizedCategory(category);
+                    drawConfigRow(ui, x, y, width, 96, hovered, false, category.color == null ? GOLD_DARK : category.color.asInt());
+                    ui.drawRect(x + 14, y + 14, 24, 24, category.color == null ? CustomColor.fromHexString("FFFFFF") : category.color);
+                    nameInput.setBounds(x + 50, y + 27, 390, 44);
+                    nameInput.setEnabled(!uncategorized);
+                    nameInput.setVisible(true);
+
+                    colorPicker.setBounds(x + 470, y + 10, 227, 40);
+
+                    int toggleX = x + width - 610;
+                    drawCategoryDefaultToggle(toggleX, y + 27, 140, 44, "Block", category.showBlockByDefault);
+                    drawCategoryDefaultToggle(toggleX + 152, y + 27, 140, 44, "Text", category.showNameByDefault);
+                    drawCategoryDefaultToggle(toggleX + 304, y + 27, 160, 44, "Distance", category.showDistanceByDefault);
+                    drawButton(ui, x + width - 128, y + 27, 112, 44, isIn(mouseX, mouseY, x + width - 128, y + 27, 112, 44), uncategorized ? BORDER_DARK : ACCENT_RED);
+                    ui.drawCenteredText("Delete", x + width - 72, y + 49, uncategorized ? CustomColor.fromInt(TEXT_DIM) : CustomColor.fromInt(TEXT_LIGHT), 2.2f);
+                }
+
+                @Override
+                public boolean mouseClicked(double mx, double my, int button) {
+                    if (!visible || !enabled) return false;
+                    for (int i = children.size() - 1; i >= 0; i--) {
+                        if (children.get(i).mouseClicked(mx, my, button)) return true;
+                    }
+                    if (button != 0 || !contains((int) mx, (int) my)) return false;
+                    int toggleX = x + width - 610;
+                    if (isIn(mx, my, toggleX, y + 27, 140, 44)) {
+                        WaypointActions.setCategoryDefault(category, WaypointActions.VisibilityTarget.BLOCK, !category.showBlockByDefault);
+                        saveCategoryDefaults();
+                        return true;
+                    }
+                    if (isIn(mx, my, toggleX + 152, y + 27, 140, 44)) {
+                        WaypointActions.setCategoryDefault(category, WaypointActions.VisibilityTarget.NAME, !category.showNameByDefault);
+                        saveCategoryDefaults();
+                        return true;
+                    }
+                    if (isIn(mx, my, toggleX + 304, y + 27, 160, 44)) {
+                        WaypointActions.setCategoryDefault(category, WaypointActions.VisibilityTarget.DISTANCE, !category.showDistanceByDefault);
+                        saveCategoryDefaults();
+                        return true;
+                    }
+                    if (!WaypointData.isUncategorizedCategory(category) && isIn(mx, my, x + width - 128, y + 27, 112, 44)) {
+                        String categoryName = category.name == null || category.name.isBlank() ? "Category" : category.name;
+                        openConfirm("Delete Category?", "Delete \"" + categoryName + "\"? Its waypoints will move to uncategorized.", () -> {
+                            WaypointActions.deleteCategory(activePackage, category);
+                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            MainWidget.invalidateAllTabs();
+                        });
+                        return true;
+                    }
+                    return true;
+                }
+
+                private int getTotalHeight() {
+                    return colorPicker.isOpen() ? colorPicker.getY() - y + colorPicker.getExpandedHeight() + 10 : 112;
+                }
+            }
+        }
+
+        private static class SettingsTabContent extends TabContentWidget {
+            private ScreenTextInput nameInput;
+            private ScreenTextInput descriptionInput;
+            private WaypointPackage inputPackage;
+
+            @Override
+            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+                if (activePackage == null) {
+                    ui.drawText("Select a package first", x + 35, y + 35, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 3f);
+                    return;
+                }
+                syncInputs();
+
+                int contentX = x + 35;
+                int fieldX = x + 240;
+                int fieldW = Math.min(620, width - 520);
+                ui.drawText("Package", contentX, y + 35, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 3f);
+
+                ui.drawText("Name", contentX, y + 95, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.5f);
+                nameInput.setBounds(fieldX, y + 85, fieldW, 42);
+
+                ui.drawText("Description", contentX, y + 155, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.5f);
+                descriptionInput.setBounds(fieldX, y + 145, fieldW, 42);
+
+                ui.drawText("ID", contentX, y + 220, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
+                ui.drawText(activePackage.id == null ? "" : activePackage.id, fieldX, y + 220, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
+                ui.drawText("Version", contentX, y + 255, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
+                ui.drawText(String.valueOf(activePackage.packageVersion), fieldX, y + 255, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
+                ui.drawText("Contents", contentX, y + 290, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
+                ui.drawText(activePackage.waypoints.size() + " waypoints, " + activePackage.categories.size() + " categories", fieldX, y + 290, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
+
+                drawSettingsButton(mouseX, mouseY, contentX, y + 350, 180, 44, activePackage.enabled ? "Enabled" : "Disabled", activePackage.enabled ? TOGGLE_ON : TOGGLE_OFF);
+                drawSettingsButton(mouseX, mouseY, contentX + 200, y + 350, 180, 44, "Duplicate", TOGGLE_ON);
+                drawSettingsButton(mouseX, mouseY, contentX + 400, y + 350, 180, 44, "Export", GOLD_DARK);
+                drawSettingsButton(mouseX, mouseY, contentX + 600, y + 350, 180, 44, "Delete", ACCENT_RED);
+            }
+
+            @Override
+            public float calculateTotalHeight() {
+                return 430;
             }
 
             @Override
@@ -1218,86 +1613,86 @@ public class NewWaypointScreen extends WEScreen {
                 }
                 if (button != 0 || activePackage == null || !contains((int) mx, (int) my)) return false;
 
-                int rowY = y + 75;
-                for (WaypointCategory category : activePackage.categories) {
-                    int toggleY = rowY + 6;
-                    if (isIn(mx, my, x + width - 445, toggleY, 120, 32)) {
-                        category.showBlockByDefault = !category.showBlockByDefault;
-                        saveCategoryDefaults();
-                        return true;
-                    }
-                    if (isIn(mx, my, x + width - 315, toggleY, 120, 32)) {
-                        category.showNameByDefault = !category.showNameByDefault;
-                        saveCategoryDefaults();
-                        return true;
-                    }
-                    if (isIn(mx, my, x + width - 185, toggleY, 140, 32)) {
-                        category.showDistanceByDefault = !category.showDistanceByDefault;
-                        saveCategoryDefaults();
-                        return true;
-                    }
-                    rowY += 54;
+                int contentX = x + 35;
+                int buttonY = y + 350;
+                if (isIn(mx, my, contentX, buttonY, 180, 44)) {
+                    WaypointActions.setPackageEnabled(activePackage, !activePackage.enabled);
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    return true;
                 }
-                return false;
+                if (isIn(mx, my, contentX + 200, buttonY, 180, 44)) {
+                    WaypointPackage copy = WaypointActions.duplicatePackage(activePackage);
+                    activePackage = copy;
+                    WaypointData.INSTANCE.activePackage = copy;
+                    if (sideBarWidget != null) sideBarWidget.rebuildPackageWidgetsFromData();
+                    MainWidget.invalidateAllTabs();
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    return true;
+                }
+                if (isIn(mx, my, contentX + 400, buttonY, 180, 44)) {
+                    MinecraftClient.getInstance().keyboard.setClipboard(WaypointData.gson.toJson(activePackage));
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    return true;
+                }
+                if (isIn(mx, my, contentX + 600, buttonY, 180, 44)) {
+                    WaypointPackage deleted = activePackage;
+                    String packageName = deleted.name == null || deleted.name.isBlank() ? "Package" : deleted.name;
+                    openConfirm("Delete Package?", "Delete \"" + packageName + "\" and all of its waypoints?", () -> {
+                        WaypointActions.deletePackage(deleted);
+                        activePackage = WaypointData.INSTANCE.packages.isEmpty() ? null : WaypointData.INSTANCE.packages.getFirst();
+                        WaypointData.INSTANCE.activePackage = activePackage;
+                        if (sideBarWidget != null) sideBarWidget.rebuildPackageWidgetsFromData();
+                        MainWidget.invalidateAllTabs();
+                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    });
+                    return true;
+                }
+                return true;
+            }
+
+            private void syncInputs() {
+                if (nameInput == null) {
+                    nameInput = new ScreenTextInput("", value -> {
+                        if (activePackage == null) return;
+                        WaypointActions.renamePackage(activePackage, value);
+                        if (sideBarWidget != null) sideBarWidget.rebuildPackageWidgetsFromData();
+                    });
+                    descriptionInput = new ScreenTextInput("", value -> {
+                        if (activePackage == null) return;
+                        WaypointActions.setPackageDescription(activePackage, value);
+                    });
+                    addChild(nameInput);
+                    addChild(descriptionInput);
+                }
+                if (inputPackage == activePackage) return;
+                inputPackage = activePackage;
+                nameInput.setInputAndMoveCursorToEnd(activePackage.name == null ? "" : activePackage.name);
+                descriptionInput.setInputAndMoveCursorToEnd(activePackage.description == null ? "" : activePackage.description);
+            }
+
+            private void drawSettingsButton(int mouseX, int mouseY, int x, int y, int width, int height, String text, int accent) {
+                drawConfigRow(ui, x, y, width, height, isIn(mouseX, mouseY, x, y, width, height), false, accent);
+                ui.drawCenteredText(text, x + width / 2f, y + height / 2f, CustomColor.fromInt(TEXT_LIGHT), 2.5f);
             }
 
             private boolean isIn(double mx, double my, int x, int y, int width, int height) {
                 return mx >= ui.sx(x) && my >= ui.sy(y) && mx < ui.sx(x) + ui.sw(width) && my < ui.sy(y) + ui.sh(height);
             }
 
-            private void saveCategoryDefaults() {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                WaypointData.save();
-                WaypointsTabContent.categoryWidgets.clear();
-            }
-
-            private void addCategory() {
-                if (activePackage == null) return;
-
-                WaypointCategory category = new WaypointCategory(generateUniqueCategoryName());
-                activePackage.categories.add(category);
-                WaypointData.save();
-                WaypointsTabContent.categoryWidgets.clear();
-            }
-
-            private String generateUniqueCategoryName() {
-                if (activePackage == null) return "New Category";
-
-                String base = "New Category";
-                String candidate = base;
-                int i = 1;
-                while (true) {
-                    String check = candidate;
-                    boolean exists = activePackage.categories.stream()
-                            .anyMatch(category -> category.name != null && category.name.equalsIgnoreCase(check));
-                    if (!exists) return candidate;
-                    candidate = base + " " + i;
-                    i++;
-                }
-            }
-
             @Override
-            public float calculateTotalHeight() {
-                if (activePackage == null) return 75;
-                return 75 + activePackage.categories.size() * 54;
-            }
-        }
-
-        private static class SettingsTabContent extends TabContentWidget {
-            @Override
-            protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-                ui.drawText("Settings", x + 35, y + 35, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 3f);
-            }
-
-            @Override
-            public float calculateTotalHeight() {
-                return 80;
+            public void invalidate() {
+                inputPackage = null;
             }
         }
 
         private static class WaypointScrollBarWidget extends Widget {
+            private final ScrollType scrollType;
             private final int buttonHeight = 40;
             private boolean held = false;
+
+            private WaypointScrollBarWidget(ScrollType scrollType) {
+                this.scrollType = scrollType;
+            }
 
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
@@ -1309,7 +1704,7 @@ public class NewWaypointScreen extends WEScreen {
 
                 ui.drawSliderBackground(x, y, width, height);
 
-                float actualOffset = actualOffsets.getOrDefault(ScrollType.Waypoints, 0f);
+                float actualOffset = actualOffsets.getOrDefault(scrollType, 0f);
                 float percent = actualOffset / maxOffset;
                 percent = Math.clamp(percent, 0f, 1f);
 
@@ -1325,7 +1720,7 @@ public class NewWaypointScreen extends WEScreen {
                     float scrollPercent = relativeY / scrollAreaHeight;
                     float newOffset = scrollPercent * maxOffset;
 
-                    targetOffsets.put(ScrollType.Waypoints, newOffset);
+                    targetOffsets.put(scrollType, newOffset);
                 }
             }
 
