@@ -46,7 +46,7 @@ public class WaypointEditMode {
     enum Dropdown { NONE, PACKAGE, CATEGORY, WAYPOINT }
 
     static final int PANEL_W = 570;
-    static final int PANEL_H = 360;
+    static final int PANEL_H = 320;
     static final int CATEGORY_PANEL_H = 260;
     static final int PANEL_GAP = 12;
     static final int ROW_H = 40;
@@ -58,6 +58,7 @@ public class WaypointEditMode {
     static final int PANEL_BG = 0xDD1A1410;
     static final int FIELD_BG = 0xEE2E251C;
     static final int FIELD_HOVER = 0xFF4D3C2D;
+    static final int FIELD_FOCUS = 0xFF876141;
     static final int GOLD = 0xFFECC600;
     static final int RED = 0xFFE05A5A;
     static final int GREEN = 0xFF5FB75F;

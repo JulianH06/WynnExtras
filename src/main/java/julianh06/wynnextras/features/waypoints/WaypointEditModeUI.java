@@ -41,7 +41,7 @@ public class WaypointEditModeUI extends WEScreen {
     private final CoordinateInputWidget zCoordinateField = new CoordinateInputWidget(this, 2, "Z");
     private final NameInputWidget nameField = new NameInputWidget(this);
     private final ActionButtonWidget freeMoveButton = new ActionButtonWidget(this, () -> "Free Move Mode", WaypointEditMode::enterFreeMoveMode);
-    private final ActionButtonWidget managerButton = new ActionButtonWidget(this, () -> "Open Manager", this::openManager);
+    private final ActionButtonWidget managerButton = new ActionButtonWidget(this, () -> "Open Waypoint screen", this::openManager);
     private final ActionButtonWidget removeButton = new ActionButtonWidget(this, () -> "Remove Waypoint", this::handleRemove);
     private final ActionButtonWidget editCurrentButton = new ActionButtonWidget(this, () -> "Edit Current", this::handleEditCurrent);
     private final ActionButtonWidget primaryButton = new ActionButtonWidget(this, () -> selectedWaypoint == null ? "Add Waypoint" : "Save Changes", this::handlePrimaryAction);
@@ -57,7 +57,9 @@ public class WaypointEditModeUI extends WEScreen {
             () -> categoryColorInt(activeCategory) & 0xFFFFFF,
             this::setActiveCategoryColor,
             () -> activeCategory == null ? 1f : activeCategory.alpha,
-            this::setActiveCategoryAlpha).openToLeft();
+            this::setActiveCategoryAlpha)
+            .openToLeft()
+            .setClosedTextBackgroundColors(FIELD_BG, FIELD_HOVER);
     private final InfoButtonWidget infoButton = new InfoButtonWidget(this);
     private final DropdownWidget dropdownWidget = new DropdownWidget(this);
     private boolean dropdownScrollbarDragging = false;
@@ -117,7 +119,7 @@ public class WaypointEditModeUI extends WEScreen {
 
     @Override
     protected int getMinLogicalHeight() {
-        return 720;
+        return 950;
     }
 
     @Override
@@ -353,6 +355,7 @@ public class WaypointEditModeUI extends WEScreen {
         boolean hasCategory = activeCategory != null;
         nameField.setVisible(editing);
         categoryField.setVisible(true);
+        freeMoveButton.setVisible(true);
         managerButton.setVisible(true);
         removeButton.setVisible(true);
         primaryButton.setVisible(true);
@@ -380,14 +383,12 @@ public class WaypointEditModeUI extends WEScreen {
             xCoordinateField.setLogicalBounds(coordX, coordY, fieldW, p(32));
             yCoordinateField.setLogicalBounds(coordX + fieldW + coordGap, coordY, fieldW, p(32));
             zCoordinateField.setLogicalBounds(coordX + (fieldW + coordGap) * 2, coordY, fieldW, p(32));
-            freeMoveButton.setLogicalBounds(panelX + p(14), panelY + p(380), panelW - p(28), p(50));
-            managerButton.setLogicalBounds(panelX + p(14), panelY + p(432), panelW - p(28), p(38));
-            int toggleY = panelY + p(480);
+            int toggleY = panelY + p(400);
             int toggleW = (panelW - p(28) - p(16)) / 3;
             showNameButton.setLogicalBounds(panelX + p(14), toggleY, toggleW, p(58));
             showBlockButton.setLogicalBounds(panelX + p(14) + toggleW + p(8), toggleY, toggleW, p(58));
             showDistanceButton.setLogicalBounds(panelX + p(14) + (toggleW + p(8)) * 2, toggleY, toggleW, p(58));
-            int buttonY = panelY + p(550);
+            int buttonY = panelY + p(470);
             int buttonW = (panelW - p(28) - p(20)) / 3;
             removeButton.setLogicalBounds(panelX + p(14), buttonY, buttonW, p(ACTION_H));
             primaryButton.setLogicalBounds(panelX + p(14) + buttonW + p(10), buttonY, buttonW, p(ACTION_H));
@@ -401,8 +402,6 @@ public class WaypointEditModeUI extends WEScreen {
             xCoordinateField.setLogicalBounds(coordX, coordY, fieldW, p(32));
             yCoordinateField.setLogicalBounds(coordX + fieldW + coordGap, coordY, fieldW, p(32));
             zCoordinateField.setLogicalBounds(coordX + (fieldW + coordGap) * 2, coordY, fieldW, p(32));
-            freeMoveButton.setLogicalBounds(panelX + p(14), panelY + p(290), panelW - p(28), p(50));
-            managerButton.setLogicalBounds(panelX + p(14), panelY + p(342), panelW - p(28), p(38));
             int actionsX = getLogicalWidth() - p(1128);
             int actionsY = getLogicalHeight() - p(58);
             int actionW = p(265);
@@ -435,14 +434,18 @@ public class WaypointEditModeUI extends WEScreen {
 
         int categoryPanelX = panelX;
         int categoryPanelY = panelY + editorPanelHeight() + p(PANEL_GAP);
+        int bottomButtonY = categoryPanelY + p(CATEGORY_PANEL_H) + p(PANEL_GAP);
+        managerButton.setLogicalBounds(panelX, bottomButtonY, panelW, p(40));
+        freeMoveButton.setLogicalBounds(panelX, bottomButtonY + p(48), panelW, p(40));
         if (hasCategory) {
-            categoryNameField.setLogicalBounds(categoryPanelX + p(14), categoryPanelY + p(68), panelW - p(28), p(38));
+            categoryNameField.setLogicalBounds(categoryPanelX + p(14), categoryPanelY + p(72), panelW - p(28), p(38));
             int toggleY = categoryPanelY + p(142);
             int toggleW = (panelW - p(28) - p(16)) / 3;
             categoryShowNameButton.setLogicalBounds(categoryPanelX + p(14), toggleY, toggleW, p(48));
             categoryShowBlockButton.setLogicalBounds(categoryPanelX + p(14) + toggleW + p(8), toggleY, toggleW, p(48));
             categoryShowDistanceButton.setLogicalBounds(categoryPanelX + p(14) + (toggleW + p(8)) * 2, toggleY, toggleW, p(48));
-            categoryColorPicker.setBounds(categoryPanelX + p(14), categoryPanelY + p(210), p(227), p(40));
+            categoryColorPicker.setBounds(categoryPanelX + p(14), categoryPanelY + p(CATEGORY_PANEL_H) - p(60), p(227), p(40));
+            categoryColorPicker.setPickerBottomY(categoryPanelY + p(CATEGORY_PANEL_H));
         } else {
             categoryNameFocused = false;
             categoryNameField.setFocused(false);
@@ -451,6 +454,7 @@ public class WaypointEditModeUI extends WEScreen {
             categoryShowBlockButton.setLogicalBounds(0, 0, 0, 0);
             categoryShowDistanceButton.setLogicalBounds(0, 0, 0, 0);
             categoryColorPicker.setBounds(0, 0, 0, 0);
+            categoryColorPicker.setPickerBottomY(null);
         }
     }
 
@@ -765,7 +769,7 @@ public class WaypointEditModeUI extends WEScreen {
         if (selectedWaypoint != null) {
             ui.drawText("Text", x + p(14), y + p(222), color(TEXT_DIM), ts(2.7f));
             ui.drawText("Coordinates", x + p(14), y + p(302), color(TEXT_DIM), ts(2.7f));
-            ui.drawText("Visibility", x + p(14), y + p(450), color(TEXT_DIM), ts(2.7f));
+            ui.drawText("Visibility", x + p(14), y + p(372), color(TEXT_DIM), ts(2.7f));
         } else {
             ui.drawText("Coordinates", x + p(14), y + p(222), color(TEXT_DIM), ts(2.7f));
         }
@@ -785,7 +789,7 @@ public class WaypointEditModeUI extends WEScreen {
     }
 
     private int editorPanelHeight() {
-        return selectedWaypoint == null ? p(PANEL_H) : p(620);
+        return selectedWaypoint == null ? p(PANEL_H) : p(540);
     }
 
     private void drawEditHud() {
@@ -831,6 +835,8 @@ public class WaypointEditModeUI extends WEScreen {
                 || containsVisible(editCurrentButton, mx, my)
                 || containsVisible(primaryButton, mx, my)
                 || containsVisible(secondaryButton, mx, my)
+                || containsVisible(managerButton, mx, my)
+                || containsVisible(freeMoveButton, mx, my)
                 || containsVisible(categoryColorPicker, mx, my)
                 || (dropdownWidget.isVisible() && dropdownWidget.contains(mx, my));
     }

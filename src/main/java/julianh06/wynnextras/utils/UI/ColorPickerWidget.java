@@ -35,6 +35,8 @@ public class ColorPickerWidget extends Widget {
     private final int fallbackColor;
     private final Style style;
     private String title = "Color";
+    private int closedTextBackgroundColor = 0xFF6c4f36;
+    private int closedTextHoverColor = 0xFF705030;
 
     private boolean open = false;
     private float colorH = 0f;
@@ -46,6 +48,7 @@ public class ColorPickerWidget extends Widget {
     private int hexCursor = 0;
     private boolean hexSelectAll = false;
     private boolean openLeft = false;
+    private Integer pickerBottomY = null;
 
     public ColorPickerWidget(Supplier<Integer> colorSupplier, Consumer<Integer> colorConsumer) {
         this(colorSupplier, colorConsumer, null, null, false, 0xFFFFFF, 0xFFFFFF, Style.LARGE);
@@ -70,6 +73,17 @@ public class ColorPickerWidget extends Widget {
 
     public ColorPickerWidget openToLeft() {
         this.openLeft = true;
+        return this;
+    }
+
+    public ColorPickerWidget setPickerBottomY(Integer pickerBottomY) {
+        this.pickerBottomY = pickerBottomY;
+        return this;
+    }
+
+    public ColorPickerWidget setClosedTextBackgroundColors(int backgroundColor, int hoverColor) {
+        this.closedTextBackgroundColor = backgroundColor;
+        this.closedTextHoverColor = hoverColor;
         return this;
     }
 
@@ -356,6 +370,7 @@ public class ColorPickerWidget extends Widget {
 
     private int pickerY() {
         if (style == Style.CONFIG) return y + height + 2;
+        if (pickerBottomY != null) return pickerBottomY - pickerHeight();
         return openLeft ? y : y + height + u(10);
     }
 
@@ -418,7 +433,7 @@ public class ColorPickerWidget extends Widget {
         ui.drawRect(x, y, u(28), u(22), CustomColor.fromInt(0xFF3a2d24));
         ui.drawRect(x + u(1), y + u(1), u(26), u(20), CustomColor.fromInt(0xFF000000 | rgb));
         ui.drawRect(x + u(36), y, u(90), u(22), CustomColor.fromInt(0xFF3a2d24));
-        ui.drawRect(x + u(37), y + u(1), u(88), u(20), CustomColor.fromInt(isIn(mouseX, mouseY, toggle[0], toggle[1], toggle[2], toggle[3]) ? 0xFF705030 : 0xFF6c4f36));
+        ui.drawRect(x + u(37), y + u(1), u(88), u(20), CustomColor.fromInt(isIn(mouseX, mouseY, toggle[0], toggle[1], toggle[2], toggle[3]) ? closedTextHoverColor : closedTextBackgroundColor));
         String label = color < 0 ? "Default" : String.format("#%06X", rgb);
         ui.drawCenteredText(label, x + u(81), y + u(11), CustomColor.fromInt(0xFFe8dcc8), t(1.45f));
     }

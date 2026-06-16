@@ -1096,11 +1096,11 @@ public class NewWaypointScreen extends WEScreen {
                 }
 
                 private void drawExpandedContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta, String categoryName) {
-                    int contentX = x + 25;
+                    int contentX = x + 15;
                     int contentY = y + COLLAPSED_HEIGHT + 18;
                     int inputHeight = 44;
-                    int labelY = contentY + 8;
-                    int fieldX = contentX + 135;
+                    int labelY = contentY + 24;
+                    int fieldX = contentX + 155;
                     int fieldWidth = Math.max(240, width - 185);
 
                     ui.drawText("Text", contentX, labelY, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
@@ -1108,13 +1108,13 @@ public class NewWaypointScreen extends WEScreen {
 
                     int coordsY = contentY + 62;
                     int coordFieldWidth = 170;
-                    ui.drawText("Coordinates", contentX, coordsY + 8, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
+                    ui.drawText("Coordinates", contentX, coordsY + 24, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
                     setInputBounds(xInput, fieldX, coordsY, coordFieldWidth, inputHeight);
                     setInputBounds(yInput, fieldX + coordFieldWidth + 35, coordsY, coordFieldWidth, inputHeight);
                     setInputBounds(zInput, fieldX + (coordFieldWidth + 35) * 2, coordsY, coordFieldWidth, inputHeight);
 
                     int visibilityY = contentY + 124;
-                    ui.drawText("Visibility", contentX, visibilityY + 15, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
+                    ui.drawText("Visibility", contentX, visibilityY + 24, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
                     int toggleGap = 12;
                     int toggleWidth = Math.max(190, (fieldWidth - toggleGap * 2) / 3);
                     drawOverrideToggle(fieldX, visibilityY, toggleWidth, 40, "Name", waypoint.showNameOverride, waypoint.shouldShowName());
@@ -1122,7 +1122,7 @@ public class NewWaypointScreen extends WEScreen {
                     drawOverrideToggle(fieldX + (toggleWidth + toggleGap) * 2, visibilityY, toggleWidth, 40, "Distance", waypoint.showDistanceOverride, waypoint.shouldShowDistance());
 
                     int categoryY = contentY + 184;
-                    ui.drawText("Category", contentX, categoryY + 15, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
+                    ui.drawText("Category", contentX, categoryY + 24, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
                     drawButton(ui, fieldX, categoryY, fieldWidth, 40, isIn(mouseX, mouseY, fieldX, categoryY, fieldWidth, 40), GOLD_DARK);
                     CustomColor categoryColor = waypoint.getCategory() == null ? CustomColor.fromHexString("FFFFFF") : waypoint.getCategory().color;
                     ui.drawText(categoryName, fieldX + 15, categoryY + 20, categoryColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
