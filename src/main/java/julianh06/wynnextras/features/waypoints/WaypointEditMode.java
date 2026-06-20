@@ -22,6 +22,7 @@ import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
@@ -418,6 +419,7 @@ public class WaypointEditMode {
         selectedWaypointPackage = null;
         selectedSnapshot = null;
         WaypointData.save();
+        playEditSound(SoundEvents.BLOCK_GLASS_PLACE, 0.8f, 1.15f);
     }
 
     static void removeWaypointsAtPreview() {
@@ -438,6 +440,7 @@ public class WaypointEditMode {
                 selectedSnapshot = null;
             }
             WaypointData.save();
+            playEditSound(SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK, 0.8f, 0.85f);
             showEditWarning("Removed " + activePackageMatches.size() + " waypoint" + (activePackageMatches.size() == 1 ? "" : "s") + " from " + activePackage.name + ".");
             return;
         }
@@ -474,7 +477,15 @@ public class WaypointEditMode {
         selectedWaypointPackage = null;
         selectedSnapshot = null;
         WaypointData.save();
+        playEditSound(SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK, 0.8f, 0.85f);
         showEditWarning("Removed " + name + " from " + pkg.name + ".");
+    }
+
+    private static void playEditSound(SoundEvent sound, float volume, float pitch) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player != null) {
+            mc.player.playSound(sound, volume, pitch);
+        }
     }
 
     static boolean isAtPreviewPos(Waypoint waypoint) {

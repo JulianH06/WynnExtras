@@ -391,10 +391,15 @@ public class WaypointEditModeUI extends WEScreen {
         showBlockButton.setVisible(editing);
         showDistanceButton.setVisible(editing);
         categoryNameField.setVisible(hasCategory);
+        categoryNameField.setEnabled(isActiveCategoryEditable());
         categoryShowNameButton.setVisible(hasCategory);
         categoryShowBlockButton.setVisible(hasCategory);
         categoryShowDistanceButton.setVisible(hasCategory);
         categoryColorPicker.setVisible(hasCategory);
+        if (!categoryNameField.isEnabled()) {
+            categoryNameFocused = false;
+            categoryNameField.setFocused(false);
+        }
 
         int coordX = panelX + p(14);
         int coordW = panelW - p(28);
@@ -662,6 +667,11 @@ public class WaypointEditModeUI extends WEScreen {
     }
 
     private void focusCategoryName() {
+        if (!isActiveCategoryEditable()) {
+            categoryNameFocused = false;
+            setFocusedWidget(null);
+            return;
+        }
         activeDropdown = Dropdown.NONE;
         activeDropdownField = null;
         searchFocused = false;
@@ -699,14 +709,25 @@ public class WaypointEditModeUI extends WEScreen {
     }
 
     private void applyCategoryNameInput() {
-        if (activeCategory == null) return;
+        if (activePackage == null || activeCategory == null) return;
+        if (WaypointData.isUncategorizedCategory(activeCategory)) {
+            categoryNameInput = activeCategory.name == null || activeCategory.name.isBlank()
+                    ? WaypointData.UNCATEGORIZED_CATEGORY_NAME
+                    : activeCategory.name;
+            categoryNameField.setInputAndMoveCursorToEnd(categoryNameInput);
+            return;
+        }
         String value = categoryNameInput == null || categoryNameInput.isBlank() ? "New Category" : categoryNameInput.trim();
         if (!value.equals(activeCategory.name)) {
-            activeCategory.name = value;
-            WaypointData.save();
+            WaypointActions.renameCategory(activePackage, activeCategory, value);
+            value = activeCategory.name;
         }
         categoryNameInput = value;
         categoryNameField.setInputAndMoveCursorToEnd(value);
+    }
+
+    private boolean isActiveCategoryEditable() {
+        return activeCategory != null && !WaypointData.isUncategorizedCategory(activeCategory);
     }
 
     private CoordinateInputWidget currentCoordinateField() {

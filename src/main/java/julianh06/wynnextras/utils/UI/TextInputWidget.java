@@ -2,11 +2,12 @@ package julianh06.wynnextras.utils.UI;
 
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.Text;
+import org.joml.Vector2f;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ public class TextInputWidget extends Widget {
     protected int maxLength = -1;
     protected Predicate<Character> characterFilter = character -> true;
     protected Consumer<String> onChange = null;
+    protected String disabledTooltip = "This field cannot be changed.";
 
     public TextInputWidget(int x, int y, int width, int height, int textXOffset, int textYOffset) {
         this(x, y, width, height, textXOffset, textYOffset, 3);
@@ -103,6 +105,17 @@ public class TextInputWidget extends Widget {
 
             ctx.disableScissor();
         }
+    }
+
+    @Override
+    protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if (enabled || !hovered || disabledTooltip == null || disabledTooltip.isBlank()) return;
+        Vector2f tooltipPos = ctx.getMatrices().transformPosition(mouseX, mouseY, new Vector2f());
+        ctx.drawTooltip(
+                MinecraftClient.getInstance().textRenderer,
+                List.of(Text.of(disabledTooltip)),
+                Math.round(tooltipPos.x),
+                Math.round(tooltipPos.y));
     }
 
     @Override
@@ -357,6 +370,7 @@ public class TextInputWidget extends Widget {
         }
     }
     public void setOnChange(Consumer<String> onChange) { this.onChange = onChange; }
+    public void setDisabledTooltip(String disabledTooltip) { this.disabledTooltip = disabledTooltip; }
 
     protected void insertText(String value) {
         if (value == null || value.isEmpty()) return;
