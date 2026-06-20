@@ -15,12 +15,14 @@ import static julianh06.wynnextras.config.ConfigTheme.*;
 public class KeybindOption extends ConfigOption {
     final Supplier<Integer> getter;
     final Consumer<Integer> setter;
+    private final int defaultKey;
     private boolean listening = false;
 
-    public KeybindOption(String name, String desc, Supplier<Integer> get, Consumer<Integer> set) {
+    public KeybindOption(String name, String desc, Supplier<Integer> get, Consumer<Integer> set, int defaultKey) {
         super(name, desc);
         this.getter = get;
         this.setter = set;
+        this.defaultKey = defaultKey;
     }
 
     private String keyName(int key) {
@@ -40,7 +42,7 @@ public class KeybindOption extends ConfigOption {
     }
 
     @Override
-    public int controlWidth() { return 95; }
+    public int controlWidth() { return 152; }
 
     @Override
     public void render(DrawContext ctx, int x, int y, int w, int h, int mx, int my, boolean hovered, int categoryColor) {
@@ -50,8 +52,13 @@ public class KeybindOption extends ConfigOption {
         ctx.fill(x, y + h - 6, x + w, y + h - 5, BORDER_DARK);
         drawWrappedTexts(ctx, x, y, w, controlWidth(), name, desc, richDesc, TEXT_LIGHT, TEXT_DIM);
 
-        int bx = x + w - 90, by = y + 10;
+        int resetX = x + w - 147, bx = x + w - 90, by = y + 10;
+        boolean resetHover = mx >= resetX && mx < resetX + 52 && my >= by && my < by + 24;
         boolean btnHover = mx >= bx && mx < bx + 80 && my >= by && my < by + 24;
+        ctx.fill(resetX, by, resetX + 52, by + 24, BORDER_DARK);
+        ctx.fill(resetX + 1, by + 1, resetX + 51, by + 23, resetHover ? PARCHMENT_HOVER : PARCHMENT);
+        ctx.drawCenteredTextWithShadow(tr, "Reset", resetX + 26, by + 8, getter.get() == defaultKey ? TEXT_DIM : TEXT_LIGHT);
+
         ctx.fill(bx, by, bx + 80, by + 24, listening ? categoryColor : BORDER_DARK);
         ctx.fill(bx + 1, by + 1, bx + 79, by + 23, listening ? PARCHMENT_HOVER : (btnHover ? PARCHMENT_HOVER : PARCHMENT));
         String label = listening ? "[ ... ]" : "[ " + keyName(getter.get()) + " ]";
@@ -61,7 +68,14 @@ public class KeybindOption extends ConfigOption {
 
     @Override
     public boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
-        int bx = x + w - 90, by = y + 10;
+        int resetX = x + w - 147, bx = x + w - 90, by = y + 10;
+        if (mx >= resetX && mx < resetX + 52 && my >= by && my < by + 24) {
+            setter.accept(defaultKey);
+            listening = false;
+            WynnExtrasConfig.save();
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            return true;
+        }
         if (mx >= bx && mx < bx + 80 && my >= by && my < by + 24) {
             listening = !listening;
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
@@ -73,8 +87,7 @@ public class KeybindOption extends ConfigOption {
 
     public boolean onKeyPressed(int key) {
         if (!listening) return false;
-        if (key == GLFW.GLFW_KEY_ESCAPE) { listening = false; return true; }
-        if (key == GLFW.GLFW_KEY_BACKSPACE || key == GLFW.GLFW_KEY_DELETE) {
+        if (key == GLFW.GLFW_KEY_ESCAPE || key == GLFW.GLFW_KEY_BACKSPACE || key == GLFW.GLFW_KEY_DELETE) {
             setter.accept(GLFW.GLFW_KEY_UNKNOWN);
             listening = false;
             WynnExtrasConfig.save();

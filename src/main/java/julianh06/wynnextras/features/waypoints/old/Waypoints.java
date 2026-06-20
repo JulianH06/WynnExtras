@@ -30,6 +30,7 @@ public class Waypoints {
     private static SubCommand addCmdNoArgs;
     private static SubCommand removeCmd;
     private static SubCommand editCmd;
+    private static SubCommand freeMoveToggleCmd;
     private static Command waypointsCmd;
 
     public static boolean inScreen = false;
@@ -131,6 +132,17 @@ public class Waypoints {
                     null
             );
 
+            freeMoveToggleCmd = new SubCommand(
+                    "freemovetoggle",
+                    "toggles waypoint edit free move mode",
+                    context -> {
+                        WaypointEditMode.toggleFreeMoveFromCommand();
+                        return 1;
+                    },
+                    null,
+                    null
+            );
+
             waypointsCmd = new Command(
                     "waypoints",
                     "",
@@ -140,7 +152,7 @@ public class Waypoints {
                         inScreen = true;
                         return 1;
                     },
-                    List.of(addCmd, addCmdNoArgs, removeCmd, editCmd),
+                    List.of(addCmd, addCmdNoArgs, removeCmd, editCmd, freeMoveToggleCmd),
                     null
             );
             commandsInitialized = true;

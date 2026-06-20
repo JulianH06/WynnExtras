@@ -1442,6 +1442,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         if (descriptionInputWidget != null) return;
         descriptionInputWidget = new TextInputWidget(0, 0, 0, 0, 6, 11, 4f);
         descriptionInputWidget.setMaxLength(DESCRIPTION_MAX_LENGTH);
+        descriptionInputWidget.setPlaceholder("Class description");
         descriptionInputWidget.setTextColor(CustomColor.fromHexString("FFFFFF"));
         descriptionInputWidget.setPlaceholderColor(CustomColor.fromHexString("777777"));
         descriptionInputWidget.setCursorColor(CustomColor.fromHexString("FFFFFF"));

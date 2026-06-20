@@ -4,9 +4,7 @@ import julianh06.wynnextras.config.configoptions.*;
 import static julianh06.wynnextras.config.ConfigTheme.*;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.core.CurrentVersionData;
-import net.fabricmc.loader.api.FabricLoader;
 import julianh06.wynnextras.features.spellhider.SpellProfiles;
-import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
 import julianh06.wynnextras.features.profileviewer.PV;
@@ -48,6 +46,7 @@ import java.util.function.Supplier;
  */
 public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContext {
     private static Identifier logoTexture = Identifier.of("wynnextras", "textures/general/wynnextrasbanner.png");
+    private static final WynnExtrasConfig DEFAULT_CONFIG = new WynnExtrasConfig();
 
     private final Screen parent;
     private final WynnExtrasConfig config;
@@ -354,7 +353,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
                         () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
                 .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
-                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v),
+                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v,
+                                DEFAULT_CONFIG.territoryMenuKey),
                         () -> config.territoryMenuKeyEnabled));
 
         // ===== OVERLAYS =====
@@ -607,6 +607,38 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
                 .add(toggle("Profile Viewer", "Dark mode for the Profile viewer",
                         () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
+            .sub("Waypoint edit mode keybinds")
+                .add(keybind("Free move toggle", "Toggle the free move mode in the waypoint edit mode",
+                        () -> config.waypointEditFreeMoveToggleKey, v -> config.waypointEditFreeMoveToggleKey = v,
+                        DEFAULT_CONFIG.waypointEditFreeMoveToggleKey))
+                .add(keybind("Add waypoint", "Add a waypoint at the preview position in waypoint edit mode",
+                        () -> config.waypointEditAddKey, v -> config.waypointEditAddKey = v,
+                        DEFAULT_CONFIG.waypointEditAddKey))
+                .add(keybind("Remove waypoint", "Remove waypoints at the preview position in the active package",
+                        () -> config.waypointEditRemoveKey, v -> config.waypointEditRemoveKey = v,
+                        DEFAULT_CONFIG.waypointEditRemoveKey))
+                .add(keybind("Edit waypoint", "Edit waypoints at the preview position in waypoint edit mode",
+                        () -> config.waypointEditExistingKey, v -> config.waypointEditExistingKey = v,
+                        DEFAULT_CONFIG.waypointEditExistingKey))
+                .add(keybind("Move forward", "Move the waypoint preview forward",
+                        () -> config.waypointEditForwardKey, v -> config.waypointEditForwardKey = v,
+                        DEFAULT_CONFIG.waypointEditForwardKey))
+                .add(keybind("Move left", "Move the waypoint preview left",
+                        () -> config.waypointEditLeftKey, v -> config.waypointEditLeftKey = v,
+                        DEFAULT_CONFIG.waypointEditLeftKey))
+                .add(keybind("Move backwards", "Move the waypoint preview backward",
+                        () -> config.waypointEditBackwardKey, v -> config.waypointEditBackwardKey = v,
+                        DEFAULT_CONFIG.waypointEditBackwardKey))
+                .add(keybind("Move right", "Move the waypoint preview right",
+                        () -> config.waypointEditRightKey, v -> config.waypointEditRightKey = v,
+                        DEFAULT_CONFIG.waypointEditRightKey))
+                .add(keybind("Move up", "Move the waypoint preview up",
+                        () -> config.waypointEditUpKey, v -> config.waypointEditUpKey = v,
+                        DEFAULT_CONFIG.waypointEditUpKey))
+                .add(keybind("Move down", "Move the waypoint preview down",
+                        () -> config.waypointEditDownKey, v -> config.waypointEditDownKey = v,
+                        DEFAULT_CONFIG.waypointEditDownKey))
+            .endSub()
             .sub("Tetris")
                 .add(slider("DAS", "Delayed Auto Shift (ms) — delay before repeated movement begins",
                         0, 300, () -> config.tetrisDAS, v -> config.tetrisDAS = v))
@@ -623,7 +655,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
                         () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
                 .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
-                                () -> config.quickRepairKey, v -> config.quickRepairKey = v),
+                                () -> config.quickRepairKey, v -> config.quickRepairKey = v,
+                                DEFAULT_CONFIG.quickRepairKey),
                         () -> config.quickRepairEnabled))
             .endSub()
             .add(toggle("Show Own Nametag", "Render your nametag above your head",
@@ -643,19 +676,14 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
             .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
                     () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
-            .add(keybind("Waypoint Edit Return Key", "Return from waypoint free move mode to waypoint edit mode",
-                    () -> config.waypointEditReturnKey, v -> config.waypointEditReturnKey = v))
-            .add(keybind("Waypoint Edit Add Key", "Add a waypoint at the preview position in waypoint edit mode",
-                    () -> config.waypointEditAddKey, v -> config.waypointEditAddKey = v))
-            .add(keybind("Waypoint Edit Remove Key", "Remove waypoints at the preview position in the active package",
-                    () -> config.waypointEditRemoveKey, v -> config.waypointEditRemoveKey = v))
             .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
                     () -> config.badgesEnabled, v -> config.badgesEnabled = v))
             .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
                     () -> config.removeChroma, v -> config.removeChroma = v))
             .sub("Debug")
                 .add(keybind("Item Components Key", "Show the hovered container item's components in a debug window",
-                        () -> config.debugItemComponentsKey, v -> config.debugItemComponentsKey = v));
+                        () -> config.debugItemComponentsKey, v -> config.debugItemComponentsKey = v,
+                        DEFAULT_CONFIG.debugItemComponentsKey));
 
         // ===== NEW =====
         category("New", 0xFF00bad5)
@@ -669,12 +697,14 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
                         () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
                 .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
-                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v),
+                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v,
+                                DEFAULT_CONFIG.territoryMenuKey),
                         () -> config.territoryMenuKeyEnabled))
                 .add(toggle("Guild Bank Keybind", "Press a key to open /gu manage > Bank directly",
                         () -> config.guildBankKeyEnabled, v -> config.guildBankKeyEnabled = v))
                 .add(visibleWhen(keybind("Guild Bank Key", "Key to open the guild bank",
-                                () -> config.guildBankKey, v -> config.guildBankKey = v),
+                                () -> config.guildBankKey, v -> config.guildBankKey = v,
+                                DEFAULT_CONFIG.guildBankKey),
                         () -> config.guildBankKeyEnabled))
                 .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
                         () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
@@ -805,7 +835,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
                     () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
             .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
-                            () -> config.quickRepairKey, v -> config.quickRepairKey = v),
+                            () -> config.quickRepairKey, v -> config.quickRepairKey = v,
+                            DEFAULT_CONFIG.quickRepairKey),
                     () -> config.quickRepairEnabled))
             .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
                     () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))
@@ -871,8 +902,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         return new TextOption(name, desc);
     }
 
-    private ConfigOption keybind(String name, String desc, Supplier<Integer> get, Consumer<Integer> set) {
-        return new KeybindOption(name, desc, get, set);
+    private ConfigOption keybind(String name, String desc, Supplier<Integer> get, Consumer<Integer> set, int defaultKey) {
+        return new KeybindOption(name, desc, get, set, defaultKey);
     }
 
     private ConfigOption toggle(String name, String desc, Supplier<Boolean> get, Consumer<Boolean> set) {

@@ -51,6 +51,8 @@ public class WaypointEditMode {
     static final int PANEL_GAP = 12;
     static final int ROW_H = 40;
     static final int DROPDOWN_MAX_H = 210;
+    static final int WAYPOINT_ROW_H = 58;
+    static final int WAYPOINT_DROPDOWN_MAX_H = 360;
     static final int FIELD_H = 50;
     static final int ACTION_H = 50;
     static final int TEXT = 0xFFE8DCC8;
@@ -118,6 +120,15 @@ public class WaypointEditMode {
         exit();
         if (mc.player != null) {
             mc.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 1f, 1f);
+        }
+    }
+
+    public static void toggleFreeMoveFromCommand() {
+        if (!enabled) return;
+        if (mode == Mode.FREE_MOVE) {
+            enterEditMode();
+        } else {
+            enterFreeMoveMode();
         }
     }
 
@@ -196,7 +207,7 @@ public class WaypointEditMode {
         }
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.getWindow() == null) return;
-        int key = WynnExtrasConfig.INSTANCE.waypointEditReturnKey;
+        int key = WynnExtrasConfig.INSTANCE.waypointEditFreeMoveToggleKey;
         if (key == GLFW.GLFW_KEY_UNKNOWN) return;
 
         boolean down = GLFW.glfwGetKey(mc.getWindow().getHandle(), key) == GLFW.GLFW_PRESS;
@@ -207,7 +218,7 @@ public class WaypointEditMode {
     @SubscribeEvent
     public void onKeyInput(KeyInputEvent event) {
         if (!enabled || mode != Mode.FREE_MOVE) return;
-        int key = WynnExtrasConfig.INSTANCE.waypointEditReturnKey;
+        int key = WynnExtrasConfig.INSTANCE.waypointEditFreeMoveToggleKey;
         if (key == GLFW.GLFW_KEY_UNKNOWN || event.getKey() != key) return;
         if (event.getAction() == GLFW.GLFW_RELEASE) {
             wasReturnKeyDown = false;
@@ -222,7 +233,7 @@ public class WaypointEditMode {
     static boolean isReturnKeyDown() {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.getWindow() == null) return false;
-        int key = WynnExtrasConfig.INSTANCE.waypointEditReturnKey;
+        int key = WynnExtrasConfig.INSTANCE.waypointEditFreeMoveToggleKey;
         return key != GLFW.GLFW_KEY_UNKNOWN && GLFW.glfwGetKey(mc.getWindow().getHandle(), key) == GLFW.GLFW_PRESS;
     }
 
@@ -262,11 +273,20 @@ public class WaypointEditMode {
         MinecraftClient mc = MinecraftClient.getInstance();
         TextRenderer tr = mc.textRenderer;
 
-        String modeText = mode == Mode.FREE_MOVE
-                ? "you are in waypoint free move mode"
-                : "you are in waypoint edit mode";
-        ctx.fill(6, 6, 10 + tr.getWidth(modeText), 22, 0xAA000000);
-        ctx.drawText(tr, modeText, 10, 10, TEXT, true);
+        String returnKey = keyName(WynnExtrasConfig.INSTANCE.waypointEditFreeMoveToggleKey);
+        String[] lines = {
+                "you are in waypoint free move mode",
+                "Press " + returnKey + " or use /we waypoints freemovetoggle",
+                "to return to waypoint edit mode",
+        };
+        int width = 0;
+        for (String line : lines) {
+            width = Math.max(width, tr.getWidth(line));
+        }
+        ctx.fill(6, 6, 10 + width, 46, 0xAA000000);
+        for (int i = 0; i < lines.length; i++) {
+            ctx.drawText(tr, lines[i], 10, 10 + i * 12, i == 0 ? TEXT : TEXT_DIM, true);
+        }
 
         if (isPreviewOnBarrier()) {
             String warning = "Wynncraft rules do not allow waypoints on barriers, this waypoint preview will not be rendered.";
@@ -275,6 +295,22 @@ public class WaypointEditMode {
             ctx.fill(x - 6, y - 4, x + tr.getWidth(warning) + 6, y + 12, 0xCC220000);
             ctx.drawText(tr, warning, x, y, 0xFFFF7777, true);
         }
+    }
+
+    private static String keyName(int key) {
+        if (key == GLFW.GLFW_KEY_UNKNOWN) return "Unbound";
+        String name = GLFW.glfwGetKeyName(key, 0);
+        if (name != null) return name.toUpperCase();
+        return switch (key) {
+            case GLFW.GLFW_KEY_SPACE -> "SPACE";
+            case GLFW.GLFW_KEY_LEFT_SHIFT -> "LSHIFT";
+            case GLFW.GLFW_KEY_RIGHT_SHIFT -> "RSHIFT";
+            case GLFW.GLFW_KEY_LEFT_ALT -> "LALT";
+            case GLFW.GLFW_KEY_RIGHT_ALT -> "RALT";
+            case GLFW.GLFW_KEY_LEFT_CONTROL -> "LCTRL";
+            case GLFW.GLFW_KEY_RIGHT_CONTROL -> "RCTRL";
+            default -> "K_" + key;
+        };
     }
 
     static void ensureSelectionDefaults() {

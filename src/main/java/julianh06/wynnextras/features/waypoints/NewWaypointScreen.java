@@ -597,8 +597,14 @@ public class NewWaypointScreen extends WEScreen {
             if(activePackage == null) return;
             WaypointData.resolveWaypointCategories(activePackage);
 
-            boolean hasNoDescription = activePackage.description == null || activePackage.description.isEmpty();
-            int topOffset = hasNoDescription ? 320 : 360;
+            String description = activePackage.description == null ? "" : activePackage.description;
+            boolean hasNoDescription = description.isEmpty();
+            int detailTextWidth = Math.max(120, width - 100);
+            List<String> descriptionLines = hasNoDescription ? List.of() : wrapText(description, detailTextWidth, 2.6f);
+            int descriptionHeight = descriptionLines.isEmpty() ? 0 : descriptionLines.size() * 28;
+            int bgHeight = hasNoDescription ? 80 : Math.max(120, 100 + descriptionHeight);
+            int tabsY = y + 170 + bgHeight;
+            int topOffset = 240 + bgHeight;
 
             int top = this.y + topOffset;
             int bottom = this.y + this.height;
@@ -614,20 +620,53 @@ public class NewWaypointScreen extends WEScreen {
             int spacing = 20;
             float xStart = x + width / 2f - 1.5f * tabWidth - spacing;
             for(TabWidget tabWidget : tabWidgets) {
-                tabWidget.setBounds((int) xStart, y + (hasNoDescription ? 250 : 290), tabWidth, 50);
+                tabWidget.setBounds((int) xStart, tabsY, tabWidth, 50);
                 tabWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
                 xStart += tabWidth + spacing;
             }
 
-            int bgHeight = hasNoDescription ? 80 : 120;
             ui.drawRect(x + 30, y + 150, width - 60, bgHeight, CustomColor.fromInt(PARCHMENT));
             ui.drawText(activePackage.name, x + 40, y + 190);
-            ui.drawText(activePackage.description, x + 40, y + 230, CustomColor.fromInt(TEXT_DIM));
+            for (int i = 0; i < descriptionLines.size(); i++) {
+                ui.drawText(descriptionLines.get(i), x + 40, y + 230 + i * 28, CustomColor.fromInt(TEXT_DIM), 2.6f);
+            }
 
             if(activeTabWidget == null) return;
 
             activeTabWidget.setBounds(x, y + topOffset, width, height - topOffset);
             activeTabWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+        }
+
+        private List<String> wrapText(String text, int maxWidth, float textScale) {
+            if (text == null || text.isEmpty()) return List.of();
+
+            List<String> lines = new ArrayList<>();
+            int lineStart = 0;
+            int index = 0;
+            int lastBreak = -1;
+            while (index < text.length()) {
+                int next = index + 1;
+                if (Character.isWhitespace(text.charAt(index))) lastBreak = next;
+                if (textWidth(text.substring(lineStart, next), textScale) <= maxWidth || index == lineStart) {
+                    index = next;
+                    continue;
+                }
+                if (lastBreak > lineStart) {
+                    lines.add(text.substring(lineStart, lastBreak).stripTrailing());
+                    lineStart = lastBreak;
+                } else {
+                    lines.add(text.substring(lineStart, index));
+                    lineStart = index;
+                }
+                index = lineStart;
+                lastBreak = -1;
+            }
+            lines.add(text.substring(lineStart).stripTrailing());
+            return lines;
+        }
+
+        private int textWidth(String text, float textScale) {
+            return (int) Math.ceil(MinecraftClient.getInstance().textRenderer.getWidth(text) * textScale);
         }
 
         @Override
@@ -755,9 +794,14 @@ public class NewWaypointScreen extends WEScreen {
         }
 
         private static class ScreenTextInput extends TextInputWidget {
-            private ScreenTextInput(String input, java.util.function.Consumer<String> changeConsumer) {
-                super(0, 0, 0, 0, 10, 11, 2);
+            private ScreenTextInput(String input, String placeholder, java.util.function.Consumer<String> changeConsumer) {
+                this(input, placeholder, 2f, changeConsumer);
+            }
+
+            private ScreenTextInput(String input, String placeholder, float textScale, java.util.function.Consumer<String> changeConsumer) {
+                super(0, 0, 0, 0, 12, 14, textScale);
                 setInput(input);
+                setPlaceholder(placeholder);
                 setBackgroundColor(CustomColor.fromInt(BG_LIGHT));
                 setFocusedColor(CustomColor.fromInt(PARCHMENT_LIGHT));
                 setTextColor(CustomColor.fromInt(TEXT_LIGHT));
@@ -1059,10 +1103,10 @@ public class NewWaypointScreen extends WEScreen {
                     this.waypoint = waypoint;
                     expanded = expand;
                     if (waypoint != null) {
-                        nameInput = new WaypointTextInput(waypoint.name == null ? "" : waypoint.name, this::applyName);
-                        xInput = new WaypointTextInput(String.valueOf(waypoint.x), ignored -> applyCoordinates());
-                        yInput = new WaypointTextInput(String.valueOf(waypoint.y), ignored -> applyCoordinates());
-                        zInput = new WaypointTextInput(String.valueOf(waypoint.z), ignored -> applyCoordinates());
+                        nameInput = new WaypointTextInput(waypoint.name == null ? "" : waypoint.name, "Waypoint name", this::applyName);
+                        xInput = new WaypointTextInput(String.valueOf(waypoint.x), "X", ignored -> applyCoordinates());
+                        yInput = new WaypointTextInput(String.valueOf(waypoint.y), "Y", ignored -> applyCoordinates());
+                        zInput = new WaypointTextInput(String.valueOf(waypoint.z), "Z", ignored -> applyCoordinates());
                         xInput.setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '-');
                         yInput.setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '-');
                         zInput.setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '-');
@@ -1319,9 +1363,10 @@ public class NewWaypointScreen extends WEScreen {
                 }
 
                 private static class WaypointTextInput extends TextInputWidget {
-                    private WaypointTextInput(String input, java.util.function.Consumer<String> changeConsumer) {
+                    private WaypointTextInput(String input, String placeholder, java.util.function.Consumer<String> changeConsumer) {
                         super(0, 0, 0, 0, 12, 11, 2.6f);
                         setInput(input);
+                        setPlaceholder(placeholder);
                         setBackgroundColor(CustomColor.fromInt(BG_LIGHT));
                         setFocusedColor(CustomColor.fromInt(PARCHMENT_LIGHT));
                         setTextColor(CustomColor.fromInt(TEXT_LIGHT));
@@ -1477,7 +1522,7 @@ public class NewWaypointScreen extends WEScreen {
 
                 private CategoryRowWidget(WaypointCategory category) {
                     this.category = category;
-                    nameInput = new ScreenTextInput(category.name == null ? "" : category.name, value -> {
+                    nameInput = new ScreenTextInput(category.name == null ? "" : category.name, "Category name", value -> {
                         WaypointActions.renameCategory(activePackage, category, value);
                         if (waypointsTab != null) waypointsTab.invalidate();
                     });
@@ -1564,6 +1609,8 @@ public class NewWaypointScreen extends WEScreen {
         }
 
         private static class SettingsTabContent extends TabContentWidget {
+            private static final int DESCRIPTION_MAX_LENGTH = 160;
+
             private ScreenTextInput nameInput;
             private ScreenTextInput descriptionInput;
             private WaypointPackage inputPackage;
@@ -1578,31 +1625,32 @@ public class NewWaypointScreen extends WEScreen {
 
                 int contentX = x + 35;
                 int fieldX = x + 240;
-                int fieldW = Math.min(620, width - 520);
+                int fieldW = Math.max(360, width - (fieldX - x) - 35);
                 ui.drawText("Package", contentX, y + 35, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 3f);
 
                 ui.drawText("Name", contentX, y + 95, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.5f);
-                nameInput.setBounds(fieldX, y + 85, fieldW, 42);
+                nameInput.setBounds(fieldX, y + 82, fieldW, 54);
 
-                ui.drawText("Description", contentX, y + 155, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.5f);
-                descriptionInput.setBounds(fieldX, y + 145, fieldW, 42);
+                ui.drawText("Description", contentX, y + 170, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.5f);
+                descriptionInput.setBounds(fieldX, y + 158, fieldW, 112);
+                ui.drawText(descriptionInput.getInput().length() + "/" + DESCRIPTION_MAX_LENGTH, fieldX + fieldW, y + 278, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2f);
 
-                ui.drawText("ID", contentX, y + 220, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
-                ui.drawText(activePackage.id == null ? "" : activePackage.id, fieldX, y + 220, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
-                ui.drawText("Version", contentX, y + 255, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
-                ui.drawText(String.valueOf(activePackage.packageVersion), fieldX, y + 255, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
-                ui.drawText("Contents", contentX, y + 290, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
-                ui.drawText(activePackage.waypoints.size() + " waypoints, " + activePackage.categories.size() + " categories", fieldX, y + 290, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
+                ui.drawText("ID", contentX, y + 315, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
+                ui.drawText(activePackage.id == null ? "" : activePackage.id, fieldX, y + 315, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
+                ui.drawText("Version", contentX, y + 350, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
+                ui.drawText(String.valueOf(activePackage.packageVersion), fieldX, y + 350, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
+                ui.drawText("Contents", contentX, y + 385, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
+                ui.drawText(activePackage.waypoints.size() + " waypoints, " + activePackage.categories.size() + " categories", fieldX, y + 385, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
 
-                drawSettingsButton(mouseX, mouseY, contentX, y + 350, 180, 44, activePackage.enabled ? "Enabled" : "Disabled", activePackage.enabled ? TOGGLE_ON : TOGGLE_OFF);
-                drawSettingsButton(mouseX, mouseY, contentX + 200, y + 350, 180, 44, "Duplicate", TOGGLE_ON);
-                drawSettingsButton(mouseX, mouseY, contentX + 400, y + 350, 180, 44, "Export", GOLD_DARK);
-                drawSettingsButton(mouseX, mouseY, contentX + 600, y + 350, 180, 44, "Delete", ACCENT_RED);
+                drawSettingsButton(mouseX, mouseY, contentX, y + 445, 180, 44, activePackage.enabled ? "Enabled" : "Disabled", activePackage.enabled ? TOGGLE_ON : TOGGLE_OFF);
+                drawSettingsButton(mouseX, mouseY, contentX + 200, y + 445, 180, 44, "Duplicate", TOGGLE_ON);
+                drawSettingsButton(mouseX, mouseY, contentX + 400, y + 445, 180, 44, "Export", GOLD_DARK);
+                drawSettingsButton(mouseX, mouseY, contentX + 600, y + 445, 180, 44, "Delete", ACCENT_RED);
             }
 
             @Override
             public float calculateTotalHeight() {
-                return 430;
+                return 525;
             }
 
             @Override
@@ -1614,7 +1662,7 @@ public class NewWaypointScreen extends WEScreen {
                 if (button != 0 || activePackage == null || !contains((int) mx, (int) my)) return false;
 
                 int contentX = x + 35;
-                int buttonY = y + 350;
+                int buttonY = y + 445;
                 if (isIn(mx, my, contentX, buttonY, 180, 44)) {
                     WaypointActions.setPackageEnabled(activePackage, !activePackage.enabled);
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
@@ -1652,22 +1700,28 @@ public class NewWaypointScreen extends WEScreen {
 
             private void syncInputs() {
                 if (nameInput == null) {
-                    nameInput = new ScreenTextInput("", value -> {
+                    nameInput = new ScreenTextInput("", "Package name", 2.6f, value -> {
                         if (activePackage == null) return;
                         WaypointActions.renamePackage(activePackage, value);
                         if (sideBarWidget != null) sideBarWidget.rebuildPackageWidgetsFromData();
                     });
-                    descriptionInput = new ScreenTextInput("", value -> {
+                    descriptionInput = new ScreenTextInput("", "Package description", 2.6f, value -> {
                         if (activePackage == null) return;
                         WaypointActions.setPackageDescription(activePackage, value);
                     });
+                    descriptionInput.setWrapText(true);
+                    descriptionInput.setMaxLength(DESCRIPTION_MAX_LENGTH);
                     addChild(nameInput);
                     addChild(descriptionInput);
                 }
                 if (inputPackage == activePackage) return;
                 inputPackage = activePackage;
                 nameInput.setInputAndMoveCursorToEnd(activePackage.name == null ? "" : activePackage.name);
-                descriptionInput.setInputAndMoveCursorToEnd(activePackage.description == null ? "" : activePackage.description);
+                String description = activePackage.description == null ? "" : activePackage.description;
+                descriptionInput.setInputAndMoveCursorToEnd(description);
+                if (!descriptionInput.getInput().equals(description)) {
+                    WaypointActions.setPackageDescription(activePackage, descriptionInput.getInput());
+                }
             }
 
             private void drawSettingsButton(int mouseX, int mouseY, int x, int y, int width, int height, String text, int accent) {

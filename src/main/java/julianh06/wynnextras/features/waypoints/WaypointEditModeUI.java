@@ -19,6 +19,7 @@ import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.glfw.GLFW;
@@ -31,6 +32,8 @@ import java.util.function.Supplier;
 import static julianh06.wynnextras.features.waypoints.WaypointEditMode.*;
 
 public class WaypointEditModeUI extends WEScreen {
+    private static final Identifier MOVE_ICON = Identifier.of("wynnextras", "textures/gui/waypointeditmodeui/move_icon.png");
+
     private enum VisibilityTarget { NAME, BLOCK, DISTANCE }
 
     private final ClickAreaWidget panelBlocker = new ClickAreaWidget(() -> true, this::clearUiFocus);
@@ -72,6 +75,9 @@ public class WaypointEditModeUI extends WEScreen {
     private int waypointDropdownX = 0;
     private int waypointDropdownY = 0;
     private int waypointDropdownW = 0;
+    private boolean waypointDropdownDragging = false;
+    private int waypointDropdownDragOffsetX = 0;
+    private int waypointDropdownDragOffsetY = 0;
     private WaypointEditMode.WaypointPositionStats lastPreviewStats = new WaypointEditMode.WaypointPositionStats(0, List.of(), List.of());
     private julianh06.wynnextras.features.waypoints.old.Waypoint nameInputWaypoint = null;
     private String nameInput = "";
@@ -186,6 +192,12 @@ public class WaypointEditModeUI extends WEScreen {
     }
 
     @Override
+    public boolean mouseReleased(Click click) {
+        if (click.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) waypointDropdownDragging = false;
+        return super.mouseReleased(click);
+    }
+
+    @Override
     public boolean keyPressed(KeyInput input) {
         int key = input.key();
         if (categoryColorPicker.keyPressed(key, input.scancode(), input.modifiers())) return true;
@@ -242,7 +254,7 @@ public class WaypointEditModeUI extends WEScreen {
             exit();
             return true;
         }
-        if (matchesKey(key, WynnExtrasConfig.INSTANCE.waypointEditReturnKey)) {
+        if (matchesKey(key, WynnExtrasConfig.INSTANCE.waypointEditFreeMoveToggleKey)) {
             enterFreeMoveMode();
             return true;
         }
@@ -254,29 +266,41 @@ public class WaypointEditModeUI extends WEScreen {
             removeSelectedWaypoint();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_W || key == GLFW.GLFW_KEY_A || key == GLFW.GLFW_KEY_S || key == GLFW.GLFW_KEY_D) {
-            movePreviewHorizontal(key);
+        if (matchesKey(key, WynnExtrasConfig.INSTANCE.waypointEditExistingKey)) {
+            handleEditCurrent();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_SPACE) {
-            movePreviewVertical(1);
-            return true;
-        }
-        if (key == GLFW.GLFW_KEY_LEFT_SHIFT || key == GLFW.GLFW_KEY_RIGHT_SHIFT) {
-            movePreviewVertical(-1);
-            return true;
-        }
+        if (movePreviewForKey(key)) return true;
         return true;
     }
 
-    private boolean isWaypointMovementKey(int key) {
-        return key == GLFW.GLFW_KEY_W
-                || key == GLFW.GLFW_KEY_A
-                || key == GLFW.GLFW_KEY_S
-                || key == GLFW.GLFW_KEY_D
-                || key == GLFW.GLFW_KEY_SPACE
-                || key == GLFW.GLFW_KEY_LEFT_SHIFT
-                || key == GLFW.GLFW_KEY_RIGHT_SHIFT;
+    private boolean movePreviewForKey(int key) {
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        if (matchesKey(key, config.waypointEditForwardKey)) {
+            movePreviewHorizontal(GLFW.GLFW_KEY_W);
+            return true;
+        }
+        if (matchesKey(key, config.waypointEditLeftKey)) {
+            movePreviewHorizontal(GLFW.GLFW_KEY_A);
+            return true;
+        }
+        if (matchesKey(key, config.waypointEditBackwardKey)) {
+            movePreviewHorizontal(GLFW.GLFW_KEY_S);
+            return true;
+        }
+        if (matchesKey(key, config.waypointEditRightKey)) {
+            movePreviewHorizontal(GLFW.GLFW_KEY_D);
+            return true;
+        }
+        if (matchesKey(key, config.waypointEditUpKey)) {
+            movePreviewVertical(1);
+            return true;
+        }
+        if (matchesKey(key, config.waypointEditDownKey)) {
+            movePreviewVertical(-1);
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -341,7 +365,9 @@ public class WaypointEditModeUI extends WEScreen {
     private boolean matchesKey(int key, int configuredKey) {
         if (configuredKey == GLFW.GLFW_KEY_UNKNOWN) return false;
         if (key == configuredKey) return true;
-        return configuredKey == GLFW.GLFW_KEY_ENTER && key == GLFW.GLFW_KEY_KP_ENTER;
+        return configuredKey == GLFW.GLFW_KEY_ENTER && key == GLFW.GLFW_KEY_KP_ENTER
+                || configuredKey == GLFW.GLFW_KEY_LEFT_SHIFT && key == GLFW.GLFW_KEY_RIGHT_SHIFT
+                || configuredKey == GLFW.GLFW_KEY_RIGHT_SHIFT && key == GLFW.GLFW_KEY_LEFT_SHIFT;
     }
 
     private void updateEditorWidgets() {
@@ -420,9 +446,11 @@ public class WaypointEditModeUI extends WEScreen {
             dropdownWidget.clearChildren();
             activeDropdownField = null;
         } else if (activeDropdown == Dropdown.WAYPOINT) {
-            int dropdownW = waypointDropdownW <= 0 ? p(430) : waypointDropdownW;
+            int dropdownW = waypointDropdownW <= 0 ? waypointDropdownDefaultWidth() : waypointDropdownW;
             int dropdownX = MathHelper.clamp(waypointDropdownX, p(8), Math.max(p(8), getLogicalWidth() - dropdownW - p(8)));
-            int dropdownY = MathHelper.clamp(waypointDropdownY, p(8), Math.max(p(8), getLogicalHeight() - p(260)));
+            int dropdownY = MathHelper.clamp(waypointDropdownY, p(8), Math.max(p(8), getLogicalHeight() - dropdownLogicalHeight(Dropdown.WAYPOINT) - p(8)));
+            waypointDropdownX = dropdownX;
+            waypointDropdownY = dropdownY;
             dropdownWidget.configure(activeDropdown, dropdownX, dropdownY, dropdownW);
         } else {
             Widget field = activeDropdownField != null ? activeDropdownField : activeDropdown == Dropdown.PACKAGE ? packageField : categoryField;
@@ -571,7 +599,7 @@ public class WaypointEditModeUI extends WEScreen {
         searchFocused = false;
         nameFocused = false;
         categoryNameFocused = false;
-        if (openWaypointSelectionOrSelect(previewPos, editCurrentButton.getX(), editCurrentButton.getY() + editCurrentButton.getHeight(), p(430))
+        if (openWaypointSelectionOrSelect(previewPos, editCurrentButton.getX(), editCurrentButton.getY() + editCurrentButton.getHeight(), waypointDropdownDefaultWidth())
                 && client != null && client.player != null) {
             client.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 1f, 1f);
         }
@@ -581,7 +609,7 @@ public class WaypointEditModeUI extends WEScreen {
         WaypointHit hit = findWaypointAt(screenMouseX, screenMouseY);
         if (hit == null) return false;
         BlockPos pos = new BlockPos(hit.waypoint().x, hit.waypoint().y, hit.waypoint().z);
-        return openWaypointSelectionOrSelect(pos, logicalMouseX + p(8), logicalMouseY + p(8), p(430));
+        return openWaypointSelectionOrSelect(pos, logicalMouseX + p(8), logicalMouseY + p(8), waypointDropdownDefaultWidth());
     }
 
     private boolean openWaypointSelectionOrSelect(BlockPos pos, int dropdownX, int dropdownY, int dropdownW) {
@@ -603,6 +631,7 @@ public class WaypointEditModeUI extends WEScreen {
         waypointDropdownX = dropdownX;
         waypointDropdownY = dropdownY;
         waypointDropdownW = dropdownW;
+        waypointDropdownDragging = false;
         activeDropdown = Dropdown.WAYPOINT;
         activeDropdownField = null;
         searchFocused = false;
@@ -790,6 +819,26 @@ public class WaypointEditModeUI extends WEScreen {
 
     private int editorPanelHeight() {
         return selectedWaypoint == null ? p(PANEL_H) : p(540);
+    }
+
+    private int waypointDropdownDefaultWidth() {
+        return Math.min(p(760), Math.max(p(430), getLogicalWidth() - p(32)));
+    }
+
+    private int dropdownRowHeight(Dropdown dropdown) {
+        return dropdown == Dropdown.WAYPOINT ? p(WAYPOINT_ROW_H) : p(ROW_H);
+    }
+
+    private int dropdownMaxHeight(Dropdown dropdown) {
+        return dropdown == Dropdown.WAYPOINT ? p(WAYPOINT_DROPDOWN_MAX_H) : p(DROPDOWN_MAX_H);
+    }
+
+    private int dropdownLogicalHeight(Dropdown dropdown) {
+        return dropdownHeaderHeight(dropdown) + visibleDropdownRows(dropdown) * dropdownRowHeight(dropdown);
+    }
+
+    private int dropdownHeaderHeight(Dropdown dropdown) {
+        return dropdown == Dropdown.WAYPOINT ? p(50) : p(30);
     }
 
     private void drawEditHud() {
@@ -1284,14 +1333,18 @@ public class WaypointEditModeUI extends WEScreen {
             TextRenderer tr = MinecraftClient.getInstance().textRenderer;
             List<Text> lines = new ArrayList<>();
             lines.add(Text.literal("§eWaypoint edit mode"));
-            lines.add(Text.literal("§fWASD§7 moves the preview horizontally."));
-            lines.add(Text.literal("§fSpace/Shift§7 moves the preview up/down."));
-            lines.add(Text.literal("§7Use package/category dropdowns to choose where it saves."));
-            lines.add(Text.literal("§7Click an existing waypoint to edit it."));
-            lines.add(Text.literal("§7Add/remove hotkeys work when no text field is focused."));
+            lines.add(Text.literal("§fAll keybinds are customizable in the WynnExtras config."));
+            lines.add(Text.literal("§fThe default binds are:"));
+            lines.add(Text.literal("§fWASD§7 to move the preview horizontally."));
+            lines.add(Text.literal("§fSpace/Shift§7 to move the preview up/down."));
+            lines.add(Text.literal("§fE§7 to edit waypoints on the preview"));
+            lines.add(Text.literal("§fI§7 to toggle free move mode"));
+            lines.add(Text.literal("§fEnter§7 to add a waypoint"));
+            lines.add(Text.literal("§fBackspace§7 to remove a waypoint"));
+            lines.add(Text.literal(""));
+            lines.add(Text.literal("§fAdditional information:"));
+            lines.add(Text.literal("§7Click on an existing waypoint in the world to edit it."));
             lines.add(Text.literal("§7Free Move Mode keeps the preview fixed while you move."));
-            lines.add(Text.literal("§7Press your return keybind to resume editing."));
-            lines.add(Text.literal("§cBarrier waypoints are saved but not rendered."));
             ctx.drawTooltip(tr, lines, screen.toScreenMouseX(mouseX), screen.toScreenMouseY(mouseY));
         }
 
@@ -1331,7 +1384,7 @@ public class WaypointEditModeUI extends WEScreen {
             boolean open = activeDropdown == dropdown && screen.activeDropdownField == this;
             screen.ui.drawText(label, logicalX, logicalY - screen.p(25), screen.color(TEXT_DIM), screen.ts(2.7f));
             screen.ui.drawButton(logicalX, logicalY, logicalW, logicalH, hovered || open);
-            screen.ui.drawText(screen.trimToWidth(MinecraftClient.getInstance().textRenderer, value, screen.textMaxWidth(logicalW - screen.p(34), 3f)), logicalX + screen.p(10), logicalY + screen.p(12), screen.color(TEXT), screen.ts(3f));
+            screen.ui.drawText(screen.trimToWidthEnd(MinecraftClient.getInstance().textRenderer, value, screen.textMaxWidth(logicalW - screen.p(34), 3f)), logicalX + screen.p(10), logicalY + screen.p(12), screen.color(TEXT), screen.ts(3f));
             screen.ui.drawText(open ? "^" : "v", logicalX + logicalW - screen.p(30), logicalY + screen.p(12), screen.color(TEXT), screen.ts(3f));
         }
 
@@ -1361,13 +1414,14 @@ public class WaypointEditModeUI extends WEScreen {
         }
 
         private void configure(Dropdown dropdown, int x, int y, int w) {
-            int rowH = screen.p(ROW_H);
+            int rowH = screen.dropdownRowHeight(dropdown);
             int newRows = screen.dropdownRowCount(dropdown);
-            int newVisibleRows = Math.min(newRows, Math.max(1, (screen.p(DROPDOWN_MAX_H) - screen.p(30)) / rowH));
+            int headerH = screen.dropdownHeaderHeight(dropdown);
+            int newVisibleRows = Math.min(newRows, Math.max(1, (screen.dropdownMaxHeight(dropdown) - headerH) / rowH));
             screen.clampDropdownScroll(dropdown, newVisibleRows);
             float newScrollOffset = screen.dropdownScroll(dropdown);
             int newFirstRow = screen.firstVisibleDropdownRow(dropdown, newVisibleRows);
-            int newLogicalH = screen.p(30) + newVisibleRows * rowH;
+            int newLogicalH = headerH + newVisibleRows * rowH;
             float rowOffset = newScrollOffset - newFirstRow * rowH;
             boolean rebuildChildren = this.dropdown != dropdown
                     || logicalX != x
@@ -1394,13 +1448,15 @@ public class WaypointEditModeUI extends WEScreen {
 
             if (!rebuildChildren) return;
             clearChildren();
-            DropdownSearchWidget searchWidget = new DropdownSearchWidget(screen);
-            searchWidget.setLogicalBounds(x + screen.p(5), y + screen.p(5), w - screen.p(10), screen.p(22));
+            DropdownSearchWidget searchWidget = new DropdownSearchWidget(screen, dropdown);
+            int searchW = dropdown == Dropdown.WAYPOINT ? w - screen.p(120) : w - screen.p(10);
+            int searchH = dropdown == Dropdown.WAYPOINT ? screen.p(40) : screen.p(22);
+            searchWidget.setLogicalBounds(x + screen.p(5), y + screen.p(5), searchW, searchH);
             searchWidget.setInput(screen.currentSearchText());
             searchWidget.setFocused(searchFocused);
             addDropdownChild(searchWidget);
 
-            int listY = y + screen.p(30);
+            int listY = y + headerH;
             int rowCount = Math.min(rows - firstRow, visibleRows + (rowOffset > 0 ? 1 : 0));
             for (int slot = 0; slot < rowCount; slot++) {
                 int rowIndex = firstRow + slot;
@@ -1427,6 +1483,13 @@ public class WaypointEditModeUI extends WEScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             screen.ui.drawRect(logicalX, logicalY, logicalW, logicalH, screen.color(0xF21A1410));
             screen.ui.drawRect(logicalX, logicalY, logicalW, screen.p(1), screen.color(GOLD));
+            if (dropdown == Dropdown.WAYPOINT) {
+                int handleSize = screen.p(36);
+                int handleX = logicalX + logicalW - handleSize - screen.p(10);
+                int handleY = logicalY + screen.p(7);
+                screen.ui.drawRect(handleX - screen.p(2), handleY - screen.p(2), handleSize + screen.p(4), handleSize + screen.p(4), screen.color(screen.waypointDropdownDragging ? 0xAA6C4F36 : 0x664D3C2D));
+                screen.ui.drawImage(MOVE_ICON, handleX, handleY, handleSize, handleSize, screen.color(screen.waypointDropdownDragging ? 0xFFFFE36A : TEXT));
+            }
         }
 
         @Override
@@ -1434,6 +1497,12 @@ public class WaypointEditModeUI extends WEScreen {
             if (!visible || !enabled || !contains((int) mx, (int) my)) return false;
             for (int i = children.size() - 1; i >= 0; i--) {
                 if (children.get(i).mouseClicked(mx, my, button)) return true;
+            }
+            if (dropdown == Dropdown.WAYPOINT
+                    && button == GLFW.GLFW_MOUSE_BUTTON_LEFT
+                    && screen.isOverWaypointDropdownDragHandle(mx, my)) {
+                screen.startWaypointDropdownDrag((int) mx, (int) my);
+                return true;
             }
             return onClick(button);
         }
@@ -1456,6 +1525,7 @@ public class WaypointEditModeUI extends WEScreen {
             for (int i = children.size() - 1; i >= 0; i--) {
                 if (children.get(i).mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) return true;
             }
+            if (dropdown == Dropdown.WAYPOINT && screen.dragWaypointDropdown(mouseX, mouseY, button)) return true;
             return false;
         }
     }
@@ -1515,14 +1585,14 @@ public class WaypointEditModeUI extends WEScreen {
         }
 
         private int scrollbarThumbY(int thumbH) {
-            float maxScroll = screen.maxDropdownScroll(dropdown, logicalH / screen.p(ROW_H));
+            float maxScroll = screen.maxDropdownScroll(dropdown, logicalH / screen.dropdownRowHeight(dropdown));
             if (maxScroll <= 0 || logicalH <= thumbH) return logicalY;
             return logicalY + (int) ((logicalH - thumbH) * (screen.dropdownScroll(dropdown) / maxScroll));
         }
 
         private void updateScroll(float logicalMouseY) {
             int thumbH = screen.scrollbarThumbHeight(dropdown, logicalH);
-            float maxScroll = screen.maxDropdownScroll(dropdown, logicalH / screen.p(ROW_H));
+            float maxScroll = screen.maxDropdownScroll(dropdown, logicalH / screen.dropdownRowHeight(dropdown));
             float maxThumbTravel = logicalH - thumbH;
             if (maxScroll <= 0 || maxThumbTravel <= 0) return;
             float thumbY = MathHelper.clamp(logicalMouseY - logicalY - screen.dropdownScrollbarDragOffset, 0, maxThumbTravel);
@@ -1537,8 +1607,8 @@ public class WaypointEditModeUI extends WEScreen {
         private int logicalW;
         private int logicalH;
 
-        private DropdownSearchWidget(WaypointEditModeUI screen) {
-            super(0, 0, 0, 0, 5, 5, 2.2f);
+        private DropdownSearchWidget(WaypointEditModeUI screen, Dropdown dropdown) {
+            super(0, 0, 0, 0, dropdown == Dropdown.WAYPOINT ? 8 : 5, dropdown == Dropdown.WAYPOINT ? 9 : 5, dropdown == Dropdown.WAYPOINT ? 2.8f : 2.2f);
             this.screen = screen;
             setPlaceholder("Search...");
             setTextColor(screen.color(TEXT));
@@ -1614,7 +1684,14 @@ public class WaypointEditModeUI extends WEScreen {
                 screen.ui.drawRect(logicalX, logicalY, logicalW, logicalH, screen.color(selected ? 0xAA6C4F36 : 0xAA4D3C2D));
             }
             screen.ui.drawRect(logicalX + screen.p(7), logicalY + screen.p(10), screen.p(20), screen.p(20), screen.color(screen.dropdownRowColor(dropdown, index)));
-            screen.ui.drawText(screen.trimToWidthEnd(tr, screen.dropdownRowText(dropdown, index), screen.textMaxWidth(logicalW - screen.p(42), 3f)), logicalX + screen.p(33), logicalY + screen.p(8), screen.color(TEXT), screen.ts(3f));
+            if (dropdown == Dropdown.WAYPOINT) {
+                String[] lines = screen.dropdownWaypointRowText(index);
+                int textW = logicalW - screen.p(58);
+                screen.ui.drawText(screen.trimToWidthEnd(tr, lines[0], screen.textMaxWidth(textW, 2.6f)), logicalX + screen.p(35), logicalY + screen.p(7), screen.color(TEXT), screen.ts(2.6f));
+                screen.ui.drawText(screen.trimToWidthEnd(tr, lines[1], screen.textMaxWidth(textW, 2.0f)), logicalX + screen.p(35), logicalY + screen.p(35), screen.color(TEXT_DIM), screen.ts(2.0f));
+            } else {
+                screen.ui.drawText(screen.trimToWidthEnd(tr, screen.dropdownRowText(dropdown, index), screen.textMaxWidth(logicalW - screen.p(42), 3f)), logicalX + screen.p(33), logicalY + screen.p(8), screen.color(TEXT), screen.ts(3f));
+            }
             ctx.disableScissor();
         }
 
@@ -1628,13 +1705,13 @@ public class WaypointEditModeUI extends WEScreen {
 
     private int dropdownRowCount(Dropdown dropdown) {
         if (dropdown == Dropdown.PACKAGE) return filteredPackages().size();
-        if (dropdown == Dropdown.CATEGORY) return filteredCategories().size();
+        if (dropdown == Dropdown.CATEGORY) return filteredCategories().size() + (activePackage == null ? 0 : 1);
         if (dropdown == Dropdown.WAYPOINT) return filteredWaypointChoices().size();
         return 0;
     }
 
     private int firstVisibleDropdownRow(Dropdown dropdown, int visibleRows) {
-        int rowH = p(ROW_H);
+        int rowH = dropdownRowHeight(dropdown);
         int rows = dropdownRowCount(dropdown);
         int scroll = (int) dropdownScroll(dropdown);
         return MathHelper.clamp(scroll / rowH, 0, Math.max(0, rows - visibleRows));
@@ -1644,6 +1721,10 @@ public class WaypointEditModeUI extends WEScreen {
         if (dropdown == Dropdown.PACKAGE) {
             String name = filteredPackages().get(index).name;
             return name == null || name.isBlank() ? "Unnamed Package" : name;
+        }
+        if (isCreateCategoryRow(dropdown, index)) {
+            String name = categorySearch == null || categorySearch.isBlank() ? "New Category" : categorySearch.trim();
+            return name.equals("New Category") ? "+ Create Category" : "+ Create \"" + name + "\"";
         }
         if (dropdown == Dropdown.CATEGORY) {
             String name = filteredCategories().get(index).name;
@@ -1657,8 +1738,18 @@ public class WaypointEditModeUI extends WEScreen {
         return waypointName + "  |  " + packageName + "  |  " + categoryName;
     }
 
+    private String[] dropdownWaypointRowText(int index) {
+        WaypointChoice choice = filteredWaypointChoices().get(index);
+        String waypointName = choice.waypoint().name == null || choice.waypoint().name.isBlank() ? "Waypoint" : choice.waypoint().name;
+        String packageName = choice.pkg().name == null ? "Unknown Package" : choice.pkg().name;
+        WaypointCategory category = choice.waypoint().getCategory();
+        String categoryName = category == null || category.name == null || category.name.isBlank() ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : category.name;
+        return new String[] { waypointName, "Package: " + packageName + "  |  Category: " + categoryName };
+    }
+
     private boolean isDropdownRowSelected(Dropdown dropdown, int index) {
         if (dropdown == Dropdown.PACKAGE) return activePackage == filteredPackages().get(index);
+        if (isCreateCategoryRow(dropdown, index)) return false;
         if (dropdown == Dropdown.CATEGORY) {
             return activeCategory == filteredCategories().get(index);
         }
@@ -1667,6 +1758,7 @@ public class WaypointEditModeUI extends WEScreen {
 
     private int dropdownRowColor(Dropdown dropdown, int index) {
         if (dropdown == Dropdown.PACKAGE) return 0xFFFFFFFF;
+        if (isCreateCategoryRow(dropdown, index)) return 0xFF808080;
         if (dropdown == Dropdown.CATEGORY) return categoryColorInt(filteredCategories().get(index));
         return categoryColorInt(filteredWaypointChoices().get(index).waypoint().getCategory());
     }
@@ -1682,6 +1774,10 @@ public class WaypointEditModeUI extends WEScreen {
             if (activeCategory == null) activeCategory = WaypointData.ensureUncategorizedCategory(activePackage);
         } else if (dropdown == Dropdown.CATEGORY) {
             List<WaypointCategory> categories = filteredCategories();
+            if (index == categories.size()) {
+                createCategoryFromDropdown();
+                return;
+            }
             if (index < 0 || index >= categories.size()) return;
             activeCategory = categories.get(index);
         } else if (dropdown == Dropdown.WAYPOINT) {
@@ -1695,6 +1791,24 @@ public class WaypointEditModeUI extends WEScreen {
         searchFocused = false;
     }
 
+    private boolean isCreateCategoryRow(Dropdown dropdown, int index) {
+        return dropdown == Dropdown.CATEGORY && activePackage != null && index == filteredCategories().size();
+    }
+
+    private void createCategoryFromDropdown() {
+        WaypointCategory category = WaypointActions.createCategory(activePackage, categorySearch);
+        if (category == null) return;
+        activeCategory = category;
+        categorySearch = "";
+        categoryScroll = 0;
+        categoryScrollTarget = 0;
+        activeDropdown = Dropdown.NONE;
+        activeDropdownField = null;
+        searchFocused = false;
+        categoryNameInputCategory = null;
+        syncCategoryNameInput();
+    }
+
     private void scrollDropdownWidget(Dropdown dropdown, double amount) {
         int visibleRows = visibleDropdownRows(dropdown);
         setDropdownScrollTarget(dropdown, dropdownTargetScroll(dropdown) + (float) (amount * -p(38)));
@@ -1703,7 +1817,7 @@ public class WaypointEditModeUI extends WEScreen {
 
     private int visibleDropdownRows(Dropdown dropdown) {
         int rows = dropdownRowCount(dropdown);
-        return Math.min(rows, Math.max(1, (p(DROPDOWN_MAX_H) - p(30)) / p(ROW_H)));
+        return Math.min(rows, Math.max(1, (dropdownMaxHeight(dropdown) - dropdownHeaderHeight(dropdown)) / dropdownRowHeight(dropdown)));
     }
 
     private float dropdownScroll(Dropdown dropdown) {
@@ -1758,13 +1872,13 @@ public class WaypointEditModeUI extends WEScreen {
     }
 
     private float maxDropdownScroll(Dropdown dropdown, int visibleRows) {
-        int rowH = p(ROW_H);
+        int rowH = dropdownRowHeight(dropdown);
         int rows = dropdownRowCount(dropdown);
         return Math.max(0, rows * rowH - visibleRows * rowH);
     }
 
     private int scrollbarThumbHeight(Dropdown dropdown, int trackH) {
-        int rowH = p(ROW_H);
+        int rowH = dropdownRowHeight(dropdown);
         int rows = dropdownRowCount(dropdown);
         if (rows <= 0) return trackH;
         return Math.max(p(18), trackH * trackH / (rows * rowH));
@@ -1815,7 +1929,39 @@ public class WaypointEditModeUI extends WEScreen {
         return dropdownScrollbarDragging && dropdownScrollbarDragTarget == dropdown;
     }
 
+    private void startWaypointDropdownDrag(int mouseX, int mouseY) {
+        waypointDropdownDragging = true;
+        waypointDropdownDragOffsetX = Math.round(mouseToLogicalX(mouseX)) - waypointDropdownX;
+        waypointDropdownDragOffsetY = Math.round(mouseToLogicalY(mouseY)) - waypointDropdownY;
+    }
+
+    private boolean dragWaypointDropdown(double mouseX, double mouseY, int button) {
+        if (!waypointDropdownDragging || button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+        int dropdownW = waypointDropdownW <= 0 ? waypointDropdownDefaultWidth() : waypointDropdownW;
+        int dropdownH = dropdownLogicalHeight(Dropdown.WAYPOINT);
+        waypointDropdownX = MathHelper.clamp(Math.round(mouseToLogicalX(mouseX)) - waypointDropdownDragOffsetX, p(8), Math.max(p(8), getLogicalWidth() - dropdownW - p(8)));
+        waypointDropdownY = MathHelper.clamp(Math.round(mouseToLogicalY(mouseY)) - waypointDropdownDragOffsetY, p(8), Math.max(p(8), getLogicalHeight() - dropdownH - p(8)));
+        return true;
+    }
+
+    private boolean isOverWaypointDropdownDragHandle(double mouseX, double mouseY) {
+        int dropdownW = waypointDropdownW <= 0 ? waypointDropdownDefaultWidth() : waypointDropdownW;
+        int handleSize = p(36);
+        int handleX = waypointDropdownX + dropdownW - handleSize - p(10);
+        int handleY = waypointDropdownY + p(7);
+        int logicalMouseX = Math.round(mouseToLogicalX(mouseX));
+        int logicalMouseY = Math.round(mouseToLogicalY(mouseY));
+        return logicalMouseX >= handleX - p(2)
+                && logicalMouseY >= handleY - p(2)
+                && logicalMouseX < handleX + handleSize + p(2)
+                && logicalMouseY < handleY + handleSize + p(2);
+    }
+
+    private float mouseToLogicalX(double mouseX) {
+        return (float) ((mouseX - getxStart()) * getScaleFactor());
+    }
+
     private float mouseToLogicalY(double mouseY) {
-        return (float) (mouseY * getScaleFactor());
+        return (float) ((mouseY - getyStart()) * getScaleFactor());
     }
 }

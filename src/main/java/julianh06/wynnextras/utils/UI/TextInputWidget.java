@@ -9,6 +9,8 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -18,6 +20,8 @@ public class TextInputWidget extends Widget {
     protected int cursorPos = 0;
     protected int selectionAnchor = 0;
     protected int horizontalTextOffset = 0;
+    protected boolean wrapText = false;
+    protected int wrappedLineGap = 3;
     protected boolean draggingSelection = false;
 
     protected boolean blinkToggle = true;
@@ -66,6 +70,10 @@ public class TextInputWidget extends Widget {
 
         if (input.isEmpty() && !isFocused()) {
             ui.drawText(placeholder, textX, textY, placeholderColor, textScale);
+        } else if (wrapText) {
+            clampCursorAndSelection();
+            horizontalTextOffset = 0;
+            drawWrappedText(ctx, textX, textY, textWidth);
         } else {
             clampCursorAndSelection();
             ensureCursorVisible(textWidth);
@@ -89,6 +97,7 @@ public class TextInputWidget extends Widget {
 
             if ((blinkToggle || input.isEmpty()) && isFocused()) {
                 int cursorX = textX + textWidth(input.substring(0, cursorPos)) - horizontalTextOffset;
+                cursorX = Math.clamp(cursorX, textX + 1, textX + textWidth - 1);
                 ui.drawLine(cursorX, textY - 2 * textScale, cursorX, textY + 10 * textScale, Math.max(1f, 0.75f * textScale), cursorColor);
             }
 
@@ -130,7 +139,7 @@ public class TextInputWidget extends Widget {
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         setFocused(true);
-        cursorPos = getCursorIndexAt(mx);
+        cursorPos = getCursorIndexAt(mx, my);
         selectionAnchor = isShiftDown() ? selectionAnchor : cursorPos;
         draggingSelection = true;
         resetBlink();
@@ -140,7 +149,7 @@ public class TextInputWidget extends Widget {
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (!visible || !enabled || !draggingSelection || button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
-        cursorPos = getCursorIndexAt(mouseX);
+        cursorPos = getCursorIndexAt(mouseX, mouseY);
         resetBlink();
         return true;
     }
@@ -202,6 +211,7 @@ public class TextInputWidget extends Widget {
                 input = removeAt(cursorPos, input);
                 cursorPos--;
                 selectionAnchor = cursorPos;
+                ensureCursorVisible(Math.max(0, width - textXOffset * 2));
                 notifyChanged();
             }
             resetBlink();
@@ -213,6 +223,7 @@ public class TextInputWidget extends Widget {
             else if (cursorPos < input.length()) {
                 input = removeAt(cursorPos + 1, input);
                 selectionAnchor = cursorPos;
+                ensureCursorVisible(Math.max(0, width - textXOffset * 2));
                 notifyChanged();
             }
             resetBlink();
@@ -321,12 +332,17 @@ public class TextInputWidget extends Widget {
         this.textXOffset = textXOffset;
         this.textYOffset = textYOffset;
     }
+    public void setWrapText(boolean wrapText) {
+        this.wrapText = wrapText;
+        horizontalTextOffset = 0;
+    }
     public void setMaxLength(int maxLength) {
         this.maxLength = maxLength;
         if (maxLength >= 0 && input.length() > maxLength) {
             input = input.substring(0, maxLength);
             cursorPos = Math.min(cursorPos, input.length());
             selectionAnchor = Math.min(selectionAnchor, input.length());
+            ensureCursorVisible(Math.max(0, width - textXOffset * 2));
             notifyChanged();
         }
     }
@@ -354,6 +370,7 @@ public class TextInputWidget extends Widget {
         input = input.substring(0, selectionStart) + clean + input.substring(selectionEnd);
         cursorPos = selectionStart + clean.length();
         selectionAnchor = cursorPos;
+        ensureCursorVisible(Math.max(0, width - textXOffset * 2));
         resetBlink();
         notifyChanged();
     }
@@ -380,6 +397,7 @@ public class TextInputWidget extends Widget {
         input = input.substring(0, selectionStart) + input.substring(selectionEnd);
         cursorPos = selectionStart;
         selectionAnchor = cursorPos;
+        ensureCursorVisible(Math.max(0, width - textXOffset * 2));
         resetBlink();
         notifyChanged();
     }
@@ -399,6 +417,7 @@ public class TextInputWidget extends Widget {
     protected void moveCursor(int newCursorPos, boolean selecting) {
         cursorPos = Math.clamp(newCursorPos, 0, input.length());
         if (!selecting) selectionAnchor = cursorPos;
+        ensureCursorVisible(Math.max(0, width - textXOffset * 2));
         resetBlink();
     }
 
@@ -416,7 +435,8 @@ public class TextInputWidget extends Widget {
         return index;
     }
 
-    protected int getCursorIndexAt(double mouseX) {
+    protected int getCursorIndexAt(double mouseX, double mouseY) {
+        if (wrapText) return getWrappedCursorIndexAt(mouseX, mouseY);
         int logicalMouseX = (int) Math.round((mouseX - ui.getXStart()) * ui.getScaleFactor());
         int localTextX = logicalMouseX - (x + textXOffset) + horizontalTextOffset;
         if (localTextX <= 0) return 0;
@@ -434,12 +454,127 @@ public class TextInputWidget extends Widget {
             return;
         }
         int cursorX = textWidth(input.substring(0, Math.min(cursorPos, input.length())));
+        int maxOffset = Math.max(0, textWidth(input) - textWidth + 2);
+        if (horizontalTextOffset > maxOffset) horizontalTextOffset = maxOffset;
         if (cursorX - horizontalTextOffset > textWidth - 2) {
             horizontalTextOffset = cursorX - textWidth + 2;
         } else if (cursorX - horizontalTextOffset < 0) {
             horizontalTextOffset = cursorX;
         }
-        horizontalTextOffset = Math.max(0, horizontalTextOffset);
+        horizontalTextOffset = Math.clamp(horizontalTextOffset, 0, maxOffset);
+    }
+
+    private void drawWrappedText(DrawContext ctx, int textX, int textY, int textWidth) {
+        List<LineRange> lines = wrapInput(textWidth);
+        int lineHeight = wrappedLineHeight();
+
+        ctx.enableScissor((int) ui.sx(textX), (int) ui.sy(y), (int) ui.sx(textX + textWidth), (int) ui.sy(y + height));
+
+        int selectionStart = getSelectionStart();
+        int selectionEnd = getSelectionEnd();
+        for (int i = 0; i < lines.size(); i++) {
+            LineRange line = lines.get(i);
+            int lineY = textY + i * lineHeight;
+            if (lineY > y + height) break;
+
+            if (isFocused() && selectionStart != selectionEnd) {
+                int start = Math.max(selectionStart, line.start);
+                int end = Math.min(selectionEnd, line.end);
+                if (start != end) {
+                    int startX = textX + textWidth(input.substring(line.start, start));
+                    int endX = textX + textWidth(input.substring(line.start, end));
+                    ui.drawRect(startX, lineY - 2, Math.max(1, endX - startX), Math.max(1, lineHeight - 2), selectionColor);
+                }
+            }
+
+            ui.drawText(input.substring(line.start, line.end), textX, lineY, textColor, textScale);
+        }
+
+        long now = System.currentTimeMillis();
+        if (now - lastBlink > 500) {
+            blinkToggle = !blinkToggle;
+            lastBlink = now;
+        }
+
+        if ((blinkToggle || input.isEmpty()) && isFocused()) {
+            LineRange cursorLine = lines.get(lines.size() - 1);
+            int lineIndex = lines.size() - 1;
+            for (int i = 0; i < lines.size(); i++) {
+                LineRange line = lines.get(i);
+                if (cursorPos >= line.start && cursorPos <= line.end) {
+                    cursorLine = line;
+                    lineIndex = i;
+                    break;
+                }
+            }
+            int cursorX = textX + textWidth(input.substring(cursorLine.start, cursorPos));
+            int cursorY = textY + lineIndex * lineHeight;
+            ui.drawLine(cursorX, cursorY - 2 * textScale, cursorX, cursorY + 10 * textScale, Math.max(1f, 0.75f * textScale), cursorColor);
+        }
+
+        ctx.disableScissor();
+    }
+
+    private int getWrappedCursorIndexAt(double mouseX, double mouseY) {
+        int textWidth = Math.max(0, width - textXOffset * 2);
+        List<LineRange> lines = wrapInput(textWidth);
+        int logicalMouseX = (int) Math.round((mouseX - ui.getXStart()) * ui.getScaleFactor());
+        int logicalMouseY = (int) Math.round((mouseY - ui.getYStart()) * ui.getScaleFactor());
+        int lineIndex = Math.clamp((logicalMouseY - (y + textYOffset)) / wrappedLineHeight(), 0, Math.max(0, lines.size() - 1));
+        LineRange line = lines.get(lineIndex);
+        int localTextX = logicalMouseX - (x + textXOffset);
+        if (localTextX <= 0) return line.start;
+        for (int i = line.start + 1; i <= line.end; i++) {
+            int previousWidth = textWidth(input.substring(line.start, i - 1));
+            int currentWidth = textWidth(input.substring(line.start, i));
+            if (localTextX < previousWidth + (currentWidth - previousWidth) / 2) return i - 1;
+        }
+        return line.end;
+    }
+
+    private List<LineRange> wrapInput(int textWidth) {
+        List<LineRange> lines = new ArrayList<>();
+        if (input.isEmpty() || textWidth <= 0) {
+            lines.add(new LineRange(0, 0));
+            return lines;
+        }
+
+        int lineStart = 0;
+        int index = 0;
+        int lastBreak = -1;
+        while (index < input.length()) {
+            int next = index + 1;
+            if (Character.isWhitespace(input.charAt(index))) lastBreak = next;
+            if (textWidth(input.substring(lineStart, next)) <= textWidth || index == lineStart) {
+                index = next;
+                continue;
+            }
+            if (lastBreak > lineStart) {
+                lines.add(new LineRange(lineStart, lastBreak));
+                lineStart = lastBreak;
+            } else {
+                lines.add(new LineRange(lineStart, index));
+                lineStart = index;
+            }
+            index = lineStart;
+            lastBreak = -1;
+        }
+        lines.add(new LineRange(lineStart, input.length()));
+        return lines;
+    }
+
+    private int wrappedLineHeight() {
+        return (int) Math.ceil(MinecraftClient.getInstance().textRenderer.fontHeight * textScale) + wrappedLineGap;
+    }
+
+    private static class LineRange {
+        private final int start;
+        private final int end;
+
+        private LineRange(int start, int end) {
+            this.start = start;
+            this.end = end;
+        }
     }
 
     protected int textWidth(String text) {
