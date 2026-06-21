@@ -329,6 +329,7 @@ public class WaypointData {
             newCategory.showBlockByDefault = cat.showBlockByDefault;
             newCategory.showNameByDefault = cat.showNameByDefault;
             newCategory.showDistanceByDefault = cat.showDistanceByDefault;
+            newCategory.showSeeThroughByDefault = cat.showSeeThroughByDefault;
             copy.categories.add(newCategory);
             categoryCopies.put(cat.id, newCategory);
         }
@@ -343,6 +344,7 @@ public class WaypointData {
             newWaypoint.showOverride = waypoint.showOverride;
             newWaypoint.showNameOverride = waypoint.showNameOverride;
             newWaypoint.showDistanceOverride = waypoint.showDistanceOverride;
+            newWaypoint.seeThroughOverride = waypoint.seeThroughOverride;
 
             WaypointCategory copiedCategory = categoryCopies.get(waypoint.categoryId);
             newWaypoint.setCategory(copiedCategory != null ? copiedCategory : ensureUncategorizedCategory(copy));

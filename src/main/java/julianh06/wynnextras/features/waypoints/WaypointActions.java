@@ -151,6 +151,7 @@ public final class WaypointActions {
             case NAME -> waypoint.setShowNameOverride(value);
             case BLOCK -> waypoint.setShowOverride(value);
             case DISTANCE -> waypoint.setShowDistanceOverride(value);
+            case SEE_THROUGH -> waypoint.setSeeThroughOverride(value);
         }
         WaypointData.save();
     }
@@ -200,6 +201,7 @@ public final class WaypointActions {
             case NAME -> category.showNameByDefault = value;
             case BLOCK -> category.showBlockByDefault = value;
             case DISTANCE -> category.showDistanceByDefault = value;
+            case SEE_THROUGH -> category.showSeeThroughByDefault = value;
         }
         WaypointData.save();
     }
@@ -263,6 +265,7 @@ public final class WaypointActions {
         copy.showBlockByDefault = category.showBlockByDefault;
         copy.showNameByDefault = category.showNameByDefault;
         copy.showDistanceByDefault = category.showDistanceByDefault;
+        copy.showSeeThroughByDefault = category.showSeeThroughByDefault;
         return copy;
     }
 
@@ -277,6 +280,7 @@ public final class WaypointActions {
         copy.showOverride = waypoint.showOverride;
         copy.showNameOverride = waypoint.showNameOverride;
         copy.showDistanceOverride = waypoint.showDistanceOverride;
+        copy.seeThroughOverride = waypoint.seeThroughOverride;
         return copy;
     }
 
@@ -294,6 +298,7 @@ public final class WaypointActions {
     public enum VisibilityTarget {
         NAME,
         BLOCK,
-        DISTANCE
+        DISTANCE,
+        SEE_THROUGH
     }
 }

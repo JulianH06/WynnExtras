@@ -13,6 +13,7 @@ public class Waypoint {
     public Boolean showOverride;
     public Boolean showNameOverride;
     public Boolean showDistanceOverride;
+    public Boolean seeThroughOverride;
 
     public String categoryId;
     private transient WaypointCategory category;
@@ -32,6 +33,7 @@ public class Waypoint {
         showOverride = null;
         showNameOverride = null;
         showDistanceOverride = null;
+        seeThroughOverride = null;
         category = null;
         categoryId = null;
         categoryName = "";
@@ -49,6 +51,7 @@ public class Waypoint {
         showOverride = null;
         showNameOverride = null;
         showDistanceOverride = null;
+        seeThroughOverride = null;
         category = null;
         categoryName = "";
     }
@@ -72,6 +75,10 @@ public class Waypoint {
         return resolveVisibility(showDistanceOverride, showDistance, category == null || category.showDistanceByDefault);
     }
 
+    public boolean shouldSeeThrough() {
+        return resolveVisibility(seeThroughOverride, seeThrough, category != null && category.showSeeThroughByDefault);
+    }
+
     public void setShowOverride(Boolean showOverride) {
         this.showOverride = showOverride;
         if (showOverride != null) show = showOverride;
@@ -87,10 +94,16 @@ public class Waypoint {
         if (showDistanceOverride != null) showDistance = showDistanceOverride;
     }
 
+    public void setSeeThroughOverride(Boolean seeThroughOverride) {
+        this.seeThroughOverride = seeThroughOverride;
+        if (seeThroughOverride != null) seeThrough = seeThroughOverride;
+    }
+
     public void migrateVisibilityOverridesFromLegacy() {
         if (showOverride == null) showOverride = show;
         if (showNameOverride == null) showNameOverride = showName;
         if (showDistanceOverride == null) showDistanceOverride = showDistance;
+        if (seeThroughOverride == null) seeThroughOverride = seeThrough;
     }
 
     private boolean resolveVisibility(Boolean override, boolean waypointValue, boolean categoryValue) {

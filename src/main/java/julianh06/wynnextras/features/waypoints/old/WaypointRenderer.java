@@ -33,7 +33,7 @@ public class WaypointRenderer {
                 WEVec pos = new WEVec(waypoint.x + 0.5f, waypoint.y + 1.5f, waypoint.z + 0.5f);
                 if(MinecraftClient.getInstance().player != null && waypoint.shouldShowDistance()) {
                     WEVec playerPos = new WEVec(MinecraftClient.getInstance().player.getBlockPos().toBottomCenterPos());
-                    WorldRenderUtils.drawText(event, pos, Text.of((int) pos.distanceTo(playerPos) + "m"), 0.75f, !waypoint.seeThrough);
+                    WorldRenderUtils.drawText(event, pos, Text.of((int) pos.distanceTo(playerPos) + "m"), 0.75f, !waypoint.shouldSeeThrough());
                 }
                 WEVec namePos = new WEVec(waypoint.x + 0.5f, waypoint.y + 2f, waypoint.z + 0.5f);
                 Color color = Color.cyan;
@@ -51,7 +51,7 @@ public class WaypointRenderer {
                     renderedAny = true;
                 }
                 if(!waypoint.shouldShowName()) continue;
-                WorldRenderUtils.drawText(event, namePos, Text.of(waypoint.name), 0.75f, !waypoint.seeThrough);
+                WorldRenderUtils.drawText(event, namePos, Text.of(waypoint.name), 0.75f, !waypoint.shouldSeeThrough());
             }
         }
 

@@ -5,7 +5,9 @@ import com.wynntils.utils.mc.McUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.tooltip.HoveredTooltipPositioner;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import org.joml.Vector2f;
 import org.lwjgl.glfw.GLFW;
@@ -110,12 +112,16 @@ public class TextInputWidget extends Widget {
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if (enabled || !hovered || disabledTooltip == null || disabledTooltip.isBlank()) return;
+        drawFittingTooltip(ctx, List.of(Text.of(disabledTooltip)), mouseX, mouseY);
+    }
+
+    public static void drawFittingTooltip(DrawContext ctx, List<Text> tooltip, int mouseX, int mouseY) {
+        if (tooltip == null || tooltip.isEmpty()) return;
+        MinecraftClient client = MinecraftClient.getInstance();
+        TextRenderer textRenderer = client.textRenderer;
         Vector2f tooltipPos = ctx.getMatrices().transformPosition(mouseX, mouseY, new Vector2f());
-        ctx.drawTooltip(
-                MinecraftClient.getInstance().textRenderer,
-                List.of(Text.of(disabledTooltip)),
-                Math.round(tooltipPos.x),
-                Math.round(tooltipPos.y));
+        List<OrderedText> orderedTooltip = tooltip.stream().map(Text::asOrderedText).toList();
+        ctx.drawTooltip(textRenderer, orderedTooltip, HoveredTooltipPositioner.INSTANCE, Math.round(tooltipPos.x), Math.round(tooltipPos.y), false);
     }
 
     @Override

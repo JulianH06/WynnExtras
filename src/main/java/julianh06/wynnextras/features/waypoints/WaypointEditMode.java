@@ -48,7 +48,7 @@ public class WaypointEditMode {
 
     static final int PANEL_W = 570;
     static final int PANEL_H = 320;
-    static final int CATEGORY_PANEL_H = 260;
+    static final int CATEGORY_PANEL_H = 320;
     static final int PANEL_GAP = 12;
     static final int ROW_H = 40;
     static final int DROPDOWN_MAX_H = 210;
@@ -519,6 +519,7 @@ public class WaypointEditMode {
         selectedSnapshot = null;
         activeCategory = waypoint.getCategory();
         WaypointData.save();
+        playEditSound(SoundEvents.BLOCK_GLASS_PLACE, 0.8f, 1.15f);
     }
 
     static void discardChanges() {
@@ -661,7 +662,7 @@ public class WaypointEditMode {
     }
 
     static boolean previewSeeThrough() {
-        return selectedWaypoint != null && selectedWaypoint.seeThrough;
+        return previewVisibility(selectedWaypoint == null ? null : selectedWaypoint.seeThroughOverride, selectedWaypoint != null && selectedWaypoint.seeThrough, activeCategory != null && activeCategory.showSeeThroughByDefault);
     }
 
     static void renderPreviewText(RenderWorldEvent event) {
@@ -745,6 +746,7 @@ public class WaypointEditMode {
         private final boolean showName;
         private final boolean showDistance;
         private final boolean seeThrough;
+        private final Boolean seeThroughOverride;
         private final Boolean showOverride;
         private final Boolean showNameOverride;
         private final Boolean showDistanceOverride;
@@ -759,6 +761,7 @@ public class WaypointEditMode {
             this.showName = waypoint.showName;
             this.showDistance = waypoint.showDistance;
             this.seeThrough = waypoint.seeThrough;
+            this.seeThroughOverride = waypoint.seeThroughOverride;
             this.showOverride = waypoint.showOverride;
             this.showNameOverride = waypoint.showNameOverride;
             this.showDistanceOverride = waypoint.showDistanceOverride;
@@ -774,6 +777,7 @@ public class WaypointEditMode {
             waypoint.showName = showName;
             waypoint.showDistance = showDistance;
             waypoint.seeThrough = seeThrough;
+            waypoint.seeThroughOverride = seeThroughOverride;
             waypoint.showOverride = showOverride;
             waypoint.showNameOverride = showNameOverride;
             waypoint.showDistanceOverride = showDistanceOverride;

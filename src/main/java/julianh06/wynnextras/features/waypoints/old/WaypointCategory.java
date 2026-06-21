@@ -10,6 +10,7 @@ public class WaypointCategory {
     public boolean showBlockByDefault;
     public boolean showNameByDefault;
     public boolean showDistanceByDefault;
+    public boolean showSeeThroughByDefault;
 
     public WaypointCategory() {
         this.id = java.util.UUID.randomUUID().toString();
@@ -19,6 +20,7 @@ public class WaypointCategory {
         showBlockByDefault = true;
         showNameByDefault = true;
         showDistanceByDefault = true;
+        showSeeThroughByDefault = false;
     }
 
     public WaypointCategory(String name) {
@@ -29,6 +31,7 @@ public class WaypointCategory {
         showBlockByDefault = true;
         showNameByDefault = true;
         showDistanceByDefault = true;
+        showSeeThroughByDefault = false;
     }
 
     public WaypointCategory(String name, CustomColor color) {
@@ -39,5 +42,6 @@ public class WaypointCategory {
         showBlockByDefault = true;
         showNameByDefault = true;
         showDistanceByDefault = true;
+        showSeeThroughByDefault = false;
     }
 }

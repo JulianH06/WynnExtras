@@ -33,8 +33,9 @@ import static julianh06.wynnextras.features.waypoints.WaypointEditMode.*;
 
 public class WaypointEditModeUI extends WEScreen {
     private static final Identifier MOVE_ICON = Identifier.of("wynnextras", "textures/gui/waypointeditmodeui/move_icon.png");
+    private static final String UNCATEGORIZED_CATEGORY_TOOLTIP = "This category cannot be deleted and it's name can't be changed";
 
-    private enum VisibilityTarget { NAME, BLOCK, DISTANCE }
+    private enum VisibilityTarget { NAME, BLOCK, DISTANCE, SEE_THROUGH }
 
     private final ClickAreaWidget panelBlocker = new ClickAreaWidget(() -> true, this::clearUiFocus);
     private final DropdownFieldWidget packageField = new DropdownFieldWidget(this, Dropdown.PACKAGE);
@@ -52,10 +53,12 @@ public class WaypointEditModeUI extends WEScreen {
     private final ActionButtonWidget showNameButton = new ActionButtonWidget(this, () -> visibilityLabel("Text", selectedWaypoint == null ? null : selectedWaypoint.showNameOverride, selectedWaypoint == null || selectedWaypoint.shouldShowName()), () -> toggleVisibility(VisibilityTarget.NAME, false), () -> toggleVisibility(VisibilityTarget.NAME, true));
     private final ActionButtonWidget showBlockButton = new ActionButtonWidget(this, () -> visibilityLabel("Block", selectedWaypoint == null ? null : selectedWaypoint.showOverride, selectedWaypoint == null || selectedWaypoint.shouldShowBlock()), () -> toggleVisibility(VisibilityTarget.BLOCK, false), () -> toggleVisibility(VisibilityTarget.BLOCK, true));
     private final ActionButtonWidget showDistanceButton = new ActionButtonWidget(this, () -> visibilityLabel("Distance", selectedWaypoint == null ? null : selectedWaypoint.showDistanceOverride, selectedWaypoint == null || selectedWaypoint.shouldShowDistance()), () -> toggleVisibility(VisibilityTarget.DISTANCE, false), () -> toggleVisibility(VisibilityTarget.DISTANCE, true));
+    private final ActionButtonWidget textSeeThroughButton = new ActionButtonWidget(this, () -> visibilityLabel("Text see through", selectedWaypoint == null ? null : selectedWaypoint.seeThroughOverride, selectedWaypoint == null ? activeCategory != null && activeCategory.showSeeThroughByDefault : selectedWaypoint.shouldSeeThrough()), () -> toggleVisibility(VisibilityTarget.SEE_THROUGH, false), () -> toggleVisibility(VisibilityTarget.SEE_THROUGH, true));
     private final CategoryNameInputWidget categoryNameField = new CategoryNameInputWidget(this);
     private final ActionButtonWidget categoryShowNameButton = new ActionButtonWidget(this, () -> categoryDefaultLabel("Text", activeCategory == null || activeCategory.showNameByDefault), () -> toggleCategoryDefault(VisibilityTarget.NAME));
     private final ActionButtonWidget categoryShowBlockButton = new ActionButtonWidget(this, () -> categoryDefaultLabel("Block", activeCategory == null || activeCategory.showBlockByDefault), () -> toggleCategoryDefault(VisibilityTarget.BLOCK));
     private final ActionButtonWidget categoryShowDistanceButton = new ActionButtonWidget(this, () -> categoryDefaultLabel("Distance", activeCategory == null || activeCategory.showDistanceByDefault), () -> toggleCategoryDefault(VisibilityTarget.DISTANCE));
+    private final ActionButtonWidget categorySeeThroughButton = new ActionButtonWidget(this, () -> categoryDefaultLabel("Text see through", activeCategory != null && activeCategory.showSeeThroughByDefault), () -> toggleCategoryDefault(VisibilityTarget.SEE_THROUGH));
     private final ColorPickerWidget categoryColorPicker = new ColorPickerWidget(
             () -> categoryColorInt(activeCategory) & 0xFFFFFF,
             this::setActiveCategoryColor,
@@ -104,10 +107,12 @@ public class WaypointEditModeUI extends WEScreen {
         addRootWidget(showNameButton);
         addRootWidget(showBlockButton);
         addRootWidget(showDistanceButton);
+        addRootWidget(textSeeThroughButton);
         addRootWidget(categoryNameField);
         addRootWidget(categoryShowNameButton);
         addRootWidget(categoryShowBlockButton);
         addRootWidget(categoryShowDistanceButton);
+        addRootWidget(categorySeeThroughButton);
         addRootWidget(categoryColorPicker);
         addRootWidget(infoButton);
         addRootWidget(dropdownWidget);
@@ -125,7 +130,7 @@ public class WaypointEditModeUI extends WEScreen {
 
     @Override
     protected int getMinLogicalHeight() {
-        return 950;
+        return 1060;
     }
 
     @Override
@@ -390,11 +395,13 @@ public class WaypointEditModeUI extends WEScreen {
         showNameButton.setVisible(editing);
         showBlockButton.setVisible(editing);
         showDistanceButton.setVisible(editing);
+        textSeeThroughButton.setVisible(editing);
         categoryNameField.setVisible(hasCategory);
         categoryNameField.setEnabled(isActiveCategoryEditable());
         categoryShowNameButton.setVisible(hasCategory);
         categoryShowBlockButton.setVisible(hasCategory);
         categoryShowDistanceButton.setVisible(hasCategory);
+        categorySeeThroughButton.setVisible(hasCategory);
         categoryColorPicker.setVisible(hasCategory);
         if (!categoryNameField.isEnabled()) {
             categoryNameFocused = false;
@@ -415,11 +422,12 @@ public class WaypointEditModeUI extends WEScreen {
             yCoordinateField.setLogicalBounds(coordX + fieldW + coordGap, coordY, fieldW, p(32));
             zCoordinateField.setLogicalBounds(coordX + (fieldW + coordGap) * 2, coordY, fieldW, p(32));
             int toggleY = panelY + p(400);
-            int toggleW = (panelW - p(28) - p(16)) / 3;
-            showNameButton.setLogicalBounds(panelX + p(14), toggleY, toggleW, p(58));
-            showBlockButton.setLogicalBounds(panelX + p(14) + toggleW + p(8), toggleY, toggleW, p(58));
-            showDistanceButton.setLogicalBounds(panelX + p(14) + (toggleW + p(8)) * 2, toggleY, toggleW, p(58));
-            int buttonY = panelY + p(470);
+            int toggleW = (panelW - p(28) - p(8)) / 2;
+            showNameButton.setLogicalBounds(panelX + p(14), toggleY, toggleW, p(54));
+            showBlockButton.setLogicalBounds(panelX + p(14) + toggleW + p(8), toggleY, toggleW, p(54));
+            showDistanceButton.setLogicalBounds(panelX + p(14), toggleY + p(62), toggleW, p(54));
+            textSeeThroughButton.setLogicalBounds(panelX + p(14) + toggleW + p(8), toggleY + p(62), toggleW, p(54));
+            int buttonY = panelY + p(520);
             int buttonW = (panelW - p(28) - p(20)) / 3;
             removeButton.setLogicalBounds(panelX + p(14), buttonY, buttonW, p(ACTION_H));
             primaryButton.setLogicalBounds(panelX + p(14) + buttonW + p(10), buttonY, buttonW, p(ACTION_H));
@@ -441,6 +449,7 @@ public class WaypointEditModeUI extends WEScreen {
             editCurrentButton.setLogicalBounds(actionsX + actionW + actionGap, actionsY, actionW, p(ACTION_H));
             primaryButton.setLogicalBounds(actionsX + (actionW + actionGap) * 2, actionsY, actionW, p(ACTION_H));
             secondaryButton.setLogicalBounds(actionsX + (actionW + actionGap) * 3, actionsY, actionW, p(ACTION_H));
+            textSeeThroughButton.setLogicalBounds(0, 0, 0, 0);
         }
 
         if (activeDropdown == Dropdown.NONE) {
@@ -473,10 +482,11 @@ public class WaypointEditModeUI extends WEScreen {
         if (hasCategory) {
             categoryNameField.setLogicalBounds(categoryPanelX + p(14), categoryPanelY + p(72), panelW - p(28), p(38));
             int toggleY = categoryPanelY + p(142);
-            int toggleW = (panelW - p(28) - p(16)) / 3;
+            int toggleW = (panelW - p(28) - p(8)) / 2;
             categoryShowNameButton.setLogicalBounds(categoryPanelX + p(14), toggleY, toggleW, p(48));
             categoryShowBlockButton.setLogicalBounds(categoryPanelX + p(14) + toggleW + p(8), toggleY, toggleW, p(48));
-            categoryShowDistanceButton.setLogicalBounds(categoryPanelX + p(14) + (toggleW + p(8)) * 2, toggleY, toggleW, p(48));
+            categoryShowDistanceButton.setLogicalBounds(categoryPanelX + p(14), toggleY + p(56), toggleW, p(48));
+            categorySeeThroughButton.setLogicalBounds(categoryPanelX + p(14) + toggleW + p(8), toggleY + p(56), toggleW, p(48));
             categoryColorPicker.setBounds(categoryPanelX + p(14), categoryPanelY + p(CATEGORY_PANEL_H) - p(60), p(227), p(40));
             categoryColorPicker.setPickerBottomY(categoryPanelY + p(CATEGORY_PANEL_H));
         } else {
@@ -486,6 +496,7 @@ public class WaypointEditModeUI extends WEScreen {
             categoryShowNameButton.setLogicalBounds(0, 0, 0, 0);
             categoryShowBlockButton.setLogicalBounds(0, 0, 0, 0);
             categoryShowDistanceButton.setLogicalBounds(0, 0, 0, 0);
+            categorySeeThroughButton.setLogicalBounds(0, 0, 0, 0);
             categoryColorPicker.setBounds(0, 0, 0, 0);
             categoryColorPicker.setPickerBottomY(null);
         }
@@ -745,6 +756,7 @@ public class WaypointEditModeUI extends WEScreen {
             case NAME -> selectedWaypoint.setShowNameOverride(nextOverride(selectedWaypoint.showNameOverride, reverse));
             case BLOCK -> selectedWaypoint.setShowOverride(nextOverride(selectedWaypoint.showOverride, reverse));
             case DISTANCE -> selectedWaypoint.setShowDistanceOverride(nextOverride(selectedWaypoint.showDistanceOverride, reverse));
+            case SEE_THROUGH -> selectedWaypoint.setSeeThroughOverride(nextOverride(selectedWaypoint.seeThroughOverride, reverse));
         }
     }
 
@@ -754,6 +766,7 @@ public class WaypointEditModeUI extends WEScreen {
             case NAME -> activeCategory.showNameByDefault = !activeCategory.showNameByDefault;
             case BLOCK -> activeCategory.showBlockByDefault = !activeCategory.showBlockByDefault;
             case DISTANCE -> activeCategory.showDistanceByDefault = !activeCategory.showDistanceByDefault;
+            case SEE_THROUGH -> activeCategory.showSeeThroughByDefault = !activeCategory.showSeeThroughByDefault;
         }
         WaypointData.save();
     }
@@ -773,7 +786,7 @@ public class WaypointEditModeUI extends WEScreen {
     }
 
     private String categoryDefaultLabel(String label, boolean enabled) {
-        return label + " Default: " + (enabled ? "On" : "Off");
+        return label + ": " + (enabled ? "On" : "Off");
     }
 
     private void setActiveCategoryColor(int rgb) {
@@ -839,7 +852,7 @@ public class WaypointEditModeUI extends WEScreen {
     }
 
     private int editorPanelHeight() {
-        return selectedWaypoint == null ? p(PANEL_H) : p(540);
+        return selectedWaypoint == null ? p(PANEL_H) : p(590);
     }
 
     private int waypointDropdownDefaultWidth() {
@@ -1250,6 +1263,7 @@ public class WaypointEditModeUI extends WEScreen {
             setPlaceholderColor(screen.color(TEXT_DIM));
             setCursorColor(screen.color(TEXT));
             setSelectionColor(screen.color(0xAA3366CC));
+            setDisabledTooltip(UNCATEGORIZED_CATEGORY_TOOLTIP);
             setOnChange(value -> screen.categoryNameInput = value);
             setOnFocus(widget -> screen.categoryNameFocused = true);
             setOnBlur(widget -> screen.categoryNameFocused = false);
