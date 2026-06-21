@@ -1762,6 +1762,9 @@ public class NewWaypointScreen extends WEScreen {
 
                 @Override
                 public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+                    for (int i = children.size() - 1; i >= 0; i--) {
+                        if (children.get(i).mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) return true;
+                    }
                     if (!clicked || button != 0) return false;
                     if (Math.abs(mouseX - clickX) > 2 || Math.abs(mouseY - clickY) > 2) isDragging = true;
                     draggedIndex = rows.indexOf(this);
@@ -1770,6 +1773,9 @@ public class NewWaypointScreen extends WEScreen {
 
                 @Override
                 public boolean mouseReleased(double mx, double my, int button) {
+                    for (int i = children.size() - 1; i >= 0; i--) {
+                        if (children.get(i).mouseReleased(mx, my, button)) return true;
+                    }
                     if (isDragging && draggedIndex >= 0 && categoryUnderMouseIndex >= 0 && activePackage != null) {
                         int insertionIndex = Math.clamp(categoryUnderMouseIndex, 0, activePackage.categories.size());
                         int targetIndex = insertionIndex > draggedIndex ? insertionIndex - 1 : insertionIndex;

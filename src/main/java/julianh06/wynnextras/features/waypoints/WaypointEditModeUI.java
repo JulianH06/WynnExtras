@@ -167,6 +167,7 @@ public class WaypointEditModeUI extends WEScreen {
         int button = click.button();
 
         updateEditorWidgets();
+        if (closeActiveDropdownFromFieldClick(click.x() / getMatrixScale(), click.y() / getMatrixScale(), button)) return true;
         if (super.mouseClicked(click, doubleClick)) return true;
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return true;
 
@@ -506,6 +507,29 @@ public class WaypointEditModeUI extends WEScreen {
         widget.setBounds(x, y, w, h);
     }
 
+    private void playClickSound() {
+        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+    }
+
+    private boolean closeActiveDropdownFromFieldClick(double mouseX, double mouseY, int button) {
+        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+        if (activeDropdown == Dropdown.PACKAGE && packageField.contains((int) mouseX, (int) mouseY)) {
+            playClickSound();
+            activeDropdown = Dropdown.NONE;
+            activeDropdownField = null;
+            searchFocused = false;
+            return true;
+        }
+        if (activeDropdown == Dropdown.CATEGORY && categoryField.contains((int) mouseX, (int) mouseY)) {
+            playClickSound();
+            activeDropdown = Dropdown.NONE;
+            activeDropdownField = null;
+            searchFocused = false;
+            return true;
+        }
+        return false;
+    }
+
     private void togglePackageDropdown() {
         applyCategoryNameInput();
         applyCoordinateInputs();
@@ -513,9 +537,9 @@ public class WaypointEditModeUI extends WEScreen {
         syncCoordinateInputs();
         nameFocused = false;
         categoryNameFocused = false;
-        activeDropdownField = packageField;
-        activeDropdown = activeDropdown == Dropdown.PACKAGE ? Dropdown.NONE : Dropdown.PACKAGE;
-        if (activeDropdown == Dropdown.NONE) activeDropdownField = null;
+        boolean closeCurrent = activeDropdown == Dropdown.PACKAGE;
+        activeDropdown = closeCurrent ? Dropdown.NONE : Dropdown.PACKAGE;
+        activeDropdownField = closeCurrent ? null : packageField;
         searchFocused = false;
     }
 
@@ -526,7 +550,7 @@ public class WaypointEditModeUI extends WEScreen {
         syncCoordinateInputs();
         nameFocused = false;
         categoryNameFocused = false;
-        boolean closeCurrent = activeDropdown == Dropdown.CATEGORY && activeDropdownField == field;
+        boolean closeCurrent = activeDropdown == Dropdown.CATEGORY;
         activeDropdown = closeCurrent ? Dropdown.NONE : Dropdown.CATEGORY;
         activeDropdownField = closeCurrent ? null : field;
         searchFocused = false;
@@ -1197,7 +1221,7 @@ public class WaypointEditModeUI extends WEScreen {
                 default -> null;
             };
             if (action == null) return false;
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            screen.playClickSound();
             action.run();
             return true;
         }
@@ -1385,7 +1409,9 @@ public class WaypointEditModeUI extends WEScreen {
 
         @Override
         protected boolean onClick(int button) {
-            return button == GLFW.GLFW_MOUSE_BUTTON_LEFT;
+            if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+            screen.playClickSound();
+            return true;
         }
     }
 
@@ -1426,6 +1452,7 @@ public class WaypointEditModeUI extends WEScreen {
         @Override
         protected boolean onClick(int button) {
             if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+            screen.playClickSound();
             if (dropdown == Dropdown.PACKAGE) screen.togglePackageDropdown();
             else screen.toggleCategoryDropdown(this);
             return true;
@@ -1536,6 +1563,7 @@ public class WaypointEditModeUI extends WEScreen {
             if (dropdown == Dropdown.WAYPOINT
                     && button == GLFW.GLFW_MOUSE_BUTTON_LEFT
                     && screen.isOverWaypointDropdownDragHandle(mx, my)) {
+                screen.playClickSound();
                 screen.startWaypointDropdownDrag((int) mx, (int) my);
                 return true;
             }
@@ -1599,6 +1627,7 @@ public class WaypointEditModeUI extends WEScreen {
         @Override
         public boolean mouseClicked(double mx, double my, int button) {
             if (!visible || !enabled || button != GLFW.GLFW_MOUSE_BUTTON_LEFT || !contains((int) mx, (int) my)) return false;
+            screen.playClickSound();
             int thumbH = screen.scrollbarThumbHeight(dropdown, logicalH);
             int thumbY = scrollbarThumbY(thumbH);
             float logicalMouseY = screen.mouseToLogicalY(my);
@@ -1733,6 +1762,7 @@ public class WaypointEditModeUI extends WEScreen {
         @Override
         protected boolean onClick(int button) {
             if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+            screen.playClickSound();
             screen.selectDropdownRow(dropdown, index);
             return true;
         }
