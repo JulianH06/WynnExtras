@@ -64,12 +64,21 @@ public class Achievements {
         return achievement;
     }
 
+    /** Tier targets shared by every per-raid completion achievement. */
+    public static final List<Integer> RAID_TARGETS = List.of(5, 25, 100, 250, 1000);
+
     private boolean registerDefaultAchievements(boolean onlyMissing) {
         boolean changed = false;
         changed |= registerDefault(simple("simple.level.120", "Reach Level 120", "Reach Combat Level 120", false), onlyMissing);
         changed |= registerDefault(simple("simple.level.121", "Reach Level 121", "Reach Combat Level 121", false), onlyMissing);
         changed |= registerDefault(progress("test.progress", "Test Progress", "progress", false, 100), onlyMissing);
         changed |= registerDefault(tiered("test.tiered", "Test Tiered", "tiered", false, List.of(10, 50, 200)), onlyMissing);
+
+        changed |= registerDefault(tiered("raid.tna",  "The Nameless Anomaly",     "Complete The Nameless Anomaly",      false, RAID_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("raid.notg", "Nest of the Grootslangs",  "Complete Nest of the Grootslangs",   false, RAID_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("raid.nol",  "Orphion's Nexus of Light", "Complete Orphion's Nexus of Light",  false, RAID_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("raid.twp",  "The Wartorn Palace",       "Complete The Wartorn Palace",        false, RAID_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("raid.tcc",  "The Canyon Colossus",      "Complete The Canyon Colossus",       false, RAID_TARGETS), onlyMissing);
         return changed;
     }
 
@@ -140,6 +149,21 @@ public class Achievements {
 
     public boolean setCompleted(String id) {
         return setUnlocked(id, true);
+    }
+
+    /** Current raw progress count of a progress/tiered achievement, or null if it isn't one. */
+    public Integer getCount(String id) {
+        Achievement a = byId.get(id);
+        if (a instanceof ProgressAchievement) return ((ProgressAchievement) a).current;
+        return null;
+    }
+
+    /** Sets the absolute progress count of a tiered achievement, recomputing its tier level. */
+    public boolean setCount(String id, int count) {
+        Achievement a = byId.get(id);
+        if (!(a instanceof TieredAchievement)) return false;
+        ((TieredAchievement) a).setCurrent(count);
+        return true;
     }
 
     public boolean addProgress(String id, int amount) {
