@@ -2,24 +2,37 @@ package julianh06.wynnextras.features.achievements;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import com.wynntils.core.text.StyledText;
+import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.misc.StyledTextAdapter;
+import julianh06.wynnextras.utils.ApiRequestHelper;
 import julianh06.wynnextras.utils.InstantTypeAdapter;
+import julianh06.wynnextras.utils.MojangAuth;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.net.URI;
+import java.net.http.HttpRequest;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class Achievements {
     private final ArrayList<ProgressAchievement> progressAchievements = new ArrayList<>();
@@ -321,6 +334,135 @@ public class Achievements {
             WynnExtras.LOGGER.error("[WynnExtras] Couldn't write the achievements file:");
             e.printStackTrace();
         }
+        scheduleServerSave();
+    }
+
+    /** Debounce window: how long to wait after the last change before uploading. */
+    private static final long UPLOAD_DEBOUNCE_SECONDS = 15;
+    /** Upper bound on how long an upload can be deferred while changes keep arriving. */
+    private static final long UPLOAD_MAX_WAIT_SECONDS = 60;
+
+    private static final ScheduledExecutorService ACHIEVEMENT_UPLOAD_EXECUTOR =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "WynnExtras-Achievement-Upload");
+                t.setDaemon(true);
+                return t;
+            });
+
+    private static ScheduledFuture<?> pendingAchievementUpload;
+    private static boolean uploadInFlight;
+    private static boolean uploadAgainAfterCurrent;
+    /** Nanotime of the first change of the current debounce window (0 when none is pending). */
+    private static long firstPendingChangeNanos;
+
+    /**
+     * Schedules a debounced server upload. Every change pushes the upload out by
+     * {@link #UPLOAD_DEBOUNCE_SECONDS}, but never past {@link #UPLOAD_MAX_WAIT_SECONDS} after the
+     * first pending change, so a steady stream of changes still gets flushed periodically.
+     */
+    private static synchronized void scheduleServerSave() {
+        long now = System.nanoTime();
+        if (firstPendingChangeNanos == 0L) {
+            firstPendingChangeNanos = now;
+        }
+
+        long maxWaitRemaining = TimeUnit.SECONDS.toNanos(UPLOAD_MAX_WAIT_SECONDS) - (now - firstPendingChangeNanos);
+        long delayNanos = Math.max(0L, Math.min(TimeUnit.SECONDS.toNanos(UPLOAD_DEBOUNCE_SECONDS), maxWaitRemaining));
+
+        if (pendingAchievementUpload != null) {
+            pendingAchievementUpload.cancel(false);
+        }
+        pendingAchievementUpload = ACHIEVEMENT_UPLOAD_EXECUTOR.schedule(
+                Achievements::runScheduledUpload, delayNanos, TimeUnit.NANOSECONDS);
+    }
+
+    private static void runScheduledUpload() {
+        synchronized (Achievements.class) {
+            pendingAchievementUpload = null;
+            firstPendingChangeNanos = 0L;
+        }
+        uploadNow();
+    }
+
+    /**
+     * Uploads the current state immediately, ensuring only one upload runs at a time. If an upload
+     * is already in flight, the latest state is re-sent once it finishes.
+     */
+    private static CompletableFuture<?> uploadNow() {
+        synchronized (Achievements.class) {
+            if (uploadInFlight) {
+                uploadAgainAfterCurrent = true;
+                return CompletableFuture.completedFuture(null);
+            }
+            uploadInFlight = true;
+        }
+
+        return serverSave().whenComplete((ignored, error) -> {
+            synchronized (Achievements.class) {
+                uploadInFlight = false;
+                if (uploadAgainAfterCurrent) {
+                    uploadAgainAfterCurrent = false;
+                    scheduleServerSave();
+                }
+            }
+        });
+    }
+
+    /**
+     * Cancels any pending debounce and uploads the latest state right away. Intended for
+     * disconnect/shutdown so a change made within the debounce window isn't lost. Returns a future
+     * that completes when the upload finishes (callers may block on it during shutdown).
+     */
+    public static CompletableFuture<?> flushServerSave() {
+        boolean hadPending;
+        synchronized (Achievements.class) {
+            hadPending = pendingAchievementUpload != null;
+            if (hadPending) {
+                pendingAchievementUpload.cancel(false);
+                pendingAchievementUpload = null;
+            }
+            firstPendingChangeNanos = 0L;
+        }
+        if (!hadPending) {
+            // Nothing was waiting to be sent; the server already has the latest state.
+            return CompletableFuture.completedFuture(null);
+        }
+        return uploadNow();
+    }
+
+    private static CompletableFuture<?> serverSave(){
+        JsonObject payload = Achievements.gson.toJsonTree(AchievementTracking.achievements).getAsJsonObject();
+        payload.addProperty("modVersion", CurrentVersionData.INSTANCE.version);
+
+        return MojangAuth.getWEToken().thenCompose(wynnextrasToken ->
+        {
+        if (wynnextrasToken == null) {
+            WynnExtras.LOGGER.error("Failed to authenticate with Mojang for aspect upload");
+            // Don't show duplicate error - MojangAuth already showed the error
+            return CompletableFuture.completedFuture(null);
+        }
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://wynnextras.com/achievements"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", wynnextrasToken)
+                .POST(HttpRequest.BodyPublishers.ofString(Achievements.gson.toJson(payload)))
+                .timeout(Duration.ofSeconds(8))
+                .build();
+        return ApiRequestHelper.sendWithAuthRetry(request, payload)
+                .thenAccept(response -> {
+                    int code = response.statusCode();
+                    if(code == 401) {
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                    } else if(code != 200) {
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading achievements: " + code));
+                    }
+                })
+                .exceptionally(ex -> {
+                    WynnExtras.LOGGER.error("Failed to upload achievements: " + ex.getMessage());
+                    return null;
+                });
+        });
     }
 
     private static Path getConfigPath(String fileName) {

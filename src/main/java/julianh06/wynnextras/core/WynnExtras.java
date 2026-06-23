@@ -235,6 +235,20 @@ public class WynnExtras implements ClientModInitializer {
 			CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool).thenRunAsync(WeightDisplay::populateStatRangesFromDatabase);
 		});
 
+		// Flush any pending (debounced) achievement upload when leaving a server, so a change made
+		// within the debounce window isn't lost. Fire-and-forget: don't block the disconnect.
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> Achievements.flushServerSave());
+
+		// On JVM shutdown wait briefly for the flush, since the upload runs on a daemon thread that
+		// would otherwise be killed before it finishes.
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			try {
+				Achievements.flushServerSave().get(8, java.util.concurrent.TimeUnit.SECONDS);
+			} catch (Exception e) {
+				LOGGER.error("[WynnExtras] Failed to flush achievements on shutdown:", e);
+			}
+		}, "WynnExtras-Achievement-Shutdown-Flush"));
+
 		ModSounds.registerSounds();
 
 		if(FabricLoader.getInstance().isModLoaded("devauth")) {
