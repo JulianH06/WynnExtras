@@ -67,6 +67,9 @@ public class Achievements {
     /** Tier targets shared by every per-raid completion achievement. */
     public static final List<Integer> RAID_TARGETS = List.of(5, 25, 100, 250, 1000);
 
+    /** Tier targets for "get N classes to a level cap" achievements. */
+    public static final List<Integer> CLASS_COUNT_TARGETS = List.of(1, 2, 3, 4, 5);
+
     private boolean registerDefaultAchievements(boolean onlyMissing) {
         boolean changed = false;
         changed |= registerDefault(simple("simple.level.120", "Reach Level 120", "Reach Combat Level 120", false), onlyMissing);
@@ -79,6 +82,40 @@ public class Achievements {
         changed |= registerDefault(tiered("raid.nol",  "Orphion's Nexus of Light", "Complete Orphion's Nexus of Light",  false, RAID_TARGETS), onlyMissing);
         changed |= registerDefault(tiered("raid.twp",  "The Wartorn Palace",       "Complete The Wartorn Palace",        false, RAID_TARGETS), onlyMissing);
         changed |= registerDefault(tiered("raid.tcc",  "The Canyon Colossus",      "Complete The Canyon Colossus",       false, RAID_TARGETS), onlyMissing);
+
+        // Class level milestones — number of classes reaching the combat level cap.
+        changed |= registerDefault(tiered("class.level120", "Level 120 Classes", "Get classes to Combat Level 120", false, CLASS_COUNT_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("class.level121", "Level 121 Classes", "Get classes to Combat Level 121", false, CLASS_COUNT_TARGETS), onlyMissing);
+
+        // Content completion.
+        changed |= registerDefault(simple("content.completion", "Completionist", "Reach 100% content completion on a class", false), onlyMissing);
+
+        // Aspect milestones. "Max all" targets are filled in from the live aspect catalogue at sync time.
+        changed |= registerDefault(simple("aspect.max.one", "Aspect Master", "Max an aspect", false), onlyMissing);
+        changed |= registerDefault(simple("aspect.max.mythic", "Mythic Mastery", "Max a Mythic aspect", false), onlyMissing);
+        changed |= registerDefault(progress("aspect.max.legendary.10", "Legendary Collector", "Max 10 Legendary aspects", false, 10), onlyMissing);
+        changed |= registerDefault(progress("aspect.max.fabled.10", "Fabled Collector", "Max 10 Fabled aspects", false, 10), onlyMissing);
+        changed |= registerDefault(simple("aspect.max.all.warrior",  "Warrior Ascended",  "Max all Warrior aspects",  false), onlyMissing);
+        changed |= registerDefault(simple("aspect.max.all.shaman",   "Shaman Ascended",   "Max all Shaman aspects",   false), onlyMissing);
+        changed |= registerDefault(simple("aspect.max.all.mage",     "Mage Ascended",     "Max all Mage aspects",     false), onlyMissing);
+        changed |= registerDefault(simple("aspect.max.all.archer",   "Archer Ascended",   "Max all Archer aspects",   false), onlyMissing);
+        changed |= registerDefault(simple("aspect.max.all.assassin", "Assassin Ascended", "Max all Assassin aspects", false), onlyMissing);
+        changed |= registerDefault(simple("aspect.max.all.legendary", "Legendary Completionist", "Max all Legendary aspects", false), onlyMissing);
+        changed |= registerDefault(simple("aspect.max.all.fabled",    "Fabled Completionist",    "Max all Fabled aspects",    false), onlyMissing);
+        changed |= registerDefault(simple("aspect.max.all.mythic",    "Mythic Completionist",    "Max all Mythic aspects",    false), onlyMissing);
+        changed |= registerDefault(simple("aspect.max.all", "Aspect Completionist", "Max all aspects", false), onlyMissing);
+
+        // Gathering professions.
+        changed |= registerDefault(simple("prof.gather.one.100", "Gatherer",              "Reach level 100 in a gathering profession",    false), onlyMissing);
+        changed |= registerDefault(simple("prof.gather.one.132", "Master Gatherer",       "Reach level 132 in a gathering profession",    false), onlyMissing);
+        changed |= registerDefault(simple("prof.gather.all.100", "Seasoned Gatherer",     "Reach level 100 in all gathering professions", false), onlyMissing);
+        changed |= registerDefault(simple("prof.gather.all.132", "Gathering Grandmaster", "Reach level 132 in all gathering professions", false), onlyMissing);
+
+        // Crafting professions.
+        changed |= registerDefault(simple("prof.craft.one.100", "Crafter",              "Reach level 100 in a crafting profession",    false), onlyMissing);
+        changed |= registerDefault(simple("prof.craft.one.132", "Master Crafter",       "Reach level 132 in a crafting profession",    false), onlyMissing);
+        changed |= registerDefault(simple("prof.craft.all.100", "Seasoned Crafter",     "Reach level 100 in all crafting professions", false), onlyMissing);
+        changed |= registerDefault(simple("prof.craft.all.132", "Crafting Grandmaster", "Reach level 132 in all crafting professions", false), onlyMissing);
         return changed;
     }
 
@@ -164,6 +201,22 @@ public class Achievements {
         if (!(a instanceof TieredAchievement)) return false;
         ((TieredAchievement) a).setCurrent(count);
         return true;
+    }
+
+    /**
+     * Sets the absolute progress and target of a plain {@link ProgressAchievement} (not a tiered one),
+     * unlocking it if the goal is met. The target is updated too so callers can supply a value derived
+     * from live data (e.g. the total number of aspects of a rarity). Returns true if this call newly
+     * unlocked the achievement.
+     */
+    public boolean setProgressGoal(String id, int current, int target) {
+        Achievement a = byId.get(id);
+        if (!(a instanceof ProgressAchievement) || a instanceof TieredAchievement) return false;
+        ProgressAchievement p = (ProgressAchievement) a;
+        boolean wasUnlocked = p.unlocked;
+        p.target = target;
+        p.setCurrentAbsolute(current);
+        return p.unlocked && !wasUnlocked;
     }
 
     public boolean addProgress(String id, int amount) {
