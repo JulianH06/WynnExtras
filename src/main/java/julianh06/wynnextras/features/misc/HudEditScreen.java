@@ -3,7 +3,7 @@ package julianh06.wynnextras.features.misc;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.qol.AttackTimer;
 import julianh06.wynnextras.features.raid.RaidSessionTracker;
-import julianh06.wynnextras.features.raid.TreeRoomMinimap;
+import julianh06.wynnextras.features.raid.tna.TreeRoomMinimap;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;

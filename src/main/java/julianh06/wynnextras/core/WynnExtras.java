@@ -33,6 +33,7 @@ import julianh06.wynnextras.features.misc.TotemTimer;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.qol.EncounterOverlay;
 import julianh06.wynnextras.features.raid.*;
+import julianh06.wynnextras.features.raid.tna.TreeRoomMinimap;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.raid.RaidListData;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
@@ -200,7 +201,7 @@ public class WynnExtras implements ClientModInitializer {
         RaidLootTrackerOverlay.register();
         RaidSessionTracker.register();
         julianh06.wynnextras.features.raid.PartyIgnoreOnRaid.register();
-        julianh06.wynnextras.features.raid.TreeRoomMinimap.register();
+        TreeRoomMinimap.register();
         QuickRepair.register();
         julianh06.wynnextras.features.qol.AutoSkipDialogue.register();
         julianh06.wynnextras.features.qol.AutoSkipCutscenes.register();

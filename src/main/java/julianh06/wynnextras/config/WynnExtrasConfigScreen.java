@@ -238,7 +238,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Auto-ignore party in raid")
                 .add(toggle("Auto-ignore party in raid", "On raid start, /ignore add all party members to reduce lag from their effects; /ignore remove them on raid end",
                         () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
-            .sub("TNA Tree Room Map")
+            .sub("TNA Tree Room")
                 .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
                         () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))
                 .add(visibleWhen(toggle("Show Tree Map only inside of tree", "Only show the Tree Map while you are the person inside of the tree",
@@ -251,6 +251,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 () -> config.showTreeMapEverywhere, v -> config.showTreeMapEverywhere = v),
                         () -> config.tnaTreeMap))
                 .add(visibleWhen(text("The Map is movable", "To change its position open your inventory and drag it where you want"), () -> config.tnaTreeMap))
+                .add(toggle("Draw Path", "Draw a path in the 3d world to the next door",
+                                () -> config.drawPathInTree, v -> config.drawPathInTree = v))
             .sub("Aspect Scoring")
                 .add(toggle("Show Score", "Shows the individual score for each aspect",
                         () -> config.showIndividualAspectScore, v -> config.showIndividualAspectScore = v))

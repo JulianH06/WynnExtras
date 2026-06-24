@@ -70,9 +70,7 @@ public class WorldRenderUtils {
     }
 
     public static WEVec exactPlayerEyeLocation(RenderWorldEvent event) {
-        ClientPlayerEntity player = MinecraftUtils.localPlayer();
-        double eyeHeight = player.getEyeHeight(player.getPose());
-        return exactLocation(player, event.partialTicks).add(0, eyeHeight, 0);
+        return new WEVec(event.camera.getCameraPos());
     }
 
     public static Set<Pair<WEVec, WEVec>> calculateEdges(Box box) {

@@ -11,15 +11,13 @@ import com.wynntils.utils.type.Time;
 import com.wynntils.core.text.StyledText;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.event.ChatEvent;
-import julianh06.wynnextras.features.raid.TreeRoomMinimap;
+import julianh06.wynnextras.features.raid.tna.TnaApi;
 import julianh06.wynnextras.mixin.RaidKindAccessor;
 import julianh06.wynnextras.utils.ChatUtils;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
-import net.neoforged.bus.api.SubscribeEvent;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 
 import java.io.IOException;
@@ -61,7 +59,7 @@ public class RaidChatNotifier {
 
     private static boolean allowReceivedMessage(Text message) {
         String raw = stripColorCodes(message.getString());
-        TreeRoomMinimap.handleMessage(raw);
+        TnaApi.handleMessage(raw);
 
         if (!shouldBlockRaidTimestampMessage(raw)) return true;
 
