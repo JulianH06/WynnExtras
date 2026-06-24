@@ -1,4 +1,4 @@
-package julianh06.wynnextras.features.waypoints.old;
+package julianh06.wynnextras.features.waypoints.data;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

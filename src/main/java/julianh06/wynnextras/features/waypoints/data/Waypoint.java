@@ -1,4 +1,4 @@
-package julianh06.wynnextras.features.waypoints.old;
+package julianh06.wynnextras.features.waypoints.data;
 
 public class Waypoint {
     public String id;

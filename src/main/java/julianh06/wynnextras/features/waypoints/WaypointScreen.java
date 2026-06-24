@@ -6,10 +6,10 @@ import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.features.waypoints.old.Waypoint;
-import julianh06.wynnextras.features.waypoints.old.WaypointCategory;
-import julianh06.wynnextras.features.waypoints.old.WaypointData;
-import julianh06.wynnextras.features.waypoints.old.WaypointPackage;
+import julianh06.wynnextras.features.waypoints.data.Waypoint;
+import julianh06.wynnextras.features.waypoints.data.WaypointCategory;
+import julianh06.wynnextras.features.waypoints.data.WaypointData;
+import julianh06.wynnextras.features.waypoints.data.WaypointPackage;
 import julianh06.wynnextras.utils.UI.ColorPickerWidget;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.UIUtils;
@@ -29,7 +29,7 @@ import net.minecraft.util.math.BlockPos;
 
 import java.util.*;
 
-public class NewWaypointScreen extends WEScreen {
+public class WaypointScreen extends WEScreen {
     @Override protected double getTargetScaleFactor() { return 2.5; }
     @Override protected int getMinLogicalWidth() { return 1925; }
     @Override protected int getMinLogicalHeight() { return 870; }
@@ -80,11 +80,11 @@ public class NewWaypointScreen extends WEScreen {
     static Map<ScrollType, Float> targetOffsets = new HashMap<>();
     static Map<ScrollType, Float> actualOffsets = new HashMap<>();
 
-    protected NewWaypointScreen() {
+    protected WaypointScreen() {
         this(null, null);
     }
 
-    protected NewWaypointScreen(WaypointPackage initialPackage, Waypoint initialWaypoint) {
+    protected WaypointScreen(WaypointPackage initialPackage, Waypoint initialWaypoint) {
         super(Text.of("WynnExtras Waypoint Screen"));
         sideBarWidget = new SideBarWidget();
         addRootWidget(sideBarWidget);
@@ -96,7 +96,7 @@ public class NewWaypointScreen extends WEScreen {
     public static void open(WaypointPackage initialPackage, Waypoint initialWaypoint) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null) return;
-        client.send(() -> client.setScreen(new NewWaypointScreen(initialPackage, initialWaypoint)));
+        client.send(() -> client.setScreen(new WaypointScreen(initialPackage, initialWaypoint)));
     }
 
     @Override
@@ -2037,7 +2037,7 @@ public class NewWaypointScreen extends WEScreen {
                         if (sideBarWidget != null) sideBarWidget.rebuildPackageWidgetsFromData();
                         MainWidget.invalidateAllTabs();
                         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                    }, () -> new NewWaypointScreen(activePackage, null));
+                    }, () -> new WaypointScreen(activePackage, null));
                     return true;
                 }
                 return true;

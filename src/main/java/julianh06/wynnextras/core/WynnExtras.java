@@ -38,8 +38,7 @@ import julianh06.wynnextras.features.raid.RaidListData;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootTracker;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
-import julianh06.wynnextras.features.waypoints.old.WaypointData;
-import julianh06.wynnextras.features.waypoints.old.Waypoints;
+import julianh06.wynnextras.features.waypoints.data.WaypointData;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
 import julianh06.wynnextras.utils.MinecraftUtils;
@@ -194,7 +193,6 @@ public class WynnExtras implements ClientModInitializer {
 		julianh06.wynnextras.features.bankoverlay.BankOverlay2.registerScreenHooks();
 		ItemComponentsDebugOverlay.registerInventoryScreenHooks();
 		ChatNotificator.init();
-		Waypoints.register();
 		FastRequeue.registerFastRequeue();
 		TreeLoader.init();
 		maintracking.init();

@@ -1,10 +1,10 @@
 package julianh06.wynnextras.features.waypoints;
 
 import com.wynntils.utils.colors.CustomColor;
-import julianh06.wynnextras.features.waypoints.old.Waypoint;
-import julianh06.wynnextras.features.waypoints.old.WaypointCategory;
-import julianh06.wynnextras.features.waypoints.old.WaypointData;
-import julianh06.wynnextras.features.waypoints.old.WaypointPackage;
+import julianh06.wynnextras.features.waypoints.data.Waypoint;
+import julianh06.wynnextras.features.waypoints.data.WaypointCategory;
+import julianh06.wynnextras.features.waypoints.data.WaypointData;
+import julianh06.wynnextras.features.waypoints.data.WaypointPackage;
 import net.minecraft.util.math.BlockPos;
 
 import java.io.IOException;

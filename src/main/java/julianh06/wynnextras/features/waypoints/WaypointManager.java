@@ -2,34 +2,43 @@ package julianh06.wynnextras.features.waypoints;
 
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
-import julianh06.wynnextras.features.waypoints.old.WaypointData;
+import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.utils.UI.WEScreen;
-import net.minecraft.client.MinecraftClient;
 
-import java.nio.file.Path;
 import java.util.List;
 
 @WEModule
 public class WaypointManager {
-     private static Command waypointCommand = new Command(
-         "newWaypoints",
-         "",
-         context -> {
-             WEScreen.open(NewWaypointScreen::new);
-             return 1;
-         },
-         null,
-         null
-     );
-
-    private static Command waypointConvertTestCommand = new Command(
-            "waypointConvertTest",
-            "",
+    private static final SubCommand editCommand = new SubCommand(
+            "edit",
+            "toggles waypoint edit mode",
             context -> {
-                WaypointData.loadFromFile(Path.of("E:\\modding\\WynnExtras\\run\\config\\wynnextras\\packages\\Blue Meteor Hay Bales Puzzle.json"));
+                WaypointEditMode.toggleFromCommand();
                 return 1;
             },
             null,
+            null
+    );
+
+    private static final SubCommand freeMoveToggleCommand = new SubCommand(
+            "freemovetoggle",
+            "toggles waypoint edit free move mode",
+            context -> {
+                WaypointEditMode.toggleFreeMoveFromCommand();
+                return 1;
+            },
+            null,
+            null
+    );
+
+    private static final Command waypointCommand = new Command(
+            "waypoints",
+            "",
+            context -> {
+                WEScreen.open(WaypointScreen::new);
+                return 1;
+            },
+            List.of(editCommand, freeMoveToggleCommand),
             null
     );
 }

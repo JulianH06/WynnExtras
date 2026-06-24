@@ -1,11 +1,9 @@
 package julianh06.wynnextras.features.waypoints;
 
 import com.google.common.reflect.TypeToken;
-import com.google.gson.JsonSyntaxException;
-import julianh06.wynnextras.features.waypoints.old.WaypointData;
-import julianh06.wynnextras.features.waypoints.old.WaypointPackage;
+import julianh06.wynnextras.features.waypoints.data.WaypointData;
+import julianh06.wynnextras.features.waypoints.data.WaypointPackage;
 
-import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;

@@ -1,8 +1,10 @@
-package julianh06.wynnextras.features.waypoints.old;
+package julianh06.wynnextras.features.waypoints;
 
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.RenderWorldEvent;
-import julianh06.wynnextras.features.waypoints.WaypointEditMode;
+import julianh06.wynnextras.features.waypoints.data.Waypoint;
+import julianh06.wynnextras.features.waypoints.data.WaypointData;
+import julianh06.wynnextras.features.waypoints.data.WaypointPackage;
 import julianh06.wynnextras.utils.WEVec;
 import julianh06.wynnextras.utils.render.WorldRenderUtils;
 import net.minecraft.block.Blocks;

@@ -1,9 +1,9 @@
 package julianh06.wynnextras.features.waypoints;
 
 import julianh06.wynnextras.config.WynnExtrasConfig;
-import julianh06.wynnextras.features.waypoints.old.WaypointCategory;
-import julianh06.wynnextras.features.waypoints.old.WaypointData;
-import julianh06.wynnextras.features.waypoints.old.WaypointPackage;
+import julianh06.wynnextras.features.waypoints.data.WaypointCategory;
+import julianh06.wynnextras.features.waypoints.data.WaypointData;
+import julianh06.wynnextras.features.waypoints.data.WaypointPackage;
 import julianh06.wynnextras.utils.UI.ColorPickerWidget;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.WEScreen;
@@ -83,7 +83,7 @@ public class WaypointEditModeUI extends WEScreen {
     private int waypointDropdownDragOffsetX = 0;
     private int waypointDropdownDragOffsetY = 0;
     private WaypointEditMode.WaypointPositionStats lastPreviewStats = new WaypointEditMode.WaypointPositionStats(0, List.of(), List.of());
-    private julianh06.wynnextras.features.waypoints.old.Waypoint nameInputWaypoint = null;
+    private julianh06.wynnextras.features.waypoints.data.Waypoint nameInputWaypoint = null;
     private String nameInput = "";
     private boolean nameFocused = false;
     private WaypointCategory categoryNameInputCategory = null;
@@ -641,7 +641,7 @@ public class WaypointEditModeUI extends WEScreen {
             }
             WaypointData.save();
         }
-        NewWaypointScreen.open(activePackage, selectedWaypoint);
+        WaypointScreen.open(activePackage, selectedWaypoint);
     }
 
     private void handleEditCurrent() {

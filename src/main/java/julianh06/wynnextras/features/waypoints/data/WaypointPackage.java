@@ -1,7 +1,6 @@
-package julianh06.wynnextras.features.waypoints.old;
+package julianh06.wynnextras.features.waypoints.data;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
