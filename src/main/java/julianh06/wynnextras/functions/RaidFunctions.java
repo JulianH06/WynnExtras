@@ -71,14 +71,15 @@ public class RaidFunctions {
         }
     }
 
-    public static class RaidDropFunction extends WEFunctionBase<Integer>{
+    public static class RaidDropFunction extends WEFunctionBase<Long>{
 
         @Override
-        public Integer getValue(FunctionArguments functionArguments) {
+        public Long getValue(FunctionArguments functionArguments) {
             RAID raid = RAID.fromString(functionArguments.getArgument("raid").getStringValue());
             MODE mode = MODE.fromString(functionArguments.getArgument("mode").getStringValue());
             TYPE type = TYPE.fromString(functionArguments.getArgument("type").getStringValue());
             RaidLootData data = RaidLootConfig.INSTANCE.data;
+            data.initSession();
             RaidLootData.RaidSpecificLoot selectedData;
 
             if (mode == MODE.LATEST){
@@ -101,27 +102,27 @@ public class RaidFunctions {
                 }
             }
 
-            return (int) switch (type){
-                case AMPLIFIER1 -> selectedData.amplifierTier1;
-                case AMPLIFIER2 -> selectedData.amplifierTier2;
-                case AMPLIFIER3 -> selectedData.amplifierTier3;
-                case AMPLIFIER4 -> selectedData.amplifierTier4;
-                case TOTAL_AMPLIFIER -> selectedData.amplifierTier1 + selectedData.amplifierTier2 + selectedData.amplifierTier3 + selectedData.amplifierTier4;
-                case CHARMS -> selectedData.totalCharms;
-                case EMERALDS -> selectedData.liquidEmeralds * 64 * 64 + selectedData.emeraldBlocks * 64;
-                case FABLED_ASPECTS -> selectedData.fabledAspects;
-                case FABLED_TOMES -> selectedData.fabledTomes;
-                case LEGENDARY_ASPECTS -> selectedData.legendaryAspects;
-                case MYTHIC_ASPECTS -> selectedData.mythicAspects;
-                case MYTHIC_TOMES -> selectedData.mythicTomes;
-                case PACKED_BAGS -> selectedData.packedBags;
-                case STUFFED_BAGS -> selectedData.stuffedBags;
-                case TOTAL_ASPECTS -> selectedData.legendaryAspects + selectedData.fabledAspects + selectedData.mythicAspects;
-                case TOTAL_BAGS -> selectedData.packedBags + selectedData.variedBags + selectedData.stuffedBags;
-                case TOTAL_TOMES -> selectedData.fabledTomes + selectedData.mythicTomes;
-                case VARIED_BAGS -> selectedData.variedBags;
-                case WARDS -> selectedData.totalWards;
-                case null, default -> -1;
+            return switch (type){
+                case AMPLIFIER1 -> (long) selectedData.amplifierTier1;
+                case AMPLIFIER2 -> (long) selectedData.amplifierTier2;
+                case AMPLIFIER3 -> (long) selectedData.amplifierTier3;
+                case AMPLIFIER4 -> (long) selectedData.amplifierTier4;
+                case TOTAL_AMPLIFIER -> (long) selectedData.amplifierTier1 + selectedData.amplifierTier2 + selectedData.amplifierTier3 + selectedData.amplifierTier4;
+                case CHARMS -> (long) selectedData.totalCharms;
+                case EMERALDS -> selectedData.liquidEmeralds * 64L * 64L + selectedData.emeraldBlocks * 64L;
+                case FABLED_ASPECTS -> (long) selectedData.fabledAspects;
+                case FABLED_TOMES -> (long) selectedData.fabledTomes;
+                case LEGENDARY_ASPECTS -> (long) selectedData.legendaryAspects;
+                case MYTHIC_ASPECTS -> (long) selectedData.mythicAspects;
+                case MYTHIC_TOMES -> (long) selectedData.mythicTomes;
+                case PACKED_BAGS -> (long) selectedData.packedBags;
+                case STUFFED_BAGS -> (long) selectedData.stuffedBags;
+                case TOTAL_ASPECTS -> (long) selectedData.legendaryAspects + selectedData.fabledAspects + selectedData.mythicAspects;
+                case TOTAL_BAGS -> (long) selectedData.packedBags + selectedData.variedBags + selectedData.stuffedBags;
+                case TOTAL_TOMES -> (long) selectedData.fabledTomes + selectedData.mythicTomes;
+                case VARIED_BAGS -> (long) selectedData.variedBags;
+                case WARDS -> (long) selectedData.totalWards;
+                case null, default -> -1L;
             };
         }
 
