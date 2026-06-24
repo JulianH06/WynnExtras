@@ -269,7 +269,7 @@ public class RaidLootTrackerOverlay {
                     displayData = data.sessionData;
                     completions = data.sessionData.completionCount;
                 } else {
-                    displayData = createAggregateData(data);
+                    displayData = RaidLootData.createAggregateData(data);
                     completions = data.perRaidData.values().stream().mapToInt(r -> r.completionCount).sum();
                 }
             } else {
@@ -339,28 +339,6 @@ public class RaidLootTrackerOverlay {
         }
     }
 
-    private static RaidLootData.RaidSpecificLoot createAggregateData(RaidLootData data) {
-        RaidLootData.RaidSpecificLoot agg = new RaidLootData.RaidSpecificLoot();
-        agg.emeraldBlocks = data.emeraldBlocks;
-        agg.liquidEmeralds = data.liquidEmeralds;
-        agg.amplifierTier1 = data.amplifierTier1;
-        agg.amplifierTier2 = data.amplifierTier2;
-        agg.amplifierTier3 = data.amplifierTier3;
-        agg.amplifierTier4 = data.amplifierTier4;
-        agg.totalBags = data.totalBags;
-        agg.stuffedBags = data.stuffedBags;
-        agg.packedBags = data.packedBags;
-        agg.variedBags = data.variedBags;
-        agg.totalTomes = data.totalTomes;
-        agg.mythicTomes = data.mythicTomes;
-        agg.fabledTomes = data.fabledTomes;
-        agg.totalCharms = data.totalCharms;
-        agg.totalWards = data.totalWards;
-        agg.mythicAspects = data.mythicAspects;
-        agg.fabledAspects = data.fabledAspects;
-        agg.legendaryAspects = data.legendaryAspects;
-        return agg;
-    }
 
     private static int drawLine(DrawContext context, String lineId, String label, String value,
                                 CustomColor color, int y, boolean inInventory) {
@@ -410,7 +388,7 @@ public class RaidLootTrackerOverlay {
                 d = data.sessionData;
                 completions = data.sessionData.completionCount;
             } else {
-                d = createAggregateData(data);
+                d = RaidLootData.createAggregateData(data);
                 completions = data.perRaidData.values().stream().mapToInt(r -> r.completionCount).sum();
             }
         } else {
