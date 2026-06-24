@@ -1,7 +1,9 @@
 package julianh06.wynnextras.features.waypoints;
 
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.event.TickEvent;
@@ -125,12 +127,16 @@ public class WaypointEditMode {
     }
 
     public static void toggleFreeMoveFromCommand() {
-        if (!enabled) return;
+        if (!enabled) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Free move mode is already disabled.")));
+            return;
+        }
         if (mode == Mode.FREE_MOVE) {
             enterEditMode();
-        } else {
-            enterFreeMoveMode();
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Free move mode disabled.")));
+            return;
         }
+        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Free move mode is already disabled.")));
     }
 
     public static void enterEditMode() {

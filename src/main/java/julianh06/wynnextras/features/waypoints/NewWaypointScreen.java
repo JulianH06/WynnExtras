@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.waypoints;
 
+import com.google.gson.JsonSyntaxException;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
@@ -64,6 +65,12 @@ public class NewWaypointScreen extends WEScreen {
     private String searchQuery = "";
     private boolean searchFocused = false;
     private static final int SEARCH_BAR_HEIGHT = 28;
+    private static final long FEEDBACK_DURATION_MS = 3000;
+    private static String feedbackMessage = "";
+    private static int feedbackColor = TOGGLE_ON;
+    private static long feedbackUntil = 0;
+    private static float feedbackX = 0;
+    private static float feedbackY = 0;
 
     private static SideBarWidget sideBarWidget;
     private MainWidget mainWidget;
@@ -130,6 +137,29 @@ public class NewWaypointScreen extends WEScreen {
         mainWidget.setBounds(sideBarWidth, 0, logicalWidth - sideBarWidth, logicalHeight);
     }
 
+    @Override
+    protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if (feedbackMessage.isEmpty() || System.currentTimeMillis() > feedbackUntil) return;
+        int logicalWidth = getLogicalWidth();
+        int logicalHeight = getLogicalHeight();
+        int toastWidth = 660;
+        int toastHeight = 44;
+        int toastX = (int) Math.clamp(feedbackX, 20, Math.max(20, logicalWidth - toastWidth - 20));
+        int toastY = (int) Math.clamp(feedbackY, 20, Math.max(20, logicalHeight - toastHeight - 20));
+        ui.drawRect(toastX, toastY, toastWidth, toastHeight, CustomColor.fromInt(BG_MEDIUM));
+        ui.drawRect(toastX, toastY, toastWidth, 3, CustomColor.fromInt(feedbackColor));
+        ui.drawRect(toastX, toastY + toastHeight - 3, toastWidth, 3, CustomColor.fromInt(BORDER_DARK));
+        ui.drawCenteredText(feedbackMessage, toastX + toastWidth / 2f, toastY + toastHeight / 2f, CustomColor.fromInt(TEXT_LIGHT), 2.25f);
+    }
+
+    private static void showFeedback(String message, boolean success, double mouseX, double mouseY, UIUtils ui) {
+        feedbackMessage = message;
+        feedbackColor = success ? TOGGLE_ON : ACCENT_RED;
+        feedbackX = ui == null ? (float) mouseX : (float) ((mouseX - ui.getXStart()) * ui.getScaleFactor());
+        feedbackY = ui == null ? (float) mouseY : (float) ((mouseY - ui.getYStart()) * ui.getScaleFactor());
+        feedbackUntil = System.currentTimeMillis() + FEEDBACK_DURATION_MS;
+    }
+
     private static void drawDiamond(DrawContext context, int cx, int cy, int size, int color) {
         for (int i = 0; i <= size; i++) {
             context.fill(cx - i, cy - size + i, cx + i + 1, cy - size + i + 1, color);
@@ -193,7 +223,7 @@ public class NewWaypointScreen extends WEScreen {
         private static final int PACKAGE_HEIGHT = 44;
         private static final int PACKAGE_SPACING = 8;
         private static final int PACKAGE_X_PADDING = 24;
-        private static final int ADD_SECTION_HEIGHT = 118;
+        private static final int ADD_SECTION_HEIGHT = 172;
         private static final int ADD_BUTTON_HEIGHT = 46;
 
         public List<PackageWidget> packageWidgets = new ArrayList<>();
@@ -333,8 +363,10 @@ public class NewWaypointScreen extends WEScreen {
             }
 
             ui.drawRect(50, addSeparatorY, width - 100, 4, CustomColor.fromInt(GOLD_DARK));
-            drawButton(ui, PACKAGE_X_PADDING, height - 72, packageWidth, ADD_BUTTON_HEIGHT, isAddPackageHovered(mouseX, mouseY), GOLD_DARK);
-            ui.drawCenteredText("Add Package", PACKAGE_X_PADDING + packageWidth / 2f, height - 72 + ADD_BUTTON_HEIGHT / 2f, CustomColor.fromHexString("FFFFFF"), 2.6f);
+            drawButton(ui, PACKAGE_X_PADDING, getAddPackageButtonY(), packageWidth, ADD_BUTTON_HEIGHT, isAddPackageHovered(mouseX, mouseY), GOLD_DARK);
+            ui.drawCenteredText("Add Package", PACKAGE_X_PADDING + packageWidth / 2f, getAddPackageButtonY() + ADD_BUTTON_HEIGHT / 2f, CustomColor.fromHexString("FFFFFF"), 2.6f);
+            drawButton(ui, PACKAGE_X_PADDING, getImportPackageButtonY(), packageWidth, ADD_BUTTON_HEIGHT, isImportPackageHovered(mouseX, mouseY), TOGGLE_ON);
+            ui.drawCenteredText("Import Package From Clipboard", PACKAGE_X_PADDING + packageWidth / 2f, getImportPackageButtonY() + ADD_BUTTON_HEIGHT / 2f, CustomColor.fromHexString("FFFFFF"), 2.25f);
         }
 
         @Override
@@ -351,6 +383,10 @@ public class NewWaypointScreen extends WEScreen {
         public boolean mouseClicked(double mx, double my, int button) {
             if (isAddPackageHovered(mx, my)) {
                 addPackage();
+                return true;
+            }
+            if (isImportPackageHovered(mx, my)) {
+                importPackageFromClipboard(mx, my);
                 return true;
             }
             if (!isInPackageList(mx, my)) return super.mouseClicked(mx, my, button);
@@ -404,9 +440,25 @@ public class NewWaypointScreen extends WEScreen {
         private boolean isAddPackageHovered(double mx, double my) {
             int packageWidth = width - PACKAGE_X_PADDING * 2 - 5;
             return mx >= ui.sx(PACKAGE_X_PADDING)
-                    && my >= ui.sy(height - 72)
+                    && my >= ui.sy(getAddPackageButtonY())
                     && mx < ui.sx(PACKAGE_X_PADDING) + ui.sw(packageWidth)
-                    && my < ui.sy(height - 72 + ADD_BUTTON_HEIGHT);
+                    && my < ui.sy(getAddPackageButtonY() + ADD_BUTTON_HEIGHT);
+        }
+
+        private boolean isImportPackageHovered(double mx, double my) {
+            int packageWidth = width - PACKAGE_X_PADDING * 2 - 5;
+            return mx >= ui.sx(PACKAGE_X_PADDING)
+                    && my >= ui.sy(getImportPackageButtonY())
+                    && mx < ui.sx(PACKAGE_X_PADDING) + ui.sw(packageWidth)
+                    && my < ui.sy(getImportPackageButtonY() + ADD_BUTTON_HEIGHT);
+        }
+
+        private int getAddPackageButtonY() {
+            return height - 126;
+        }
+
+        private int getImportPackageButtonY() {
+            return height - 72;
         }
 
         private void addPackage() {
@@ -414,6 +466,22 @@ public class NewWaypointScreen extends WEScreen {
             MainWidget.activePackage = waypointPackage;
             rebuildPackageWidgetsFromData();
             MainWidget.invalidateAllTabs();
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        }
+
+        private void importPackageFromClipboard(double mx, double my) {
+            try {
+                WaypointPackage imported = WaypointActions.importPackageFromJson(MinecraftClient.getInstance().keyboard.getClipboard());
+                MainWidget.activePackage = imported;
+                WaypointData.INSTANCE.activePackage = imported;
+                rebuildPackageWidgetsFromData();
+                MainWidget.invalidateAllTabs();
+                showFeedback("Imported package \"" + imported.name + "\".", true, mx, my, ui);
+            } catch (JsonSyntaxException | IllegalArgumentException e) {
+                showFeedback("Failed to import package: " + e.getMessage(), false, mx, my, ui);
+            } catch (Exception e) {
+                showFeedback("Failed to import package.", false, mx, my, ui);
+            }
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         }
 
@@ -604,7 +672,10 @@ public class NewWaypointScreen extends WEScreen {
             ui.drawCenteredText("WynnExtras", x + width / 2f, y + 70, CustomColor.fromInt(TEXT_LIGHT));
             ui.drawCenteredText("Waypoints", x + width / 2f, y + 110, CustomColor.fromInt(TEXT_DIM));
 
-            if(activePackage == null) return;
+            if(activePackage == null) {
+                drawNoPackageHint();
+                return;
+            }
             WaypointData.resolveWaypointCategories(activePackage);
 
             String description = activePackage.description == null ? "" : activePackage.description;
@@ -645,6 +716,14 @@ public class NewWaypointScreen extends WEScreen {
 
             activeTabWidget.setBounds(x, y + topOffset, width, height - topOffset);
             activeTabWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+        }
+
+        private void drawNoPackageHint() {
+            float centerX = x + width / 2f;
+            float centerY = y + 150 + (height - 150) / 2f;
+            ui.drawCenteredText("Select a package on the left to get started.", centerX, centerY - 32, CustomColor.fromInt(TEXT_DIM), 2.65f);
+            ui.drawCenteredText("Use Waypoint Edit Mode if you want to create your own waypoints.", centerX, centerY + 2, CustomColor.fromInt(TEXT_DIM), 2.35f);
+            ui.drawCenteredText("Open it with /we waypoints edit.", centerX, centerY + 32, CustomColor.fromInt(TEXT_DIM), 2.25f);
         }
 
         private List<String> wrapText(String text, int maxWidth, float textScale) {
@@ -1894,7 +1973,12 @@ public class NewWaypointScreen extends WEScreen {
                     return true;
                 }
                 if (isIn(mx, my, contentX + 400, buttonY, 180, 44)) {
-                    MinecraftClient.getInstance().keyboard.setClipboard(WaypointData.gson.toJson(activePackage));
+                    try {
+                        MinecraftClient.getInstance().keyboard.setClipboard(WaypointData.gson.toJson(activePackage));
+                        showFeedback("Exported package \"" + activePackage.name + "\" to clipboard.", true, mx, my, ui);
+                    } catch (Exception e) {
+                        showFeedback("Failed to export package.", false, mx, my, ui);
+                    }
                     McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }

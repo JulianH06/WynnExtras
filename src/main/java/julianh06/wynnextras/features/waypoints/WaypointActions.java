@@ -10,8 +10,11 @@ import net.minecraft.util.math.BlockPos;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public final class WaypointActions {
@@ -96,6 +99,22 @@ public final class WaypointActions {
         WaypointData.INSTANCE.packages.add(copy);
         savePackagesAndOrder();
         return copy;
+    }
+
+    public static WaypointPackage importPackageFromJson(String json) {
+        if (json == null || json.isBlank()) {
+            throw new IllegalArgumentException("Clipboard is empty.");
+        }
+
+        WaypointPackage imported = WaypointData.gson.fromJson(json, WaypointPackage.class);
+        if (imported == null) {
+            throw new IllegalArgumentException("Clipboard does not contain a valid package.");
+        }
+
+        normalizeImportedPackage(imported);
+        WaypointData.INSTANCE.packages.add(imported);
+        savePackagesAndOrder();
+        return imported;
     }
 
     public static Waypoint createWaypoint(WaypointPackage pkg, WaypointCategory category, BlockPos pos) {
@@ -256,6 +275,39 @@ public final class WaypointActions {
             candidate = base + " Copy " + i;
             i++;
         }
+    }
+
+    private static void normalizeImportedPackage(WaypointPackage pkg) {
+        pkg.id = UUID.randomUUID().toString();
+        pkg.name = uniquePackageName(null, cleanName(pkg.name, "Imported Package"));
+        pkg.description = pkg.description == null ? "" : pkg.description;
+        pkg.packageVersion = WaypointData.CURRENT_PACKAGE_VERSION;
+        if (pkg.categories == null) pkg.categories = new ArrayList<>();
+        if (pkg.waypoints == null) pkg.waypoints = new ArrayList<>();
+
+        Set<String> seenCategoryIds = new HashSet<>();
+        for (WaypointCategory category : pkg.categories) {
+            if (WaypointData.isUncategorizedCategory(category)) {
+                category.id = WaypointData.UNCATEGORIZED_CATEGORY_ID;
+            } else if (category.id == null || category.id.isBlank() || seenCategoryIds.contains(category.id)) {
+                category.id = UUID.randomUUID().toString();
+            }
+            seenCategoryIds.add(category.id);
+            if (category.name == null || category.name.isBlank()) category.name = "New Category";
+            if (category.color == null) category.color = CustomColor.fromHexString("FFFFFF");
+        }
+
+        Set<String> seenWaypointIds = new HashSet<>();
+        for (Waypoint waypoint : pkg.waypoints) {
+            if (waypoint.id == null || waypoint.id.isBlank() || seenWaypointIds.contains(waypoint.id)) {
+                waypoint.id = UUID.randomUUID().toString();
+            }
+            seenWaypointIds.add(waypoint.id);
+            if (waypoint.name == null || waypoint.name.isBlank()) waypoint.name = "Waypoint";
+        }
+
+        WaypointData.ensureUncategorizedCategory(pkg);
+        WaypointData.resolveWaypointCategories(pkg);
     }
 
     private static WaypointCategory copyCategory(WaypointCategory category) {

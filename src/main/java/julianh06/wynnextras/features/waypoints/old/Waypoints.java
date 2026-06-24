@@ -1,20 +1,14 @@
 package julianh06.wynnextras.features.waypoints.old;
 
-import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.event.ClickEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.waypoints.WaypointEditMode;
-import julianh06.wynnextras.utils.WEVec;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.lwjgl.glfw.GLFW;
 
@@ -26,9 +20,6 @@ import static julianh06.wynnextras.features.waypoints.old.WaypointScreen.scaleFa
 public class Waypoints {
     static boolean commandsInitialized = false;
 
-    private static SubCommand addCmd;
-    private static SubCommand addCmdNoArgs;
-    private static SubCommand removeCmd;
     private static SubCommand editCmd;
     private static SubCommand freeMoveToggleCmd;
     private static Command waypointsCmd;
@@ -39,87 +30,6 @@ public class Waypoints {
     public static void register() {
         ClientTickEvents.END_CLIENT_TICK.register((client) -> {
             if(commandsInitialized) return;
-
-            addCmd = new SubCommand(
-                    "add",
-                    "",
-                    context -> {
-                        if(MinecraftClient.getInstance().player == null || WaypointData.INSTANCE.packages.isEmpty()) return 1;
-                        int x = IntegerArgumentType.getInteger(context, "x");
-                        int y = IntegerArgumentType.getInteger(context, "y");
-                        int z = IntegerArgumentType.getInteger(context, "z");
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                                Text.of("Waypoint added at " + x + " " + y + " " + z + " in Package " + WaypointData.INSTANCE.packages.getFirst().name)));
-                        WaypointPackage pkg = WaypointData.INSTANCE.packages.getFirst();
-                        Waypoint waypoint = new Waypoint(x, y, z);
-                        waypoint.setCategory(WaypointData.ensureUncategorizedCategory(pkg));
-                        pkg.waypoints.add(waypoint);
-                        WaypointData.save();
-                        return 1;
-                    },
-                    null,
-                    List.of(ClientCommandManager.argument("x", IntegerArgumentType.integer()),
-                            ClientCommandManager.argument("y", IntegerArgumentType.integer()),
-                            ClientCommandManager.argument("z", IntegerArgumentType.integer())
-                    )
-            );
-
-            addCmdNoArgs = new SubCommand(
-                    "add",
-                    "",
-                    context -> {
-                        if(MinecraftClient.getInstance().player == null || WaypointData.INSTANCE.packages.isEmpty()) return 1;
-                        int x = (int) Math.floor(MinecraftClient.getInstance().player.getX());
-                        int y = (int) Math.floor(MinecraftClient.getInstance().player.getY()) - 1;
-                        int z = (int) Math.floor(MinecraftClient.getInstance().player.getZ());
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                                Text.of("Waypoint added at " + x + " " + y + " " + z + " in Package " + WaypointData.INSTANCE.packages.getFirst().name)));
-                        WaypointPackage pkg = WaypointData.INSTANCE.packages.getFirst();
-                        Waypoint waypoint = new Waypoint(x, y, z);
-                        waypoint.setCategory(WaypointData.ensureUncategorizedCategory(pkg));
-                        pkg.waypoints.add(waypoint);
-                        WaypointData.save();
-                        return 1;
-                    },
-                    null,
-                    null
-            );
-
-            removeCmd = new SubCommand(
-                    "remove",
-                    "removes the closest waypoint",
-                    context -> {
-                        Waypoint closest = null;
-                        WaypointPackage nearestPackage = null;
-                        double smallestDistance = -1;
-                        for(WaypointPackage waypointPackage : WaypointData.INSTANCE.packages) {
-                            for (Waypoint waypoint : waypointPackage.waypoints) {
-                                if (MinecraftClient.getInstance().player == null) return 1;
-                                WEVec pos = new WEVec(waypoint.x + 0.5f, waypoint.y + 1.5f, waypoint.z + 0.5f);
-                                WEVec playerPos = new WEVec(MinecraftClient.getInstance().player.getBlockPos().toBottomCenterPos());
-                                double distance = pos.distanceTo(playerPos);
-
-                                if (closest == null || distance < smallestDistance) {
-                                    closest = waypoint;
-                                    nearestPackage = waypointPackage;
-                                    smallestDistance = distance;
-                                }
-                            }
-                        }
-                        if(closest != null) {
-                            nearestPackage.waypoints.remove(closest);
-                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                                    Text.of("Waypoint removed at " + closest.x + " " + closest.y + " " + closest.z + " in package " + nearestPackage.name)));
-                            WaypointData.save();
-                        } else {
-                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                                    Text.of("There are no waypoints left to remove.")));
-                        }
-                        return 1;
-                    },
-                    null,
-                    null
-            );
 
             editCmd = new SubCommand(
                     "edit",
@@ -152,7 +62,7 @@ public class Waypoints {
                         inScreen = true;
                         return 1;
                     },
-                    List.of(addCmd, addCmdNoArgs, removeCmd, editCmd, freeMoveToggleCmd),
+                    List.of(editCmd, freeMoveToggleCmd),
                     null
             );
             commandsInitialized = true;
