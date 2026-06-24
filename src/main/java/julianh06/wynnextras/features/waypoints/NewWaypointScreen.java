@@ -503,17 +503,61 @@ public class NewWaypointScreen extends WEScreen {
             @Override
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 boolean selected = MainWidget.activePackage == waypointPackage;
-                drawConfigRow(ui, x, y, width, height, hovered, selected, GOLD_DARK);
-                drawDiamond(ctx, (int) ui.sx(x + 18), (int) ui.sy(y + height / 2f), Math.max(2, ui.sw(4)), selected ? GOLD_DARK : BORDER_DARK);
-                ui.drawText(waypointPackage.name, x + 36, y + height / 2f, selected ? CustomColor.fromInt(TEXT_LIGHT) : CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
+                boolean disabled = !waypointPackage.enabled;
+                drawConfigRow(ui, x, y, width, height, hovered, selected, disabled ? ACCENT_RED : GOLD_DARK);
+                if (disabled) {
+                    ui.drawRect(x, y, width, height, CustomColor.fromInt(0x55200000));
+                }
+                int markerColor = disabled ? ACCENT_RED : (selected ? GOLD_DARK : BORDER_DARK);
+                CustomColor nameColor = selected ? CustomColor.fromInt(TEXT_LIGHT) : CustomColor.fromInt(disabled ? 0xFFb88f8f : TEXT_DIM);
+                drawDiamond(ctx, (int) ui.sx(x + 18), (int) ui.sy(y + height / 2f), Math.max(2, ui.sw(4)), markerColor);
+                ui.drawText(truncateName(waypointPackage.name, disabled), x + 36, y + height / 2f, nameColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
+                if (disabled) {
+                    ui.drawRect(x + width - 92, y + 8, 74, height - 16, CustomColor.fromInt(ACCENT_RED));
+                    ui.drawCenteredText("Disabled", x + width - 55, y + height / 2f, CustomColor.fromInt(TEXT_LIGHT), 1.55f);
+                }
             }
 
             private void drawDraggedPreview(DrawContext ctx, int mouseX, int mouseY) {
                 float dragX = mouseX * ui.getScaleFactorF();
                 float dragY = mouseY * ui.getScaleFactorF();
+                boolean disabled = !waypointPackage.enabled;
                 drawConfigRow(ui, dragX, dragY, width, height, true, true, GOLD_DARK);
-                drawDiamond(ctx, (int) ui.sx(dragX + 18), (int) ui.sy(dragY + height / 2f), Math.max(2, ui.sw(4)), GOLD_DARK);
-                ui.drawText(waypointPackage.name, dragX + 36, dragY + height / 2f, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
+                if (disabled) {
+                    ui.drawRect(dragX, dragY, width, height, CustomColor.fromInt(0x55200000));
+                }
+                drawDiamond(ctx, (int) ui.sx(dragX + 18), (int) ui.sy(dragY + height / 2f), Math.max(2, ui.sw(4)), disabled ? ACCENT_RED : GOLD_DARK);
+                ui.drawText(truncateName(waypointPackage.name, disabled), dragX + 36, dragY + height / 2f, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
+                if (disabled) {
+                    ui.drawRect(dragX + width - 92, dragY + 8, 74, height - 16, CustomColor.fromInt(ACCENT_RED));
+                    ui.drawCenteredText("Disabled", dragX + width - 55, dragY + height / 2f, CustomColor.fromInt(TEXT_LIGHT), 1.55f);
+                }
+            }
+
+            private String truncateName(String name, boolean disabled) {
+                String value = name == null ? "" : name;
+                int availableWidth = disabled ? width - 136 : width - 48;
+                return truncateText(value, Math.max(0, availableWidth), 2.6f);
+            }
+
+            private String truncateText(String text, int maxWidth, float scale) {
+                if (textWidth(text, scale) <= maxWidth) return text;
+                String suffix = "...";
+                int suffixWidth = textWidth(suffix, scale);
+                if (suffixWidth > maxWidth) return "";
+
+                int low = 0;
+                int high = text.length();
+                while (low < high) {
+                    int mid = (low + high + 1) / 2;
+                    if (textWidth(text.substring(0, mid) + suffix, scale) <= maxWidth) low = mid;
+                    else high = mid - 1;
+                }
+                return text.substring(0, low) + suffix;
+            }
+
+            private int textWidth(String text, float scale) {
+                return (int) Math.ceil(MinecraftClient.getInstance().textRenderer.getWidth(text) * scale);
             }
 
             @Override
@@ -1925,6 +1969,7 @@ public class NewWaypointScreen extends WEScreen {
 
                 ui.drawText("Name", contentX, y + 95, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.5f);
                 nameInput.setBounds(fieldX, y + 82, fieldW, 54);
+                ui.drawText(nameInput.getInput().length() + "/" + WaypointActions.MAX_PACKAGE_NAME_LENGTH, fieldX + fieldW, y + 140, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2f);
 
                 ui.drawText("Description", contentX, y + 170, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.5f);
                 descriptionInput.setBounds(fieldX, y + 158, fieldW, 112);
@@ -2009,6 +2054,7 @@ public class NewWaypointScreen extends WEScreen {
                         if (activePackage == null) return;
                         WaypointActions.setPackageDescription(activePackage, value);
                     });
+                    nameInput.setMaxLength(WaypointActions.MAX_PACKAGE_NAME_LENGTH);
                     descriptionInput.setWrapText(true);
                     descriptionInput.setMaxLength(DESCRIPTION_MAX_LENGTH);
                     addChild(nameInput);

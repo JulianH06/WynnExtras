@@ -44,6 +44,7 @@ public class WaypointEditModeUI extends WEScreen {
     private final CoordinateInputWidget yCoordinateField = new CoordinateInputWidget(this, 1, "Y");
     private final CoordinateInputWidget zCoordinateField = new CoordinateInputWidget(this, 2, "Z");
     private final NameInputWidget nameField = new NameInputWidget(this);
+    private final ActionButtonWidget packageEnabledButton = new ActionButtonWidget(this, () -> activePackage == null || activePackage.enabled ? "Enabled" : "Disabled", this::togglePackageEnabled, () -> activePackage == null ? GREEN : activePackage.enabled ? GREEN : RED, 2.55f);
     private final ActionButtonWidget freeMoveButton = new ActionButtonWidget(this, () -> "Free Move Mode", WaypointEditMode::enterFreeMoveMode);
     private final ActionButtonWidget managerButton = new ActionButtonWidget(this, () -> "Open Waypoint screen", this::openManager);
     private final ActionButtonWidget removeButton = new ActionButtonWidget(this, () -> "Remove Waypoint", this::handleRemove);
@@ -98,6 +99,7 @@ public class WaypointEditModeUI extends WEScreen {
         addRootWidget(yCoordinateField);
         addRootWidget(zCoordinateField);
         addRootWidget(nameField);
+        addRootWidget(packageEnabledButton);
         addRootWidget(freeMoveButton);
         addRootWidget(managerButton);
         addRootWidget(removeButton);
@@ -386,6 +388,7 @@ public class WaypointEditModeUI extends WEScreen {
         boolean editing = selectedWaypoint != null;
         boolean hasCategory = activeCategory != null;
         nameField.setVisible(editing);
+        packageEnabledButton.setVisible(activePackage != null);
         categoryField.setVisible(true);
         freeMoveButton.setVisible(true);
         managerButton.setVisible(true);
@@ -413,9 +416,13 @@ public class WaypointEditModeUI extends WEScreen {
         int coordW = panelW - p(28);
         int coordGap = p(8);
         int fieldW = (coordW - coordGap * 2) / 3;
+        int packageToggleW = p(118);
+        int packageGap = p(8);
+        int packageFieldW = panelW - p(28) - packageToggleW - packageGap;
 
         if (editing) {
-            packageField.setLogicalBounds(panelX + p(14), panelY + p(80), panelW - p(28), p(FIELD_H));
+            packageField.setLogicalBounds(panelX + p(14), panelY + p(80), packageFieldW, p(FIELD_H));
+            packageEnabledButton.setLogicalBounds(panelX + p(14) + packageFieldW + packageGap, panelY + p(80), packageToggleW, p(FIELD_H));
             categoryField.setLogicalBounds(panelX + p(14), panelY + p(160), panelW - p(28), p(FIELD_H));
             nameField.setLogicalBounds(panelX + p(14), panelY + p(250), panelW - p(28), p(38));
             int coordY = panelY + p(332);
@@ -436,7 +443,8 @@ public class WaypointEditModeUI extends WEScreen {
         } else {
             nameFocused = false;
             nameField.setFocused(false);
-            packageField.setLogicalBounds(panelX + p(14), panelY + p(80), panelW - p(28), p(FIELD_H));
+            packageField.setLogicalBounds(panelX + p(14), panelY + p(80), packageFieldW, p(FIELD_H));
+            packageEnabledButton.setLogicalBounds(panelX + p(14) + packageFieldW + packageGap, panelY + p(80), packageToggleW, p(FIELD_H));
             categoryField.setLogicalBounds(panelX + p(14), panelY + p(160), panelW - p(28), p(FIELD_H));
             int coordY = panelY + p(252);
             xCoordinateField.setLogicalBounds(coordX, coordY, fieldW, p(32));
@@ -554,6 +562,11 @@ public class WaypointEditModeUI extends WEScreen {
         activeDropdown = closeCurrent ? Dropdown.NONE : Dropdown.CATEGORY;
         activeDropdownField = closeCurrent ? null : field;
         searchFocused = false;
+    }
+
+    private void togglePackageEnabled() {
+        if (activePackage == null) return;
+        WaypointActions.setPackageEnabled(activePackage, !activePackage.enabled);
     }
 
     private void focusCoordinate(int coordinate) {
@@ -1171,20 +1184,40 @@ public class WaypointEditModeUI extends WEScreen {
         private final Supplier<String> labelSupplier;
         private final Runnable onLeftClick;
         private final Runnable onRightClick;
+        private final Supplier<Integer> accentSupplier;
+        private final float maxTextScale;
         private int logicalX;
         private int logicalY;
         private int logicalW;
         private int logicalH;
 
         private ActionButtonWidget(WaypointEditModeUI screen, Supplier<String> labelSupplier, Runnable onClick) {
-            this(screen, labelSupplier, onClick, null);
+            this(screen, labelSupplier, onClick, null, null);
         }
 
         private ActionButtonWidget(WaypointEditModeUI screen, Supplier<String> labelSupplier, Runnable onLeftClick, Runnable onRightClick) {
+            this(screen, labelSupplier, onLeftClick, onRightClick, null);
+        }
+
+        private ActionButtonWidget(WaypointEditModeUI screen, Supplier<String> labelSupplier, Runnable onClick, Supplier<Integer> accentSupplier) {
+            this(screen, labelSupplier, onClick, accentSupplier, 3.0f);
+        }
+
+        private ActionButtonWidget(WaypointEditModeUI screen, Supplier<String> labelSupplier, Runnable onClick, Supplier<Integer> accentSupplier, float maxTextScale) {
+            this(screen, labelSupplier, onClick, null, accentSupplier, maxTextScale);
+        }
+
+        private ActionButtonWidget(WaypointEditModeUI screen, Supplier<String> labelSupplier, Runnable onLeftClick, Runnable onRightClick, Supplier<Integer> accentSupplier) {
+            this(screen, labelSupplier, onLeftClick, onRightClick, accentSupplier, 3.0f);
+        }
+
+        private ActionButtonWidget(WaypointEditModeUI screen, Supplier<String> labelSupplier, Runnable onLeftClick, Runnable onRightClick, Supplier<Integer> accentSupplier, float maxTextScale) {
             this.screen = screen;
             this.labelSupplier = labelSupplier;
             this.onLeftClick = onLeftClick;
             this.onRightClick = onRightClick;
+            this.accentSupplier = accentSupplier;
+            this.maxTextScale = maxTextScale;
         }
 
         private void setLogicalBounds(int x, int y, int w, int h) {
@@ -1199,13 +1232,16 @@ public class WaypointEditModeUI extends WEScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             String label = labelSupplier.get();
             screen.ui.drawButton(logicalX, logicalY, logicalW, logicalH, hovered);
+            if (accentSupplier != null) {
+                screen.ui.drawRect(logicalX + screen.p(5), logicalY + logicalH - screen.p(6), logicalW - screen.p(10), screen.p(3), screen.color(accentSupplier.get()));
+            }
             String[] lines = screen.buttonLabelLines(label);
             if (lines.length == 1) {
-                screen.ui.drawCenteredText(label, logicalX + logicalW / 2f, logicalY + logicalH / 2f, screen.color(TEXT), screen.ts(screen.fitTextScale(label, logicalW - screen.p(12), 3.0f, 1.25f)));
+                screen.ui.drawCenteredText(label, logicalX + logicalW / 2f, logicalY + logicalH / 2f, screen.color(TEXT), screen.ts(screen.fitTextScale(label, logicalW - screen.p(12), maxTextScale, 1.25f)));
                 return;
             }
 
-            float scale = screen.fitTextScale(lines, logicalW - screen.p(12), logicalH, 2.0f, 1.25f);
+            float scale = screen.fitTextScale(lines, logicalW - screen.p(12), logicalH, Math.min(2.0f, maxTextScale), 1.25f);
             float lineHeight = MinecraftClient.getInstance().textRenderer.fontHeight * scale;
             float firstLineY = logicalY + logicalH / 2f - lineHeight / 2f;
             for (int i = 0; i < lines.length; i++) {
@@ -1442,10 +1478,20 @@ public class WaypointEditModeUI extends WEScreen {
             String value = dropdown == Dropdown.PACKAGE
                     ? activePackage == null ? "None" : activePackage.name
                     : activeCategory == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : activeCategory.name;
+            boolean disabledPackage = dropdown == Dropdown.PACKAGE && activePackage != null && !activePackage.enabled;
             boolean open = activeDropdown == dropdown && screen.activeDropdownField == this;
             screen.ui.drawText(label, logicalX, logicalY - screen.p(25), screen.color(TEXT_DIM), screen.ts(2.7f));
             screen.ui.drawButton(logicalX, logicalY, logicalW, logicalH, hovered || open);
-            screen.ui.drawText(screen.trimToWidthEnd(MinecraftClient.getInstance().textRenderer, value, screen.textMaxWidth(logicalW - screen.p(34), 3f)), logicalX + screen.p(10), logicalY + screen.p(12), screen.color(TEXT), screen.ts(3f));
+            if (disabledPackage) {
+                screen.ui.drawRect(logicalX, logicalY, logicalW, logicalH, screen.color(0x55200000));
+                screen.ui.drawRect(logicalX + screen.p(6), logicalY + logicalH - screen.p(6), logicalW - screen.p(12), screen.p(3), screen.color(RED));
+            }
+            int statusW = disabledPackage ? screen.p(84) : 0;
+            int textW = logicalW - screen.p(34) - statusW;
+            screen.ui.drawText(screen.trimToWidthEnd(MinecraftClient.getInstance().textRenderer, value, screen.textMaxWidth(textW, 3f)), logicalX + screen.p(10), logicalY + screen.p(12), screen.color(disabledPackage ? 0xFFFFB0B0 : TEXT), screen.ts(3f));
+            if (disabledPackage) {
+                screen.ui.drawText("Disabled", logicalX + logicalW - screen.p(130), logicalY + screen.p(16), screen.color(RED), screen.ts(2.0f));
+            }
             screen.ui.drawText(open ? "^" : "v", logicalX + logicalW - screen.p(30), logicalY + screen.p(12), screen.color(TEXT), screen.ts(3f));
         }
 
@@ -1747,14 +1793,22 @@ public class WaypointEditModeUI extends WEScreen {
             if (selected || hovered) {
                 screen.ui.drawRect(logicalX, logicalY, logicalW, logicalH, screen.color(selected ? 0xAA6C4F36 : 0xAA4D3C2D));
             }
-            screen.ui.drawRect(logicalX + screen.p(7), logicalY + screen.p(10), screen.p(20), screen.p(20), screen.color(screen.dropdownRowColor(dropdown, index)));
+            boolean disabledPackage = dropdown == Dropdown.PACKAGE && !screen.filteredPackages().get(index).enabled;
+            if (disabledPackage) {
+                screen.ui.drawRect(logicalX, logicalY, logicalW, logicalH, screen.color(0x55200000));
+            }
+            screen.ui.drawRect(logicalX + screen.p(7), logicalY + screen.p(10), screen.p(20), screen.p(20), screen.color(disabledPackage ? RED : screen.dropdownRowColor(dropdown, index)));
             if (dropdown == Dropdown.WAYPOINT) {
                 String[] lines = screen.dropdownWaypointRowText(index);
                 int textW = logicalW - screen.p(58);
                 screen.ui.drawText(screen.trimToWidthEnd(tr, lines[0], screen.textMaxWidth(textW, 2.6f)), logicalX + screen.p(35), logicalY + screen.p(7), screen.color(TEXT), screen.ts(2.6f));
                 screen.ui.drawText(screen.trimToWidthEnd(tr, lines[1], screen.textMaxWidth(textW, 2.0f)), logicalX + screen.p(35), logicalY + screen.p(35), screen.color(TEXT_DIM), screen.ts(2.0f));
             } else {
-                screen.ui.drawText(screen.trimToWidthEnd(tr, screen.dropdownRowText(dropdown, index), screen.textMaxWidth(logicalW - screen.p(42), 3f)), logicalX + screen.p(33), logicalY + screen.p(8), screen.color(TEXT), screen.ts(3f));
+                int statusW = disabledPackage ? screen.p(86) : 0;
+                screen.ui.drawText(screen.trimToWidthEnd(tr, screen.dropdownRowText(dropdown, index), screen.textMaxWidth(logicalW - screen.p(42) - statusW, 3f)), logicalX + screen.p(33), logicalY + screen.p(8), screen.color(disabledPackage ? 0xFFFFB0B0 : TEXT), screen.ts(3f));
+                if (disabledPackage) {
+                    screen.ui.drawText("Disabled", logicalX + logicalW - screen.p(94), logicalY + screen.p(11), screen.color(RED), screen.ts(1.8f));
+                }
             }
             ctx.disableScissor();
         }

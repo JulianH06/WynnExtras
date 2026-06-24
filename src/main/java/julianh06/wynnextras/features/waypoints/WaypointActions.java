@@ -18,10 +18,12 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class WaypointActions {
+    public static final int MAX_PACKAGE_NAME_LENGTH = 50;
+
     private WaypointActions() {}
 
     public static WaypointPackage createPackage(String baseName) {
-        WaypointPackage pkg = new WaypointPackage(WaypointData.INSTANCE.generateUniqueName(cleanName(baseName, "New Package")));
+        WaypointPackage pkg = new WaypointPackage(uniquePackageName(null, cleanPackageName(baseName, "New Package")));
         pkg.description = "";
         WaypointData.ensureUncategorizedCategory(pkg);
         WaypointData.INSTANCE.packages.add(pkg);
@@ -32,7 +34,7 @@ public final class WaypointActions {
     public static void renamePackage(WaypointPackage pkg, String name) {
         if (pkg == null) return;
         String oldName = pkg.name;
-        String newName = uniquePackageName(pkg, cleanName(name, "New Package"));
+        String newName = uniquePackageName(pkg, cleanPackageName(name, "New Package"));
         if (newName.equals(oldName)) return;
 
         pkg.name = newName;
@@ -235,6 +237,11 @@ public final class WaypointActions {
         return clean.isBlank() ? fallback : clean;
     }
 
+    private static String cleanPackageName(String value, String fallback) {
+        String clean = cleanName(value, fallback);
+        return clean.length() > MAX_PACKAGE_NAME_LENGTH ? clean.substring(0, MAX_PACKAGE_NAME_LENGTH) : clean;
+    }
+
     public static String uniqueCategoryName(WaypointPackage pkg, String base) {
         return uniqueCategoryName(pkg, null, base);
     }
@@ -253,6 +260,7 @@ public final class WaypointActions {
     }
 
     private static String uniquePackageName(WaypointPackage self, String base) {
+        base = cleanPackageName(base, "New Package");
         String candidate = base;
         int i = 1;
         while (true) {
@@ -260,7 +268,9 @@ public final class WaypointActions {
             boolean exists = WaypointData.INSTANCE.packages.stream()
                     .anyMatch(pkg -> pkg != self && pkg.name != null && pkg.name.equals(check));
             if (!exists) return candidate;
-            candidate = base + " (" + i + ")";
+            String suffix = " (" + i + ")";
+            String prefix = base.substring(0, Math.max(0, Math.min(base.length(), MAX_PACKAGE_NAME_LENGTH - suffix.length())));
+            candidate = prefix + suffix;
             i++;
         }
     }
@@ -279,7 +289,7 @@ public final class WaypointActions {
 
     private static void normalizeImportedPackage(WaypointPackage pkg) {
         pkg.id = UUID.randomUUID().toString();
-        pkg.name = uniquePackageName(null, cleanName(pkg.name, "Imported Package"));
+        pkg.name = uniquePackageName(null, cleanPackageName(pkg.name, "Imported Package"));
         pkg.description = pkg.description == null ? "" : pkg.description;
         pkg.packageVersion = WaypointData.CURRENT_PACKAGE_VERSION;
         if (pkg.categories == null) pkg.categories = new ArrayList<>();
