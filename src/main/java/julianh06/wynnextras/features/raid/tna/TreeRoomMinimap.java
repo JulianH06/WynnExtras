@@ -25,8 +25,6 @@ import net.minecraft.util.Identifier;
 
 import java.util.Map;
 
-import static julianh06.wynnextras.features.raid.tna.TnaApi.reset;
-
 @WEModule
 public class TreeRoomMinimap {
     private static final int DEFAULT_SIZE = 130;
@@ -139,19 +137,17 @@ public class TreeRoomMinimap {
     public static void render(DrawContext context, RenderTickCounter renderTickCounter) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.world == null) {
-            reset();
+            TnaApi.reset();
             return;
         }
 
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
 
         if(!config.tnaTreeMap || config.showTreeMapOnlyWhileInsideOfTree && !TnaApi.inTree()) {
-            reset();
             return;
         }
 
         if(!config.showTreeMapEverywhere && !TnaApi.inTreeRoom()) {
-            reset();
             return;
         }
 
@@ -440,8 +436,10 @@ public class TreeRoomMinimap {
             int screenWidth = mc.getWindow().getScaledWidth();
             int screenHeight = mc.getWindow().getScaledHeight();
             int scaledW = (int) (WIDTH * getEffectiveScale());
-            xPos = Math.clamp(xPos, 0, screenWidth - scaledW);
-            yPos = Math.clamp(yPos, 0, screenHeight - scaledW);
+            int maxX = Math.max(0, screenWidth - scaledW);
+            int maxY = Math.max(0, screenHeight - scaledW);
+            xPos = Math.clamp(xPos, 0, maxX);
+            yPos = Math.clamp(yPos, 0, maxY);
         }
     }
 

@@ -24,6 +24,7 @@ public class TnaApi {
     private static Path path = null;
     private static boolean collectedHeartLast = false;
     private static boolean inTreeLastFrame = false;
+    private static boolean needsPathRecalculation = true;
 
 
     public static boolean inTreeRoom() {
@@ -75,11 +76,13 @@ public class TnaApi {
     }
 
     @SubscribeEvent
-    public void onWorldRedner(RenderWorldEvent event) {
+    public void onWorldRender(RenderWorldEvent event) {
         boolean inTree = inTree();
-        if (!inTree) path = null;
-        else if (collectedHeart && !collectedHeartLast) recalcPath();
-        else if (!inTreeLastFrame) recalcPath();
+        if (!inTree || !WynnExtrasConfig.INSTANCE.drawPathInTree) {
+            path = null;
+        } else if (needsPathRecalculation || collectedHeart != collectedHeartLast || !inTreeLastFrame) {
+            recalcPath();
+        }
 
         collectedHeartLast = collectedHeart;
         inTreeLastFrame = inTree;
@@ -89,13 +92,19 @@ public class TnaApi {
     }
 
     private void recalcPath() {
-        if (!inTree()) {
+        if (!inTree() || !WynnExtrasConfig.INSTANCE.drawPathInTree) {
             path = null;
+            needsPathRecalculation = false;
             return;
         }
         Grotto target = getTargetGrotto();
-        if (target == Grotto.None || !WynnExtrasConfig.INSTANCE.drawPathInTree) return;
+        if (target == Grotto.None) {
+            path = null;
+            needsPathRecalculation = false;
+            return;
+        }
         path = TreeGraph.TreeGraph.findPath(MinecraftClient.getInstance().player.getEntityPos(), target);
+        needsPathRecalculation = false;
     }
 
     public static void reset() {
@@ -103,6 +112,14 @@ public class TnaApi {
         playerInTree = "";
         playerGrotto = Grotto.None;
         heartGrotto = Grotto.None;
+        path = null;
+        collectedHeartLast = false;
+        inTreeLastFrame = false;
+        needsPathRecalculation = true;
+    }
+
+    private static void recalculatePath() {
+        needsPathRecalculation = true;
     }
 
     private static final Pattern ENTER_TREE_PATTERN =
@@ -132,6 +149,7 @@ public class TnaApi {
             playerInTree = treeMatcher.group(1);
             collectedHeart = false;
             playerGrotto = Grotto.Entrance;
+            recalculatePath();
             return;
         }
 
@@ -139,6 +157,7 @@ public class TnaApi {
         if (grottoMatcher.matches()) {
             playerInTree = grottoMatcher.group(1);
             playerGrotto = Grotto.from(grottoMatcher.group(2));
+            recalculatePath();
             return;
         }
 
@@ -146,6 +165,7 @@ public class TnaApi {
         if (heartMatcher.matches()) {
             collectedHeart = true;
             heartGrotto = Grotto.None;
+            recalculatePath();
             return;
         }
 
@@ -158,6 +178,7 @@ public class TnaApi {
         Matcher isoMatcher = ISOPTERA_PATTERN.matcher(message);
         if (isoMatcher.matches()) {
             heartGrotto = Grotto.from(isoMatcher.group(1));
+            recalculatePath();
         }
     }
 }
