@@ -149,6 +149,8 @@ public abstract class WEHandledScreen {
     public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
         x /= matrixScale;
         y /= matrixScale;
+        if (focusedWidget != null && focusedWidget.mouseDragged(x, y, button, dx, dy))
+            return true;
         for (Widget w : rootWidgets)
             if (w.mouseDragged(x, y, button, dx, dy))
                 return true;

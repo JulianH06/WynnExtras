@@ -174,6 +174,7 @@ public class TreeScreen extends WEScreen {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        ensureTreeSearchBar();
 
         PVScreen.mouseX = mouseX;
         PVScreen.mouseY = mouseY;
@@ -210,9 +211,7 @@ public class TreeScreen extends WEScreen {
         abilityWidget.setPlayerTree(playerTree);
         abilityWidget.setClassTree(tree);
         abilityWidget.setScrollOffset(rightScrollOffset);
-        if(searchBar != null) {
-            abilityWidget.setSearchInput(searchBar.getInput());
-        }
+        if(treeSearchBar != null) abilityWidget.setSearchInput(treeSearchBar.getInput());
         abilityWidget.setBounds(xStart, -100, 1800, 750);
     }
 
@@ -244,20 +243,20 @@ public class TreeScreen extends WEScreen {
             }
         }
 
+        if(abilityWidget != null) abilityWidget.drawNodeTooltip(ctx, mouseX, mouseY);
+    }
+
+    private void ensureTreeSearchBar() {
+        int sectionWidth = 900;
+        int x = (int) (screenWidth * ui.getScaleFactor() / 2 - sectionWidth) - 20;
         if(treeSearchBar == null) {
-            treeSearchBar = new TextInputWidget(x + sectionWidth, getLogicalHeight() - 50, sectionWidth, 40, 10, 13);
+            treeSearchBar = new TextInputWidget(x + sectionWidth + 43, getLogicalHeight() - 50, sectionWidth, 40, 10, 13);
             treeSearchBar.setBackgroundColor(null);
             treeSearchBar.setTextColor(CustomColor.fromHexString("FFFFFF"));
             treeSearchBar.setPlaceholder("Search for ability...");
             rootWidgets.add(treeSearchBar);
-            //treeSearchBar.draw(ctx, mouseX, mouseY, tickDelta, ui);
-        } else {
-            ui.drawButton(x + sectionWidth + 40, getLogicalHeight() - 50, sectionWidth, 50, treeSearchBar.isHovered());
-            treeSearchBar.setBounds(x + sectionWidth + 43, getLogicalHeight() - 50, sectionWidth, 40);
-            treeSearchBar.draw(ctx, mouseX, mouseY, tickDelta, ui);
         }
-
-        if(abilityWidget != null) abilityWidget.drawNodeTooltip(ctx, mouseX, mouseY);
+        treeSearchBar.setBounds(x + sectionWidth + 43, getLogicalHeight() - 50, sectionWidth, 40);
     }
 
     @Override
@@ -407,6 +406,7 @@ public class TreeScreen extends WEScreen {
                 nameInput.setBackgroundColor(null);
                 nameInput.setTextColor(CustomColor.fromHexString("FFFFFF"));
                 nameInput.setPlaceholder("<Click here to add a name>");
+                nameInput.setOnChange(value -> TreeData.getTree(data.name).visibleName = value);
                 children.add(nameInput);
             } else {
                 nameInput.setBounds(x, y, width - 140, 40);

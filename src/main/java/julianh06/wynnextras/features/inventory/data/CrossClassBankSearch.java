@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -33,8 +34,10 @@ public class CrossClassBankSearch {
     private static final int ACCOUNT_BANK_MAX_PAGES = 21;
     private static final int CHARACTER_BANK_MAX_PAGES = 12;
     private static final int SEARCH_THREADS = Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors() - 1));
+    private static final long CLASS_SELECTION_WEAPON_CACHE_MS = 30000L;
     private static final ExecutorService SEARCH_COORDINATOR = Executors.newSingleThreadExecutor(daemonThreadFactory("WynnExtras Bank Search Coordinator"));
     private static final ExecutorService SEARCH_EXECUTOR = Executors.newFixedThreadPool(SEARCH_THREADS, daemonThreadFactory("WynnExtras Bank Search"));
+    private static final Map<Path, CachedWeaponData> CLASS_SELECTION_WEAPON_CACHE = new ConcurrentHashMap<>();
 
     public record SearchRequest(
             Path configDir,
@@ -44,8 +47,16 @@ public class CrossClassBankSearch {
             boolean includeAccountBank,
             boolean allPages,
             Map<Integer, List<ItemStack>> accountBankPages,
-            int accountLastPage
+            int accountLastPage,
+            Map<Integer, List<ItemStack>> miscBucketPages,
+            int miscBucketLastPage,
+            Map<Integer, List<ItemStack>> bookshelfPages,
+            int bookshelfLastPage
     ) {}
+
+    private record CachedWeaponData(List<CharacterWeaponData> characters, long loadedAtMs) {}
+    private record CharacterWeaponData(String characterId, String nickname, int level, ItemStack weapon,
+                                       boolean weaponInInventory, long modifiedAtMs) {}
 
     /**
      * Result of a cross-class search
@@ -53,7 +64,9 @@ public class CrossClassBankSearch {
     public static class SearchResult {
         public enum Type {
             BANK_PAGE,
-            PLAYER_INVENTORY
+            PLAYER_INVENTORY,
+            MISC_BUCKET,
+            TOME_BOOKSHELF
         }
 
         public final String characterId;
@@ -102,6 +115,18 @@ public class CrossClassBankSearch {
         int accountLastPage = includeAccountBank && AccountBankData.INSTANCE != null
                 ? AccountBankData.INSTANCE.getLastPage()
                 : 0;
+        Map<Integer, List<ItemStack>> miscBucketPages = includeAccountBank
+                ? snapshotBankPages(MiscBucketData.INSTANCE)
+                : Collections.emptyMap();
+        int miscBucketLastPage = includeAccountBank && MiscBucketData.INSTANCE != null
+                ? MiscBucketData.INSTANCE.getLastPage()
+                : 0;
+        Map<Integer, List<ItemStack>> bookshelfPages = includeAccountBank
+                ? snapshotBankPages(BookshelfData.INSTANCE)
+                : Collections.emptyMap();
+        int bookshelfLastPage = includeAccountBank && BookshelfData.INSTANCE != null
+                ? BookshelfData.INSTANCE.getLastPage()
+                : 0;
 
         return new SearchRequest(
                 configDir,
@@ -111,7 +136,11 @@ public class CrossClassBankSearch {
                 includeAccountBank,
                 allPages,
                 accountBankPages,
-                accountLastPage
+                accountLastPage,
+                miscBucketPages,
+                miscBucketLastPage,
+                bookshelfPages,
+                bookshelfLastPage
         );
     }
 
@@ -131,29 +160,26 @@ public class CrossClassBankSearch {
                 ? null
                 : SearchQueryParser.parse(request.query());
 
+        List<SearchResult> miscBucketResults = Collections.emptyList();
+        List<SearchResult> bookshelfResults = Collections.emptyList();
         if (request.includeAccountBank()) {
             results.addAll(request.allPages()
                     ? getAccountBankPages(request.accountBankPages(), request.accountLastPage())
                     : searchAccountBank(request.accountBankPages(), parsedQuery));
+            miscBucketResults = request.allPages()
+                    ? getStoragePages(request.miscBucketPages(), request.miscBucketLastPage(), "__misc_bucket__", "Misc Bucket", SearchResult.Type.MISC_BUCKET)
+                    : searchStoragePages(request.miscBucketPages(), parsedQuery, "__misc_bucket__", "Misc Bucket", SearchResult.Type.MISC_BUCKET);
+            bookshelfResults = request.allPages()
+                    ? getStoragePages(request.bookshelfPages(), request.bookshelfLastPage(), "__tome_bookshelf__", "Tome Bookshelf", SearchResult.Type.TOME_BOOKSHELF)
+                    : searchStoragePages(request.bookshelfPages(), parsedQuery, "__tome_bookshelf__", "Tome Bookshelf", SearchResult.Type.TOME_BOOKSHELF);
         }
 
-        if (request.configDir() == null || !Files.exists(request.configDir())) return results;
-
-        List<Path> bankFiles = listCharacterBankFiles(request.configDir());
-        if (bankFiles.isEmpty()) return results;
-
-        List<CompletableFuture<List<SearchResult>>> futures = bankFiles.stream()
-                .map(file -> CompletableFuture.supplyAsync(() -> searchCharacterFile(file, request, parsedQuery), SEARCH_EXECUTOR))
-                .toList();
-
-        for (CompletableFuture<List<SearchResult>> future : futures) {
-            try {
-                results.addAll(future.join());
-            } catch (CompletionException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Error searching character bank file: " + e.getMessage());
-            }
+        if (request.configDir() != null && Files.exists(request.configDir())) {
+            results.addAll(searchCharacterFiles(listCharacterBankFiles(request.configDir()), request, parsedQuery));
         }
 
+        results.addAll(miscBucketResults);
+        results.addAll(bookshelfResults);
         return results;
     }
 
@@ -203,40 +229,24 @@ public class CrossClassBankSearch {
                 SearchResult inventoryResult = searchPlayerInventory(characterId, nickname, level, data, query);
                 if (inventoryResult != null) results.add(inventoryResult);
             }
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error parsing character bank file " + file + ": " + e.getMessage());
-        }
+        } catch (Exception ignored) { }
 
         return results;
     }
 
-    /**
-     * Get all character IDs that have bank data saved
-     */
-    public static List<String> getAllCharacterIds() {
-        List<String> ids = new ArrayList<>();
-
-        if (McUtils.player() == null) return ids;
+    public static ItemStack findLastHeldWeaponForClassSelection(String stableId, String name, String classType, int level,
+                                                                boolean requireUniqueBankMatch) {
+        if (McUtils.player() == null) return ItemStack.EMPTY;
 
         Path configDir = FabricLoader.getInstance().getConfigDir()
                 .resolve("wynnextras/" + McUtils.player().getUuid().toString());
+        if (!Files.exists(configDir)) return ItemStack.EMPTY;
 
-        if (!Files.exists(configDir)) return ids;
+        return findLastHeldWeapon(configDir, stableId, name, classType, level, requireUniqueBankMatch);
+    }
 
-        try (Stream<Path> files = Files.list(configDir)) {
-            files.filter(CrossClassBankSearch::isCharacterBankFile)
-                 .forEach(file -> {
-                     String characterId = getCharacterId(file);
-                     if (isNullClassName(characterId)) return;
-                     ids.add(characterId);
-                 });
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error listing character bank files: " + e.getMessage());
-        }
-
-        return ids;
+    public static void invalidateClassSelectionWeaponCache() {
+        CLASS_SELECTION_WEAPON_CACHE.clear();
     }
 
     /**
@@ -278,10 +288,126 @@ public class CrossClassBankSearch {
                 if (pageItems == null) pageItems = Collections.emptyList();
                 results.add(new SearchResult("__account__", "Account Bank", 0, pageNum, pageItems, pageItems));
             }
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error loading account bank pages: " + e.getMessage());
-        }
+        } catch (Exception ignored) { }
         return results;
+    }
+
+    private static List<SearchResult> getStoragePages(Map<Integer, List<ItemStack>> pages, int lastPage, String storageId, String storageName, SearchResult.Type type) {
+        List<SearchResult> results = new ArrayList<>();
+        try {
+            if (pages == null) return results;
+
+            int pageCount = Math.clamp(lastPage, pages.size(), CHARACTER_BANK_MAX_PAGES);
+            for (int pageNum = 0; pageNum < pageCount; pageNum++) {
+                List<ItemStack> pageItems = pages.get(pageNum);
+                if (pageItems == null) pageItems = Collections.emptyList();
+                results.add(new SearchResult(storageId, storageName, 0, pageNum, pageItems, pageItems, Collections.emptyList(), type));
+            }
+        } catch (Exception ignored) { }
+        return results;
+    }
+
+    private static ItemStack findLastHeldWeapon(Path configDir, String stableId, String name, String classType, int level,
+                                                boolean requireUniqueBankMatch) {
+        List<CharacterWeaponData> bankCharacters = getClassSelectionWeaponData(configDir);
+        int bestScore = 0;
+        int bestCount = 0;
+        ItemStack bestWeapon = ItemStack.EMPTY;
+        long bestModifiedAtMs = Long.MIN_VALUE;
+
+        for (CharacterWeaponData character : bankCharacters) {
+            int score = scoreClassSelectionBankMatch(character.characterId(), character.nickname(), character.level(),
+                    stableId, name, classType, level);
+            if (score <= 0) continue;
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestCount = 1;
+                bestWeapon = character.weaponInInventory() ? character.weapon().copy() : ItemStack.EMPTY;
+                bestModifiedAtMs = character.modifiedAtMs();
+            } else if (score == bestScore) {
+                bestCount++;
+                if (!requireUniqueBankMatch && shouldPreferHeldWeaponCandidate(character, bestWeapon, bestModifiedAtMs)) {
+                    bestWeapon = character.weapon().copy();
+                    bestModifiedAtMs = character.modifiedAtMs();
+                }
+            }
+        }
+
+        if (bestScore < 70) return ItemStack.EMPTY;
+        if (requireUniqueBankMatch && bestCount != 1) return ItemStack.EMPTY;
+        return bestWeapon;
+    }
+
+    private static boolean shouldPreferHeldWeaponCandidate(CharacterWeaponData candidate, ItemStack bestWeapon, long bestModifiedAtMs) {
+        if (!candidate.weaponInInventory()) return false;
+        if (bestWeapon == null || bestWeapon.isEmpty()) return true;
+        return candidate.modifiedAtMs() > bestModifiedAtMs;
+    }
+
+    private static List<CharacterWeaponData> getClassSelectionWeaponData(Path configDir) {
+        long now = System.currentTimeMillis();
+        CachedWeaponData cached = CLASS_SELECTION_WEAPON_CACHE.get(configDir);
+        if (cached != null && now - cached.loadedAtMs() < CLASS_SELECTION_WEAPON_CACHE_MS) {
+            return cached.characters();
+        }
+
+        List<CharacterWeaponData> characters = new ArrayList<>();
+        for (Path file : listCharacterBankFiles(configDir)) {
+            String characterId = getCharacterId(file);
+            if (isNullClassName(characterId)) continue;
+
+            try (Reader reader = Files.newBufferedReader(file)) {
+                BankData data = BankData.getGson().fromJson(reader, CharacterBankData.class);
+                if (data == null || isInvalidCharacterBank(characterId, data)) continue;
+
+                ItemStack weapon = data.getLastHeldWeapon();
+                boolean weaponInInventory = weapon != null && !weapon.isEmpty()
+                        && hasSavedPlayerInventory(data)
+                        && containsStack(data.getPlayerInventory(), weapon);
+                long modifiedAtMs = Files.getLastModifiedTime(file).toMillis();
+                characters.add(new CharacterWeaponData(
+                        characterId,
+                        data.getCharacterNickname(),
+                        data.getCharacterLevel(),
+                        weapon == null ? ItemStack.EMPTY : weapon.copy(),
+                        weaponInInventory,
+                        modifiedAtMs
+                ));
+            } catch (Exception ignored) { }
+        }
+
+        CLASS_SELECTION_WEAPON_CACHE.put(configDir, new CachedWeaponData(characters, now));
+        return characters;
+    }
+
+    private static int scoreClassSelectionBankMatch(String characterId, String nickname, int bankLevel, String stableId,
+                                                    String name, String classType, int level) {
+        String normalizedStableId = safeLower(stableId).replace("-", "");
+        String normalizedCharacterId = safeLower(characterId).replace("-", "");
+        if (!normalizedStableId.isEmpty() && !normalizedCharacterId.isEmpty()
+                && (normalizedStableId.equals(normalizedCharacterId)
+                || normalizedStableId.contains(normalizedCharacterId)
+                || normalizedCharacterId.contains(normalizedStableId))) return 100;
+
+        if (level > 0 && bankLevel == level) {
+            String normalizedNickname = normalizeClassSelectionMatchText(nickname);
+            String normalizedName = normalizeClassSelectionMatchText(name);
+            String normalizedClassType = normalizeClassSelectionMatchText(classType);
+            if (!normalizedNickname.isEmpty()
+                    && (normalizedNickname.equals(normalizedName) || normalizedNickname.equals(normalizedClassType))) {
+                return 70;
+            }
+        }
+        return 0;
+    }
+
+    private static String safeLower(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String normalizeClassSelectionMatchText(String value) {
+        return safeLower(value).replaceAll("[^a-z0-9]", "");
     }
 
     /**
@@ -315,9 +441,29 @@ public class CrossClassBankSearch {
                     results.add(new SearchResult("__account__", "Account Bank", 0, pageNum, matchingItems, pageItems));
                 }
             }
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error searching account bank: " + e.getMessage());
-        }
+        } catch (Exception ignored) { }
+        return results;
+    }
+
+    private static List<SearchResult> searchStoragePages(Map<Integer, List<ItemStack>> pages, SearchQueryParser.ParsedQuery query, String storageId, String storageName, SearchResult.Type type) {
+        List<SearchResult> results = new ArrayList<>();
+        try {
+            if (pages == null) return results;
+
+            for (Map.Entry<Integer, List<ItemStack>> entry : pages.entrySet()) {
+                int pageNum = entry.getKey();
+                List<ItemStack> pageItems = entry.getValue();
+                if (pageItems == null) continue;
+
+                List<ItemStack> matchingItems = new ArrayList<>();
+                for (ItemStack stack : pageItems) {
+                    if (matchesStack(stack, query)) matchingItems.add(stack);
+                }
+                if (!matchingItems.isEmpty()) {
+                    results.add(new SearchResult(storageId, storageName, 0, pageNum, matchingItems, pageItems, Collections.emptyList(), type));
+                }
+            }
+        } catch (Exception ignored) { }
         return results;
     }
 
@@ -334,19 +480,49 @@ public class CrossClassBankSearch {
                 : searchCharacterBank(file, characterId, parsedQuery, request.currentCharacterId());
     }
 
+    private static List<SearchResult> searchCharacterFiles(List<Path> bankFiles, SearchRequest request, SearchQueryParser.ParsedQuery parsedQuery) {
+        List<SearchResult> results = new ArrayList<>();
+        if (bankFiles.isEmpty()) return results;
+
+        String currentCharacterId = request.currentCharacterId();
+        if (request.includeCurrentCharacter() && currentCharacterId != null) {
+            for (Path file : bankFiles) {
+                if (Objects.equals(getCharacterId(file), currentCharacterId)) {
+                    results.addAll(searchCharacterFile(file, request, parsedQuery));
+                    break;
+                }
+            }
+        }
+
+        List<CompletableFuture<List<SearchResult>>> futures = bankFiles.stream()
+                .filter(file -> !Objects.equals(getCharacterId(file), currentCharacterId))
+                .map(file -> CompletableFuture.supplyAsync(() -> searchCharacterFile(file, request, parsedQuery), SEARCH_EXECUTOR))
+                .toList();
+
+        for (CompletableFuture<List<SearchResult>> future : futures) {
+            try {
+                results.addAll(future.join());
+            } catch (CompletionException ignored) { }
+        }
+
+        return results;
+    }
+
     private static List<Path> listCharacterBankFiles(Path configDir) {
         try (Stream<Path> files = Files.list(configDir)) {
             return files
                     .filter(CrossClassBankSearch::isCharacterBankFile)
                     .toList();
         } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error listing character bank files: " + e.getMessage());
             return Collections.emptyList();
         }
     }
 
     private static Map<Integer, List<ItemStack>> snapshotAccountBankPages() {
-        AccountBankData data = AccountBankData.INSTANCE;
+        return snapshotBankPages(AccountBankData.INSTANCE);
+    }
+
+    private static Map<Integer, List<ItemStack>> snapshotBankPages(BankData data) {
         if (data == null || data.getBankPages() == null) return Collections.emptyMap();
 
         return data.getBankPages().entrySet().stream()
@@ -381,17 +557,14 @@ public class CrossClassBankSearch {
         try (Reader reader = Files.newBufferedReader(file)) {
             BankData data = BankData.getGson().fromJson(reader, CharacterBankData.class);
             if (data == null || data.getBankPages() == null) {
-                WynnExtras.LOGGER.info("[WynnExtras] No bank data for character: " + characterId);
                 return results;
             }
             if (isInvalidCharacterBank(characterId, data)) {
-                WynnExtras.LOGGER.info("[WynnExtras] Skipping invalid character bank: " + characterId);
                 return results;
             }
 
             String nickname = data.getCharacterNickname();
             int level = data.getCharacterLevel();
-            WynnExtras.LOGGER.info("[WynnExtras] Character " + characterId + " (" + nickname + " Lv." + level + ") has " + data.getBankPages().size() + " pages");
 
             int pageCount = Math.min(Math.max(data.getLastPage(), data.getBankPages().size()), CHARACTER_BANK_MAX_PAGES);
             for (int pageNum = 0; pageNum < pageCount; pageNum++) {
@@ -411,12 +584,7 @@ public class CrossClassBankSearch {
                         SearchResult.Type.PLAYER_INVENTORY
                 ));
             }
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error reading character bank file " + file + ": " + e.getMessage());
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error parsing character bank file " + file + ": " + e.getMessage());
-            e.printStackTrace();
-        }
+        } catch (Exception ignored) { }
 
         return results;
     }
@@ -467,6 +635,15 @@ public class CrossClassBankSearch {
         return false;
     }
 
+    private static boolean containsStack(List<ItemStack> items, ItemStack target) {
+        if (items == null || target == null || target.isEmpty()) return false;
+        for (ItemStack stack : items) {
+            if (stack == null || stack.isEmpty()) continue;
+            if (stack.getCount() == target.getCount() && ItemStack.areItemsAndComponentsEqual(stack, target)) return true;
+        }
+        return false;
+    }
+
     private static boolean isCharacterBankFile(Path path) {
         String fileName = path.getFileName().toString();
         return fileName.startsWith(CHARACTER_BANK_PREFIX) && fileName.endsWith(JSON_SUFFIX);
@@ -478,7 +655,7 @@ public class CrossClassBankSearch {
     }
 
     private static boolean isInvalidCharacterBank(String characterId, BankData data) {
-        return isNullClassName(characterId) || isNullClassName(data.getCharacterNickname());
+        return isNullClassName(characterId);
     }
 
     private static boolean isNullClassName(String value) {

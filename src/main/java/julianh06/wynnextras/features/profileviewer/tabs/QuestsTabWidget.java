@@ -45,6 +45,7 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
         if(questSearchBar == null) {
             questSearchBar = new Searchbar( -1, -1, -1, -1);
             questSearchBar.setSearchText("Search...");
+            addChild(questSearchBar);
         }
 
         if(selectedCharacter == null) {
@@ -82,11 +83,7 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
         PVScreen.DarkModeToggleWidget.drawImageWithFade(questBackgroundTextureDark, questBackgroundTexture, x + 30, y + 90, 1740, 600, ui);
         PVScreen.DarkModeToggleWidget.drawImageWithFade(questSearchbarTextureDark, questSearchbarTexture, x + 600F, y + height, 1050, 60, ui);
 
-        questSearchBar.setX((int) ((x + 200 * 3) / ui.getScaleFactor()));
-        questSearchBar.setY((int) ((y + height + 7 * 3) / ui.getScaleFactor()));
-        questSearchBar.setWidth((int) (350 * 3 / ui.getScaleFactor()));
-        questSearchBar.setHeight((int) (14 * 3 / ui.getScaleFactor()));
-        questSearchBar.drawWithoutBackgroundButWithSearchtext(ctx, CustomColor.fromHexString("FFFFFF"), (float) ui.getScaleFactor());
+        questSearchBar.setBounds(x + 200 * 3, y + height + 7 * 3, 350 * 3, 14 * 3);
 
         int i = 0;
         List<String> allQuestsCopy = new ArrayList<>(List.copyOf(allQuests));

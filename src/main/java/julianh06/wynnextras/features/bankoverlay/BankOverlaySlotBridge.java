@@ -70,6 +70,24 @@ public final class BankOverlaySlotBridge {
         PREVIOUS_EXPOSED_SLOTS.clear();
     }
 
+    public static Slot getExposedSlotAt(HandledScreen<?> screen, double mouseX, double mouseY) {
+        if (screen == null) return null;
+
+        HandledScreenAccessor accessor = (HandledScreenAccessor) screen;
+        int screenX = accessor.getX();
+        int screenY = accessor.getY();
+
+        for (Slot slot : EXPOSED_SLOTS) {
+            int slotX = screenX + slot.x;
+            int slotY = screenY + slot.y;
+            if (mouseX >= slotX && mouseX < slotX + 16 && mouseY >= slotY && mouseY < slotY + 16) {
+                return slot;
+            }
+        }
+
+        return null;
+    }
+
     public static void restoreAll() {
         for (Map.Entry<Slot, SlotPosition> entry : ORIGINAL_POSITIONS.entrySet()) {
             move(entry.getKey(), entry.getValue().x(), entry.getValue().y());

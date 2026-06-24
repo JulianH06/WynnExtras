@@ -93,16 +93,16 @@ public class WynnExtrasConfig {
     public static final String CLASS_SELECTION_LINE_LOCATION = "location";
     public static final String CLASS_SELECTION_LINE_PLAYTIME = "playtime";
     public static final String CLASS_SELECTION_LINE_CONTENT_PROGRESS = "content_progress";
+    public static final String CLASS_SELECTION_LINE_LAST_HELD_WEAPON = "last_held_weapon";
     public static final List<String> CLASS_SELECTION_BASE_LINE_IDS = List.of(
             CLASS_SELECTION_LINE_LEVEL,
-            CLASS_SELECTION_LINE_PLAYTIME,
-            CLASS_SELECTION_LINE_LOCATION,
-            CLASS_SELECTION_LINE_CONTENT_PROGRESS);
+            CLASS_SELECTION_LINE_PLAYTIME);
     public static final List<String> CLASS_SELECTION_LINE_IDS = List.of(
             CLASS_SELECTION_LINE_LEVEL,
             CLASS_SELECTION_LINE_LOCATION,
             CLASS_SELECTION_LINE_PLAYTIME,
-            CLASS_SELECTION_LINE_CONTENT_PROGRESS);
+            CLASS_SELECTION_LINE_CONTENT_PROGRESS,
+            CLASS_SELECTION_LINE_LAST_HELD_WEAPON);
     public static final Map<String, String> CLASS_SELECTION_LINE_NAMES = createClassSelectionLineNames();
 
     private static final Path CONFIG_PATH = FabricLoader.getInstance()
@@ -166,7 +166,7 @@ public class WynnExtrasConfig {
         premades.put("+2 Slimey Goo|+2 Goos", twoGoo);
         premades.put("Another Soul must be given!|NEXT SOUL", soul);
         premades.put("+1 Void Matter|+1 Void Matter", voidMatter);
-        premades.put("The Void Holes have begun to desetabilize!|KILL THE VOID HOLES", fourOutOfFiveVoidMatter);
+        premades.put("The Void Holes have begun to destabilize!|KILL THE VOID HOLES", fourOutOfFiveVoidMatter);
         premades.put("+1 Light Crystal|+1 Crystal", oneLightCrystal);
         premades.put("+2 Light Crystal|+2 Crystals", twoLightCrystal);
         premades.put("The players on the|UPPER PLATFORM SPAWNED", notgUpperPlatform);
@@ -197,11 +197,13 @@ public class WynnExtrasConfig {
     public boolean toggleBankOverlay = true;
     public boolean smoothScrollToggle = true;
     public boolean bankQuickToggle = true;
+    public boolean bankAllCharactersBrowseMode = false;
     public int bankOverlayMaxRows = 3;
     public int bankOverlayMaxColumns = 3;
     public boolean bankOverlayHideEmptyRows = false;
     public boolean bankBagOverlay = false;
     public boolean showTotalBagsInBankOverlay = false;
+    public int maxAnnotationCalculationsPerFrame = 75;
     public boolean showWeight = false;
     public boolean showScales = false;
     public boolean scaleBackgroundEnabled = false;
@@ -282,6 +284,16 @@ public class WynnExtrasConfig {
     public int territoryMenuKey = org.lwjgl.glfw.GLFW.GLFW_KEY_I;
     public boolean guildBankKeyEnabled = false;
     public int guildBankKey = org.lwjgl.glfw.GLFW.GLFW_KEY_Y;
+    public int waypointEditFreeMoveToggleKey = GLFW.GLFW_KEY_I;
+    public int waypointEditAddKey = GLFW.GLFW_KEY_ENTER;
+    public int waypointEditRemoveKey = GLFW.GLFW_KEY_BACKSPACE;
+    public int waypointEditExistingKey = GLFW.GLFW_KEY_E;
+    public int waypointEditForwardKey = GLFW.GLFW_KEY_W;
+    public int waypointEditLeftKey = GLFW.GLFW_KEY_A;
+    public int waypointEditBackwardKey = GLFW.GLFW_KEY_S;
+    public int waypointEditRightKey = GLFW.GLFW_KEY_D;
+    public int waypointEditUpKey = GLFW.GLFW_KEY_SPACE;
+    public int waypointEditDownKey = GLFW.GLFW_KEY_LEFT_SHIFT;
     public boolean provokeTimerToggle = false;
     public Map<String, Long> raidPBs = new HashMap<>();
     public boolean chiropTimer = false;
@@ -614,6 +626,7 @@ public class WynnExtrasConfig {
         names.put(CLASS_SELECTION_LINE_LOCATION, "Location");
         names.put(CLASS_SELECTION_LINE_PLAYTIME, "Playtime");
         names.put(CLASS_SELECTION_LINE_CONTENT_PROGRESS, "Content Progress");
+        names.put(CLASS_SELECTION_LINE_LAST_HELD_WEAPON, "Last Held Weapon");
         return Collections.unmodifiableMap(names);
     }
 
@@ -628,8 +641,11 @@ public class WynnExtrasConfig {
         boolean showContentProgressLine = classSelectionContentProgressStyle == ClassSelectionContentProgressStyle.LINE;
         Set<String> configuredIds = new HashSet<>(classSelectionActiveLines);
         configuredIds.addAll(classSelectionAvailableLines);
-        for (String id : CLASS_SELECTION_BASE_LINE_IDS) {
-            if (!configuredIds.contains(id)) classSelectionAvailableLines.add(id);
+        for (String id : CLASS_SELECTION_LINE_IDS) {
+            if (!configuredIds.contains(id)) {
+                classSelectionAvailableLines.add(id);
+                configuredIds.add(id);
+            }
         }
         if (showContentProgressLine && !configuredIds.contains(CLASS_SELECTION_LINE_CONTENT_PROGRESS)) {
             classSelectionAvailableLines.add(CLASS_SELECTION_LINE_CONTENT_PROGRESS);

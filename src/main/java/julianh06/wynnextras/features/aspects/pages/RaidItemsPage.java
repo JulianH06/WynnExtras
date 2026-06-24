@@ -165,7 +165,7 @@ public class RaidItemsPage extends PageWidget {
 
         int widgetsWidth = widgetCount * widgetWidth + Math.max(0, widgetCount - 1) * H_WIDGET_SPACING;
         int widgetX = showHorizontalScrollBar ? H_WIDGET_SPACING - (int) hScrollOffset : (int) ((scaledWidth - widgetsWidth) / 2f);
-        for (RaidItemsWidget widget : widgets) {
+        for (RaidItemsWidget widget : getWidgetsSnapshot()) {
             widget.setBounds(widgetX, widgetY, widgetWidth, widgetHeight);
             widget.draw(ctx, mouseX, mouseY, tickDelta, ui);
             widgetX += widgetWidth + H_WIDGET_SPACING;
@@ -199,7 +199,7 @@ public class RaidItemsPage extends PageWidget {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        for (RaidItemsWidget widget : widgets) {
+        for (RaidItemsWidget widget : getWidgetsSnapshot()) {
             if (widget.mouseClicked(mx, my, button)) return true;
         }
 
@@ -218,7 +218,7 @@ public class RaidItemsPage extends PageWidget {
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
-        for (RaidItemsWidget widget : widgets) {
+        for (RaidItemsWidget widget : getWidgetsSnapshot()) {
             widget.mouseReleased(mx, my, button);
         }
 
@@ -240,7 +240,7 @@ public class RaidItemsPage extends PageWidget {
             return true;
         }
 
-        for (RaidItemsWidget widget : widgets) {
+        for (RaidItemsWidget widget : getWidgetsSnapshot()) {
             if (widget.mouseScrolled(mx, my, delta)) return true;
         }
         return false;
@@ -253,6 +253,10 @@ public class RaidItemsPage extends PageWidget {
         }
     }
 
+    private static List<RaidItemsWidget> getWidgetsSnapshot() {
+        return new ArrayList<>(widgets);
+    }
+
     private static void fetchOfficialLootPools(boolean forceRefresh) {
         if (fetchStarted && !forceRefresh) return;
 
@@ -260,8 +264,7 @@ public class RaidItemsPage extends PageWidget {
         loading = true;
 
         WynncraftApiHandler.fetchOfficialLootPools(forceRefresh).thenAccept(result -> {
-            raidRewards.clear();
-            available = false;
+            Map<Raid, List<LootrunLootPoolData.LootrunItem>> newRaidRewards = new java.util.HashMap<>();
 
             if (result != null) {
                 for (WynncraftApiHandler.ApiLootPool pool : result) {
@@ -275,12 +278,17 @@ public class RaidItemsPage extends PageWidget {
                             .filter(reward -> !isIgnoredRaidReward(reward))
                             .map(LootrunLootPoolPage::toLootrunItem)
                             .toList();
-                    raidRewards.put(raid, items);
-                    if (!items.isEmpty()) available = true;
+                    newRaidRewards.put(raid, items);
                 }
             }
 
-            loading = false;
+            boolean newAvailable = newRaidRewards.values().stream().anyMatch(items -> !items.isEmpty());
+            MinecraftClient.getInstance().execute(() -> {
+                raidRewards.clear();
+                raidRewards.putAll(newRaidRewards);
+                available = newAvailable;
+                loading = false;
+            });
         });
     }
 

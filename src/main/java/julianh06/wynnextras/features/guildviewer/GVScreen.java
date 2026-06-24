@@ -195,9 +195,9 @@ public class GVScreen extends WEScreen {
         }
 
         if (searchBar != null) {
-            searchBar.setX((int) ((xStart + 89 * 3) / ui.getScaleFactor()));
-            searchBar.setY((int) ((yStart + backgroundImageWidget.getHeight() + 20) / scaleFactor) + 1);
-            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"), (float) ui.getScaleFactor());
+            searchBar.setBounds(xStart + 89 * 3, yStart + backgroundImageWidget.getHeight() + 20, 300, 42);
+            if (!rootWidgets.contains(searchBar)) addRootWidget(searchBar);
+            searchBar.draw(context, mouseX, mouseY, delta, ui);
         }
 
         if (GV.currentGuildData == null) return;

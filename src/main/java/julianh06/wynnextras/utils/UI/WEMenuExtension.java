@@ -149,6 +149,7 @@ public abstract class WEMenuExtension {
     }
 
     public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        if (focusedWidget != null && focusedWidget.mouseDragged(x, y, button, dx, dy)) return true;
         for (Widget w : rootWidgets)
             if (w.mouseDragged(x, y, button, dx, dy)) return true;
         return false;

@@ -39,6 +39,8 @@ public abstract class WEScreen extends Screen {
     protected double getTargetScaleFactor() { return -1; }
     protected int getMinLogicalWidth()  { return 0; }
     protected int getMinLogicalHeight() { return 0; }
+    protected boolean shouldRenderBlur() { return true; }
+    protected boolean shouldRenderBackground() { return true; }
     protected double actualScale = 1.0;
 
     public final List<Widget> rootWidgets = new ArrayList<>();
@@ -95,9 +97,29 @@ public abstract class WEScreen extends Screen {
     }
 
     @Override
+    public void blur() {
+        if (shouldRenderBlur()) super.blur();
+    }
+
+    @Override
+    public void applyBlur(DrawContext context) {
+        if (shouldRenderBlur()) super.applyBlur(context);
+    }
+
+    @Override
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
+        if (shouldRenderBackground()) super.renderBackground(context, mouseX, mouseY, deltaTicks);
+    }
+
+    @Override
+    public void renderInGameBackground(DrawContext context) {
+        if (shouldRenderBackground()) super.renderInGameBackground(context);
+    }
+
+    @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         try {
-            if (super.client != null) super.applyBlur(context);
+            if (super.client != null) applyBlur(context);
         } catch (Exception ignored) {}
 
         this.drawContext = context;
@@ -108,7 +130,7 @@ public abstract class WEScreen extends Screen {
         int mx = (int)(mouseX / matrixScale);
         int my = (int)(mouseY / matrixScale);
 
-        ui.drawBackground();
+        if (shouldRenderBackground()) ui.drawBackground();
 
         context.getMatrices().pushMatrix();
         context.getMatrices().scale((float) matrixScale, (float) matrixScale);
@@ -218,14 +240,11 @@ public abstract class WEScreen extends Screen {
         double mouseY = click.y() / matrixScale;
         int button = click.button();
 
-
         if(ui == null) return false;
+        if (focusedWidget != null && focusedWidget.mouseDragged(mouseX, mouseY, button, dx, dy)) return true;
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             Widget w = rootWidgets.get(i);
-            if (w.contains((int) mouseX, (int) mouseY)) {
-                w.mouseDragged(mouseX, mouseY, button, dx, dy);
-                return true;
-            }
+            if (w.mouseDragged(mouseX, mouseY, button, dx, dy)) return true;
         }
         return super.mouseDragged(click, dx, dy);
     }

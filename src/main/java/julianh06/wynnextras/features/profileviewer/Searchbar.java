@@ -1,98 +1,76 @@
 package julianh06.wynnextras.features.profileviewer;
 
-import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.render.FontRenderer;
-import com.wynntils.utils.render.RenderUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.TextShadow;
-import com.wynntils.utils.render.type.VerticalAlignment;
-import julianh06.wynnextras.event.KeyInputEvent;
-import julianh06.wynnextras.features.inventory.BankOverlay;
-import julianh06.wynnextras.utils.overlays.EasyTextInput;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
+import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.UI.TextInputWidget;
+import net.minecraft.sound.SoundEvents;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.concurrent.atomic.AtomicLong;
-
-public class Searchbar extends EasyTextInput {
+public class Searchbar extends TextInputWidget {
     public Searchbar(int x, int y, int height, int width) {
-        super(x, y, height, width);
+        super(x, y, width, height, 9, 6, 3f);
+        setBackgroundColor(null);
+        setTextColor(CustomColor.fromHexString("FFFFFF"));
+        setPlaceholderColor(CustomColor.fromHexString("AAAAAA"));
+        setCursorColor(CustomColor.fromHexString("FFFFFF"));
+        setSelectionColor(CustomColor.fromInt(0xAA3366CC));
     }
-    int scaleFactor;
 
-    @Override
     public void click() {
-        if(!isActive) {
-            isActive = true;
-            BankOverlay.setActiveTextInput(this);
-            cursorPos = input.length();
-            color = CustomColor.fromHexString("FFEA00");
-            return;
-        }
+        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        setFocused(true);
     }
 
-    @Override
-    public void onInput(KeyInputEvent event) {
-        if(!isActive) return;
-
-        AtomicLong now = new AtomicLong();
-        int action = event.getAction();
-        int key = event.getKey();
-        int scancode = event.getScanCode();
-        //char character = event.getCharacter();
-
-        now.set(System.currentTimeMillis());
-
-        if (action == GLFW.GLFW_RELEASE) {
-            cooldowns.remove(key);
-        } else {
-            // Backspace
-            if (key == GLFW.GLFW_KEY_BACKSPACE && cursorPos > 0) {
-                input = removeAt(cursorPos, input);
-                cursorPos--;
-            }
-            // Delete
-            else if (key == GLFW.GLFW_KEY_DELETE && cursorPos < input.length()) {
-                input = removeAt(cursorPos + 1, input);
-            }
-            // left arrow
-            else if (key == GLFW.GLFW_KEY_LEFT && cursorPos > 0) {
-                cursorPos--;
-            }
-            // right arrow
-            else if (key == GLFW.GLFW_KEY_RIGHT && cursorPos < input.length()) {
-                cursorPos++;
-            }
-        }
+    public void setActive(boolean active) {
+        setFocused(active);
     }
 
-    @Override
-    public void drawWithoutBackground(DrawContext context, CustomColor color) {
-        drawWithoutBackground(context, color, (float) MinecraftClient.getInstance().getWindow().getScaleFactor());
-    }
-
-    public void drawWithoutBackground(DrawContext context, CustomColor color, float scaleFactor) {
-        if(input == null) return;
-        long now = System.currentTimeMillis();
-        if(input.isEmpty() && !isActive) {
-            //context.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, searchText, x + 3, y + 1, CustomColor.fromHexString("FFFFFF").asInt());
-        } else {
-            if(cursorPos > input.length()) {
-                cursorPos = input.length();
-            }
-            FontRenderer.getInstance().renderText(context, StyledText.fromComponent(Text.of(input)), x + (float) (3 * 3) / scaleFactor, y + (float) 3 / scaleFactor, color, HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1f * 3 / scaleFactor);
-            if(now - lastBlink > 500) {
-                blinkToggle = !blinkToggle;
-                lastBlink = now;
-            }
-            if(blinkToggle && isActive) RenderUtils.drawLine(context, CustomColor.fromHexString("FFFFFF"), x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y, x + (float) (4 * 3) / scaleFactor + (float) (MinecraftClient.getInstance().textRenderer.getWidth(input.substring(0, cursorPos)) * 3) / scaleFactor, y + (float) (10 * 3) / scaleFactor, 1f * 3 / scaleFactor);
-        }
+    public boolean isActive() {
+        return isFocused();
     }
 
     public void setSearchText(String value) {
-        super.searchText = value;
+        setPlaceholder(value);
+    }
+
+    public void setInputAndKeepStartVisible(String value) {
+        setInput(value);
+        cursorPos = 0;
+        selectionAnchor = 0;
+        horizontalTextOffset = 0;
+    }
+
+    public void setX(int value) {
+        setPosition(value, getY());
+    }
+
+    public void setY(int value) {
+        setPosition(getX(), value);
+    }
+
+    public void setWidth(int value) {
+        setSize(value, getHeight());
+    }
+
+    public void setHeight(int value) {
+        setSize(getWidth(), value);
+    }
+
+    public boolean isClickInBounds(int mouseX, int mouseY) {
+        return mouseX >= getX()
+                && mouseY >= getY()
+                && mouseX < getX() + getWidth()
+                && mouseY < getY() + getHeight();
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT && isClickInBounds((int) mx, (int) my)) {
+            clearInput();
+            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            setFocused(true);
+            return true;
+        }
+        return super.mouseClicked(mx, my, button);
     }
 }

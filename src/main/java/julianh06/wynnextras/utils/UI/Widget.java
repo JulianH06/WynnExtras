@@ -65,7 +65,7 @@ public abstract class Widget {
         children.add(child);
     }
 
-    public void addAllChildren(List<Widget> children) {
+    public void addAllChildren(List<? extends Widget> children) {
         if(children == null || children.isEmpty()) return;
         for(Widget child : children) {
             child.parent = this;
@@ -85,7 +85,7 @@ public abstract class Widget {
     }
 
     // ---- Drawing Lifecycle ----
-    public final void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
+    public void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
         this.ui = ui;
         if(!visible || this.ui == null) return;
         // update hover state for this widget
@@ -141,7 +141,13 @@ public abstract class Widget {
         return false;
     }
 
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) { return false; }
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (!visible || !enabled) return false;
+        for (int i = children.size() - 1; i >= 0; i--) {
+            if (children.get(i).mouseDragged(mouseX, mouseY, button, deltaX, deltaY)) return true;
+        }
+        return false;
+    }
 
     public boolean mouseScrolled(double mx, double my, double delta) {
         if (!visible) return false;
@@ -210,5 +216,13 @@ public abstract class Widget {
 
     public void setUi(UIUtils ui) {
         this.ui = ui;
+    }
+
+    public UIUtils getUi() {
+        return ui;
+    }
+
+    public void setHovered(Boolean hovered) {
+        this.hovered = hovered;
     }
 }

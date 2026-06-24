@@ -43,7 +43,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public class PVScreen extends WEScreen {
-    @Override protected double getTargetScaleFactor() { return 2.5; }
+    @Override protected double getTargetScaleFactor() { return 2.0; }
     @Override protected int getMinLogicalWidth()  { return 2100; }
     @Override protected int getMinLogicalHeight() { return 870; }
 
@@ -386,22 +386,17 @@ public class PVScreen extends WEScreen {
         //Player searchbar
         DarkModeToggleWidget.drawImageWithFade(openInBrowserButtonTextureWDark, openInBrowserButtonTextureW, xStart + 267, yStart + currentTabWidget.getHeight(), 300, 60, ui);
 
-        if(searchBar == null || searchBar.getInput().equals("Unknown user")) {
+        String searchBarValue = getCurrentSearchBarValue();
+        if(searchBar == null) {
             searchBar = new Searchbar(-1, -1, (int) (14 * 3 / scaleFactor), (int) (100 * 3 / scaleFactor));
-            if(PV.currentPlayerData == null) {
-                searchBar.setInput("Unknown user");
-            } else if(PV.currentPlayerData.getUsername() == null) {
-                searchBar.setInput("Unknown user");
-            } else {
-                searchBar.setInput(PV.currentPlayerData.getUsername());
-            }
+            searchBar.setInputAndKeepStartVisible(searchBarValue);
+        } else if (!searchBar.isFocused() && shouldRefreshSearchBarValue(searchBar.getInput(), searchBarValue)) {
+            searchBar.setInputAndKeepStartVisible(searchBarValue);
         }
 
         if (searchBar != null) {
-            searchBar.setX((int) ((xStart + 89 * 3) / ui.getScaleFactor()));
-            searchBar.setY((int) ((yStart + currentTabWidget.getHeight() + 8 * 3) / ui.getScaleFactor()));
-            searchBar.drawWithoutBackground(context, CustomColor.fromHexString("FFFFFF"), (float) ui.getScaleFactor());
-            //searchBar.draw(context);
+            searchBar.setBounds(xStart + 89 * 3, yStart + currentTabWidget.getHeight() + 20, 300, 42);
+            if (!rootWidgets.contains(searchBar)) addRootWidget(searchBar);
         }
 
         for (Widget w : rootWidgets) {
@@ -428,6 +423,24 @@ public class PVScreen extends WEScreen {
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
 
+    }
+
+    private String getCurrentSearchBarValue() {
+        if(PV.currentPlayerData != null && PV.currentPlayerData.getUsername() != null) {
+            return PV.currentPlayerData.getUsername();
+        }
+        if(player != null && !player.isBlank() && !player.equals("null")) {
+            return player;
+        }
+        return "Unknown user";
+    }
+
+    private boolean shouldRefreshSearchBarValue(String currentValue, String newValue) {
+        if(Objects.equals(currentValue, newValue)) return false;
+        return currentValue == null
+                || currentValue.isEmpty()
+                || currentValue.equals("Unknown user")
+                || currentValue.equals(player);
     }
 
     public static Identifier getProfTexture(String prof) {
@@ -741,35 +754,10 @@ public class PVScreen extends WEScreen {
     }
 
     public static void onClick() {
-        if(openInBrowserButton == null || searchBar == null || (currentTab == Tab.Quests && questSearchBar == null) || (currentTab == Tab.Tree && treeSearchBar == null)) return;
+        if(openInBrowserButton == null) return;
         if(openInBrowserButton.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             openInBrowserButton.click();
-        }
-        if(searchBar != null) {
-            if (searchBar.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                searchBar.click();
-            } else {
-                searchBar.setActive(false);
-            }
-        }
-        if(questSearchBar != null) {
-            if (questSearchBar.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                questSearchBar.click();
-            } else {
-                questSearchBar.setActive(false);
-            }
-        }
-
-        if(treeSearchBar != null) {
-            if (treeSearchBar.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-                treeSearchBar.click();
-            } else {
-                treeSearchBar.setActive(false);
-            }
         }
     }
 
@@ -900,7 +888,7 @@ public class PVScreen extends WEScreen {
 
         @Override
         public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-            return false;
+            return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
         }
 
         @Override
