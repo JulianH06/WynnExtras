@@ -1,8 +1,7 @@
-package julianh06.wynnextras.features.raid;
+package julianh06.wynnextras.features.raid.tna;
 
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.FontRenderer;
 import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.Texture;
@@ -12,9 +11,7 @@ import com.wynntils.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.utils.Pair;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -25,13 +22,8 @@ import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @WEModule
 public class TreeRoomMinimap {
@@ -56,40 +48,35 @@ public class TreeRoomMinimap {
     private static int dragOffsetX = 0;
     private static int dragOffsetY = 0;
 
-    private static final Map<String, Pair<Integer, Integer>> heartPositionMap = Map.of(
-            "Gray", new Pair<>(12, 83),
-            "Black", new Pair<>(16, 53),
-            "White", new Pair<>(50, 68),
-            "Orange", new Pair<>(57, 25),
-            "Blue", new Pair<>(95, 49)
+    private static final Map<Grotto, Pair<Integer, Integer>> heartPositionMap = Map.of(
+            Grotto.Gray, new Pair<>(12, 83),
+            Grotto.Black, new Pair<>(16, 53),
+            Grotto.White, new Pair<>(50, 68),
+            Grotto.Orange, new Pair<>(57, 25),
+            Grotto.Blue, new Pair<>(95, 49)
     );
 
-    private static final Map<String, Pair<Integer, Integer>> playerPositionMap = Map.of(
-            "Gray", new Pair<>(30, 82),
-            "Black", new Pair<>(28, 60),
-            "White", new Pair<>(50, 54),
-            "Orange", new Pair<>(73, 30),
-            "Blue", new Pair<>(103, 35),
-            "Entrance", new Pair<>(55, 100)
+    private static final Map<Grotto, Pair<Integer, Integer>> playerPositionMap = Map.of(
+            Grotto.Gray, new Pair<>(30, 82),
+            Grotto.Black, new Pair<>(28, 60),
+            Grotto.White, new Pair<>(50, 54),
+            Grotto.Orange, new Pair<>(73, 30),
+            Grotto.Blue, new Pair<>(103, 35),
+            Grotto.Entrance, new Pair<>(55, 100)
     );
 
-    private static final Map<String, Map<Boolean, Identifier>> pathTextures = Map.of(
-        "Gray", Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/entrance_to_gray.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/gray_to_entrance.png")),
-        "Black", Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/gray_to_black.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/black_to_gray.png")),
-        "White", Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/black_to_white.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/white_to_black.png")),
-        "Orange", Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/white_to_orange.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/orange_to_white.png")),
-        "Blue", Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/orange_to_blue.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/blue_to_orange.png")),
-        "Entrance", Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/blue_to_entrance.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/entrance_to_blue.png")),
-        "Outside", Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/entrance_to_outside.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/outside_to_blue.png"))
+    private static final Map<Grotto, Map<Boolean, Identifier>> pathTextures = Map.of(
+            Grotto.Gray, Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/entrance_to_gray.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/gray_to_entrance.png")),
+            Grotto.Black, Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/gray_to_black.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/black_to_gray.png")),
+            Grotto.White, Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/black_to_white.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/white_to_black.png")),
+            Grotto.Orange, Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/white_to_orange.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/orange_to_white.png")),
+            Grotto.Blue, Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/orange_to_blue.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/blue_to_orange.png")),
+            Grotto.Entrance, Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/blue_to_entrance.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/entrance_to_blue.png")),
+            Grotto.Outside, Map.of(true, Identifier.of("wynnextras", "textures/treeroomminimap/paths/entrance_to_outside.png"), false, Identifier.of("wynnextras", "textures/treeroomminimap/paths/outside_to_blue.png"))
     );
 
     private static final Identifier specialPathTexture1 = Identifier.of("wynnextras", "textures/treeroomminimap/paths/special_path_1.png");
     private static final Identifier specialPathTexture2 = Identifier.of("wynnextras", "textures/treeroomminimap/paths/special_path_2.png");
-
-    private static boolean collectedHeart = false;
-    private static String player = "";
-    private static String playerGrotto = "";
-    private static String heartGrotto = "";
 
     private static boolean configLoaded = false;
 
@@ -147,36 +134,20 @@ public class TreeRoomMinimap {
         });
     }
 
-    @SubscribeEvent
-    public void onChat(ChatEvent event) {
-        String raw = event.message.getString().replaceAll("\u00a7[0-9a-fk-orx]", "");
-        handleMessage(raw);
-    }
-
-    private static void reset() {
-        collectedHeart = false;
-        player = "";
-        playerGrotto = "";
-        heartGrotto = "";
-    }
-
     public static void render(DrawContext context, RenderTickCounter renderTickCounter) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.world == null) {
-            reset();
+            TnaApi.reset();
             return;
         }
 
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
 
-        if(!config.tnaTreeMap || config.showTreeMapOnlyWhileInsideOfTree && !player.equals(MinecraftClient.getInstance().player.getName().getString())) {
-            reset();
+        if(!config.tnaTreeMap || config.showTreeMapOnlyWhileInsideOfTree && !TnaApi.inTree()) {
             return;
         }
 
-        BlockPos playerPos = mc.player.getBlockPos();
-        if(!config.showTreeMapEverywhere && (playerPos == null || playerPos.getX() < 24100 || playerPos.getX() > 24300 || playerPos.getZ() > -22100 || playerPos.getZ() < -22400)) {
-            reset();
+        if(!config.showTreeMapEverywhere && !TnaApi.inTreeRoom()) {
             return;
         }
 
@@ -200,9 +171,9 @@ public class TreeRoomMinimap {
                 113,
                 113);
 
-        renderHeart(heartGrotto, context);
-        if(config.showPathsOnTreeMap && MinecraftClient.getInstance().player != null && player.equals(MinecraftClient.getInstance().player.getName().getString())) renderFullPath(context);
-        renderPlayer(playerGrotto, context, getSkinTexture(player));
+        renderHeart(TnaApi.getHeartGrotto(), context);
+        if(config.showPathsOnTreeMap && MinecraftClient.getInstance().player != null && TnaApi.inTree()) renderFullPath(context);
+        renderPlayer(TnaApi.getPlayerGrotto(), context, getSkinTexture(TnaApi.getPlayerInTree()));
 
         renderOverlay(context);
         context.getMatrices().popMatrix();
@@ -258,7 +229,7 @@ public class TreeRoomMinimap {
             mapTexture.height());
     }
 
-    private static void renderHeart(String room, DrawContext context) {
+    private static void renderHeart(Grotto room, DrawContext context) {
         Pair<Integer, Integer> position = heartPositionMap.getOrDefault(room, null);
 
         if(position == null) return;
@@ -278,7 +249,7 @@ public class TreeRoomMinimap {
                 128);
     }
 
-    private static void renderPlayer(String room, DrawContext context, Identifier texture) {
+    private static void renderPlayer(Grotto room, DrawContext context, Identifier texture) {
         Pair<Integer, Integer> position = playerPositionMap.getOrDefault(room, null);
 
         if(position == null || texture == null) return;
@@ -303,87 +274,87 @@ public class TreeRoomMinimap {
     }
 
     private static void renderFullPath(DrawContext context) {
-        if(collectedHeart) {
-            if(playerGrotto.equals("Entrance")) {
+        if(TnaApi.hasHeart()) {
+            if(TnaApi.getPlayerGrotto().equals(Grotto.Entrance)) {
                 return;
             }
-            if(playerGrotto.equals("Blue") || playerGrotto.equals("Orange")) {
-                if(playerGrotto.equals("Orange")) renderPath(pathTextures.get("Entrance").get(true), context);
-                renderPath(pathTextures.get("Outside").get(true), context);
+            if(TnaApi.getPlayerGrotto().equals(Grotto.Blue) || TnaApi.getPlayerGrotto().equals(Grotto.Orange)) {
+                if(TnaApi.getPlayerGrotto().equals(Grotto.Orange)) renderPath(pathTextures.get(Grotto.Entrance).get(true), context);
+                renderPath(pathTextures.get(Grotto.Outside).get(true), context);
             } else {
-                renderPath(pathTextures.get("Gray").get(false), context);
-                if(playerGrotto.equals("Gray")) return;
-                renderPath(pathTextures.get("Black").get(false), context);
-                if(playerGrotto.equals("Black")) return;
-                renderPath(pathTextures.get("White").get(false), context);
+                renderPath(pathTextures.get(Grotto.Gray).get(false), context);
+                if(TnaApi.getPlayerGrotto().equals(Grotto.Gray)) return;
+                renderPath(pathTextures.get(Grotto.Black).get(false), context);
+                if(TnaApi.getPlayerGrotto().equals(Grotto.Black)) return;
+                renderPath(pathTextures.get(Grotto.White).get(false), context);
             }
         } else {
-            switch (heartGrotto) {
-                case "Blue" -> {
-                    switch (playerGrotto) {
-                        case "Entrance" -> {
-                            renderPath(pathTextures.get("Outside").get(false), context);
-                            if (playerGrotto.equals("Entrance")) return;
-                            renderPath(pathTextures.get("Gray").get(false), context);
+            switch (TnaApi.getHeartGrotto()) {
+                case Grotto.Blue -> {
+                    switch (TnaApi.getPlayerGrotto()) {
+                        case Grotto.Entrance -> {
+                            renderPath(pathTextures.get(Grotto.Outside).get(false), context);
+                            if (TnaApi.getPlayerGrotto().equals(Grotto.Entrance)) return;
+                            renderPath(pathTextures.get(Grotto.Gray).get(false), context);
                             return;
                         }
-                        case "Gray" -> {
+                        case Grotto.Gray -> {
                             renderPath(specialPathTexture1, context);
                             return;
                         }
-                        case "Orange" -> {
+                        case Grotto.Orange -> {
                             return;
                         }
                     }
-                    renderPath(pathTextures.get("Blue").get(true), context);
-                    if (playerGrotto.equals("White")) return;
-                    renderPath(pathTextures.get("Orange").get(true), context);
-                    if (playerGrotto.equals("Black")) return;
-                    renderPath(pathTextures.get("White").get(true), context);
+                    renderPath(pathTextures.get(Grotto.Blue).get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.White)) return;
+                    renderPath(pathTextures.get(Grotto.Orange).get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Black)) return;
+                    renderPath(pathTextures.get(Grotto.White).get(true), context);
                 }
-                case "Orange" -> {
-                    if (playerGrotto.equals("Entrance") || playerGrotto.equals("Gray") || playerGrotto.equals("Blue")) {
+                case Grotto.Orange -> {
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Entrance) || TnaApi.getPlayerGrotto().equals(Grotto.Gray) || TnaApi.getPlayerGrotto().equals(Grotto.Blue)) {
                         renderPath(specialPathTexture2, context);
-                        if (playerGrotto.equals("Blue")) return;
+                        if (TnaApi.getPlayerGrotto().equals(Grotto.Blue)) return;
                         renderPath(specialPathTexture1, context);
                         return;
                     }
-                    if (playerGrotto.equals("Orange")) return;
-                    renderPath(pathTextures.get("Orange").get(true), context);
-                    if (playerGrotto.equals("White")) return;
-                    renderPath(pathTextures.get("White").get(true), context);
-                    if (playerGrotto.equals("Black")) return;
-                    renderPath(pathTextures.get("Black").get(true), context);
-                    if (playerGrotto.equals("Gray")) return;
-                    renderPath(pathTextures.get("Gray").get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Orange)) return;
+                    renderPath(pathTextures.get(Grotto.Orange).get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.White)) return;
+                    renderPath(pathTextures.get(Grotto.White).get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Black)) return;
+                    renderPath(pathTextures.get(Grotto.Black).get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Gray)) return;
+                    renderPath(pathTextures.get(Grotto.Gray).get(true), context);
                 }
-                case "White" -> {
-                    if (playerGrotto.equals("Blue")) {
-                        renderPath(pathTextures.get("Blue").get(false), context);
+                case Grotto.White -> {
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Blue)) {
+                        renderPath(pathTextures.get(Grotto.Blue).get(false), context);
                         return;
                     }
-                    if (playerGrotto.equals("White")) return;
-                    renderPath(pathTextures.get("White").get(true), context);
-                    if (playerGrotto.equals("Black")) return;
-                    renderPath(pathTextures.get("Black").get(true), context);
-                    if (playerGrotto.equals("Gray")) return;
-                    renderPath(pathTextures.get("Gray").get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.White)) return;
+                    renderPath(pathTextures.get(Grotto.White).get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Black)) return;
+                    renderPath(pathTextures.get(Grotto.Black).get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Gray)) return;
+                    renderPath(pathTextures.get(Grotto.Gray).get(true), context);
                 }
-                case "Black" -> {
-                    if (playerGrotto.equals("Blue") || playerGrotto.equals("Orange")) {
+                case Grotto.Black -> {
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Blue) || TnaApi.getPlayerGrotto().equals(Grotto.Orange)) {
                         return;
                     }
-                    if (playerGrotto.equals("Black")) return;
-                    renderPath(pathTextures.get("Black").get(true), context);
-                    if (playerGrotto.equals("Gray")) return;
-                    renderPath(pathTextures.get("Gray").get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Black)) return;
+                    renderPath(pathTextures.get(Grotto.Black).get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Gray)) return;
+                    renderPath(pathTextures.get(Grotto.Gray).get(true), context);
                 }
-                case "Gray" -> {
-                    if (playerGrotto.equals("Blue") || playerGrotto.equals("Orange") || playerGrotto.equals("White")) {
+                case Grotto.Gray -> {
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Blue) || TnaApi.getPlayerGrotto().equals(Grotto.Orange) || TnaApi.getPlayerGrotto().equals(Grotto.White)) {
                         return;
                     }
-                    if (playerGrotto.equals("Gray")) return;
-                    renderPath(pathTextures.get("Gray").get(true), context);
+                    if (TnaApi.getPlayerGrotto().equals(Grotto.Gray)) return;
+                    renderPath(pathTextures.get(Grotto.Gray).get(true), context);
                 }
             }
         }
@@ -465,8 +436,10 @@ public class TreeRoomMinimap {
             int screenWidth = mc.getWindow().getScaledWidth();
             int screenHeight = mc.getWindow().getScaledHeight();
             int scaledW = (int) (WIDTH * getEffectiveScale());
-            xPos = Math.max(0, Math.min(xPos, screenWidth - scaledW));
-            yPos = Math.max(0, Math.min(yPos, screenHeight - scaledW));
+            int maxX = Math.max(0, screenWidth - scaledW);
+            int maxY = Math.max(0, screenHeight - scaledW);
+            xPos = Math.clamp(xPos, 0, maxX);
+            yPos = Math.clamp(yPos, 0, maxY);
         }
     }
 
@@ -508,60 +481,4 @@ public class TreeRoomMinimap {
         return DefaultSkinHelper.getTexture();
     }
 
-    private static final Pattern ENTER_TREE_PATTERN =
-        Pattern.compile(".*?\\b([A-Za-z0-9_]{3,16}) has entered the tree!$");
-
-    private static final Pattern ENTER_GROTTO_PATTERN =
-        Pattern.compile(".*?\\b([A-Za-z0-9_]{3,16}) has entered the (Gray|Black|White|Orange|Blue) Grotto$");
-
-    private static final Pattern HEART_PATTERN =
-        Pattern.compile(".*?\\[\\+1 Isoptera Heart]$");
-
-    private static final Pattern DEPOSITED_HEART_PATTERN =
-            Pattern.compile(".*?\\[-1 Isoptera Heart]$");
-
-    private static final Pattern ISOPTERA_PATTERN =
-        Pattern.compile(".*?The Interdimensional Isoptera is in the (Gray|Black|White|Orange|Blue) Grotto$");
-
-    public static void handleMessage(String message) {
-        message = message.replace('\n', ' ')
-                .replace('\r', ' ')
-                .replaceAll("\\s+", " ")
-                .replaceAll("\uDAFF\uDFFC\uE001\uDB00\uDC06 ", "")
-                .trim();
-
-        Matcher treeMatcher = ENTER_TREE_PATTERN.matcher(message);
-        if (treeMatcher.matches()) {
-            player = treeMatcher.group(1);
-            collectedHeart = false;
-            playerGrotto = "Entrance";
-            return;
-        }
-
-        Matcher grottoMatcher = ENTER_GROTTO_PATTERN.matcher(message);
-        if (grottoMatcher.matches()) {
-            player = grottoMatcher.group(1);
-            playerGrotto = grottoMatcher.group(2);
-            return;
-        }
-
-        Matcher heartMatcher = HEART_PATTERN.matcher(message);
-        if (heartMatcher.matches()) {
-            collectedHeart = true;
-            heartGrotto = "";
-            return;
-        }
-
-        Matcher depositedHeartMatcher = DEPOSITED_HEART_PATTERN.matcher(message);
-        if (depositedHeartMatcher.matches()) {
-            reset();
-            return;
-        }
-
-        Matcher isoMatcher = ISOPTERA_PATTERN.matcher(message);
-        if (isoMatcher.matches()) {
-            heartGrotto = isoMatcher.group(1);
-            return;
-        }
-    }
 }

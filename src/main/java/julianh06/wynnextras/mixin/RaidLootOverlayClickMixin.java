@@ -1,10 +1,9 @@
 package julianh06.wynnextras.mixin;
 
-import com.sun.source.tree.Tree;
 import julianh06.wynnextras.features.crafting.CraftingResultPreviewer;
 import julianh06.wynnextras.features.inventory.TradeMarketOverlay;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
-import julianh06.wynnextras.features.raid.TreeRoomMinimap;
+import julianh06.wynnextras.features.raid.tna.TreeRoomMinimap;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
 import net.minecraft.client.input.MouseInput;
@@ -13,7 +12,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Mouse.class)
 public class RaidLootOverlayClickMixin {

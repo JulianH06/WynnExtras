@@ -10,8 +10,6 @@ import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -49,33 +47,31 @@ public class LineDrawer {
                 RenderLayers.debugFilledBox()
         );
 
-
         MatrixStack.Entry matrix = event.matrices.peek();
-
         Camera camera = MinecraftClient.getInstance().gameRenderer.getCamera();
-        Quaternionf q = camera.getRotation();
-
-        Vector3f forward = new Vector3f(0, 0, -1);
-        forward.rotate(q);
-
-        Vec3d cameraForward = new Vec3d(forward.x(), forward.y(), forward.z());
-
-        float halfWidth = lineWidth * 0.01f;
+        float halfWidth = lineWidth * -0.01f;
 
         for (QueuedLine line : queuedLines) {
             WEVec dir = line.p2.subtract(line.p1).normalize();
-            WEVec right = new WEVec(cameraForward).cross(dir);
+            Vec3d toCamera1 = camera.getCameraPos().subtract(line.p1.toVec3d()).normalize();
+            Vec3d toCamera2 = camera.getCameraPos().subtract(line.p2.toVec3d()).normalize();
+            WEVec right1 = new WEVec(toCamera1).cross(dir);
+            WEVec right2 = new WEVec(toCamera2).cross(dir);
 
-            if (right.lengthSquared() < 1e-6) {
-                right = new WEVec(0, 1, 0).cross(dir);
+            if (right1.lengthSquared() < 1e-6) {
+                right1 = new WEVec(0, 1, 0).cross(dir);
+            }
+            if (right2.lengthSquared() < 1e-6) {
+                right2 = new WEVec(0, 1, 0).cross(dir);
             }
 
-            right = right.normalize().multiply(halfWidth);
+            right1 = right1.normalize().multiply(halfWidth);
+            right2 = right2.normalize().multiply(halfWidth);
 
-            WEVec p1a = line.p1.add(right);
-            WEVec p1b = line.p1.subtract(right);
-            WEVec p2a = line.p2.add(right);
-            WEVec p2b = line.p2.subtract(right);
+            WEVec p1a = line.p1.add(right1);
+            WEVec p1b = line.p1.subtract(right1);
+            WEVec p2a = line.p2.add(right2);
+            WEVec p2b = line.p2.subtract(right2);
 
             buffer.vertex(matrix.getPositionMatrix(), (float)p1a.x(), (float)p1a.y(), (float)p1a.z())
                     .color(line.color.getRed(), line.color.getGreen(), line.color.getBlue(), line.color.getAlpha());

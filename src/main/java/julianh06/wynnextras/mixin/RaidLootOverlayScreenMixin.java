@@ -4,7 +4,7 @@ import julianh06.wynnextras.features.crafting.CraftingResultPreviewer;
 import julianh06.wynnextras.features.inventory.TradeMarketOverlay;
 import julianh06.wynnextras.features.misc.GuildRaidBlockOverlay;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
-import julianh06.wynnextras.features.raid.TreeRoomMinimap;
+import julianh06.wynnextras.features.raid.tna.TreeRoomMinimap;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
