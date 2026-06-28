@@ -115,6 +115,7 @@ public abstract class WEHandledScreen {
     public boolean mouseClicked(double x, double y, int button) {
         x /= matrixScale;
         y /= matrixScale;
+        clearUiFocus();
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             if (rootWidgets.get(i).mouseClicked(x, y, button)) {
                 setFocusedWidget(rootWidgets.get(i));
@@ -195,6 +196,15 @@ public abstract class WEHandledScreen {
         if (focusedWidget != null) focusedWidget.setFocused(false);
         focusedWidget = w;
         if (w != null) w.setFocused(true);
+    }
+
+    protected void clearUiFocus() {
+        for (Widget w : rootWidgets) {
+            w.clearFocusTree();
+        }
+        if (focusedElement != null) focusedElement.setFocused(false);
+        focusedWidget = null;
+        focusedElement = null;
     }
 
     public void computeScale() {

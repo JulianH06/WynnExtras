@@ -86,6 +86,12 @@ public class WaypointScreen extends WEScreen {
 
     protected WaypointScreen(WaypointPackage initialPackage, Waypoint initialWaypoint) {
         super(Text.of("WynnExtras Waypoint Screen"));
+        String initialPackageId = initialPackage == null ? null : initialPackage.id;
+        String initialPackageName = initialPackage == null ? null : initialPackage.name;
+        String initialWaypointId = initialWaypoint == null ? null : initialWaypoint.id;
+        WaypointData.reloadFromDisk();
+        initialPackage = WaypointData.findPackage(initialPackageId, initialPackageName);
+        initialWaypoint = WaypointData.findWaypoint(initialPackage, initialWaypointId);
         sideBarWidget = new SideBarWidget();
         addRootWidget(sideBarWidget);
         MainWidget.resetState(initialPackage, initialWaypoint);
@@ -130,7 +136,7 @@ public class WaypointScreen extends WEScreen {
         //drawMainPanel(ctx, mouseX, mouseY);
         //drawFooter(ctx, mouseX, mouseY);
 
-        int sideBarWidth = 450;
+        int sideBarWidth = 520;
         int logicalWidth = getLogicalWidth();
         int logicalHeight = getLogicalHeight();
         sideBarWidget.setBounds(0, 0, sideBarWidth, logicalHeight);
@@ -220,7 +226,7 @@ public class WaypointScreen extends WEScreen {
 
     private static class SideBarWidget extends Widget {
         private static final int LIST_START_Y = 120;
-        private static final int PACKAGE_HEIGHT = 44;
+        private static final int PACKAGE_HEIGHT = 50;
         private static final int PACKAGE_SPACING = 8;
         private static final int PACKAGE_X_PADDING = 24;
         private static final int ADD_SECTION_HEIGHT = 172;
@@ -486,6 +492,9 @@ public class WaypointScreen extends WEScreen {
         }
 
         private static class PackageWidget extends Widget {
+            private static final int TOGGLE_WIDTH = 104;
+            private static final int TOGGLE_HEIGHT = 34;
+            private static final int TOGGLE_RIGHT_PADDING = 14;
             final WaypointPackage waypointPackage;
             final int index;
             final SideBarWidget parent;
@@ -511,11 +520,8 @@ public class WaypointScreen extends WEScreen {
                 int markerColor = disabled ? ACCENT_RED : (selected ? GOLD_DARK : BORDER_DARK);
                 CustomColor nameColor = selected ? CustomColor.fromInt(TEXT_LIGHT) : CustomColor.fromInt(disabled ? 0xFFb88f8f : TEXT_DIM);
                 drawDiamond(ctx, (int) ui.sx(x + 18), (int) ui.sy(y + height / 2f), Math.max(2, ui.sw(4)), markerColor);
-                ui.drawText(truncateName(waypointPackage.name, disabled), x + 36, y + height / 2f, nameColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
-                if (disabled) {
-                    ui.drawRect(x + width - 92, y + 8, 74, height - 16, CustomColor.fromInt(ACCENT_RED));
-                    ui.drawCenteredText("Disabled", x + width - 55, y + height / 2f, CustomColor.fromInt(TEXT_LIGHT), 1.55f);
-                }
+                ui.drawText(truncateName(waypointPackage.name), x + 36, y + height / 2f, nameColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
+                drawEnabledToggle(waypointPackage.enabled, isToggleHovered(mouseX, mouseY));
             }
 
             private void drawDraggedPreview(DrawContext ctx, int mouseX, int mouseY) {
@@ -527,17 +533,38 @@ public class WaypointScreen extends WEScreen {
                     ui.drawRect(dragX, dragY, width, height, CustomColor.fromInt(0x55200000));
                 }
                 drawDiamond(ctx, (int) ui.sx(dragX + 18), (int) ui.sy(dragY + height / 2f), Math.max(2, ui.sw(4)), disabled ? ACCENT_RED : GOLD_DARK);
-                ui.drawText(truncateName(waypointPackage.name, disabled), dragX + 36, dragY + height / 2f, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
-                if (disabled) {
-                    ui.drawRect(dragX + width - 92, dragY + 8, 74, height - 16, CustomColor.fromInt(ACCENT_RED));
-                    ui.drawCenteredText("Disabled", dragX + width - 55, dragY + height / 2f, CustomColor.fromInt(TEXT_LIGHT), 1.55f);
-                }
+                ui.drawText(truncateName(waypointPackage.name), dragX + 36, dragY + height / 2f, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.6f);
+                drawEnabledToggleAt(dragX, dragY, waypointPackage.enabled, false);
             }
 
-            private String truncateName(String name, boolean disabled) {
+            private String truncateName(String name) {
                 String value = name == null ? "" : name;
-                int availableWidth = disabled ? width - 136 : width - 48;
+                int availableWidth = width - 36 - TOGGLE_WIDTH - TOGGLE_RIGHT_PADDING - 12;
                 return truncateText(value, Math.max(0, availableWidth), 2.6f);
+            }
+
+            private void drawEnabledToggle(boolean enabled, boolean hover) {
+                drawEnabledToggleAt(x, y, enabled, hover);
+            }
+
+            private void drawEnabledToggleAt(float rowX, float rowY, boolean enabled, boolean hover) {
+                int toggleX = (int) (rowX + width - TOGGLE_WIDTH - TOGGLE_RIGHT_PADDING);
+                int toggleY = (int) (rowY + (height - TOGGLE_HEIGHT) / 2f);
+                int accent = enabled ? TOGGLE_ON : ACCENT_RED;
+                ui.drawRect(toggleX, toggleY, TOGGLE_WIDTH, TOGGLE_HEIGHT, CustomColor.fromInt(hover ? PARCHMENT_HOVER : BG_LIGHT));
+                ui.drawRect(toggleX, toggleY, TOGGLE_WIDTH, 2, CustomColor.fromInt(hover ? GOLD : BORDER_LIGHT));
+                ui.drawRect(toggleX, toggleY + TOGGLE_HEIGHT - 2, TOGGLE_WIDTH, 2, CustomColor.fromInt(BORDER_DARK));
+                ui.drawRect(toggleX + 4, toggleY + TOGGLE_HEIGHT - 5, TOGGLE_WIDTH - 8, 2, CustomColor.fromInt(accent));
+                ui.drawCenteredText(enabled ? "Enabled" : "Disabled", toggleX + TOGGLE_WIDTH / 2f, toggleY + TOGGLE_HEIGHT / 2f, CustomColor.fromInt(TEXT_LIGHT), 1.95f);
+            }
+
+            private boolean isToggleHovered(double mx, double my) {
+                int toggleX = x + width - TOGGLE_WIDTH - TOGGLE_RIGHT_PADDING;
+                int toggleY = y + (height - TOGGLE_HEIGHT) / 2;
+                return mx >= ui.sx(toggleX)
+                        && my >= ui.sy(toggleY)
+                        && mx < ui.sx(toggleX) + ui.sw(TOGGLE_WIDTH)
+                        && my < ui.sy(toggleY) + ui.sh(TOGGLE_HEIGHT);
             }
 
             private String truncateText(String text, int maxWidth, float scale) {
@@ -570,6 +597,12 @@ public class WaypointScreen extends WEScreen {
 
             @Override
             public boolean mouseClicked(double mx, double my, int button) {
+                if (isToggleHovered(mx, my)) {
+                    WaypointActions.setPackageEnabled(waypointPackage, !waypointPackage.enabled);
+                    MainWidget.invalidateAllTabs();
+                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    return true;
+                }
                 clicked = true;
                 clickX = (float) mx;
                 clickY = (float) my;

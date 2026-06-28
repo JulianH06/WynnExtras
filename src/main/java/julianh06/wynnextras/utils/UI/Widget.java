@@ -84,6 +84,13 @@ public abstract class Widget {
         children.clear();
     }
 
+    public void clearFocusTree() {
+        setFocused(false);
+        for (Widget child : children) {
+            child.clearFocusTree();
+        }
+    }
+
     // ---- Drawing Lifecycle ----
     public void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
         this.ui = ui;

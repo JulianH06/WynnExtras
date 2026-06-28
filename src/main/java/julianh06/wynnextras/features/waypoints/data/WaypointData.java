@@ -76,6 +76,48 @@ public class WaypointData {
         }
     }
 
+    public static void reloadFromDisk() {
+        String activeId = INSTANCE.activePackage == null ? null : INSTANCE.activePackage.id;
+        String activeName = INSTANCE.activePackage == null ? null : INSTANCE.activePackage.name;
+
+        load();
+
+        WaypointPackage active = findPackage(activeId, activeName);
+        if (active == null && !INSTANCE.packages.isEmpty()) {
+            active = INSTANCE.packages.getFirst();
+        }
+        INSTANCE.activePackage = active;
+    }
+
+    public static WaypointPackage findPackage(String id, String name) {
+        if (id != null && !id.isBlank()) {
+            for (WaypointPackage pkg : INSTANCE.packages) {
+                if (id.equals(pkg.id)) return pkg;
+            }
+        }
+        if (name != null && !name.isBlank()) {
+            for (WaypointPackage pkg : INSTANCE.packages) {
+                if (name.equals(pkg.name)) return pkg;
+            }
+        }
+        return null;
+    }
+
+    public static Waypoint findWaypoint(WaypointPackage preferredPackage, String id) {
+        if (id == null || id.isBlank()) return null;
+        if (preferredPackage != null) {
+            for (Waypoint waypoint : preferredPackage.waypoints) {
+                if (id.equals(waypoint.id)) return waypoint;
+            }
+        }
+        for (WaypointPackage pkg : INSTANCE.packages) {
+            for (Waypoint waypoint : pkg.waypoints) {
+                if (id.equals(waypoint.id)) return waypoint;
+            }
+        }
+        return null;
+    }
+
     public static WaypointPackage loadFromFile(Path file) {
         try (Reader reader = Files.newBufferedReader(file)) {
             JsonElement root = WaypointData.gson.fromJson(reader, JsonElement.class);

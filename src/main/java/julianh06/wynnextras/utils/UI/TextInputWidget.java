@@ -8,7 +8,9 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.tooltip.HoveredTooltipPositioner;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.OrderedText;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import org.joml.Vector2f;
 import org.lwjgl.glfw.GLFW;
 
@@ -91,7 +93,7 @@ public class TextInputWidget extends Widget {
                 ui.drawRect(startX, y + 3, Math.max(1, endX - startX), Math.max(1, height - 6), selectionColor);
             }
 
-            ui.drawText(input, textX - horizontalTextOffset, textY, textColor, textScale);
+            drawInputText(ctx, input, textX - horizontalTextOffset, textY);
 
             long now = System.currentTimeMillis();
             if (now - lastBlink > 500) {
@@ -507,7 +509,7 @@ public class TextInputWidget extends Widget {
                 }
             }
 
-            ui.drawText(input.substring(line.start, line.end), textX, lineY, textColor, textScale);
+            drawInputText(ctx, input.substring(line.start, line.end), textX, lineY);
         }
 
         long now = System.currentTimeMillis();
@@ -598,7 +600,74 @@ public class TextInputWidget extends Widget {
     }
 
     protected int textWidth(String text) {
-        return (int) Math.ceil(MinecraftClient.getInstance().textRenderer.getWidth(text) * textScale);
+        TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
+        int width = 0;
+        Style style = baseInputStyle();
+        for (int i = 0; i < text.length(); i++) {
+            char character = text.charAt(i);
+            if (character == '§' && i + 1 < text.length()) {
+                Formatting formatting = Formatting.byCode(Character.toLowerCase(text.charAt(i + 1)));
+                if (formatting != null) {
+                    style = applyFormatting(style, formatting);
+                    width += textRenderer.getWidth(visibleChar(character, style));
+                    width += textRenderer.getWidth(visibleChar(text.charAt(i + 1), style));
+                    i++;
+                    continue;
+                }
+            }
+            width += textRenderer.getWidth(visibleChar(character, style));
+        }
+        return (int) Math.ceil(width * textScale);
+    }
+
+    protected void drawInputText(DrawContext ctx, String text, int x, int y) {
+        if (text.isEmpty()) return;
+        TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
+        float renderScale = textScale / ui.getScaleFactorF();
+        float localX = 0;
+        Style style = baseInputStyle();
+
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().translate(ui.sx(x), ui.sy(y));
+        ctx.getMatrices().scale(renderScale, renderScale);
+        for (int i = 0; i < text.length(); i++) {
+            char character = text.charAt(i);
+            if (character == '§' && i + 1 < text.length()) {
+                char code = text.charAt(i + 1);
+                Formatting formatting = Formatting.byCode(Character.toLowerCase(code));
+                if (formatting != null) {
+                    style = applyFormatting(style, formatting);
+                    localX = drawVisibleChar(ctx, textRenderer, character, localX, style);
+                    localX = drawVisibleChar(ctx, textRenderer, code, localX, style);
+                    i++;
+                    continue;
+                }
+            }
+
+            localX = drawVisibleChar(ctx, textRenderer, character, localX, style);
+        }
+        ctx.getMatrices().popMatrix();
+    }
+
+    private float drawVisibleChar(DrawContext ctx, TextRenderer textRenderer, char character, float x, Style style) {
+        OrderedText text = visibleChar(character, style);
+        ctx.drawText(textRenderer, text, Math.round(x), 0, textColor.asInt(), true);
+        return x + textRenderer.getWidth(text);
+    }
+
+    private OrderedText visibleChar(char character, Style style) {
+        return OrderedText.styledForwardsVisitedString(String.valueOf(character), style);
+    }
+
+    private Style baseInputStyle() {
+        return Style.EMPTY.withColor(textColor.asInt());
+    }
+
+    private Style applyFormatting(Style style, Formatting formatting) {
+        if (formatting == Formatting.RESET) return baseInputStyle();
+        if (formatting.isColor()) return baseInputStyle().withExclusiveFormatting(formatting);
+        if (formatting.isModifier()) return style.withFormatting(formatting);
+        return style;
     }
 
     protected void clampCursorAndSelection() {

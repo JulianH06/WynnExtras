@@ -192,6 +192,8 @@ public abstract class WEScreen extends Screen {
         double mouseY = click.y() / matrixScale;
         int button = click.button();
 
+        clearUiFocus();
+
         // root widgets (topmost-first)
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             Widget w = rootWidgets.get(i);
@@ -288,6 +290,15 @@ public abstract class WEScreen extends Screen {
         if (focusedWidget != null) focusedWidget.setFocused(false);
         focusedWidget = w;
         if (focusedWidget != null) focusedWidget.setFocused(true);
+    }
+
+    protected void clearUiFocus() {
+        for (Widget w : rootWidgets) {
+            w.clearFocusTree();
+        }
+        if (focusedElement != null) focusedElement.setFocused(false);
+        focusedWidget = null;
+        focusedElement = null;
     }
 
     protected void updateVisibleListRange() {

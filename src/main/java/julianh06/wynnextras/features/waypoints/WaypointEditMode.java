@@ -143,6 +143,7 @@ public class WaypointEditMode {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
 
+        reloadPackagesPreservingSelection();
         ensureSelectionDefaults();
         if (!enabled) {
             previewPos = initialPreviewPos(mc.player);
@@ -164,6 +165,13 @@ public class WaypointEditMode {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || pkg == null || waypoint == null) return;
 
+        String packageId = pkg.id;
+        String packageName = pkg.name;
+        String waypointId = waypoint.id;
+        WaypointData.reloadFromDisk();
+        pkg = WaypointData.findPackage(packageId, packageName);
+        waypoint = WaypointData.findWaypoint(pkg, waypointId);
+        if (pkg == null || waypoint == null) return;
         ensureSelectionDefaults();
         enabled = true;
         mode = Mode.EDIT;
@@ -173,6 +181,41 @@ public class WaypointEditMode {
         selectWaypoint(pkg, waypoint);
         syncCoordinateInputs();
         mc.send(() -> mc.setScreen(new WaypointEditModeUI()));
+    }
+
+    private static void reloadPackagesPreservingSelection() {
+        String activePackageId = activePackage == null ? null : activePackage.id;
+        String activePackageName = activePackage == null ? null : activePackage.name;
+        String activeCategoryId = activeCategory == null ? null : activeCategory.id;
+        String selectedPackageId = selectedWaypointPackage == null ? null : selectedWaypointPackage.id;
+        String selectedPackageName = selectedWaypointPackage == null ? null : selectedWaypointPackage.name;
+        String selectedWaypointId = selectedWaypoint == null ? null : selectedWaypoint.id;
+
+        WaypointData.reloadFromDisk();
+
+        activePackage = WaypointData.findPackage(activePackageId, activePackageName);
+        if (activePackage == null) activePackage = WaypointData.INSTANCE.activePackage;
+
+        activeCategory = findCategory(activePackage, activeCategoryId);
+
+        selectedWaypointPackage = WaypointData.findPackage(selectedPackageId, selectedPackageName);
+        selectedWaypoint = WaypointData.findWaypoint(selectedWaypointPackage, selectedWaypointId);
+        if (selectedWaypoint != null) {
+            if (selectedWaypointPackage == null) selectedWaypointPackage = packageOf(selectedWaypoint);
+            selectedSnapshot = new WaypointSnapshot(selectedWaypoint);
+        } else {
+            selectedWaypointPackage = null;
+            selectedSnapshot = null;
+        }
+    }
+
+    private static WaypointCategory findCategory(WaypointPackage pkg, String id) {
+        if (pkg == null || id == null || id.isBlank()) return null;
+        WaypointData.resolveWaypointCategories(pkg);
+        for (WaypointCategory category : pkg.categories) {
+            if (id.equals(category.id)) return category;
+        }
+        return null;
     }
 
     public static void enterFreeMoveMode() {

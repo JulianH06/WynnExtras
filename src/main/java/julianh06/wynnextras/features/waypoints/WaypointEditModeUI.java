@@ -692,7 +692,9 @@ public class WaypointEditModeUI extends WEScreen {
         return true;
     }
 
-    private void clearUiFocus() {
+    @Override
+    protected void clearUiFocus() {
+        super.clearUiFocus();
         applyCategoryNameInput();
         activeDropdown = Dropdown.NONE;
         activeDropdownField = null;

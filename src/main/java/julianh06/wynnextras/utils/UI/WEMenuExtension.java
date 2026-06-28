@@ -122,6 +122,7 @@ public abstract class WEMenuExtension {
     // --- Input ---
 
     public boolean mouseClicked(double x, double y, int button) {
+        clearUiFocus();
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             if (rootWidgets.get(i).mouseClicked(x, y, button)) {
                 setFocusedWidget(rootWidgets.get(i));
@@ -179,6 +180,15 @@ public abstract class WEMenuExtension {
         if (focusedWidget != null) focusedWidget.setFocused(false);
         focusedWidget = w;
         if (w != null) w.setFocused(true);
+    }
+
+    protected void clearUiFocus() {
+        for (Widget w : rootWidgets) {
+            w.clearFocusTree();
+        }
+        if (focusedElement != null) focusedElement.setFocused(false);
+        focusedWidget = null;
+        focusedElement = null;
     }
 
     protected abstract void drawBackground(DrawContext ctx, int mouseX, int mouseY, float delta);
