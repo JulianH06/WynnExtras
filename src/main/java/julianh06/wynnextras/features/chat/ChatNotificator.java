@@ -56,7 +56,7 @@ public class ChatNotificator {
             "item bomb", "love bomb", "smoke bomb", "party bomb", "confetti", "glitter", "arrow bomb", "dxp weekend", "dxp month"
     };
 
-    private static void notify(Text message) {
+    public static void notify(Text message) {
         if(message.getString().contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
 
         handleBombshareSuggestion(message);

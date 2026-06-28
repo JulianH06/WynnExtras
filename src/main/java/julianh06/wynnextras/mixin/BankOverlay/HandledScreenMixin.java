@@ -337,11 +337,12 @@ public abstract class HandledScreenMixin {
         }
 
         if(bankOverlay != null) {
-            bankOverlay.mouseClicked(mouseX, mouseY, button, doubleClick);
+            boolean handledByBankOverlay = bankOverlay.mouseClicked(mouseX, mouseY, button, doubleClick);
 
-            if (WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
+            if (handledByBankOverlay && WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
                 if (currentOverlayType != BankOverlayType.NONE) {
-                    cir.cancel();
+                    cir.setReturnValue(true);
+                    return;
                 }
             }
         }

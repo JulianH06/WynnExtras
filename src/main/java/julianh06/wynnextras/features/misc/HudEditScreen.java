@@ -169,7 +169,8 @@ public class HudEditScreen extends Screen {
             List<String> attacks = AttackTimer.getUpcomingAttacks();
             if (!attacks.isEmpty()) attackText = attacks.get(0);
             HudElement attackTimerEl = new HudElement("attackTimer", attackText,
-                    c.attackTimerX, c.attackTimerY, 1.0f, WynnExtrasConfig.Align.LEFT, 0xFFFFAA00);
+                    c.attackTimerX, c.attackTimerY, 1.0f, WynnExtrasConfig.Align.LEFT,
+                    0xFF000000 | attackTimerNormalColor());
             attackTimerEl.topLeft = true;
             elements.add(attackTimerEl);
         }
@@ -274,7 +275,7 @@ public class HudEditScreen extends Screen {
         ctx.fill(e.x - 2, e.y - 2, e.x - 1, e.y + sh + 2, border);
         ctx.fill(e.x + sw + 1, e.y - 2, e.x + sw + 2, e.y + sh + 2, border);
 
-        Integer override = WynnExtrasConfig.INSTANCE.hudColorOverrides.get(e.id);
+        Integer override = hudColorOverride(e.id);
         int textColor;
         if (focused) {
             textColor = 0xFF000000 | hsvToRgb(colorH, colorS, colorV);
@@ -355,6 +356,32 @@ public class HudEditScreen extends Screen {
         int y = b[1] + b[3] - btnH - 8;
         int startX = b[0] + 8;
         return new int[]{startX + btnIdx * (btnW + gap), y, btnW, btnH};
+    }
+
+    private static int attackTimerNormalColor() {
+        Integer color = WynnExtrasConfig.INSTANCE.attackTimerNormalColor;
+        return color == null ? 0xFFAA00 : color & 0xFFFFFF;
+    }
+
+    private static Integer hudColorOverride(String id) {
+        if ("attackTimer".equals(id)) return attackTimerNormalColor();
+        return WynnExtrasConfig.INSTANCE.hudColorOverrides.get(id);
+    }
+
+    private static void resetHudColor(String id) {
+        if ("attackTimer".equals(id)) {
+            WynnExtrasConfig.INSTANCE.attackTimerNormalColor = 0xFFAA00;
+            return;
+        }
+        WynnExtrasConfig.INSTANCE.hudColorOverrides.remove(id);
+    }
+
+    private static void setHudColor(String id, int color) {
+        if ("attackTimer".equals(id)) {
+            WynnExtrasConfig.INSTANCE.attackTimerNormalColor = color & 0xFFFFFF;
+            return;
+        }
+        WynnExtrasConfig.INSTANCE.hudColorOverrides.put(id, color & 0xFFFFFF);
     }
 
     private void renderColorPicker(DrawContext ctx) {
@@ -562,14 +589,14 @@ public class HudEditScreen extends Screen {
                 if (mx >= bb[0] && mx < bb[0] + bb[2] && my >= bb[1] && my < bb[1] + bb[3]) {
                     int c = hsvToRgb(colorH, colorS, colorV);
                     if (i == 0) {
-                        WynnExtrasConfig.INSTANCE.hudColorOverrides.remove(colorEditTarget.id);
+                        resetHudColor(colorEditTarget.id);
                         WynnExtrasConfig.save();
                     } else if (i == 1) {
-                        WynnExtrasConfig.INSTANCE.hudColorOverrides.put(colorEditTarget.id, c);
+                        setHudColor(colorEditTarget.id, c);
                         WynnExtrasConfig.save();
                     } else if (i == 2) {
                         for (HudElement el : elements) {
-                            WynnExtrasConfig.INSTANCE.hudColorOverrides.put(el.id, c);
+                            setHudColor(el.id, c);
                         }
                         WynnExtrasConfig.save();
                     }
@@ -594,7 +621,7 @@ public class HudEditScreen extends Screen {
             for (HudElement e : elements) {
                 if (e.hovered(mx, my)) {
                     colorEditTarget = e;
-                    Integer existing = WynnExtrasConfig.INSTANCE.hudColorOverrides.get(e.id);
+                    Integer existing = hudColorOverride(e.id);
                     int c = existing != null ? existing : 0xFFFFFF;
                     float[] hsv = rgbToHsv((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF);
                     colorH = hsv[0]; colorS = hsv[1]; colorV = hsv[2];
@@ -692,7 +719,7 @@ public class HudEditScreen extends Screen {
             }
             if (keyCode == GLFW.GLFW_KEY_ENTER) {
                 int c = hsvToRgb(colorH, colorS, colorV);
-                WynnExtrasConfig.INSTANCE.hudColorOverrides.put(colorEditTarget.id, c);
+                setHudColor(colorEditTarget.id, c);
                 WynnExtrasConfig.save();
                 colorEditTarget = null;
                 return true;

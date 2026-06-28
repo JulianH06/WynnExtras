@@ -337,19 +337,48 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .sub("Radiant HUD")
                 .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
                         () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))
-                .sub("Aura")
+            .sub("Aura")
                 .add(toggle("Aura Ping", "Flash screen and show countdown when aura procs",
                         () -> config.auraPingEnabled, v -> config.auraPingEnabled = v))
-                .sub("Wars / Territory")
-                .add(toggle("Weekly War Count", "Show number of wars in last 7 days on HUD",
-                        () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
-                .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
-                        () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
+            .sub("Attack Timer")
                 .add(toggle("Attack Timer", "Show upcoming attack times from scoreboard",
                         () -> config.attackTimerMenuEnabled, v -> config.attackTimerMenuEnabled = v))
                 .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
                                 () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),
                         () -> config.attackTimerMenuEnabled))
+                .add(visibleWhen(color("Normal Color", "Default attack timer text color",
+                                () -> config.attackTimerNormalColor, v -> config.attackTimerNormalColor = v,
+                                DEFAULT_CONFIG.attackTimerNormalColor, DEFAULT_CONFIG.attackTimerNormalColor),
+                        () -> config.attackTimerMenuEnabled))
+                .add(visibleWhen(color("Current Territory Color", "Attack timer text color while standing in that territory",
+                                () -> config.attackTimerCurrentTerritoryColor, v -> config.attackTimerCurrentTerritoryColor = v,
+                                DEFAULT_CONFIG.attackTimerCurrentTerritoryColor, DEFAULT_CONFIG.attackTimerCurrentTerritoryColor),
+                        () -> config.attackTimerMenuEnabled))
+                .add(visibleWhen(color("Very Low Defense Color", "Defense color for Very Low territories",
+                                () -> config.attackTimerVeryLowDefenseColor, v -> config.attackTimerVeryLowDefenseColor = v,
+                                DEFAULT_CONFIG.attackTimerVeryLowDefenseColor, DEFAULT_CONFIG.attackTimerVeryLowDefenseColor),
+                        () -> config.attackTimerMenuEnabled))
+                .add(visibleWhen(color("Low Defense Color", "Defense color for Low territories",
+                                () -> config.attackTimerLowDefenseColor, v -> config.attackTimerLowDefenseColor = v,
+                                DEFAULT_CONFIG.attackTimerLowDefenseColor, DEFAULT_CONFIG.attackTimerLowDefenseColor),
+                        () -> config.attackTimerMenuEnabled))
+                .add(visibleWhen(color("Medium Defense Color", "Defense color for Medium territories",
+                                () -> config.attackTimerMediumDefenseColor, v -> config.attackTimerMediumDefenseColor = v,
+                                DEFAULT_CONFIG.attackTimerMediumDefenseColor, DEFAULT_CONFIG.attackTimerMediumDefenseColor),
+                        () -> config.attackTimerMenuEnabled))
+                .add(visibleWhen(color("High Defense Color", "Defense color for High territories",
+                                () -> config.attackTimerHighDefenseColor, v -> config.attackTimerHighDefenseColor = v,
+                                DEFAULT_CONFIG.attackTimerHighDefenseColor, DEFAULT_CONFIG.attackTimerHighDefenseColor),
+                        () -> config.attackTimerMenuEnabled))
+                .add(visibleWhen(color("Very High Defense Color", "Defense color for Very High territories",
+                                () -> config.attackTimerVeryHighDefenseColor, v -> config.attackTimerVeryHighDefenseColor = v,
+                                DEFAULT_CONFIG.attackTimerVeryHighDefenseColor, DEFAULT_CONFIG.attackTimerVeryHighDefenseColor),
+                        () -> config.attackTimerMenuEnabled))
+                .sub("Wars / Territory")
+                .add(toggle("Weekly War Count", "Show number of wars in last 7 days on HUD",
+                        () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
+                .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
+                        () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
                 .add(toggle("War Beacon (EXPERIMENTAL)", "Green beacon beam at the soonest war territory (Experimental, might not render correctly)",
                         () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v))
                 .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",

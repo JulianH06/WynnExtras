@@ -1950,7 +1950,7 @@ public class BankOverlay2 extends WEHandledScreen {
         if (!characterBankUnavailable) {
             int regularPageCount = getRenderableRegularPageCount();
             for(int i = 0; i < regularPageCount; i++) {
-                pages.get(i).mouseClicked(x, y, button, doubleClick);
+                if (pages.get(i).mouseClicked(x, y, button, doubleClick)) return true;
             }
         }
         // Handle clicks on cross-class search results
@@ -1963,8 +1963,8 @@ public class BankOverlay2 extends WEHandledScreen {
             }
         }
         if (characterBankUnavailable) return true;
-        if(inventoryWidget != null) inventoryWidget.mouseClicked(x, y, button, doubleClick);
-        return true;
+        if(inventoryWidget != null && inventoryWidget.mouseClicked(x, y, button, doubleClick)) return true;
+        return false;
     }
 
     @Override
@@ -4338,7 +4338,7 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         private boolean canBulkQuickMove(int button, boolean doubleClick) {
-            return button == 0 && doubleClick && isShiftHeld() && lastQuickMoved != null && !lastQuickMoved.isEmpty();
+            return button == 0 && doubleClick && isShiftHeld() && hasHeldItem() && lastQuickMoved != null && !lastQuickMoved.isEmpty();
         }
 
         private boolean bulkQuickMoveMatchingStacks(ScreenHandler liveHandler, int clickedSlotIndex, int button) {
@@ -4371,9 +4371,9 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         private boolean clickLiveSlot(int button, boolean doubleClick) {
-            if(index == 4 && isInventorySlot) return false; //Ingredient pouch, clicking it within the bank overlay crashes the game
-            if(index == 34 && isInventorySlot) return false; //Compass, clicking it within the bank overlay crashes the game
-            if(index == 35 && isInventorySlot) return false; //Content book, clicking it within the bank overlay crashes the game
+            if(index == 4 && isInventorySlot) return true; //Ingredient pouch, clicking it within the bank overlay crashes the game
+            if(index == 34 && isInventorySlot) return true; //Compass, clicking it within the bank overlay crashes the game
+            if(index == 35 && isInventorySlot) return true; //Content book, clicking it within the bank overlay crashes the game
 
             ScreenHandler liveHandler = getLiveScreenHandlerForClick();
             int slotIndex = index + (isInventorySlot ? 54 : 0);
@@ -4407,7 +4407,7 @@ public class BankOverlay2 extends WEHandledScreen {
             if(heldItem.getCustomName() != null) {
                 if ((heldItem.getCustomName().getString().contains("Pouch") || heldItem.getCustomName().getString().contains("Potions")) && button == 1) {
                     heldItem = oldHeld == null ? Items.AIR.getDefaultStack() : oldHeld;
-                    return false;
+                    return true;
                 }
             }
 
@@ -4490,7 +4490,11 @@ public class BankOverlay2 extends WEHandledScreen {
 
                 if(activeInv == inventoryIndex || isInventorySlot) {
                     if (beginDragSplitting(this, button)) return true;
-                    clickLiveSlot(button, doubleClick);
+                    if (clickLiveSlot(button, doubleClick)) {
+                        pendingMouseTweaksRightClick = null;
+                        return true;
+                    }
+                    return false;
                 } else if(!hasHeldItem()) {
                     if (isJumpInProgress()) return true;
                     if (BankOverlay.isCharacterBankMissingCharacterId()) return false;

@@ -278,6 +278,13 @@ public class WynnExtrasConfig {
     public boolean attackTimerAutoBroadcast = false;
     public int attackTimerX = 5;
     public int attackTimerY = 150;
+    public Integer attackTimerNormalColor = 0xFFAA00;
+    public Integer attackTimerCurrentTerritoryColor = 0xFFFF55;
+    public Integer attackTimerVeryLowDefenseColor = 0x55FF55;
+    public Integer attackTimerLowDefenseColor = 0x55FF55;
+    public Integer attackTimerMediumDefenseColor = 0xFFFF55;
+    public Integer attackTimerHighDefenseColor = 0xFF5555;
+    public Integer attackTimerVeryHighDefenseColor = 0xAA0000;
     public boolean warBeaconEnabled = false;
     public HashMap<String, Integer> hudColorOverrides = new HashMap<>();
     public boolean territoryMenuKeyEnabled = false;
@@ -593,11 +600,13 @@ public class WynnExtrasConfig {
                 //if (INSTANCE.configProfiles == null) INSTANCE.configProfiles = new LinkedHashMap<>();
                 if (INSTANCE.weeklyWars == null) INSTANCE.weeklyWars = new ArrayList<>();
                 if (INSTANCE.hudColorOverrides == null) INSTANCE.hudColorOverrides = new HashMap<>();
+                INSTANCE.syncAttackTimerColors();
             }
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Failed to load config: " + e.getMessage());
             INSTANCE = new WynnExtrasConfig();
         }
+        INSTANCE.syncAttackTimerColors();
         INSTANCE.syncClassSelectionLines();
         if (INSTANCE.classSelectionContentProgressStyle == null) {
             INSTANCE.classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
@@ -605,6 +614,17 @@ public class WynnExtrasConfig {
         if (INSTANCE.classSelectionCompletionChromaMode == null) {
             INSTANCE.classSelectionCompletionChromaMode = ClassSelectionCompletionChromaMode.NAME_AND_LINES;
         }
+    }
+
+    private void syncAttackTimerColors() {
+        WynnExtrasConfig defaults = new WynnExtrasConfig();
+        if (attackTimerNormalColor == null) attackTimerNormalColor = defaults.attackTimerNormalColor;
+        if (attackTimerCurrentTerritoryColor == null) attackTimerCurrentTerritoryColor = defaults.attackTimerCurrentTerritoryColor;
+        if (attackTimerVeryLowDefenseColor == null) attackTimerVeryLowDefenseColor = defaults.attackTimerVeryLowDefenseColor;
+        if (attackTimerLowDefenseColor == null) attackTimerLowDefenseColor = defaults.attackTimerLowDefenseColor;
+        if (attackTimerMediumDefenseColor == null) attackTimerMediumDefenseColor = defaults.attackTimerMediumDefenseColor;
+        if (attackTimerHighDefenseColor == null) attackTimerHighDefenseColor = defaults.attackTimerHighDefenseColor;
+        if (attackTimerVeryHighDefenseColor == null) attackTimerVeryHighDefenseColor = defaults.attackTimerVeryHighDefenseColor;
     }
 
     public static void save() {

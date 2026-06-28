@@ -63,6 +63,7 @@ public class RaidChatNotifier {
 
         if (!shouldBlockRaidTimestampMessage(raw)) return true;
 
+        ChatNotificator.notify(message);
         handleMessage(raw);
         return false;
     }

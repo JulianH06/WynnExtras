@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WarBeacon {
     private static final int BEAM_RGB = 0x32FF32;
+    private static final double BEAM_BASE_Y = -200.0;
     private static final String TERRITORY_LIST_URL = "https://api.wynncraft.com/v3/guild/list/territory";
     private static final long TERRITORY_FETCH_RETRY_MS = 60_000L;
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
@@ -62,9 +63,7 @@ public class WarBeacon {
                 return;
             }
 
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.player == null) return;
-            drawBeam(matrices, camera, orderedRenderCommandQueue, tickProgress, center.x, mc.player.getY(), center.z);
+            drawBeam(matrices, camera, orderedRenderCommandQueue, tickProgress, center.x, BEAM_BASE_Y, center.z);
         } catch (Exception exception) {
             logRenderFailure(exception);
         }
