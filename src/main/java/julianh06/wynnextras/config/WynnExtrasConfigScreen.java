@@ -405,6 +405,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         1, 24, () -> config.bankOverlayMaxRows, v -> config.bankOverlayMaxRows = v))
                 .add(slider("Max Columns", "The maximum amount of columns (lower can reduce lag)",
                         1, 24, () -> config.bankOverlayMaxColumns, v -> config.bankOverlayMaxColumns = v))
+                .add(visibleWhen(toggle("Wynntils Page Jump Buttons", "Show the normal Wynntils bank page jump buttons on the left",
+                        () -> config.showWynntilsBankPageJumpButtons, v -> config.showWynntilsBankPageJumpButtons = v),
+                        () -> config.bankOverlayMaxRows == 1 && config.bankOverlayMaxColumns == 1))
                 .add(toggle("Hide empty rows", "Hides rows that only have locked pages",
                         () -> config.bankOverlayHideEmptyRows, v -> config.bankOverlayHideEmptyRows = v))
                 .add(toggle("Bag Overlay", "Show crafter bag counts by raid/tier on bank screens",

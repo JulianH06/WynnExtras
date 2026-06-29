@@ -3,6 +3,7 @@ package julianh06.wynnextras.mixin;
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import net.minecraft.client.gui.DrawContext;
@@ -19,6 +20,7 @@ public class PressableWidgetMixin {
         try {
             // Check cheap static field first to avoid expensive getCurrentContainer() call
             if(BankOverlay.currentOverlayType != BankOverlayType.NONE && WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
+                if (BankOverlay2.shouldShowWynntilsPageJumpButtons()) return;
                 ci.cancel();
                 return;
             }

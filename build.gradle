@@ -51,6 +51,10 @@ dependencies {
 
 	implementation 'org.apache.httpcomponents:httpclient:4.5.14'
 
+	//intellij showed some warnings about vulnerable dependencies so this should fix it
+	implementation platform("io.netty:netty-bom:4.2.10.Final")
+	implementation platform("org.apache.logging.log4j:log4j-bom:2.25.4")
+
 	modRuntimeOnly "me.djtheredstoner:DevAuth-fabric:1.2.1"
 
 //	modRuntimeOnly "maven.modrinth:wynnmod:2.0.1"

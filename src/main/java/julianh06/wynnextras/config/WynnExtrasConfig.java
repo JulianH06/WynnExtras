@@ -200,6 +200,7 @@ public class WynnExtrasConfig {
     public boolean bankAllCharactersBrowseMode = false;
     public int bankOverlayMaxRows = 3;
     public int bankOverlayMaxColumns = 3;
+    public boolean showWynntilsBankPageJumpButtons = false;
     public boolean bankOverlayHideEmptyRows = false;
     public boolean bankBagOverlay = false;
     public boolean showTotalBagsInBankOverlay = false;

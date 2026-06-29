@@ -10,6 +10,7 @@ import com.wynntils.models.containers.containers.personal.AccountBankContainer;
 import com.wynntils.models.containers.containers.personal.BookshelfContainer;
 import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
 import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
+import com.wynntils.screens.container.widgets.PersonalStorageUtilitiesWidget;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
@@ -29,6 +30,7 @@ import julianh06.wynnextras.features.mount.MountOverlay;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.input.KeyInput;
@@ -54,6 +56,8 @@ import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 @WEModule
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenMixin {
+    @Unique private static final int WYNNTILS_BANK_WIDGET_Y_OFFSET = 14;
+
     @Shadow public abstract void close();
 
     @Shadow public Slot focusedSlot;
@@ -139,6 +143,7 @@ public abstract class HandledScreenMixin {
                 return null;
             });
             bankOverlay.render(context, mouseX, mouseY, delta);
+            renderWynntilsBankPageJumpButtons(context, mouseX, mouseY, delta, (HandledScreen<?>) (Object) this);
         }
 
         if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
@@ -202,6 +207,44 @@ public abstract class HandledScreenMixin {
 
         ProfessionOverlay.renderOnScreen(context);
         ItemComponentsDebugOverlay.render(context, mouseX, mouseY);
+    }
+
+    @Unique
+    private void renderWynntilsBankPageJumpButtons(DrawContext context, int mouseX, int mouseY, float delta, HandledScreen<?> screen) {
+        if (!BankOverlay2.shouldShowWynntilsPageJumpButtons()) return;
+
+        for (Element child : screen.children()) {
+            if (child instanceof PersonalStorageUtilitiesWidget widget) {
+                context.getMatrices().pushMatrix();
+                context.getMatrices().translate(0, -WYNNTILS_BANK_WIDGET_Y_OFFSET);
+                widget.render(context, mouseX, mouseY + WYNNTILS_BANK_WIDGET_Y_OFFSET, delta);
+                context.getMatrices().popMatrix();
+            }
+        }
+    }
+
+    @Unique
+    private boolean handleWynntilsBankPageJumpButtonClick(Click click, boolean doubleClick, HandledScreen<?> screen) {
+        if (!BankOverlay2.shouldShowWynntilsPageJumpButtons()) return false;
+
+        double mouseX = click.x();
+        double mouseY = click.y();
+        double translatedMouseY = mouseY + WYNNTILS_BANK_WIDGET_Y_OFFSET;
+
+        for (Element child : screen.children()) {
+            if (!(child instanceof PersonalStorageUtilitiesWidget widget)) continue;
+
+            if (widget.isMouseOver(mouseX, translatedMouseY)) {
+                BankOverlay2.saveActivePageSnapshot();
+                return widget.mouseClicked(new Click(mouseX, translatedMouseY, click.buttonInfo()), doubleClick);
+            }
+
+            if (widget.isMouseOver(mouseX, mouseY)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Unique
@@ -292,6 +335,12 @@ public abstract class HandledScreenMixin {
             cir.setReturnValue(true);
             return;
         }
+
+        if (handleWynntilsBankPageJumpButtonClick(click, doubleClick, self)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
         // Class Selection Overlay click handling
         if (classSelectionOverlay != null) {
             classSelectionOverlay.mouseClicked(mouseX, mouseY, button);

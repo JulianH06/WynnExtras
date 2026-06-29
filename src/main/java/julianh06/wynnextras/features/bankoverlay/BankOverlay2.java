@@ -450,6 +450,13 @@ public class BankOverlay2 extends WEHandledScreen {
         setTargetCharacterForClassMenu(null, null, 0);
     }
 
+    public static boolean shouldShowWynntilsPageJumpButtons() {
+        return WynnExtrasConfig.INSTANCE.toggleBankOverlay
+                && WynnExtrasConfig.INSTANCE.showWynntilsBankPageJumpButtons
+                && WynnExtrasConfig.INSTANCE.bankOverlayMaxRows == 1
+                && WynnExtrasConfig.INSTANCE.bankOverlayMaxColumns == 1
+                && currentOverlayType != BankOverlayType.NONE;
+    }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
@@ -523,6 +530,7 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         initializeOverlayState();
+        syncActivePageFromWynntilsQuickJump();
 
         float snapValue = 0.5f;
 
@@ -1327,7 +1335,16 @@ public class BankOverlay2 extends WEHandledScreen {
         return Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * 3) - 104 * c + layoutExtraScrollHeight);
     }
 
-    private static void saveActivePageSnapshot() {
+    private static void scrollToPage(int pageIndex) {
+        if (pageIndex < 0 || xFitAmount <= 0) return;
+
+        int row = Math.floorDiv(pageIndex, xFitAmount);
+        int maxOffset = getMaxScrollOffset(Math.max(Math.max(shownPages, BankOverlay.getCurrentMaxPages()), pageIndex + 1));
+        float newOffset = MathHelper.clamp(row * 104f, 0, maxOffset);
+        targetOffset = newOffset;
+    }
+
+    public static void saveActivePageSnapshot() {
         if (storeActivePageSnapshot()) {
             Pages.save();
         }
@@ -2164,6 +2181,20 @@ public class BankOverlay2 extends WEHandledScreen {
         accessor.setLastPage(99);
 
         if (activeInv == -1) activeInv = 1;
+    }
+
+    private static void syncActivePageFromWynntilsQuickJump() {
+        if (!shouldShowWynntilsPageJumpButtons()) return;
+        if (shouldWait || isReloading || bankTypeSwitchInProgress) return;
+
+        int livePage = getCurrentBankPageNumber();
+        if (livePage < 0 || livePage == activeInv) return;
+
+        activeInv = livePage;
+        retryLoad();
+        storeActivePageSnapshot();
+        scrollToPage(activeInv);
+        clearAnnotationCache(activeInv);
     }
 
     private static void clearHoverState(HandledScreen<?> screen) {
