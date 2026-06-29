@@ -52,6 +52,7 @@ import julianh06.wynnextras.mixin.ItemGuessFeatureAccessor;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.SearchQueryParser;
 import julianh06.wynnextras.utils.WynntilsHighlightUtils;
+import julianh06.wynnextras.utils.WynnModItemOverlayBridge;
 import julianh06.wynnextras.utils.UI.*;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
@@ -2595,21 +2596,13 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static void renderItemOverlays(DrawContext context, ItemStack stack, int x, int y, Optional<WynnItem> item) {
-        if (item.isPresent()) {
-            ItemAnnotation annotation = item.get();
-            if (annotation instanceof TeleportScrollItem ||
-                    annotation instanceof AmplifierItem ||
-                    annotation instanceof DungeonKeyItem ||
-                    annotation instanceof EmeraldPouchItem ||
-                    annotation instanceof GatheringToolItem ||
-                    annotation instanceof PowderItem ||
-                    annotation instanceof PotionItem ||
-                    annotation instanceof CrafterBagItem) {
-                if (itemTextOverlayEnabled) {
-                    ((ItemTextOverlayFeatureMixin) itemTextOverlayFeature).invokeDrawTextOverlay(context, stack, x, y, false);
-                }
-            }
+        if (itemTextOverlayEnabled) {
+            try {
+                ((ItemTextOverlayFeatureMixin) itemTextOverlayFeature).invokeDrawTextOverlay(context, stack, x, y, false);
+            } catch (Exception ignored) {}
+        }
 
+        if (item.isPresent()) {
             if (unidentifiedItemIconEnabled) {
                 ((UnidentifiedItemIconFeatureInvoker) unidentifiedItemIconFeature).invokeDrawIcon(context, stack, x, y, 100);
             }
@@ -4203,6 +4196,7 @@ public class BankOverlay2 extends WEHandledScreen {
             }
             renderHighlightOverlay(ctx, cachedHighlightColor, x + 1, y + 1);
 
+            WynnModItemOverlayBridge.renderPre(ctx, stack, itemX, itemY);
             ctx.drawItem(renderStack, itemX, itemY);
 
             renderDurabilityRing(ctx, stack, item.orElse(null), x + 1, y + 1);
@@ -4217,6 +4211,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 );
             } catch (Exception ignored) {}
 
+            WynnModItemOverlayBridge.renderPost(ctx, stack, itemX, itemY);
             renderItemOverlays(ctx, stack, x + 1, y + 1, item);
 
             // Inline cached search overlay (uses the frame-level parsed query).
