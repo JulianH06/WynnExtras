@@ -2,7 +2,7 @@ package julianh06.wynnextras.features.achievements;
 
 import java.time.Instant;
 
-public abstract class Achievement {
+public class Achievement {
     protected String id;
     protected String title;
     protected String description;
@@ -21,5 +21,7 @@ public abstract class Achievement {
         }
     }
 
-    public abstract float getProgress();
+    public float getProgress() {
+        return unlocked ? 1f : 0f;
+    }
 }

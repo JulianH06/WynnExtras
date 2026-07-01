@@ -60,7 +60,11 @@ public class ProfessionCalculatorScreen extends WEScreen {
 
     private static final int MAT_AMOUNT_SCALE = 3; // At Sky/Dernic tier, actual amount = ratio * 3
 
-    private static final String[] MATERIAL_TYPES = {"Dernic", "Sky"};
+    private static final String[] MATERIAL_TYPES = {"107-110", "110-115", "115-max", "Sky"};
+    private static final MaterialType[] MATERIAL_TYPE_VALUES = {
+            MaterialType.MAT_107_110, MaterialType.MAT_110_115, MaterialType.MAT_115_MAX, MaterialType.SKY
+    };
+    private static final int DEFAULT_MATERIAL_INDEX = 2; // 115-max (least decay near max level)
     private static final String[] XP_MULTIPLIERS = {"1x", "1.5x", "2x", "2.5x", "3x", "3.5x", "4x", "4.5x", "5x"};
     private static final double[] XP_MULT_VALUES = {1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0};
     private static final String[] PROF_SPEED_OPTIONS = {"On", "Off"};
@@ -79,6 +83,7 @@ public class ProfessionCalculatorScreen extends WEScreen {
     private CycleButtonWidget xpMultButton;
     private CycleButtonWidget profSpeedButton;
     private CycleButtonWidget ingTierFilterButton;
+    private TextInputWidget ingredientLevelInput;
     private TextInputWidget fromLevelInput;
     private TextInputWidget toLevelInput;
     private TextInputWidget currentOverflowInput;
@@ -110,10 +115,13 @@ public class ProfessionCalculatorScreen extends WEScreen {
         professionButton = new CycleButtonWidget("Profession", CRAFTING_PROFESSIONS, idx -> onProfessionChanged());
         recipeButton = new CycleButtonWidget("Recipe", RECIPE_NAMES[0], idx -> recalculate());
         materialTypeButton = new CycleButtonWidget("Material", MATERIAL_TYPES, idx -> recalculate());
+        materialTypeButton.setSelectedIndexSilent(DEFAULT_MATERIAL_INDEX);
         xpMultButton = new CycleButtonWidget("XP Bonus", XP_MULTIPLIERS, idx -> recalculate());
         profSpeedButton = new CycleButtonWidget("Prof Speed", PROF_SPEED_OPTIONS, idx -> recalculate());
         ingTierFilterButton = new CycleButtonWidget("Ing Tier", ING_TIER_FILTER_OPTIONS, idx -> {});
 
+        ingredientLevelInput = createStyledInput("Ing Level");
+        ingredientLevelInput.setInput("100");
         fromLevelInput = createStyledInput("Level (99-132)");
         toLevelInput = createStyledInput("Level (99-132)");
         toLevelInput.setInput("132");
@@ -141,6 +149,7 @@ public class ProfessionCalculatorScreen extends WEScreen {
         addRootWidget(xpMultButton);
         addRootWidget(profSpeedButton);
         addRootWidget(ingTierFilterButton);
+        addRootWidget(ingredientLevelInput);
         addRootWidget(fromLevelInput);
         addRootWidget(toLevelInput);
         addRootWidget(currentOverflowInput);
@@ -246,7 +255,15 @@ public class ProfessionCalculatorScreen extends WEScreen {
 
     private int getFromLevel() { return parseLevel(fromLevelInput, 99); }
     private int getToLevel() { return parseLevel(toLevelInput, 132); }
-    private MaterialType getMaterialType() { return materialTypeButton.getSelectedIndex() == 0 ? MaterialType.DERNIC : MaterialType.SKY; }
+    private MaterialType getMaterialType() { return MATERIAL_TYPE_VALUES[materialTypeButton.getSelectedIndex()]; }
+
+    private double getIngredientLevel() {
+        String text = ingredientLevelInput.getInput().trim();
+        if (text.isEmpty()) return 100;
+        try { return Math.max(1, Math.min(132, Double.parseDouble(text.replace(',', '.')))); }
+        catch (NumberFormatException e) { return 100; }
+    }
+
     private double getXpMultiplier() { return XP_MULT_VALUES[xpMultButton.getSelectedIndex()]; }
     private boolean hasProfSpeed() { return profSpeedButton.getSelectedIndex() == 0; }
 
@@ -297,7 +314,7 @@ public class ProfessionCalculatorScreen extends WEScreen {
 
     private long computeInputHash() {
         long hash = 0;
-        for (TextInputWidget w : new TextInputWidget[]{fromLevelInput, toLevelInput, currentOverflowInput, overflowGoalInput, topNInput}) {
+        for (TextInputWidget w : new TextInputWidget[]{ingredientLevelInput, fromLevelInput, toLevelInput, currentOverflowInput, overflowGoalInput, topNInput}) {
             if (w != null) hash = hash * 31 + w.getInput().hashCode();
         }
         for (int t = 0; t < 3; t++) {
@@ -310,15 +327,15 @@ public class ProfessionCalculatorScreen extends WEScreen {
 
     private void recalculate() {
         if (professionButton == null || recipeButton == null || materialTypeButton == null
-                || xpMultButton == null || profSpeedButton == null || fromLevelInput == null
-                || toLevelInput == null || currentOverflowInput == null || overflowGoalInput == null
-                || ingPriceInputs[0] == null) return;
+                || xpMultButton == null || profSpeedButton == null || ingredientLevelInput == null
+                || fromLevelInput == null || toLevelInput == null || currentOverflowInput == null
+                || overflowGoalInput == null || ingPriceInputs[0] == null) return;
 
         int fromLevel = getFromLevel();
         int toLevel = getToLevel();
         MaterialType matType = getMaterialType();
-        double bonusMult = getXpMultiplier(); // Prof speed does NOT affect XP
-        int recipeLevel = matType.recipeLevel;
+        double ingLevel = getIngredientLevel();
+        double eventMult = getXpMultiplier(); // Prof speed does NOT affect XP
         double overflowGoal = getOverflowGoal();
         double currentOverflow = (fromLevel >= 132) ? getCurrentOverflow() : 0;
         double overflowNeeded = Math.max(0, overflowGoal - currentOverflow);
@@ -360,21 +377,20 @@ public class ProfessionCalculatorScreen extends WEScreen {
         int rowIdx = 0;
 
         for (int ingTier = 1; ingTier <= 3; ingTier++) {
-            double ingBase = CraftXpCalculator.computeIngBaseFullTier(recipeLevel, ingTier);
-
             for (int[] matCombo : MAT_COMBOS) {
-                // Weighted material multiplier using recipe ratios
-                double matMult = CraftXpCalculator.computeMatMult(matCombo[0], matCombo[1], matRatios[0], matRatios[1]);
-                double xpPerCraft = CraftXpCalculator.computeXpPerCraft(ingBase, matMult, bonusMult, Math.min(fromLevel, 132), matType);
+                // No-decay XP per craft for this tier combo (weighted material tiers + fitted ratio multiplier)
+                double noDecayXp = CraftXpCalculator.computeNoDecayXp(
+                        matType, ingLevel, ingTier, matCombo[0], matCombo[1], matRatios[0], matRatios[1], eventMult);
+                double xpPerCraft = CraftXpCalculator.computeXpPerCraft(noDecayXp, Math.min(fromLevel, 132), matType);
 
                 int crafts;
                 if (fromLevel >= 132) {
-                    crafts = CraftXpCalculator.estimateCraftsForOverflow(overflowNeeded, ingBase, matMult, bonusMult, matType);
+                    crafts = CraftXpCalculator.estimateCraftsForOverflow(overflowNeeded, noDecayXp, matType);
                 } else if (toLevel <= 132 && overflowGoal <= 0) {
-                    crafts = CraftXpCalculator.estimateCraftsToLevel(fromLevel, Math.max(fromLevel, toLevel), ingBase, matMult, bonusMult, matType);
+                    crafts = CraftXpCalculator.estimateCraftsToLevel(fromLevel, Math.max(fromLevel, toLevel), noDecayXp, matType);
                 } else {
-                    int craftsTo132 = CraftXpCalculator.estimateCraftsToLevel(fromLevel, 132, ingBase, matMult, bonusMult, matType);
-                    int overflowCrafts = CraftXpCalculator.estimateCraftsForOverflow(overflowNeeded, ingBase, matMult, bonusMult, matType);
+                    int craftsTo132 = CraftXpCalculator.estimateCraftsToLevel(fromLevel, 132, noDecayXp, matType);
+                    int overflowCrafts = CraftXpCalculator.estimateCraftsForOverflow(overflowNeeded, noDecayXp, matType);
                     crafts = craftsTo132 + overflowCrafts;
                 }
 
@@ -470,15 +486,18 @@ public class ProfessionCalculatorScreen extends WEScreen {
         topNInput.setBounds(topNX + 40, row2Y, btnW4 - 40, btnH);
 
         // ── Row 3: From [___] To [___] ──
-        int inputW2 = Math.min(300, (logicalW - 100) / 2);
-        int row3Width = inputW2 * 2 + btnGap;
+        int inputW3 = Math.min(300, (logicalW - 120) / 3);
+        int row3Width = inputW3 * 3 + btnGap * 2;
         int row3X = (logicalW - row3Width) / 2;
         int row3Y = row2Y + btnH + btnGap + labelH;
+        int inputW2 = inputW3; // reused by the overflow row below
 
-        ui.drawText("\u00a77From Level", row3X, row3Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
-        ui.drawText("\u00a77To Level", row3X + inputW2 + btnGap, row3Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
-        fromLevelInput.setBounds(row3X, row3Y, inputW2, btnH);
-        toLevelInput.setBounds(row3X + inputW2 + btnGap, row3Y, inputW2, btnH);
+        ui.drawText("\u00a77Ingredient Level", row3X, row3Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
+        ui.drawText("\u00a77From Level", row3X + inputW3 + btnGap, row3Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
+        ui.drawText("\u00a77To Level", row3X + (inputW3 + btnGap) * 2, row3Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
+        ingredientLevelInput.setBounds(row3X, row3Y, inputW3, btnH);
+        fromLevelInput.setBounds(row3X + inputW3 + btnGap, row3Y, inputW3, btnH);
+        toLevelInput.setBounds(row3X + (inputW3 + btnGap) * 2, row3Y, inputW3, btnH);
 
         // ── Row 4: Overflow ──
         int fromLevel = getFromLevel();

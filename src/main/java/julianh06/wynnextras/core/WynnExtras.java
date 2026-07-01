@@ -7,6 +7,8 @@ import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.*;
 import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
+import julianh06.wynnextras.features.achievements.AchievementTracking;
+import julianh06.wynnextras.features.achievements.Achievements;
 import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
@@ -229,6 +231,7 @@ public class WynnExtras implements ClientModInitializer {
 
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+			Achievements.load();
 			AccountBankData.INSTANCE.load();
 			CharacterBankData.INSTANCE.load();
 			BookshelfData.INSTANCE.load();
@@ -240,6 +243,20 @@ public class WynnExtras implements ClientModInitializer {
 			CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool).thenRunAsync(WeightDisplay::populateStatRangesFromDatabase);
 		});
 
+		// Flush any pending (debounced) achievement upload when leaving a server, so a change made
+		// within the debounce window isn't lost. Fire-and-forget: don't block the disconnect.
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> Achievements.flushServerSave());
+
+		// On JVM shutdown wait briefly for the flush, since the upload runs on a daemon thread that
+		// would otherwise be killed before it finishes.
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			try {
+				Achievements.flushServerSave().get(8, java.util.concurrent.TimeUnit.SECONDS);
+			} catch (Exception e) {
+				LOGGER.error("[WynnExtras] Failed to flush achievements on shutdown:", e);
+			}
+		}, "WynnExtras-Achievement-Shutdown-Flush"));
+
 		ModSounds.registerSounds();
 
 		if(FabricLoader.getInstance().isModLoaded("devauth")) {
@@ -249,7 +266,6 @@ public class WynnExtras implements ClientModInitializer {
 		}
 
 		ResetTimeConfig.INSTANCE.fetchIfNeeded();
-
 	}
 
 	private static void updateVersionData() {

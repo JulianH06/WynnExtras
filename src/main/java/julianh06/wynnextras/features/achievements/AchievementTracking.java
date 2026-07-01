@@ -1,0 +1,482 @@
+package julianh06.wynnextras.features.achievements;
+
+import com.wynntils.core.components.Models;
+import com.wynntils.models.raid.raids.RaidKind;
+import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.type.CappedValue;
+import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.event.RaidEndedEvent;
+import julianh06.wynnextras.event.TickEvent;
+import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
+import julianh06.wynnextras.features.profileviewer.data.Aspect;
+import julianh06.wynnextras.features.profileviewer.data.CharacterData;
+import julianh06.wynnextras.features.profileviewer.data.PlayerData;
+import julianh06.wynnextras.features.profileviewer.data.Profession;
+import julianh06.wynnextras.features.profileviewer.data.Raids;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.Text;
+import net.neoforged.bus.api.SubscribeEvent;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+@WEModule
+public class AchievementTracking {
+    public static Achievements achievements;
+    private boolean init;
+
+    /**
+     * How far our self-counted total may run ahead of the Wynncraft API before we assume our
+     * count is wrong and snap back to the API. The API lags behind real completions, so a small
+     * lead is expected and trusted; a large one is treated as drift.
+     */
+    private static final int API_MISMATCH_TOLERANCE = 5;
+
+    /** Combat level cap a class must reach to count toward the {@code class.levelXXX} achievements. */
+    private static final int CLASS_LEVEL_120 = 120;
+    private static final int CLASS_LEVEL_121 = 121;
+
+    /**
+     * Raw content-completion value that equals 100%. Kept in sync with
+     * {@code ClassWidget.MAX_CONTENT_COMPLETION}, which the profile viewer uses for the same purpose.
+     */
+    private static final int CONTENT_COMPLETION_MAX = 1289;
+
+    /** Level a profession reaches at its cap. */
+    private static final int PROFESSION_MAX_LEVEL = 132;
+
+    /** Wynncraft profession keys, as returned (lowercase) by the player API. */
+    private static final List<String> GATHERING_PROFESSIONS = List.of("mining", "woodcutting", "farming", "fishing");
+    private static final List<String> CRAFTING_PROFESSIONS = List.of(
+            "alchemism", "armouring", "cooking", "jeweling", "scribing", "tailoring", "weaponsmithing", "woodworking");
+
+    /** Aspect amount that counts as "maxed", by rarity (matches AspectsPage). */
+    private static int maxedThreshold(String rarity) {
+        return switch (rarity == null ? "" : rarity.toLowerCase()) {
+            case "mythic" -> 15;
+            case "fabled" -> 75;
+            case "legendary" -> 150;
+            default -> Integer.MAX_VALUE;
+        };
+    }
+
+    /** Ensures the startup API sync only runs once per client launch. */
+    private boolean raidCountsSynced;
+
+    /** Ensures the aspect achievement sync only dispatches once the aspect catalogue is loaded. */
+    private boolean aspectsSynced;
+
+    @SubscribeEvent
+    private void onTick(TickEvent event) {
+        if (!init) {
+            init = true;
+            if (getFromServer() != null) {
+                achievements = getFromServer();
+            }
+        }
+        if (achievements == null) return;
+
+        CappedValue combatLevel = Models.CombatXp.getCombatLevel();
+        int currentLevel = combatLevel.current();
+
+        unlockLevelAchievement(currentLevel, 120);
+        unlockLevelAchievement(currentLevel, 121);
+
+        // Once per launch, reconcile our self-counted raid totals (and class/content/profession
+        // achievements) against the Wynncraft API.
+        if (!raidCountsSynced && McUtils.player() != null) {
+            raidCountsSynced = true;
+            syncRaidCountsFromApi();
+        }
+
+        // Once the aspect catalogue has finished loading, evaluate the aspect achievements.
+        if (!aspectsSynced && McUtils.player() != null && trySyncAspectAchievements()) {
+            aspectsSynced = true;
+        }
+    }
+
+    /**
+     * Fires whenever a raid is completed. We immediately count it ourselves (the API is too slow
+     * to reflect it yet), then re-query the API to reconcile in case runs happened elsewhere.
+     */
+    @SubscribeEvent
+    private void onRaidEnded(RaidEndedEvent event) {
+        if (!(event instanceof RaidEndedEvent.Completed)) return;
+        if (achievements == null || event.getRaid() == null) return;
+
+        RaidType type = RaidType.fromKind(event.getRaid().getRaidKind());
+        if (type == null) return;
+
+        Integer current = achievements.getCount(type.achievementId);
+        int newCount = (current == null ? 0 : current) + 1;
+        applyCount(type, newCount, true);
+        save();
+
+        syncRaidCountsFromApi();
+    }
+
+    private void unlockLevelAchievement(int currentLevel, int requiredLevel) {
+        if (currentLevel < requiredLevel) return;
+
+        String id = "simple.level." + requiredLevel;
+        if (achievements.isUnlocked(id)) return;
+
+        if (achievements.setCompleted(id)) {
+            announce("Achievement Unlocked: Level " + requiredLevel);
+            save();
+        }
+    }
+
+    private void announce(String message) {
+        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(message)));
+    }
+
+    /**
+     * Pulls the player's raid completion counts from the Wynncraft API and reconciles them with
+     * our locally stored counts. Runs the actual mutation on the client thread since the HTTP
+     * response arrives on a background thread.
+     */
+    private void syncRaidCountsFromApi() {
+        if (achievements == null || McUtils.player() == null) return;
+
+        String username = McUtils.player().getGameProfile().name();
+        if (username == null || username.isEmpty()) return;
+
+        WynncraftApiHandler.fetchPlayerData(username)
+                .thenAccept(data -> MinecraftClient.getInstance().execute(() -> reconcileWithApi(data)))
+                .exceptionally(ex -> {
+                    WynnExtras.LOGGER.error("[WynnExtras] Failed to sync raid achievement counts: " + ex.getMessage());
+                    return null;
+                });
+    }
+
+    private void reconcileWithApi(PlayerData data) {
+        if (achievements == null || data == null) return;
+
+        boolean changed = false;
+        changed |= reconcileRaids(data);
+        changed |= evaluateCharacterAchievements(data);
+        if (changed) save();
+    }
+
+    /** Reconciles raid completion counts against the API. Returns true if anything changed. */
+    private boolean reconcileRaids(PlayerData data) {
+        if (data.getGlobalData() == null) return false;
+
+        Raids raids = data.getGlobalData().getRaids();
+        if (raids == null || raids.getList() == null) return false; // stats private / unavailable — keep local counts
+        Map<String, Integer> list = raids.getList();
+
+        boolean changed = false;
+        for (RaidType type : RaidType.values()) {
+            int apiCount = type.apiCount(list);
+            Integer localBoxed = achievements.getCount(type.achievementId);
+            int local = localBoxed == null ? 0 : localBoxed;
+
+            int reconciled = reconcile(local, apiCount);
+            if (reconciled != local) {
+                // API reconciliation is silent: only real completions in onRaidEnded announce.
+                applyCount(type, reconciled, false);
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /**
+     * Evaluates the class-level, content-completion and profession achievements from the per-character
+     * data in a single Wynncraft API response. Returns true if any achievement state changed.
+     */
+    private boolean evaluateCharacterAchievements(PlayerData data) {
+        Map<String, CharacterData> characters = data.getCharacters();
+        if (characters == null || characters.isEmpty()) return false; // stats private / unavailable
+
+        int classesAt120 = 0;
+        int classesAt121 = 0;
+        boolean contentComplete = false;
+
+        boolean anyGather100 = false, anyGather132 = false, allGather100 = false, allGather132 = false;
+        boolean anyCraft100 = false, anyCraft132 = false, allCraft100 = false, allCraft132 = false;
+
+        for (CharacterData character : characters.values()) {
+            if (character == null) continue;
+
+            int level = character.getLevel();
+            if (level >= CLASS_LEVEL_120) classesAt120++;
+            if (level >= CLASS_LEVEL_121) classesAt121++;
+
+            if (character.getContentCompletion() >= CONTENT_COMPLETION_MAX) contentComplete = true;
+
+            Map<String, Profession> professions = character.getProfessions();
+            if (professions == null) continue;
+
+            boolean charAllGather100 = true, charAllGather132 = true;
+            for (String prof : GATHERING_PROFESSIONS) {
+                int lvl = professionLevel(professions, prof);
+                if (lvl >= 100) anyGather100 = true;
+                if (lvl >= PROFESSION_MAX_LEVEL) anyGather132 = true;
+                if (lvl < 100) charAllGather100 = false;
+                if (lvl < PROFESSION_MAX_LEVEL) charAllGather132 = false;
+            }
+            if (charAllGather100) allGather100 = true;
+            if (charAllGather132) allGather132 = true;
+
+            boolean charAllCraft100 = true, charAllCraft132 = true;
+            for (String prof : CRAFTING_PROFESSIONS) {
+                int lvl = professionLevel(professions, prof);
+                if (lvl >= 100) anyCraft100 = true;
+                if (lvl >= PROFESSION_MAX_LEVEL) anyCraft132 = true;
+                if (lvl < 100) charAllCraft100 = false;
+                if (lvl < PROFESSION_MAX_LEVEL) charAllCraft132 = false;
+            }
+            if (charAllCraft100) allCraft100 = true;
+            if (charAllCraft132) allCraft132 = true;
+        }
+
+        boolean changed = false;
+
+        changed |= applyTieredCount("class.level120", classesAt120, "class(es) at Level 120");
+        changed |= applyTieredCount("class.level121", classesAt121, "class(es) at Level 121");
+
+        if (contentComplete) changed |= unlockSimple("content.completion", "100% Content Completion");
+
+        if (anyGather100) changed |= unlockSimple("prof.gather.one.100", "Level 100 Gathering Profession");
+        if (anyGather132) changed |= unlockSimple("prof.gather.one.132", "Level 132 Gathering Profession");
+        if (allGather100) changed |= unlockSimple("prof.gather.all.100", "All Gathering Professions Level 100");
+        if (allGather132) changed |= unlockSimple("prof.gather.all.132", "All Gathering Professions Level 132");
+        if (anyCraft100) changed |= unlockSimple("prof.craft.one.100", "Level 100 Crafting Profession");
+        if (anyCraft132) changed |= unlockSimple("prof.craft.one.132", "Level 132 Crafting Profession");
+        if (allCraft100) changed |= unlockSimple("prof.craft.all.100", "All Crafting Professions Level 100");
+        if (allCraft132) changed |= unlockSimple("prof.craft.all.132", "All Crafting Professions Level 132");
+
+        return changed;
+    }
+
+    private static int professionLevel(Map<String, Profession> professions, String key) {
+        Profession profession = professions.get(key);
+        return profession == null ? 0 : profession.getLevel();
+    }
+
+    /**
+     * Decides the authoritative count given our local count and the API's count:
+     * the API wins when it's ahead (we missed runs) or when our count has drifted implausibly
+     * far ahead of it; otherwise we keep our local count (the API is simply lagging).
+     */
+    private static int reconcile(int local, int apiCount) {
+        if (apiCount > local) return apiCount;
+        if (local - apiCount > API_MISMATCH_TOLERANCE) return apiCount;
+        return local;
+    }
+
+    /** Applies an absolute count, optionally announcing any newly reached tiers. */
+    private void applyCount(RaidType type, int newCount, boolean announce) {
+        Integer beforeTier = achievements.getTier(type.achievementId);
+        achievements.setCount(type.achievementId, newCount);
+        Integer afterTier = achievements.getTier(type.achievementId);
+
+        if (!announce || beforeTier == null || afterTier == null) return;
+
+        for (int tier = beforeTier; tier < afterTier && tier < Achievements.RAID_TARGETS.size(); tier++) {
+            int milestone = Achievements.RAID_TARGETS.get(tier);
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                    Text.of("Achievement: Completed " + milestone + " " + type.displayName + " raids!")));
+        }
+    }
+
+    /**
+     * Dispatches the aspect achievement evaluation once the aspect catalogue has finished loading.
+     * Returns false while the catalogue is still loading so the caller retries on a later tick; true
+     * once a request has been dispatched (or there's nothing more we can do this launch).
+     */
+    private boolean trySyncAspectAchievements() {
+        if (achievements == null || McUtils.player() == null) return false;
+
+        List<ApiAspect> catalogue = WynncraftApiHandler.fetchAllAspects(); // kicks off the load on first call
+        if (WynncraftApiHandler.INSTANCE.isFetchingAspects.get()) return false; // still loading — retry later
+        if (catalogue == null || catalogue.isEmpty()) return false;
+
+        List<ApiAspect> snapshot = new ArrayList<>(catalogue);
+        // Only proceed once aspects for every class are present, otherwise totals would be wrong.
+        long classCount = snapshot.stream()
+                .map(ApiAspect::getRequiredClass)
+                .filter(Objects::nonNull)
+                .map(String::toLowerCase)
+                .distinct()
+                .count();
+        if (classCount < 5) return false;
+
+        String uuid = McUtils.player().getUuidAsString();
+        WynncraftApiHandler.fetchPlayerAspectData(uuid)
+                .thenAccept(result -> MinecraftClient.getInstance().execute(() -> applyAspectAchievements(result, snapshot)))
+                .exceptionally(ex -> {
+                    WynnExtras.LOGGER.error("[WynnExtras] Failed to sync aspect achievements: " + ex.getMessage());
+                    return null;
+                });
+        return true;
+    }
+
+    private void applyAspectAchievements(WynncraftApiHandler.FetchResult result, List<ApiAspect> catalogue) {
+        if (achievements == null) return;
+        if (result == null || result.status() != WynncraftApiHandler.FetchStatus.OK || result.user() == null) return;
+        List<Aspect> playerAspects = result.user().getAspects();
+        if (playerAspects == null) return;
+
+        // Highest owned amount per aspect name.
+        Map<String, Integer> amounts = new HashMap<>();
+        for (Aspect aspect : playerAspects) {
+            if (aspect.getName() == null) continue;
+            amounts.merge(aspect.getName(), aspect.getAmount(), Math::max);
+        }
+
+        int totalAll = 0, totalMythic = 0, totalFabled = 0, totalLegendary = 0;
+        int maxedAll = 0, maxedMythic = 0, maxedFabled = 0, maxedLegendary = 0;
+        Map<String, Integer> totalByClass = new HashMap<>();
+        Map<String, Integer> maxedByClass = new HashMap<>();
+
+        for (ApiAspect api : catalogue) {
+            String rarity = api.getRarity() == null ? "" : api.getRarity().toLowerCase();
+            String clazz = api.getRequiredClass() == null ? "" : api.getRequiredClass().toLowerCase();
+
+            totalAll++;
+            totalByClass.merge(clazz, 1, Integer::sum);
+            switch (rarity) {
+                case "mythic" -> totalMythic++;
+                case "fabled" -> totalFabled++;
+                case "legendary" -> totalLegendary++;
+            }
+
+            boolean maxed = amounts.getOrDefault(api.getName(), 0) >= maxedThreshold(rarity);
+            if (!maxed) continue;
+
+            maxedAll++;
+            maxedByClass.merge(clazz, 1, Integer::sum);
+            switch (rarity) {
+                case "mythic" -> maxedMythic++;
+                case "fabled" -> maxedFabled++;
+                case "legendary" -> maxedLegendary++;
+            }
+        }
+
+        boolean changed = false;
+
+        if (maxedAll >= 1) changed |= unlockSimple("aspect.max.one", "Max an Aspect");
+        if (maxedMythic >= 1) changed |= unlockSimple("aspect.max.mythic", "Max a Mythic Aspect");
+
+        changed |= applyProgress("aspect.max.legendary.10", maxedLegendary, 10, "Max 10 Legendary Aspects");
+        changed |= applyProgress("aspect.max.fabled.10", maxedFabled, 10, "Max 10 Fabled Aspects");
+
+        changed |= unlockAllMaxed("aspect.max.all.warrior",  maxedByClass.getOrDefault("warrior", 0),  totalByClass.getOrDefault("warrior", 0),  "Max all Warrior Aspects");
+        changed |= unlockAllMaxed("aspect.max.all.shaman",   maxedByClass.getOrDefault("shaman", 0),   totalByClass.getOrDefault("shaman", 0),   "Max all Shaman Aspects");
+        changed |= unlockAllMaxed("aspect.max.all.mage",     maxedByClass.getOrDefault("mage", 0),     totalByClass.getOrDefault("mage", 0),     "Max all Mage Aspects");
+        changed |= unlockAllMaxed("aspect.max.all.archer",   maxedByClass.getOrDefault("archer", 0),   totalByClass.getOrDefault("archer", 0),   "Max all Archer Aspects");
+        changed |= unlockAllMaxed("aspect.max.all.assassin", maxedByClass.getOrDefault("assassin", 0), totalByClass.getOrDefault("assassin", 0), "Max all Assassin Aspects");
+
+        changed |= unlockAllMaxed("aspect.max.all.legendary", maxedLegendary, totalLegendary, "Max all Legendary Aspects");
+        changed |= unlockAllMaxed("aspect.max.all.fabled",    maxedFabled,    totalFabled,    "Max all Fabled Aspects");
+        changed |= unlockAllMaxed("aspect.max.all.mythic",    maxedMythic,    totalMythic,    "Max all Mythic Aspects");
+        changed |= unlockAllMaxed("aspect.max.all",           maxedAll,       totalAll,       "Max all Aspects");
+
+        if (changed) save();
+    }
+
+    /** Sets a tiered achievement's absolute count, announcing each newly reached tier. Returns true if changed. */
+    private boolean applyTieredCount(String id, int newCount, String label) {
+        Integer beforeCount = achievements.getCount(id);
+        Integer beforeTier = achievements.getTier(id);
+        achievements.setCount(id, newCount);
+        Integer afterTier = achievements.getTier(id);
+
+        if (beforeTier != null && afterTier != null && afterTier > beforeTier) {
+            // Announce only the highest tier reached this update, to avoid a burst on the first sync.
+            int reachedTier = Math.min(afterTier, Achievements.CLASS_COUNT_TARGETS.size()) - 1;
+            int milestone = Achievements.CLASS_COUNT_TARGETS.get(reachedTier);
+            announce("Achievement: " + milestone + " " + label + "!");
+        }
+        Integer afterCount = achievements.getCount(id);
+        return !Objects.equals(beforeCount, afterCount) || !Objects.equals(beforeTier, afterTier);
+    }
+
+    /** Unlocks a simple achievement, announcing it if it wasn't already unlocked. Returns true if changed. */
+    private boolean unlockSimple(String id, String announceName) {
+        if (achievements.isUnlocked(id)) return false;
+        if (achievements.setCompleted(id)) {
+            announce("Achievement Unlocked: " + announceName);
+            return true;
+        }
+        return false;
+    }
+
+    /** Updates a progress achievement's count/target, announcing it if it just unlocked. Returns true if changed. */
+    private boolean applyProgress(String id, int current, int target, String announceName) {
+        if (target <= 0) return false;
+        Integer beforeCount = achievements.getCount(id);
+        boolean newlyUnlocked = achievements.setProgressGoal(id, current, target);
+        if (newlyUnlocked) announce("Achievement Unlocked: " + announceName);
+        Integer afterCount = achievements.getCount(id);
+        return newlyUnlocked || !Objects.equals(beforeCount, afterCount);
+    }
+
+    /** Unlocks an "all maxed" simple achievement when the maxed count reaches the (non-zero) total. */
+    private boolean unlockAllMaxed(String id, int maxed, int total, String announceName) {
+        if (total <= 0 || maxed < total) return false;
+        return unlockSimple(id, announceName);
+    }
+
+    private void save() {
+        Achievements.save();
+    }
+
+    private Achievements getFromServer() {
+        return null;
+    }
+
+    private Achievements loadFromClient() {
+        return null;
+    }
+
+    /**
+     * The five raids tracked by completion achievements. Matched against the in-game raid via
+     * {@link RaidKind#getRaidName()}, which is identical to the key Wynncraft's API uses in the
+     * raid completion map.
+     */
+    private enum RaidType {
+        TNA("raid.tna", "The Nameless Anomaly"),
+        NOTG("raid.notg", "Nest of the Grootslangs"),
+        NOL("raid.nol", "Orphion's Nexus of Light"),
+        TWP("raid.twp", "The Wartorn Palace"),
+        TCC("raid.tcc", "The Canyon Colossus");
+
+        final String achievementId;
+        final String displayName;
+
+        RaidType(String achievementId, String displayName) {
+            this.achievementId = achievementId;
+            this.displayName = displayName;
+        }
+
+        int apiCount(Map<String, Integer> list) {
+            Integer value = list.get(displayName);
+            if (value != null) return value;
+            // The API has historically reported The Wartorn Palace under the "unknown" key.
+            if (this == TWP) {
+                value = list.get("unknown");
+                if (value != null) return value;
+            }
+            return 0;
+        }
+
+        static RaidType fromKind(RaidKind kind) {
+            if (kind == null) return null;
+            String raidName = kind.getRaidName();
+            for (RaidType type : values()) {
+                if (type.displayName.equals(raidName)) return type;
+            }
+            return null;
+        }
+    }
+}
