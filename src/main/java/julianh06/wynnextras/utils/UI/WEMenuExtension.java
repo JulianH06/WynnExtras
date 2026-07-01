@@ -1,6 +1,6 @@
 package julianh06.wynnextras.utils.UI;
 
-import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
+import julianh06.wynnextras.utils.HandledScreenAccess;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -74,19 +74,19 @@ public abstract class WEMenuExtension {
     // --- HandledScreen helpers (logical coords = GUI units * scaleFactor) ---
 
     protected float hsX(HandledScreen<?> screen) {
-        return ((HandledScreenAccessor) screen).getX() * (float) scaleFactor;
+        return HandledScreenAccess.x(screen) * (float) scaleFactor;
     }
 
     protected float hsY(HandledScreen<?> screen) {
-        return ((HandledScreenAccessor) screen).getY() * (float) scaleFactor;
+        return HandledScreenAccess.y(screen) * (float) scaleFactor;
     }
 
     protected float hsWidth(HandledScreen<?> screen) {
-        return ((HandledScreenAccessor) screen).getBackgroundWidth() * (float) scaleFactor;
+        return HandledScreenAccess.backgroundWidth(screen) * (float) scaleFactor;
     }
 
     protected float hsHeight(HandledScreen<?> screen) {
-        return ((HandledScreenAccessor) screen).getBackgroundHeight() * (float) scaleFactor;
+        return HandledScreenAccess.backgroundHeight(screen) * (float) scaleFactor;
     }
 
     // --- List ---

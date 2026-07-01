@@ -12,25 +12,31 @@ import com.wynntils.models.stats.type.SkillStatType;
 import com.wynntils.models.stats.type.StatPossibleValues;
 import com.wynntils.models.stats.type.StatType;
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.mc.TooltipUtils;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.type.Pair;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.loader.SkillPointLoader;
-import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
+import julianh06.wynnextras.utils.HandledScreenAccess;
 import julianh06.wynnextras.utils.UI.WEMenuExtension;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
+import net.minecraft.client.gui.tooltip.TooltipComponent;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
@@ -67,7 +73,7 @@ public class CompassMenuOverlay extends WEMenuExtension {
         if (!selectingWeapon) return false;
         if (!(McUtils.screen() instanceof HandledScreen<?> screen)) return false;
 
-        Slot focused = ((HandledScreenAccessor) screen).getFocusedSlot();
+        Slot focused = HandledScreenAccess.focusedSlot(screen);
         if (focused == null || !focused.hasStack()) return false;
 
         ItemStack clicked = focused.getStack();
@@ -117,9 +123,48 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        renderHoveredTooltip(ctx, mouseX, mouseY);
+    }
+
+    public void renderHoveredTooltip(DrawContext ctx, int mouseX, int mouseY) {
         if(hoveredItem.isEmpty()) return;
 
-        ctx.drawItemTooltip(MinecraftClient.getInstance().textRenderer, hoveredItem, mouseX, mouseY);
+        MinecraftClient mc = MinecraftClient.getInstance();
+        List<Text> tooltip = hoveredItem.getTooltip(Item.TooltipContext.DEFAULT, mc.player, TooltipType.BASIC);
+        drawTooltip(mc.textRenderer, TooltipUtils.getClientTooltipComponent(tooltip), mouseX + 14, mouseY, ctx);
+    }
+
+    private static void drawTooltip(net.minecraft.client.font.TextRenderer textRenderer, List<TooltipComponent> components, int x, int y, DrawContext context) {
+        if (components.isEmpty()) return;
+
+        int width = 0;
+        int height = components.size() == 1 ? -2 : 0;
+        TooltipComponent component;
+        for (Iterator<TooltipComponent> iterator = components.iterator(); iterator.hasNext(); height += component.getHeight(textRenderer)) {
+            component = iterator.next();
+            width = Math.max(width, component.getWidth(textRenderer));
+        }
+
+        int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
+        int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
+        if (x + width > screenWidth) x = Math.max(4, screenWidth - width - 4);
+        if (y + height > screenHeight) y = Math.max(4, screenHeight - height - 4);
+
+        TooltipBackgroundRenderer.render(context, x, y, width, height, null);
+
+        int textY = y;
+        for (int i = 0; i < components.size(); i++) {
+            component = components.get(i);
+            component.drawText(context, textRenderer, x, textY);
+            textY += component.getHeight(textRenderer) + (i == 0 ? 2 : 0);
+        }
+
+        int itemY = y;
+        for (int i = 0; i < components.size(); i++) {
+            component = components.get(i);
+            component.drawItems(textRenderer, x, itemY, width, height, context);
+            itemY += component.getHeight(textRenderer) + (i == 0 ? 2 : 0);
+        }
     }
 
     private static class ItemWidget extends Widget {

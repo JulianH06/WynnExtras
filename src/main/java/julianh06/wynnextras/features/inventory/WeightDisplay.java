@@ -5,7 +5,7 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.Core;
 import julianh06.wynnextras.event.KeyInputEvent;
-import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
+import julianh06.wynnextras.utils.HandledScreenAccess;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.minecraft.client.MinecraftClient;
@@ -74,7 +74,7 @@ public class WeightDisplay {
                  MinecraftClient mc = MinecraftClient.getInstance();
                  boolean isHovered = false;
                  if (mc.currentScreen instanceof HandledScreen<?> hs) {
-                     Slot focused = ((HandledScreenAccessor) hs).getFocusedSlot();
+                     Slot focused = HandledScreenAccess.focusedSlot(hs);
                      isHovered = focused != null && ItemStack.areItemsAndComponentsEqual(focused.getStack(), stack);
                  }
                  if (isHovered) {

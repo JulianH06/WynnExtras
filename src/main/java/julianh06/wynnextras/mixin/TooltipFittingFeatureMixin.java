@@ -4,6 +4,7 @@ import com.wynntils.features.tooltips.TooltipFittingFeature;
 import com.wynntils.utils.mc.TooltipUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.inventory.WeightDisplay;
+import julianh06.wynnextras.utils.LunarCompat;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,6 +24,8 @@ public class TooltipFittingFeatureMixin {
             )
     )
     private List<TooltipComponent> redirectGetClientTooltipComponent(List<Text> components) {
+        if (LunarCompat.isLunarClient()) return TooltipUtils.getClientTooltipComponent(components);
+
         var currentHoveredStack = WeightDisplay.getCurrentHoveredStack();
         if (!WynnExtrasConfig.INSTANCE.showWeight || currentHoveredStack == null)
             return TooltipUtils.getClientTooltipComponent(components);

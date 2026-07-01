@@ -44,13 +44,15 @@ import julianh06.wynnextras.features.inventory.data.BookshelfData;
 import julianh06.wynnextras.features.inventory.data.CharacterBankData;
 import julianh06.wynnextras.features.inventory.data.CrossClassBankSearch;
 import julianh06.wynnextras.features.inventory.data.MiscBucketData;
-import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
 import julianh06.wynnextras.mixin.Accessor.*;
 import julianh06.wynnextras.mixin.Invoker.*;
 import julianh06.wynnextras.mixin.ItemFavoriteFeatureAccessor;
 import julianh06.wynnextras.mixin.ItemGuessFeatureAccessor;
+import julianh06.wynnextras.utils.HandledScreenAccess;
+import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.SearchQueryParser;
+import julianh06.wynnextras.utils.SlotAccess;
 import julianh06.wynnextras.utils.WynntilsHighlightUtils;
 import julianh06.wynnextras.utils.WynnModItemOverlayBridge;
 import julianh06.wynnextras.utils.UI.*;
@@ -109,6 +111,7 @@ public class BankOverlay2 extends WEHandledScreen {
     private static int hoveredY = -1;
     private static int hoveredIndex = -1;
     private static int hoveredInvIndex = -1;
+    private static TooltipRenderData hoveredTooltipData = null;
 
     static ItemHighlightFeature itemHighlightFeature;
     static ItemTextOverlayFeature itemTextOverlayFeature;
@@ -508,7 +511,7 @@ public class BankOverlay2 extends WEHandledScreen {
             if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
                 Screen screen = McUtils.screen();
                 if (!(screen instanceof HandledScreen<?> containerScreen)) return;
-                yPos = ((HandledScreenAccessor) containerScreen).getY() + (4 + McUtils.containerMenu().slots.size() / 9f) * 16;
+                yPos = HandledScreenAccess.y(containerScreen) + (4 + McUtils.containerMenu().slots.size() / 9f) * 16;
             } else {
                 context.fillGradient(
                         0, 0, mc.currentScreen.width, mc.currentScreen.height,
@@ -662,7 +665,7 @@ public class BankOverlay2 extends WEHandledScreen {
             scrollBarWidget = new ScrollBarWidget();
         }
 
-        ci.cancel();
+        if (ci != null) ci.cancel();
 
         if (!WynnExtras.hasTestInventory()) {
             WynnExtras.updateTestInventory(screen.getScreenHandler().slots);
@@ -950,15 +953,15 @@ public class BankOverlay2 extends WEHandledScreen {
             }
         }
 
-        renderHoveredTooltip(context, screen, mouseX, mouseY);
-        renderHeldItemOverlay(context, mouseX, mouseY);
-
         if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
             quickActionWidget.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 31, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
         } else {
             quickActionWidget.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
         }
         quickActionWidget.draw(context, mouseX, mouseY, delta, ui);
+
+        renderHoveredTooltip(context, screen, mouseX, mouseY);
+        renderHeldItemOverlay(context, mouseX, mouseY);
 
         touchHoveredSlot = hoveredBackingSlot;
         BankOverlaySlotBridge.endFrame();
@@ -2185,6 +2188,7 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static void syncActivePageFromWynntilsQuickJump() {
+        if (LunarCompat.isLunarClient()) return;
         if (!shouldShowWynntilsPageJumpButtons()) return;
         if (shouldWait || isReloading || bankTypeSwitchInProgress) return;
 
@@ -2206,8 +2210,9 @@ public class BankOverlay2 extends WEHandledScreen {
         hoveredX = -1;
         hoveredY = -1;
         hoveredSlot = Items.AIR.getDefaultStack();
+        hoveredTooltipData = null;
         if (screen != null) {
-            ((HandledScreenAccessor) screen).setFocusedSlot(null);
+            HandledScreenAccess.setFocusedSlot(screen, null);
         }
     }
 
@@ -2380,7 +2385,7 @@ public class BankOverlay2 extends WEHandledScreen {
         BankOverlaySlotBridge.expose(bridgeScreen, backingSlot, screenX, screenY);
         if (hovered) {
             hoveredBackingSlot = backingSlot;
-            ((HandledScreenAccessor) bridgeScreen).setFocusedSlot(backingSlot);
+            HandledScreenAccess.setFocusedSlot(bridgeScreen, backingSlot);
         }
     }
 
@@ -2656,29 +2661,17 @@ public class BankOverlay2 extends WEHandledScreen {
         Optional<WynnItem> item = asWynnItem(hoveredSlot);
         WeightDisplay.setCurrentHoveredStack(hoveredSlot);
         TooltipRenderData tooltipData = getTooltipRenderData(hoveredSlot, item);
+        hoveredTooltipData = tooltipData;
         TradeMarketComparisonPanel.cacheHoveredTooltip(hoveredSlot, tooltipData.tooltip());
 
-        int tooltipHeight = tooltipData.height();
-        int screenHeight = screen.height;
-        float scale = 1.0f;
+        Slot tooltipSource = getTooltipSourceSlot(screen);
+        ensureWynntilsOriginalName(tooltipSource.getStack());
+        HandledScreenAccess.setFocusedSlot(screen, tooltipSource);
+    }
 
-        int y = mouseY;
-        boolean overflow = false;
-        if (tooltipHeight > screenHeight) {
-            scale = (float) screenHeight / (float) tooltipHeight;
-            y = 0; //ganz unten am screen
-            overflow = true;
-        }
-
-        if(!overflow) {
-            Slot tooltipSource = getTooltipSourceSlot(screen);
-            ensureWynntilsOriginalName(tooltipSource.getStack());
-            ((HandledScreenAccessor) screen).setFocusedSlot(tooltipSource);
-            ((HandledScreenInvoker) screen).invokeDrawMouseoverTooltip(context, mouseX, mouseY);
-        } else {
-            drawTooltip(screen.getTextRenderer(), tooltipData.components(), (int) (mouseX + 14 * scale), y, context);
-        }
-
+    public static void renderLunarFallbackTooltip(DrawContext context, int mouseX, int mouseY) {
+        if (hoveredTooltipData == null) return;
+        drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltipData.components(), mouseX + 14, mouseY, context);
     }
 
     private static TooltipRenderData getTooltipRenderData(ItemStack stack, Optional<WynnItem> item) {
@@ -2738,9 +2731,7 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         tooltipInventory.setStack(0, hoveredSlot);
-        HandledScreenAccessor accessor = (HandledScreenAccessor) screen;
-        ((SlotAccessor) tooltipSlot).setX(hoveredX - accessor.getX());
-        ((SlotAccessor) tooltipSlot).setY(hoveredY - accessor.getY());
+        SlotAccess.setPosition(tooltipSlot, hoveredX - HandledScreenAccess.x(screen), hoveredY - HandledScreenAccess.y(screen));
         return tooltipSlot;
     }
 
@@ -2778,6 +2769,11 @@ public class BankOverlay2 extends WEHandledScreen {
                     i = k;
                 }
             }
+
+            int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
+            int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
+            if (x + i > screenWidth) x = Math.max(4, screenWidth - i - 4);
+            if (y + j > screenHeight) y = Math.max(4, screenHeight - j - 4);
 
             int l = i;
             int m = j;
@@ -3363,9 +3359,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
         if (isBank) cacheCurrentBankPageIfPossible();
 
-        HandledScreenAccessor accessor = (HandledScreenAccessor) screen;
-        int x = accessor.getX() + accessor.getBackgroundWidth() + 4;
-        int y = accessor.getY() + 14;
+        int x = HandledScreenAccess.x(screen) + HandledScreenAccess.backgroundWidth(screen) + 4;
+        int y = HandledScreenAccess.y(screen) + 14;
 
         if (isBank) {
             // Bank: top-right header (cumulative totals across pages) + grid for the current page.
@@ -3573,6 +3568,7 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static int getCurrentBankPageNumber() {
+        if (LunarCompat.isLunarClient() && BankOverlay.activeInv != -1) return BankOverlay.activeInv;
         try {
             int p = Models.Bank.getCurrentPage();
             if (p > 0) return p - 1;
@@ -4810,7 +4806,7 @@ public class BankOverlay2 extends WEHandledScreen {
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             WynnExtrasConfig.INSTANCE.toggleBankOverlay = !WynnExtrasConfig.INSTANCE.toggleBankOverlay;
             if(WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
-                activeInv = Models.Bank.getCurrentPage() - 1;
+                activeInv = LunarCompat.isLunarClient() ? Math.max(0, activeInv) : Models.Bank.getCurrentPage() - 1;
             }
             WynnExtrasConfig.save();
             return false;

@@ -26,6 +26,7 @@ import julianh06.wynnextras.features.loader.SkillPointLoader;
 import julianh06.wynnextras.features.misc.BloodSorrowTimer;
 import julianh06.wynnextras.features.misc.FastRequeue;
 import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
+import julianh06.wynnextras.features.misc.LunarScreenOverlayFallback;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.misc.QuickRepair;
@@ -43,6 +44,7 @@ import julianh06.wynnextras.features.waypoints.data.WaypointData;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
 import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.TickScheduler;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -61,6 +63,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWCharCallbackI;
 import org.lwjgl.glfw.GLFWKeyCallbackI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,6 +128,7 @@ public class WynnExtras implements ClientModInitializer {
 	private static int testInvSize;
 
 	GLFWKeyCallbackI previousCallback;
+	GLFWCharCallbackI previousCharCallback;
 
 	private static final Identifier PILL_FONT = Identifier.ofVanilla("banner/pill");
 	private static final Style BACKGROUND_STYLE;
@@ -192,6 +196,7 @@ public class WynnExtras implements ClientModInitializer {
 		julianh06.wynnextras.features.misc.RadiantHud.init();
 		julianh06.wynnextras.features.misc.ProfessionOverlay.register();
 		julianh06.wynnextras.features.bankoverlay.BankOverlay2.registerScreenHooks();
+		LunarScreenOverlayFallback.register();
 		ItemComponentsDebugOverlay.registerInventoryScreenHooks();
 		ChatNotificator.init();
 		FastRequeue.registerFastRequeue();
@@ -284,8 +289,13 @@ public class WynnExtras implements ClientModInitializer {
 				}
 			});
 
-			GLFW.glfwSetCharCallback(MinecraftClient.getInstance().getWindow().getHandle(), (win, codepoint) -> {
+			previousCharCallback = GLFW.glfwSetCharCallback(MinecraftClient.getInstance().getWindow().getHandle(), (win, codepoint) -> {
+				if (BankOverlay.handleScreenCharTyped((char) codepoint)) return;
+
 				new CharInputEvent((char) codepoint).post();
+				if (previousCharCallback != null) {
+					previousCharCallback.invoke(win, codepoint);
+				}
 			});
 		}
 	}
@@ -356,19 +366,14 @@ public class WynnExtras implements ClientModInitializer {
 
 			if(isLunarClient()) {
 				McUtils.sendMessageToClient(
-					addWynnExtrasPrefix(Text.of("§aSeems like you are using Lunar Client. Some features (especially the Bank Overlay) will not work correctly with Lunar. We recommend using a different launcher like prism or Modrinth."))
+					addWynnExtrasPrefix(Text.of("§aSeems like you are using Lunar Client. Some features might not work correctly with Lunar. We recommend using a different launcher like prism or Modrinth."))
 				);
 			}
 		}
 	}
 
 	public static boolean isLunarClient() {
-		try {
-			Class.forName("com.moonsworth.lunar.genesis.Genesis");
-			return true;
-		} catch (ClassNotFoundException e) {
-			return false;
-		}
+		return LunarCompat.isLunarClient();
 	}
 
 	public static boolean isOnBeta() {

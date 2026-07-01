@@ -37,8 +37,8 @@ import julianh06.wynnextras.features.crafting.data.recipes.woodworking.RelikReci
 import julianh06.wynnextras.features.crafting.data.recipes.woodworking.WandRecipes;
 import julianh06.wynnextras.features.crafting.wynnbuilder.DecodedCraft;
 import julianh06.wynnextras.features.crafting.wynnbuilder.WynnBuilderDecoder;
-import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
 import julianh06.wynnextras.utils.Pair;
+import julianh06.wynnextras.utils.HandledScreenAccess;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.WEMenuExtension;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -223,10 +223,10 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         ProfessionType type = container.getProfessionType();
         lastState.put(type, state);
 
-        int xStart = ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth();
+        int xStart = HandledScreenAccess.x(screen) + HandledScreenAccess.backgroundWidth(screen);
         int widgetWidth = 165;
-        int screenY = ((HandledScreenAccessor) screen).getY();
-        int backgroundHeight = ((HandledScreenAccessor) screen).getBackgroundHeight();
+        int screenY = HandledScreenAccess.y(screen);
+        int backgroundHeight = HandledScreenAccess.backgroundHeight(screen);
 
         boolean big = (type == null || type == ProfessionType.ALCHEMISM || type == ProfessionType.COOKING || type == ProfessionType.SCRIBING);
         int selBtnHeight = big ? 0 : 20;
@@ -265,7 +265,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         profXpBombWidget.refresh();
 
         var textRenderer = MinecraftClient.getInstance().textRenderer;
-        int menuWidth = ((HandledScreenAccessor) screen).getBackgroundWidth();
+        int menuWidth = HandledScreenAccess.backgroundWidth(screen);
         int speedWidth = textRenderer.getWidth(profSpeedBombWidget.text);
         int xpWidth = textRenderer.getWidth(profXpBombWidget.text);
         int maxBombWidth = Math.max(speedWidth, Math.max(xpWidth,
@@ -374,7 +374,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         int scissorY2 = yStart + widgetHeight - 7;
 
         // Buttons (left side of crafting station, right-aligned near GUI)
-        int leftX = ((HandledScreenAccessor) screen).getX();
+        int leftX = HandledScreenAccess.x(screen);
         int wbBtnW = (leftX - 10) / 2;
         int wbBtnH = 17;
         int wbBtnX = leftX - wbBtnW - 2;
@@ -462,8 +462,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
                     if (!sb2.isEmpty()) sb2.append(" ");
                     sb2.append(words[wi++]);
                 }
-                ui.drawCenteredText(sb1.toString(), ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth() / 2f, statusY, CustomColor.fromHexString("FF0000"), 1f);
-                if (!sb2.isEmpty()) ui.drawCenteredText(sb2.toString(), ((HandledScreenAccessor) screen).getX() + ((HandledScreenAccessor) screen).getBackgroundWidth() / 2f, statusY + 10, CustomColor.fromHexString("FF0000"), 1f);
+                ui.drawCenteredText(sb1.toString(), HandledScreenAccess.x(screen) + HandledScreenAccess.backgroundWidth(screen) / 2f, statusY, CustomColor.fromHexString("FF0000"), 1f);
+                if (!sb2.isEmpty()) ui.drawCenteredText(sb2.toString(), HandledScreenAccess.x(screen) + HandledScreenAccess.backgroundWidth(screen) / 2f, statusY + 10, CustomColor.fromHexString("FF0000"), 1f);
             } else {
                 ui.drawCenteredText(statusMessage, xStart, statusY, CustomColor.fromHexString("FF0000"), 1f);
             }

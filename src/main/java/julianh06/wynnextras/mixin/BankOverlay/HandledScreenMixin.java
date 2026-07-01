@@ -27,6 +27,7 @@ import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.misc.QuickRepair;
 import julianh06.wynnextras.features.mount.MountOverlay;
+import julianh06.wynnextras.utils.LunarCompat;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -92,6 +93,7 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        LunarCompat.recordHandledScreenMixinRender((HandledScreen<?>) (Object) this);
         // Encounter Selection Overlay (must render FIRST and cancel vanilla render so chest UI is fully hidden)
         {
             HandledScreen<?> encSelf = (HandledScreen<?>) (Object) this;

@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.bankoverlay;
 
-import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
-import julianh06.wynnextras.mixin.Accessor.SlotAccessor;
+import julianh06.wynnextras.utils.HandledScreenAccess;
+import julianh06.wynnextras.utils.SlotAccess;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
@@ -56,9 +56,8 @@ public final class BankOverlaySlotBridge {
     public static void expose(HandledScreen<?> screen, Slot slot, int screenX, int screenY) {
         if (screen == null || slot == null) return;
 
-        HandledScreenAccessor accessor = (HandledScreenAccessor) screen;
         remember(slot);
-        move(slot, screenX - accessor.getX(), screenY - accessor.getY());
+        move(slot, screenX - HandledScreenAccess.x(screen), screenY - HandledScreenAccess.y(screen));
         EXPOSED_SLOTS.add(slot);
         PREVIOUS_EXPOSED_SLOTS.remove(slot);
     }
@@ -73,9 +72,8 @@ public final class BankOverlaySlotBridge {
     public static Slot getExposedSlotAt(HandledScreen<?> screen, double mouseX, double mouseY) {
         if (screen == null) return null;
 
-        HandledScreenAccessor accessor = (HandledScreenAccessor) screen;
-        int screenX = accessor.getX();
-        int screenY = accessor.getY();
+        int screenX = HandledScreenAccess.x(screen);
+        int screenY = HandledScreenAccess.y(screen);
 
         for (Slot slot : EXPOSED_SLOTS) {
             int slotX = screenX + slot.x;
@@ -115,10 +113,7 @@ public final class BankOverlaySlotBridge {
     }
 
     private static void move(Slot slot, int x, int y) {
-        if (slot.x == x && slot.y == y) return;
-        SlotAccessor accessor = (SlotAccessor) slot;
-        accessor.setX(x);
-        accessor.setY(y);
+        SlotAccess.setPosition(slot, x, y);
     }
 
     private record SlotPosition(int x, int y) {}

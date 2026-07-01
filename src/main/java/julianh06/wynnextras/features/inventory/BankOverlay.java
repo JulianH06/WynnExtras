@@ -23,11 +23,15 @@ import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.bankoverlay.BankOverlaySlotBridge;
 import julianh06.wynnextras.features.inventory.data.*;
 import julianh06.wynnextras.features.misc.ClassSelectionOverlay;
+import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
@@ -158,6 +162,34 @@ public class BankOverlay {
 
     @SubscribeEvent
     public void onInput(KeyInputEvent event) {
+        handleKeyInput(event);
+    }
+
+    @SubscribeEvent
+    public void onChar(CharInputEvent event) {
+        handleCharInput(event);
+    }
+
+    public static boolean handleScreenKeyPress(int key, int scanCode, int modifiers) {
+        if (!LunarCompat.isLunarClient()) return false;
+        if (currentOverlayType == BankOverlayType.NONE && !ClassSelectionOverlay.isTextInputActive()) return false;
+
+        KeyInputEvent event = new KeyInputEvent(key, scanCode, GLFW.GLFW_PRESS, modifiers);
+        handleKeyInput(event);
+        return ClassSelectionOverlay.isTextInputActive()
+                || (currentOverlayType != BankOverlayType.NONE && (BankOverlay2.isAnyTextInputFocused()
+                || (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)));
+    }
+
+    public static boolean handleScreenCharTyped(char character) {
+        if (!LunarCompat.isLunarClient()) return false;
+        if (currentOverlayType == BankOverlayType.NONE && !ClassSelectionOverlay.isTextInputActive()) return false;
+        handleCharInput(new CharInputEvent(character));
+        return ClassSelectionOverlay.isTextInputActive()
+                || (currentOverlayType != BankOverlayType.NONE && BankOverlay2.isAnyTextInputFocused());
+    }
+
+    private static void handleKeyInput(KeyInputEvent event) {
         if (ClassSelectionOverlay.handleKeyInput(event)) return;
         if(event.getAction() == GLFW.GLFW_PRESS || event.getAction() == GLFW.GLFW_REPEAT) {
             BankOverlay2.handleKeyPressed(event.getKey(), event.getScanCode(), event.getModifiers());
@@ -167,17 +199,15 @@ public class BankOverlay {
         }
     }
 
-    @SubscribeEvent
-    public void onChar(CharInputEvent event) {
+    private static void handleCharInput(CharInputEvent event) {
         if (ClassSelectionOverlay.handleCharInput(event)) return;
         // Don't insert character if Ctrl is held (it's a shortcut like Ctrl+V)
         if (!isCtrlHeld()) {
             BankOverlay2.handleCharTyped(event.getCharacter());
         }
         if(activeTextInput != null && !isCtrlHeld()) {
-                activeTextInput.onCharInput(event);
-            }
-
+            activeTextInput.onCharInput(event);
+        }
     }
 
     private static boolean isCtrlHeld() {
@@ -283,6 +313,12 @@ public class BankOverlay {
     public static void registerBankOverlay() {
         WynnExtras.LOGGER.info("Registering Bankoverlay for " + WynnExtras.MOD_ID);
 
+        ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
+            if (!(screen instanceof HandledScreen<?>)) return;
+            ScreenKeyboardEvents.allowKeyPress(screen).register((s, input) ->
+                    !handleScreenKeyPress(input.key(), input.scancode(), input.modifiers()));
+        });
+
         ClientTickEvents.START_CLIENT_TICK.register((tick) -> {
             MinecraftClient client = MinecraftClient.getInstance();
             if(client.player == null || client.world == null) { return; }
@@ -306,6 +342,7 @@ public class BankOverlay {
 
             if(registeredScroll) return;
             if(expectedOverlayType != BankOverlayType.NONE && expectedOverlayType != currentOverlayType) return;
+            updateOverlayType();
 
             String InventoryTitle = currScreen.getTitle().getString();
             if(InventoryTitle == null) { return; }
