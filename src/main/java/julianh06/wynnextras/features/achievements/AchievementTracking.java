@@ -1,9 +1,7 @@
 package julianh06.wynnextras.features.achievements;
 
-import com.wynntils.core.components.Models;
 import com.wynntils.models.raid.raids.RaidKind;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.CappedValue;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.RaidEndedEvent;
@@ -47,9 +45,6 @@ public class AchievementTracking {
      */
     private static final int CONTENT_COMPLETION_MAX = 1289;
 
-    /** Level a profession reaches at its cap. */
-    private static final int PROFESSION_MAX_LEVEL = 132;
-
     /** Wynncraft profession keys, as returned (lowercase) by the player API. */
     private static final List<String> GATHERING_PROFESSIONS = List.of("mining", "woodcutting", "farming", "fishing");
     private static final List<String> CRAFTING_PROFESSIONS = List.of(
@@ -80,12 +75,6 @@ public class AchievementTracking {
             }
         }
         if (achievements == null) return;
-
-        CappedValue combatLevel = Models.CombatXp.getCombatLevel();
-        int currentLevel = combatLevel.current();
-
-        unlockLevelAchievement(currentLevel, 120);
-        unlockLevelAchievement(currentLevel, 121);
 
         // Once per launch, reconcile our self-counted raid totals (and class/content/profession
         // achievements) against the Wynncraft API.
@@ -118,18 +107,6 @@ public class AchievementTracking {
         save();
 
         syncRaidCountsFromApi();
-    }
-
-    private void unlockLevelAchievement(int currentLevel, int requiredLevel) {
-        if (currentLevel < requiredLevel) return;
-
-        String id = "simple.level." + requiredLevel;
-        if (achievements.isUnlocked(id)) return;
-
-        if (achievements.setCompleted(id)) {
-            announce("Achievement Unlocked: Level " + requiredLevel);
-            save();
-        }
     }
 
     private void announce(String message) {
@@ -200,8 +177,8 @@ public class AchievementTracking {
         int classesAt121 = 0;
         boolean contentComplete = false;
 
-        boolean anyGather100 = false, anyGather132 = false, allGather100 = false, allGather132 = false;
-        boolean anyCraft100 = false, anyCraft132 = false, allCraft100 = false, allCraft132 = false;
+        Map<String, Integer> gatheringLevels = new HashMap<>();
+        Map<String, Integer> craftingLevels = new HashMap<>();
 
         for (CharacterData character : characters.values()) {
             if (character == null) continue;
@@ -215,46 +192,38 @@ public class AchievementTracking {
             Map<String, Profession> professions = character.getProfessions();
             if (professions == null) continue;
 
-            boolean charAllGather100 = true, charAllGather132 = true;
             for (String prof : GATHERING_PROFESSIONS) {
-                int lvl = professionLevel(professions, prof);
-                if (lvl >= 100) anyGather100 = true;
-                if (lvl >= PROFESSION_MAX_LEVEL) anyGather132 = true;
-                if (lvl < 100) charAllGather100 = false;
-                if (lvl < PROFESSION_MAX_LEVEL) charAllGather132 = false;
+                gatheringLevels.merge(prof, professionLevel(professions, prof), Math::max);
             }
-            if (charAllGather100) allGather100 = true;
-            if (charAllGather132) allGather132 = true;
 
-            boolean charAllCraft100 = true, charAllCraft132 = true;
             for (String prof : CRAFTING_PROFESSIONS) {
-                int lvl = professionLevel(professions, prof);
-                if (lvl >= 100) anyCraft100 = true;
-                if (lvl >= PROFESSION_MAX_LEVEL) anyCraft132 = true;
-                if (lvl < 100) charAllCraft100 = false;
-                if (lvl < PROFESSION_MAX_LEVEL) charAllCraft132 = false;
+                craftingLevels.merge(prof, professionLevel(professions, prof), Math::max);
             }
-            if (charAllCraft100) allCraft100 = true;
-            if (charAllCraft132) allCraft132 = true;
         }
 
         boolean changed = false;
 
-        changed |= applyTieredCount("class.level120", classesAt120, "class(es) at Level 120");
-        changed |= applyTieredCount("class.level121", classesAt121, "class(es) at Level 121");
+        changed |= applyTieredCount("class.level120", classesAt120, Achievements.CLASS_COUNT_TARGETS, "class(es) at Level 120");
+        changed |= applyTieredCount("class.level121", classesAt121, Achievements.CLASS_COUNT_TARGETS, "class(es) at Level 121");
 
         if (contentComplete) changed |= unlockSimple("content.completion", "100% Content Completion");
 
-        if (anyGather100) changed |= unlockSimple("prof.gather.one.100", "Level 100 Gathering Profession");
-        if (anyGather132) changed |= unlockSimple("prof.gather.one.132", "Level 132 Gathering Profession");
-        if (allGather100) changed |= unlockSimple("prof.gather.all.100", "All Gathering Professions Level 100");
-        if (allGather132) changed |= unlockSimple("prof.gather.all.132", "All Gathering Professions Level 132");
-        if (anyCraft100) changed |= unlockSimple("prof.craft.one.100", "Level 100 Crafting Profession");
-        if (anyCraft132) changed |= unlockSimple("prof.craft.one.132", "Level 132 Crafting Profession");
-        if (allCraft100) changed |= unlockSimple("prof.craft.all.100", "All Crafting Professions Level 100");
-        if (allCraft132) changed |= unlockSimple("prof.craft.all.132", "All Crafting Professions Level 132");
+        changed |= applyTieredCount("prof.gather.100", countProfessionsAtLevel(gatheringLevels, GATHERING_PROFESSIONS, 100), Achievements.GATHERING_PROFESSION_TARGETS, "gathering profession(s) at Level 100");
+        changed |= applyTieredCount("prof.gather.115", countProfessionsAtLevel(gatheringLevels, GATHERING_PROFESSIONS, 115), Achievements.GATHERING_PROFESSION_TARGETS, "gathering profession(s) at Level 115");
+        changed |= applyTieredCount("prof.gather.132", countProfessionsAtLevel(gatheringLevels, GATHERING_PROFESSIONS, 132), Achievements.GATHERING_PROFESSION_TARGETS, "gathering profession(s) at Level 132");
+        changed |= applyTieredCount("prof.craft.100", countProfessionsAtLevel(craftingLevels, CRAFTING_PROFESSIONS, 100), Achievements.CRAFTING_PROFESSION_TARGETS, "crafting profession(s) at Level 100");
+        changed |= applyTieredCount("prof.craft.115", countProfessionsAtLevel(craftingLevels, CRAFTING_PROFESSIONS, 115), Achievements.CRAFTING_PROFESSION_TARGETS, "crafting profession(s) at Level 115");
+        changed |= applyTieredCount("prof.craft.132", countProfessionsAtLevel(craftingLevels, CRAFTING_PROFESSIONS, 132), Achievements.CRAFTING_PROFESSION_TARGETS, "crafting profession(s) at Level 132");
 
         return changed;
+    }
+
+    private static int countProfessionsAtLevel(Map<String, Integer> professionLevels, List<String> professions, int level) {
+        int count = 0;
+        for (String profession : professions) {
+            if (professionLevels.getOrDefault(profession, 0) >= level) count++;
+        }
+        return count;
     }
 
     private static int professionLevel(Map<String, Profession> professions, String key) {
@@ -333,22 +302,12 @@ public class AchievementTracking {
             amounts.merge(aspect.getName(), aspect.getAmount(), Math::max);
         }
 
-        int totalAll = 0, totalMythic = 0, totalFabled = 0, totalLegendary = 0;
         int maxedAll = 0, maxedMythic = 0, maxedFabled = 0, maxedLegendary = 0;
-        Map<String, Integer> totalByClass = new HashMap<>();
         Map<String, Integer> maxedByClass = new HashMap<>();
 
         for (ApiAspect api : catalogue) {
             String rarity = api.getRarity() == null ? "" : api.getRarity().toLowerCase();
             String clazz = api.getRequiredClass() == null ? "" : api.getRequiredClass().toLowerCase();
-
-            totalAll++;
-            totalByClass.merge(clazz, 1, Integer::sum);
-            switch (rarity) {
-                case "mythic" -> totalMythic++;
-                case "fabled" -> totalFabled++;
-                case "legendary" -> totalLegendary++;
-            }
 
             boolean maxed = amounts.getOrDefault(api.getName(), 0) >= maxedThreshold(rarity);
             if (!maxed) continue;
@@ -364,28 +323,21 @@ public class AchievementTracking {
 
         boolean changed = false;
 
-        if (maxedAll >= 1) changed |= unlockSimple("aspect.max.one", "Max an Aspect");
-        if (maxedMythic >= 1) changed |= unlockSimple("aspect.max.mythic", "Max a Mythic Aspect");
-
-        changed |= applyProgress("aspect.max.legendary.10", maxedLegendary, 10, "Max 10 Legendary Aspects");
-        changed |= applyProgress("aspect.max.fabled.10", maxedFabled, 10, "Max 10 Fabled Aspects");
-
-        changed |= unlockAllMaxed("aspect.max.all.warrior",  maxedByClass.getOrDefault("warrior", 0),  totalByClass.getOrDefault("warrior", 0),  "Max all Warrior Aspects");
-        changed |= unlockAllMaxed("aspect.max.all.shaman",   maxedByClass.getOrDefault("shaman", 0),   totalByClass.getOrDefault("shaman", 0),   "Max all Shaman Aspects");
-        changed |= unlockAllMaxed("aspect.max.all.mage",     maxedByClass.getOrDefault("mage", 0),     totalByClass.getOrDefault("mage", 0),     "Max all Mage Aspects");
-        changed |= unlockAllMaxed("aspect.max.all.archer",   maxedByClass.getOrDefault("archer", 0),   totalByClass.getOrDefault("archer", 0),   "Max all Archer Aspects");
-        changed |= unlockAllMaxed("aspect.max.all.assassin", maxedByClass.getOrDefault("assassin", 0), totalByClass.getOrDefault("assassin", 0), "Max all Assassin Aspects");
-
-        changed |= unlockAllMaxed("aspect.max.all.legendary", maxedLegendary, totalLegendary, "Max all Legendary Aspects");
-        changed |= unlockAllMaxed("aspect.max.all.fabled",    maxedFabled,    totalFabled,    "Max all Fabled Aspects");
-        changed |= unlockAllMaxed("aspect.max.all.mythic",    maxedMythic,    totalMythic,    "Max all Mythic Aspects");
-        changed |= unlockAllMaxed("aspect.max.all",           maxedAll,       totalAll,       "Max all Aspects");
+        changed |= applyTieredCount("aspect.max.all", maxedAll, Achievements.ALL_ASPECT_TARGETS, "maxed aspect(s)");
+        changed |= applyTieredCount("aspect.max.all.mythic", maxedMythic, Achievements.MYTHIC_ASPECT_TARGETS, "maxed Mythic aspect(s)");
+        changed |= applyTieredCount("aspect.max.all.fabled", maxedFabled, Achievements.FABLED_ASPECT_TARGETS, "maxed Fabled aspect(s)");
+        changed |= applyTieredCount("aspect.max.all.legendary", maxedLegendary, Achievements.LEGENDARY_ASPECT_TARGETS, "maxed Legendary aspect(s)");
+        changed |= applyTieredCount("aspect.max.all.warrior", maxedByClass.getOrDefault("warrior", 0), Achievements.WARRIOR_ASPECT_TARGETS, "maxed Warrior aspect(s)");
+        changed |= applyTieredCount("aspect.max.all.shaman", maxedByClass.getOrDefault("shaman", 0), Achievements.SHAMAN_ASPECT_TARGETS, "maxed Shaman aspect(s)");
+        changed |= applyTieredCount("aspect.max.all.mage", maxedByClass.getOrDefault("mage", 0), Achievements.MAGE_ASPECT_TARGETS, "maxed Mage aspect(s)");
+        changed |= applyTieredCount("aspect.max.all.archer", maxedByClass.getOrDefault("archer", 0), Achievements.ARCHER_ASPECT_TARGETS, "maxed Archer aspect(s)");
+        changed |= applyTieredCount("aspect.max.all.assassin", maxedByClass.getOrDefault("assassin", 0), Achievements.ASSASSIN_ASPECT_TARGETS, "maxed Assassin aspect(s)");
 
         if (changed) save();
     }
 
     /** Sets a tiered achievement's absolute count, announcing each newly reached tier. Returns true if changed. */
-    private boolean applyTieredCount(String id, int newCount, String label) {
+    private boolean applyTieredCount(String id, int newCount, List<Integer> targets, String label) {
         Integer beforeCount = achievements.getCount(id);
         Integer beforeTier = achievements.getTier(id);
         achievements.setCount(id, newCount);
@@ -393,8 +345,8 @@ public class AchievementTracking {
 
         if (beforeTier != null && afterTier != null && afterTier > beforeTier) {
             // Announce only the highest tier reached this update, to avoid a burst on the first sync.
-            int reachedTier = Math.min(afterTier, Achievements.CLASS_COUNT_TARGETS.size()) - 1;
-            int milestone = Achievements.CLASS_COUNT_TARGETS.get(reachedTier);
+            int reachedTier = Math.min(afterTier, targets.size()) - 1;
+            int milestone = targets.get(reachedTier);
             announce("Achievement: " + milestone + " " + label + "!");
         }
         Integer afterCount = achievements.getCount(id);
@@ -409,22 +361,6 @@ public class AchievementTracking {
             return true;
         }
         return false;
-    }
-
-    /** Updates a progress achievement's count/target, announcing it if it just unlocked. Returns true if changed. */
-    private boolean applyProgress(String id, int current, int target, String announceName) {
-        if (target <= 0) return false;
-        Integer beforeCount = achievements.getCount(id);
-        boolean newlyUnlocked = achievements.setProgressGoal(id, current, target);
-        if (newlyUnlocked) announce("Achievement Unlocked: " + announceName);
-        Integer afterCount = achievements.getCount(id);
-        return newlyUnlocked || !Objects.equals(beforeCount, afterCount);
-    }
-
-    /** Unlocks an "all maxed" simple achievement when the maxed count reaches the (non-zero) total. */
-    private boolean unlockAllMaxed(String id, int maxed, int total, String announceName) {
-        if (total <= 0 || maxed < total) return false;
-        return unlockSimple(id, announceName);
     }
 
     private void save() {

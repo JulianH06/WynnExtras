@@ -14,6 +14,26 @@ public class Achievement {
         return unlocked;
     }
 
+    public String getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public boolean isSecret() {
+        return secret;
+    }
+
+    public Instant getUnlockedAt() {
+        return unlockedAt;
+    }
+
     public void unlock() {
         if(!unlocked) {
             unlocked = true;

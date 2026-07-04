@@ -4,6 +4,7 @@ import julianh06.wynnextras.config.configoptions.*;
 import static julianh06.wynnextras.config.ConfigTheme.*;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.core.CurrentVersionData;
+import julianh06.wynnextras.features.achievements.AchievementScreen;
 import julianh06.wynnextras.features.spellhider.SpellProfiles;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
@@ -149,6 +150,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     if (MinecraftClient.getInstance().player != null) {
                         MinecraftClient.getInstance().player.networkHandler.sendChatCommand("we raidlist");
                     }
+                }, "Open"))
+                .add(button("Achievements", "Open achievements and badge customization", (x) -> {
+                    WEScreen.open(AchievementScreen::new);
                 }, "Open"))
             .endSub()
 //            .add(visibleWhen(button("Disable WynnExtras", "Turn off all features (your settings are preserved)",
@@ -685,6 +689,14 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Crowd sourcing")
                 .add(toggle("Gambits", "Help gather the current gambits so others can see them with /we gambits",
                         () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v))
+            .sub("Achievements and badges")
+                .add(toggle("Upload Achievements", "Upload your achievements to WynnExtras",
+                        () -> config.uploadAchievements, v -> config.uploadAchievements = v))
+                .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
+                        () -> config.showWynnExtrasBadges, v -> config.showWynnExtrasBadges = v))
+                .add(button("Achievements & Badges", "Open achievements and select your badge icon and color", (x) -> {
+                    WEScreen.open(AchievementScreen::new);
+                }, "Open"))
             .sub("Quick Repair")
                 .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
                         () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
@@ -710,8 +722,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
             .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
                     () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
-            .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
-                    () -> config.badgesEnabled, v -> config.badgesEnabled = v))
             .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
                     () -> config.removeChroma, v -> config.removeChroma = v))
             .sub("Debug")

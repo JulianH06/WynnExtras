@@ -2,9 +2,13 @@ package julianh06.wynnextras.features.achievements;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.wynntils.core.text.StyledText;
 import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.misc.StyledTextAdapter;
@@ -26,8 +30,10 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -83,53 +89,65 @@ public class Achievements {
     /** Tier targets for "get N classes to a level cap" achievements. */
     public static final List<Integer> CLASS_COUNT_TARGETS = List.of(1, 2, 3, 4, 5);
 
+    public static final List<Integer> ALL_ASPECT_TARGETS = List.of(1, 10, 25, 50, 100, 128);
+    public static final List<Integer> MYTHIC_ASPECT_TARGETS = List.of(1, 5, 10, 15, 20);
+    public static final List<Integer> FABLED_ASPECT_TARGETS = List.of(1, 10, 25, 49);
+    public static final List<Integer> LEGENDARY_ASPECT_TARGETS = List.of(1, 10, 25, 59);
+    public static final List<Integer> WARRIOR_ASPECT_TARGETS = List.of(1, 5, 10, 20, 27);
+    public static final List<Integer> SHAMAN_ASPECT_TARGETS = List.of(1, 5, 10, 20, 25);
+    public static final List<Integer> MAGE_ASPECT_TARGETS = List.of(1, 5, 10, 20, 25);
+    public static final List<Integer> ARCHER_ASPECT_TARGETS = List.of(1, 5, 10, 20, 25);
+    public static final List<Integer> ASSASSIN_ASPECT_TARGETS = List.of(1, 5, 10, 20, 26);
+
+    /** Tier targets for "get N gathering professions to a level milestone" achievements. */
+    public static final List<Integer> GATHERING_PROFESSION_TARGETS = List.of(1, 2, 3, 4);
+
+    /** Tier targets for "get N crafting professions to a level milestone" achievements. */
+    public static final List<Integer> CRAFTING_PROFESSION_TARGETS = List.of(1, 3, 5, 8);
+
+    private static final Set<String> KNOWN_ACHIEVEMENT_IDS = knownAchievementIds();
+
     private boolean registerDefaultAchievements(boolean onlyMissing) {
         boolean changed = false;
-        changed |= registerDefault(simple("simple.level.120", "Reach Level 120", "Reach Combat Level 120", false), onlyMissing);
-        changed |= registerDefault(simple("simple.level.121", "Reach Level 121", "Reach Combat Level 121", false), onlyMissing);
-        changed |= registerDefault(progress("test.progress", "Test Progress", "progress", false, 100), onlyMissing);
-        changed |= registerDefault(tiered("test.tiered", "Test Tiered", "tiered", false, List.of(10, 50, 200)), onlyMissing);
-
         changed |= registerDefault(tiered("raid.tna",  "The Nameless Anomaly",     "Complete The Nameless Anomaly",      false, RAID_TARGETS), onlyMissing);
         changed |= registerDefault(tiered("raid.notg", "Nest of the Grootslangs",  "Complete Nest of the Grootslangs",   false, RAID_TARGETS), onlyMissing);
         changed |= registerDefault(tiered("raid.nol",  "Orphion's Nexus of Light", "Complete Orphion's Nexus of Light",  false, RAID_TARGETS), onlyMissing);
         changed |= registerDefault(tiered("raid.twp",  "The Wartorn Palace",       "Complete The Wartorn Palace",        false, RAID_TARGETS), onlyMissing);
         changed |= registerDefault(tiered("raid.tcc",  "The Canyon Colossus",      "Complete The Canyon Colossus",       false, RAID_TARGETS), onlyMissing);
 
-        // Class level milestones — number of classes reaching the combat level cap.
         changed |= registerDefault(tiered("class.level120", "Level 120 Classes", "Get classes to Combat Level 120", false, CLASS_COUNT_TARGETS), onlyMissing);
         changed |= registerDefault(tiered("class.level121", "Level 121 Classes", "Get classes to Combat Level 121", false, CLASS_COUNT_TARGETS), onlyMissing);
 
-        // Content completion.
         changed |= registerDefault(simple("content.completion", "Completionist", "Reach 100% content completion on a class", false), onlyMissing);
 
-        // Aspect milestones. "Max all" targets are filled in from the live aspect catalogue at sync time.
-        changed |= registerDefault(simple("aspect.max.one", "Aspect Master", "Max an aspect", false), onlyMissing);
-        changed |= registerDefault(simple("aspect.max.mythic", "Mythic Mastery", "Max a Mythic aspect", false), onlyMissing);
-        changed |= registerDefault(progress("aspect.max.legendary.10", "Legendary Collector", "Max 10 Legendary aspects", false, 10), onlyMissing);
-        changed |= registerDefault(progress("aspect.max.fabled.10", "Fabled Collector", "Max 10 Fabled aspects", false, 10), onlyMissing);
-        changed |= registerDefault(simple("aspect.max.all.warrior",  "Warrior Ascended",  "Max all Warrior aspects",  false), onlyMissing);
-        changed |= registerDefault(simple("aspect.max.all.shaman",   "Shaman Ascended",   "Max all Shaman aspects",   false), onlyMissing);
-        changed |= registerDefault(simple("aspect.max.all.mage",     "Mage Ascended",     "Max all Mage aspects",     false), onlyMissing);
-        changed |= registerDefault(simple("aspect.max.all.archer",   "Archer Ascended",   "Max all Archer aspects",   false), onlyMissing);
-        changed |= registerDefault(simple("aspect.max.all.assassin", "Assassin Ascended", "Max all Assassin aspects", false), onlyMissing);
-        changed |= registerDefault(simple("aspect.max.all.legendary", "Legendary Completionist", "Max all Legendary aspects", false), onlyMissing);
-        changed |= registerDefault(simple("aspect.max.all.fabled",    "Fabled Completionist",    "Max all Fabled aspects",    false), onlyMissing);
-        changed |= registerDefault(simple("aspect.max.all.mythic",    "Mythic Completionist",    "Max all Mythic aspects",    false), onlyMissing);
-        changed |= registerDefault(simple("aspect.max.all", "Aspect Completionist", "Max all aspects", false), onlyMissing);
+        changed |= registerDefault(tiered("aspect.max.all", "Aspect Completionist", "Max aspects", false, ALL_ASPECT_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("aspect.max.all.mythic", "Mythic Completionist", "Max Mythic aspects", false, MYTHIC_ASPECT_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("aspect.max.all.fabled", "Fabled Completionist", "Max Fabled aspects", false, FABLED_ASPECT_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("aspect.max.all.legendary", "Legendary Completionist", "Max Legendary aspects", false, LEGENDARY_ASPECT_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("aspect.max.all.warrior", "Warrior Completionist", "Max Warrior aspects", false, WARRIOR_ASPECT_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("aspect.max.all.shaman", "Shaman Completionist", "Max Shaman aspects", false, SHAMAN_ASPECT_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("aspect.max.all.mage", "Mage Completionist", "Max Mage aspects", false, MAGE_ASPECT_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("aspect.max.all.archer", "Archer Completionist", "Max Archer aspects", false, ARCHER_ASPECT_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("aspect.max.all.assassin", "Assassin Completionist", "Max Assassin aspects", false, ASSASSIN_ASPECT_TARGETS), onlyMissing);
 
-        // Gathering professions.
-        changed |= registerDefault(simple("prof.gather.one.100", "Gatherer",              "Reach level 100 in a gathering profession",    false), onlyMissing);
-        changed |= registerDefault(simple("prof.gather.one.132", "Master Gatherer",       "Reach level 132 in a gathering profession",    false), onlyMissing);
-        changed |= registerDefault(simple("prof.gather.all.100", "Seasoned Gatherer",     "Reach level 100 in all gathering professions", false), onlyMissing);
-        changed |= registerDefault(simple("prof.gather.all.132", "Gathering Grandmaster", "Reach level 132 in all gathering professions", false), onlyMissing);
+        changed |= registerDefault(tiered("prof.gather.100", "Level 100 Gathering", "Reach level 100 in gathering professions", false, GATHERING_PROFESSION_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("prof.gather.115", "Level 115 Gathering", "Reach level 115 in gathering professions", false, GATHERING_PROFESSION_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("prof.gather.132", "Level 132 Gathering", "Reach level 132 in gathering professions", false, GATHERING_PROFESSION_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("prof.craft.100", "Level 100 Crafting", "Reach level 100 in crafting professions", false, CRAFTING_PROFESSION_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("prof.craft.115", "Level 115 Crafting", "Reach level 115 in crafting professions", false, CRAFTING_PROFESSION_TARGETS), onlyMissing);
+        changed |= registerDefault(tiered("prof.craft.132", "Level 132 Crafting", "Reach level 132 in crafting professions", false, CRAFTING_PROFESSION_TARGETS), onlyMissing);
 
-        // Crafting professions.
-        changed |= registerDefault(simple("prof.craft.one.100", "Crafter",              "Reach level 100 in a crafting profession",    false), onlyMissing);
-        changed |= registerDefault(simple("prof.craft.one.132", "Master Crafter",       "Reach level 132 in a crafting profession",    false), onlyMissing);
-        changed |= registerDefault(simple("prof.craft.all.100", "Seasoned Crafter",     "Reach level 100 in all crafting professions", false), onlyMissing);
-        changed |= registerDefault(simple("prof.craft.all.132", "Crafting Grandmaster", "Reach level 132 in all crafting professions", false), onlyMissing);
         return changed;
+    }
+
+    public static boolean isKnownAchievement(String id) {
+        return KNOWN_ACHIEVEMENT_IDS.contains(id);
+    }
+
+    private static Set<String> knownAchievementIds() {
+        Achievements achievements = new Achievements();
+        achievements.populateAll();
+        return Collections.unmodifiableSet(new HashSet<>(achievements.byId.keySet()));
     }
 
     private boolean registerDefault(Achievement achievement, boolean onlyMissing) {
@@ -294,12 +312,11 @@ public class Achievements {
 
         if (Files.exists(configPath)) {
             try (Reader reader = Files.newBufferedReader(configPath)) {
-                Achievements loaded = gson.fromJson(reader, Achievements.class);
+                JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+                Achievements loaded = fromJson(json);
                 if (loaded != null) {
-                    loaded.rebuildIndex();
-                    boolean changed = loaded.registerDefaultAchievements(true);
                     AchievementTracking.achievements = loaded;
-                    if (changed) {
+                    if (!isCompactFormat(json)) {
                         save();
                     }
                 } else {
@@ -329,7 +346,7 @@ public class Achievements {
         }
 
         try (Writer writer = Files.newBufferedWriter(configPath)) {
-            gson.toJson(AchievementTracking.achievements, writer);
+            gson.toJson(toCompactJson(AchievementTracking.achievements, false), writer);
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Couldn't write the achievements file:");
             e.printStackTrace();
@@ -361,6 +378,15 @@ public class Achievements {
      * first pending change, so a steady stream of changes still gets flushed periodically.
      */
     private static synchronized void scheduleServerSave() {
+        if (!shouldUploadAchievements()) {
+            if (pendingAchievementUpload != null) {
+                pendingAchievementUpload.cancel(false);
+                pendingAchievementUpload = null;
+            }
+            firstPendingChangeNanos = 0L;
+            return;
+        }
+
         long now = System.nanoTime();
         if (firstPendingChangeNanos == 0L) {
             firstPendingChangeNanos = now;
@@ -381,6 +407,7 @@ public class Achievements {
             pendingAchievementUpload = null;
             firstPendingChangeNanos = 0L;
         }
+        if (!shouldUploadAchievements()) return;
         uploadNow();
     }
 
@@ -414,6 +441,18 @@ public class Achievements {
      * that completes when the upload finishes (callers may block on it during shutdown).
      */
     public static CompletableFuture<?> flushServerSave() {
+        if (!shouldUploadAchievements()) {
+            synchronized (Achievements.class) {
+                if (pendingAchievementUpload != null) {
+                    pendingAchievementUpload.cancel(false);
+                    pendingAchievementUpload = null;
+                }
+                firstPendingChangeNanos = 0L;
+                uploadAgainAfterCurrent = false;
+            }
+            return CompletableFuture.completedFuture(null);
+        }
+
         boolean hadPending;
         synchronized (Achievements.class) {
             hadPending = pendingAchievementUpload != null;
@@ -431,14 +470,14 @@ public class Achievements {
     }
 
     private static CompletableFuture<?> serverSave(){
-        JsonObject payload = Achievements.gson.toJsonTree(AchievementTracking.achievements).getAsJsonObject();
-        payload.addProperty("modVersion", CurrentVersionData.INSTANCE.version);
+        if (!shouldUploadAchievements()) return CompletableFuture.completedFuture(null);
+
+        JsonObject payload = toCompactJson(AchievementTracking.achievements, true);
 
         return MojangAuth.getWEToken().thenCompose(wynnextrasToken ->
         {
         if (wynnextrasToken == null) {
-            WynnExtras.LOGGER.error("Failed to authenticate with Mojang for aspect upload");
-            // Don't show duplicate error - MojangAuth already showed the error
+            WynnExtras.LOGGER.error("Failed to authenticate with Mojang for achievement upload");
             return CompletableFuture.completedFuture(null);
         }
 
@@ -463,6 +502,115 @@ public class Achievements {
                     return null;
                 });
         });
+    }
+
+    private static boolean shouldUploadAchievements() {
+        return WynnExtrasConfig.INSTANCE.uploadAchievements;
+    }
+
+    private static boolean isCompactFormat(JsonObject json) {
+        return json != null && json.has("schemaVersion") && json.has("achievements")
+                && json.get("achievements").isJsonArray();
+    }
+
+    private static JsonObject toCompactJson(Achievements achievements, boolean includeModVersion) {
+        JsonObject root = new JsonObject();
+        root.addProperty("schemaVersion", 1);
+        if (includeModVersion) {
+            root.addProperty("modVersion", CurrentVersionData.INSTANCE.version);
+        }
+
+        JsonArray states = new JsonArray();
+        if (achievements != null) {
+            for (Achievement achievement : achievements.allSimple()) {
+                states.add(toStateJson(achievement));
+            }
+            for (ProgressAchievement achievement : achievements.allProgress()) {
+                states.add(toStateJson(achievement));
+            }
+            for (TieredAchievement achievement : achievements.allTiered()) {
+                states.add(toStateJson(achievement));
+            }
+        }
+        root.add("achievements", states);
+        return root;
+    }
+
+    private static JsonObject toStateJson(Achievement achievement) {
+        JsonObject state = new JsonObject();
+        state.addProperty("id", achievement.id);
+        state.addProperty("unlocked", achievement.unlocked);
+        if (achievement instanceof ProgressAchievement progressAchievement) {
+            state.addProperty("current", progressAchievement.current);
+        }
+        return state;
+    }
+
+    private static Achievements fromJson(JsonObject json) {
+        if (json == null) return null;
+
+        Achievements achievements = new Achievements();
+        achievements.populateAll();
+
+        if (isCompactFormat(json)) {
+            applyCompactStates(achievements, json.getAsJsonArray("achievements"));
+            return achievements;
+        }
+
+        Achievements oldFormat = gson.fromJson(json, Achievements.class);
+        if (oldFormat == null) return achievements;
+        oldFormat.rebuildIndex();
+        applyOldStates(achievements, oldFormat.achievements);
+        applyOldStates(achievements, oldFormat.progressAchievements);
+        applyOldStates(achievements, oldFormat.tieredAchievements);
+        return achievements;
+    }
+
+    private static void applyCompactStates(Achievements achievements, JsonArray states) {
+        if (states == null) return;
+        for (JsonElement element : states) {
+            if (!element.isJsonObject()) continue;
+
+            JsonObject state = element.getAsJsonObject();
+            if (!state.has("id") || !state.get("id").isJsonPrimitive()) continue;
+
+            String id = state.get("id").getAsString();
+            Achievement achievement = achievements.getById(id);
+            if (achievement == null) continue;
+
+            Integer current = null;
+            if (state.has("current") && state.get("current").isJsonPrimitive()) {
+                try {
+                    current = state.get("current").getAsInt();
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            applyState(achievement, state.has("unlocked") && state.get("unlocked").getAsBoolean(), current);
+        }
+    }
+
+    private static void applyOldStates(Achievements achievements, List<? extends Achievement> oldStates) {
+        if (oldStates == null) return;
+        for (Achievement oldState : oldStates) {
+            if (oldState == null || oldState.id == null) continue;
+            Achievement achievement = achievements.getById(oldState.id);
+            if (achievement == null) continue;
+
+            Integer current = oldState instanceof ProgressAchievement progressAchievement ? progressAchievement.current : null;
+            applyState(achievement, oldState.unlocked, current);
+        }
+    }
+
+    private static void applyState(Achievement achievement, boolean unlocked, Integer current) {
+        if (current != null && achievement instanceof TieredAchievement tieredAchievement) {
+            tieredAchievement.setCurrent(current);
+        } else if (current != null && achievement instanceof ProgressAchievement progressAchievement) {
+            progressAchievement.setCurrentAbsolute(current);
+        }
+
+        if (unlocked) {
+            achievement.unlock();
+        }
     }
 
     private static Path getConfigPath(String fileName) {

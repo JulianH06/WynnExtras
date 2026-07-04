@@ -349,8 +349,8 @@ public class WynnExtrasConfig {
     public boolean arrowHiderToggle = false;
 
     public boolean showOwnNametag = false;
-    // The code for this is in LivingEntityRendererMixin
-    public boolean badgesEnabled = false;
+    public boolean showWynnExtrasBadges = true;
+    public boolean uploadAchievements = true;
 
     // ==================== CHAT PEEK ====================
     public boolean chatPeekEnabled = false;

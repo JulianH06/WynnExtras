@@ -13,6 +13,14 @@ public class TieredAchievement extends ProgressAchievement {
         return (float) current / levelTargets.get(currentLevel);
     }
 
+    public int getCurrentLevel() {
+        return currentLevel;
+    }
+
+    public java.util.List<Integer> getLevelTargets() {
+        return java.util.Collections.unmodifiableList(levelTargets);
+    }
+
     @Override
     public void progress(int progress) {
         if(unlocked) return;

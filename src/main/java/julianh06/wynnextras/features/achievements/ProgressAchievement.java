@@ -9,6 +9,14 @@ public class ProgressAchievement extends Achievement{
         return Math.min(1f, (float) current / target);
     }
 
+    public int getCurrent() {
+        return current;
+    }
+
+    public int getTarget() {
+        return target;
+    }
+
     public void progress(int progress) {
         if(unlocked) return;
 

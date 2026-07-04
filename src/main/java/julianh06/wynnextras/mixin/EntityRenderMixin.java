@@ -2,6 +2,7 @@ package julianh06.wynnextras.mixin;
 
 
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.features.badges.BadgeService;
 import net.minecraft.client.render.Frustum;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.state.EntityRenderState;
@@ -10,6 +11,7 @@ import net.minecraft.entity.EntityType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(EntityRenderer.class)
@@ -19,5 +21,10 @@ public class EntityRenderMixin<T extends Entity, S extends EntityRenderState> {
         if(WynnExtrasConfig.INSTANCE.arrowHiderToggle && entity.getType().equals(EntityType.ARROW)){
             cir.setReturnValue(false);
         };
+    }
+
+    @Inject(method = "renderLabelIfPresent", at = @At("HEAD"))
+    private void appendWynnExtrasBadge(S state, net.minecraft.client.util.math.MatrixStack matrices, net.minecraft.client.render.command.OrderedRenderCommandQueue renderQueue, net.minecraft.client.render.state.CameraRenderState camera, CallbackInfo ci) {
+        state.displayName = BadgeService.appendBadge(state, state.displayName);
     }
 }
