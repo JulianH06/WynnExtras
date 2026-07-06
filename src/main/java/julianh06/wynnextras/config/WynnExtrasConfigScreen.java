@@ -704,6 +704,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 () -> config.quickRepairKey, v -> config.quickRepairKey = v,
                                 DEFAULT_CONFIG.quickRepairKey),
                         () -> config.quickRepairEnabled))
+                .add(visibleWhen(slider("Durability Threshold", "Only repair items at or below this durability percentage",
+                                0, 100, () -> config.quickRepairDurabilityThreshold,
+                                v -> config.quickRepairDurabilityThreshold = v),
+                        () -> config.quickRepairEnabled))
             .endSub()
             .add(toggle("Show Own Nametag", "Render your nametag above your head",
                     () -> config.showOwnNametag, v -> config.showOwnNametag = v))
@@ -881,6 +885,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
                             () -> config.quickRepairKey, v -> config.quickRepairKey = v,
                             DEFAULT_CONFIG.quickRepairKey),
+                    () -> config.quickRepairEnabled))
+            .add(visibleWhen(slider("Durability Threshold", "Only repair items at or below this durability percentage",
+                            0, 100, () -> config.quickRepairDurabilityThreshold,
+                            v -> config.quickRepairDurabilityThreshold = v),
                     () -> config.quickRepairEnabled))
             .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
                     () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))

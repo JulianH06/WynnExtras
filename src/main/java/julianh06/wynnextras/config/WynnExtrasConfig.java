@@ -259,6 +259,7 @@ public class WynnExtrasConfig {
     public boolean toggleFastRequeue = false;
     public boolean quickRepairEnabled = true;
     public int quickRepairKey = org.lwjgl.glfw.GLFW.GLFW_KEY_R;
+    public int quickRepairDurabilityThreshold = 35;
     public boolean shiftDisableGuildRaid = true;
 
     public boolean autoStreamEnabled = false;
@@ -601,12 +602,14 @@ public class WynnExtrasConfig {
                 //if (INSTANCE.configProfiles == null) INSTANCE.configProfiles = new LinkedHashMap<>();
                 if (INSTANCE.weeklyWars == null) INSTANCE.weeklyWars = new ArrayList<>();
                 if (INSTANCE.hudColorOverrides == null) INSTANCE.hudColorOverrides = new HashMap<>();
+                INSTANCE.syncQuickRepairThreshold();
                 INSTANCE.syncAttackTimerColors();
             }
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Failed to load config: " + e.getMessage());
             INSTANCE = new WynnExtrasConfig();
         }
+        INSTANCE.syncQuickRepairThreshold();
         INSTANCE.syncAttackTimerColors();
         INSTANCE.syncClassSelectionLines();
         if (INSTANCE.classSelectionContentProgressStyle == null) {
@@ -626,6 +629,10 @@ public class WynnExtrasConfig {
         if (attackTimerMediumDefenseColor == null) attackTimerMediumDefenseColor = defaults.attackTimerMediumDefenseColor;
         if (attackTimerHighDefenseColor == null) attackTimerHighDefenseColor = defaults.attackTimerHighDefenseColor;
         if (attackTimerVeryHighDefenseColor == null) attackTimerVeryHighDefenseColor = defaults.attackTimerVeryHighDefenseColor;
+    }
+
+    private void syncQuickRepairThreshold() {
+        quickRepairDurabilityThreshold = Math.clamp(quickRepairDurabilityThreshold, 0, 100);
     }
 
     public static void save() {
