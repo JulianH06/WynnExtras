@@ -148,8 +148,6 @@ public class GVScreen extends WEScreen {
 
         backgroundImageWidget.draw(context, mouseX, mouseY, delta, ui);
         updateValues();
-        updateVisibleListRange();
-        layoutListElements();
 
         targetOffset = ui == null ? 0 : Math.clamp(targetOffset, 0, maxOffset);
 

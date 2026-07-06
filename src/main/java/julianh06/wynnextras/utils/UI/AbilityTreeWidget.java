@@ -419,7 +419,6 @@ public class AbilityTreeWidget extends Widget {
         return null;
     }
 
-    // Konsolidierter interner Zustand
     private class AbilityTreeState {
         AbilityMapData classTree;
         AbilityMapData playerTree;
@@ -440,7 +439,6 @@ public class AbilityTreeWidget extends Widget {
         void prepare(AbilityMapData classTree, AbilityMapData playerTree) {
             this.classTree = classTree;
             this.playerTree = playerTree;
-            // playerMap -> unlocked sets
             for (List<AbilityMapData.Node> nodes : this.playerTree.pages.values()) {
                 for (AbilityMapData.Node node : nodes) {
                     if (node.meta != null) {
@@ -452,7 +450,6 @@ public class AbilityTreeWidget extends Widget {
                     }
                 }
             }
-            // classTree -> set unlocked flags and split lists
             int i = 0;
             for (List<AbilityMapData.Node> nodes : this.classTree.pages.values()) {
                 int yStart = 0;

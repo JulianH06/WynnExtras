@@ -66,6 +66,13 @@ public class AchievementTracking {
     /** Ensures the aspect achievement sync only dispatches once the aspect catalogue is loaded. */
     private boolean aspectsSynced;
 
+    public static void reloadAchievementsFromApi() {
+        if (achievements == null) Achievements.load();
+        AchievementTracking tracking = new AchievementTracking();
+        tracking.syncRaidCountsFromApi();
+        tracking.trySyncAspectAchievements();
+    }
+
     @SubscribeEvent
     private void onTick(TickEvent event) {
         if (!init) {

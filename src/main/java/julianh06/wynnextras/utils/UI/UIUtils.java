@@ -86,7 +86,6 @@ public final class UIUtils {
         clearSeparatorCache();
     }
 
-    // --- Kontext aktualisieren (bei jedem Render) ---
     public void updateContext(DrawContext ctx, double scaleFactor, int xStart, int yStart) {
         this.drawContext = ctx;
         this.scaleFactor = scaleFactor;
@@ -94,7 +93,6 @@ public final class UIUtils {
         this.yStart = yStart;
     }
 
-    // --- Getter / Setter ---
     public double getScaleFactor() { return scaleFactor; }
     public float getScaleFactorF() { return (float) scaleFactor; }
     public void setScaleFactor(double scaleFactor) { this.scaleFactor = scaleFactor; }
@@ -102,13 +100,11 @@ public final class UIUtils {
     public int getYStart() { return yStart; }
     public void setOffset(int xStart, int yStart) { this.xStart = xStart; this.yStart = yStart; }
 
-    // --- Coordinate transforms (logical -> screen pixels) ---
     public float sx(float logicalX) { return xStart + (float)(logicalX / scaleFactor); }
     public float sy(float logicalY) { return yStart + (float)(logicalY / scaleFactor); }
     public int sw(float logicalW) { return Math.max(0, (int)Math.round(logicalW / scaleFactor)); }
     public int sh(float logicalH) { return Math.max(0, (int)Math.round(logicalH / scaleFactor)); }
 
-    // --- Drawing helpers: Background / Text / Image ---
     public void drawBackground() {
         if (MinecraftClient.getInstance().currentScreen == null) return;
         drawContext.fillGradient(
@@ -744,7 +740,6 @@ public final class UIUtils {
             if (res.isEmpty()) return null;
             try (var is = res.get().getInputStream();
                  NativeImage img = NativeImage.read(is)) {
-                // NativeImage.getColor is private; accessed via @Invoker mixin.
                 // Pixel format is ABGR (little-endian RGBA): lowest byte = R.
                 int c = ((NativeImageInvoker) (Object) img).invokeGetColor(1, img.getHeight() / 2);
                 return new int[]{c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF};
@@ -759,7 +754,6 @@ public final class UIUtils {
             if (res.isEmpty()) return null;
             try (var is = res.get().getInputStream();
                  NativeImage img = NativeImage.read(is)) {
-                // NativeImage.getColor is private; accessed via @Invoker mixin.
                 // Pixel format is ABGR (little-endian RGBA): lowest byte = R.
                 int c = ((NativeImageInvoker) (Object) img).invokeGetColor(2, 2);
                 return new int[]{c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF};

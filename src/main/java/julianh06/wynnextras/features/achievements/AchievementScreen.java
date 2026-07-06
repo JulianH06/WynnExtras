@@ -6,6 +6,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.badges.BadgeCatalog;
 import julianh06.wynnextras.features.badges.BadgeProfile;
 import julianh06.wynnextras.features.badges.BadgeProfileData;
+import julianh06.wynnextras.features.badges.BadgeService;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -21,6 +22,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class AchievementScreen extends WEScreen {
     private static final int BG = 0xF01A1410;
@@ -75,6 +77,9 @@ public class AchievementScreen extends WEScreen {
     private HorizontalScrollTarget horizontalScrollDragging;
     private double horizontalScrollDragOffset;
     private List<Text> hoveredBadgeTooltip = List.of();
+    private String initialBadgeIconId;
+    private String initialBadgeColorId;
+    private boolean handledClose;
     private static final Map<String, Boolean> CATEGORY_EXPANDED = new LinkedHashMap<>();
 
     public AchievementScreen() {
@@ -99,6 +104,7 @@ public class AchievementScreen extends WEScreen {
     @Override
     protected void init() {
         super.init();
+        captureInitialBadgeProfile();
         rootWidgets.clear();
         ScreenMouseEvents.afterMouseScroll(this).register((screen, mouseX, mouseY, horizontalAmount, verticalAmount, consumed) -> {
             double mx = mouseX / matrixScale;
@@ -112,6 +118,12 @@ public class AchievementScreen extends WEScreen {
             }
             return true;
         });
+    }
+
+    @Override
+    public void removed() {
+        uploadBadgeProfileIfChanged();
+        super.removed();
     }
 
     @Override
@@ -684,6 +696,23 @@ public class AchievementScreen extends WEScreen {
 
     private void playClick() {
         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+    }
+
+    private void captureInitialBadgeProfile() {
+        if (initialBadgeIconId != null && initialBadgeColorId != null) return;
+        BadgeProfile profile = BadgeProfileData.getLocalProfile();
+        initialBadgeIconId = profile.selectedIconId;
+        initialBadgeColorId = profile.selectedColorId;
+    }
+
+    private void uploadBadgeProfileIfChanged() {
+        if (handledClose) return;
+        handledClose = true;
+        BadgeProfile profile = BadgeProfileData.getLocalProfile();
+        if (!Objects.equals(initialBadgeIconId, profile.selectedIconId)
+                || !Objects.equals(initialBadgeColorId, profile.selectedColorId)) {
+            BadgeService.syncWithServerSoon();
+        }
     }
 
     private String trimText(String text, int maxWidth) {

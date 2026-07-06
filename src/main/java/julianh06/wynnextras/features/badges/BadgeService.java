@@ -83,6 +83,11 @@ public class BadgeService {
         tickCounter = 199;
     }
 
+    public static void reloadBadgeInfoFromServer() {
+        getActiveUsers();
+        getActiveUserDetails();
+    }
+
     @SubscribeEvent
     public void onTick(TickEvent event) {
         if (!Models.WorldState.onWorld()) return;

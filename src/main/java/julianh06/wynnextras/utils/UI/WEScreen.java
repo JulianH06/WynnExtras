@@ -44,16 +44,7 @@ public abstract class WEScreen extends Screen {
     protected double actualScale = 1.0;
 
     public final List<Widget> rootWidgets = new ArrayList<>();
-    protected final List<WEElement<?>> listElements = new ArrayList<>();
     protected Widget focusedWidget = null;
-    protected WEElement<?> focusedElement = null;
-    protected float listX, listY, listWidth, listHeight;
-    protected float listItemHeight;
-    protected float listSpacing;
-    protected float listScrollOffset = 0f;
-    protected int firstVisibleIndex = 0;
-    protected int lastVisibleIndex = -1;
-    protected float listViewportPadding = 1f;
 
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 0; // in ms
@@ -135,8 +126,6 @@ public abstract class WEScreen extends Screen {
         context.getMatrices().pushMatrix();
         context.getMatrices().scale((float) matrixScale, (float) matrixScale);
         updateValues();
-        updateVisibleListRange();
-        layoutListElements();
         drawBackground(context, mx, my, delta);
         drawContent(context, mx, my, delta);
 
@@ -144,13 +133,6 @@ public abstract class WEScreen extends Screen {
             w.draw(context, mx, my, delta, ui);
         }
 
-        // draw only visible range with small buffer for smoothness
-        int start = Math.max(0, firstVisibleIndex - 1);
-        int end = Math.min(listElements.size() - 1, lastVisibleIndex + 1);
-        for (int i = start; i <= end; i++) {
-            WEElement<?> e = listElements.get(i);
-            e.draw(context, mx, my, delta, ui);
-        }
         drawForeground(context, mx, my, delta);
 
         context.getMatrices().popMatrix();
@@ -174,18 +156,6 @@ public abstract class WEScreen extends Screen {
 
     protected void updateValues() {}
 
-    protected void updateElementBounds() {
-        if (ui == null) return;
-
-        for (WEElement<?> e : listElements) {
-            int sx = (int) (e.x * McUtils.guiScale());
-            int sy = (int) (e.y * McUtils.guiScale());
-            int sw = (int) (e.width * McUtils.guiScale());
-            int sh = (int) (e.height * McUtils.guiScale());
-            e.setBounds(sx, sy, sw, sh);
-        }
-    }
-
     @Override
     public boolean mouseClicked(Click click, boolean doubleClick) {
         double mouseX = click.x() / matrixScale;
@@ -194,33 +164,15 @@ public abstract class WEScreen extends Screen {
 
         clearUiFocus();
 
-        // root widgets (topmost-first)
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             Widget w = rootWidgets.get(i);
             if (w.mouseClicked(mouseX, mouseY, button)) {
                 setFocusedWidget(w);
-                setFocusedElement(null);
                 return true;
             }
         }
 
-        // list viewport handling
-        if (isInsideListViewport(mouseX, mouseY)) {
-            updateVisibleListRange();
-            // iterate visible elements topmost-first (last index is visually lower, so reverse visible order)
-            for (int i = lastVisibleIndex; i >= firstVisibleIndex; i--) {
-                WEElement<?> e = listElements.get(i);
-                if (e.mouseClicked(mouseX, mouseY, button)) {
-                    setFocusedElement(e);
-                    setFocusedWidget(null);
-                    return true;
-                }
-            }
-        }
-
-        // click outside -> clear focus
         setFocusedWidget(null);
-        setFocusedElement(null);
         return super.mouseClicked(click, doubleClick);
     }
 
@@ -259,7 +211,6 @@ public abstract class WEScreen extends Screen {
         int modifiers = input.modifiers();
 
         if (focusedWidget != null && focusedWidget.keyPressed(keyCode, scanCode, modifiers)) return true;
-        // fallback to focused-first then all widgets
         for (Widget w : rootWidgets) {
             if (w.keyPressed(keyCode, scanCode, modifiers)) return true;
         }
@@ -278,13 +229,6 @@ public abstract class WEScreen extends Screen {
         return super.charTyped(input);
     }
 
-    protected void setFocusedElement(WEElement<?> e) {
-        if (focusedElement == e) return;
-        if (focusedElement != null) focusedElement.setFocused(false);
-        focusedElement = e;
-        if (focusedElement != null) focusedElement.setFocused(true);
-    }
-
     protected void setFocusedWidget(Widget w) {
         if (focusedWidget == w) return;
         if (focusedWidget != null) focusedWidget.setFocused(false);
@@ -296,35 +240,7 @@ public abstract class WEScreen extends Screen {
         for (Widget w : rootWidgets) {
             w.clearFocusTree();
         }
-        if (focusedElement != null) focusedElement.setFocused(false);
         focusedWidget = null;
-        focusedElement = null;
-    }
-
-    protected void updateVisibleListRange() {
-        int total = listElements.size();
-        if (total == 0 || listItemHeight <= 0 || listHeight <= 0) {
-            firstVisibleIndex = 0;
-            lastVisibleIndex = Math.max(-1, total - 1);
-            return;
-        }
-
-        float slot = listItemHeight + listSpacing;
-        int start = (int) Math.floor(listScrollOffset / slot);
-        start = Math.max(0, start);
-
-        int visibleCount = (int) Math.ceil(listHeight / slot) + 1; // +1 buffer
-        firstVisibleIndex = Math.min(total - 1, start);
-        lastVisibleIndex = Math.min(total - 1, start + visibleCount - 1);
-    }
-
-    protected boolean isInsideListViewport(double mouseX, double mouseY) {
-        if (ui == null) return false;
-        float sx = ui.sx(listX);
-        float sy = ui.sy(listY);
-        int sw = ui.sw(listWidth);
-        int sh = ui.sh(listHeight + (listSpacing * (listElements.size() - 1)));
-        return mouseX >= sx && mouseY >= sy && mouseX < sx + sw && mouseY < sy + sh;
     }
 
     private double lastScaleFactor = -1;
@@ -362,37 +278,11 @@ public abstract class WEScreen extends Screen {
     }
 
     protected void scrollList(float delta) {
-        float contentHeight = listElements.size() * (listItemHeight + listSpacing) - listSpacing;
-        listScrollOffset -= delta; // negative/positive depending on wheel direction; adjust if needed
-        float scrollPadding = 40f;
-        float maxScroll = Math.max(0f, contentHeight - listHeight + scrollPadding);
-        listScrollOffset = Math.max(0f, Math.min(listScrollOffset, maxScroll));
-
-        updateVisibleListRange();
-        // reposition visible elements after scroll
-        layoutListElements();
     }
 
-    protected void layoutListElements() {
-        if (listElements.isEmpty()) return;
-        float yy = listY - listScrollOffset;
-        for (int i = 0; i < listElements.size(); i++) {
-            WEElement<?> e = listElements.get(i);
-            int logicalX = Math.round(listX);
-            int logicalY = Math.round(yy);
-            int logicalW = Math.round(listWidth);
-            int logicalH = Math.round(listItemHeight);
-            e.setBounds(logicalX, logicalY, logicalW, logicalH);
-            yy += listItemHeight + listSpacing;
-        }
-    }
-
-    // Layout helper: position list vertically with spacing and optional scroll offset (logical coords)
     protected void layoutVertical(List<? extends Widget> list, float startX, float startY, float itemHeight, float spacing, float scrollOffset) {
         float yy = startY - scrollOffset;
         for (Widget w : list) {
-            // Widgets expected to expose setBounds(int x,int y,int w,int h) in your implementation
-            // Here we assume Widget has that method; if your Widget uses different API adapt accordingly.
             w.setBounds((int) startX, (int) yy, (int) (getLogicalWidth()), (int) itemHeight);
             yy += itemHeight + spacing;
         }
@@ -408,37 +298,14 @@ public abstract class WEScreen extends Screen {
         return (int) Math.round(w.getScaledHeight() * scaleFactor / matrixScale);
     }
 
-    // Root widget management
     public void addRootWidget(Widget w) {
         if (w == null) return;
         this.rootWidgets.add(w);
         if (ui != null) {
-            // if your Widget has setUi method, call it here, otherwise widgets should use UIUtils via constructor
             try {
                 w.getClass().getMethod("setUi", UIUtils.class).invoke(w, ui);
-            } catch (Exception ignored) {
-                // ignore if not present; prefer constructor injection
-            }
+            } catch (Exception ignored) { }
         }
-    }
-
-    protected void addListElement(WEElement<?> e) {
-        if (e == null) return;
-        listElements.add(e);
-        // falls das WEElement die UIUtils benötigt, setze sie (wenn Methode vorhanden)
-        try {
-            e.getClass().getMethod("setUi", UIUtils.class).invoke(e, ui);
-        } catch (Exception ignored) {}
-        layoutListElements();         // berechne / setze Bounds für alle Elemente
-        updateVisibleListRange();     // aktualisiere visible range
-    }
-
-    protected void removeListElement(WEElement<?> e) {
-        if (e == null) return;
-        listElements.remove(e);
-        if (focusedElement == e) setFocusedElement(null);
-        layoutListElements();
-        updateVisibleListRange();
     }
 
     public void removeRootWidget(Widget w) {
@@ -450,13 +317,9 @@ public abstract class WEScreen extends Screen {
     @Override
     public void removed() {
         super.removed();
-        // cleanup if needed
         rootWidgets.clear();
-        listElements.clear();
         focusedWidget = null;
     }
-
-    // Utility helpers that delegate to UIUtils for compatibility with existing call sites
 
     protected void drawText(String text, float x, float y, CustomColor color,
                             HorizontalAlignment horizontalAlignment,
@@ -508,19 +371,15 @@ public abstract class WEScreen extends Screen {
     public static void open(Supplier<? extends WEScreen> screenSupplier) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null) return;
-        // schedule on client thread (safe from other threads)
         client.send(() -> {
             WEScreen current = null;
             if (client.currentScreen instanceof WEScreen) current = (WEScreen) client.currentScreen;
-            // optional: skip if same class already open
             if (current != null && current.getClass() == screenSupplier.get().getClass()) {
                 return;
             }
             client.setScreen(screenSupplier.get());
         });
     }
-
-    //needed for the class selection stuff
 
     public void setDrawContext(DrawContext drawContext) {
         this.drawContext = drawContext;

@@ -22,15 +22,7 @@ public abstract class WEHandledScreen {
     protected int getMinScreenHeight() { return 0; }
 
     protected final List<Widget> rootWidgets = new ArrayList<>();
-    protected final List<WEElement<?>> listElements = new ArrayList<>();
     protected Widget focusedWidget = null;
-    protected WEElement<?> focusedElement = null;
-    protected float listX, listY, listWidth, listHeight;
-    protected float listItemHeight;
-    protected float listSpacing;
-    protected float listScrollOffset = 0f;
-    protected int firstVisibleIndex = 0;
-    protected int lastVisibleIndex = -1;
 
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 0; // in ms
@@ -57,54 +49,10 @@ public abstract class WEHandledScreen {
             w.draw(ctx, mx, my, delta, ui);
         }
 
-        updateVisibleListRange();
-        layoutListElements();
-
-        for (int i = firstVisibleIndex; i <= lastVisibleIndex; i++) {
-            listElements.get(i).draw(ctx, mx, my, delta, ui);
-        }
-
         drawForeground(ctx, mx, my, delta);
 
         ctx.getMatrices().popMatrix();
     }
-
-
-
-
-
-
-
-    protected void scrollList(float delta) {
-        float contentHeight = listElements.size() * (listItemHeight + listSpacing) - listSpacing;
-        listScrollOffset -= delta;
-        float maxScroll = Math.max(0, contentHeight - listHeight);
-        listScrollOffset = Math.max(0, Math.min(listScrollOffset, maxScroll));
-    }
-
-    protected void layoutListElements() {
-        float yy = listY - listScrollOffset;
-        for (WEElement<?> e : listElements) {
-            e.setBounds((int) listX, (int) yy, (int) listWidth, (int) listItemHeight);
-            yy += listItemHeight + listSpacing;
-        }
-    }
-
-    protected void updateVisibleListRange() {
-        if (listElements.isEmpty() || listItemHeight <= 0) {
-            firstVisibleIndex = 0;
-            lastVisibleIndex = -1;
-            return;
-        }
-
-        float slot = listItemHeight + listSpacing;
-        int start = (int) Math.floor(listScrollOffset / slot);
-        int visibleCount = (int) Math.ceil(listHeight / slot) + 1;
-
-        firstVisibleIndex = Math.max(0, start);
-        lastVisibleIndex = Math.min(listElements.size() - 1, start + visibleCount);
-    }
-
 
 
 
@@ -119,21 +67,10 @@ public abstract class WEHandledScreen {
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             if (rootWidgets.get(i).mouseClicked(x, y, button)) {
                 setFocusedWidget(rootWidgets.get(i));
-                setFocusedElement(null);
                 return true;
             }
         }
 
-        for (int i = lastVisibleIndex; i >= firstVisibleIndex; i--) {
-            WEElement<?> e = listElements.get(i);
-            if (e.mouseClicked(x, y, button)) {
-                setFocusedElement(e);
-                setFocusedWidget(null);
-                return true;
-            }
-        }
-
-        setFocusedElement(null);
         setFocusedWidget(null);
         return false;
     }
@@ -186,12 +123,6 @@ public abstract class WEHandledScreen {
 
 
 
-    protected void setFocusedElement(WEElement<?> e) {
-        if (focusedElement != null) focusedElement.setFocused(false);
-        focusedElement = e;
-        if (e != null) e.setFocused(true);
-    }
-
     protected void setFocusedWidget(Widget w) {
         if (focusedWidget != null) focusedWidget.setFocused(false);
         focusedWidget = w;
@@ -202,9 +133,7 @@ public abstract class WEHandledScreen {
         for (Widget w : rootWidgets) {
             w.clearFocusTree();
         }
-        if (focusedElement != null) focusedElement.setFocused(false);
         focusedWidget = null;
-        focusedElement = null;
     }
 
     public void computeScale() {

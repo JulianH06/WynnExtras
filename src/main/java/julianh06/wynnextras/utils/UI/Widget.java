@@ -26,7 +26,6 @@ public abstract class Widget {
     public Widget(int x, int y, int width, int height) { setBounds(x, y, width, height); }
     public Widget() { setBounds(0, 0, 0, 0); }
 
-    // ---- Bounds / Layout ----
     public final void setBounds(int x, int y, int width, int height) {
         int normalizedWidth = Math.max(0, width);
         int normalizedHeight = Math.max(0, height);
@@ -48,7 +47,6 @@ public abstract class Widget {
     public int getWidth() { return width; }
     public int getHeight() { return height; }
 
-    // ---- Visibility / State ----
     public boolean isVisible() { return visible; }
     public void setVisible(boolean visible) { this.visible = visible; }
 
@@ -58,7 +56,6 @@ public abstract class Widget {
     public boolean isHovered() { return hovered; }
     public boolean isFocused() { return focused; }
 
-    // ---- Children ----
     public void addChild(Widget child) {
         if (child == null) return;
         child.parent = this;
@@ -91,16 +88,13 @@ public abstract class Widget {
         }
     }
 
-    // ---- Drawing Lifecycle ----
     public void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
         this.ui = ui;
         if(!visible || this.ui == null) return;
-        // update hover state for this widget
         hovered = contains(mouseX, mouseY);
         updateValues();
         drawBackground(ctx, mouseX, mouseY, tickDelta);
         drawContent(ctx, mouseX, mouseY, tickDelta);
-        // draw children in insertion order (lower z first)
         for (Widget child : children) {
             child.draw(ctx, mouseX, mouseY, tickDelta, ui);
         }
@@ -113,26 +107,21 @@ public abstract class Widget {
     protected abstract void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta);
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) { /* override */ }
 
-    // ---- Input / Event propagation ----
     /**
      * Mouse click event propagation.
      * Returns true if the event was consumed.
      */
     public boolean mouseClicked(double mx, double my, int button) {
         if (!visible || !enabled) return false;
-        // propagate to children in reverse order (topmost first)
         for (int i = children.size() - 1; i >= 0; i--) {
             Widget child = children.get(i);
             if (child.mouseClicked(mx, my, button)) return true;
         }
-        // if this widget contains the click, handle it
         if (contains((int) mx, (int) my)) {
-            // manage focus
             setFocused(true);
             if (onClickCallback != null) onClickCallback.accept(this);
             return onClick(button);
         } else {
-            // clicking outside removes focus
             if (focused) setFocused(false);
         }
         return false;
@@ -158,7 +147,6 @@ public abstract class Widget {
 
     public boolean mouseScrolled(double mx, double my, double delta) {
         if (!visible) return false;
-        // children first
         for (int i = children.size() - 1; i >= 0; i--) {
             if (children.get(i).mouseScrolled(mx, my, delta)) return true;
         }
@@ -169,7 +157,6 @@ public abstract class Widget {
 
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (!visible || !enabled) return false;
-        // dispatch to focused child if present
         for (Widget child : children) {
             if (child.keyPressed(keyCode, scanCode, modifiers)) return true;
         }
@@ -188,24 +175,20 @@ public abstract class Widget {
 
     protected boolean onCharTyped(char chr, int modifiers) { return false; }
 
-    // ---- Focus ----
     public void setFocused(boolean focused) {
         if (this.focused == focused) return;
         this.focused = focused;
         if (focused) {
             if (onFocusCallback != null) onFocusCallback.accept(this);
-            // blur siblings / other focus handling should be done by container (e.g., WEScreen)
         } else {
             if (onBlurCallback != null) onBlurCallback.accept(this);
         }
     }
 
-    // ---- Callbacks ----
     public void setOnClick(Consumer<Widget> callback) { this.onClickCallback = callback; }
     public void setOnFocus(Consumer<Widget> callback) { this.onFocusCallback = callback; }
     public void setOnBlur(Consumer<Widget> callback) { this.onBlurCallback = callback; }
 
-    // ---- Utilities ----
     public boolean contains(int mx, int my) {
         if(ui == null) return false;
         return mx >= ui.sx(x) && my >= ui.sy(y) && mx < ui.sx(x) + ui.sw(width) && my < ui.sy(y) + ui.sh(height);
@@ -217,7 +200,6 @@ public abstract class Widget {
     }
 
     public void tick() {
-        // per-frame update hook; propagate to children
         for (Widget c : children) c.tick();
     }
 

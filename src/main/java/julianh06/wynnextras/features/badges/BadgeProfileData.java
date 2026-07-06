@@ -28,7 +28,6 @@ public final class BadgeProfileData {
         BadgeProfile profile = getLocalProfile();
         profile.selectedIconId = icon.id();
         save();
-        BadgeService.syncWithServerSoon();
     }
 
     public static void setColor(String colorId) {
@@ -37,7 +36,6 @@ public final class BadgeProfileData {
         BadgeProfile profile = getLocalProfile();
         profile.selectedColorId = color.id();
         save();
-        BadgeService.syncWithServerSoon();
     }
 
     public static void load() {

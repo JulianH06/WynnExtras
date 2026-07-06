@@ -17,7 +17,6 @@ import julianh06.wynnextras.features.profileviewer.data.*;
 import julianh06.wynnextras.features.profileviewer.tabs.*;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
-import julianh06.wynnextras.utils.UI.WEElement;
 import julianh06.wynnextras.utils.UI.Widget;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.client.MinecraftClient;
@@ -350,8 +349,6 @@ public class PVScreen extends WEScreen {
 
         backgroundImageWidget.draw(context, mouseX, mouseY, delta, ui);
         updateValues();
-        updateVisibleListRange();
-        layoutListElements();
 
         targetScrollOffset = Math.min(targetScrollOffset, maxScrollOffset);
         float snapValue = 0.5f;
@@ -407,14 +404,6 @@ public class PVScreen extends WEScreen {
         //its to make the tooltips of the player names always render above the class buttons
         for (PlayerWidget w : lastViewedPlayersWidget) {
             w.draw(context, mouseX, mouseY, delta, ui);
-        }
-
-        // draw only visible range with small buffer for smoothness
-        int start = Math.max(0, firstVisibleIndex - 1);
-        int end = Math.min(listElements.size() - 1, lastVisibleIndex + 1);
-        for (int i = start; i <= end; i++) {
-            WEElement<?> e = listElements.get(i);
-            e.draw(context, mouseX, mouseY, delta, ui);
         }
 
         context.getMatrices().popMatrix();
