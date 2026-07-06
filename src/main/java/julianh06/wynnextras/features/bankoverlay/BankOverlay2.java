@@ -105,6 +105,7 @@ public class BankOverlay2 extends WEHandledScreen {
     private static final boolean MOUSE_TWEAKS_LOADED = FabricLoader.getInstance().isModLoaded("mousetweaks");
     private static final Pattern POTIONS_USES_PATTERN = Pattern.compile("\\[(\\d+)/(\\d+)]");
     private static final Pattern MINECRAFT_FORMATTING_CODE_PATTERN = Pattern.compile("\u00a7[0-9a-fk-or]");
+    private static final Pattern PAGE_RANK_REQUIREMENT_PATTERN = Pattern.compile("(?i)(?:only available to|requires(?: a)? rank:?|rank required:?)\\s+([A-Za-z0-9+]+)");
     private static final EmeraldUnits[] EMERALD_UNITS = EmeraldUnits.values();
     private static ItemStack hoveredSlot = Items.AIR.getDefaultStack();
     private static int hoveredX = -1;
@@ -190,6 +191,9 @@ public class BankOverlay2 extends WEHandledScreen {
     private static int xFitAmount = 0;
     private static int yFitAmount = 0;
     private static float pageBuyCustomModelData = 0;
+    private static BankOverlayType rankLockedOverlayType = BankOverlayType.NONE;
+    private static int rankLockedPageCount = -1;
+    private static String rankLockedRequiredRank = "";
 
     private static final List<PageWidget> pages = new ArrayList<>();
     private static final Map<Integer, List<ItemStack>> annotationStackCache = new HashMap<>();
@@ -1148,6 +1152,69 @@ public class BankOverlay2 extends WEHandledScreen {
         return false;
     }
 
+    private static String getPageRankRequirement(ItemStack stack) {
+        if (stack == null || stack.isEmpty() || stack.getComponents() == null) return null;
+        if (stack.getComponents().get(DataComponentTypes.LORE) == null) return null;
+
+        StringBuilder loreText = new StringBuilder();
+        for (Text line : stack.getComponents().get(DataComponentTypes.LORE).lines()) {
+            String cleanedLine = MINECRAFT_FORMATTING_CODE_PATTERN.matcher(line.getString()).replaceAll("");
+            if (!loreText.isEmpty()) loreText.append(' ');
+            loreText.append(cleanedLine.trim());
+        }
+        String cleanedLore = loreText.toString().replaceAll("\\s+", " ").trim();
+        String lowerLore = cleanedLore.toLowerCase(Locale.ROOT);
+        if (!lowerLore.contains("the next page is only")
+                && !lowerLore.contains("only available to")
+                && !lowerLore.contains("requires a rank")) {
+            return null;
+        }
+
+        Matcher matcher = PAGE_RANK_REQUIREMENT_PATTERN.matcher(cleanedLore);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return "a rank";
+    }
+
+    private static void setRankLockedPageLimit(int pageCount, String requiredRank) {
+        if (pageCount < 1 || currentOverlayType == BankOverlayType.NONE) return;
+        rankLockedOverlayType = currentOverlayType;
+        rankLockedPageCount = pageCount;
+        rankLockedRequiredRank = requiredRank == null || requiredRank.isBlank() ? "a rank" : requiredRank;
+        if (currentData != null && hasStoredPagePast(pageCount)) {
+            truncateStoredPages(pageCount);
+        }
+    }
+
+    private static boolean hasStoredPagePast(int pageCount) {
+        if (currentData == null) return false;
+        return currentData.getLastPage() > pageCount
+                || currentData.getBankPages().keySet().stream().anyMatch(pageIndex -> pageIndex >= pageCount)
+                || currentData.getBankPageNames().keySet().stream().anyMatch(pageIndex -> pageIndex >= pageCount)
+                || currentData.getBagCounts().keySet().stream().anyMatch(pageIndex -> pageIndex >= pageCount);
+    }
+
+    private static void clearRankLockedPageLimit() {
+        if (currentOverlayType != rankLockedOverlayType) return;
+        rankLockedOverlayType = BankOverlayType.NONE;
+        rankLockedPageCount = -1;
+        rankLockedRequiredRank = "";
+    }
+
+    private static void clearRankLockedPageLimitIfPastBoundary(int currentPageCount) {
+        if (currentOverlayType == rankLockedOverlayType && rankLockedPageCount > 0 && currentPageCount >= rankLockedPageCount) {
+            clearRankLockedPageLimit();
+        }
+    }
+
+    private static boolean isCurrentBankRankLockedAtLimit() {
+        return currentOverlayType == rankLockedOverlayType
+                && rankLockedPageCount > 0
+                && currentData != null
+                && currentData.getLastPage() >= rankLockedPageCount;
+    }
+
     private static boolean rightButtonPointsToPage(ItemStack stack, int pageNumber) {
         if (stack == null || stack.isEmpty()) return false;
         String rawName = stack.getName().getString();
@@ -1292,6 +1359,14 @@ public class BankOverlay2 extends WEHandledScreen {
         boolean purchaseButton = isPagePurchaseButton(rightButton);
         Float buttonModelData = getFirstCustomModelData(rightButton);
 
+        String requiredRank = getPageRankRequirement(rightButton);
+        if (requiredRank != null) {
+            setRankLockedPageLimit(reloadCurrentPage + 1, requiredRank);
+            truncateStoredPages(reloadCurrentPage + 1);
+            return false;
+        }
+        clearRankLockedPageLimitIfPastBoundary(reloadCurrentPage + 1);
+
         if (purchaseButton) {
             truncateStoredPages(reloadCurrentPage + 1);
             return false;
@@ -1356,7 +1431,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
     private static int getRenderableRegularPageCount() {
         if (currentData == null) return pages.size();
-        int requested = Math.max(currentData.getLastPage() + 1, activeInv + 1);
+        int storedPageCount = currentData.getLastPage();
+        int requested = Math.max(storedPageCount + 1, activeInv + 1);
         return Math.min(pages.size(), Math.max(0, requested));
     }
 
@@ -1789,7 +1865,7 @@ public class BankOverlay2 extends WEHandledScreen {
         String queryText = searchInput == null ? "" : searchInput;
         boolean searching = !queryText.isEmpty();
         SearchQueryParser.ParsedQuery query = searching ? SearchQueryParser.parse(queryText) : null;
-        int pageCount = Math.min(Math.max(data.getLastPage() + 1, data.getBankPages().size()), maxPages);
+        int pageCount = Math.min(Math.max(data.getLastPage() + (searching ? 0 : 1), data.getBankPages().size()), maxPages);
         int bottomBorder = (int) (yStart + (yFitAmount) * (90 + 4 + 10) * Math.max(2, ui.getScaleFactor()));
         LocalCrossClassPageCache cache = accountCache ? accountLocalCrossClassPageCache : currentCharacterLocalCrossClassPageCache;
         if (cache != null && cache.matches(data, characterId, displayName, characterLevel, maxPages, pageCount, queryText, yStart, bottomBorder, ui.getScaleFactorF())) {
@@ -1799,12 +1875,13 @@ public class BankOverlay2 extends WEHandledScreen {
         List<CrossClassPageWidget> cachedPages = new ArrayList<>();
 
         for (int pageNum = 0; pageNum < pageCount; pageNum++) {
-            List<ItemStack> pageItems = pageNum < data.getBankPages().size() ? data.getBankPages().get(pageNum) : EMPTY_BANK_PAGE;
+            List<ItemStack> pageItems = data.getBankPages().get(pageNum);
+            boolean pagePlaceholder = !searching && pageItems == null && pageNum >= data.getLastPage();
             if (pageItems == null) pageItems = Collections.emptyList();
 
             if (searching && !pageContainsSearch(pageItems, query)) continue;
 
-            cachedPages.add(new CrossClassPageWidget(
+            CrossClassPageWidget pageWidget = new CrossClassPageWidget(
                     characterId,
                     displayName,
                     characterLevel,
@@ -1814,7 +1891,12 @@ public class BankOverlay2 extends WEHandledScreen {
                     CrossClassBankSearch.SearchResult.Type.BANK_PAGE,
                     yStart,
                     bottomBorder
-            ));
+            );
+            if (pagePlaceholder) {
+                boolean rankLocked = data == currentData && currentOverlayType == rankLockedOverlayType && rankLockedPageCount == data.getLastPage();
+                pageWidget.setPagePlaceholder(rankLocked ? rankLockedRequiredRank : null);
+            }
+            cachedPages.add(pageWidget);
         }
         LocalCrossClassPageCache newCache = new LocalCrossClassPageCache(
                 data,
@@ -3903,6 +3985,13 @@ public class BankOverlay2 extends WEHandledScreen {
         @Override
         protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(McUtils.containerMenu() != null && index == currentData.getLastPage()) {
+                if (isCurrentBankRankLockedAtLimit()) {
+                    ui.drawCenteredText("§c✖ §Rank required: §f" + rankLockedRequiredRank + "§7.", x + 81, y + 14, WHITE_TEXT_COLOR, 0.9f);
+                    ui.drawCenteredText("§7Upgrade to unlock this page.", x + 81, y + 78, WHITE_TEXT_COLOR, 0.8f);
+                    ui.drawImage(WynnExtrasConfig.INSTANCE.darkmodeToggle ? lock_locked_dark : lock_locked, x + 82 - 25, y + 46 - 19, 50, 50);
+                    return;
+                }
+
                 if(priceText == null) {
                     String text = "§c✖ §7Price: §funknown.";
                     String text2 = "§7Go to page §f" + currentData.getLastPage() + " §7to check.";
@@ -3975,6 +4064,13 @@ public class BankOverlay2 extends WEHandledScreen {
 
                     List<Text> lore = rightArrow.getComponents().get(DataComponentTypes.LORE).lines();
 
+                    String requiredRank = getPageRankRequirement(rightArrow);
+                    if (requiredRank != null) {
+                        setRankLockedPageLimit(activeInv + 1, requiredRank);
+                        return;
+                    }
+                    clearRankLockedPageLimitIfPastBoundary(activeInv + 1);
+
                     if (rightArrow.getComponents().get(DataComponentTypes.CUSTOM_NAME).getString().contains(">§4>§c>§4>§c>") &&
                             (pageBuyCustomModelData == 0 || rightArrow.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA).getFloat(0) == pageBuyCustomModelData)
                     ) {
@@ -4037,6 +4133,7 @@ public class BankOverlay2 extends WEHandledScreen {
         protected boolean onClick(int button) {
             if(!isMouseInOverlay) return true;
             if (isJumpInProgress()) return true;
+            if (index == currentData.getLastPage() && isCurrentBankRankLockedAtLimit()) return true;
 
             if(index < currentData.getLastPage() && index != activeInv && !hasHeldItem()) {
                 jumpToPage(index);
@@ -4967,6 +5064,8 @@ public class BankOverlay2 extends WEHandledScreen {
         private int lastSlotLayoutY = Integer.MIN_VALUE;
         private double lastSlotLayoutScale = Double.NaN;
         private int lastSlotLayoutCount = -1;
+        private boolean pagePlaceholder = false;
+        private String placeholderRequiredRank = null;
 
         public CrossClassPageWidget(String characterId, String characterNickname, int characterLevel, int pageNumber, List<ItemStack> items, List<ItemStack> armorItems, CrossClassBankSearch.SearchResult.Type type, int topBorder, int botBorder) {
             super(0, 0, 0, 0);
@@ -4979,6 +5078,11 @@ public class BankOverlay2 extends WEHandledScreen {
             this.type = type == null ? CrossClassBankSearch.SearchResult.Type.BANK_PAGE : type;
             this.topBorder = topBorder;
             this.botBorder = botBorder;
+        }
+
+        public void setPagePlaceholder(String requiredRank) {
+            this.pagePlaceholder = true;
+            this.placeholderRequiredRank = requiredRank;
         }
 
         @Override
@@ -4994,11 +5098,14 @@ public class BankOverlay2 extends WEHandledScreen {
             String bgColor = WynnExtrasConfig.INSTANCE.darkmodeToggle ? "2c2d2f" : "81644b";
             ui.drawRect(x, y - 11, width, 11, CustomColor.fromHexString(bgColor));
 
-            // Draw bank texture background
-            Identifier texture = isPlayerInventoryPage()
-                    ? (WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankInventoryTextureDark : bankInventoryTexture)
-                    : (WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankTextureDark : bankTexture);
-            ui.drawImage(texture, x, y, width, height);
+            if (pagePlaceholder) {
+                ui.drawRect(x, y, width, height, PAGE_DIM_COLOR);
+            } else {
+                Identifier texture = isPlayerInventoryPage()
+                        ? (WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankInventoryTextureDark : bankInventoryTexture)
+                        : (WynnExtrasConfig.INSTANCE.darkmodeToggle ? bankTextureDark : bankTexture);
+                ui.drawImage(texture, x, y, width, height);
+            }
 
             // Draw character label above the page
             boolean localBankPage = isLocalBankPage();
@@ -5007,6 +5114,18 @@ public class BankOverlay2 extends WEHandledScreen {
             String pageLabel = isPlayerInventoryPage() ? "Inventory" : "Page " + (pageNumber + 1);
             String prefix = isStaticStoragePage() || localBankPage ? "§e" : "§e@";
             ui.drawText(prefix + name + levelStr + " §7" + pageLabel, x + 2, y - 9, YELLOW_TEXT_COLOR, 0.9f);
+
+            if (pagePlaceholder) {
+                setSlotsVisible(false);
+                Identifier lockTexture = WynnExtrasConfig.INSTANCE.darkmodeToggle ? lock_locked_dark : lock_locked;
+                ui.drawImage(lockTexture, x + 82 - 25, y + 46 - 19, 50, 50);
+                boolean rankLockedPlaceholder = placeholderRequiredRank != null && !placeholderRequiredRank.isBlank();
+                String line1 = rankLockedPlaceholder ? "§c✖ §7Requires §f" + placeholderRequiredRank + "§7." : "§c✖ §7Page not unlocked.";
+                String line2 = rankLockedPlaceholder ? "§7Upgrade to unlock this page." : "§7Open the bank to buy it.";
+                ui.drawCenteredText(line1, x + 81, y + 14, WHITE_TEXT_COLOR, 0.9f);
+                ui.drawCenteredText(line2, x + 81, y + 78, WHITE_TEXT_COLOR, 0.8f);
+                return;
+            }
 
             if (items.isEmpty() && !hasAnyArmorItem()) {
                 setSlotsVisible(false);
@@ -5099,6 +5218,7 @@ public class BankOverlay2 extends WEHandledScreen {
         protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if (ui == null) return;
             if (y > botBorder || y + height < topBorder) return;
+            if (pagePlaceholder) return;
 
             if (isLocalBankPage()) {
                 ui.drawRect(x, y, width, height, PAGE_DIM_COLOR);
@@ -5131,6 +5251,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            if (pagePlaceholder) return true;
             if (isStaticStoragePage()) return true;
             if (isJumpInProgress()) return true;
             if (button == 0) {
