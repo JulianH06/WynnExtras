@@ -99,26 +99,34 @@ public class CraftingHelperOverlay extends WEMenuExtension {
     private record MissingRequirement(String type, String name, int amount) {}
 
     private static final String MAIN_ING_MAP_URL = "https://raw.githubusercontent.com/hppeng-wynn/hppeng-wynn.github.io/HEAD/py_script/ing_map.json";
-    private static final String BETA_ING_MAP_URL = "https://raw.githubusercontent.com/wynnbuilder-beta/wynnbuilder-beta.github.io/master/py_script/ing_map.json";
+    private static final String BETA_ING_MAP_URL = "https://raw.githubusercontent.com/wynnbuilder-beta/wynnbuilder-beta.github.io/master/data/baseline/maps/ing_map.json";
     private static final HttpClient ING_HTTP = HttpClient.newHttpClient();
     private static volatile Map<Integer, String> mainIngMap = null;
     private static volatile Map<Integer, String> betaIngMap = null;
     private static volatile boolean ingMapsLoading = false;
 
     private static void ensureIngMapsLoaded() {
-        if ((mainIngMap != null && betaIngMap != null) || ingMapsLoading) return;
+        if ((isIngMapLoaded(mainIngMap) && isIngMapLoaded(betaIngMap)) || ingMapsLoading) return;
         ingMapsLoading = true;
         CompletableFuture.runAsync(() -> {
-            mainIngMap = fetchIngMap(MAIN_ING_MAP_URL);
-            betaIngMap = fetchIngMap(BETA_ING_MAP_URL);
-            ingMapsLoading = false;
+            try {
+                if (!isIngMapLoaded(mainIngMap)) mainIngMap = fetchIngMap(MAIN_ING_MAP_URL);
+                if (!isIngMapLoaded(betaIngMap)) betaIngMap = fetchIngMap(BETA_ING_MAP_URL);
+            } finally {
+                ingMapsLoading = false;
+            }
         });
+    }
+
+    private static boolean isIngMapLoaded(Map<Integer, String> ingMap) {
+        return ingMap != null && !ingMap.isEmpty();
     }
 
     private static Map<Integer, String> fetchIngMap(String url) {
         try {
             HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).build();
             HttpResponse<String> resp = ING_HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() < 200 || resp.statusCode() >= 300) return Collections.emptyMap();
             JsonObject obj = JsonParser.parseString(resp.body()).getAsJsonObject();
             Map<Integer, String> map = new HashMap<>();
             for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
@@ -667,6 +675,11 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             wbStatusMessage = "Loading ingredient data, try again shortly.";
             return;
         }
+        if (ingMap.isEmpty()) {
+            wbStatusMessage = "Could not load ingredient data.";
+            return;
+        }
+        List<Integer> unknownIngredientIds = new ArrayList<>();
         for (int id : craft.ingredientIds()) {
             if (WynnBuilderDecoder.isNoIngredient(id)) {
                 ingNamesFromLink.add(null);
@@ -675,10 +688,15 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             String ingName = ingMap.get(id);
             if (ingName == null) {
                 ingNamesFromLink.add(null);
+                unknownIngredientIds.add(id);
                 continue;
             }
             ingNamesFromLink.add(ingName);
             requirements.add(new ItemRequirement("ingredients", ingName, 1));
+        }
+        if (!unknownIngredientIds.isEmpty()) {
+            wbStatusMessage = "Unknown ingredient ID: " + unknownIngredientIds.get(0);
+            return;
         }
 
         // Save for "Reuse Last"
