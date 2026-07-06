@@ -65,9 +65,6 @@ public class BankOverlay {
 
     public static final Map<Integer, List<ItemAnnotation>> annotationCache = new HashMap<>();
 
-    private static long lastScrollTime = 0;
-    private static final long scrollCooldown = 50; // in ms
-
     private static EasyTextInput activeTextInput;
 
     public static volatile BankOverlayType currentOverlayType = BankOverlayType.NONE;
@@ -359,20 +356,7 @@ public class BankOverlay {
                         verticalAmount,
                         consumed
                 ) -> {
-                    long now = System.currentTimeMillis();
-                    if (now - lastScrollTime < scrollCooldown) {
-                        return true;
-                    }
-                    lastScrollTime = now;
-
-                    if (BankOverlay.currentOverlayType != BankOverlayType.NONE) {
-                        if (verticalAmount > 0) {
-                            BankOverlay2.adjustTargetOffset(-104f);
-                        } else {
-                            BankOverlay2.adjustTargetOffset(104f);
-                        }
-                    }
-                    return true;
+                    return BankOverlay2.handleMouseScrolled(verticalAmount);
                 });
             }
             BankOverlay2.setBankSyncId(currScreenHandler.syncId);

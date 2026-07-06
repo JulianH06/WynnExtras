@@ -503,6 +503,10 @@ public abstract class HandledScreenMixin {
     private void onMouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount, CallbackInfoReturnable<Boolean> cir) {
         if (ItemComponentsDebugOverlay.mouseScrolled(mouseX, mouseY, verticalAmount)) {
             cir.setReturnValue(true);
+            return;
+        }
+        if (BankOverlay2.handleMouseScrolled(verticalAmount)) {
+            cir.setReturnValue(true);
         }
     }
 

@@ -269,6 +269,10 @@ public class BankOverlay2 extends WEHandledScreen {
 
     private static long lastClickTime = 0;
     private static final long DOUBLE_CLICK_INTERVAL_MS = 500L;
+    private static long lastScrollTime = 0;
+    private static final long SCROLL_COOLDOWN_MS = 50L;
+    private static long blockSlotClicksAfterScrollUntil = 0L;
+    private static final long SCROLL_SLOT_CLICK_BLOCK_MS = 150L;
 
     private static Pair<Integer, Integer> lastClickedSlot = new Pair<>(-1, -1);
     private static ItemStack lastQuickMoved = ItemStack.EMPTY;
@@ -430,6 +434,32 @@ public class BankOverlay2 extends WEHandledScreen {
 
     public static void adjustTargetOffset(float offset) {
         targetOffset += offset;
+    }
+
+    public static boolean handleMouseScrolled(double verticalAmount) {
+        if (BankOverlay.currentOverlayType == BankOverlayType.NONE) return false;
+        if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return false;
+
+        long now = System.currentTimeMillis();
+        if (now - lastScrollTime < SCROLL_COOLDOWN_MS) {
+            return true;
+        }
+        lastScrollTime = now;
+        blockSlotClicksAfterScrollUntil = now + SCROLL_SLOT_CLICK_BLOCK_MS;
+
+        if (verticalAmount > 0) {
+            adjustTargetOffset(-104f);
+        } else {
+            adjustTargetOffset(104f);
+        }
+        return true;
+    }
+
+    public static boolean shouldBlockSlotClickAfterScroll(int syncId) {
+        if (BankOverlay.currentOverlayType == BankOverlayType.NONE) return false;
+        if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return false;
+        if (syncId != bankSyncid) return false;
+        return System.currentTimeMillis() < blockSlotClicksAfterScrollUntil;
     }
 
     public static void setBankSyncId(int syncId) {
@@ -711,7 +741,9 @@ public class BankOverlay2 extends WEHandledScreen {
                     crossClassSearchActive = true;
                     crossClassPages.clear();
                     boolean includeCurrentCharacter = allCharactersBrowseMode && currentOverlayType != BankOverlayType.CHARACTER;
-                    boolean includeAccountBank = allCharactersBrowseMode && currentOverlayType != BankOverlayType.ACCOUNT;
+                    boolean includeAccountBank = allCharactersBrowseMode
+                            || currentOverlayType == BankOverlayType.MISC
+                            || currentOverlayType == BankOverlayType.BOOKSHELF;
                     queueCrossClassSearch(cacheKey, searchInput, includeCurrentCharacter, includeAccountBank, allCharactersBrowseMode);
                 }
                 startQueuedCrossClassSearchIfReady();
@@ -876,8 +908,8 @@ public class BankOverlay2 extends WEHandledScreen {
                 ui.drawCenteredText("Quick Actions", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, WHITE_TEXT_COLOR, 1.1f);
             }
 
-            boolean showAllCharactersButton = currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER;
-            boolean showReloadButton = currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER;
+            boolean showAllCharactersButton = currentOverlayType != BankOverlayType.NONE;
+            boolean showReloadButton = currentOverlayType != BankOverlayType.NONE;
             boolean showRightButtonPanel = currentOverlayType != BankOverlayType.NONE && (showAllCharactersButton || showReloadButton);
 
             if(showRightButtonPanel) {
@@ -1668,6 +1700,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
         int bottomBorder = (int) (yStart + (yFitAmount) * (90 + 4 + 10) * Math.max(2, ui.getScaleFactor()));
         for (CrossClassBankSearch.SearchResult result : payload.results()) {
+            if (!shouldShowCrossClassResult(result)) continue;
+
             CrossClassPageWidget ccPage = new CrossClassPageWidget(
                     result.characterId,
                     result.characterNickname,
@@ -1681,6 +1715,16 @@ public class BankOverlay2 extends WEHandledScreen {
             );
             crossClassPages.add(ccPage);
         }
+    }
+
+    private static boolean shouldShowCrossClassResult(CrossClassBankSearch.SearchResult result) {
+        if (result == null) return false;
+        if ("__account__".equals(result.characterId) && currentOverlayType == BankOverlayType.ACCOUNT) return false;
+        return switch (result.type) {
+            case MISC_BUCKET -> currentOverlayType != BankOverlayType.MISC;
+            case TOME_BOOKSHELF -> currentOverlayType != BankOverlayType.BOOKSHELF;
+            default -> true;
+        };
     }
 
     private static int startNextRow(int visualIndex) {
