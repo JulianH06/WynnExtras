@@ -11,6 +11,7 @@ import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
@@ -282,13 +283,19 @@ public class AchievementScreen extends WEScreen {
 
     private List<Achievement> allAchievements() {
         List<Achievement> list = new ArrayList<>();
-        if (AchievementTracking.achievements == null) return list;
+        ensureAchievementsAvailable();
         list.addAll(AchievementTracking.achievements.allSimple());
         list.addAll(AchievementTracking.achievements.allProgress());
         list.addAll(AchievementTracking.achievements.allTiered());
         list.removeIf(achievement -> !Achievements.isKnownAchievement(achievement.getId()));
         list.sort(Comparator.comparing(Achievement::getId));
         return list;
+    }
+
+    private void ensureAchievementsAvailable() {
+        if (AchievementTracking.achievements != null) return;
+        AchievementTracking.achievements = new Achievements();
+        AchievementTracking.achievements.populateAll();
     }
 
     private List<AchievementCategory> achievementCategories() {
@@ -439,7 +446,11 @@ public class AchievementScreen extends WEScreen {
         int boxW = Math.max(120, w - x - 24);
         Text badge = BadgeCatalog.badgeText(profile.selectedIconId, profile.selectedColorId);
         int previewW = Math.max(12, boxW - 82);
-        String playerName = McUtils.playerName() == null ? "PlayerName" : McUtils.playerName();
+        String playerName = "PlayerName";
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client != null && client.player != null) {
+            playerName = client.player.getGameProfile().name();
+        }
         int nameW = Math.max(0, previewW - textRenderer.getWidth(" ") - textRenderer.getWidth(badge));
         Text preview = Text.literal(trimText(playerName, nameW))
                 .append(Text.literal(" "))
@@ -538,7 +549,7 @@ public class AchievementScreen extends WEScreen {
 
     private String progressText(Achievement achievement) {
         if (achievement instanceof TieredAchievement tiered) {
-            Integer target = AchievementTracking.achievements.getCurrentTierTarget(achievement.getId());
+            Integer target = AchievementTracking.achievements == null ? null : AchievementTracking.achievements.getCurrentTierTarget(achievement.getId());
             List<Integer> targets = tiered.getLevelTargets();
             int maxTarget = targets.isEmpty() ? 0 : targets.getLast();
             if (achievement.isUnlocked() || target == null) {

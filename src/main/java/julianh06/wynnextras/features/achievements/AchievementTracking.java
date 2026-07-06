@@ -65,6 +65,7 @@ public class AchievementTracking {
 
     /** Ensures the aspect achievement sync only dispatches once the aspect catalogue is loaded. */
     private boolean aspectsSynced;
+    private volatile boolean syncingAspects;
 
     public static void reloadAchievementsFromApi() {
         if (achievements == null) Achievements.load();
@@ -91,8 +92,8 @@ public class AchievementTracking {
         }
 
         // Once the aspect catalogue has finished loading, evaluate the aspect achievements.
-        if (!aspectsSynced && McUtils.player() != null && trySyncAspectAchievements()) {
-            aspectsSynced = true;
+        if (!aspectsSynced && McUtils.player() != null) {
+            trySyncAspectAchievements();
         }
     }
 
@@ -266,11 +267,11 @@ public class AchievementTracking {
 
     /**
      * Dispatches the aspect achievement evaluation once the aspect catalogue has finished loading.
-     * Returns false while the catalogue is still loading so the caller retries on a later tick; true
-     * once a request has been dispatched (or there's nothing more we can do this launch).
+     * Failed player-aspect requests are retried later instead of marking the launch as synced.
      */
     private boolean trySyncAspectAchievements() {
         if (achievements == null || McUtils.player() == null) return false;
+        if (syncingAspects) return false;
 
         List<ApiAspect> catalogue = WynncraftApiHandler.fetchAllAspects(); // kicks off the load on first call
         if (WynncraftApiHandler.INSTANCE.isFetchingAspects.get()) return false; // still loading — retry later
@@ -287,20 +288,27 @@ public class AchievementTracking {
         if (classCount < 5) return false;
 
         String uuid = McUtils.player().getUuidAsString();
+        syncingAspects = true;
         WynncraftApiHandler.fetchPlayerAspectData(uuid)
-                .thenAccept(result -> MinecraftClient.getInstance().execute(() -> applyAspectAchievements(result, snapshot)))
+                .thenAccept(result -> MinecraftClient.getInstance().execute(() -> {
+                    syncingAspects = false;
+                    if (applyAspectAchievements(result, snapshot)) {
+                        aspectsSynced = true;
+                    }
+                }))
                 .exceptionally(ex -> {
+                    syncingAspects = false;
                     WynnExtras.LOGGER.error("[WynnExtras] Failed to sync aspect achievements: " + ex.getMessage());
                     return null;
                 });
         return true;
     }
 
-    private void applyAspectAchievements(WynncraftApiHandler.FetchResult result, List<ApiAspect> catalogue) {
-        if (achievements == null) return;
-        if (result == null || result.status() != WynncraftApiHandler.FetchStatus.OK || result.user() == null) return;
+    private boolean applyAspectAchievements(WynncraftApiHandler.FetchResult result, List<ApiAspect> catalogue) {
+        if (achievements == null) return false;
+        if (result == null || result.status() != WynncraftApiHandler.FetchStatus.OK || result.user() == null) return false;
         List<Aspect> playerAspects = result.user().getAspects();
-        if (playerAspects == null) return;
+        if (playerAspects == null) return false;
 
         // Highest owned amount per aspect name.
         Map<String, Integer> amounts = new HashMap<>();
@@ -341,6 +349,7 @@ public class AchievementTracking {
         changed |= applyTieredCount("aspect.max.all.assassin", maxedByClass.getOrDefault("assassin", 0), Achievements.ASSASSIN_ASPECT_TARGETS, "maxed Assassin aspect(s)");
 
         if (changed) save();
+        return true;
     }
 
     /** Sets a tiered achievement's absolute count, announcing each newly reached tier. Returns true if changed. */

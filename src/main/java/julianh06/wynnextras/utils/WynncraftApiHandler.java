@@ -306,7 +306,7 @@ public class WynncraftApiHandler {
         List<String> classes = List.of("warrior", "shaman", "mage", "archer", "assassin");
         List<ApiAspect> aspectList = WynncraftApiHandler.INSTANCE.aspectList;
 
-        if (!aspectList.isEmpty()) return aspectList;
+        if (hasAllAspectClasses(aspectList, classes)) return aspectList;
         if (INSTANCE.isFetchingAspects.get()) return aspectList;
 
         long now = System.currentTimeMillis();
@@ -333,7 +333,7 @@ public class WynncraftApiHandler {
                         synchronized (aspectList) {
                             for (ApiAspect aspect : result) {
                                 boolean alreadyExists = aspectList.stream()
-                                        .anyMatch(existing -> existing.getName().equals(aspect.getName()));
+                                        .anyMatch(existing -> Objects.equals(existing.getName(), aspect.getName()));
                                 if (!alreadyExists) aspectList.add(aspect);
                             }
                         }
@@ -350,7 +350,7 @@ public class WynncraftApiHandler {
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .whenComplete((v, ex) -> {
                     synchronized (WynncraftApiHandler.class) {
-                        if (aspectList.isEmpty()) {
+                        if (!hasAllAspectClasses(aspectList, classes)) {
                             INSTANCE.lastAspectFetchFailureMillis = System.currentTimeMillis();
                         } else {
                             INSTANCE.lastAspectFetchFailureMillis = 0;
@@ -361,6 +361,17 @@ public class WynncraftApiHandler {
                 });
 
         return aspectList;
+    }
+
+    private static boolean hasAllAspectClasses(List<ApiAspect> aspectList, List<String> classes) {
+        if (aspectList == null || aspectList.isEmpty()) return false;
+
+        Set<String> loadedClasses = aspectList.stream()
+                .map(ApiAspect::getRequiredClass)
+                .filter(Objects::nonNull)
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+        return loadedClasses.containsAll(classes);
     }
 
     /** Default: silent on lookup failure. Auto-fetchers (GV/ProfessionOverlay/CharacterModelMixin etc.)
