@@ -608,6 +608,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.chatClickPV, v -> config.chatClickPV = v))
             .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs with your guild when someone asks about them in chat",
                     () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
+            .add(toggle("Bomb Rethrow Suggestion", "Show a clickable suggestion to rethrow a bomb when it expires",
+                    () -> config.bombRethrowSuggestion, v -> config.bombRethrowSuggestion = v))
             .add(toggle("Right-click chat to copy", "Right-click a chat message (while chat is open) to copy it to the clipboard",
                     () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
             .add(toggle("Stack Duplicate Messages (EXPERIMENTAL)", "Collapse repeated messages into one with a (N) counter (Experimental, might break your chat)",
@@ -777,6 +779,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
                 .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs with your guild when someone asks about them in chat",
                         () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
+                .add(toggle("Bomb Rethrow Suggestion", "Show a clickable suggestion to rethrow a bomb when it expires",
+                        () -> config.bombRethrowSuggestion, v -> config.bombRethrowSuggestion = v))
                 .add(toggle("Chat Media Preview (Experimental)", "Preview trusted Discord CDN, Imgur, and Tenor PNG, JPEG, and GIF links",
                         () -> config.chatMediaPreviewEnabled, v -> config.chatMediaPreviewEnabled = v))
                 .add(text("Warning", "We have restricted media downloads to only download from trusted sites (Discord, Imgur and Tenor). We have implemented these and other measures to minimize potential vulnerabilities, but they can never be completely ruled out. Use at your own risk."))

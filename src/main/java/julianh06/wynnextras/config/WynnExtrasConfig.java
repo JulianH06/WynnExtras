@@ -331,6 +331,7 @@ public class WynnExtrasConfig {
     // ==================== CHAT CLICK ====================
     public boolean chatClickPV = false;
     public boolean bombShareSuggestion = false;
+    public boolean bombRethrowSuggestion = false;
     public boolean chatMediaPreviewEnabled = false;
     public ChatMediaPreviewLoadPolicy chatMediaPreviewLoadPolicy = ChatMediaPreviewLoadPolicy.CLICK_TO_LOAD;
     public boolean chatMediaPreviewAutoDisplay = false;
