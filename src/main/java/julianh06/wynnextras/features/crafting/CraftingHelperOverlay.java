@@ -63,6 +63,10 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public class CraftingHelperOverlay extends WEMenuExtension {
+    private static final int DEFAULT_WIDGET_WIDTH = 165;
+    private static final int MIN_WIDGET_WIDTH = 110;
+    private static final int RESIZE_GRIP_SIZE = 6;
+
     private static long lastScrollTime = 0;
     private static final long scrollCooldown = 50; // in ms
     public static float targetOffset = 0;
@@ -145,14 +149,18 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
     private static boolean resizingTop = false;
     private static boolean resizingBottom = false;
+    private static boolean resizingRight = false;
     private static double resizeDragStartY = 0;
+    private static double resizeDragStartX = 0;
     private static int resizeDragStartBlockHeight = 0;
     private static int resizeDragScreenHeight = 0;
+    private static int resizeDragStartWidth = DEFAULT_WIDGET_WIDTH;
     private static int currentActualBlockH = 0;
     private static int currentBlockTop = 0;
     private static int currentScreenH = 0;
     private static int currentXStart = 0;
     private static int currentWidgetWidth = 200;
+    private static int currentMaxWidgetWidth = DEFAULT_WIDGET_WIDTH;
 
     ProfBombWidget profSpeedBombWidget;
     ProfBombWidget profXpBombWidget;
@@ -232,7 +240,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         lastState.put(type, state);
 
         int xStart = HandledScreenAccess.x(screen) + HandledScreenAccess.backgroundWidth(screen);
-        int widgetWidth = 165;
+        int widgetWidth = Math.clamp(WynnExtrasConfig.INSTANCE.craftingHelperWidth, MIN_WIDGET_WIDTH, getMaxWidgetWidth(screen, xStart));
         int screenY = HandledScreenAccess.y(screen);
         int backgroundHeight = HandledScreenAccess.backgroundHeight(screen);
 
@@ -252,6 +260,11 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             float minPct = (float) minBlockH / resizeDragScreenHeight;
             WynnExtrasConfig.INSTANCE.craftingHelperHeightPercent = Math.clamp((float) newBlock / resizeDragScreenHeight, minPct, 1.0f);
         }
+        if (resizingRight) {
+            int dx = mouseX - (int) resizeDragStartX;
+            widgetWidth = Math.clamp(resizeDragStartWidth + dx, MIN_WIDGET_WIDTH, getMaxWidgetWidth(screen, xStart));
+            WynnExtrasConfig.INSTANCE.craftingHelperWidth = widgetWidth;
+        }
 
         int desiredBlockH = (int) (screen.height * WynnExtrasConfig.INSTANCE.craftingHelperHeightPercent);
         int actualBlockH = Math.clamp(desiredBlockH, minBlockH, maxBlockH);
@@ -266,6 +279,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         currentScreenH = screen.height;
         currentXStart = xStart;
         currentWidgetWidth = widgetWidth;
+        currentMaxWidgetWidth = getMaxWidgetWidth(screen, xStart);
 
         if (profSpeedBombWidget == null) profSpeedBombWidget = new ProfBombWidget(BombType.PROFESSION_SPEED);
         if (profXpBombWidget == null) profXpBombWidget = new ProfBombWidget(BombType.PROFESSION_XP);
@@ -487,9 +501,18 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         helperWidget.scissorX2 = scissorX2;
         helperWidget.scissorY2 = scissorY2;
 
-        boolean nearBottom = mouseY >= blockTop + actualBlockH - 6 && mouseY <= blockTop + actualBlockH && !resizingTop;
+        boolean nearBottom = mouseY >= blockTop + actualBlockH - RESIZE_GRIP_SIZE && mouseY <= blockTop + actualBlockH && !resizingTop;
         if (nearBottom || resizingBottom)
             ui.drawRect(xStart, blockTop + actualBlockH - 3, widgetWidth, 3, CustomColor.fromHexString("FFFFFF").withAlpha(0.3f));
+
+        boolean nearRight = mouseX >= xStart + widgetWidth - RESIZE_GRIP_SIZE && mouseX <= xStart + widgetWidth + 3 &&
+                mouseY >= blockTop && mouseY <= blockTop + actualBlockH && !resizingBottom && !resizingTop;
+        if (nearRight || resizingRight)
+            ui.drawRect(xStart + widgetWidth - 3, blockTop, 3, actualBlockH, CustomColor.fromHexString("FFFFFF").withAlpha(0.3f));
+    }
+
+    private static int getMaxWidgetWidth(HandledScreen<?> screen, int xStart) {
+        return Math.max(MIN_WIDGET_WIDTH, screen.width - xStart - 20);
     }
 
     private void setupSelectionWidget(SelectionWidget selectionWidget, ProfessionType type, int i, int maxWidgets, int xStart, int yStart, int widgetWidth) {
@@ -569,8 +592,15 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         if (button == 0 && currentActualBlockH > 0) {
             int bTop = currentBlockTop;
             int bBottom = bTop + currentActualBlockH;
-            if (x >= currentXStart && x <= currentXStart + currentWidgetWidth) {
-                if (y >= bBottom - 6 && y <= bBottom + 3) {
+            int right = currentXStart + currentWidgetWidth;
+            if (y >= bTop && y <= bBottom && x >= right - RESIZE_GRIP_SIZE && x <= right + 3) {
+                resizingRight = true;
+                resizeDragStartX = x;
+                resizeDragStartWidth = currentWidgetWidth;
+                return true;
+            }
+            if (x >= currentXStart && x <= right) {
+                if (y >= bBottom - RESIZE_GRIP_SIZE && y <= bBottom + 3) {
                     resizingBottom = true;
                     resizeDragStartY = y;
                     resizeDragStartBlockHeight = currentActualBlockH;
@@ -589,9 +619,11 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
-        if (button == 0 && (resizingTop || resizingBottom)) {
+        if (button == 0 && (resizingTop || resizingBottom || resizingRight)) {
             resizingTop = false;
             resizingBottom = false;
+            resizingRight = false;
+            WynnExtrasConfig.INSTANCE.craftingHelperWidth = Math.clamp(WynnExtrasConfig.INSTANCE.craftingHelperWidth, MIN_WIDGET_WIDTH, currentMaxWidgetWidth);
             WynnExtrasConfig.save();
             return true;
         }
@@ -1111,7 +1143,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         };
     }
 
-    private static void drawRecipe(DrawContext ctx, int x, int y, int height, int level,
+    private static void drawRecipe(DrawContext ctx, int x, int y, int width, int height, int level,
                                    IRecipeData recipe, UIUtils ui) {
         if (recipe == null) return;
 
@@ -1121,11 +1153,50 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         //ui.drawRect(x, y, width, height, CustomColor.fromHexString("080808"));
 
+        float separatorX = x + width * 0.8f;
+        int materialTextWidth = Math.max(0, (int) (separatorX - (x + 20) - 4));
+
         drawMaterialIcon(ctx, ui, materials.getFirst().getFirst(), x + 3, y + 2, 14);
-        ui.drawText(materials.getFirst().getFirst().getName() + " " + materials.getFirst().getSecond(), x + 20, y + height / 4f + 1, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 0.85f);
+        String firstText = formatMaterialText(materials.getFirst().getFirst().getName(), materials.getFirst().getSecond(), materialTextWidth, 0.85f);
+        ui.drawText(firstText, x + 20, y + height / 4f + 1, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 0.85f);
 
         drawMaterialIcon(ctx, ui, materials.get(1).getFirst(), x + 3, y + 16, 14);
-        ui.drawText(materials.get(1).getFirst().getName() + " " + materials.get(1).getSecond(), x + 20, y + 3 * height / 4f - 1, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 0.85f);
+        String secondText = formatMaterialText(materials.get(1).getFirst().getName(), materials.get(1).getSecond(), materialTextWidth, 0.85f);
+        ui.drawText(secondText, x + 20, y + 3 * height / 4f - 1, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 0.85f);
+    }
+
+    private static String formatMaterialText(String name, int amount, int maxWidth, float textScale) {
+        String suffix = " x" + amount;
+        String fullText = name + suffix;
+        TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
+        if (getScaledTextWidth(textRenderer, fullText, textScale) <= maxWidth) return fullText;
+        if (getScaledTextWidth(textRenderer, suffix, textScale) > maxWidth) return truncateToWidth(fullText, maxWidth, textScale);
+
+        int nameWidth = maxWidth - getScaledTextWidth(textRenderer, suffix, textScale);
+        String truncatedName = truncateToWidth(name, nameWidth, textScale);
+        if (truncatedName.isEmpty()) return suffix.trim();
+        return truncatedName + suffix;
+    }
+
+    private static String truncateToWidth(String text, int maxWidth, float textScale) {
+        if (text == null || maxWidth <= 0) return "";
+        TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
+        if (getScaledTextWidth(textRenderer, text, textScale) <= maxWidth) return text;
+
+        String suffix = "..";
+        if (getScaledTextWidth(textRenderer, suffix, textScale) > maxWidth) return "";
+
+        int maxLen = text.length();
+        while (maxLen > suffix.length()) {
+            String truncated = text.substring(0, maxLen - suffix.length()) + suffix;
+            if (getScaledTextWidth(textRenderer, truncated, textScale) <= maxWidth) return truncated;
+            maxLen--;
+        }
+        return suffix;
+    }
+
+    private static int getScaledTextWidth(TextRenderer textRenderer, String text, float textScale) {
+        return (int) Math.ceil(textRenderer.getWidth(text) * textScale);
     }
 
     private static void drawMaterialIcon(DrawContext ctx, UIUtils ui, IMaterial material, float x, float y, float size) {
@@ -1346,7 +1417,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 //ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromHexString("FFFFFF"));
                 ui.drawButton(x, y, width, height, hovered && helperWidget.hovered);
-                drawRecipe(ctx, x, y, height, level, recipeData, ui);
+                drawRecipe(ctx, x, y, width, height, level, recipeData, ui);
                 ui.drawLine(x + width * 0.8f, y + 2, x + width * 0.8f, y + height - 3, 1f, UIUtils.getVanillaSeparatorColor(hovered && helperWidget.hovered));
                 if (level < 100) {
                     ui.drawCenteredText(String.valueOf(Math.max(1, level)), x + width * 0.9f, y + height / 4f + 1, 0.85f);
@@ -1480,7 +1551,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             ui.drawButton(x, y - 2, width + 2, height + 3, hovered);
             if (index == state.ordinal() - 1)
                 ui.drawRectBorders(x + 2, y - 1, x + width, y + height - 1, CustomColor.fromHexString("FFFF00"));
-            ui.drawCenteredText(text, x + width / 2f, y + height / 2f, 1f);
+            ui.drawCenteredText(truncateToWidth(text, Math.max(0, width - 6), 1f), x + width / 2f, y + height / 2f, 1f);
         }
 
         @Override

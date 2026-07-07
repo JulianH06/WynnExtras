@@ -223,6 +223,7 @@ public class WynnExtrasConfig {
     public boolean craftingDynamicTextures = false;
     public boolean craftingHelperReverseOrder = false;
     public float craftingHelperHeightPercent = 0.6f;
+    public int craftingHelperWidth = 165;
     public boolean skillpointHelper = true;
     public boolean tradeMarketOverlay = false;
     public int tradeMarketOverlayX = 10;
