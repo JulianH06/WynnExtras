@@ -139,7 +139,7 @@ public class CharacterModelMixin {
                     int apiLevel = charData.getLevel();
 
                     if (displayName != null && !displayName.isEmpty()) {
-                        CharacterBankData.INSTANCE.setCharacterInfo(displayName, apiLevel);
+                        CharacterBankData.INSTANCE.setCharacterInfo(displayName, apiLevel, charData.getGamemode());
                         CharacterBankData.INSTANCE.save();
                         WynnExtras.LOGGER.info("[WynnExtras] API updated character: " + displayName + " Lv." + apiLevel + " for ID: " + characterId);
                     }

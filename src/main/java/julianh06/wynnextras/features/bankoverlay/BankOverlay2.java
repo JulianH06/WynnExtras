@@ -239,6 +239,9 @@ public class BankOverlay2 extends WEHandledScreen {
     // All characters browse mode
     private static boolean allCharactersBrowseMode = false;
     private static AllCharactersButtonWidget allCharactersButtonWidget = null;
+    private static boolean currentClassAccountBankUnavailable = false;
+    private static boolean currentClassAccountBankAvailabilityDetected = false;
+    private static long suppressAccountBankAvailabilityDetectionUntil = 0L;
 
     // Saved search from cross-class swap (persists across bank close/reopen)
     private static String savedCrossClassSearch = null;
@@ -374,6 +377,7 @@ public class BankOverlay2 extends WEHandledScreen {
         }
         pages.clear();
         clearCrossClassSearchState();
+        currentClassAccountBankAvailabilityDetected = false;
         allCharactersBrowseMode = WynnExtrasConfig.INSTANCE.bankAllCharactersBrowseMode;
         allCharactersButtonWidget = null;
         isReloading = false;
@@ -723,10 +727,14 @@ public class BankOverlay2 extends WEHandledScreen {
             context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
             ui.updateContext(context, ui.getScaleFactor(), 0, 0);
 
+            detectCurrentClassAccountBankAvailabilityIfNeeded();
+
             // Check for cross-class search (@ or all characters browse mode)
             String rawSearchInput = searchbar2.getInput();
             boolean characterBankUnavailable = BankOverlay.isCharacterBankMissingCharacterId();
-            boolean isCrossClassSearch = (rawSearchInput != null && rawSearchInput.contains("@")) || allCharactersBrowseMode;
+            boolean crossClassModeAllowed = shouldAllowCrossClassMode();
+            boolean effectiveAllCharactersBrowseMode = allCharactersBrowseMode && crossClassModeAllowed;
+            boolean isCrossClassSearch = crossClassModeAllowed && ((rawSearchInput != null && rawSearchInput.contains("@")) || effectiveAllCharactersBrowseMode);
             String searchInput = rawSearchInput;
 
             // Strip @ from search query for actual matching
@@ -739,16 +747,16 @@ public class BankOverlay2 extends WEHandledScreen {
                 drawMissingCharacterIdWarning(xStart, yStart);
             } else if (isCrossClassSearch) {
                 // Trigger cross-class search if needed (@ present, with or without search text)
-                String cacheKey = allCharactersBrowseMode ? ("__allchars__" + (rawSearchInput != null ? rawSearchInput : "")) : rawSearchInput;
+                String cacheKey = effectiveAllCharactersBrowseMode ? ("__allchars__" + (rawSearchInput != null ? rawSearchInput : "")) : rawSearchInput;
                 if (!cacheKey.equals(lastCrossClassSearchQuery)) {
                     lastCrossClassSearchQuery = cacheKey;
                     crossClassSearchActive = true;
                     crossClassPages.clear();
-                    boolean includeCurrentCharacter = allCharactersBrowseMode && currentOverlayType != BankOverlayType.CHARACTER;
-                    boolean includeAccountBank = allCharactersBrowseMode
+                    boolean includeCurrentCharacter = effectiveAllCharactersBrowseMode && currentOverlayType != BankOverlayType.CHARACTER;
+                    boolean includeAccountBank = effectiveAllCharactersBrowseMode
                             || currentOverlayType == BankOverlayType.MISC
                             || currentOverlayType == BankOverlayType.BOOKSHELF;
-                    queueCrossClassSearch(cacheKey, searchInput, includeCurrentCharacter, includeAccountBank, allCharactersBrowseMode);
+                    queueCrossClassSearch(cacheKey, searchInput, includeCurrentCharacter, includeAccountBank, effectiveAllCharactersBrowseMode);
                 }
                 startQueuedCrossClassSearchIfReady();
                 applyCompletedCrossClassSearch(yStart);
@@ -763,7 +771,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             }
 
-            boolean groupAllCharactersPages = allCharactersBrowseMode && crossClassSearchActive;
+            boolean groupAllCharactersPages = effectiveAllCharactersBrowseMode && crossClassSearchActive;
             boolean accountPagesBeforeRegular = groupAllCharactersPages && currentOverlayType == BankOverlayType.CHARACTER;
             List<CrossClassPageWidget> accountCrossClassPages = Collections.emptyList();
             List<CrossClassPageWidget> currentCharacterCrossClassPages = Collections.emptyList();
@@ -785,7 +793,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
                 visuali = drawCrossClassPages(context, mouseX, mouseY, delta, xStart, yStart, visuali, extraYOffset, accountCrossClassPages);
                 pageAmount += accountCrossClassPages.size();
-            } else if (initialBrowseScrollPending && (!allCharactersBrowseMode || currentOverlayType != BankOverlayType.CHARACTER)) {
+            } else if (initialBrowseScrollPending && (!effectiveAllCharactersBrowseMode || currentOverlayType != BankOverlayType.CHARACTER)) {
                 initialBrowseScrollPending = false;
             } else if (groupAllCharactersPages && currentOverlayType == BankOverlayType.ACCOUNT) {
                 currentCharacterCrossClassPages = buildCachedCurrentCharacterCrossClassPages(searchInput, yStart);
@@ -880,7 +888,8 @@ public class BankOverlay2 extends WEHandledScreen {
             inventoryWidget.setItems(buildInventoryForIndex(0, true));
             inventoryWidget.draw(context, mouseX, mouseY, delta, ui);
 
-            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+            boolean showSwitchButton = shouldShowBankSwitchButton();
+            if(showSwitchButton) {
                 switchButtonWidget.setBounds(buttonWidgetsX, yStart + (yFitAmount - 1) * (90 + 4 + 10) + 3, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
                 switchButtonWidget.draw(context, mouseX, mouseY, delta, ui);
             } else {
@@ -888,12 +897,12 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             if(WynnExtrasConfig.INSTANCE.darkmodeToggle) {
-                ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackgroundDark : buttonBackgroundShortDark, buttonWidgetsX - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+                ui.drawImage(showSwitchButton ? buttonBackgroundDark : buttonBackgroundShortDark, buttonWidgetsX - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
             } else {
-                ui.drawImage((currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) ? buttonBackground : buttonBackgroundShort, buttonWidgetsX - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
+                ui.drawImage(showSwitchButton ? buttonBackground : buttonBackgroundShort, buttonWidgetsX - 8, yStart + (yFitAmount - 1) * (104) - 8, (int) (170 * ui.getScaleFactor()), (int) (91 * ui.getScaleFactor()));
             }
 
-            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+            if(showSwitchButton) {
                 searchbar2.setBounds(buttonWidgetsX, bottomWidgetsY + 59, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
             } else {
                 searchbar2.setBounds(buttonWidgetsX, bottomWidgetsY + 31, (int) (155 * ui.getScaleFactor()), (int) (23 * ui.getScaleFactor()));
@@ -903,16 +912,16 @@ public class BankOverlay2 extends WEHandledScreen {
             searchbar2.setBackgroundColor(null);
             searchbar2.draw(context, mouseX, mouseY, delta, ui);
 
-            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+            if(showSwitchButton) {
                 ui.drawCenteredText("Switch to " + (currentOverlayType == BankOverlayType.ACCOUNT ? "Character" : "Account") + " Bank", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, WHITE_TEXT_COLOR, 1.1f);
             }
-            if(currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER) {
+            if(showSwitchButton) {
                 ui.drawCenteredText("Quick Actions", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 44, WHITE_TEXT_COLOR, 1.1f);
             } else {
                 ui.drawCenteredText("Quick Actions", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, WHITE_TEXT_COLOR, 1.1f);
             }
 
-            boolean showAllCharactersButton = currentOverlayType != BankOverlayType.NONE;
+            boolean showAllCharactersButton = currentOverlayType != BankOverlayType.NONE && shouldAllowCrossClassMode();
             boolean showReloadButton = currentOverlayType != BankOverlayType.NONE;
             boolean showRightButtonPanel = currentOverlayType != BankOverlayType.NONE && (showAllCharactersButton || showReloadButton);
 
@@ -1650,6 +1659,73 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 
+    private static boolean shouldShowBankSwitchButton() {
+        if (currentOverlayType != BankOverlayType.ACCOUNT && currentOverlayType != BankOverlayType.CHARACTER) return false;
+        BankOverlayType targetType = currentOverlayType == BankOverlayType.ACCOUNT
+                ? BankOverlayType.CHARACTER
+                : BankOverlayType.ACCOUNT;
+        return hasBankSwitchSlotForTarget(targetType);
+    }
+
+    private static boolean shouldAllowCrossClassMode() {
+        return !currentClassAccountBankUnavailable || WynnExtrasConfig.INSTANCE.allowAllCharactersModeOnIronmanClasses;
+    }
+
+    private static void detectCurrentClassAccountBankAvailabilityIfNeeded() {
+        if (currentClassAccountBankAvailabilityDetected) return;
+        if (currentOverlayType != BankOverlayType.CHARACTER) return;
+        if (System.currentTimeMillis() < suppressAccountBankAvailabilityDetectionUntil) {
+            currentClassAccountBankAvailabilityDetected = true;
+            return;
+        }
+        currentClassAccountBankUnavailable = !hasBankSwitchSlotForTarget(BankOverlayType.ACCOUNT);
+        currentClassAccountBankAvailabilityDetected = true;
+    }
+
+    private static void suppressAccountBankAvailabilityDetectionAfterSwitch() {
+        suppressAccountBankAvailabilityDetectionUntil = System.currentTimeMillis() + 2000L;
+    }
+
+    private static boolean hasBankSwitchSlotForTarget(BankOverlayType targetType) {
+        ScreenHandler handler = McUtils.containerMenu();
+        if (handler == null || handler.slots.size() <= 47) return false;
+        Slot slot = handler.getSlot(47);
+        if (slot == null || !slot.hasStack() || slot.getStack() == null || slot.getStack().isEmpty()) return false;
+
+        return stackContainsText(slot.getStack(), "storage type");
+    }
+
+    private static boolean stackContainsText(ItemStack stack, String text) {
+        if (stack == null || stack.isEmpty() || text == null || text.isEmpty()) return false;
+        String expectedText = text.toLowerCase(Locale.ROOT);
+        if (cleanStackText(stack.getName().getString()).contains(expectedText)) return true;
+        if (stack.getCustomName() != null && cleanStackText(stack.getCustomName().getString()).contains(expectedText)) return true;
+
+        if (stack.getComponents() != null && stack.getComponents().get(DataComponentTypes.LORE) != null) {
+            for (Text line : stack.getComponents().get(DataComponentTypes.LORE).lines()) {
+                if (cleanStackText(line.getString()).contains(expectedText)) return true;
+            }
+        }
+
+        try {
+            PlayerEntity player = MinecraftClient.getInstance().player;
+            for (Text line : stack.getTooltip(Item.TooltipContext.DEFAULT, player, TooltipType.BASIC)) {
+                if (cleanStackText(line.getString()).contains(expectedText)) return true;
+            }
+        } catch (Exception ignored) {}
+
+        return false;
+    }
+
+    private static String cleanStackText(String text) {
+        if (text == null) return "";
+        return MINECRAFT_FORMATTING_CODE_PATTERN.matcher(text)
+                .replaceAll("")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
     private static void invalidateLocalCrossClassPageCaches() {
         accountLocalCrossClassPageCache = null;
         currentCharacterLocalCrossClassPageCache = null;
@@ -1957,6 +2033,7 @@ public class BankOverlay2 extends WEHandledScreen {
             PageWidget.jumpToPage(pageIndex);
             return;
         }
+        if (!hasBankSwitchSlotForTarget(targetType)) return;
 
         storeActivePageSnapshot();
         preserveCurrentSearchForNextOverlay();
@@ -1980,6 +2057,7 @@ public class BankOverlay2 extends WEHandledScreen {
             expectedOverlayType = BankOverlayType.NONE;
             return;
         }
+        suppressAccountBankAvailabilityDetectionAfterSwitch();
         clickOnSlot(47, handler.syncId, 0, handler.getStacks());
         BankOverlay.resetScrollRegistration();
 
@@ -4840,6 +4918,7 @@ public class BankOverlay2 extends WEHandledScreen {
             else if(currentOverlayType == BankOverlayType.ACCOUNT) expectedOverlayType = BankOverlayType.CHARACTER;
 
             if(currScreenHandler == null) { return false; }
+            suppressAccountBankAvailabilityDetectionAfterSwitch();
             clickOnSlot(47, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
             BankOverlay.resetScrollRegistration();
             return true;

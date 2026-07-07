@@ -420,6 +420,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.showTotalBagsInBankOverlay, v -> config.showTotalBagsInBankOverlay = v), () -> config.bankBagOverlay))
                 .add(visibleWhen(slider("Max Wynntils annotation calculations per frame", "Limits the amount of Wynntils item annotation calculations being done each frame to reduce lag", 10, 200,
                         () -> config.maxAnnotationCalculationsPerFrame, v -> config.maxAnnotationCalculationsPerFrame = v), () -> config.toggleBankOverlay))
+                .add(toggle("Allow all characters mode on ironman classes", "Shows cross-class bank data while playing an ironman class",
+                        () -> config.allowAllCharactersModeOnIronmanClasses, v -> config.allowAllCharactersModeOnIronmanClasses = v))
                 .endSub()
             .sub("Class Selection")
                 .add(toggle("Custom Class Selection", "Replace vanilla class selection with a custom overlay",

@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -42,6 +43,7 @@ public abstract class BankData {
     private HashMap<Integer, String> bankPageNames = new HashMap<>();
     private String characterNickname = null; // For character banks - stores the character's class name (e.g., "Dark Wizard")
     private int characterLevel = 0; // For character banks - stores the character's combat level
+    private List<String> characterGamemode = List.of();
     private ItemStack lastHeldWeapon = ItemStack.EMPTY;
     private List<ItemStack> playerInventory = List.of();
     private List<ItemStack> playerArmor = List.of();
@@ -98,6 +100,7 @@ public abstract class BankData {
                     this.bankPageNames = loaded.bankPageNames != null ? loaded.bankPageNames : new HashMap<>();
                     this.characterNickname = loaded.characterNickname;
                     this.characterLevel = loaded.characterLevel;
+                    this.characterGamemode = loaded.characterGamemode != null ? List.copyOf(loaded.characterGamemode) : List.of();
                     this.lastHeldWeapon = loaded.lastHeldWeapon == null ? ItemStack.EMPTY : loaded.lastHeldWeapon.copy();
                     this.playerInventory = loaded.playerInventory != null ? loaded.playerInventory : List.of();
                     this.playerArmor = loaded.playerArmor != null ? loaded.playerArmor : List.of();
@@ -115,6 +118,7 @@ public abstract class BankData {
             this.bankPageNames = new HashMap<>();
             this.characterNickname = null;
             this.characterLevel = 0;
+            this.characterGamemode = List.of();
             this.lastHeldWeapon = ItemStack.EMPTY;
             this.playerInventory = List.of();
             this.playerArmor = List.of();
@@ -150,9 +154,25 @@ public abstract class BankData {
         return characterLevel;
     }
 
+    public List<String> getCharacterGamemode() {
+        return characterGamemode == null ? List.of() : characterGamemode;
+    }
+
+    public boolean isIronmanCharacter() {
+        return getCharacterGamemode().stream()
+                .filter(Objects::nonNull)
+                .map(mode -> mode.toLowerCase(java.util.Locale.ROOT))
+                .anyMatch(mode -> mode.contains("ironman"));
+    }
+
     public void setCharacterInfo(String characterNickname, int characterLevel) {
         this.characterNickname = characterNickname;
         this.characterLevel = characterLevel;
+    }
+
+    public void setCharacterInfo(String characterNickname, int characterLevel, List<String> characterGamemode) {
+        setCharacterInfo(characterNickname, characterLevel);
+        this.characterGamemode = characterGamemode == null ? List.of() : List.copyOf(characterGamemode);
     }
 
     public ItemStack getLastHeldWeapon() {
@@ -194,6 +214,7 @@ public abstract class BankData {
         snapshot.bankPageNames = bankPageNames == null ? new HashMap<>() : new HashMap<>(bankPageNames);
         snapshot.characterNickname = characterNickname;
         snapshot.characterLevel = characterLevel;
+        snapshot.characterGamemode = characterGamemode == null ? List.of() : List.copyOf(characterGamemode);
         snapshot.lastHeldWeapon = lastHeldWeapon == null ? ItemStack.EMPTY : lastHeldWeapon.copy();
         snapshot.playerInventory = copyItemList(playerInventory);
         snapshot.playerArmor = copyItemList(playerArmor);
@@ -223,6 +244,7 @@ public abstract class BankData {
         private HashMap<Integer, String> bankPageNames = new HashMap<>();
         private String characterNickname = null;
         private int characterLevel = 0;
+        private List<String> characterGamemode = List.of();
         private ItemStack lastHeldWeapon = ItemStack.EMPTY;
         private List<ItemStack> playerInventory = List.of();
         private List<ItemStack> playerArmor = List.of();

@@ -177,9 +177,7 @@ public class WaypointScreen extends WEScreen {
         CustomColor bg = CustomColor.fromInt(selected ? PARCHMENT : (hovered ? BG_LIGHT : BG_MEDIUM));
         ui.drawRect(x, y, width, height, bg);
         if (selected) {
-            ui.drawRect(x, y, 4, height, CustomColor.fromInt(accentColor));
-        } else if (hovered) {
-            ui.drawRect(x, y, 4, height, CustomColor.fromInt(BG_LIGHT));
+            ui.drawRect(x, y, width, 3, CustomColor.fromInt(accentColor));
         }
     }
 

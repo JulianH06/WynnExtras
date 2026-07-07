@@ -193,6 +193,7 @@ public class CrossClassBankSearch {
             BankData data = BankData.getGson().fromJson(reader, CharacterBankData.class);
             if (data == null || data.getBankPages() == null) return results;
             if (isInvalidCharacterBank(characterId, data)) return results;
+            if (data.isIronmanCharacter()) return results;
 
             String nickname = data.getCharacterNickname();
             int level = data.getCharacterLevel();
@@ -560,6 +561,9 @@ public class CrossClassBankSearch {
                 return results;
             }
             if (isInvalidCharacterBank(characterId, data)) {
+                return results;
+            }
+            if (data.isIronmanCharacter()) {
                 return results;
             }
 
