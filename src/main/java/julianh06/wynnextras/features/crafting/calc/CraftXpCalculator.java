@@ -185,6 +185,28 @@ public final class CraftXpCalculator {
         return String.format("%.0f", xp);
     }
 
+    public static long estimateProfessionXp(int level, int xpPercent) {
+        if (level < MIN_LEVEL) return 0;
+
+        long xp = 0;
+        int cappedLevel = Math.min(level, MAX_LEVEL);
+        for (int currentLevel = MIN_LEVEL + 1; currentLevel <= cappedLevel; currentLevel++) {
+            xp += XP_REQUIRED[currentLevel - MIN_LEVEL];
+        }
+
+        if (cappedLevel >= MAX_LEVEL) {
+            xp += estimateProfessionOverflowXp(xpPercent);
+        } else {
+            long currentLevelXp = XP_REQUIRED[cappedLevel + 1 - MIN_LEVEL];
+            xp += currentLevelXp * Math.max(0, xpPercent) / 100L;
+        }
+        return xp;
+    }
+
+    public static long estimateProfessionOverflowXp(int xpPercent) {
+        return XP_REQUIRED[MAX_LEVEL - MIN_LEVEL] * Math.max(0, xpPercent) / 100L;
+    }
+
     public static String formatNumber(int number) {
         return String.format("%,d", number);
     }
