@@ -4,5 +4,6 @@ public record DecodedCraft(
         int[] ingredientIds,
         int recipeId,
         int mat1Tier,
-        int mat2Tier
+        int mat2Tier,
+        int attackSpeed
 ) {}

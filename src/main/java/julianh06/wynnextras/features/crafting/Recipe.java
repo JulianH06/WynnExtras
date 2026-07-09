@@ -13,7 +13,7 @@ import com.wynntils.models.stats.type.StatType;
 import com.wynntils.utils.type.Pair;
 import com.wynntils.utils.type.RangedValue;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
-import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
+import julianh06.wynnextras.features.crafting.data.CraftingDataService;
 import julianh06.wynnextras.utils.CraftingUtils;
 import org.joml.Vector2d;
 import org.joml.Vector2i;
@@ -94,7 +94,7 @@ public class Recipe {
         this.materials = materials;
         this.level = level;
         updateMultipliers();
-        RecipeLoader.RecipeData ranges = RecipeLoader.getRecipe(type, level);
+        CraftingDataService.RecipeData ranges = CraftingDataService.getInstance().getRecipe(type, level);
         if (ranges == null) {
             dura = null;
             healthOrDmg = null;
@@ -119,18 +119,18 @@ public class Recipe {
 
     public void setLevel(Vector2i level) {
         this.level = level;
-        RecipeLoader.RecipeData ranges = RecipeLoader.getRecipe(type, level);
+        CraftingDataService.RecipeData ranges = CraftingDataService.getInstance().getRecipe(type, level);
         if (ranges == null) {
             WynnExtras.LOGGER.error("cannot set recipe to lvl " + this.level + " no constant found");
             return;
         }
-        this.dura = ranges.durability();
+        this.dura = type.isConsumable() ? ranges.duration() : ranges.durability();
         this.healthOrDmg = ranges.healthOrDamage();
     }
 
-    public void setConstants(RecipeLoader.RecipeData data) {
-        this.level = data.lvl();
-        this.dura = data.durability();
+    public void setConstants(CraftingDataService.RecipeData data) {
+        this.level = data.level();
+        this.dura = type.isConsumable() ? data.duration() : data.durability();
         this.healthOrDmg = data.healthOrDamage();
     }
 
@@ -163,8 +163,8 @@ public class Recipe {
         Vector2d durabilityBase = new Vector2d(this.dura);
         durabilityBase = durabilityBase.mul(materials.getMultiplier());
         Vector2d finalDura = durabilityBase.add(durabilityModifier, durabilityModifier);
-        if(finalDura.x < 10) finalDura.x = 1;
-        if(finalDura.y < 10) finalDura.y = 1;
+        if(finalDura.x < 0) finalDura.x = 0;
+        if(finalDura.y < 0) finalDura.y = 0;
         return new Vector2i((int) Math.round(finalDura.x), (int) Math.round(finalDura.y));
     }
 
@@ -187,7 +187,7 @@ public class Recipe {
 
     public Map<DamageType, Vector4i> getDamage() {
         if (!getType().isWeapon()) return null;
-        HashMap<DamageType, Vector4i> result = new HashMap<>();
+        Map<DamageType, Vector4i> result = new LinkedHashMap<>();
 
         double ratio = 2.05;
         switch (attackSpeed) {
@@ -201,15 +201,51 @@ public class Recipe {
         nDamBaseLow = (int) Math.floor(nDamBaseLow * ratio);
         nDamBaseHigh = (int) Math.floor(nDamBaseHigh * ratio);
 
-        // apply powders here wynntills doesnt count them as being ingredients so i cant be bothered to do it rn
-
-        int low1 = (int) Math.floor(nDamBaseLow * 0.9);
-        int low2 = (int) Math.floor(nDamBaseLow * 1.1);
-        int high1 = (int) Math.floor(nDamBaseHigh * 0.9);
-        int high2 = (int) Math.floor(nDamBaseHigh * 1.1);
-        result.put(DamageType.NEUTRAL, new Vector4i(low1, low2, high1, high2));
+        double[][] lowDamage = applyIngredientPowders(nDamBaseLow);
+        double[][] highDamage = applyIngredientPowders(nDamBaseHigh);
+        DamageType[] damageTypes = {DamageType.NEUTRAL, DamageType.EARTH, DamageType.THUNDER,
+                DamageType.WATER, DamageType.FIRE, DamageType.AIR};
+        for (int i = 0; i < damageTypes.length; i++) {
+            if (i > 0 && lowDamage[i][1] == 0 && highDamage[i][1] == 0) continue;
+            result.put(damageTypes[i], new Vector4i(
+                    (int) Math.floor(lowDamage[i][0] * 0.9),
+                    (int) Math.floor(lowDamage[i][1] * 1.1),
+                    (int) Math.floor(highDamage[i][0] * 0.9),
+                    (int) Math.floor(highDamage[i][1] * 1.1)
+            ));
+        }
 
         return result;
+    }
+
+    private double[][] applyIngredientPowders(int neutralBase) {
+        double[][] damage = new double[6][2];
+        damage[0][0] = neutralBase;
+        damage[0][1] = neutralBase;
+        double neutralRemaining = neutralBase;
+        double[] conversions = new double[5];
+        int[] minimumBonus = new int[5];
+        int[] maximumBonus = new int[5];
+        List<Integer> order = new ArrayList<>();
+
+        for (IngredientInfo ingredient : ingredients) {
+            if (ingredient == null) continue;
+            CraftingDataService.PowderData powder = CraftingDataService.getInstance().getPowder(ingredient.name());
+            if (powder == null) continue;
+            if (conversions[powder.element()] == 0) order.add(powder.element());
+            conversions[powder.element()] += powder.conversion() / 200.0;
+            minimumBonus[powder.element()] += Math.floorDiv(powder.damageMinimum(), 2);
+            maximumBonus[powder.element()] += Math.floorDiv(powder.damageMaximum(), 2);
+        }
+        for (int element : order) {
+            double converted = Math.min(neutralRemaining, conversions[element] * neutralRemaining);
+            neutralRemaining -= converted;
+            damage[element + 1][0] += converted + minimumBonus[element];
+            damage[element + 1][1] += converted + maximumBonus[element];
+        }
+        damage[0][0] = neutralRemaining;
+        damage[0][1] = neutralRemaining;
+        return damage;
     }
 
     public Double[] getMultipliers() {
@@ -287,7 +323,7 @@ public class Recipe {
                 }
             }
             if (basic) {
-                RecipeLoader.RecipeData data = RecipeLoader.getRecipe(getType(), getLevel());
+                CraftingDataService.RecipeData data = CraftingDataService.getInstance().getRecipe(getType(), getLevel());
                 if (data == null) return null;
                 return new CraftingResult(
                         new Recipe(this),

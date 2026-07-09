@@ -13,7 +13,7 @@ import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
 import julianh06.wynnextras.features.crafting.data.MaterialTextureResolver;
-import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
+import julianh06.wynnextras.features.crafting.data.CraftingDataService;
 import julianh06.wynnextras.features.guildviewer.BannerGuiRenderer;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
@@ -176,6 +176,7 @@ public class WynnExtras implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		Core.init(MOD_ID);
+		CraftingDataService.getInstance().initialize();
 		updateVersionData();
 
 		SpecialGuiElementRegistry.register(context -> new BannerGuiRenderer(context.vertexConsumers(), MinecraftClient.getInstance().getAtlasManager()));
@@ -222,7 +223,6 @@ public class WynnExtras implements ClientModInitializer {
         julianh06.wynnextras.features.chat.mediapreview.ChatMediaPreview.register();
         RaidLootConfig.INSTANCE.load();
 		MaterialTextureResolver.register();
-		RecipeLoader.loadRecipes();
 		SkillPointLoader.init();
 
 		RaidListData.load();
@@ -238,7 +238,6 @@ public class WynnExtras implements ClientModInitializer {
 			MiscBucketData.INSTANCE.load();
 			BankOverlay2.invalidateBagTotalCache();
 			WynncraftApiHandler.load();
-			WynncraftApiHandler.fetchItemDatabase().thenAccept(WynncraftApiHandler::setCachedItemDatabase);
 
 			CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool).thenRunAsync(WeightDisplay::populateStatRangesFromDatabase);
 		});

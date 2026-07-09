@@ -2,12 +2,14 @@ package julianh06.wynnextras.features.crafting;
 
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
+import com.wynntils.models.gear.type.GearAttackSpeed;
 import com.wynntils.utils.colors.CustomColor;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.render.FontRenderer;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
+import julianh06.wynnextras.features.crafting.data.CraftingDataService;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.Item;
@@ -38,10 +40,20 @@ public class CraftingResultPreviewer {
 
     private static boolean configLoaded = false;
 
-    private final static Pattern craftingPattern = Pattern.compile("§7 - §f(\\w+) §7\\[Lv\\. (\\d+)\\.0 to (\\d+)\\.0]");
+    private final static Pattern craftingPattern = Pattern.compile(" - ([A-Za-z]+) \\[Lv\\. (\\d+)(?:\\.0)? to (\\d+)(?:\\.0)?]");
 
     private static DefaultedList<ItemStack> stacks = DefaultedList.of();
     private static CraftingResult result = null;
+    private static GearAttackSpeed importedAttackSpeed = GearAttackSpeed.NORMAL;
+
+    public static void setImportedAttackSpeed(int encodedAttackSpeed) {
+        importedAttackSpeed = switch (encodedAttackSpeed) {
+            case 0 -> GearAttackSpeed.SLOW;
+            case 1 -> GearAttackSpeed.NORMAL;
+            case 2 -> GearAttackSpeed.FAST;
+            default -> GearAttackSpeed.NORMAL;
+        };
+    }
 
     private static void loadConfig() {
         if (configLoaded) return;
@@ -66,6 +78,15 @@ public class CraftingResultPreviewer {
         if (!WynnExtrasConfig.INSTANCE.craftingPreviewOverlay) return;
 
         loadConfig();
+        CraftingDataService dataService = CraftingDataService.getInstance();
+        if (dataService.getState() != CraftingDataService.State.READY) {
+            Text status = Text.literal(dataService.getStatusMessage());
+            context.drawText(MinecraftClient.getInstance().textRenderer, status, xPos, yPos, 0xFFFF5555, true);
+            currentWidth = MinecraftClient.getInstance().textRenderer.getWidth(status);
+            currentHeight = 11;
+            result = null;
+            return;
+        }
         if (result != null) {
             List<Text> lines = result.getTooltip();
 
@@ -99,21 +120,40 @@ public class CraftingResultPreviewer {
 
         if (McUtils.player() == null) return;
         DefaultedList<ItemStack> stacks = McUtils.containerMenu().getStacks();
-        if (stacks.equals(CraftingResultPreviewer.stacks))
+        if (sameStacks(stacks, CraftingResultPreviewer.stacks))
             return; // probably a slot changed even but i dont wanna find it
-        CraftingResultPreviewer.stacks = stacks;
+        CraftingResultPreviewer.stacks = copyStacks(stacks);
         update();
+    }
+
+    private static DefaultedList<ItemStack> copyStacks(DefaultedList<ItemStack> source) {
+        DefaultedList<ItemStack> copy = DefaultedList.ofSize(source.size(), ItemStack.EMPTY);
+        for (int i = 0; i < source.size(); i++) {
+            copy.set(i, source.get(i).copy());
+        }
+        return copy;
+    }
+
+    private static boolean sameStacks(DefaultedList<ItemStack> left, DefaultedList<ItemStack> right) {
+        if (left.size() != right.size()) return false;
+        for (int i = 0; i < left.size(); i++) {
+            ItemStack a = left.get(i);
+            ItemStack b = right.get(i);
+            if (a.getCount() != b.getCount()) return false;
+            if (!ItemStack.areItemsAndComponentsEqual(a, b)) return false;
+        }
+        return true;
     }
 
     private static void update() {
         List<Text> checkmarkTooltip = getTooltip(stacks, 13);
-        if (!checkmarkTooltip.getFirst().getString().contains("Craft")) {
+        if (checkmarkTooltip.isEmpty() || !checkmarkTooltip.getFirst().getString().contains("Craft")) {
             result = null;
             return;
         }
 
-        Matcher matcher = craftingPattern.matcher(checkmarkTooltip.get(2).getString());
-        if (matcher.find()) {
+        Matcher matcher = findCraftingLine(checkmarkTooltip);
+        if (matcher != null) {
             String typeStr = matcher.group(1);
             int minLvl = Integer.parseInt(matcher.group(2));
             int maxLvl = Integer.parseInt(matcher.group(3));
@@ -148,8 +188,23 @@ public class CraftingResultPreviewer {
                     lvl,
                     type
             );
+            if (type.isWeapon()) recipe.setAttackSpeed(importedAttackSpeed);
             result = recipe.craft();
         }
+    }
+
+    private static Matcher findCraftingLine(List<Text> tooltip) {
+        for (Text line : tooltip) {
+            Matcher matcher = craftingPattern.matcher(stripFormatting(line.getString()));
+            if (matcher.find()) {
+                return matcher;
+            }
+        }
+        return null;
+    }
+
+    private static String stripFormatting(String text) {
+        return text.replaceAll("§.", "");
     }
 
     private static List<Text> getTooltip(DefaultedList<ItemStack> stacks, int slot) {

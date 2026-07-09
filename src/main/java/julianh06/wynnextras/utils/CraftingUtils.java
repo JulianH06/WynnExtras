@@ -1,8 +1,7 @@
 package julianh06.wynnextras.utils;
 
-import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.features.crafting.data.CraftingDataService;
 import com.wynntils.core.components.Managers;
-import com.wynntils.core.components.Models;
 import com.wynntils.features.tooltips.ItemStatInfoFeature;
 import com.wynntils.handlers.tooltip.type.TooltipIdentificationDecorator;
 import com.wynntils.models.elements.type.Skill;
@@ -14,39 +13,10 @@ import com.wynntils.utils.type.RangedValue;
 
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class CraftingUtils {
-    private static Map<String, IngredientInfo> allIngredients;
-    private static boolean initAttempted = false;
-
     public static IngredientInfo getIng(String name) {
-        initIngs();
-        if (allIngredients == null) return null;
-        return allIngredients.get(name);
-    }
-
-    public static Map<String, IngredientInfo> getAllIngs() {
-        initIngs();
-        return allIngredients;
-    }
-
-    private static void initIngs() {
-        if (initAttempted) return;
-        initAttempted = true;
-
-        try {
-            allIngredients = Models.Ingredient.getAllIngredientInfos()
-                    .collect(Collectors.toMap(
-                            IngredientInfo::name,
-                            ingredient -> ingredient,
-                            (existing, replacement) -> existing
-                    ));
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("Failed to load ingredient list from wynntills: " + e.getMessage());
-            allIngredients = new HashMap<>();
-            initAttempted = false;
-        }
+        return CraftingDataService.getInstance().getIngredient(name);
     }
 
     public static StatPossibleValues applyMultiplier(StatPossibleValues value, Double multiplier) {

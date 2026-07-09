@@ -32,6 +32,8 @@ public record CraftingResult(
         RangedValue duration,
         Map<DamageType, Vector4i> damage
 ) {
+    private static final Map<String, Integer> WYNNBUILDER_STAT_ORDER = createWynnBuilderStatOrder();
+
     public List<Text> getTooltip() {
         List<Text> tooltip = new ArrayList<>();
         tooltip.add(Text.literal("Crafting " + type.getDisplayName()).formatted(Formatting.DARK_AQUA));
@@ -67,12 +69,15 @@ public record CraftingResult(
     }
 
     private void addDamage(List<Text> tooltip) {
-        for (Map.Entry<DamageType, Vector4i> entry : damage.entrySet()) {
-            MutableText append = applyElementFormatting(entry.getKey().name()).append(" Damage: ")
-                    .append(String.valueOf(entry.getValue().x)).append("-")
-                    .append(String.valueOf(entry.getValue().y)).append("➜")
-                    .append(String.valueOf(entry.getValue().z)).append("-")
-                    .append(String.valueOf(entry.getValue().w));
+        for (DamageType damageType : List.of(DamageType.NEUTRAL, DamageType.EARTH, DamageType.THUNDER,
+                DamageType.WATER, DamageType.FIRE, DamageType.AIR)) {
+            Vector4i value = damage.get(damageType);
+            if (value == null) continue;
+            MutableText append = applyElementFormatting(damageType.name()).append(" Damage: ")
+                    .append(String.valueOf(value.x)).append("-")
+                    .append(String.valueOf(value.y)).append("➜")
+                    .append(String.valueOf(value.z)).append("-")
+                    .append(String.valueOf(value.w));
             tooltip.add(append);
         }
         if (!damage.isEmpty()) {
@@ -97,7 +102,7 @@ public record CraftingResult(
     }
 
     private void addIds(List<Text> tooltip) {
-        for (StatPossibleValues id : possibleValues) {
+        for (StatPossibleValues id : sortedPossibleValues()) {
             String unit = id.statType().getUnit().getDisplayName();
 
             if (id.range().low() == 0 && id.range().high() == 0) continue;
@@ -118,6 +123,81 @@ public record CraftingResult(
         if (!possibleValues.isEmpty()) {
             addBlank(tooltip);
         }
+    }
+
+    private List<StatPossibleValues> sortedPossibleValues() {
+        return possibleValues.stream()
+                .sorted(Comparator
+                        .comparingInt((StatPossibleValues value) -> statOrder(value.statType()))
+                        .thenComparing(value -> value.statType().getDisplayName()))
+                .toList();
+    }
+
+    private static int statOrder(StatType statType) {
+        Integer order = WYNNBUILDER_STAT_ORDER.get(statType.getInternalRollName());
+        if (order != null) return order;
+        order = WYNNBUILDER_STAT_ORDER.get(statType.getApiName());
+        if (order != null) return order;
+        return WYNNBUILDER_STAT_ORDER.getOrDefault(statType.getKey(), Integer.MAX_VALUE);
+    }
+
+    private static Map<String, Integer> createWynnBuilderStatOrder() {
+        String[] wynnBuilderIds = {
+                "str", "dex", "int", "def", "agi",
+                "hpBonus", "hprRaw", "hprPct", "healPct", "mr", "ms", "ref", "thorns", "ls",
+                "poison", "expd", "spd", "atkTier",
+                "sdRaw", "nSdRaw", "rSdRaw", "sdPct", "nSdPct", "rSdPct",
+                "mdRaw", "nMdRaw", "rMdRaw", "mdPct", "nMdPct", "rMdPct",
+                "damRaw", "nDamRaw", "rDamRaw", "damPct", "nDamPct", "rDamPct",
+                "fSdRaw", "wSdRaw", "aSdRaw", "tSdRaw", "eSdRaw",
+                "fSdPct", "wSdPct", "aSdPct", "tSdPct", "eSdPct",
+                "fMdRaw", "wMdRaw", "aMdRaw", "tMdRaw", "eMdRaw",
+                "fMdPct", "wMdPct", "aMdPct", "tMdPct", "eMdPct",
+                "fDamRaw", "wDamRaw", "aDamRaw", "tDamRaw", "eDamRaw",
+                "fDamPct", "wDamPct", "aDamPct", "tDamPct", "eDamPct",
+                "fDefPct", "wDefPct", "aDefPct", "tDefPct", "eDefPct",
+                "critDamPct", "rDefPct",
+                "spPct1", "spRaw1", "spPct2", "spRaw2", "spPct3", "spRaw3", "spPct4", "spRaw4",
+                "sprint", "sprintReg", "jh", "xpb", "lb", "lq", "spRegen", "eSteal",
+                "gXp", "gSpd", "kb", "weakenEnemy", "slowEnemy", "maxMana", "mainAttackRange"
+        };
+        Map<String, Integer> result = new HashMap<>();
+        for (int i = 0; i < wynnBuilderIds.length; i++) {
+            result.put(wynnBuilderIds[i], i);
+        }
+        putAlias(result, "STRENGTH", "str");
+        putAlias(result, "STRENGTHPOINTS", "str");
+        putAlias(result, "DEXTERITY", "dex");
+        putAlias(result, "DEXTERITYPOINTS", "dex");
+        putAlias(result, "INTELLIGENCE", "int");
+        putAlias(result, "INTELLIGENCEPOINTS", "int");
+        putAlias(result, "DEFENCE", "def");
+        putAlias(result, "DEFENSE", "def");
+        putAlias(result, "DEFENCEPOINTS", "def");
+        putAlias(result, "DEFENSEPOINTS", "def");
+        putAlias(result, "AGILITY", "agi");
+        putAlias(result, "AGILITYPOINTS", "agi");
+        putAlias(result, "HEALTHREGEN", "hprRaw");
+        putAlias(result, "HEALTH_REGEN_RAW", "hprRaw");
+        putAlias(result, "HEALTHREGENRAW", "hprRaw");
+        putAlias(result, "HEALTHREGENPERCENT", "hprPct");
+        putAlias(result, "HEALTH_REGEN_PERCENT", "hprPct");
+        putAlias(result, "MANAREGEN", "mr");
+        putAlias(result, "MANA_REGEN", "mr");
+        putAlias(result, "SPELLDAMAGE", "sdPct");
+        putAlias(result, "SPELLDAMAGERAW", "sdRaw");
+        putAlias(result, "DAMAGEBONUS", "mdPct");
+        putAlias(result, "DAMAGEBONUSRAW", "mdRaw");
+        putAlias(result, "WATERSPELLDAMAGE", "wSdPct");
+        putAlias(result, "WATERSPELLDAMAGERAW", "wSdRaw");
+        putAlias(result, "WATERDAMAGEBONUS", "wDamPct");
+        putAlias(result, "WATERDAMAGEBONUSRAW", "wDamRaw");
+        return Map.copyOf(result);
+    }
+
+    private static void putAlias(Map<String, Integer> result, String alias, String wynnBuilderId) {
+        Integer order = result.get(wynnBuilderId);
+        if (order != null) result.put(alias, order);
     }
 
     public void addBaseFormat(List<Text> tooltip, String name, RangedValue value) {

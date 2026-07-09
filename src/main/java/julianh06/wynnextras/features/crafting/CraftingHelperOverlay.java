@@ -1,8 +1,5 @@
 package julianh06.wynnextras.features.crafting;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.wynntils.core.components.Models;
 import com.wynntils.models.containers.containers.CraftingStationContainer;
 import com.wynntils.models.profession.type.ProfessionType;
@@ -16,12 +13,12 @@ import com.wynntils.utils.type.Time;
 import com.wynntils.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
+import julianh06.wynnextras.features.crafting.data.CraftingDataService;
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.VcitCompat;
 import julianh06.wynnextras.features.crafting.data.recipes.AlchemismRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.CookingRecipes;
-import julianh06.wynnextras.features.crafting.data.recipes.RecipeLoader;
 import julianh06.wynnextras.features.crafting.data.recipes.ScribingRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.armouring.ChestplateRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.armouring.HelmetRecipes;
@@ -56,11 +53,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
 public class CraftingHelperOverlay extends WEMenuExtension {
     private static final int DEFAULT_WIDGET_WIDTH = 165;
@@ -102,46 +95,6 @@ public class CraftingHelperOverlay extends WEMenuExtension {
     private record ItemRequirement(String type, String name, int amount) {}
     private record MissingRequirement(String type, String name, int amount) {}
 
-    private static final String MAIN_ING_MAP_URL = "https://raw.githubusercontent.com/hppeng-wynn/hppeng-wynn.github.io/HEAD/py_script/ing_map.json";
-    private static final String BETA_ING_MAP_URL = "https://raw.githubusercontent.com/wynnbuilder-beta/wynnbuilder-beta.github.io/master/data/baseline/maps/ing_map.json";
-    private static final HttpClient ING_HTTP = HttpClient.newHttpClient();
-    private static volatile Map<Integer, String> mainIngMap = null;
-    private static volatile Map<Integer, String> betaIngMap = null;
-    private static volatile boolean ingMapsLoading = false;
-
-    private static void ensureIngMapsLoaded() {
-        if ((isIngMapLoaded(mainIngMap) && isIngMapLoaded(betaIngMap)) || ingMapsLoading) return;
-        ingMapsLoading = true;
-        CompletableFuture.runAsync(() -> {
-            try {
-                if (!isIngMapLoaded(mainIngMap)) mainIngMap = fetchIngMap(MAIN_ING_MAP_URL);
-                if (!isIngMapLoaded(betaIngMap)) betaIngMap = fetchIngMap(BETA_ING_MAP_URL);
-            } finally {
-                ingMapsLoading = false;
-            }
-        });
-    }
-
-    private static boolean isIngMapLoaded(Map<Integer, String> ingMap) {
-        return ingMap != null && !ingMap.isEmpty();
-    }
-
-    private static Map<Integer, String> fetchIngMap(String url) {
-        try {
-            HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).build();
-            HttpResponse<String> resp = ING_HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() < 200 || resp.statusCode() >= 300) return Collections.emptyMap();
-            JsonObject obj = JsonParser.parseString(resp.body()).getAsJsonObject();
-            Map<Integer, String> map = new HashMap<>();
-            for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
-                map.put(entry.getValue().getAsInt(), entry.getKey());
-            }
-            return map;
-        } catch (Exception e) {
-            return Collections.emptyMap();
-        }
-    }
-
     private static RecipeState state = RecipeState.NONE;
 
     private final static Map<ProfessionType, Map<RecipeState, Float>> lastOffset = new HashMap<>();
@@ -174,7 +127,6 @@ public class CraftingHelperOverlay extends WEMenuExtension {
     static String statusMessage = "";
 
     public CraftingHelperOverlay() {
-        ensureIngMapsLoaded();
         state = RecipeState.NONE;
         helperWidget = null;
         selectionWidget1 = null;
@@ -654,9 +606,24 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             return;
         }
 
-        // Detect beta WynnBuilder from the URL domain (before the # fragment).
         String urlPart = link.substring(0, link.lastIndexOf('#')).toLowerCase();
-        boolean isBetaLink = urlPart.contains("wynnbuilder-beta") || urlPart.contains("beta.wynnbuilder");
+        String host;
+        try {
+            host = URI.create(urlPart).getHost();
+        } catch (IllegalArgumentException e) {
+            wbStatusMessage = "Invalid WynnBuilder URL.";
+            return;
+        }
+        if (host == null || !(host.contains("wynnbuilder") || host.equals("hppeng-wynn.github.io"))) {
+            wbStatusMessage = "This is not a WynnBuilder URL.";
+            return;
+        }
+
+        CraftingDataService dataService = CraftingDataService.getInstance();
+        if (dataService.getState() != CraftingDataService.State.READY) {
+            wbStatusMessage = dataService.getStatusMessage();
+            return;
+        }
 
         if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) {
             wbStatusMessage = "Not at a crafting station.";
@@ -668,12 +635,17 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             wbStatusMessage = "Invalid WynnBuilder link.";
             return;
         }
+        if (craft.attackSpeed() < 0 || craft.attackSpeed() > 2) {
+            wbStatusMessage = "Unsupported WynnBuilder attack-speed encoding.";
+            return;
+        }
 
-        RecipeLoader.RecipeData recipeData = RecipeLoader.getRecipeById(craft.recipeId());
+        CraftingDataService.RecipeData recipeData = dataService.getRecipeByWynnBuilderId(craft.recipeId());
         if (recipeData == null) {
             wbStatusMessage = "Unknown recipe ID: " + craft.recipeId();
             return;
         }
+        if (recipeData.type().isWeapon()) CraftingResultPreviewer.setImportedAttackSpeed(craft.attackSpeed());
 
         // Verify correct crafting station
         ProfessionType stationProf = container.getProfessionType();
@@ -682,14 +654,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             return;
         }
 
-        // Get material data for this recipe
-        IRecipeData materialData = getRecipeDataForType(recipeData.type());
-        if (materialData == null) {
-            wbStatusMessage = "Could not find material data for " + recipeData.type();
-            return;
-        }
-
-        List<Pair<IMaterial, Integer>> materials = materialData.getMaterials(recipeData.lvl().x);
+        List<CraftingDataService.Material> materials = recipeData.materials();
         if (materials == null || materials.size() < 2) {
             wbStatusMessage = "Could not determine materials for this recipe.";
             return;
@@ -697,27 +662,18 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         List<ItemRequirement> requirements = new ArrayList<>();
         for (int m = 0; m < 2; m++) {
-            Pair<IMaterial, Integer> mat = materials.get(m);
-            requirements.add(new ItemRequirement("materials", mat.getFirst().getName(), mat.getSecond()));
+            CraftingDataService.Material mat = materials.get(m);
+            requirements.add(new ItemRequirement("materials", normalizeMaterialName(mat.item()), mat.amount()));
         }
 
         List<String> ingNamesFromLink = new ArrayList<>();
-        Map<Integer, String> ingMap = isBetaLink ? betaIngMap : mainIngMap;
-        if (ingMap == null) {
-            wbStatusMessage = "Loading ingredient data, try again shortly.";
-            return;
-        }
-        if (ingMap.isEmpty()) {
-            wbStatusMessage = "Could not load ingredient data.";
-            return;
-        }
         List<Integer> unknownIngredientIds = new ArrayList<>();
         for (int id : craft.ingredientIds()) {
             if (WynnBuilderDecoder.isNoIngredient(id)) {
                 ingNamesFromLink.add(null);
                 continue;
             }
-            String ingName = ingMap.get(id);
+            String ingName = dataService.getIngredientNameByWynnBuilderId(id);
             if (ingName == null) {
                 ingNamesFromLink.add(null);
                 unknownIngredientIds.add(id);
@@ -735,8 +691,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         List<String> matNamesForSave = new ArrayList<>();
         List<Integer> matCountsForSave = new ArrayList<>();
         for (int m = 0; m < 2; m++) {
-            matNamesForSave.add(materials.get(m).getFirst().getName());
-            matCountsForSave.add(materials.get(m).getSecond());
+            matNamesForSave.add(normalizeMaterialName(materials.get(m).item()));
+            matCountsForSave.add(materials.get(m).amount());
         }
         saveLastCraft(matNamesForSave, matCountsForSave, ingNamesFromLink);
 
@@ -772,10 +728,6 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         wbTotalClicks = WB_CLICK_QUEUE.size();
         wbClicksDone = 0;
-
-        if (!isBetaLink) {
-            wbStatusMessage = recipeData.type().getDisplayName() + " " + recipeData.lvl().x + "-" + recipeData.lvl().y;
-        }
 
         wbIsReuse = false;
         wbFinishedTime = 0;
@@ -927,6 +879,15 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         return requirement.amount() + "x " + name;
     }
 
+    private static String normalizeMaterialName(String name) {
+        if (name == null) return null;
+        String normalized = name.startsWith("Refined ") ? name.substring("Refined ".length()) : name;
+        if (normalized.endsWith(" Wood")) {
+            normalized = normalized.substring(0, normalized.length() - " Wood".length()) + " Plank";
+        }
+        return normalized;
+    }
+
     /**
      * Read ingredient names currently in the crafting slots and save them.
      */
@@ -1043,7 +1004,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             String matName = lastMaterialNames.get(m);
             int amount = lastMaterialCounts.get(m);
             if (matName == null || amount <= 0) continue;
-            requirements.add(new ItemRequirement("materials", matName, amount));
+            requirements.add(new ItemRequirement("materials", normalizeMaterialName(matName), amount));
         }
 
         for (int i = 0; i < Math.min(6, lastIngredientNames.size()); i++) {
@@ -1556,22 +1517,18 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         @Override
         protected boolean onClick(int button) {
+            RecipeState clickedState = switch (index) {
+                case 0 -> RecipeState.FIRST;
+                case 1 -> RecipeState.SECOND;
+                case 2 -> RecipeState.THIRD;
+                default -> RecipeState.NONE;
+            };
+
+            if (state == clickedState) return true;
+
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 
-            switch (index) {
-                case 0 -> {
-                    if (state != RecipeState.FIRST) state = RecipeState.FIRST;
-                    else state = RecipeState.NONE;
-                }
-                case 1 -> {
-                    if (state != RecipeState.SECOND) state = RecipeState.SECOND;
-                    else state = RecipeState.NONE;
-                }
-                case 2 -> {
-                    if (state != RecipeState.THIRD) state = RecipeState.THIRD;
-                    else state = RecipeState.NONE;
-                }
-            }
+            state = clickedState;
 
             helperWidget.recipeData = null;
 
