@@ -71,8 +71,9 @@ public class ChatNotificator {
 
         WynnExtrasConfig.INSTANCE.syncPremades();
 
+        boolean isOurMessage = message.getString().contains("\uE016\uE018\uE00D");
         for(Map.Entry<String, Boolean> entry : WynnExtrasConfig.INSTANCE.premades.entrySet()) {
-            if(message.getString().contains(":")) continue;
+            if(!isOurMessage && message.getString().contains(":")) continue;
 
             String[] parts = entry.getKey().split("\\|");
             if(parts.length != 2) continue;

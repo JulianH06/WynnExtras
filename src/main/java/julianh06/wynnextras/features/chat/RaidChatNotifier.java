@@ -238,6 +238,11 @@ public class RaidChatNotifier {
                     "The golem has been defeated, and the",
                     "§bGolem defeated §c",
                     "golemdefeated"
+            ),
+            new MultiOccurrenceDetector(
+                    "A Colossal Core has spawned!",
+                    "§bA Colossal Core has spawned! ",
+                    "colossalcorespawned"
             )
     );
 
@@ -367,6 +372,7 @@ public class RaidChatNotifier {
             Pattern.compile("A player must stand on the platform", Pattern.CASE_INSENSITIVE),
             Pattern.compile("A miniboss has spawned! It has sped", Pattern.CASE_INSENSITIVE),
             Pattern.compile("The golem has been defeated, and", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("A Colossal Core has spawned!", Pattern.CASE_INSENSITIVE),
             Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE),
             Pattern.compile("Key! \\[2/2]", Pattern.CASE_INSENSITIVE),
             Pattern.compile("Collected the Left Key!", Pattern.CASE_INSENSITIVE),

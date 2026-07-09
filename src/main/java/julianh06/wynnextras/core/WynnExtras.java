@@ -185,6 +185,7 @@ public class WynnExtras implements ClientModInitializer {
 		ProvokeTimer.init();
 		TotemTimer.register();
 		BloodSorrowTimer.register();
+		julianh06.wynnextras.features.misc.CurseTracker.register();
 		julianh06.wynnextras.features.misc.RadiantHud.init();
 		julianh06.wynnextras.features.misc.ProfessionOverlay.register();
 		julianh06.wynnextras.features.bankoverlay.BankOverlay2.registerScreenHooks();

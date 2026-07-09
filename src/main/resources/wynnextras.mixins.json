@@ -10,10 +10,12 @@
     "requireAnnotations": true
   },
   "client": [
+    "BatchingRenderCommandQueueMixin",
     "ChatClickMixin",
     "ChatCopyMixin",
     "ChatHudAddMessageMixin",
     "ClientPacketListenerMixin",
+    "EntityRenderManagerShaderMixin",
     "EntityRenderMixin",
     "GameRendererMixin",
     "GuildMapScreenMixin",
