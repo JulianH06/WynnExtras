@@ -69,7 +69,7 @@ public class maintracking {
             (ctx) -> {
                 MinecraftUtils.mc().send(() -> {
                     WEScreen.open(AspectScreen::new);
-                    AspectScreen.currentPage = AspectScreen.Page.AspectLootpool;
+                    AspectScreen.currentPage = AspectScreen.Page.Gambits;
                 });
                 return 1;
             },

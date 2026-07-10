@@ -48,7 +48,7 @@ public class AbilityTreeDataDeserializer implements JsonDeserializer<AbilityTree
 
                     AbilityTreeData.Ability ability = new AbilityTreeData.Ability();
                     ability.page = pageNumber;
-                    ability.name = abilityData.get("name").getAsString();
+                    ability.name = getAsStringOrNull(abilityData.get("name"));
                     ability.slot = abilityData.has("slot") ? abilityData.get("slot").getAsInt() : 0;
 
                     // Coordinates
@@ -62,7 +62,7 @@ public class AbilityTreeDataDeserializer implements JsonDeserializer<AbilityTree
                     if (desc != null && desc.isJsonArray()) {
                         ability.description = new ArrayList<>();
                         for (JsonElement line : desc.getAsJsonArray()) {
-                            ability.description.add(line.getAsString());
+                            ability.description.add(jsonElementToString(line));
                         }
                     }
 
@@ -72,11 +72,11 @@ public class AbilityTreeDataDeserializer implements JsonDeserializer<AbilityTree
                         JsonObject req = abilityData.getAsJsonObject("requirements");
                         AbilityTreeData.Requirements r = new AbilityTreeData.Requirements();
                         if (req.has("ABILITY_POINTS")) r.ABILITY_POINTS = req.get("ABILITY_POINTS").getAsInt();
-                        if (req.has("NODE")) r.NODE = req.get("NODE").getAsString();
+                        if (req.has("NODE")) r.NODE = jsonElementToString(req.get("NODE"));
                         if (req.has("ARCHETYPE") && req.get("ARCHETYPE").isJsonObject()) {
                             JsonObject ar = req.getAsJsonObject("ARCHETYPE");
                             AbilityTreeData.ArchetypeRequirement arq = new AbilityTreeData.ArchetypeRequirement();
-                            arq.name = ar.get("name").getAsString();
+                            arq.name = jsonElementToString(ar.get("name"));
                             arq.amount = ar.get("amount").getAsInt();
                             r.ARCHETYPE = arq;
                         }
@@ -88,7 +88,7 @@ public class AbilityTreeDataDeserializer implements JsonDeserializer<AbilityTree
                     if (links != null && links.isJsonArray()) {
                         ability.links = new ArrayList<>();
                         for (JsonElement link : links.getAsJsonArray()) {
-                            ability.links.add(link.getAsString());
+                            ability.links.add(jsonElementToString(link));
                         }
                     }
 
@@ -98,7 +98,7 @@ public class AbilityTreeDataDeserializer implements JsonDeserializer<AbilityTree
                     if (locks != null && locks.isJsonArray()) {
                         ability.locks = new ArrayList<>();
                         for (JsonElement lock : locks.getAsJsonArray()) {
-                            ability.locks.add(lock.getAsString());
+                            ability.locks.add(jsonElementToString(lock));
                         }
                     }
 
@@ -118,13 +118,14 @@ public class AbilityTreeDataDeserializer implements JsonDeserializer<AbilityTree
     }
 
     private AbilityTreeData.Icon parseIcon(JsonElement iconElement) {
-        if (!iconElement.isJsonObject()) return null;
+        if (iconElement == null || iconElement.isJsonNull() || !iconElement.isJsonObject()) return null;
         JsonObject iconObj = iconElement.getAsJsonObject();
 
         AbilityTreeData.Icon icon = new AbilityTreeData.Icon();
         icon.format = iconObj.has("format") ? iconObj.get("format").getAsString() : null;
 
         JsonElement value = iconObj.get("value");
+        if (value == null || value.isJsonNull()) return icon;
         if (value.isJsonPrimitive()) {
             icon.value = value.getAsString();
         } else if (value.isJsonObject()) {
@@ -137,6 +138,30 @@ public class AbilityTreeDataDeserializer implements JsonDeserializer<AbilityTree
         }
 
         return icon;
+    }
+
+    private String getAsStringOrNull(JsonElement element) {
+        if (element == null || element.isJsonNull()) return null;
+        return jsonElementToString(element);
+    }
+
+    private String jsonElementToString(JsonElement element) {
+        if (element == null || element.isJsonNull()) return "";
+        if (element.isJsonPrimitive()) return element.getAsString();
+        if (element.isJsonArray()) {
+            StringBuilder builder = new StringBuilder();
+            for (JsonElement child : element.getAsJsonArray()) {
+                builder.append(jsonElementToString(child));
+            }
+            return builder.toString();
+        }
+        if (element.isJsonObject()) {
+            JsonObject object = element.getAsJsonObject();
+            if (object.has("text")) return jsonElementToString(object.get("text"));
+            if (object.has("name")) return jsonElementToString(object.get("name"));
+            if (object.has("value")) return jsonElementToString(object.get("value"));
+        }
+        return element.toString();
     }
 }
 

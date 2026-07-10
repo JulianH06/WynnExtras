@@ -110,7 +110,7 @@ public class AbilityTreeWidget extends Widget {
     public static final Identifier UP_right_DOWN_left = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active9.png");
     public static final Identifier up_RIGHT_down_LEFT = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/up_right_down_left_active10.png");
 
-    public final String className;
+    private String className;
 
     private int scrollOffset;
 
@@ -130,7 +130,7 @@ public class AbilityTreeWidget extends Widget {
 
     public AbilityTreeWidget(String className, int x, int y, int width, int height, int botLimit) {
         super(x, y, width, height);
-        this.className = className == null ? "" : className;
+        this.className = normalizeClassName(className);
         this.x = x;
         this.y = y;
         this.width = width;
@@ -141,6 +141,20 @@ public class AbilityTreeWidget extends Widget {
     public void setClassTree(AbilityMapData classTree) {
         this.classTree = classTree;
         refreshState();
+    }
+
+    public void setClassName(String className) {
+        String normalized = normalizeClassName(className);
+        if (this.className.equals(normalized)) return;
+
+        this.className = normalized;
+        this.classTree = null;
+        currentHoveredNode = null;
+        refreshState();
+    }
+
+    public String getClassName() {
+        return className;
     }
 
     public void setPlayerTree(AbilityMapData playerTree) {
@@ -155,7 +169,10 @@ public class AbilityTreeWidget extends Widget {
     }
 
     public void setScrollOffset(int scrollOffset) {
+        if (this.scrollOffset == scrollOffset) return;
+
         this.scrollOffset = scrollOffset;
+        refreshState();
     }
 
     public void refreshState() {
@@ -257,22 +274,25 @@ public class AbilityTreeWidget extends Widget {
     public void drawNodeTooltip(DrawContext ctx, int mouseX, int mouseY) {
         if (!loaded) return;
 
-        AbilityTreeData treeData = AbilityTreeCache.getClassTree(this.className.toLowerCase());
+        AbilityTreeData treeData = AbilityTreeCache.getClassTree(this.className);
 
-        if (currentHoveredNode != null && treeData != null) {
-            Map<String, AbilityTreeData.Ability> page = treeData.pages.get(currentHoveredNode.meta.page);
-            if (page != null) {
-                AbilityTreeData.Ability ability = findAbilityMatchForHovered(page, currentHoveredNode);
-                if (ability != null && ability.description != null && ability.name != null) {
-                    List<String> description = new ArrayList<>(ability.description);
-                    description.add(0, ability.name);
-                    int tx = (int)(mouseX * PVScreen.currentMatrixScale);
-                    int ty = (int)(mouseY * PVScreen.currentMatrixScale);
-                    ctx.drawTooltip(MinecraftClient.getInstance().textRenderer,
-                            parseStyledHtml(description), tx, ty);
-                }
-            }
+        if (currentHoveredNode == null || currentHoveredNode.meta == null || treeData == null || treeData.pages == null) return;
+
+        Map<String, AbilityTreeData.Ability> page = treeData.pages.get(currentHoveredNode.meta.page);
+        if (page == null) return;
+
+        AbilityTreeData.Ability ability = findAbilityMatchForHovered(page, currentHoveredNode);
+        if (ability == null || ability.name == null) return;
+
+        List<String> description = new ArrayList<>();
+        description.add(0, ability.name);
+        if (ability.description != null) {
+            description.addAll(ability.description);
         }
+        int tx = (int)(mouseX * PVScreen.currentMatrixScale);
+        int ty = (int)(mouseY * PVScreen.currentMatrixScale);
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer,
+                parseStyledHtml(description), tx, ty);
     }
 
     private Identifier connectorTextureFor(AbilityMapData.Node node) {
@@ -409,14 +429,23 @@ public class AbilityTreeWidget extends Widget {
     }
 
     private AbilityTreeData.Ability findAbilityMatchForHovered(Map<String, AbilityTreeData.Ability> page, AbilityMapData.Node node) {
+        if (node.meta != null && node.meta.id != null) {
+            AbilityTreeData.Ability ability = page.get(node.meta.id);
+            if (ability != null) return ability;
+        }
+
         for (AbilityTreeData.Ability a : page.values()) {
-            if (a.coordinates.x == node.coordinates.x &&
+            if (a.coordinates != null && a.coordinates.x == node.coordinates.x &&
                     (a.coordinates.y == (node.coordinates.y % 6) ||
                             ((node.coordinates.y % 6) == 0 && (a.coordinates.y % 6) == 0))) {
                 return a;
             }
         }
         return null;
+    }
+
+    private String normalizeClassName(String className) {
+        return className == null ? "" : className.toLowerCase();
     }
 
     private class AbilityTreeState {

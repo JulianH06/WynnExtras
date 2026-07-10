@@ -311,9 +311,10 @@ public class TreeTabWidget extends PVScreen.TabWidget {
 //            }
         }
 
-        abilityWidget.setPlayerTree(playerTree);
-        abilityWidget.setClassTree(tree);
+        abilityWidget.setClassName(className);
         abilityWidget.setScrollOffset(scrollOffset);
+        abilityWidget.setClassTree(tree);
+        abilityWidget.setPlayerTree(playerTree);
         if(treeSearchBar != null) {
             abilityWidget.setSearchInput(treeSearchBar.getInput());
         }

@@ -208,9 +208,10 @@ public class TreeScreen extends WEScreen {
 
         if(tree == null || playerTree == null) return;
 
-        abilityWidget.setPlayerTree(playerTree);
-        abilityWidget.setClassTree(tree);
+        abilityWidget.setClassName(currentViewedTreeData.className);
         abilityWidget.setScrollOffset(rightScrollOffset);
+        abilityWidget.setClassTree(tree);
+        abilityWidget.setPlayerTree(playerTree);
         if(treeSearchBar != null) abilityWidget.setSearchInput(treeSearchBar.getInput());
         abilityWidget.setBounds(xStart, -100, 1800, 750);
     }
@@ -222,7 +223,7 @@ public class TreeScreen extends WEScreen {
         int y = 0;
 
         if(abilityWidget != null && treeSearchBar != null) {
-            AbilityTreeData treeData = AbilityTreeCache.getClassTree(abilityWidget.className.toLowerCase());
+            AbilityTreeData treeData = AbilityTreeCache.getClassTree(abilityWidget.getClassName());
             if (treeData != null) {
                 if (treeData.pages != null) {
                     for (Map<String, AbilityTreeData.Ability> pagee : treeData.pages.values()) {

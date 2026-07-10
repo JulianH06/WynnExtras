@@ -112,6 +112,9 @@ public class AspectsPage extends PageWidget {
     @Override
     public void drawContent(DrawContext context, int mouseX, int mouseY, float tickDelta) {
         hoveredTooltip.clear();
+        if (currentTab != Tab.Overview) {
+            setSearchInputVisible(false);
+        }
         int logicalW = (int) (width * ui.getScaleFactorF());
         int logicalH = (int) (height * ui.getScaleFactorF());
         int centerX = logicalW / 2;
@@ -269,6 +272,7 @@ public class AspectsPage extends PageWidget {
             int boxColor = searchInputFocused ? 0xFFFFAA00 : 0xFFAAAAAA;
             ui.drawRect(searchBoxX - 2, searchBoxY - 2, searchBoxWidth + 4, searchBoxHeight + 4, CustomColor.fromInt(boxColor));
             ui.drawRect(searchBoxX, searchBoxY, searchBoxWidth, searchBoxHeight, CustomColor.fromInt(0xFF000000));
+            setSearchInputVisible(true);
             searchInputWidget.setBounds(searchBoxX, searchBoxY, searchBoxWidth, searchBoxHeight);
             if (!searchInputWidget.isFocused() && !searchInputWidget.getInput().equals(searchInput)) {
                 searchInputWidget.setInput(searchInput);
@@ -362,6 +366,16 @@ public class AspectsPage extends PageWidget {
             tabSwitchButton.setBounds(x, 90, buttonWidth, buttonHeight);
             tabSwitchButton.draw(context, mouseX, mouseY, tickDelta, ui);
             x += buttonWidth + spacing;
+        }
+    }
+
+    private void setSearchInputVisible(boolean visible) {
+        if (searchInputWidget == null) return;
+        searchInputWidget.setVisible(visible);
+        searchInputWidget.setEnabled(visible);
+        if (!visible && searchInputWidget.isFocused()) {
+            searchInputWidget.setFocused(false);
+            searchInputFocused = false;
         }
     }
 

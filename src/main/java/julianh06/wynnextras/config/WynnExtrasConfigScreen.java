@@ -696,6 +696,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Achievements and badges")
                 .add(toggle("Upload Achievements", "Upload your achievements to WynnExtras",
                         () -> config.uploadAchievements, v -> config.uploadAchievements = v))
+                .add(text("Achievement upload notice", "If the toggle above is enabled, your achievements will be uploaded, the server currently does not have a use case for them but we will add some in the future. One example being that we want to show a users achievements in the profile viewer"))
                 .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
                         () -> config.showWynnExtrasBadges, v -> config.showWynnExtrasBadges = v))
                 .add(button("Achievements & Badges", "Open achievements and select your badge icon and color", (x) -> {
