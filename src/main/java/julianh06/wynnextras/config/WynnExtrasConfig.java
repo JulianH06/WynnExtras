@@ -372,6 +372,7 @@ public class WynnExtrasConfig {
     public int totemTimerWarningThreshold = 2;
     public boolean totemTimerEstimate = true;
     public boolean totemTimerTimeOnly = false;
+    public boolean totemTimerShowToxoplasmosis = false;
     public boolean totemTimerSolidColor = false;
     public int totemTimerX = -1;
     public int totemTimerY = 40;

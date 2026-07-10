@@ -296,6 +296,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(toggle("Minimalistic Timer", "Show only the time, without the totem label",
                                 () -> config.totemTimerTimeOnly, v -> config.totemTimerTimeOnly = v),
                         () -> config.totemTimerEnabled && config.totemTimerOwnOnly))
+                .add(visibleWhen(toggle("Toxoplasmosis", "Show the toxoplasmosis value in the totem timer",
+                                () -> config.totemTimerShowToxoplasmosis, v -> config.totemTimerShowToxoplasmosis = v),
+                        () -> config.totemTimerEnabled))
                 .add(visibleWhen(toggle("Warning Text", "Show RECAST TOTEM! on screen when low (movable in Edit Gui)",
                                 () -> config.totemTimerWarningText, v -> config.totemTimerWarningText = v),
                         () -> config.totemTimerEnabled))

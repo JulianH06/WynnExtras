@@ -25,11 +25,16 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Box;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TotemTimer {
     private static int lastSelectedSlot = -1;
+    private static final Pattern TIME_TOKEN = Pattern.compile("~?\\d+(?:\\.\\d+)?s", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TOXOPLASMOSIS_VALUE = Pattern.compile("\\d+(?:\\.\\d+)?[kKmMbB]?");
 
-    public record TotemInfo(String owner, String timeText, boolean estimated) {}
+    public record TotemInfo(String owner, String timeText, String toxoplasmosisText, boolean estimated) {}
+    private record TotemLineInfo(String timeText, String toxoplasmosisText) {}
 
     /** True if the stack is a relik — including crafted reliks, which are CraftedGearItem
      *  not GearItem and were previously ignored, leaving the timer stuck on stale data
@@ -54,6 +59,17 @@ public class TotemTimer {
         }
     }
 
+    private static String cleanToxoplasmosisText(String text) {
+        if (text == null || text.isBlank()) return "";
+
+        Matcher matcher = TOXOPLASMOSIS_VALUE.matcher(text);
+        String value = "";
+        while (matcher.find()) {
+            value = matcher.group();
+        }
+        return value.isEmpty() ? "" : "\u2620 " + value;
+    }
+
     private static int timeColor(String timeText) {
         float secs = parseSeconds(timeText);
         if (secs < 0) return 0xFFFFFFFF;
@@ -63,11 +79,26 @@ public class TotemTimer {
         return 0xFFFF4444;
     }
 
+    private static TotemLineInfo parseTotemLine(String line) {
+        String trimmed = line == null ? "" : line.trim();
+        if (trimmed.isEmpty()) return new TotemLineInfo("", "");
+
+        Matcher matcher = TIME_TOKEN.matcher(trimmed);
+        if (matcher.find()) {
+            String toxoplasmosisText = (trimmed.substring(0, matcher.start()) + " " + trimmed.substring(matcher.end())).trim();
+            return new TotemLineInfo(matcher.group(), cleanToxoplasmosisText(toxoplasmosisText));
+        }
+
+        String[] tokens = trimmed.split("\\s+");
+        return new TotemLineInfo(tokens[tokens.length - 1], "");
+    }
+
     private static final List<TotemInfo> totems = new ArrayList<>();
     private static boolean warningActive = false;
 
     // Out-of-render estimation: owner -> {lastKnownSeconds, lastUpdateTick}
     private static final Map<String, float[]> estimatedTotems = new HashMap<>();
+    private static final Map<String, String> estimatedTotemToxoplasmosis = new HashMap<>();
     private static final List<String> lastFoundKeys = new ArrayList<>();
     private static long tickCounter = 0;
 
@@ -99,6 +130,7 @@ public class TotemTimer {
                     ItemStack newStack = client.player.getInventory().getStack(currentSlot);
                     if (isRelik(prevStack) && isRelik(newStack)) {
                         estimatedTotems.clear();
+                        estimatedTotemToxoplasmosis.clear();
                     }
                 }
                 lastSelectedSlot = currentSlot;
@@ -130,7 +162,7 @@ public class TotemTimer {
                 );
             }
 
-            if (tickCounter % 10 != 0) return;
+            if (tickCounter % 2 != 0) return;
 
             totems.clear();
             double px = client.player.getX(), py = client.player.getY(), pz = client.player.getZ();
@@ -160,6 +192,7 @@ public class TotemTimer {
                 if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
 
                 String timeText = "";
+                String toxoplasmosisText = "";
                 String[] lines = text.split("\n");
                 // Scan lines starting after the header line so a prepended banner is skipped.
                 boolean pastHeader = false;
@@ -170,8 +203,9 @@ public class TotemTimer {
                         continue;
                     }
                     if (pastHeader && !l.isEmpty()) {
-                        String[] tokens = l.split("\\s+");
-                        timeText = tokens[tokens.length - 1];
+                        TotemLineInfo lineInfo = parseTotemLine(l);
+                        timeText = lineInfo.timeText();
+                        toxoplasmosisText = lineInfo.toxoplasmosisText();
                         break;
                     }
                 }
@@ -186,7 +220,9 @@ public class TotemTimer {
                         double dist2 = dx * dx + dy * dy + dz * dz;
                         if (dist2 <= 4.0 && dist2 < bestDist2) {
                             bestDist2 = dist2;
-                            timeText = otherRaw.trim();
+                            TotemLineInfo lineInfo = parseTotemLine(otherRaw.trim());
+                            timeText = lineInfo.timeText();
+                            toxoplasmosisText = lineInfo.toxoplasmosisText();
                         }
                     }
                 }
@@ -199,9 +235,10 @@ public class TotemTimer {
                 float secs = parseSeconds(timeText);
                 if (secs > 0) {
                     estimatedTotems.put(key, new float[]{ secs, tickCounter });
+                    estimatedTotemToxoplasmosis.put(key, toxoplasmosisText);
                 }
 
-                totems.add(new TotemInfo(owner, timeText, false));
+                totems.add(new TotemInfo(owner, timeText, toxoplasmosisText, false));
             }
 
             if (c.totemTimerEstimate) {
@@ -224,9 +261,12 @@ public class TotemTimer {
                     }
 
                     String estTimeText = String.format("~%.0fs", estimatedSecs);
-                    totems.add(new TotemInfo(owner, estTimeText, true));
+                    totems.add(new TotemInfo(owner, estTimeText, estimatedTotemToxoplasmosis.getOrDefault(key, ""), true));
                 }
-                toRemove.forEach(estimatedTotems::remove);
+                for (String key : toRemove) {
+                    estimatedTotems.remove(key);
+                    estimatedTotemToxoplasmosis.remove(key);
+                }
             }
 
         });
@@ -260,6 +300,9 @@ public class TotemTimer {
             for (TotemInfo t : totems) {
                 String timeDisplay = t.timeText().trim();
                 if (timeDisplay.isEmpty()) timeDisplay = "?";
+                if (c.totemTimerShowToxoplasmosis && !t.toxoplasmosisText().isBlank()) {
+                    timeDisplay += " " + t.toxoplasmosisText().trim();
+                }
 
                 String line = (c.totemTimerOwnOnly && c.totemTimerTimeOnly) ? timeDisplay
                         : (c.totemTimerOwnOnly ? ("Totem: " + timeDisplay)
