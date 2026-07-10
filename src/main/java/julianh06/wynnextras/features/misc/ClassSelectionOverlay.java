@@ -9,6 +9,8 @@ import com.wynntils.utils.render.RenderUtils;
 import com.wynntils.utils.render.type.HorizontalAlignment;
 import com.wynntils.utils.render.type.VerticalAlignment;
 import com.wynntils.utils.wynn.ContainerUtils;
+import com.wynntils.core.events.MixinHelper;
+import com.wynntils.mc.event.ContainerClickEvent;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.UIUtils;
@@ -24,6 +26,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.tooltip.TooltipType;
+import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
@@ -1543,6 +1546,10 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     private void clickSlot(int slotIndex, int mouseButton) {
         try {
+            ContainerClickEvent event = new ContainerClickEvent(McUtils.containerMenu(), slotIndex, SlotActionType.PICKUP, mouseButton);
+            MixinHelper.post(event);
+            if (event.isCanceled()) return;
+
             ContainerUtils.clickOnSlot(slotIndex, McUtils.containerMenu().syncId,
                     mouseButton, McUtils.containerMenu().getStacks());
         } catch (Exception e) {}
