@@ -786,7 +786,16 @@ public class BankOverlay2 extends WEHandledScreen {
                     }
                 }
                 if (initialBrowseScrollPending && !accountCrossClassPages.isEmpty() && (searchInput == null || searchInput.isEmpty())) {
-                    float initialOffset = getRowsForPageCount(accountCrossClassPages.size()) * 104f;
+                    int regularPageCount = characterBankUnavailable ? 0 : getRenderableRegularPageCount();
+                    int estimatedPageAmount = accountCrossClassPages.size() + regularPageCount;
+                    int estimatedExtraScrollHeight = 0;
+                    if (!remainingCrossClassPages.isEmpty()) {
+                        estimatedPageAmount = startNextRow(estimatedPageAmount);
+                        estimatedPageAmount += remainingCrossClassPages.size();
+                        estimatedExtraScrollHeight += CROSS_CLASS_GROUP_GAP;
+                    }
+                    int maxInitialOffset = getMaxScrollOffset(estimatedPageAmount, estimatedExtraScrollHeight);
+                    float initialOffset = MathHelper.clamp(getRowsForPageCount(accountCrossClassPages.size()) * 104f, 0, maxInitialOffset);
                     actualOffset = initialOffset;
                     targetOffset = initialOffset;
                     initialBrowseScrollPending = false;
@@ -1450,10 +1459,14 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static int getMaxScrollOffset(int pageCount) {
+        return getMaxScrollOffset(pageCount, layoutExtraScrollHeight);
+    }
+
+    private static int getMaxScrollOffset(int pageCount, int extraScrollHeight) {
         if (xFitAmount <= 0) return 0;
         int totalRows = (int) Math.ceil((double) pageCount / xFitAmount);
         int c = (xFitAmount % 2 == 0 ? 1 : 0);
-        return Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * 3) - 104 * c + layoutExtraScrollHeight);
+        return Math.max(0, (totalRows - yFitAmount + c + 1) * (260 - 52 * 3) - 104 * c + extraScrollHeight);
     }
 
     private static void scrollToPage(int pageIndex) {
