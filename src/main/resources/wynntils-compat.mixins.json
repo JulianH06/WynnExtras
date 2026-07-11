@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "julianh06.wynnextras.wtshim.fabric.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "PlayerListHudAccessor",
+    "ItemStackMixin",
+    "ClientPlayNetworkHandlerMixin",
+    "ClientPlayerInteractionManagerMixin",
+    "HandledScreenCloseMixin",
+    "ScreenInitMixin",
+    "BossBarHudMixin"
+  ]
+}

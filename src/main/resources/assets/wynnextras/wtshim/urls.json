@@ -1,0 +1,417 @@
+[
+  {
+    "version": 13
+  },
+  {
+    "id": "apiAthenaAuthPublicKey",
+    "url": "https://athena.wynntils.com/auth/getPublicKey"
+  },
+  {
+    "arguments": [
+      "key",
+      "username",
+      "version"
+    ],
+    "id": "apiAthenaAuthResponse",
+    "method": "post",
+    "url": "https://athena.wynntils.com/auth/responseEncryption"
+  },
+  {
+    "arguments": [
+      "trace"
+    ],
+    "id": "apiAthenaTelemetryCrash",
+    "method": "post",
+    "url": "https://athena.wynntils.com/crash/report"
+  },
+  {
+    "arguments": [
+      "old_version",
+      "new_version"
+    ],
+    "id": "apiAthenaUpdateChangelog",
+    "url": "https://athena.wynntils.com/version/changelog/%{old_version}/%{new_version}"
+  },
+  {
+    "arguments": [
+      "old_version",
+      "new_version"
+    ],
+    "id": "apiAthenaUpdateChangelogV2",
+    "url": "https://athena.wynntils.com/v2/version/changelog/%{old_version}/%{new_version}"
+  },
+  {
+    "arguments": [
+      "stream"
+    ],
+    "id": "apiAthenaUpdateCheck",
+    "url": "https://athena.wynntils.com/version/latest/%{stream}"
+  },
+  {
+    "arguments": [
+      "uuid"
+    ],
+    "id": "apiAthenaUserInfo",
+    "method": "post",
+    "url": "https://athena.wynntils.com/user/getInfo"
+  },
+  {
+    "arguments": [
+      "lang",
+      "text"
+    ],
+    "id": "apiGoogleTranslation",
+    "url": "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=%{lang}&dt=t&q=%{text}"
+  },
+  {
+    "arguments": [
+      "name"
+    ],
+    "encoding": "wiki",
+    "id": "apiWikiDiscoveryQuery",
+    "url": "https://wynncraft.wiki.gg/api.php?action=parse&format=json&prop=wikitext&section=0&page=%{name}"
+  },
+  {
+    "arguments": [
+      "name"
+    ],
+    "encoding": "cargo",
+    "id": "apiWikiQuestPageQuery",
+    "url": "https://wynncraft.wiki.gg/index.php?title=Special:CargoExport&tables=Quests&&fields=Quests._pageTitle&where=Quests.name+%3D+%{name}&order+by=&limit=2000&format=json"
+  },
+  {
+    "id": "dataAthenaGuildList",
+    "url": "https://athena.wynntils.com/cache/get/guildList"
+  },
+  {
+    "id": "dataAthenaItemWeights",
+    "url": "https://athena.wynntils.com/cache/get/itemWeights"
+  },
+  {
+    "id": "dataAthenaLeaderboard",
+    "url": "https://athena.wynntils.com/cache/get/leaderboard"
+  },
+  {
+    "id": "dataAthenaLootpools",
+    "url": "https://athena.wynntils.com/cache/get/lootPools"
+  },
+  {
+    "id": "dataAthenaServerList",
+    "url": "https://athena.wynntils.com/cache/get/serverList"
+  },
+  {
+    "id": "dataAthenaTerritoryListV2",
+    "url": "https://athena.wynntils.com/cache/get/territoryList"
+  },
+  {
+    "id": "dataAthenaWorldEvents",
+    "url": "https://athena.wynntils.com/cache/get/worldEvents"
+  },
+  {
+    "id": "dataStaticAbilities",
+    "md5": "fd5e9a5b76988ae00265695ee90d622a",
+    "path": "Reference/abilities.json",
+    "url": "https://cdn.wynntils.com/static/Reference/abilities.json"
+  },
+  {
+    "id": "dataStaticAspects",
+    "md5": "10826b4a7c9ef99c9c4a96a787b668cc",
+    "path": "Reference/aspects.json",
+    "url": "https://cdn.wynntils.com/static/Reference/aspects.json"
+  },
+  {
+    "id": "dataStaticCaveInfo",
+    "md5": "ef98c782956bef8cff07700b51c2bda4",
+    "path": "Reference/caves.json",
+    "url": "https://cdn.wynntils.com/static/Reference/caves.json"
+  },
+  {
+    "id": "dataStaticCharms",
+    "md5": "7d9c175c4a13f154eabb8cf77af1cb82",
+    "path": "Reference/charms.json",
+    "url": "https://cdn.wynntils.com/static/Reference/charms.json"
+  },
+  {
+    "id": "dataStaticCombatLocations",
+    "md5": "fd9cbfa568fb10084bc52f862b97b0f2",
+    "path": "Data-Storage/combat_locations.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/combat_locations.json"
+  },
+  {
+    "id": "dataStaticCombatMapFeatures",
+    "md5": "ae014dde3797591343e40170a9884d32",
+    "path": "Reference/combat_mapfeatures.json",
+    "url": "https://cdn.wynntils.com/static/Reference/combat_mapfeatures.json"
+  },
+  {
+    "id": "dataStaticDestinations",
+    "md5": "8b296692b963c938f8ece2ef3599bafb",
+    "path": "Data-Storage/destinations.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/destinations.json"
+  },
+  {
+    "id": "dataStaticGatheringNodes",
+    "md5": "3edf9ef125979de9dc242253b16d1531",
+    "path": "Reference/gathering_nodes.json",
+    "url": "https://cdn.wynntils.com/static/Reference/gathering_nodes.json"
+  },
+  {
+    "id": "dataStaticGear",
+    "md5": "7290bf97dfdd26d938fb2673c6992afe",
+    "path": "Reference/gear.json",
+    "url": "https://cdn.wynntils.com/static/Reference/gear.json"
+  },
+  {
+    "id": "dataStaticGearAdvanced",
+    "md5": "7cc0f3d523b1423e11f5fcb7a508c2d9",
+    "path": "Reference/advanced_gear.json",
+    "url": "https://cdn.wynntils.com/static/Reference/advanced_gear.json"
+  },
+  {
+    "id": "dataStaticHints",
+    "md5": "315e1cfbd8fbbc6d6940fd29a76f4472",
+    "path": "Data-Storage/hint_messages.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/hint_messages.json"
+  },
+  {
+    "id": "dataStaticIdentificationKeys",
+    "md5": "a6617793c2790b7cafc222f6c54e7e27",
+    "path": "Reference/id_keys.json",
+    "url": "https://cdn.wynntils.com/static/Reference/id_keys.json"
+  },
+  {
+    "id": "dataStaticIngredientSkins",
+    "md5": "04c5e1ee6dcd78bc0939ec7b5a6d6dd0",
+    "path": "Data-Storage/ingredient_skins.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/ingredient_skins.json"
+  },
+  {
+    "id": "dataStaticIngredients",
+    "md5": "0bb1ac302a9166304fa0700e7ebde36e",
+    "path": "Reference/ingredients.json",
+    "url": "https://cdn.wynntils.com/static/Reference/ingredients.json"
+  },
+  {
+    "id": "dataStaticIngredientsAdvanced",
+    "md5": "f0244d7c5658d7093eb0650b0f29a657",
+    "path": "Reference/advanced_ingredients.json",
+    "url": "https://cdn.wynntils.com/static/Reference/advanced_ingredients.json"
+  },
+  {
+    "id": "dataStaticItemObtain",
+    "md5": "20e9a265f5e2ed91b02d80623b3765bd",
+    "path": "Data-Storage/item_obtain.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/item_obtain.json"
+  },
+  {
+    "id": "dataStaticItemObtainV2",
+    "md5": "4f3c92acadb5c1331b5886f6e397baa8",
+    "path": "Data-Storage/item_obtain_v2.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/item_obtain_v2.json"
+  },
+  {
+    "id": "dataStaticItemSets",
+    "md5": "c3d578efe823698d9b174355738a8ef6",
+    "path": "Data-Storage/item_sets.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/item_sets.json"
+  },
+  {
+    "id": "dataStaticLootrunTasksNamed",
+    "md5": "2e0080ebd9e8d06a1635bb2dedb652fe",
+    "path": "Data-Storage/lootrun_tasks_named.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/lootrun_tasks_named.json"
+  },
+  {
+    "id": "dataStaticLootrunTasksNamedV2",
+    "md5": "0bc51ca15cc70905c398ed06971fbfa3",
+    "path": "Data-Storage/lootrun_tasks_named_v2.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/lootrun_tasks_named_v2.json"
+  },
+  {
+    "id": "dataStaticMajorIds",
+    "md5": "38bb5299f66016271f5bf3a1f49ec0ae",
+    "path": "Data-Storage/major_ids.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/major_ids.json"
+  },
+  {
+    "id": "dataStaticMaps",
+    "md5": "a4ef527f7aa0314ab679a8493f1a4e0a",
+    "path": "Reference/maps.json",
+    "url": "https://cdn.wynntils.com/static/Reference/maps.json"
+  },
+  {
+    "id": "dataStaticMaterialConversion",
+    "md5": "a4ec63ebbd23003dc6627fed738f8c24",
+    "path": "Data-Storage/material_conversions.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/material_conversions.json"
+  },
+  {
+    "id": "dataStaticMaterials",
+    "md5": "fd4df36b43befe98a733825ed120998d",
+    "path": "Reference/materials.json",
+    "url": "https://cdn.wynntils.com/static/Reference/materials.json"
+  },
+  {
+    "id": "dataStaticModelData",
+    "md5": "e9dd911a30d64379aad614ccf71df01c",
+    "path": "Data-Storage/model_data.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/model_data.json"
+  },
+  {
+    "id": "dataStaticPlaceMapFeatures",
+    "md5": "cb890e5fa52b1b3e40f203f456ce9c26",
+    "path": "Reference/place_mapfeatures.json",
+    "url": "https://cdn.wynntils.com/static/Reference/place_mapfeatures.json"
+  },
+  {
+    "id": "dataStaticPlaces",
+    "md5": "f11f6350ee38aa662e7adfd9e8b1e95f",
+    "path": "Reference/places.json",
+    "url": "https://cdn.wynntils.com/static/Reference/places.json"
+  },
+  {
+    "id": "dataStaticRecipes",
+    "md5": "391e48e4f03e6b0f3e282235af5a1c12",
+    "path": "Reference/recipes.json",
+    "url": "https://cdn.wynntils.com/static/Reference/recipes.json"
+  },
+  {
+    "id": "dataStaticSeaskipperDestinations",
+    "md5": "dc9eb0e70e689368aec0ef0e41a77a96",
+    "path": "Data-Storage/seaskipper_destinations.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/seaskipper_destinations.json"
+  },
+  {
+    "id": "dataStaticServiceMapFeatures",
+    "md5": "f8da52e87a8d35843a57bc8fa2c4a260",
+    "path": "Data-Storage/service_mapfeatures.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/service_mapfeatures.json"
+  },
+  {
+    "id": "dataStaticServices",
+    "md5": "183e76811f0b598649753c870e158444",
+    "path": "Reference/services.json",
+    "url": "https://cdn.wynntils.com/static/Reference/services.json"
+  },
+  {
+    "id": "dataStaticServicesCrowdsourced",
+    "md5": "e8750040331b747650f1ed85ae55626e",
+    "path": "Data-Storage/services_crowdsourced.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/services_crowdsourced.json"
+  },
+  {
+    "id": "dataStaticSets",
+    "md5": "c6a30d7c6ce5d9c53364991ad250a2af",
+    "path": "Reference/sets.json",
+    "url": "https://cdn.wynntils.com/static/Reference/sets.json"
+  },
+  {
+    "id": "dataStaticShinyStats",
+    "md5": "43227d9e0f0327fd68e852feb2a5a728",
+    "path": "Data-Storage/shiny_stats.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/shiny_stats.json"
+  },
+  {
+    "id": "dataStaticSplashes",
+    "md5": "262f3c73093a1f0979beedb8b25e9420",
+    "path": "Data-Storage/splashes.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/splashes.json"
+  },
+  {
+    "id": "dataStaticTomes",
+    "md5": "83d773feb4f8ba278621567884cd7f30",
+    "path": "Reference/tomes.json",
+    "url": "https://cdn.wynntils.com/static/Reference/tomes.json"
+  },
+  {
+    "id": "dataStaticTools",
+    "md5": "ea93ac47d7cfccc2d4db7e1bdcb8873f",
+    "path": "Reference/tools.json",
+    "url": "https://cdn.wynntils.com/static/Reference/tools.json"
+  },
+  {
+    "id": "dataStaticUrls",
+    "path": "Data-Storage/urls.json",
+    "url": "https://cdn.wynntils.com/static/Data-Storage/urls.json"
+  },
+  {
+    "arguments": [
+      "name"
+    ],
+    "id": "dataWynncraftGuild",
+    "url": "https://api.wynncraft.com/v3/guild/%{name}"
+  },
+  {
+    "arguments": [
+      "type"
+    ],
+    "id": "dataWynncraftLeaderboard",
+    "url": "https://api.wynncraft.com/v3/leaderboards/%{type}?resultLimit=9"
+  },
+  {
+    "arguments": [
+      "username"
+    ],
+    "id": "dataWynncraftPlayer",
+    "url": "https://api.wynncraft.com/v3/player/%{username}"
+  },
+  {
+    "arguments": [
+      "identifier"
+    ],
+    "id": "dataWynncraftPlayerFullResults",
+    "url": "https://api.wynncraft.com/v3/player/%{identifier}?fullResult"
+  },
+  {
+    "id": "dataWynncraftTerritoryListV3",
+    "url": "https://api.wynncraft.com/v3/guild/list/territory"
+  },
+  {
+    "arguments": [
+      "title"
+    ],
+    "encoding": "wiki",
+    "id": "linkWikiLookup",
+    "url": "https://wynncraft.wiki.gg/wiki/%{title}"
+  },
+  {
+    "arguments": [
+      "itemname"
+    ],
+    "id": "linkWynncraftItemLookup",
+    "url": "https://wynncraft.com/item/%{itemname}"
+  },
+  {
+    "arguments": [
+      "username"
+    ],
+    "id": "linkWynncraftPlayerStats",
+    "url": "https://wynncraft.com/stats/player/%{username}"
+  },
+  {
+    "arguments": [
+      "itemname"
+    ],
+    "id": "linkWynndataItemLookup",
+    "url": "https://data.wynntils.com/i/%{itemname}"
+  },
+  {
+    "id": "linkWynntilsDiscordInvite",
+    "url": "https://discord.gg/SZuNem8"
+  },
+  {
+    "id": "linkWynntilsPatreon",
+    "url": "https://www.patreon.com/Wynntils"
+  },
+  {
+    "arguments": [
+      "token"
+    ],
+    "id": "linkWynntilsRegisterAccount",
+    "url": "https://account.wynntils.com/register.php?token=%{token}"
+  },
+  {
+    "id": "linkWynntilsStatus",
+    "url": "https://status.wynntils.com/"
+  }
+]

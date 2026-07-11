@@ -1,0 +1,51 @@
+// © Wynntils (LGPL-3.0-only) — see LICENSE-WYNNTILS
+package julianh06.wynnextras.wtshim.handlers.container;
+
+import julianh06.wynnextras.wtshim.handlers.container.type.ContainerContent;
+import julianh06.wynnextras.wtshim.handlers.container.type.ContainerContentChangeType;
+import julianh06.wynnextras.wtshim.models.containers.Container;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import net.minecraft.item.ItemStack;
+
+public interface ContainerQueryStep {
+    /**
+     * Take the action needed to start this step. If this is the very first step, container
+     * is null. Otherwise, it will be the currently open container that the next step
+     * will be taken on.
+     */
+    boolean startStep(ContainerContent container) throws ContainerQueryException;
+
+    /**
+     * Verify that the container that has just opened has the expected type.
+     * To ensure robustness, make this test as tight as possible.
+     */
+    boolean verifyContainer(Class<? extends Container> containerType);
+
+    /**
+     * Verify that the container has the expected content change.
+     * This is called when a set slot or set content packet is received.
+     * This method needs to return true before {@link #handleContent} is called.
+     */
+    boolean verifyContentChange(
+            ContainerContent container, Int2ObjectMap<ItemStack> changes, ContainerContentChangeType changeType);
+
+    /**
+     * Process the actual content of the container that this step has opened up.
+     */
+    void handleContent(ContainerContent container) throws ContainerQueryException;
+
+    /**
+     * Return a chained ContainerQueryStep, if another step is needed for the
+     * currently open container. If the query session is finished, return null.
+     */
+    ContainerQueryStep getNextStep(ContainerContent container) throws ContainerQueryException;
+
+    /**
+     * This will be called by ContainerQueryManager if an error occurs. If that happens,
+     * no further methods will be called on this step.
+     */
+    void onError(String errorMsg);
+
+    /** A way to identify this query. It is used to help avoid queueing the same query twice. */
+    String getName();
+}
