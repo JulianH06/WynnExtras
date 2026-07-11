@@ -377,6 +377,7 @@ public class BankOverlay2 extends WEHandledScreen {
         }
         pages.clear();
         clearCrossClassSearchState();
+        currentClassAccountBankUnavailable = false;
         currentClassAccountBankAvailabilityDetected = false;
         allCharactersBrowseMode = WynnExtrasConfig.INSTANCE.bankAllCharactersBrowseMode;
         allCharactersButtonWidget = null;
@@ -1686,8 +1687,13 @@ public class BankOverlay2 extends WEHandledScreen {
 
     private static void detectCurrentClassAccountBankAvailabilityIfNeeded() {
         if (currentClassAccountBankAvailabilityDetected) return;
-        if (currentOverlayType != BankOverlayType.CHARACTER) return;
+        if (currentOverlayType != BankOverlayType.CHARACTER) {
+            currentClassAccountBankUnavailable = false;
+            currentClassAccountBankAvailabilityDetected = true;
+            return;
+        }
         if (System.currentTimeMillis() < suppressAccountBankAvailabilityDetectionUntil) {
+            currentClassAccountBankUnavailable = false;
             currentClassAccountBankAvailabilityDetected = true;
             return;
         }

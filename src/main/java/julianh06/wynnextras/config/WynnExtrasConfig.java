@@ -357,6 +357,7 @@ public class WynnExtrasConfig {
     public boolean showOwnNametag = false;
     public boolean showWynnExtrasBadges = true;
     public boolean uploadAchievements = true;
+    public boolean showAchievementUnlockMessages = true;
 
     // ==================== CHAT PEEK ====================
     public boolean chatPeekEnabled = false;

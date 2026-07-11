@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.achievements;
 import com.wynntils.models.raid.raids.RaidKind;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.RaidEndedEvent;
 import julianh06.wynnextras.event.TickEvent;
@@ -14,7 +15,11 @@ import julianh06.wynnextras.features.profileviewer.data.Profession;
 import julianh06.wynnextras.features.profileviewer.data.Raids;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.HoverEvent;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.ArrayList;
@@ -27,6 +32,8 @@ import java.util.Objects;
 public class AchievementTracking {
     public static Achievements achievements;
     private boolean init;
+    private static final List<UnlockAnnouncement> pendingUnlockAnnouncements = new ArrayList<>();
+    private static int unlockAnnouncementFlushTicks = -1;
 
     /**
      * How far our self-counted total may run ahead of the Wynncraft API before we assume our
@@ -34,6 +41,7 @@ public class AchievementTracking {
      * lead is expected and trusted; a large one is treated as drift.
      */
     private static final int API_MISMATCH_TOLERANCE = 5;
+    private static final int UNLOCK_ANNOUNCEMENT_DELAY_TICKS = 60;
 
     /** Combat level cap a class must reach to count toward the {@code class.levelXXX} achievements. */
     private static final int CLASS_LEVEL_120 = 120;
@@ -76,6 +84,8 @@ public class AchievementTracking {
 
     @SubscribeEvent
     private void onTick(TickEvent event) {
+        tickUnlockAnnouncements();
+
         if (!init) {
             init = true;
             if (getFromServer() != null) {
@@ -119,6 +129,58 @@ public class AchievementTracking {
 
     private void announce(String message) {
         McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(message)));
+    }
+
+    private void tickUnlockAnnouncements() {
+        if (!WynnExtrasConfig.INSTANCE.showAchievementUnlockMessages) {
+            pendingUnlockAnnouncements.clear();
+            unlockAnnouncementFlushTicks = -1;
+            return;
+        }
+        if (unlockAnnouncementFlushTicks < 0) return;
+
+        unlockAnnouncementFlushTicks--;
+        if (unlockAnnouncementFlushTicks <= 0) {
+            flushUnlockAnnouncements();
+        }
+    }
+
+    private void flushUnlockAnnouncements() {
+        unlockAnnouncementFlushTicks = -1;
+        if (pendingUnlockAnnouncements.isEmpty()) return;
+
+        if (pendingUnlockAnnouncements.size() > 3) {
+            sendBundledUnlockAnnouncement();
+        } else {
+            for (UnlockAnnouncement announcement : pendingUnlockAnnouncements) {
+                announce(announcement.message);
+            }
+        }
+
+        announce("§7Use §e/we achievements §7to view your achievement rewards.");
+        pendingUnlockAnnouncements.clear();
+    }
+
+    private void announceAchievementUnlock(String message, String tooltipLine) {
+        if (!WynnExtrasConfig.INSTANCE.showAchievementUnlockMessages) return;
+
+        pendingUnlockAnnouncements.add(new UnlockAnnouncement(message, tooltipLine));
+        unlockAnnouncementFlushTicks = UNLOCK_ANNOUNCEMENT_DELAY_TICKS;
+    }
+
+    private void sendBundledUnlockAnnouncement() {
+        MutableText tooltip = Text.empty();
+        for (int i = 0; i < pendingUnlockAnnouncements.size(); i++) {
+            if (i > 0) tooltip.append(Text.literal("\n"));
+            tooltip.append(Text.literal("§a- §f" + pendingUnlockAnnouncements.get(i).tooltipLine));
+        }
+
+        int amount = pendingUnlockAnnouncements.size();
+        MutableText message = Text.literal("You have unlocked " + amount + " achievements! ")
+                .append(Text.literal("[Hover here to view them]").setStyle(Style.EMPTY
+                        .withColor(Formatting.YELLOW)
+                        .withHoverEvent(new HoverEvent.ShowText(tooltip))));
+        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
     }
 
     /**
@@ -165,8 +227,7 @@ public class AchievementTracking {
 
             int reconciled = reconcile(local, apiCount);
             if (reconciled != local) {
-                // API reconciliation is silent: only real completions in onRaidEnded announce.
-                applyCount(type, reconciled, false);
+                applyCount(type, reconciled, reconciled > local);
                 changed = true;
             }
         }
@@ -258,11 +319,13 @@ public class AchievementTracking {
 
         if (!announce || beforeTier == null || afterTier == null) return;
 
-        for (int tier = beforeTier; tier < afterTier && tier < Achievements.RAID_TARGETS.size(); tier++) {
-            int milestone = Achievements.RAID_TARGETS.get(tier);
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                    Text.of("Achievement: Completed " + milestone + " " + type.displayName + " raids!")));
-        }
+        if (afterTier <= beforeTier) return;
+
+        int reachedTier = Math.min(afterTier, Achievements.RAID_TARGETS.size()) - 1;
+        int milestone = Achievements.RAID_TARGETS.get(reachedTier);
+        announceAchievementUnlock(
+                "Achievement: Completed " + milestone + " " + type.displayName + " raids!",
+                "Completed " + milestone + " " + type.displayName + " raids");
     }
 
     /**
@@ -363,7 +426,7 @@ public class AchievementTracking {
             // Announce only the highest tier reached this update, to avoid a burst on the first sync.
             int reachedTier = Math.min(afterTier, targets.size()) - 1;
             int milestone = targets.get(reachedTier);
-            announce("Achievement: " + milestone + " " + label + "!");
+            announceAchievementUnlock("Achievement: " + milestone + " " + label + "!", milestone + " " + label);
         }
         Integer afterCount = achievements.getCount(id);
         return !Objects.equals(beforeCount, afterCount) || !Objects.equals(beforeTier, afterTier);
@@ -373,10 +436,20 @@ public class AchievementTracking {
     private boolean unlockSimple(String id, String announceName) {
         if (achievements.isUnlocked(id)) return false;
         if (achievements.setCompleted(id)) {
-            announce("Achievement Unlocked: " + announceName);
+            announceAchievementUnlock("Achievement Unlocked: " + announceName, announceName);
             return true;
         }
         return false;
+    }
+
+    private static class UnlockAnnouncement {
+        final String message;
+        final String tooltipLine;
+
+        UnlockAnnouncement(String message, String tooltipLine) {
+            this.message = message;
+            this.tooltipLine = tooltipLine;
+        }
     }
 
     private void save() {

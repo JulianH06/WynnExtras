@@ -28,6 +28,7 @@ import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.misc.QuickRepair;
 import julianh06.wynnextras.features.mount.MountOverlay;
 import julianh06.wynnextras.utils.LunarCompat;
+import julianh06.wynnextras.utils.SmoothGuiCompat;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -144,7 +145,9 @@ public abstract class HandledScreenMixin {
                 close();
                 return null;
             });
+            boolean poppedSmoothGui = SmoothGuiCompat.popIfApplied(context);
             bankOverlay.render(context, mouseX, mouseY, delta);
+            SmoothGuiCompat.pushIfNeeded(context, poppedSmoothGui && !ci.isCancelled());
             renderWynntilsBankPageJumpButtons(context, mouseX, mouseY, delta, (HandledScreen<?>) (Object) this);
         }
 

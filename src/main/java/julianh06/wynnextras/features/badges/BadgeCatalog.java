@@ -80,7 +80,7 @@ public final class BadgeCatalog {
             new BadgeColor("black", 0x111111, "Black", AchievementId.PROF_GATHER_132, 1),
             new BadgeColor("silver", 0xD8D8D8, "Silver", AchievementId.RAID_TCC, 4),
             new BadgeColor("rose_gold", 0xE6A7A1, "Rose Gold", AchievementId.PROF_CRAFT_115, 2),
-            new BadgeColor("bronze", 0xD98235, "bronze", AchievementId.PROF_CRAFT_100, 2),
+            new BadgeColor("bronze", 0xD98235, "Bronze", AchievementId.PROF_CRAFT_100, 2),
             new BadgeColor("gold", 0xFFBF00, "Gold", AchievementId.ASPECT_MAX_ALL_MAGE, 1),
             new BadgeColor("yellow", 0xFFD700, "Yellow", AchievementId.RAID_NOL, 4),
             new BadgeColor("lime", 0xB6FF3F, "Lime", AchievementId.RAID_NOTG, 4),
