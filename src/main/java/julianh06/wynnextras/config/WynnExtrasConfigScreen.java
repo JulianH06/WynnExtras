@@ -499,6 +499,16 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Trade Market")
                 .add(toggle("Scale background", "Use mythic scale as item background",
                         () -> config.scaleBackgroundEnabled, v -> config.scaleBackgroundEnabled = v))
+                .add(visibleWhen(dropdown("Scale background shape", "Shape used for the scale background",
+                                ScaleBackgroundShape.class,
+                                () -> config.scaleBackgroundShape,
+                                v -> config.scaleBackgroundShape = v),
+                        () -> config.scaleBackgroundEnabled))
+                .add(visibleWhen(slider("Scale background opacity", "Opacity of the scale background in percent",
+                                0, 100,
+                                () -> config.scaleBackgroundOpacity,
+                                v -> config.scaleBackgroundOpacity = v),
+                        () -> config.scaleBackgroundEnabled))
                 .add(toggle("Hide scale background button", "Hides the quick toggle for the scale background setting",
                         () -> config.hideScaleBackgroundButton, v -> config.hideScaleBackgroundButton = v))
                 .add(toggle("Hide comparing info text", "Shows a text that informs you that you can compare items with F1",
@@ -609,7 +619,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.blockedWords, v -> config.blockedWords = v, "Words"))
             .add(toggle("Quick PV/GV Access (EXPERIMENTAL)", "Click on a players name or guild to open the pv/gv!",
                     () -> config.chatClickPV, v -> config.chatClickPV = v))
-            .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs with your guild when someone asks about them in chat",
+            .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs when someone asks about them",
                     () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
             .add(toggle("Bomb Rethrow Suggestion", "Show a clickable suggestion to rethrow a bomb when it expires",
                     () -> config.bombRethrowSuggestion, v -> config.bombRethrowSuggestion = v))
@@ -693,6 +703,62 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
                 .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
                         0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
+                .add(toggle("20G after level", "Instant gravity after the selected level.",
+                        () -> config.tetris20GEnabled, v -> config.tetris20GEnabled = v))
+                .add(visibleWhen(slider("20G Level", "Level where instant gravity starts",
+                                1, 100, () -> config.tetris20GLevel, v -> config.tetris20GLevel = v),
+                        () -> config.tetris20GEnabled))
+                .add(keybind("Move right", "Move the active piece right",
+                        () -> config.tetrisMoveRightKey, v -> config.tetrisMoveRightKey = v,
+                        DEFAULT_CONFIG.tetrisMoveRightKey))
+                .add(keybind("Move right alt", "Alternative key to move the active piece right",
+                        () -> config.tetrisMoveRightAltKey, v -> config.tetrisMoveRightAltKey = v,
+                        DEFAULT_CONFIG.tetrisMoveRightAltKey))
+                .add(keybind("Move left", "Move the active piece left",
+                        () -> config.tetrisMoveLeftKey, v -> config.tetrisMoveLeftKey = v,
+                        DEFAULT_CONFIG.tetrisMoveLeftKey))
+                .add(keybind("Move left alt", "Alternative key to move the active piece left",
+                        () -> config.tetrisMoveLeftAltKey, v -> config.tetrisMoveLeftAltKey = v,
+                        DEFAULT_CONFIG.tetrisMoveLeftAltKey))
+                .add(keybind("Soft drop", "Move the active piece down faster",
+                        () -> config.tetrisSoftDropKey, v -> config.tetrisSoftDropKey = v,
+                        DEFAULT_CONFIG.tetrisSoftDropKey))
+                .add(keybind("Soft drop alt", "Alternative key to move the active piece down faster",
+                        () -> config.tetrisSoftDropAltKey, v -> config.tetrisSoftDropAltKey = v,
+                        DEFAULT_CONFIG.tetrisSoftDropAltKey))
+                .add(keybind("Rotate clockwise", "Rotate the active piece clockwise",
+                        () -> config.tetrisRotateClockwiseKey, v -> config.tetrisRotateClockwiseKey = v,
+                        DEFAULT_CONFIG.tetrisRotateClockwiseKey))
+                .add(keybind("Rotate clockwise alt", "Alternative key to rotate the active piece clockwise",
+                        () -> config.tetrisRotateClockwiseAltKey, v -> config.tetrisRotateClockwiseAltKey = v,
+                        DEFAULT_CONFIG.tetrisRotateClockwiseAltKey))
+                .add(keybind("Rotate counterclockwise", "Rotate the active piece counterclockwise",
+                        () -> config.tetrisRotateCounterClockwiseKey, v -> config.tetrisRotateCounterClockwiseKey = v,
+                        DEFAULT_CONFIG.tetrisRotateCounterClockwiseKey))
+                .add(keybind("Rotate counterclockwise alt", "Alternative key to rotate the active piece counterclockwise",
+                        () -> config.tetrisRotateCounterClockwiseAltKey, v -> config.tetrisRotateCounterClockwiseAltKey = v,
+                        DEFAULT_CONFIG.tetrisRotateCounterClockwiseAltKey))
+                .add(keybind("Hard drop", "Instantly drop and lock the active piece",
+                        () -> config.tetrisHardDropKey, v -> config.tetrisHardDropKey = v,
+                        DEFAULT_CONFIG.tetrisHardDropKey))
+                .add(keybind("Hold", "Hold or swap the active piece",
+                        () -> config.tetrisHoldKey, v -> config.tetrisHoldKey = v,
+                        DEFAULT_CONFIG.tetrisHoldKey))
+                .add(keybind("Hold alt", "Alternative key to hold or swap the active piece",
+                        () -> config.tetrisHoldAltKey, v -> config.tetrisHoldAltKey = v,
+                        DEFAULT_CONFIG.tetrisHoldAltKey))
+                .add(keybind("Start", "Start a game from the game-over screen",
+                        () -> config.tetrisStartKey, v -> config.tetrisStartKey = v,
+                        DEFAULT_CONFIG.tetrisStartKey))
+                .add(keybind("Restart", "Restart the current game",
+                        () -> config.tetrisRestartKey, v -> config.tetrisRestartKey = v,
+                        DEFAULT_CONFIG.tetrisRestartKey))
+                .add(keybind("Toggle mode", "Switch between classic and 40 lines on the game-over screen",
+                        () -> config.tetrisToggleModeKey, v -> config.tetrisToggleModeKey = v,
+                        DEFAULT_CONFIG.tetrisToggleModeKey))
+                .add(keybind("Quit", "End the current game",
+                        () -> config.tetrisQuitKey, v -> config.tetrisQuitKey = v,
+                        DEFAULT_CONFIG.tetrisQuitKey))
             .sub("Crowd sourcing")
                 .add(toggle("Gambits", "Help gather the current gambits so others can see them with /we gambits",
                         () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v))
@@ -781,7 +847,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.stackDuplicateMessages))
                 .add(toggle("Right-click chat to copy", "Right-click a chat message (while chat is open) to copy it to the clipboard",
                         () -> config.rightClickToCopyChat, v -> config.rightClickToCopyChat = v))
-                .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs with your guild when someone asks about them in chat",
+                .add(toggle("Bomb Share Suggestion", "Show a clickable suggestion to share bombs when someone asks about them",
                         () -> config.bombShareSuggestion, v -> config.bombShareSuggestion = v))
                 .add(toggle("Bomb Rethrow Suggestion", "Show a clickable suggestion to rethrow a bomb when it expires",
                         () -> config.bombRethrowSuggestion, v -> config.bombRethrowSuggestion = v))

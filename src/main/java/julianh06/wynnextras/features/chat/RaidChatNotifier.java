@@ -253,6 +253,28 @@ public class RaidChatNotifier {
         return INSTANCE.raidPBs.get(key);
     }
 
+    public static Map<String, Long> getRaidPBs() {
+        if (INSTANCE.raidPBs == null) INSTANCE.raidPBs = new HashMap<>();
+        return new HashMap<>(INSTANCE.raidPBs);
+    }
+
+    public static boolean resetPB(String key) {
+        if (INSTANCE.raidPBs == null) INSTANCE.raidPBs = new HashMap<>();
+        boolean removed = INSTANCE.raidPBs.remove(key) != null;
+        if (removed) INSTANCE.save();
+        return removed;
+    }
+
+    public static int resetAllPBs() {
+        if (INSTANCE.raidPBs == null) INSTANCE.raidPBs = new HashMap<>();
+        int count = INSTANCE.raidPBs.size();
+        if (count > 0) {
+            INSTANCE.raidPBs.clear();
+            INSTANCE.save();
+        }
+        return count;
+    }
+
     // Dedup so the mixin path and direct ChatEvent path don't double-process the same message.
     private static String lastHandledMsg = null;
     private static long lastHandledMs = 0;

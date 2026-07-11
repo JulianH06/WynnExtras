@@ -48,6 +48,7 @@ public class ItemStatInfoFeatureMixin {
 
         ItemStack currentHoveredStack = WeightDisplay.getCurrentHoveredStack();
         if (currentHoveredStack == null || event.getTooltips() == null) return;
+        if (!WeightDisplay.isTrackedMythic(currentHoveredStack)) return;
         if (WeightDisplay.isUnidentified(currentHoveredStack)) return;
 
         String cleanName = WeightDisplay.extractCleanName(currentHoveredStack);

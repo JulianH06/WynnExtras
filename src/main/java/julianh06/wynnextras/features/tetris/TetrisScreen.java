@@ -123,12 +123,16 @@ public class TetrisScreen extends Screen {
 
         long now = System.currentTimeMillis();
 
-        int level = 1 + totalLines / 10;
-        int divided = Math.max(15, 600 - level * 50);
-        long tick = now / divided;
-        if (tick != lastTick) {
-            if (currentPiece.canGoDown()) currentPiece.moveDown();
-            lastTick = tick;
+        int level = currentLevel();
+        if (is20G(level)) {
+            dropToGround();
+        } else {
+            int divided = Math.max(15, 600 - level * 50);
+            long tick = now / divided;
+            if (tick != lastTick) {
+                if (currentPiece.canGoDown()) currentPiece.moveDown();
+                lastTick = tick;
+            }
         }
 
         if (!currentPiece.canGoDown()) {
@@ -168,6 +172,18 @@ public class TetrisScreen extends Screen {
         }
     }
 
+    private int currentLevel() {
+        return 1 + totalLines / 10;
+    }
+
+    private boolean is20G(int level) {
+        return WynnExtrasConfig.INSTANCE.tetris20GEnabled && level >= WynnExtrasConfig.INSTANCE.tetris20GLevel;
+    }
+
+    private void dropToGround() {
+        while (currentPiece.canGoDown()) currentPiece.moveDown();
+    }
+
     public void doNewPieceStuff() {
         pieceTouchedGround = false;
         lockResets = 0;
@@ -184,7 +200,7 @@ public class TetrisScreen extends Screen {
                 SoundInstance.AttenuationType.NONE, 0, 0, 0, true
             ));
         }
-        int level = 1 + totalLines / 10;
+        int level = currentLevel();
         totalLines += linesCleared;
 
         boolean isDifficult = false;
@@ -419,7 +435,7 @@ public class TetrisScreen extends Screen {
     }
 
     private void drawHud(DrawContext ctx) {
-        int level = 1 + totalLines / 10;
+        int level = currentLevel();
         long elapsed = System.currentTimeMillis() - sprintStartTime;
 
         int holdX = fromX - 72, holdY = fromY, holdW = 62, holdH = 70;
@@ -462,7 +478,7 @@ public class TetrisScreen extends Screen {
             ctx.drawText(textRenderer, flashMessage, fromX + (toX - fromX) / 2 - textW / 2, toY + 8, 0xFFcca76f, true);
         }
 
-        String hint = "Ctrl+Q: quit";
+        String hint = keyName(WynnExtrasConfig.INSTANCE.tetrisQuitKey) + ": quit";
         int hintW = textRenderer.getWidth(hint);
         ctx.drawText(textRenderer, hint, fromX + (toX - fromX) / 2 - hintW / 2, fromY - 14, 0x559a8b70, false);
     }
@@ -483,19 +499,19 @@ public class TetrisScreen extends Screen {
             ctx.drawText(textRenderer, "40 Lines!", tx, panelY + 8, 0xFFe8dcc8, true);
             ctx.drawText(textRenderer, "Time:  " + formatTime(elapsed), tx, panelY + 24, 0xFFcca76f, false);
             ctx.drawText(textRenderer, "Best:  " + (best > 0 ? formatTime(best) : "-"), tx, panelY + 38, 0xFFcca76f, false);
-            ctx.drawText(textRenderer, "Tab: Classic", tx, panelY + 55, 0xFF9a8b70, false);
+            ctx.drawText(textRenderer, keyName(WynnExtrasConfig.INSTANCE.tetrisToggleModeKey) + ": Classic", tx, panelY + 55, 0xFF9a8b70, false);
         } else if (sprintMode) {
             ctx.drawText(textRenderer, "40 Lines", tx, panelY + 8, 0xFFe8dcc8, true);
             int best = WynnExtrasConfig.INSTANCE.tetrisBest40LinesMs;
             ctx.drawText(textRenderer, "Best:  " + (best > 0 ? formatTime(best) : "-"), tx, panelY + 24, 0xFFcca76f, false);
-            ctx.drawText(textRenderer, "Tab: Classic", tx, panelY + 55, 0xFF9a8b70, false);
+            ctx.drawText(textRenderer, keyName(WynnExtrasConfig.INSTANCE.tetrisToggleModeKey) + ": Classic", tx, panelY + 55, 0xFF9a8b70, false);
         } else {
             ctx.drawText(textRenderer, "Game Over!", tx, panelY + 8, 0xFFe8dcc8, true);
             ctx.drawText(textRenderer, "Score: " + score, tx, panelY + 24, 0xFFcca76f, false);
             ctx.drawText(textRenderer, "Best:  " + WynnExtrasConfig.INSTANCE.tetrisBestScore, tx, panelY + 38, 0xFFcca76f, false);
-            ctx.drawText(textRenderer, "Tab: Sprint", tx, panelY + 55, 0xFF9a8b70, false);
+            ctx.drawText(textRenderer, keyName(WynnExtrasConfig.INSTANCE.tetrisToggleModeKey) + ": Sprint", tx, panelY + 55, 0xFF9a8b70, false);
         }
-        ctx.drawText(textRenderer, "Enter / Ctrl+R", tx, panelY + 70, 0xFF9a8b70, false);
+        ctx.drawText(textRenderer, keyName(WynnExtrasConfig.INSTANCE.tetrisStartKey) + " / " + keyName(WynnExtrasConfig.INSTANCE.tetrisRestartKey), tx, panelY + 70, 0xFF9a8b70, false);
     }
 
     private void fillBlock(DrawContext ctx, int x, int y, int color) {
@@ -533,39 +549,80 @@ public class TetrisScreen extends Screen {
     @Override
     public boolean keyPressed(KeyInput input) {
         int keyCode = input.key();
-        if (keyCode == GLFW.GLFW_KEY_ENTER && gameOver) {
+        if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisStartKey) && gameOver) {
             startGame();
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_R && input.modifiers() == GLFW.GLFW_MOD_CONTROL) {
+        if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisRestartKey)) {
             startGame();
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_TAB && gameOver) {
+        if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisToggleModeKey) && gameOver) {
             sprintMode = !sprintMode;
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_Q && input.modifiers() == GLFW.GLFW_MOD_CONTROL && !gameOver) {
+        if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisQuitKey) && !gameOver) {
             onGameOver();
             return true;
         }
         if (!gameOver && currentPiece != null) {
             long now = System.currentTimeMillis();
-            switch (keyCode) {
-                case GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_D -> { rightPressed = true; rightPressTime = now; if (currentPiece.canMoveRight()) { if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) { lockStart = now; lockResets++; } currentPiece.moveRight(); lastActionWasRotation = false; } return true; }
-                case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_A -> { leftPressed = true; leftPressTime = now; if (currentPiece.canMoveLeft()) { if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) { lockStart = now; lockResets++; } currentPiece.moveLeft(); lastActionWasRotation = false; } return true; }
-                case GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_S -> { downPressed = true; downPressTime = now; lastActionWasRotation = false; return true; }
-                case GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_W -> { if (currentPiece.canRotate(true)) { if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) { lockStart = now; lockResets++; } currentPiece.rotate(true); lastActionWasRotation = true; } return true; }
-                case GLFW.GLFW_KEY_Z, GLFW.GLFW_KEY_X -> { if (currentPiece.canRotate(false)) { if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) { lockStart = now; lockResets++; } currentPiece.rotate(false); lastActionWasRotation = true; } return true; }
-                case GLFW.GLFW_KEY_SPACE -> {
-                    if (!currentPiece.getFamily().isEmpty()) {
-                        currentPiece.setDownPosition();
-                        int cells = Math.max(0, (currentPiece.getFamily().get(0).getDownPosition() - currentPiece.getFamily().get(0).getY()) / TetrisNode.CELL);
-                        score += 2 * cells;
-                    }
-                    pieceTouchedGround = false; lastActionWasRotation = false; currentPiece.moveCompletelyDown(); return true;
+            if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisMoveRightKey, WynnExtrasConfig.INSTANCE.tetrisMoveRightAltKey)) {
+                rightPressed = true;
+                rightPressTime = now;
+                if (currentPiece.canMoveRight()) {
+                    resetLockIfNeeded(now);
+                    currentPiece.moveRight();
+                    lastActionWasRotation = false;
                 }
-                case GLFW.GLFW_KEY_C, GLFW.GLFW_KEY_LEFT_SHIFT -> { holdPiece(); return true; }
+                return true;
+            }
+            if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisMoveLeftKey, WynnExtrasConfig.INSTANCE.tetrisMoveLeftAltKey)) {
+                leftPressed = true;
+                leftPressTime = now;
+                if (currentPiece.canMoveLeft()) {
+                    resetLockIfNeeded(now);
+                    currentPiece.moveLeft();
+                    lastActionWasRotation = false;
+                }
+                return true;
+            }
+            if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisSoftDropKey, WynnExtrasConfig.INSTANCE.tetrisSoftDropAltKey)) {
+                downPressed = true;
+                downPressTime = now;
+                lastActionWasRotation = false;
+                return true;
+            }
+            if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisRotateClockwiseKey, WynnExtrasConfig.INSTANCE.tetrisRotateClockwiseAltKey)) {
+                if (currentPiece.canRotate(true)) {
+                    resetLockIfNeeded(now);
+                    currentPiece.rotate(true);
+                    lastActionWasRotation = true;
+                }
+                return true;
+            }
+            if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisRotateCounterClockwiseKey, WynnExtrasConfig.INSTANCE.tetrisRotateCounterClockwiseAltKey)) {
+                if (currentPiece.canRotate(false)) {
+                    resetLockIfNeeded(now);
+                    currentPiece.rotate(false);
+                    lastActionWasRotation = true;
+                }
+                return true;
+            }
+            if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisHardDropKey)) {
+                if (!currentPiece.getFamily().isEmpty()) {
+                    currentPiece.setDownPosition();
+                    int cells = Math.max(0, (currentPiece.getFamily().get(0).getDownPosition() - currentPiece.getFamily().get(0).getY()) / TetrisNode.CELL);
+                    score += 2 * cells;
+                }
+                pieceTouchedGround = false;
+                lastActionWasRotation = false;
+                currentPiece.moveCompletelyDown();
+                return true;
+            }
+            if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisHoldKey, WynnExtrasConfig.INSTANCE.tetrisHoldAltKey)) {
+                holdPiece();
+                return true;
             }
         }
         return super.keyPressed(input);
@@ -573,12 +630,54 @@ public class TetrisScreen extends Screen {
 
     @Override
     public boolean keyReleased(KeyInput input) {
-        switch (input.key()) {
-            case GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_D -> { rightPressed = false; return true; }
-            case GLFW.GLFW_KEY_LEFT, GLFW.GLFW_KEY_A -> { leftPressed = false; return true; }
-            case GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_S -> { downPressed = false; return true; }
+        int keyCode = input.key();
+        if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisMoveRightKey, WynnExtrasConfig.INSTANCE.tetrisMoveRightAltKey)) {
+            rightPressed = false;
+            return true;
+        }
+        if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisMoveLeftKey, WynnExtrasConfig.INSTANCE.tetrisMoveLeftAltKey)) {
+            leftPressed = false;
+            return true;
+        }
+        if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.tetrisSoftDropKey, WynnExtrasConfig.INSTANCE.tetrisSoftDropAltKey)) {
+            downPressed = false;
+            return true;
         }
         return false;
+    }
+
+    private void resetLockIfNeeded(long now) {
+        if (pieceTouchedGround && lockResets < MAX_LOCK_RESETS) {
+            lockStart = now;
+            lockResets++;
+        }
+    }
+
+    private static boolean matchesKey(int keyCode, int... configuredKeys) {
+        for (int configuredKey : configuredKeys) {
+            if (configuredKey != GLFW.GLFW_KEY_UNKNOWN && keyCode == configuredKey) return true;
+        }
+        return false;
+    }
+
+    private static String keyName(int key) {
+        if (key == GLFW.GLFW_KEY_UNKNOWN) return "UNBOUND";
+        String name = GLFW.glfwGetKeyName(key, 0);
+        if (name != null) return name.toUpperCase();
+        return switch (key) {
+            case GLFW.GLFW_KEY_SPACE -> "SPACE";
+            case GLFW.GLFW_KEY_TAB -> "TAB";
+            case GLFW.GLFW_KEY_ENTER -> "ENTER";
+            case GLFW.GLFW_KEY_LEFT_SHIFT -> "LSHIFT";
+            case GLFW.GLFW_KEY_RIGHT_SHIFT -> "RSHIFT";
+            case GLFW.GLFW_KEY_LEFT_CONTROL -> "LCTRL";
+            case GLFW.GLFW_KEY_RIGHT_CONTROL -> "RCTRL";
+            case GLFW.GLFW_KEY_UP -> "UP";
+            case GLFW.GLFW_KEY_DOWN -> "DOWN";
+            case GLFW.GLFW_KEY_LEFT -> "LEFT";
+            case GLFW.GLFW_KEY_RIGHT -> "RIGHT";
+            default -> "KEY_" + key;
+        };
     }
 
     @Override

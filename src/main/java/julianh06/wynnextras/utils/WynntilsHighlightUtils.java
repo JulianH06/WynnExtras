@@ -34,4 +34,9 @@ public final class WynntilsHighlightUtils {
         Texture resolvedTexture = texture == null ? Texture.HIGHLIGHT_WYNN : texture;
         RenderUtils.drawSprite(context, resolvedTexture, color, x, y, width, height);
     }
+
+    public static void drawHighlightTexture(DrawContext context, Texture texture, CustomColor color, float x, float y) {
+        Texture resolvedTexture = texture == null ? Texture.HIGHLIGHT_WYNN : texture;
+        RenderUtils.drawSprite(context, resolvedTexture, color, x, y);
+    }
 }

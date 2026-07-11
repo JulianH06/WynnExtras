@@ -16,9 +16,11 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.text.TextColor;
 import net.minecraft.util.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
 
+import java.util.Locale;
 import java.util.Map;
 
 
@@ -155,15 +157,18 @@ public class ChatNotificator {
     }
 
     private static void handleBombshareSuggestion(Text message) {
-        // Bomb share suggestion: player chat messages contain ":"
         if (!WynnExtrasConfig.INSTANCE.bombShareSuggestion) return;
 
         String msg = message.getString().toLowerCase();
-        if (!msg.contains(":")) return;
+        int separatorIndex = msg.indexOf(':');
+        if (separatorIndex == -1) return;
+
+        String chatContent = msg.substring(separatorIndex + 1);
+        if (chatContent.contains(" with ") && chatContent.contains(" remaining")) return;
 
         boolean excluded = false;
         for (String ex : BOMB_EXCLUDE) {
-            if (msg.contains(ex)) {
+            if (chatContent.contains(ex)) {
                 excluded = true;
                 break;
             }
@@ -172,31 +177,59 @@ public class ChatNotificator {
         if(excluded) return;
 
         for (String keyword : BOMB_KEYWORDS) {
-            if (!msg.contains(keyword)) continue;
+            if (!chatContent.contains(keyword)) continue;
 
-            boolean lootRelated = msg.contains("loot");
-            boolean combatRelated = msg.contains("combat");
+            boolean lootRelated = chatContent.contains("loot");
+            boolean combatRelated = chatContent.contains("combat");
+            String channel = detectBombshareChannel(message);
             MinecraftClient.getInstance().send(() -> {
                 var text = WynnExtras.addWynnExtrasPrefix(Text.literal(""))
                         .append(Text.literal("§e§n[Share all Bombs]").setStyle(Style.EMPTY
-                                .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild"))))
+                                .withClickEvent(new ClickEvent.RunCommand("/we bombshare " + channel))))
                         .append(Text.literal("  "));
                 if (lootRelated) {
                     text.append(Text.literal("§a§n[Loot only]").setStyle(Style.EMPTY
-                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild loot"))));
+                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare " + channel + " loot"))));
                 } else if (combatRelated) {
                     text.append(Text.literal("§a§n[Combat only]").setStyle(Style.EMPTY
-                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild combat"))));
+                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare " + channel + " combat"))));
                 } else {
                     text.append(Text.literal("§a§n[Prof only]").setStyle(Style.EMPTY
-                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare guild prof"))));
+                            .withClickEvent(new ClickEvent.RunCommand("/we bombshare " + channel + " prof"))));
                 }
                 text.append(Text.literal("  "))
                         .append(Text.literal("§c§n[Disable]").setStyle(Style.EMPTY
-                                .withClickEvent(new ClickEvent.RunCommand("/we bombshare disable"))));
+                                .withClickEvent(new ClickEvent.RunCommand("/we bombshare toggle"))));
                 McUtils.sendMessageToClient(text);
             });
             break;
         }
+    }
+
+    private static String detectBombshareChannel(Text message) {
+        TextColor firstColor = firstColor(message);
+        if (firstColor != null) {
+            int rgb = firstColor.getRgb();
+            if (rgb == 0x55FFFF) return "guild";
+            if (rgb == 0xFFFF55) return "party";
+        }
+
+        String prefix = message.getString();
+        int separatorIndex = prefix.indexOf(':');
+        if (separatorIndex != -1) prefix = prefix.substring(0, separatorIndex);
+        prefix = prefix.toLowerCase(Locale.ROOT);
+
+        if (prefix.contains("guild") || prefix.contains("[g]")) return "guild";
+        if (prefix.contains("party") || prefix.contains("[p]")) return "party";
+        return "all";
+    }
+
+    private static TextColor firstColor(Text text) {
+        if (text.getStyle().getColor() != null) return text.getStyle().getColor();
+        for (Text sibling : text.getSiblings()) {
+            TextColor color = firstColor(sibling);
+            if (color != null) return color;
+        }
+        return null;
     }
 }

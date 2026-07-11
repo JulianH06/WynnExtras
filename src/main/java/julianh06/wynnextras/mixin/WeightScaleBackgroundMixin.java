@@ -1,8 +1,10 @@
 package julianh06.wynnextras.mixin;
 
+import com.wynntils.utils.colors.CustomColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.inventory.WeightDisplay;
+import julianh06.wynnextras.utils.WynntilsHighlightUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -61,8 +63,21 @@ public abstract class WeightScaleBackgroundMixin {
             }
         }
 
-        int solidColor = 0xFF000000 | (color & 0x00FFFFFF);
-        context.fill(slot.x - 1, slot.y - 1, slot.x + 17, slot.y + 17, solidColor);
+        int opacity = Math.clamp(WynnExtrasConfig.INSTANCE.scaleBackgroundOpacity, 0, 100);
+        int alpha = Math.round(opacity * 255 / 100f);
+        CustomColor backgroundColor = new CustomColor(
+                (color >> 16) & 0xFF,
+                (color >> 8) & 0xFF,
+                color & 0xFF,
+                alpha
+        );
+        WynntilsHighlightUtils.drawHighlightTexture(
+                context,
+                WynnExtrasConfig.INSTANCE.scaleBackgroundShape.texture(),
+                backgroundColor,
+                slot.x - 8,
+                slot.y - 8
+        );
     }
 
     @Inject(method = "drawSlot", at = @At("TAIL"))

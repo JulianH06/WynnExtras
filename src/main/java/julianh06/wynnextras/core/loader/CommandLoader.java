@@ -82,27 +82,31 @@ public class CommandLoader implements WELoader {
                     })
                     .then(ClientCommandManager.argument("channel", StringArgumentType.word())
                             .suggests((ctx, builder) -> {
+                                builder.suggest("all");
                                 builder.suggest("guild");
                                 builder.suggest("party");
                                 builder.suggest("local");
                                 builder.suggest("clipboard");
-                                builder.suggest("disable");
+                                builder.suggest("toggle");
                                 return builder.buildFuture();
                             })
                             .executes(ctx -> {
                                 String channel = StringArgumentType.getString(ctx, "channel").toLowerCase();
                                 switch (channel) {
+                                    case "all", "a" -> executeBombshareAll(null);
                                     case "guild", "g" -> executeBombshare("g", null);
                                     case "party", "p" -> executeBombshare("p", null);
                                     case "local" -> executeBombshare(null, null);
                                     case "clipboard" -> copyBombshareToClipboard(null);
-                                    case "disable" -> {
-                                        WynnExtrasConfig.INSTANCE.bombShareSuggestion = false;
+                                    case "toggle" -> {
+                                        WynnExtrasConfig.INSTANCE.bombShareSuggestion = !WynnExtrasConfig.INSTANCE.bombShareSuggestion;
                                         WynnExtrasConfig.save();
-                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aBomb share suggestions disabled. Re-enable in /we config > Chat."));
+                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(WynnExtrasConfig.INSTANCE.bombShareSuggestion
+                                                ? "§aBomb share suggestions enabled."
+                                                : "§aBomb share suggestions disabled."));
                                     }
                                     default ->
-                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel + ". Use guild, party, local or clipboard."));
+                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel + ". Use all, guild, party, local, clipboard or toggle."));
                                 }
                                 return 1;
                             })
@@ -125,6 +129,7 @@ public class CommandLoader implements WELoader {
                                             default -> { McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown filter: " + filterStr + ". Use prof, loot, or combat.")); yield null; }
                                         };
                                         switch (channel) {
+                                            case "all", "a" -> executeBombshareAll(bombFilter);
                                             case "guild", "g" -> executeBombshare("g", bombFilter);
                                             case "party", "p" -> executeBombshare("p", bombFilter);
                                             case "local" -> executeBombshare(null, bombFilter);
@@ -521,6 +526,44 @@ public class CommandLoader implements WELoader {
             McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
         } else if (McUtils.player() != null) {
             McUtils.player().networkHandler.sendChatCommand(chatPrefix + " " + message);
+        }
+    }
+
+    private static void executeBombshareAll(Set<BombType> filter) {
+        if (!Models.WorldState.onWorld()) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cYou must be on a world to use this command."));
+            return;
+        }
+
+        Map<BombType, List<String>> bombsByType = new LinkedHashMap<>();
+        for (BombInfo bomb : Models.Bomb.getBombBells()) {
+            if (!bomb.isActive()) continue;
+            if (filter != null && !filter.contains(bomb.bomb())) continue;
+            bombsByType.computeIfAbsent(bomb.bomb(), k -> new ArrayList<>()).add(bomb.server());
+        }
+
+        String message;
+        if (bombsByType.isEmpty()) {
+            message = "[WynnExtras] No active" + filterName(filter) + " bombs!";
+        } else {
+            StringBuilder sb = new StringBuilder("[WynnExtras]");
+            Map<BombType, String> shortNames = Map.of(
+                    BombType.PROFESSION_XP, "ProfXP",
+                    BombType.PROFESSION_SPEED, "ProfSpeed",
+                    BombType.COMBAT_XP, "CombatXP",
+                    BombType.DUNGEON, "Dungeon",
+                    BombType.LOOT, "Loot",
+                    BombType.LOOT_CHEST, "LootChest"
+            );
+            for (var entry : bombsByType.entrySet()) {
+                String name = shortNames.getOrDefault(entry.getKey(), entry.getKey().getDisplayName());
+                sb.append(" [").append(name).append("] ").append(String.join(", ", entry.getValue()));
+            }
+            message = sb.toString();
+        }
+
+        if (McUtils.player() != null) {
+            McUtils.player().networkHandler.sendChatMessage(message);
         }
     }
 

@@ -209,6 +209,8 @@ public class WynnExtrasConfig {
     public boolean showWeight = false;
     public boolean showScales = false;
     public boolean scaleBackgroundEnabled = false;
+    public ScaleBackgroundShape scaleBackgroundShape = ScaleBackgroundShape.BOX;
+    public int scaleBackgroundOpacity = 100;
     public boolean hideTMInfoText = false;
     public boolean hideScaleBackgroundButton = false;
     public boolean craftingHelperOverlay = true;
@@ -446,6 +448,25 @@ public class WynnExtrasConfig {
     public int tetrisARR = 30;
     public int tetrisSDFDelay = 100;
     public int tetrisSDF = 30;
+    public boolean tetris20GEnabled = false;
+    public int tetris20GLevel = 20;
+    public int tetrisMoveRightKey = GLFW.GLFW_KEY_RIGHT;
+    public int tetrisMoveRightAltKey = GLFW.GLFW_KEY_D;
+    public int tetrisMoveLeftKey = GLFW.GLFW_KEY_LEFT;
+    public int tetrisMoveLeftAltKey = GLFW.GLFW_KEY_A;
+    public int tetrisSoftDropKey = GLFW.GLFW_KEY_DOWN;
+    public int tetrisSoftDropAltKey = GLFW.GLFW_KEY_S;
+    public int tetrisRotateClockwiseKey = GLFW.GLFW_KEY_UP;
+    public int tetrisRotateClockwiseAltKey = GLFW.GLFW_KEY_W;
+    public int tetrisRotateCounterClockwiseKey = GLFW.GLFW_KEY_Z;
+    public int tetrisRotateCounterClockwiseAltKey = GLFW.GLFW_KEY_X;
+    public int tetrisHardDropKey = GLFW.GLFW_KEY_SPACE;
+    public int tetrisHoldKey = GLFW.GLFW_KEY_C;
+    public int tetrisHoldAltKey = GLFW.GLFW_KEY_LEFT_SHIFT;
+    public int tetrisStartKey = GLFW.GLFW_KEY_ENTER;
+    public int tetrisRestartKey = GLFW.GLFW_KEY_R;
+    public int tetrisToggleModeKey = GLFW.GLFW_KEY_TAB;
+    public int tetrisQuitKey = GLFW.GLFW_KEY_Q;
 
     //==================== Dark Modes ==========================
     public boolean darkmodeToggle = false; //for bank overlay (dont wanna change the variable cause it would reset it to false for everyone)
@@ -607,14 +628,18 @@ public class WynnExtrasConfig {
                 if (INSTANCE.weeklyWars == null) INSTANCE.weeklyWars = new ArrayList<>();
                 if (INSTANCE.hudColorOverrides == null) INSTANCE.hudColorOverrides = new HashMap<>();
                 INSTANCE.syncQuickRepairThreshold();
+                INSTANCE.syncScaleBackgroundSettings();
                 INSTANCE.syncAttackTimerColors();
+                INSTANCE.syncTetrisSettings();
             }
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Failed to load config: " + e.getMessage());
             INSTANCE = new WynnExtrasConfig();
         }
         INSTANCE.syncQuickRepairThreshold();
+        INSTANCE.syncScaleBackgroundSettings();
         INSTANCE.syncAttackTimerColors();
+        INSTANCE.syncTetrisSettings();
         INSTANCE.syncClassSelectionLines();
         if (INSTANCE.classSelectionContentProgressStyle == null) {
             INSTANCE.classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
@@ -637,6 +662,19 @@ public class WynnExtrasConfig {
 
     private void syncQuickRepairThreshold() {
         quickRepairDurabilityThreshold = Math.clamp(quickRepairDurabilityThreshold, 0, 100);
+    }
+
+    private void syncScaleBackgroundSettings() {
+        if (scaleBackgroundShape == null) scaleBackgroundShape = ScaleBackgroundShape.BOX;
+        scaleBackgroundOpacity = Math.clamp(scaleBackgroundOpacity, 0, 100);
+    }
+
+    private void syncTetrisSettings() {
+        tetrisDAS = Math.clamp(tetrisDAS, 0, 300);
+        tetrisARR = Math.clamp(tetrisARR, 0, 100);
+        tetrisSDFDelay = Math.clamp(tetrisSDFDelay, 0, 300);
+        tetrisSDF = Math.clamp(tetrisSDF, 0, 100);
+        tetris20GLevel = Math.clamp(tetris20GLevel, 1, 100);
     }
 
     public static void save() {

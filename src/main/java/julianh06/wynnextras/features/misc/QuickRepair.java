@@ -71,7 +71,7 @@ public class QuickRepair extends WEMenuExtension {
             long window = client.getWindow().getHandle();
             int key = WynnExtrasConfig.INSTANCE.quickRepairKey;
             boolean keyDown = GLFW.glfwGetKey(window, key) == GLFW.GLFW_PRESS;
-            if (keyDown && !keyWasDown && title.equals(BLACKSMITH_TITLE)) {
+            if (keyDown && !keyWasDown) {
                 startRepair();
                 McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aRepairing..."));
             }
@@ -134,7 +134,7 @@ public class QuickRepair extends WEMenuExtension {
             emptySlotTicks = 0;
             lastNextPageSignature = null;
             client.execute(() -> client.player.closeHandledScreen());
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aAll items repaired!"));
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aAll items under the threshold of " + WynnExtrasConfig.INSTANCE.quickRepairDurabilityThreshold +  "% repaired!"));
         }
     }
 
@@ -224,7 +224,7 @@ public class QuickRepair extends WEMenuExtension {
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
         if (!WynnExtrasConfig.INSTANCE.quickRepairEnabled) return;
         if (!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
-        if (!screen.getTitle().getString().equals(BLACKSMITH_TITLE)) return;
+        if (!screen.getTitle().getString().equals(BLACKSMITH_TITLE) && !screen.getTitle().getString().equals(REPAIR_TITLE)) return;
 
         if (repairButton == null) {
             repairButton = new RepairButtonWidget();

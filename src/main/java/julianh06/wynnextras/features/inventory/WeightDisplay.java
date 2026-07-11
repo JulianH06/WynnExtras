@@ -1,11 +1,13 @@
 package julianh06.wynnextras.features.inventory;
 
 import com.google.gson.*;
+import com.wynntils.models.gear.type.GearTier;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.Core;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.utils.HandledScreenAccess;
+import julianh06.wynnextras.utils.ItemUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.minecraft.client.MinecraftClient;
@@ -67,7 +69,7 @@ public class WeightDisplay {
          ItemTooltipCallback.EVENT.register((stack, tooltipContext, tooltipType, lines) -> {
              if (stack.isEmpty()) return;
              String cleanName = extractCleanName(stack);
-             if (!itemCache.containsKey(cleanName)) return;
+             if (!isTrackedMythic(stack)) return;
              if (isUnidentified(stack)) return;
 
              if (upPressed || downPressed) {
@@ -110,6 +112,7 @@ public class WeightDisplay {
 
     public static ItemData computeScale(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return null;
+        if (!isTrackedMythic(stack)) return null;
         String key = extractCleanName(stack);
         ItemData weightProfile = itemCache.get(key);
         if (weightProfile == null) return null;
@@ -246,7 +249,7 @@ public class WeightDisplay {
 
     public static boolean isTrackedMythic(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        return itemCache.containsKey(extractCleanName(stack));
+        return itemCache.containsKey(extractCleanName(stack)) && ItemUtils.isTier(stack, GearTier.MYTHIC);
     }
 
     public static boolean isUnidentified(ItemStack stack) {
@@ -445,6 +448,7 @@ public class WeightDisplay {
         List<Text> modified = new ArrayList<>();
 
         String key = extractCleanName(itemStack);
+        if (!isTrackedMythic(itemStack)) return tooltips;
         ItemData itemData = itemCache.getOrDefault(key, null);
         ItemData scaleData = weightCacheByHash.getOrDefault(itemStack.getComponents().hashCode(), null);
 
