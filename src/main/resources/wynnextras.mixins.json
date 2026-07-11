@@ -15,6 +15,7 @@
     "ChatHudAddMessageMixin",
     "ClientPlayerInteractionManagerMixin",
     "ClientPacketListenerMixin",
+    "GameDataRecorderMixin",
     "EntityRenderMixin",
     "GameRendererMixin",
     "GuildMapScreenMixin",

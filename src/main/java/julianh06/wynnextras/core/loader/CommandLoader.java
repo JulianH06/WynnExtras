@@ -137,6 +137,15 @@ public class CommandLoader implements WELoader {
             base = base.then(bombshare);
             alias = alias.then(bombshare);
 
+            var record = ClientCommandManager.literal("record")
+                    .executes(ctx -> {
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                julianh06.wynnextras.features.debug.GameDataRecorder.toggle()));
+                        return 1;
+                    });
+            base = base.then(record);
+            alias = alias.then(record);
+
             var hide = ClientCommandManager.literal("hide")
                     .executes(ctx -> {
                         WynnExtrasConfig.INSTANCE.playerHiderToggle = !WynnExtrasConfig.INSTANCE.playerHiderToggle;
