@@ -339,6 +339,18 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(toggle("Resonance", "Manually set if you use a resonance or not",
                                 () -> config.resoInHand, v -> config.resoInHand = v),
                         () -> !config.autoDetectResonanceInHand && !config.autoDetectBloodSorrowTime && config.bloodSorrowTimerEnabled))
+            .sub("Curse Tracker")
+                .add(toggle("Curse Tracker", "Show Curse remaining time on HUD",
+                        () -> config.curseTrackerEnabled, v -> config.curseTrackerEnabled = v))
+                .add(visibleWhen(toggle("Color mobs based on curse", "Highlight cursed mobs with a colored bounding box",
+                                () -> config.curseTrackerColorMobs, v -> config.curseTrackerColorMobs = v),
+                        () -> config.curseTrackerEnabled))
+                .add(visibleWhen(dropdown("Mob highlight color", "Color of the cursed mob highlight",
+                                WynnExtrasConfig.TextColor.class, () -> config.curseTrackerMobColor, v -> config.curseTrackerMobColor = v),
+                        () -> config.curseTrackerEnabled && config.curseTrackerColorMobs))
+                .add(visibleWhen(slider("Timeout duration", "Time for how long the tracker shows \"Curse: expired\" after curse ended (in seconds)", 0, 60,
+                        () -> config.curseTimeout, v -> config.curseTimeout = v),
+                        () -> config.curseTrackerEnabled))
                 .sub("Provoke Timer")
                 .add(toggle("Enable Provoke Timer", "Show provoke timer on HUD",
                         () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
@@ -571,7 +583,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Artifacts power restored", "When you can charge again in TWP room 3",
                         () -> config.artifactRestored, v -> config.artifactRestored = v))
                 .add(toggle("Item broke (0 durability)", "Show 'ITEM BROKE' when one of your items reaches zero durability",
-                        () -> config.itemZeroDurability, v -> config.itemZeroDurability = v)).endSub()
+                        () -> config.itemZeroDurability, v -> config.itemZeroDurability = v))
+                .add(toggle("Colossal Core spawned", "Show 'CORE SPAWNED' when a Colossal Core spawns in TCC",
+                        () -> config.colossalCoreSpawned, v -> config.colossalCoreSpawned = v)).endSub()
             .sub("Media Preview (Experimental)")
                 .add(text("Warning", "We have restricted media downloads to only download from trusted sites (Discord, Imgur and Tenor). We have implemented these and other measures to minimize potential vulnerabilities, but they can never be completely ruled out. Use at your own risk."))
                 .add(toggle("Chat Media Preview", "Preview trusted Discord CDN, Imgur, and Tenor PNG, JPEG, and GIF links",

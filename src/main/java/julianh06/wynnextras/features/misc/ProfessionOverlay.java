@@ -35,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 public class ProfessionOverlay {
 
     private static final long DISPLAY_DURATION_MS = 60 * 1000; // 1 minute
+    private static final long INACTIVITY_PAUSE_MS = 30 * 1000; // pause rate tracking after 30s without a gain
     private static final int MAX_HISTORY = 500;
     private static final long XP_PER_100_PERCENT_AT_132 = 66_287_449L;
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
@@ -54,9 +55,12 @@ public class ProfessionOverlay {
     // Session XP gain per charId:profession
     private static final Map<String, Float> sessionXpGain = new HashMap<>();
 
-    // Session action count, start time, and cached actions/hr per charId:profession
+    // Session action count, active duration, and cached actions/hr per charId:profession.
+    // Active duration only accumulates the gap between gains when it's below INACTIVITY_PAUSE_MS,
+    // so AFK periods don't tank the XP/hr rate and ETA.
     private static final Map<String, Integer> sessionActionCount = new HashMap<>();
-    private static final Map<String, Long> sessionStartTime = new HashMap<>();
+    private static final Map<String, Long> sessionActiveMs = new HashMap<>();
+    private static final Map<String, Long> lastGainTimePerKey = new HashMap<>();
     private static final Map<String, Double> cachedActionsPerHour = new HashMap<>();
     private static final Map<String, Double> cachedXpPerHour = new HashMap<>();
 
@@ -117,7 +121,8 @@ public class ProfessionOverlay {
         sessionXpGain.clear();
         xpHistory.clear();
         sessionActionCount.clear();
-        sessionStartTime.clear();
+        sessionActiveMs.clear();
+        lastGainTimePerKey.clear();
         cachedActionsPerHour.clear();
         cachedXpPerHour.clear();
     }
@@ -168,19 +173,25 @@ public class ProfessionOverlay {
         // Track session gain
         sessionXpGain.merge(key, gainedXpRaw, Float::sum);
 
-        // Track action count + start time for actions/hour
+        // Track action count + accumulate active time (gaps > INACTIVITY_PAUSE_MS are skipped)
         sessionActionCount.merge(key, 1, Integer::sum);
-        sessionStartTime.putIfAbsent(key, System.currentTimeMillis());
+        long now = System.currentTimeMillis();
+        Long prevGain = lastGainTimePerKey.get(key);
+        if (prevGain != null) {
+            long delta = now - prevGain;
+            if (delta > 0 && delta < INACTIVITY_PAUSE_MS) {
+                sessionActiveMs.merge(key, delta, Long::sum);
+            }
+        }
+        lastGainTimePerKey.put(key, now);
 
         // Update cached actions/hr and xp/hr
         int count = sessionActionCount.get(key);
-        if (count > 1) {
-            long elapsedMs = System.currentTimeMillis() - sessionStartTime.get(key);
-            if (elapsedMs > 0) {
-                double hours = elapsedMs / 3_600_000.0;
-                cachedActionsPerHour.put(key, count / hours);
-                cachedXpPerHour.put(key, (double) sessionXpGain.get(key) / hours);
-            }
+        long activeMs = sessionActiveMs.getOrDefault(key, 0L);
+        if (count > 1 && activeMs > 0) {
+            double hours = activeMs / 3_600_000.0;
+            cachedActionsPerHour.put(key, count / hours);
+            cachedXpPerHour.put(key, (double) sessionXpGain.get(key) / hours);
         }
 
         // Track overflow
@@ -207,7 +218,8 @@ public class ProfessionOverlay {
         leaderboardData.clear();
         leaderboardXpList.clear();
         sessionActionCount.clear();
-        sessionStartTime.clear();
+        sessionActiveMs.clear();
+        lastGainTimePerKey.clear();
         cachedActionsPerHour.clear();
         cachedXpPerHour.clear();
 
