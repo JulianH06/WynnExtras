@@ -19,6 +19,17 @@ public class AchievementManager {
             }
     );
 
+    private static final Command badgeCommand = new Command(
+            "badges",
+            "opens the WynnExtras badges screen",
+            context -> {
+                AchievementScreen achievementScreen = new AchievementScreen();
+                achievementScreen.setTab(AchievementScreen.Tab.BADGES);
+                WEScreen.open(() -> achievementScreen);
+                return 1;
+            }
+    );
+
     private static final Command reloadBadgesCommand = new Command(
             "reloadBadges",
             "reloads WynnExtras badge data from the server",

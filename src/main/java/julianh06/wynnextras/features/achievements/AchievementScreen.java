@@ -963,7 +963,7 @@ public class AchievementScreen extends WEScreen {
         }
     }
 
-    private enum Tab {
+    public enum Tab {
         ACHIEVEMENTS,
         BADGES
     }
@@ -985,4 +985,8 @@ public class AchievementScreen extends WEScreen {
     }
 
     private record RewardPreview(RewardType type, String iconId, String colorId, Integer minTier) {}
+
+    public void setTab(Tab tab) {
+        this.tab = tab;
+    }
 }

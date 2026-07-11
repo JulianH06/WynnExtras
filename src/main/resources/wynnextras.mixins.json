@@ -16,6 +16,7 @@
     "ChatHudAddMessageMixin",
     "ClientPlayerInteractionManagerMixin",
     "ClientPacketListenerMixin",
+    "CustomNametagRendererFeatureMixin",
     "EntityRenderManagerShaderMixin",
     "EntityRenderMixin",
     "GameRendererMixin",
