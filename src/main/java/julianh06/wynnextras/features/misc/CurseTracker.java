@@ -19,16 +19,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CurseTracker {
-    private static final char CURSE_SYMBOL = '\u2749'; // ❉
+    private static final char CURSE_SYMBOL = '\u2749';
     private static final Pattern CURSE_PATTERN = Pattern.compile(CURSE_SYMBOL + "\\s*(\\d+(?:\\.\\d+)?)\\s*s");
-    private static final long EXPIRED_X_DURATION_MS = 30_000L;
 
     private static long tickCounter = 0;
-    // The label value last read from the server (-1 = no active curse)
     private static float labelValue = -1f;
-    // Wall clock when labelValue was last changed (anchor for the countdown)
     private static long syncAtMs = 0L;
-    // Wall clock when we last saw any ❉ label (for the post-expiry red-X grace window)
     private static long lastSeenAtMs = -1L;
 
     public static volatile Set<Integer> cursedEntityIds = Set.of();
@@ -44,8 +40,8 @@ public class CurseTracker {
             if (predicted < 0f) predicted = 0f;
             return new CurseState("Curse: " + String.format("%.1fs", predicted), timeColor(predicted), false);
         }
-        if (lastSeenAtMs > 0 && System.currentTimeMillis() - lastSeenAtMs <= EXPIRED_X_DURATION_MS) {
-            return new CurseState("Curse: \u2717", 0xFFFF4444, true);
+        if (lastSeenAtMs > 0 && System.currentTimeMillis() - lastSeenAtMs <= WynnExtrasConfig.INSTANCE.curseTimeout * 1000L) {
+            return new CurseState("Curse: expired", 0xFFFF4444, true);
         }
         return null;
     }

@@ -366,6 +366,7 @@ public class WynnExtrasConfig {
     public int curseTrackerY = 80;
     public float curseTrackerScale = 1.0f;
     public Align curseTrackerAlignment = Align.CENTER;
+    public int curseTimeout = 5;
     public boolean curseTrackerColorMobs = false;
     public TextColor curseTrackerMobColor = TextColor.DARK_PURPLE;
 
