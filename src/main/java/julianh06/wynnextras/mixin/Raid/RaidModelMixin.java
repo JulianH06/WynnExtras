@@ -1,9 +1,9 @@
 package julianh06.wynnextras.mixin.Raid;
 
-import com.wynntils.core.WynntilsMod;
-import com.wynntils.models.raid.RaidModel;
-import com.wynntils.models.raid.event.RaidEndedEvent;
-import com.wynntils.models.raid.type.RaidInfo;
+import julianh06.wynnextras.wtshim.core.WynntilsMod;
+import julianh06.wynnextras.wtshim.models.raid.RaidModel;
+import julianh06.wynnextras.wtshim.models.raid.event.RaidEndedEvent;
+import julianh06.wynnextras.wtshim.models.raid.type.RaidInfo;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;

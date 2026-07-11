@@ -1,15 +1,15 @@
 package julianh06.wynnextras.utils;
 
 import julianh06.wynnextras.features.crafting.data.CraftingDataService;
-import com.wynntils.core.components.Managers;
-import com.wynntils.features.tooltips.ItemStatInfoFeature;
-import com.wynntils.handlers.tooltip.type.TooltipIdentificationDecorator;
-import com.wynntils.models.elements.type.Skill;
-import com.wynntils.models.ingredients.type.IngredientInfo;
-import com.wynntils.models.stats.type.StatPossibleValues;
-import com.wynntils.utils.mc.KeyboardUtils;
-import com.wynntils.utils.type.Pair;
-import com.wynntils.utils.type.RangedValue;
+import julianh06.wynnextras.wtshim.core.components.Managers;
+import julianh06.wynnextras.wtshim.features.tooltips.ItemStatInfoFeature;
+import julianh06.wynnextras.wtshim.handlers.tooltip.type.TooltipIdentificationDecorator;
+import julianh06.wynnextras.wtshim.models.elements.type.Skill;
+import julianh06.wynnextras.wtshim.models.ingredients.type.IngredientInfo;
+import julianh06.wynnextras.wtshim.models.stats.type.StatPossibleValues;
+import julianh06.wynnextras.wtshim.utils.mc.KeyboardUtils;
+import julianh06.wynnextras.wtshim.utils.type.Pair;
+import julianh06.wynnextras.wtshim.utils.type.RangedValue;
 
 import java.util.*;
 import java.util.function.Function;

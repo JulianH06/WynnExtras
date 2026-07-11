@@ -1,6 +1,6 @@
 package julianh06.wynnextras.config.configoptions;
 
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
 
 public class DescLine {
     public enum Align { LEFT, CENTER, RIGHT }

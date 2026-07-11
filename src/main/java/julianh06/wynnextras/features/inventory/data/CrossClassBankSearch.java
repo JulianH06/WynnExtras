@@ -1,9 +1,9 @@
 package julianh06.wynnextras.features.inventory.data;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.items.WynnItem;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.utils.SearchQueryParser;
 import net.fabricmc.loader.api.FabricLoader;

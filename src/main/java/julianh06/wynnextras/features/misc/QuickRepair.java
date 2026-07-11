@@ -1,10 +1,10 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.properties.DurableItemProperty;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.wynn.ContainerUtils;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.items.WynnItem;
+import julianh06.wynnextras.wtshim.models.items.properties.DurableItemProperty;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;

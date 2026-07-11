@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.crafting;
 
-import com.wynntils.models.ingredients.type.IngredientPosition;
+import julianh06.wynnextras.wtshim.models.ingredients.type.IngredientPosition;
 
 import java.util.ArrayList;
 import java.util.Arrays;

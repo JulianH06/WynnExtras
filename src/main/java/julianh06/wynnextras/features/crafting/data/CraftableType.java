@@ -1,9 +1,9 @@
 package julianh06.wynnextras.features.crafting.data;
 
 
-import com.wynntils.models.character.type.ClassType;
-import com.wynntils.models.gear.type.GearType;
-import com.wynntils.models.profession.type.ProfessionType;
+import julianh06.wynnextras.wtshim.models.character.type.ClassType;
+import julianh06.wynnextras.wtshim.models.gear.type.GearType;
+import julianh06.wynnextras.wtshim.models.profession.type.ProfessionType;
 
 public enum CraftableType {
     HELMET(ProfessionType.ARMOURING),

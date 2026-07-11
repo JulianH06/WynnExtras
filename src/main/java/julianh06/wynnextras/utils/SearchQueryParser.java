@@ -1,16 +1,16 @@
 package julianh06.wynnextras.utils;
 
-import com.wynntils.models.gear.type.GearType;
-import com.wynntils.models.gear.type.ConsumableType;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.items.game.*;
-import com.wynntils.models.gear.type.GearTier;
-import com.wynntils.models.character.type.ClassType;
-import com.wynntils.models.items.properties.ClassableItemProperty;
-import com.wynntils.models.items.properties.GearTierItemProperty;
-import com.wynntils.models.items.properties.LeveledItemProperty;
-import com.wynntils.models.profession.type.ProfessionType;
-import com.wynntils.models.stats.type.StatActualValue;
+import julianh06.wynnextras.wtshim.models.gear.type.GearType;
+import julianh06.wynnextras.wtshim.models.gear.type.ConsumableType;
+import julianh06.wynnextras.wtshim.models.items.WynnItem;
+import julianh06.wynnextras.wtshim.models.items.items.game.*;
+import julianh06.wynnextras.wtshim.models.gear.type.GearTier;
+import julianh06.wynnextras.wtshim.models.character.type.ClassType;
+import julianh06.wynnextras.wtshim.models.items.properties.ClassableItemProperty;
+import julianh06.wynnextras.wtshim.models.items.properties.GearTierItemProperty;
+import julianh06.wynnextras.wtshim.models.items.properties.LeveledItemProperty;
+import julianh06.wynnextras.wtshim.models.profession.type.ProfessionType;
+import julianh06.wynnextras.wtshim.models.stats.type.StatActualValue;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;

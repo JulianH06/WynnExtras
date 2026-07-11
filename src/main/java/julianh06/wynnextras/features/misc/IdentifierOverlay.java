@@ -1,10 +1,10 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.containers.ItemIdentifierContainer;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.containers.containers.ItemIdentifierContainer;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.render.RenderUtils;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
 import julianh06.wynnextras.utils.UI.WEMenuExtension;
 import julianh06.wynnextras.utils.UI.WEScreen;

@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.statuseffects.type.StatusEffect;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.statuseffects.type.StatusEffect;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;

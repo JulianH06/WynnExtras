@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.aspects;
 
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.type.Time;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;

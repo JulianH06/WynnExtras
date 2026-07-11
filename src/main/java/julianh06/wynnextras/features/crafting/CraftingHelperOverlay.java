@@ -1,16 +1,16 @@
 package julianh06.wynnextras.features.crafting;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
-import com.wynntils.models.profession.type.ProfessionType;
-import com.wynntils.models.worlds.type.BombInfo;
-import com.wynntils.models.worlds.type.BombType;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
-import com.wynntils.utils.type.Time;
-import com.wynntils.utils.wynn.ContainerUtils;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.containers.containers.CraftingStationContainer;
+import julianh06.wynnextras.wtshim.models.profession.type.ProfessionType;
+import julianh06.wynnextras.wtshim.models.worlds.type.BombInfo;
+import julianh06.wynnextras.wtshim.models.worlds.type.BombType;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.render.type.HorizontalAlignment;
+import julianh06.wynnextras.wtshim.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.wtshim.utils.type.Time;
+import julianh06.wynnextras.wtshim.utils.wynn.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
 import julianh06.wynnextras.features.crafting.data.CraftingDataService;

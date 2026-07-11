@@ -5,7 +5,7 @@ import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.features.badges.BadgeService;
 import julianh06.wynnextras.utils.UI.WEScreen;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import net.minecraft.text.Text;
 
 @WEModule

@@ -38,11 +38,12 @@
 			}
 		}
 	},
-	"license": "CC0-1.0",
+	"license": "GPL-3.0-only AND LGPL-3.0-only",
 	"icon": "assets/wynnextras/wynnextras.png",
 	"environment": "*",
 	"entrypoints": {
 		"client": [
+          "julianh06.wynnextras.wtshim.fabric.WynntilsCompatInit",
           "julianh06.wynnextras.core.WynnExtras"
 		],
 		"modmenu": [
@@ -50,14 +51,14 @@
         ]
 	},
 	"mixins": [
-      "wynnextras.mixins.json"
+      "wynnextras.mixins.json",
+      "wynntils-compat.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.16.10",
-		"minecraft": "~1.21.4",
+		"minecraft": "~1.21.11",
 		"java": ">=21",
-		"fabric-api": "*",
-		"wynntils": ">=3.3.4"
+		"fabric-api": "*"
 	},
 	"suggests": {
 		"modmenu": "*"

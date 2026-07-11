@@ -1,11 +1,11 @@
 package julianh06.wynnextras.features.crafting;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
-import com.wynntils.models.gear.type.GearAttackSpeed;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.FontRenderer;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.containers.containers.CraftingStationContainer;
+import julianh06.wynnextras.wtshim.models.gear.type.GearAttackSpeed;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.render.FontRenderer;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.crafting.data.CraftableType;

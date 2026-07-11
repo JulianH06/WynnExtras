@@ -1,8 +1,8 @@
 package julianh06.wynnextras.features.mount;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.render.type.HorizontalAlignment;
+import julianh06.wynnextras.wtshim.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;

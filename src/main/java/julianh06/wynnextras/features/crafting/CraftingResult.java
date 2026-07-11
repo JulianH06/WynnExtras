@@ -1,15 +1,15 @@
 package julianh06.wynnextras.features.crafting;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.models.character.type.ClassType;
-import com.wynntils.models.elements.type.Skill;
-import com.wynntils.models.gear.type.GearRequirements;
-import com.wynntils.models.items.items.game.CraftedGearItem;
-import com.wynntils.models.stats.type.DamageType;
-import com.wynntils.models.stats.type.StatPossibleValues;
-import com.wynntils.models.stats.type.StatType;
-import com.wynntils.utils.type.Pair;
-import com.wynntils.utils.type.RangedValue;
+import julianh06.wynnextras.wtshim.models.character.type.ClassType;
+import julianh06.wynnextras.wtshim.models.elements.type.Skill;
+import julianh06.wynnextras.wtshim.models.gear.type.GearRequirements;
+import julianh06.wynnextras.wtshim.models.items.items.game.CraftedGearItem;
+import julianh06.wynnextras.wtshim.models.stats.type.DamageType;
+import julianh06.wynnextras.wtshim.models.stats.type.StatPossibleValues;
+import julianh06.wynnextras.wtshim.models.stats.type.StatType;
+import julianh06.wynnextras.wtshim.utils.type.Pair;
+import julianh06.wynnextras.wtshim.utils.type.RangedValue;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;

@@ -1,6 +1,6 @@
 package julianh06.wynnextras.utils.UI;
 
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;

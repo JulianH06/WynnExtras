@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.chat;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.loader.WELoader;

@@ -6,7 +6,7 @@ import com.google.gson.JsonParser;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import com.wynntils.core.text.StyledText;
+import julianh06.wynnextras.wtshim.core.text.StyledText;
 
 import java.io.IOException;
 

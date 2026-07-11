@@ -1,13 +1,13 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.Container;
-import com.wynntils.models.containers.containers.CharacterInfoContainer;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
-import com.wynntils.models.containers.containers.personal.AccountBankContainer;
-import com.wynntils.models.containers.containers.personal.BookshelfContainer;
-import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
-import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.containers.Container;
+import julianh06.wynnextras.wtshim.models.containers.containers.CharacterInfoContainer;
+import julianh06.wynnextras.wtshim.models.containers.containers.CraftingStationContainer;
+import julianh06.wynnextras.wtshim.models.containers.containers.personal.AccountBankContainer;
+import julianh06.wynnextras.wtshim.models.containers.containers.personal.BookshelfContainer;
+import julianh06.wynnextras.wtshim.models.containers.containers.personal.CharacterBankContainer;
+import julianh06.wynnextras.wtshim.models.containers.containers.personal.MiscBucketContainer;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;

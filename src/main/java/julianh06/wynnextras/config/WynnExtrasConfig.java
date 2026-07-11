@@ -157,6 +157,7 @@ public class WynnExtrasConfig {
     public boolean notgLowerPlatform = false;
     public boolean artifactRestored = true;
     public boolean itemZeroDurability = true;
+    public boolean colossalCoreSpawned = false;
 
     public void syncPremades() {
         if(premades == null) premades = new HashMap<>();
@@ -173,6 +174,7 @@ public class WynnExtrasConfig {
         premades.put("A new platform has|LOWER PLATFORM SPAWNED", notgLowerPlatform);
         premades.put("The Artifact's power has been restored|SPEAR RECHARGED", artifactRestored);
         premades.put("One of your items has reached zero durability|ITEM BROKE", itemZeroDurability);
+        premades.put("A Colossal Core has spawned!|CORE SPAWNED", colossalCoreSpawned);
 
         //Isoptera announcements
         premades.put("The Interdimensional Isoptera is in the Gray Grotto|GRAY", isopteraGray);
@@ -384,6 +386,15 @@ public class WynnExtrasConfig {
     public float totemWarningScale = 2.0f;
     public Align totemWarningAlignment = Align.CENTER;
 
+    // ==================== CURSE TRACKER ====================
+    public boolean curseTrackerEnabled = false;
+    public int curseTrackerX = -1;
+    public int curseTrackerY = 80;
+    public float curseTrackerScale = 1.0f;
+    public Align curseTrackerAlignment = Align.CENTER;
+    public boolean curseTrackerColorMobs = false;
+    public TextColor curseTrackerMobColor = TextColor.DARK_PURPLE;
+
     // ==================== BLOOD SORROW TIMER ====================
     public boolean bloodSorrowTimerEnabled = false;
     public boolean autoDetectBloodSorrowTime = true;
@@ -582,7 +593,19 @@ public class WynnExtrasConfig {
         try {
             if (Files.exists(CONFIG_PATH)) {
                 String json = Files.readString(CONFIG_PATH);
-                INSTANCE = GSON.fromJson(json, WynnExtrasConfig.class);
+                try {
+                    INSTANCE = GSON.fromJson(json, WynnExtrasConfig.class);
+                } catch (Exception e) {
+                    // Corrupted config (invalid JSON): back it up and start fresh instead of crashing the game
+                    WynnExtras.LOGGER.error("[WynnExtras] Config is corrupted, resetting to defaults: " + e.getMessage());
+                    try {
+                        Files.move(CONFIG_PATH, CONFIG_PATH.resolveSibling("wynnextras.json.corrupted"),
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException moveEx) {
+                        WynnExtras.LOGGER.error("[WynnExtras] Failed to back up corrupted config: " + moveEx.getMessage());
+                    }
+                    INSTANCE = new WynnExtrasConfig();
+                }
                 if (INSTANCE == null) {
                     INSTANCE = new WynnExtrasConfig();
                 }

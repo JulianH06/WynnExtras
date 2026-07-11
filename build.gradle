@@ -28,6 +28,8 @@ repositories {
 		name = "Cloth Config"
 		url = "https://maven.shedaniel.me/"
 	}
+	// NeoForged EventBus (WynnExtras uses it for its own event system)
+	maven { url = "https://maven.neoforged.net/releases" }
 
 	maven { url = "https://repo.maven.apache.org/maven2" }
 }
@@ -65,10 +67,19 @@ dependencies {
 
 	modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	modImplementation "maven.modrinth:wynntils:v${project.wynntils_version}-fabric"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	shadowImpl 'org.reflections:reflections:0.10.2'
+
+	// NeoForged EventBus — used by WynnExtras' own event system and our Wynntils-compat event shell
+	shadowImpl("net.neoforged:bus:${project.neoforge_eventbus_version}") {
+		exclude group: "org.ow2.asm"
+		exclude group: "org.apache.logging.log4j"
+		exclude group: "cpw.mods", module: "modlauncher"
+		exclude group: "org.apache.commons", module: "commons-lang3"
+	}
+	// Note: commons-lang3 is provided by Minecraft — don't shadow it to avoid
+	// NoSuchMethodError when our shadowed version overrides Minecraft's.
 }
 
 processResources {
@@ -114,6 +125,15 @@ tasks.named("shadowJar").configure {
 	configurations = [project.configurations.shadowImpl, project.configurations.shadowModImpl]
 	archiveClassifier.set('all')
 	exclude 'javassist/tools/rmi/AppletServer.class'
+
+	// Relocate shaded libs: real Wynntils bundles net.neoforged.bus (and friends)
+	// unrelocated — without this, running alongside Wynntils is first-jar-wins.
+	relocate 'net.neoforged.bus', 'julianh06.wynnextras.shaded.neoforged.bus'
+	relocate 'net.jodah', 'julianh06.wynnextras.shaded.jodah'
+	relocate 'org.reflections', 'julianh06.wynnextras.shaded.reflections'
+	relocate 'javassist', 'julianh06.wynnextras.shaded.javassist'
+	// Minecraft provides slf4j — never ship our own copy.
+	exclude 'org/slf4j/**'
 }
 
 // configure the maven publication

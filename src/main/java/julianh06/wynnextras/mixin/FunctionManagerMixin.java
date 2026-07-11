@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.core.consumers.functions.Function;
-import com.wynntils.core.consumers.functions.FunctionManager;
+import julianh06.wynnextras.wtshim.core.consumers.functions.Function;
+import julianh06.wynnextras.wtshim.core.consumers.functions.FunctionManager;
 import julianh06.wynnextras.functions.RaidFunctions;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

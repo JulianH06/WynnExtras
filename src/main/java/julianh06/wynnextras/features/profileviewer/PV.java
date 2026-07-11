@@ -2,7 +2,7 @@ package julianh06.wynnextras.features.profileviewer;
 
 import julianh06.wynnextras.core.WynnExtras;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.ClickEvent;

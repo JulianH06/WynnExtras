@@ -1,8 +1,8 @@
 package julianh06.wynnextras.features.aspects.pages;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.*;

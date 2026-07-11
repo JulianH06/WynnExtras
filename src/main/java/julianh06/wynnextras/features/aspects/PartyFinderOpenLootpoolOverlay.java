@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.UI.WEHandledScreen;
 import julianh06.wynnextras.utils.UI.WEScreen;

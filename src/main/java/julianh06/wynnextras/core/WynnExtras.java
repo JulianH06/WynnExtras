@@ -1,6 +1,6 @@
 package julianh06.wynnextras.core;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
@@ -196,6 +196,7 @@ public class WynnExtras implements ClientModInitializer {
 		ProvokeTimer.init();
 		TotemTimer.register();
 		BloodSorrowTimer.register();
+		julianh06.wynnextras.features.misc.CurseTracker.register();
 		julianh06.wynnextras.features.misc.RadiantHud.init();
 		julianh06.wynnextras.features.misc.ProfessionOverlay.register();
 		julianh06.wynnextras.features.bankoverlay.BankOverlay2.registerScreenHooks();
@@ -231,6 +232,7 @@ public class WynnExtras implements ClientModInitializer {
 
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+			warnIfWynntilsPresent();
 			Achievements.load();
 			AccountBankData.INSTANCE.load();
 			CharacterBankData.INSTANCE.load();
@@ -265,6 +267,20 @@ public class WynnExtras implements ClientModInitializer {
 		}
 
 		ResetTimeConfig.INSTANCE.fetchIfNeeded();
+	}
+
+	private static boolean wynntilsWarningShown = false;
+
+	// This standalone build ships its own Wynntils-compat layer. Running next to
+	// real Wynntils works, but WynnExtras can no longer suppress Wynntils' own UI
+	// (bank overlay, tooltips, highlights) — the user has to disable those manually.
+	private static void warnIfWynntilsPresent() {
+		if (wynntilsWarningShown || !FabricLoader.getInstance().isModLoaded("wynntils")) return;
+		wynntilsWarningShown = true;
+		TickScheduler.runAfterTicks(100, () -> {
+			sendMessageToClient("§eWynntils detected! This standalone WynnExtras build has its own Wynntils replacement built in.");
+			sendMessageToClient("§eTo avoid doubled UI, disable these Wynntils features: §fPersonal Storage Utilities, Item Stat Info, Tooltip Fitting, Container Scroll, Item Highlight§e.");
+		});
 	}
 
 	private static void updateVersionData() {

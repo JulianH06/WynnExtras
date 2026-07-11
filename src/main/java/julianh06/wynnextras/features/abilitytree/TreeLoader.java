@@ -1,10 +1,10 @@
 package julianh06.wynnextras.features.abilitytree;
 
 import com.google.gson.*;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.character.type.SavableSkillPointSet;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.character.type.SavableSkillPointSet;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.type.Time;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;

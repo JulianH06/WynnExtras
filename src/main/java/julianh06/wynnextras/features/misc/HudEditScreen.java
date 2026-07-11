@@ -108,6 +108,17 @@ public class HudEditScreen extends Screen {
             elements.add(new HudElement("blood", "Blood Sorrow: 1.7s",
                     c.bloodSorrowTimerX, c.bloodSorrowTimerY, c.bloodSorrowTimerScale, c.bloodSorrowAlignment));
         }
+        if (c.curseTrackerEnabled) {
+            String curseText = "Curse: 3.2s";
+            int curseColor = 0xFF44FF44;
+            CurseTracker.CurseState state = CurseTracker.getState();
+            if (state != null) {
+                curseText = state.displayText();
+                curseColor = state.color();
+            }
+            elements.add(new HudElement("curse", curseText,
+                    c.curseTrackerX, c.curseTrackerY, c.curseTrackerScale, c.curseTrackerAlignment, curseColor));
+        }
         if (c.totemTimerEnabled && c.totemTimerWarningText) {
             int wx = c.totemWarningX;
             if (wx == -1) wx = 200;
@@ -207,6 +218,9 @@ public class HudEditScreen extends Screen {
                 e.x = (width - e.sw()) / 2;
             }
             if (e.id.equals("blood") && WynnExtrasConfig.INSTANCE.bloodSorrowTimerX == -1) {
+                e.x = (width - e.sw()) / 2;
+            }
+            if (e.id.equals("curse") && WynnExtrasConfig.INSTANCE.curseTrackerX == -1) {
                 e.x = (width - e.sw()) / 2;
             }
             if (e.id.equals("warning") && WynnExtrasConfig.INSTANCE.totemWarningX == -1) {
@@ -756,6 +770,9 @@ public class HudEditScreen extends Screen {
                 }
                 case "blood" -> {
                     c.bloodSorrowTimerX = e.x + e.sw() / 2; c.bloodSorrowTimerY = e.y + e.sh() / 2; c.bloodSorrowTimerScale = e.scale; c.bloodSorrowAlignment = e.alignment;
+                }
+                case "curse" -> {
+                    c.curseTrackerX = e.x + e.sw() / 2; c.curseTrackerY = e.y + e.sh() / 2; c.curseTrackerScale = e.scale; c.curseTrackerAlignment = e.alignment;
                 }
                 case "warning" -> {
                     c.totemWarningX = e.x + e.sw() / 2; c.totemWarningY = e.y + e.sh() / 2; c.totemWarningScale = e.scale; c.totemWarningAlignment = e.alignment;

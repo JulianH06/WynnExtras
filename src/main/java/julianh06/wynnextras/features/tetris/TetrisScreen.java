@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.tetris;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import net.minecraft.client.MinecraftClient;

@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.waypoints;
 
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
 import julianh06.wynnextras.features.waypoints.data.Waypoint;
 import julianh06.wynnextras.features.waypoints.data.WaypointCategory;
 import julianh06.wynnextras.features.waypoints.data.WaypointData;

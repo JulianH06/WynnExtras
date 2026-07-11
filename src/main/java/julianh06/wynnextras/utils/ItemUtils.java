@@ -1,12 +1,12 @@
 package julianh06.wynnextras.utils;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.gear.type.GearTier;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.encoding.type.EncodingSettings;
-import com.wynntils.models.items.items.game.GearItem;
-import com.wynntils.utils.EncodedByteBuffer;
-import com.wynntils.utils.type.ErrorOr;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.gear.type.GearTier;
+import julianh06.wynnextras.wtshim.models.items.WynnItem;
+import julianh06.wynnextras.wtshim.models.items.encoding.type.EncodingSettings;
+import julianh06.wynnextras.wtshim.models.items.items.game.GearItem;
+import julianh06.wynnextras.wtshim.utils.EncodedByteBuffer;
+import julianh06.wynnextras.wtshim.utils.type.ErrorOr;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.item.ItemStack;

@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin.Raid;
 
-import com.wynntils.models.raid.event.RaidEndedEvent;
-import com.wynntils.models.raid.type.RaidInfo;
+import julianh06.wynnextras.wtshim.models.raid.event.RaidEndedEvent;
+import julianh06.wynnextras.wtshim.models.raid.type.RaidInfo;
 import julianh06.wynnextras.features.misc.PlayerHider;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

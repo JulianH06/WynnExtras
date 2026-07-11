@@ -302,8 +302,8 @@ public class WeightDisplay {
 
     private static boolean isItemStatInfoFeatureEnabled() {
         try {
-            Class<?> featureClass = Class.forName("com.wynntils.features.tooltips.ItemStatInfoFeature");
-            Class<?> managersClass = Class.forName("com.wynntils.core.components.Managers");
+            Class<?> featureClass = Class.forName("julianh06.wynnextras.wtshim.features.tooltips.ItemStatInfoFeature");
+            Class<?> managersClass = Class.forName("julianh06.wynnextras.wtshim.core.components.Managers");
             Object featureManager = managersClass.getField("Feature").get(null);
             Object feature = featureManager.getClass().getMethod("getFeatureInstance", Class.class).invoke(featureManager, featureClass);
             if (feature == null) return false;

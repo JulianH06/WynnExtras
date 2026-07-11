@@ -7,3 +7,8 @@
 # These are Windows script files and should use crlf
 *.bat           text eol=crlf
 
+# Custom merge driver: normalizes com.wynntils -> wtshim on base/theirs before
+# merging so upstream merges don't conflict on rewritten imports.
+# One-time setup per clone: git config merge.wtshim.driver 'tools/merge-wtshim.sh %O %A %B'
+*.java merge=wtshim
+

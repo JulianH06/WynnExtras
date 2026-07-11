@@ -1,6 +1,6 @@
 //package julianh06.wynnextras.config;
 //
-//import com.wynntils.utils.mc.McUtils;
+//import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 //import net.minecraft.client.gui.Click;
 //import net.minecraft.client.gui.DrawContext;
 //import net.minecraft.client.gui.screen.Screen;

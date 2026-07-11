@@ -1,7 +1,7 @@
 package julianh06.wynnextras.functions;
 
 import com.google.common.base.CaseFormat;
-import com.wynntils.core.consumers.functions.Function;
+import julianh06.wynnextras.wtshim.core.consumers.functions.Function;
 
 public abstract class WEFunctionBase<T> extends Function<T> {
     private final String WEName;

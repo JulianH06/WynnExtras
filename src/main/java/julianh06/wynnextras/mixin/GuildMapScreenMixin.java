@@ -1,27 +1,27 @@
 package julianh06.wynnextras.mixin;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.core.components.Models;
-import com.wynntils.core.text.StyledText;
-import com.wynntils.models.marker.MarkerModel;
-import com.wynntils.models.territories.TerritoryInfo;
-import com.wynntils.models.territories.profile.TerritoryProfile;
-import com.wynntils.models.territories.type.GuildResource;
-import com.wynntils.models.territories.type.GuildResourceValues;
-import com.wynntils.screens.maps.AbstractMapScreen;
-import com.wynntils.screens.maps.GuildMapScreen;
-import com.wynntils.services.map.pois.Poi;
-import com.wynntils.services.map.pois.TerritoryPoi;
-import com.wynntils.services.map.type.TerritoryFilterType;
-import com.wynntils.utils.colors.CommonColors;
-import com.wynntils.utils.render.FontRenderer;
-import com.wynntils.utils.render.RenderUtils;
-import com.wynntils.utils.render.Texture;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.TextShadow;
-import com.wynntils.utils.render.type.VerticalAlignment;
-import com.wynntils.utils.type.BoundingBox;
-import com.wynntils.utils.type.CappedValue;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.core.text.StyledText;
+import julianh06.wynnextras.wtshim.models.marker.MarkerModel;
+import julianh06.wynnextras.wtshim.models.territories.TerritoryInfo;
+import julianh06.wynnextras.wtshim.models.territories.profile.TerritoryProfile;
+import julianh06.wynnextras.wtshim.models.territories.type.GuildResource;
+import julianh06.wynnextras.wtshim.models.territories.type.GuildResourceValues;
+import julianh06.wynnextras.wtshim.screens.maps.AbstractMapScreen;
+import julianh06.wynnextras.wtshim.screens.maps.GuildMapScreen;
+import julianh06.wynnextras.wtshim.services.map.pois.Poi;
+import julianh06.wynnextras.wtshim.services.map.pois.TerritoryPoi;
+import julianh06.wynnextras.wtshim.services.map.type.TerritoryFilterType;
+import julianh06.wynnextras.wtshim.utils.colors.CommonColors;
+import julianh06.wynnextras.wtshim.utils.render.FontRenderer;
+import julianh06.wynnextras.wtshim.utils.render.RenderUtils;
+import julianh06.wynnextras.wtshim.utils.render.Texture;
+import julianh06.wynnextras.wtshim.utils.render.type.HorizontalAlignment;
+import julianh06.wynnextras.wtshim.utils.render.type.TextShadow;
+import julianh06.wynnextras.wtshim.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.wtshim.utils.type.BoundingBox;
+import julianh06.wynnextras.wtshim.utils.type.CappedValue;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.duckInterfaces.TerritoryInfoMixinDuck;
 import julianh06.wynnextras.mixin.Accessor.GuildMapScreenAccessor;
@@ -41,7 +41,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.wynntils.services.map.type.TerritoryFilterType.HIGHER;
+import static julianh06.wynnextras.wtshim.services.map.type.TerritoryFilterType.HIGHER;
 
 @Mixin(value = GuildMapScreen.class)
 public class GuildMapScreenMixin extends AbstractMapScreen {

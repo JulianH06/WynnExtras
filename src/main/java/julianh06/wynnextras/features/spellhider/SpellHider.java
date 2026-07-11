@@ -2,7 +2,7 @@ package julianh06.wynnextras.features.spellhider;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.*;
-import com.wynntils.mc.extension.EntityExtension;
+import julianh06.wynnextras.wtshim.mc.extension.EntityExtension;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.InitEvent;

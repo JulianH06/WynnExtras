@@ -1,7 +1,7 @@
 //package julianh06.wynnextras.features.aspects.pages;
 //
-//import com.wynntils.utils.colors.CustomColor;
-//import com.wynntils.utils.mc.McUtils;
+//import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
+//import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 //import julianh06.wynnextras.features.aspects.AspectScreen;
 //import julianh06.wynnextras.features.aspects.oldPages.AspectScreenHost;
 //import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;

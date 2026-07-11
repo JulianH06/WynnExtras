@@ -1,6 +1,6 @@
 package julianh06.wynnextras.mixin.BankOverlay;
 
-import com.wynntils.features.inventory.PersonalStorageUtilitiesFeature;
+import julianh06.wynnextras.wtshim.features.inventory.PersonalStorageUtilitiesFeature;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

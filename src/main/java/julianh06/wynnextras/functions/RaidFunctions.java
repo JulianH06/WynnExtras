@@ -1,7 +1,7 @@
 package julianh06.wynnextras.functions;
 
-import com.wynntils.core.consumers.functions.arguments.Argument;
-import com.wynntils.core.consumers.functions.arguments.FunctionArguments;
+import julianh06.wynnextras.wtshim.core.consumers.functions.arguments.Argument;
+import julianh06.wynnextras.wtshim.core.consumers.functions.arguments.FunctionArguments;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
 import net.minecraft.client.resource.language.I18n;

@@ -1,8 +1,8 @@
 package julianh06.wynnextras.features.raid;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.raid.type.RaidRoomInfo;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.raid.type.RaidRoomInfo;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.event.RaidEndedEvent;
 import julianh06.wynnextras.event.api.WEEventBus;

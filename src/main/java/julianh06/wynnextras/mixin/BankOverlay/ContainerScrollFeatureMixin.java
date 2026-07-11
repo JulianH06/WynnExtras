@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin.BankOverlay;
 
-import com.wynntils.features.ui.ContainerScrollFeature;
-import com.wynntils.models.containers.type.ScrollableContainerProperty;
+import julianh06.wynnextras.wtshim.features.ui.ContainerScrollFeature;
+import julianh06.wynnextras.wtshim.models.containers.type.ScrollableContainerProperty;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -17,7 +17,7 @@ public class ContainerScrollFeatureMixin {
             method = "onInteract",
             at = @At(
                     value = "INVOKE",
-                    target = "Lcom/wynntils/models/containers/type/ScrollableContainerProperty;getScrollButton(Lnet/minecraft/client/gui/screen/ingame/HandledScreen;Z)Ljava/util/Optional;"
+                    target = "Ljulianh06/wynnextras/wtshim/models/containers/type/ScrollableContainerProperty;getScrollButton(Lnet/minecraft/client/gui/screen/ingame/HandledScreen;Z)Ljava/util/Optional;"
             )
     )
     public Optional<Integer> getScrollButton(ScrollableContainerProperty instance, HandledScreen<?> screen, boolean previousPage) {

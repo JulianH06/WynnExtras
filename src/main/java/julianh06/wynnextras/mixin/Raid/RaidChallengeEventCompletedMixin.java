@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin.Raid;
 
-import com.wynntils.models.raid.event.RaidChallengeEvent;
-import com.wynntils.models.raid.type.RaidInfo;
+import julianh06.wynnextras.wtshim.models.raid.event.RaidChallengeEvent;
+import julianh06.wynnextras.wtshim.models.raid.type.RaidInfo;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

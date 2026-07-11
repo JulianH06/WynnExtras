@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.features.tooltips.TooltipFittingFeature;
-import com.wynntils.utils.mc.TooltipUtils;
+import julianh06.wynnextras.wtshim.features.tooltips.TooltipFittingFeature;
+import julianh06.wynnextras.wtshim.utils.mc.TooltipUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.inventory.WeightDisplay;
 import julianh06.wynnextras.utils.LunarCompat;
@@ -20,7 +20,7 @@ public class TooltipFittingFeatureMixin {
             method = "onTooltipPre",
             at = @At(
                     value = "INVOKE",
-                    target = "Lcom/wynntils/utils/mc/TooltipUtils;getClientTooltipComponent(Ljava/util/List;)Ljava/util/List;"
+                    target = "Ljulianh06/wynnextras/wtshim/utils/mc/TooltipUtils;getClientTooltipComponent(Ljava/util/List;)Ljava/util/List;"
             )
     )
     private List<TooltipComponent> redirectGetClientTooltipComponent(List<Text> components) {

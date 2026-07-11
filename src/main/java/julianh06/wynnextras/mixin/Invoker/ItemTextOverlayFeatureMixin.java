@@ -1,6 +1,6 @@
 package julianh06.wynnextras.mixin.Invoker;
 
-import com.wynntils.features.inventory.ItemTextOverlayFeature;
+import julianh06.wynnextras.wtshim.features.inventory.ItemTextOverlayFeature;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;

@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import com.wynntils.mc.extension.EntityRenderStateExtension;
+import julianh06.wynnextras.wtshim.mc.extension.EntityRenderStateExtension;
 import julianh06.wynnextras.features.misc.HuntedModeTracker;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.render.PlayerRenderFilter;

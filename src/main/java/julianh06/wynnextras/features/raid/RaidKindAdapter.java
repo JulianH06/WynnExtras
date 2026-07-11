@@ -4,7 +4,7 @@ import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.*;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import com.wynntils.models.raid.raids.*;
+import julianh06.wynnextras.wtshim.models.raid.raids.*;
 
 import java.io.IOException;
 

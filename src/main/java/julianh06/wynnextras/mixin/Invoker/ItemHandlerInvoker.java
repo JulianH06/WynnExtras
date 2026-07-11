@@ -1,8 +1,8 @@
 package julianh06.wynnextras.mixin.Invoker;
 
-import com.wynntils.core.text.StyledText;
-import com.wynntils.handlers.item.ItemAnnotation;
-import com.wynntils.handlers.item.ItemHandler;
+import julianh06.wynnextras.wtshim.core.text.StyledText;
+import julianh06.wynnextras.wtshim.handlers.item.ItemAnnotation;
+import julianh06.wynnextras.wtshim.handlers.item.ItemHandler;
 import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;

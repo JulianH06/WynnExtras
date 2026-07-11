@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.waypoints.data;
 
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
 
 public class WaypointCategory {
     public String id;

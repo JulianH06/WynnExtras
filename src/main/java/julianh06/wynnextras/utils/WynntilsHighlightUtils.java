@@ -1,10 +1,10 @@
 package julianh06.wynnextras.utils;
 
-import com.wynntils.core.components.Managers;
-import com.wynntils.features.inventory.ItemHighlightFeature;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.render.RenderUtils;
-import com.wynntils.utils.render.Texture;
+import julianh06.wynnextras.wtshim.core.components.Managers;
+import julianh06.wynnextras.wtshim.features.inventory.ItemHighlightFeature;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.render.RenderUtils;
+import julianh06.wynnextras.wtshim.utils.render.Texture;
 import net.minecraft.client.gui.DrawContext;
 
 public final class WynntilsHighlightUtils {

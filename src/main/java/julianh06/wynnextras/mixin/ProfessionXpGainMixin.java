@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.models.profession.event.ProfessionXpGainEvent;
-import com.wynntils.models.profession.type.ProfessionType;
+import julianh06.wynnextras.wtshim.models.profession.event.ProfessionXpGainEvent;
+import julianh06.wynnextras.wtshim.models.profession.type.ProfessionType;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

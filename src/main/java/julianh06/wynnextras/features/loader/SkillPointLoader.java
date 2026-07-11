@@ -1,9 +1,9 @@
 package julianh06.wynnextras.features.loader;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.containers.CharacterInfoContainer;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.containers.containers.CharacterInfoContainer;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.type.Time;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.misc.CompassMenuOverlay;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;

@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin.Invoker;
 
-import com.wynntils.features.inventory.ItemHighlightFeature;
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.features.inventory.ItemHighlightFeature;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
 import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;

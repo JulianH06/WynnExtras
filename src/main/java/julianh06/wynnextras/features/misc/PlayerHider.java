@@ -1,10 +1,10 @@
 package julianh06.wynnextras.features.misc;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.raid.raids.RaidKind;
-import com.wynntils.models.raid.type.RaidInfo;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.raid.raids.RaidKind;
+import julianh06.wynnextras.wtshim.models.raid.type.RaidInfo;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;

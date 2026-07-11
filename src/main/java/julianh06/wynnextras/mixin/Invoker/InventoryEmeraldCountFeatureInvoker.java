@@ -1,6 +1,6 @@
 package julianh06.wynnextras.mixin.Invoker;
 
-import com.wynntils.features.inventory.InventoryEmeraldCountFeature;
+import julianh06.wynnextras.wtshim.features.inventory.InventoryEmeraldCountFeature;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 

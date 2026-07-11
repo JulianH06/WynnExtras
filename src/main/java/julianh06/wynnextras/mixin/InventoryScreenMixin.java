@@ -1,11 +1,11 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.Container;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
-import com.wynntils.models.containers.containers.ItemIdentifierContainer;
-import com.wynntils.models.containers.containers.personal.*;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.containers.Container;
+import julianh06.wynnextras.wtshim.models.containers.containers.CraftingStationContainer;
+import julianh06.wynnextras.wtshim.models.containers.containers.ItemIdentifierContainer;
+import julianh06.wynnextras.wtshim.models.containers.containers.personal.*;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.inventory.BankOverlay;

@@ -1,14 +1,14 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.wynn.ContainerUtils;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.wynn.ContainerUtils;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 
-import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
+import static julianh06.wynnextras.wtshim.utils.wynn.ContainerUtils.clickOnSlot;
 
 public class FastRequeue {
     static boolean inRaidChest = false;

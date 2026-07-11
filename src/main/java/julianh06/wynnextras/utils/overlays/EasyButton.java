@@ -1,7 +1,7 @@
 package julianh06.wynnextras.utils.overlays;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.render.RenderUtils;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.render.RenderUtils;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;

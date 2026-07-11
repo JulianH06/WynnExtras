@@ -1,10 +1,10 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.territories.TerritoryInfo;
-import com.wynntils.models.territories.type.GuildResource;
-import com.wynntils.models.territories.type.GuildResourceValues;
-import com.wynntils.utils.type.CappedValue;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.territories.TerritoryInfo;
+import julianh06.wynnextras.wtshim.models.territories.type.GuildResource;
+import julianh06.wynnextras.wtshim.models.territories.type.GuildResourceValues;
+import julianh06.wynnextras.wtshim.utils.type.CappedValue;
 import julianh06.wynnextras.duckInterfaces.Estimation;
 import julianh06.wynnextras.duckInterfaces.TerritoryInfoMixinDuck;
 import net.minecraft.util.Formatting;

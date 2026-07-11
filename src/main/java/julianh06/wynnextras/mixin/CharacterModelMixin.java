@@ -1,11 +1,11 @@
 package julianh06.wynnextras.mixin;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.character.CharacterModel;
-import com.wynntils.models.worlds.event.WorldStateEvent;
-import com.wynntils.models.worlds.type.WorldState;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.character.CharacterModel;
+import julianh06.wynnextras.wtshim.models.worlds.event.WorldStateEvent;
+import julianh06.wynnextras.wtshim.models.worlds.type.WorldState;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.misc.HuntedModeTracker;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
@@ -41,7 +41,7 @@ public class CharacterModelMixin {
             method = "onWorldStateChanged",
             at = @At(
                     value = "INVOKE",
-                    target = "Lcom/wynntils/models/character/CharacterModel;scanCharacterInfo()V",
+                    target = "Ljulianh06/wynnextras/wtshim/models/character/CharacterModel;scanCharacterInfo()V",
                     shift = At.Shift.AFTER
             )
     )

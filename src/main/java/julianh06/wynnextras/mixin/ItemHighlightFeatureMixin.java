@@ -1,11 +1,11 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.features.inventory.ItemHighlightFeature;
-import com.wynntils.models.gear.type.GearTier;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.items.game.GearItem;
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.features.inventory.ItemHighlightFeature;
+import julianh06.wynnextras.wtshim.models.gear.type.GearTier;
+import julianh06.wynnextras.wtshim.models.items.WynnItem;
+import julianh06.wynnextras.wtshim.models.items.items.game.GearItem;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.inventory.WeightDisplay;
 import net.minecraft.client.MinecraftClient;

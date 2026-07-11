@@ -1,8 +1,8 @@
 package julianh06.wynnextras.features.chat;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.type.Time;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
@@ -71,8 +71,9 @@ public class ChatNotificator {
 
         WynnExtrasConfig.INSTANCE.syncPremades();
 
+        boolean isOurMessage = message.getString().contains("\uE016\uE018\uE00D");
         for(Map.Entry<String, Boolean> entry : WynnExtrasConfig.INSTANCE.premades.entrySet()) {
-            if(message.getString().contains(":")) continue;
+            if(!isOurMessage && message.getString().contains(":")) continue;
 
             String[] parts = entry.getKey().split("\\|");
             if(parts.length != 2) continue;

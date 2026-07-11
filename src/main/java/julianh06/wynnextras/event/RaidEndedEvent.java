@@ -1,6 +1,6 @@
 package julianh06.wynnextras.event;
 
-import com.wynntils.models.raid.type.RaidInfo;
+import julianh06.wynnextras.wtshim.models.raid.type.RaidInfo;
 import julianh06.wynnextras.event.api.WEEvent;
 
 public class RaidEndedEvent extends WEEvent {

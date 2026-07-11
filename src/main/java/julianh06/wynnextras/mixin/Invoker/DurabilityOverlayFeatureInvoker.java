@@ -1,6 +1,6 @@
 package julianh06.wynnextras.mixin.Invoker;
 
-import com.wynntils.features.inventory.DurabilityOverlayFeature;
+import julianh06.wynnextras.wtshim.features.inventory.DurabilityOverlayFeature;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;

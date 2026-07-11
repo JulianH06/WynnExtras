@@ -1,9 +1,9 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.features.tooltips.ItemStatInfoFeature;
-import com.wynntils.mc.event.ItemTooltipRenderEvent;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.utils.mc.TooltipUtils;
+import julianh06.wynnextras.wtshim.features.tooltips.ItemStatInfoFeature;
+import julianh06.wynnextras.wtshim.mc.event.ItemTooltipRenderEvent;
+import julianh06.wynnextras.wtshim.models.items.WynnItem;
+import julianh06.wynnextras.wtshim.utils.mc.TooltipUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.inventory.WeightDisplay;
@@ -24,7 +24,7 @@ public class ItemStatInfoFeatureMixin {
             method = "onTooltipPre",
             at = @At(
                     value = "INVOKE",
-                    target = "Lcom/wynntils/utils/mc/TooltipUtils;getWynnItemTooltip(Lnet/minecraft/item/ItemStack;Lcom/wynntils/models/items/WynnItem;)Ljava/util/List;"
+                    target = "Ljulianh06/wynnextras/wtshim/utils/mc/TooltipUtils;getWynnItemTooltip(Lnet/minecraft/item/ItemStack;Ljulianh06/wynnextras/wtshim/models/items/WynnItem;)Ljava/util/List;"
             ),
             remap = false
     )

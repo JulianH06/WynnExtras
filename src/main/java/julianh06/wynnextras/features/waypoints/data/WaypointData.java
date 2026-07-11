@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.wynntils.core.text.StyledText;
+import julianh06.wynnextras.wtshim.core.text.StyledText;
 import julianh06.wynnextras.features.misc.StyledTextAdapter;
 import julianh06.wynnextras.features.waypoints.OrderManager;
 import net.fabricmc.loader.api.FabricLoader;

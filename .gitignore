@@ -42,4 +42,4 @@ replay_*.log
 
 libs/
 
-*.md
+*.md.claude/scheduled_tasks.lock

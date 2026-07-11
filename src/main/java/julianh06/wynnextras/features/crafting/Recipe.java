@@ -1,17 +1,17 @@
 package julianh06.wynnextras.features.crafting;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.models.character.type.ClassType;
-import com.wynntils.models.elements.type.Skill;
-import com.wynntils.models.gear.type.GearAttackSpeed;
-import com.wynntils.models.gear.type.GearRequirements;
-import com.wynntils.models.ingredients.type.IngredientInfo;
-import com.wynntils.models.ingredients.type.IngredientPosition;
-import com.wynntils.models.stats.type.DamageType;
-import com.wynntils.models.stats.type.StatPossibleValues;
-import com.wynntils.models.stats.type.StatType;
-import com.wynntils.utils.type.Pair;
-import com.wynntils.utils.type.RangedValue;
+import julianh06.wynnextras.wtshim.models.character.type.ClassType;
+import julianh06.wynnextras.wtshim.models.elements.type.Skill;
+import julianh06.wynnextras.wtshim.models.gear.type.GearAttackSpeed;
+import julianh06.wynnextras.wtshim.models.gear.type.GearRequirements;
+import julianh06.wynnextras.wtshim.models.ingredients.type.IngredientInfo;
+import julianh06.wynnextras.wtshim.models.ingredients.type.IngredientPosition;
+import julianh06.wynnextras.wtshim.models.stats.type.DamageType;
+import julianh06.wynnextras.wtshim.models.stats.type.StatPossibleValues;
+import julianh06.wynnextras.wtshim.models.stats.type.StatType;
+import julianh06.wynnextras.wtshim.utils.type.Pair;
+import julianh06.wynnextras.wtshim.utils.type.RangedValue;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
 import julianh06.wynnextras.features.crafting.data.CraftingDataService;
 import julianh06.wynnextras.utils.CraftingUtils;
@@ -361,7 +361,7 @@ public class Recipe {
             // add to running total of ids
             double multiplier = metaMultipliers[i];
             if (ing.variableStats() != null) {
-                for (com.wynntils.utils.type.Pair<StatType, RangedValue> entry : ing.variableStats()) {
+                for (julianh06.wynnextras.wtshim.utils.type.Pair<StatType, RangedValue> entry : ing.variableStats()) {
                     StatPossibleValues idData = new StatPossibleValues(entry.key(), entry.value(), 0, true);
                     StatPossibleValues scaled = applyMultiplier(idData, multiplier);
                     addIds(possibleValues, scaled);

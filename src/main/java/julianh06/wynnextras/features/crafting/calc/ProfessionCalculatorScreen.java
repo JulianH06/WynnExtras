@@ -1,8 +1,8 @@
 package julianh06.wynnextras.features.crafting.calc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.profession.type.ProfessionType;
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.profession.type.ProfessionType;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.crafting.calc.CraftXpCalculator.MaterialType;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;

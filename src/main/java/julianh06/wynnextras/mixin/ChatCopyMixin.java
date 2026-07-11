@@ -1,6 +1,6 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.mixin.Accessor.ChatHudAccessor;

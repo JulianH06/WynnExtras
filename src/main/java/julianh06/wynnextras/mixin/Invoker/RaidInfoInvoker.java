@@ -1,6 +1,6 @@
 package julianh06.wynnextras.mixin.Invoker;
 
-import com.wynntils.models.raid.type.RaidInfo;
+import julianh06.wynnextras.wtshim.models.raid.type.RaidInfo;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 

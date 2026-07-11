@@ -2,7 +2,7 @@ package julianh06.wynnextras.features.aspects;
 
 import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.*;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Pair;
 

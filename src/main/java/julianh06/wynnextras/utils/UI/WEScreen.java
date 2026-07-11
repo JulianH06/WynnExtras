@@ -1,13 +1,13 @@
 package julianh06.wynnextras.utils.UI;
 
-import com.wynntils.core.text.StyledText;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.FontRenderer;
-import com.wynntils.utils.render.RenderUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.TextShadow;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.wtshim.core.text.StyledText;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.render.FontRenderer;
+import julianh06.wynnextras.wtshim.utils.render.RenderUtils;
+import julianh06.wynnextras.wtshim.utils.render.type.HorizontalAlignment;
+import julianh06.wynnextras.wtshim.utils.render.type.TextShadow;
+import julianh06.wynnextras.wtshim.utils.render.type.VerticalAlignment;
 import julianh06.wynnextras.annotations.WEModule;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;

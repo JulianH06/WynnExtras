@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.inventory;
 
-import com.wynntils.models.containers.containers.personal.*;
+import julianh06.wynnextras.wtshim.models.containers.containers.personal.*;
 
 import java.awt.*;
 

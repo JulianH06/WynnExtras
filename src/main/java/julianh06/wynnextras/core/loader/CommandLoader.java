@@ -4,11 +4,11 @@ import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.profession.type.ProfessionType;
-import com.wynntils.models.worlds.type.BombInfo;
-import com.wynntils.models.worlds.type.BombType;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.models.profession.type.ProfessionType;
+import julianh06.wynnextras.wtshim.models.worlds.type.BombInfo;
+import julianh06.wynnextras.wtshim.models.worlds.type.BombType;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -165,6 +165,33 @@ public class CommandLoader implements WELoader {
                     }));
             base = base.then(hide);
             alias = alias.then(hide);
+
+            var compatdebug = ClientCommandManager.literal("compatdebug")
+                    .executes(ctx -> {
+                        var events = julianh06.wynnextras.wtshim.core.WynntilsMod.getRecentEventsForDebug();
+                        if (events.isEmpty()) {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No compat events recorded yet."));
+                            return 1;
+                        }
+                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                "§eLast " + events.size() + " compat-shim events (newest last):"));
+                        for (String line : events) {
+                            McUtils.sendMessageToClient(net.minecraft.text.Text.literal("§8" + line));
+                        }
+                        return 1;
+                    });
+            base = base.then(compatdebug);
+            alias = alias.then(compatdebug);
+
+            var guildmap = ClientCommandManager.literal("guildmap")
+                    .executes(ctx -> {
+                        net.minecraft.client.MinecraftClient.getInstance().send(() ->
+                                net.minecraft.client.MinecraftClient.getInstance().setScreen(
+                                        julianh06.wynnextras.wtshim.screens.maps.GuildMapScreen.create()));
+                        return 1;
+                    });
+            base = base.then(guildmap);
+            alias = alias.then(guildmap);
 
 //            var changelog = ClientCommandManager.literal("changelog").executes(ctx -> {
 //                MinecraftClient.getInstance().send(() ->

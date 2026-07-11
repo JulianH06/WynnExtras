@@ -1,16 +1,16 @@
 package julianh06.wynnextras.features.misc;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.utils.colors.CommonColors;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
-import com.wynntils.utils.wynn.ContainerUtils;
-import com.wynntils.core.events.MixinHelper;
-import com.wynntils.mc.event.ContainerClickEvent;
+import julianh06.wynnextras.wtshim.utils.colors.CommonColors;
+import julianh06.wynnextras.wtshim.utils.colors.CustomColor;
+import julianh06.wynnextras.wtshim.utils.colors.WynncraftShaderColor;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.utils.render.RenderUtils;
+import julianh06.wynnextras.wtshim.utils.render.type.HorizontalAlignment;
+import julianh06.wynnextras.wtshim.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.wtshim.utils.wynn.ContainerUtils;
+import julianh06.wynnextras.wtshim.core.events.MixinHelper;
+import julianh06.wynnextras.wtshim.mc.event.ContainerClickEvent;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.UIUtils;

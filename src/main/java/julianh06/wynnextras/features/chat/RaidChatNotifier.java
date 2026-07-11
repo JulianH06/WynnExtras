@@ -2,13 +2,13 @@ package julianh06.wynnextras.features.chat;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.wynntils.models.raid.raids.*;
-import com.wynntils.models.raid.type.RaidInfo;
-import com.wynntils.models.raid.type.RaidRoomInfo;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.core.components.Models;
-import com.wynntils.utils.type.Time;
-import com.wynntils.core.text.StyledText;
+import julianh06.wynnextras.wtshim.models.raid.raids.*;
+import julianh06.wynnextras.wtshim.models.raid.type.RaidInfo;
+import julianh06.wynnextras.wtshim.models.raid.type.RaidRoomInfo;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.core.components.Models;
+import julianh06.wynnextras.wtshim.utils.type.Time;
+import julianh06.wynnextras.wtshim.core.text.StyledText;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.raid.tna.TnaApi;
@@ -237,6 +237,11 @@ public class RaidChatNotifier {
                     "The golem has been defeated, and the",
                     "§bGolem defeated §c",
                     "golemdefeated"
+            ),
+            new MultiOccurrenceDetector(
+                    "A Colossal Core has spawned!",
+                    "§bA Colossal Core has spawned! ",
+                    "colossalcorespawned"
             )
     );
 
@@ -366,6 +371,7 @@ public class RaidChatNotifier {
             Pattern.compile("A player must stand on the platform", Pattern.CASE_INSENSITIVE),
             Pattern.compile("A miniboss has spawned! It has sped", Pattern.CASE_INSENSITIVE),
             Pattern.compile("The golem has been defeated, and", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("A Colossal Core has spawned!", Pattern.CASE_INSENSITIVE),
             Pattern.compile("has picked up the Wings!", Pattern.CASE_INSENSITIVE),
             Pattern.compile("Key! \\[2/2]", Pattern.CASE_INSENSITIVE),
             Pattern.compile("Collected the Left Key!", Pattern.CASE_INSENSITIVE),

@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.aspects;
 
-import com.wynntils.core.text.StyledText;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wtshim.core.text.StyledText;
+import julianh06.wynnextras.wtshim.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
@@ -20,7 +20,7 @@ import net.minecraft.util.Identifier;
 
 import java.util.List;
 
-import static com.wynntils.utils.wynn.ContainerUtils.clickOnSlot;
+import static julianh06.wynnextras.wtshim.utils.wynn.ContainerUtils.clickOnSlot;
 
 public class AspectUtils {
     static List<ApiAspect> apiAspects = WynncraftApiHandler.fetchAllAspects();

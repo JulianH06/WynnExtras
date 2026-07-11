@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.badges;
 
-import com.wynntils.utils.colors.WynncraftShaderColor;
+import julianh06.wynnextras.wtshim.utils.colors.WynncraftShaderColor;
 import julianh06.wynnextras.features.achievements.AchievementId;
 import julianh06.wynnextras.features.achievements.AchievementTracking;
 import julianh06.wynnextras.features.achievements.Achievements;
