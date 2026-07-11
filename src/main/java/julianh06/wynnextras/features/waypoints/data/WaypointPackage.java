@@ -13,6 +13,7 @@ public class WaypointPackage {
     public String description;
     public boolean enabled;
     public int packageVersion = WaypointData.CURRENT_PACKAGE_VERSION;
+    public int contentVersion = 1;
     public List<WaypointCategory> categories = new ArrayList<>();
     public List<Waypoint> waypoints = new ArrayList<>();
 

@@ -80,7 +80,6 @@ public final class WaypointActions {
         WaypointPackage copy = new WaypointPackage(WaypointData.INSTANCE.generateUniqueName(original.name == null ? "Package" : original.name));
         copy.description = original.description;
         copy.enabled = original.enabled;
-        copy.packageVersion = WaypointData.CURRENT_PACKAGE_VERSION;
 
         Map<String, WaypointCategory> categoryCopies = new HashMap<>();
         for (WaypointCategory category : original.categories) {
@@ -292,6 +291,7 @@ public final class WaypointActions {
         pkg.name = uniquePackageName(null, cleanPackageName(pkg.name, "Imported Package"));
         pkg.description = pkg.description == null ? "" : pkg.description;
         pkg.packageVersion = WaypointData.CURRENT_PACKAGE_VERSION;
+        if (pkg.contentVersion < 1) pkg.contentVersion = 1;
         if (pkg.categories == null) pkg.categories = new ArrayList<>();
         if (pkg.waypoints == null) pkg.waypoints = new ArrayList<>();
 

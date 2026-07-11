@@ -2008,10 +2008,8 @@ public class WaypointScreen extends WEScreen {
 
                 ui.drawText("ID", contentX, y + 315, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
                 ui.drawText(activePackage.id == null ? "" : activePackage.id, fieldX, y + 315, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
-                ui.drawText("Version", contentX, y + 350, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
-                ui.drawText(String.valueOf(activePackage.packageVersion), fieldX, y + 350, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
-                ui.drawText("Contents", contentX, y + 385, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
-                ui.drawText(activePackage.waypoints.size() + " waypoints, " + activePackage.categories.size() + " categories", fieldX, y + 385, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
+                ui.drawText("Contents", contentX, y + 350, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.4f);
+                ui.drawText(activePackage.waypoints.size() + " waypoints, " + activePackage.categories.size() + " categories", fieldX, y + 350, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.TOP, 2.3f);
 
                 drawSettingsButton(mouseX, mouseY, contentX, y + 445, 180, 44, activePackage.enabled ? "Enabled" : "Disabled", activePackage.enabled ? TOGGLE_ON : TOGGLE_OFF);
                 drawSettingsButton(mouseX, mouseY, contentX + 200, y + 445, 180, 44, "Duplicate", TOGGLE_ON);

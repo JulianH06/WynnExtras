@@ -14,6 +14,7 @@ import com.wynntils.utils.type.Pair;
 import com.wynntils.utils.type.RangedValue;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.ItemStack;
 import org.joml.Vector2i;
 
@@ -128,7 +129,8 @@ public final class CraftingDataService {
                 .thenCompose(dataVersions -> fetch("WynnBuilder recipes", latestWynnBuilderRecipesUri(dataVersions)));
 
         CompletableFuture.allOf(recipes, items, ingredientMap, wynnBuilderRecipes)
-                .thenApply(ignored -> buildData(recipes.join(), items.join(), ingredientMap.join(), wynnBuilderRecipes.join()))
+                .thenApplyAsync(ignored -> buildData(recipes.join(), items.join(), ingredientMap.join(), wynnBuilderRecipes.join()),
+                        MinecraftClient.getInstance())
                 .whenComplete((loaded, throwable) -> {
                     if (throwable != null) {
                         data = null;

@@ -206,6 +206,7 @@ public class WaypointData {
                 resolveWaypointCategories(migrated);
 
                 migrated.packageVersion = CURRENT_PACKAGE_VERSION;
+                migrated.contentVersion = 1;
                 migrated.description = "";
 
                 migrated.saveToFile(file.getParent());
