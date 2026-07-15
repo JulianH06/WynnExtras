@@ -33,6 +33,8 @@ public class MojangAuth {
 
     private static String wynnextrasToken = null;
     private static long expiryTime = 0;
+    private static volatile long lastBackendLoginFailureMillis = 0;
+    private static CompletableFuture<String> pendingLogin;
 
     /**
      * Authenticate with backend and obtain wynnextras token
@@ -108,16 +110,22 @@ public class MojangAuth {
 
                     HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-                    if (response.statusCode() != 200) return null;
+                    if (response.statusCode() != 200) {
+                        lastBackendLoginFailureMillis = System.currentTimeMillis();
+                        BackendErrorLogger.error("backend-auth", "Backend authentication failed with status " + response.statusCode());
+                        return null;
+                    }
 
                     JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
                     wynnextrasToken = json.get("token").getAsString();
                     expiryTime = json.get("expiresIn").getAsLong();
+                    lastBackendLoginFailureMillis = 0;
 
                     WynnExtras.LOGGER.info("Received WynnExtras token from backend");
                     return wynnextrasToken;
                 } catch (Exception e) {
-                    WynnExtras.LOGGER.error("Backend authentication failed", e);
+                    lastBackendLoginFailureMillis = System.currentTimeMillis();
+                    BackendErrorLogger.error("backend-auth", "Backend authentication failed: " + e.getMessage());
                     return null;
                 }
             });
@@ -151,15 +159,28 @@ public class MojangAuth {
     /**
      * Get a valid WEToken
      */
-    public static CompletableFuture<String> getWEToken() {
+    public static synchronized CompletableFuture<String> getWEToken() {
         long now = System.currentTimeMillis();
 
         if (wynnextrasToken != null && now < expiryTime) {
             return CompletableFuture.completedFuture(wynnextrasToken);
         }
 
+        if (now - lastBackendLoginFailureMillis < BackendErrorLogger.COOLDOWN_MS) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        if (pendingLogin != null) return pendingLogin;
+
         WynnExtras.LOGGER.info("Session expired or missing, logging in");
-        return login();
+        CompletableFuture<String> loginFuture = login();
+        pendingLogin = loginFuture;
+        loginFuture.whenComplete((result, ex) -> {
+            synchronized (MojangAuth.class) {
+                if (pendingLogin == loginFuture) pendingLogin = null;
+            }
+        });
+        return loginFuture;
     }
 
     /**
@@ -171,6 +192,6 @@ public class MojangAuth {
         wynnextrasToken = null;
         expiryTime = 0;
 
-        return login();
+        return getWEToken();
     }
 }

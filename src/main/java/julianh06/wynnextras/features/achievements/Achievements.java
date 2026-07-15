@@ -13,6 +13,7 @@ import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.misc.StyledTextAdapter;
 import julianh06.wynnextras.utils.ApiRequestHelper;
+import julianh06.wynnextras.utils.BackendErrorLogger;
 import julianh06.wynnextras.utils.InstantTypeAdapter;
 import julianh06.wynnextras.utils.MojangAuth;
 import net.fabricmc.loader.api.FabricLoader;
@@ -477,7 +478,6 @@ public class Achievements {
         return MojangAuth.getWEToken().thenCompose(wynnextrasToken ->
         {
         if (wynnextrasToken == null) {
-            WynnExtras.LOGGER.error("Failed to authenticate with Mojang for achievement upload");
             return CompletableFuture.completedFuture(null);
         }
 
@@ -492,13 +492,17 @@ public class Achievements {
                 .thenAccept(response -> {
                     int code = response.statusCode();
                     if(code == 401) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                        if (BackendErrorLogger.error("achievement-upload", "Achievement upload authentication failed")) {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                        }
                     } else if(code != 200) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading achievements: " + code));
+                        if (BackendErrorLogger.error("achievement-upload", "Achievement upload failed: " + code)) {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading achievements: " + code));
+                        }
                     }
                 })
                 .exceptionally(ex -> {
-                    WynnExtras.LOGGER.error("Failed to upload achievements: " + ex.getMessage());
+                    BackendErrorLogger.error("achievement-upload", "Failed to upload achievements: " + ex.getMessage());
                     return null;
                 });
         });

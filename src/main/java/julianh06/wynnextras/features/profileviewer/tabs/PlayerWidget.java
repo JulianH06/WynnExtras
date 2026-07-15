@@ -58,7 +58,7 @@ public class PlayerWidget extends Widget {
         RenderUtils.drawTexturedRect(
                 ctx,
                 texture,
-                ui.sx(x + 22 + (hovered ? 10 : 0)), ui.sy(y + 10),   // z = 1 = über dem Kopf, removed in 1.21.11?
+                ui.sx(x + 22 + (hovered ? 10 : 0)), ui.sy(y + 10),
                 ui.sw(60), ui.sh(60),
                 40, 8, 8, 8,
                 64, 64

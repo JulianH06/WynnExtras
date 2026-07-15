@@ -249,7 +249,6 @@ public class EasyTextInput extends EasyElement{
     }
 
     public void insertCharAtCursor(char c) {
-        // Einfügen an der Cursor‐Position
         input = insertAt(cursorPos, String.valueOf(c), input);
         cursorPos++;
     }

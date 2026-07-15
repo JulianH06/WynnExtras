@@ -4919,27 +4919,12 @@ public class BankOverlay2 extends WEHandledScreen {
             if (isReloading) return false;
             if (hasHeldItem() || isJumpInProgress()) return true;
             McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-            ScreenHandler currScreenHandler = McUtils.containerMenu();
-
-            storeActivePageSnapshot();
-            activeInv = 0;
+            BankOverlayType targetType = currentOverlayType == BankOverlayType.CHARACTER
+                    ? BankOverlayType.ACCOUNT
+                    : BankOverlayType.CHARACTER;
+            switchBankAndJumpToPage(targetType, 0);
             actualOffset = 0;
             targetOffset = 0;
-            if (!BankOverlay.isCharacterBankMissingCharacterId()) currentData.saveAsyncDebounced();
-            BankOverlay2.pages.clear();
-            BankOverlay.activeInvSlots.clear();
-            annotationCache.clear();
-            annotationStackCache.clear();
-            annotationComponentCache.clear();
-            if (!BankOverlay.isCharacterBankMissingCharacterId()) Pages.saveAsyncDebounced();
-
-            if(currentOverlayType == BankOverlayType.CHARACTER) expectedOverlayType = BankOverlayType.ACCOUNT;
-            else if(currentOverlayType == BankOverlayType.ACCOUNT) expectedOverlayType = BankOverlayType.CHARACTER;
-
-            if(currScreenHandler == null) { return false; }
-            suppressAccountBankAvailabilityDetectionAfterSwitch();
-            clickOnSlot(47, currScreenHandler.syncId, 0, currScreenHandler.getStacks());
-            BankOverlay.resetScrollRegistration();
             return true;
         }
     }

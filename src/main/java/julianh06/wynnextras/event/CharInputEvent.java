@@ -14,7 +14,6 @@ public class CharInputEvent extends WEEvent {
         return character;
     }
 
-    // Falls du ein init‐Flag oder Registrierung brauchst:
     public static boolean initialized = false;
     public static void init() {
         WynnExtras.LOGGER.info("Initialized WynnExtras CharInputEvent");

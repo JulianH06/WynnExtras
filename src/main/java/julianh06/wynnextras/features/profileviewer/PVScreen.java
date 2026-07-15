@@ -240,7 +240,6 @@ public class PVScreen extends WEScreen {
         }
         addedNewest = false;
         registerScrolling();
-        //addRootWidget(hier jetzt alle verschiedenen tabs);
     }
 
     @Override

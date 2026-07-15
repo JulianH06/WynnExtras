@@ -28,7 +28,6 @@ import java.util.List;
 
 
 public class AspectScanning {
-    //TODO: aus tree stuff zeug klauen, auf aspects page gehen, dann ausgeben AspectScanning x:100
     static int SearchedPages = 0;
     public static final Map<String, Pair<String, String>> allAspects = new HashMap<>();
 

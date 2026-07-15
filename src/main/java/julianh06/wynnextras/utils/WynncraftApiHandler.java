@@ -577,7 +577,7 @@ public class WynncraftApiHandler {
                     .handle((response, ex) -> {
 
                         if (ex != null) {
-                            WynnExtras.LOGGER.error("Server unreachable: " + ex.getMessage());
+                            BackendErrorLogger.error("player-aspect-fetch", "Aspect server unreachable: " + ex.getMessage());
                             return new FetchResult(FetchStatus.SERVER_UNREACHABLE, null);
                         }
 
@@ -597,7 +597,7 @@ public class WynncraftApiHandler {
                         }
 
                         if (code >= 500) {
-                            WynnExtras.LOGGER.error("GET SERVER ERROR: " + code + " → " + response.body());
+                            BackendErrorLogger.error("player-aspect-fetch", "GET SERVER ERROR: " + code + " → " + response.body());
                             return new FetchResult(FetchStatus.SERVER_ERROR, null);
                         }
 
@@ -632,8 +632,6 @@ public class WynncraftApiHandler {
         // Authenticate with Mojang first
         MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
             if (wynnextrasToken == null) {
-                WynnExtras.LOGGER.error("Failed to authenticate with Mojang for aspect upload");
-                // Don't show duplicate error - MojangAuth already showed the error
                 return;
             }
 
@@ -688,19 +686,23 @@ public class WynncraftApiHandler {
                         .thenAccept(response -> {
                             int code = response.statusCode();
                             if (code == 401) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
-                                WynnExtras.LOGGER.error("Personal aspects upload auth error: " + response.body());
+                                if (BackendErrorLogger.error("aspect-upload", "Personal aspects upload auth error: " + response.body())) {
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                                }
                             } else if (code >= 500) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cServer error - try again later"));
-                                WynnExtras.LOGGER.error("Personal aspects upload error: " + code + " → " + response.body());
+                                if (BackendErrorLogger.error("aspect-upload", "Personal aspects upload error: " + code + " → " + response.body())) {
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cServer error - try again later"));
+                                }
                             } else if(code != 200) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed (error " + code + ")"));
-                                WynnExtras.LOGGER.error("Personal aspects upload error: " + code + " → " + response.body());
+                                if (BackendErrorLogger.error("aspect-upload", "Personal aspects upload error: " + code + " → " + response.body())) {
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed (error " + code + ")"));
+                                }
                             }
                         })
                         .exceptionally(ex -> {
-                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed - check your connection"));
-                            WynnExtras.LOGGER.error("Failed to upload personal aspects: " + ex.getMessage());
+                            if (BackendErrorLogger.error("aspect-upload", "Failed to upload personal aspects: " + ex.getMessage())) {
+                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed - check your connection"));
+                            }
                             return null;
                         });
             } catch (Exception e) {
@@ -773,7 +775,6 @@ public class WynncraftApiHandler {
         // Authenticate with Mojang first
         julianh06.wynnextras.utils.MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
             if (wynnextrasToken == null) {
-                WynnExtras.LOGGER.error("Failed to authenticate with Mojang");
                 return;
             }
 
@@ -803,13 +804,17 @@ public class WynncraftApiHandler {
                         .thenAccept(response -> {
                             int code = response.statusCode();
                             if(code == 401) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                                if (BackendErrorLogger.error("gambit-upload", "Gambit upload authentication failed")) {
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                                }
                             } else if(code != 200) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading gambits: " + code));
+                                if (BackendErrorLogger.error("gambit-upload", "Gambit upload failed: " + code)) {
+                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading gambits: " + code));
+                                }
                             }
                         })
                         .exceptionally(ex -> {
-                            WynnExtras.LOGGER.error("Failed to upload gambits: " + ex.getMessage());
+                            BackendErrorLogger.error("gambit-upload", "Failed to upload gambits: " + ex.getMessage());
                             return null;
                         });
 
@@ -837,15 +842,10 @@ public class WynncraftApiHandler {
                     .GET()
                     .build();
 
-            WynnExtras.LOGGER.info("[WynnExtras] Fetching leaderboard from: http://wynnextras.com/aspects/leaderboard?limit=" + limit);
-
             return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenApply(response -> {
-                        WynnExtras.LOGGER.info("[WynnExtras] Leaderboard response code: " + response.statusCode());
-                        WynnExtras.LOGGER.info("[WynnExtras] Leaderboard response body: " + response.body().substring(0, Math.min(500, response.body().length())));
-
                         if (response.statusCode() != 200) {
-                            WynnExtras.LOGGER.info("Failed to fetch leaderboard: " + response.statusCode());
+                            BackendErrorLogger.error("aspect-leaderboard", "Failed to fetch leaderboard: " + response.statusCode());
                             return new ArrayList<LeaderboardEntry>();
                         }
 
@@ -857,20 +857,15 @@ public class WynncraftApiHandler {
                                 JsonObject entry = json.get(i).getAsJsonObject();
                                 LeaderboardEntry player = gson.fromJson(entry, LeaderboardEntry.class);
                                 result.add(player);
-                                WynnExtras.LOGGER.info("[WynnExtras] Parsed leaderboard entry: " + player.getPlayerName() + " - " + player.getMaxAspectCount() + " maxed");
                             }
-
-                            WynnExtras.LOGGER.info("[WynnExtras] Fetched " + result.size() + " leaderboard entries");
                             return result;
                         } catch (Exception e) {
-                            WynnExtras.LOGGER.error("Error parsing leaderboard: " + e.getMessage());
-                            e.printStackTrace();
+                            BackendErrorLogger.error("aspect-leaderboard", "Error parsing leaderboard: " + e.getMessage());
                             return new ArrayList<LeaderboardEntry>();
                         }
                     })
                     .exceptionally(ex -> {
-                        WynnExtras.LOGGER.error("Failed to fetch leaderboard: " + ex.getMessage());
-                        ex.printStackTrace();
+                        BackendErrorLogger.error("aspect-leaderboard", "Failed to fetch leaderboard: " + ex.getMessage());
                         return new ArrayList<LeaderboardEntry>();
                     });
 
@@ -899,7 +894,7 @@ public class WynncraftApiHandler {
             return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenApply(response -> {
                         if (response.statusCode() != 200) {
-                            WynnExtras.LOGGER.info("No crowdsourced gambits: " + response.statusCode());
+                            BackendErrorLogger.error("gambit-fetch", "Failed to fetch crowdsourced gambits: " + response.statusCode());
                             return null;
                         }
 
@@ -916,7 +911,6 @@ public class WynncraftApiHandler {
                                 result.add(new julianh06.wynnextras.features.aspects.GambitData.GambitEntry(name, description));
                             }
 
-                            WynnExtras.LOGGER.info("Fetched " + result.size() + " gambits from crowdsourced data");
                             return result;
                         } catch (Exception e) {
                             WynnExtras.LOGGER.error("Error parsing crowdsourced gambits: " + e.getMessage());
@@ -924,7 +918,7 @@ public class WynncraftApiHandler {
                         }
                     })
                     .exceptionally(ex -> {
-                        WynnExtras.LOGGER.error("Failed to fetch crowdsourced gambits: " + ex.getMessage());
+                        BackendErrorLogger.error("gambit-fetch", "Failed to fetch crowdsourced gambits: " + ex.getMessage());
                         return null;
                     });
 
@@ -1152,16 +1146,16 @@ public class WynncraftApiHandler {
         while (index < html.length()) {
             int nextOpen = html.indexOf("<span", index);
             int nextClose = html.indexOf("</span>", index);
-            if (nextClose == -1) return -1; // kein schließendes Tag mehr
+            if (nextClose == -1) return -1; // no closing tag remains
 
             if (nextOpen != -1 && nextOpen < nextClose) {
-                depth++; // inneres <span> beginnt
+                depth++; // nested <span> begins
                 index = nextOpen + 5;
             } else {
                 if (depth == 0) {
-                    return nextClose; // passendes schließendes Tag für die aktuelle Ebene
+                    return nextClose; // matching closing tag for the current level
                 } else {
-                    depth--; // schließt eine verschachtelte Ebene
+                    depth--; // closes a nested level
                     index = nextClose + 7;
                 }
             }

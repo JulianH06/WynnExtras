@@ -13,6 +13,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.utils.ApiRequestHelper;
+import julianh06.wynnextras.utils.BackendErrorLogger;
 import julianh06.wynnextras.utils.MojangAuth;
 import net.minecraft.client.render.entity.state.EntityRenderState;
 import net.minecraft.client.MinecraftClient;
@@ -109,7 +110,6 @@ public class BadgeService {
 
         MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
             if (wynnextrasToken == null) {
-                WynnExtras.LOGGER.error("[WynnExtras] Failed to get auth data for badge sync");
                 return;
             }
 
@@ -117,7 +117,7 @@ public class BadgeService {
             getActiveUsers();
             getActiveUserDetails();
         }).exceptionally(e -> {
-            WynnExtras.LOGGER.error("[WynnExtras] Error getting auth data: " + e.getMessage());
+            BackendErrorLogger.error("badge-auth", "Error getting auth data for badge sync: " + e.getMessage());
             return null;
         });
     }
@@ -133,9 +133,11 @@ public class BadgeService {
 
                 if (response.statusCode() == 200) {
                     parseDetailsResponse(response.body());
+                } else {
+                    BackendErrorLogger.error("badge-details", "Badge details fetching failed: " + response.statusCode());
                 }
             } catch (Exception e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Badge details fetching error: " + e.getMessage());
+                BackendErrorLogger.error("badge-details", "Badge details fetching error: " + e.getMessage());
             }
         });
     }
@@ -152,10 +154,10 @@ public class BadgeService {
                 if (response.statusCode() == 200) {
                     parseResponse(response.body());
                 } else {
-                    WynnExtras.LOGGER.error("[WynnExtras] Badge fetching failed: " + response.statusCode());
+                    BackendErrorLogger.error("badge-active-users", "Badge fetching failed: " + response.statusCode());
                 }
             } catch (Exception e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Badge fetching error: " + e.getMessage());
+                BackendErrorLogger.error("badge-active-users", "Badge fetching error: " + e.getMessage());
             }
         });
     }
@@ -178,11 +180,11 @@ public class BadgeService {
 
                 ApiRequestHelper.sendWithAuthRetry(request, body).thenAccept(response -> {
                     if (response.statusCode() != 200) {
-                        WynnExtras.LOGGER.error("[WynnExtras] Badge heartbeat failed: " + response.statusCode());
+                        BackendErrorLogger.error("badge-heartbeat", "Badge heartbeat failed: " + response.statusCode());
                     }
                 });
             } catch (Exception e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Badge heartbeat error: " + e.getMessage());
+                BackendErrorLogger.error("badge-heartbeat", "Badge heartbeat error: " + e.getMessage());
             }
         });
     }

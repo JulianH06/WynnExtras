@@ -37,8 +37,6 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
         addChild(pvScrollBar);
     }
 
-    //TODO: g von missing ist teilweise noch sichtbar
-
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if(PV.currentPlayerData == null) return;

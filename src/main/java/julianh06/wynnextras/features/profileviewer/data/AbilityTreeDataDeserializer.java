@@ -83,7 +83,7 @@ public class AbilityTreeDataDeserializer implements JsonDeserializer<AbilityTree
                         ability.requirements = r;
                     }
 
-                    // Links
+                    // Ability links
                     JsonElement links = abilityData.get("links");
                     if (links != null && links.isJsonArray()) {
                         ability.links = new ArrayList<>();
@@ -164,4 +164,3 @@ public class AbilityTreeDataDeserializer implements JsonDeserializer<AbilityTree
         return element.toString();
     }
 }
-
