@@ -368,7 +368,7 @@ public class WynnExtras implements ClientModInitializer {
 	}
 
 	private static Instant lastNotificationTime = null;
-	private static final Duration COOLDOWN = Duration.ofMinutes(15);
+	private static final Duration COOLDOWN = Duration.ofMinutes(60);
 
 	public static void tryNotifyVersionUpdate(String currentVersion, String latestVersion) {
 		if (latestVersion == null || currentVersion.equals(latestVersion)) return;

@@ -1,5 +1,7 @@
 package julianh06.wynnextras.features.achievements;
 
+import com.wynntils.core.components.Models;
+import com.wynntils.models.emeralds.type.EmeraldUnits;
 import com.wynntils.models.raid.raids.RaidKind;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
@@ -13,8 +15,13 @@ import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.features.profileviewer.data.PlayerData;
 import julianh06.wynnextras.features.profileviewer.data.Profession;
 import julianh06.wynnextras.features.profileviewer.data.Raids;
+import julianh06.wynnextras.features.inventory.BankOverlay;
+import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.utils.BossBarUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.hud.ClientBossBar;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
@@ -46,6 +53,10 @@ public class AchievementTracking {
     /** Combat level cap a class must reach to count toward the {@code class.levelXXX} achievements. */
     private static final int CLASS_LEVEL_120 = 120;
     private static final int CLASS_LEVEL_121 = 121;
+    private static final int PROFESSION_LEVEL_MAX = 132;
+    private static final long RICH_BANK_SCAN_INTERVAL_MS = 10_000L;
+    private static final long WAR_COOLDOWN_MS = 25_000L;
+    private static final long WAR_API_REFRESH_INTERVAL_MS = 60_000L;
 
     /**
      * Raw content-completion value that equals 100%. Kept in sync with
@@ -74,6 +85,11 @@ public class AchievementTracking {
     /** Ensures the aspect achievement sync only dispatches once the aspect catalogue is loaded. */
     private boolean aspectsSynced;
     private volatile boolean syncingAspects;
+    private long nextRichBankScanAt;
+    private long lastWarDetected;
+    private long nextWarApiSyncAt;
+    private boolean warBossBarActive;
+    private String lastWarDefenseDebugState;
 
     public static void reloadAchievementsFromApi() {
         if (achievements == null) Achievements.load();
@@ -94,11 +110,16 @@ public class AchievementTracking {
         }
         if (achievements == null) return;
 
-        // Once per launch, reconcile our self-counted raid totals (and class/content/profession
-        // achievements) against the Wynncraft API.
+        checkRichBankAchievement();
+        trackWarAchievements();
+
+        // Once per launch, reconcile raid, war, class, content and profession achievements against the API.
         if (!raidCountsSynced && McUtils.player() != null) {
             raidCountsSynced = true;
+            nextWarApiSyncAt = System.currentTimeMillis() + WAR_API_REFRESH_INTERVAL_MS;
             syncRaidCountsFromApi();
+        } else {
+            syncWarCountFromApiIfDue();
         }
 
         // Once the aspect catalogue has finished loading, evaluate the aspect achievements.
@@ -125,6 +146,113 @@ public class AchievementTracking {
         save();
 
         syncRaidCountsFromApi();
+    }
+
+    /** Checks the currently open bank page at most once every ten seconds. */
+    private void checkRichBankAchievement() {
+        if (achievements.isUnlocked("bank.rich")) return;
+
+        long now = System.currentTimeMillis();
+        if (now < nextRichBankScanAt) return;
+        nextRichBankScanAt = now + RICH_BANK_SCAN_INTERVAL_MS;
+
+        if (BankOverlay.currentOverlayType != BankOverlayType.ACCOUNT
+                && BankOverlay.currentOverlayType != BankOverlayType.CHARACTER) return;
+        if (BankOverlay.activeInvSlots.size() < 45) return;
+
+        for (int i = 0; i < 45; i++) {
+            Slot slot = BankOverlay.activeInvSlots.get(i);
+            if (slot == null || slot.getStack().getItem() != EmeraldUnits.LIQUID_EMERALD.getItemType()
+                    || slot.getStack().getCount() != 64) {
+                return;
+            }
+        }
+
+        if (unlockSimple("bank.rich", "Rich")) save();
+    }
+
+    /** Uses the same Tower boss-bar detection and cooldown as the weekly war counter. */
+    private void trackWarAchievements() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+
+        for (ClientBossBar bar : BossBarUtils.getBossBars(client.inGameHud.getBossBarHud())) {
+            String name = bar.getName().getString();
+            if (name == null || !name.replaceAll("§[0-9a-fk-or]", "").contains("Tower")) continue;
+            String territoryName = getWarTerritoryName(name);
+
+            if (!warBossBarActive) {
+                warBossBarActive = true;
+                WynnExtras.LOGGER.info("[WE Achievement Debug] Tower boss bar detected: '{}', territory='{}'", name, territoryName);
+            }
+
+            long now = System.currentTimeMillis();
+            if (now - lastWarDetected > WAR_COOLDOWN_MS) {
+                WarDefense defense = WarDefense.fromName(currentWarDefense(territoryName));
+                if (defense == null) return;
+
+                boolean alreadyUnlocked = achievements.isUnlocked(defense.achievementId);
+                boolean changed = unlockSimple(defense.achievementId, defense.displayName + " Defense tower");
+                WynnExtras.LOGGER.info("[WE Achievement Debug] War defence '{}' mapped to '{}'; alreadyUnlocked={}, changed={}",
+                        defense.displayName, defense.achievementId, alreadyUnlocked, changed);
+                if (changed) save();
+                lastWarDetected = now;
+            }
+            return;
+        }
+
+        if (warBossBarActive) {
+            WynnExtras.LOGGER.info("[WE Achievement Debug] Tower boss bar disappeared");
+        }
+        warBossBarActive = false;
+        lastWarDefenseDebugState = null;
+    }
+
+    private void syncWarCountFromApiIfDue() {
+        if (McUtils.player() == null) return;
+        long now = System.currentTimeMillis();
+        if (now < nextWarApiSyncAt) return;
+
+        nextWarApiSyncAt = now + WAR_API_REFRESH_INTERVAL_MS;
+        syncRaidCountsFromApi();
+    }
+
+    private String currentWarDefense(String territoryName) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return null;
+
+        try {
+            var poi = territoryName == null ? null : Models.Territory.getTerritoryPoiFromAdvancement(territoryName);
+            if (poi == null) {
+                logWarDefenseDebug("no-poi:" + territoryName, "No territory POI for '" + territoryName + "'");
+                return null;
+            }
+            if (poi.getTerritoryInfo() == null || poi.getTerritoryInfo().getDefences() == null) {
+                logWarDefenseDebug("no-defense:" + territoryName, "No defence data for '" + territoryName + "'");
+                return null;
+            }
+            String defense = poi.getTerritoryInfo().getDefences().name();
+            logWarDefenseDebug("defense:" + defense, "Territory '" + territoryName + "' reports defence '" + defense + "'");
+            return defense;
+        } catch (Exception exception) {
+            logWarDefenseDebug("exception:" + exception.getClass().getName(), "Failed to read war defence: " + exception);
+            return null;
+        }
+    }
+
+    private String getWarTerritoryName(String bossBarName) {
+        String name = bossBarName.replaceAll("§[0-9a-fk-or]", "");
+        int towerIndex = name.indexOf(" Tower");
+        if (towerIndex == -1) return null;
+
+        name = name.substring(0, towerIndex).replaceFirst("^\\[[^]]+]\\s*", "").trim();
+        return name.isEmpty() ? null : name;
+    }
+
+    private void logWarDefenseDebug(String state, String message) {
+        if (state.equals(lastWarDefenseDebugState)) return;
+        lastWarDefenseDebugState = state;
+        WynnExtras.LOGGER.info("[WE Achievement Debug] {}", message);
     }
 
     private void announce(String message) {
@@ -207,6 +335,7 @@ public class AchievementTracking {
 
         boolean changed = false;
         changed |= reconcileRaids(data);
+        changed |= reconcileWars(data);
         changed |= evaluateCharacterAchievements(data);
         if (changed) save();
     }
@@ -234,6 +363,12 @@ public class AchievementTracking {
         return changed;
     }
 
+    private boolean reconcileWars(PlayerData data) {
+        if (data.getGlobalData() == null) return false;
+        return applyTieredCount("war.completion", Math.max(0, data.getGlobalData().getWars()),
+                Achievements.WAR_TARGETS, "wars completed");
+    }
+
     /**
      * Evaluates the class-level, content-completion and profession achievements from the per-character
      * data in a single Wynncraft API response. Returns true if any achievement state changed.
@@ -245,6 +380,8 @@ public class AchievementTracking {
         int classesAt120 = 0;
         int classesAt121 = 0;
         boolean contentComplete = false;
+        boolean ultimateCompletionist = false;
+        boolean maxLevel = false;
 
         Map<String, Integer> gatheringLevels = new HashMap<>();
         Map<String, Integer> craftingLevels = new HashMap<>();
@@ -261,6 +398,15 @@ public class AchievementTracking {
             Map<String, Profession> professions = character.getProfessions();
             if (professions == null) continue;
 
+            if (character.getContentCompletion() >= CONTENT_COMPLETION_MAX
+                    && allProfessionsAtLevel(professions, PROFESSION_LEVEL_MAX)) {
+                ultimateCompletionist = true;
+            }
+            if (character.getLevel() >= CLASS_LEVEL_121
+                    && allProfessionsAtLevel(professions, PROFESSION_LEVEL_MAX)) {
+                maxLevel = true;
+            }
+
             for (String prof : GATHERING_PROFESSIONS) {
                 gatheringLevels.merge(prof, professionLevel(professions, prof), Math::max);
             }
@@ -276,6 +422,8 @@ public class AchievementTracking {
         changed |= applyTieredCount("class.level121", classesAt121, Achievements.CLASS_COUNT_TARGETS, "class(es) at Level 121");
 
         if (contentComplete) changed |= unlockSimple("content.completion", "100% Content Completion");
+        if (ultimateCompletionist) changed |= unlockSimple("content.ultimate_completionist", "Ultimate Completionist");
+        if (maxLevel) changed |= unlockSimple("class.max_level", "Max Level");
 
         changed |= applyTieredCount("prof.gather.100", countProfessionsAtLevel(gatheringLevels, GATHERING_PROFESSIONS, 100), Achievements.GATHERING_PROFESSION_TARGETS, "gathering profession(s) at Level 100");
         changed |= applyTieredCount("prof.gather.115", countProfessionsAtLevel(gatheringLevels, GATHERING_PROFESSIONS, 115), Achievements.GATHERING_PROFESSION_TARGETS, "gathering profession(s) at Level 115");
@@ -293,6 +441,16 @@ public class AchievementTracking {
             if (professionLevels.getOrDefault(profession, 0) >= level) count++;
         }
         return count;
+    }
+
+    private static boolean allProfessionsAtLevel(Map<String, Profession> professions, int level) {
+        for (String profession : GATHERING_PROFESSIONS) {
+            if (professionLevel(professions, profession) < level) return false;
+        }
+        for (String profession : CRAFTING_PROFESSIONS) {
+            if (professionLevel(professions, profession) < level) return false;
+        }
+        return true;
     }
 
     private static int professionLevel(Map<String, Profession> professions, String key) {
@@ -449,6 +607,31 @@ public class AchievementTracking {
         UnlockAnnouncement(String message, String tooltipLine) {
             this.message = message;
             this.tooltipLine = tooltipLine;
+        }
+    }
+
+    private enum WarDefense {
+        VERY_LOW("war.defence.very_low", "Very Low"),
+        LOW("war.defence.low", "Low"),
+        MEDIUM("war.defence.medium", "Medium"),
+        HIGH("war.defence.high", "High"),
+        VERY_HIGH("war.defence.very_high", "Very High");
+
+        final String achievementId;
+        final String displayName;
+
+        WarDefense(String achievementId, String displayName) {
+            this.achievementId = achievementId;
+            this.displayName = displayName;
+        }
+
+        static WarDefense fromName(String name) {
+            if (name == null) return null;
+            try {
+                return valueOf(name);
+            } catch (IllegalArgumentException ignored) {
+                return null;
+            }
         }
     }
 

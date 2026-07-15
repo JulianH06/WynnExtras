@@ -64,6 +64,14 @@ public class AchievementScreen extends WEScreen {
             "aspect.max.all.archer",
             "aspect.max.all.assassin"
     );
+    private static final List<String> WAR_ACHIEVEMENT_ORDER = List.of(
+            "war.completion",
+            "war.defence.very_low",
+            "war.defence.low",
+            "war.defence.medium",
+            "war.defence.high",
+            "war.defence.very_high"
+    );
 
     private Tab tab = Tab.ACHIEVEMENTS;
     private float scroll;
@@ -302,6 +310,7 @@ public class AchievementScreen extends WEScreen {
         Map<String, List<Achievement>> grouped = new LinkedHashMap<>();
         grouped.put("General", new ArrayList<>());
         grouped.put("Raids", new ArrayList<>());
+        grouped.put("Warring", new ArrayList<>());
         grouped.put("Aspects", new ArrayList<>());
         grouped.put("Gathering", new ArrayList<>());
         grouped.put("Crafting", new ArrayList<>());
@@ -317,6 +326,8 @@ public class AchievementScreen extends WEScreen {
             String key = entry.getKey();
             if ("Aspects".equals(key)) {
                 entry.getValue().sort(Comparator.comparingInt(this::aspectSortIndex).thenComparing(Achievement::getId));
+            } else if ("Warring".equals(key)) {
+                entry.getValue().sort(Comparator.comparingInt(this::warSortIndex).thenComparing(Achievement::getId));
             } else {
                 entry.getValue().sort(Comparator.comparing(Achievement::getId));
             }
@@ -331,10 +342,16 @@ public class AchievementScreen extends WEScreen {
         return index == -1 ? Integer.MAX_VALUE : index;
     }
 
+    private int warSortIndex(Achievement achievement) {
+        int index = WAR_ACHIEVEMENT_ORDER.indexOf(achievement.getId());
+        return index == -1 ? Integer.MAX_VALUE : index;
+    }
+
     private String categoryName(Achievement achievement) {
         String id = achievement.getId();
         if (id == null) return "General";
         if (id.startsWith("raid.")) return "Raids";
+        if (id.startsWith("war.")) return "Warring";
         if (id.startsWith("aspect.")) return "Aspects";
         if (id.startsWith("prof.gather.")) return "Gathering";
         if (id.startsWith("prof.craft.")) return "Crafting";
