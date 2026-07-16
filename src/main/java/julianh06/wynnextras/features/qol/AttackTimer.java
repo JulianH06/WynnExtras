@@ -1,7 +1,11 @@
 package julianh06.wynnextras.features.qol;
 
 import com.wynntils.core.components.Models;
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.event.api.WEEventBus;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -27,6 +31,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -39,7 +44,7 @@ public class AttackTimer {
     private static final Pattern DEFENSE_BROADCAST = Pattern.compile(
             ":\\s*(?<terr>[^:]+?)\\s+defense is\\s+(?<def>Very Low|Low|Medium|High|Very High)",
             Pattern.CASE_INSENSITIVE);
-    private static final Pattern WAR_START = Pattern.compile("The war for (?<terr>.+?) will start in \\d+ minutes?\\.");
+    private static final Pattern WAR_START = Pattern.compile("The war for (?<terr>.+?) will start in (?<minutes>\\d+) minutes?\\.");
     private static final int DEFAULT_NORMAL_COLOR = 0xFFAA00;
     private static final int DEFAULT_CURRENT_TERRITORY_COLOR = 0xFFFF55;
     private static final int DEFAULT_VERY_LOW_DEFENSE_COLOR = 0x55FF55;
@@ -47,21 +52,51 @@ public class AttackTimer {
     private static final int DEFAULT_MEDIUM_DEFENSE_COLOR = 0xFFFF55;
     private static final int DEFAULT_HIGH_DEFENSE_COLOR = 0xFF5555;
     private static final int DEFAULT_VERY_HIGH_DEFENSE_COLOR = 0xAA0000;
+    private static final long WORLD_JOIN_BASELINE_DELAY_MS = 5_000L;
 
     public static String soonestTerritory = null;
     // territory -> defense level ("Very Low" / "Low" / "Medium" / "High" / "Very High")
     private static final Map<String, String> cachedDefenses = new HashMap<>();
+    // Defences read directly from an "Attacking: X" menu, keyed by normalized territory name.
+    private static final Map<String, String> menuDefenses = new HashMap<>();
+    // A defence snapshot made when the client observes the war being queued. These are deliberately
+    // kept in memory only: a war that was already queued when the game was opened will not count since its defence is unknown.
+    private static final Map<String, QueuedDefense> queuedAttackDefenses = new HashMap<>();
     private static final Set<String> activeAttackTerritories = new HashSet<>();
+    private static long worldJoinObservedAt = -1;
+    private static boolean attackBaselineReady;
     // Last territory the local player personally looked up (for auto-broadcast)
     private static String lastSelfLookupTerritory = null;
     private static long lastSelfLookupAt = 0;
+
+    private static final SubCommand territoryDefencesDebugCommand = new SubCommand(
+            "territorydefences",
+            "lists territory defence snapshots saved during this game session",
+            context -> {
+                printTerritoryDefenseDebug();
+                return 1;
+            },
+            null,
+            null
+    );
+
+    private static final Command debugCommand = new Command(
+            "debug",
+            "WynnExtras debug commands",
+            context -> {
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we debug territorydefences"));
+                return 1;
+            },
+            List.of(territoryDefencesDebugCommand),
+            null
+    );
 
     public static void register() {
         HudRenderCallback.EVENT.register(AttackTimer::render);
         WEEventBus.registerEventListener(new AttackTimer());
         // Scan open "Attacking: X" menus for defense info and cache it
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (!WynnExtrasConfig.INSTANCE.attackTimerMenuEnabled) return;
+            observeNewAttacks(client);
             if (!(client.currentScreen instanceof GenericContainerScreen gcs)) return;
             String title = gcs.getTitle().getString();
             if (!title.contains("Attacking: ")) return;
@@ -77,7 +112,7 @@ public class AttackTimer {
                 if (clean.contains("Territory Defences")) {
                     String[] parts = clean.split(":\\s*", 2);
                     if (parts.length == 2) {
-                        cachedDefenses.put(territory, parts[1].trim());
+                        cacheMenuDefense(territory, parts[1].trim());
                         lastSelfLookupTerritory = territory;
                         lastSelfLookupAt = System.currentTimeMillis();
                     }
@@ -89,7 +124,6 @@ public class AttackTimer {
 
     @SubscribeEvent
     public void onChat(ChatEvent event) {
-        if (!WynnExtrasConfig.INSTANCE.attackTimerMenuEnabled) return;
         try {
             String raw = event.message.getString().replaceAll("§[0-9a-fk-orx]", "").trim();
             if (raw.isEmpty()) return;
@@ -97,18 +131,20 @@ public class AttackTimer {
             // Guildmate defense broadcast
             Matcher m = DEFENSE_BROADCAST.matcher(raw);
             if (m.find()) {
-                cachedDefenses.put(m.group("terr").trim(), m.group("def").trim());
+                cachedDefenses.put(territoryKey(m.group("terr")), m.group("def").trim());
                 return;
             }
 
-            // "The war for X will start in N minutes" — auto-broadcast our cached defense
-            if (WynnExtrasConfig.INSTANCE.attackTimerAutoBroadcast) {
-                Matcher ws = WAR_START.matcher(raw);
-                if (ws.find()) {
-                    String terr = ws.group("terr").trim();
+            Matcher ws = WAR_START.matcher(raw);
+            if (ws.find()) {
+                String terr = ws.group("terr").trim();
+                captureQueuedAttack(terr, Integer.parseInt(ws.group("minutes")) * 60L);
+
+                // "The war for X will start in N minutes" — auto-broadcast our cached defense
+                if (WynnExtrasConfig.INSTANCE.attackTimerAutoBroadcast) {
                     if (terr.equals(lastSelfLookupTerritory)
                             && System.currentTimeMillis() - lastSelfLookupAt < 5000) {
-                        String def = cachedDefenses.get(terr);
+                        String def = cachedDefenses.get(territoryKey(terr));
                         if (def != null && MinecraftClient.getInstance().player != null) {
                             MinecraftClient.getInstance().player.networkHandler
                                     .sendChatCommand("g " + terr + " defense is " + def);
@@ -173,19 +209,121 @@ public class AttackTimer {
     }
 
     private static String getDefenseLevel(String territory) {
-        String cached = cachedDefenses.get(territory);
+        String cached = cachedDefenses.get(territoryKey(territory));
         if (cached != null) return cached;
 
         try {
             var poi = Models.Territory.getTerritoryPoiFromAdvancement(territory);
-            if (poi == null || poi.getTerritoryInfo() == null) return null;
-            String def = strip(poi.getTerritoryInfo().getDefences().getAsString()).trim();
-            if (def.isEmpty()) return null;
-            cachedDefenses.put(territory, def);
-            return def;
+            if (poi == null || poi.getTerritoryInfo() == null || poi.getTerritoryInfo().getDefences() == null) return null;
+            String defense = strip(poi.getTerritoryInfo().getDefences().getAsString()).trim();
+            if (defense.isEmpty()) return null;
+            cachedDefenses.put(territoryKey(territory), defense);
+            return defense;
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    private static void observeNewAttacks(MinecraftClient client) {
+        if (client.player == null || client.world == null) {
+            worldJoinObservedAt = -1;
+            attackBaselineReady = false;
+            activeAttackTerritories.clear();
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (worldJoinObservedAt < 0) {
+            worldJoinObservedAt = now;
+            return;
+        }
+
+        List<String> attacks = getUpcomingAttacks();
+        Set<String> currentTerritories = new HashSet<>();
+        for (String attack : attacks) {
+            String territory = getAttackTerritory(attack);
+            if (!territory.isEmpty()) currentTerritories.add(territory);
+        }
+
+        // Do not infer existing attacks immediately after joining. They could have been queued
+        // before this client was started, so their defence snapshot is unknown.
+        if (!attackBaselineReady) {
+            if (now - worldJoinObservedAt < WORLD_JOIN_BASELINE_DELAY_MS) return;
+            activeAttackTerritories.addAll(currentTerritories);
+            attackBaselineReady = true;
+            return;
+        }
+
+        for (String territory : currentTerritories) {
+            if (activeAttackTerritories.contains(territory)) continue;
+
+            // This is a new attack on this territory. Never let an earlier attack's value count
+            // if we cannot determine the defence for this one.
+            queuedAttackDefenses.remove(territoryKey(territory));
+            String attack = attacks.stream().filter(entry -> getAttackTerritory(entry).equals(territory)).findFirst().orElse("");
+            String time = attack.isEmpty() ? "" : attack.split(" ", 2)[0];
+            captureQueuedAttack(territory, parseMinutes(time));
+        }
+
+        activeAttackTerritories.clear();
+        activeAttackTerritories.addAll(currentTerritories);
+    }
+
+    private static void captureQueuedAttack(String territory, long remainingSeconds) {
+        long startsAt = System.currentTimeMillis() + remainingSeconds * 1000L;
+        String defense = readDefenseAtQueue(territory);
+        queuedAttackDefenses.put(territoryKey(territory), new QueuedDefense(territory, defense, startsAt, false));
+        if (defense != null) {
+            WynnExtras.LOGGER.info("[WE Achievement Debug] Captured queued defence '{}' for '{}'", defense, territory);
+        } else {
+            WynnExtras.LOGGER.info("[WE Achievement Debug] Could not capture queued defence for '{}'", territory);
+        }
+    }
+
+    private static String readDefenseAtQueue(String territory) {
+        try {
+            var poi = Models.Territory.getTerritoryPoiFromAdvancement(territory);
+            if (poi != null && poi.getTerritoryInfo() != null && poi.getTerritoryInfo().getDefences() != null) {
+                String defense = strip(poi.getTerritoryInfo().getDefences().getAsString()).trim();
+                if (!defense.isEmpty()) {
+                    cachedDefenses.put(territoryKey(territory), defense);
+                    return defense;
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return menuDefenses.get(territoryKey(territory));
+    }
+
+    /**
+     * Returns the defence captured when this client saw the current attack get queued.
+     * No API fallback is intentional: later buffs must not change the achievement tier.
+     */
+    public static String getQueuedAttackDefense(String territory) {
+        String key = territoryKey(territory);
+        QueuedDefense queuedDefense = queuedAttackDefenses.get(key);
+        if (queuedDefense == null || queuedDefense.used || queuedDefense.defense == null) {
+            return null;
+        }
+        return queuedDefense.defense;
+    }
+
+    public static void markQueuedAttackDefenseUsed(String territory) {
+        String key = territoryKey(territory);
+        QueuedDefense queuedDefense = queuedAttackDefenses.get(key);
+        if (queuedDefense == null || queuedDefense.used) return;
+        queuedAttackDefenses.put(key, new QueuedDefense(queuedDefense.territory, queuedDefense.defense,
+                queuedDefense.startsAt, true));
+    }
+
+    private static void cacheMenuDefense(String territory, String defense) {
+        String key = territoryKey(territory);
+        cachedDefenses.put(key, defense);
+        menuDefenses.put(key, defense);
+    }
+
+    private static String territoryKey(String territory) {
+        return territory == null ? "" : territory.trim().toLowerCase(Locale.ROOT);
     }
 
     private static int parseMinutes(String time) {
@@ -201,19 +339,33 @@ public class AttackTimer {
         return attack.substring(firstSpace + 1).trim();
     }
 
-    private static void clearFinishedAttackDefenses(List<String> attacks) {
-        Set<String> currentTerritories = new HashSet<>();
-        for (String attack : attacks) {
-            String territory = getAttackTerritory(attack);
-            if (!territory.isEmpty()) currentTerritories.add(territory);
+    private static String formatTimerTime(long remainingMs) {
+        long totalSeconds = Math.max(0, remainingMs / 1000L);
+        return String.format("%02d:%02d", totalSeconds / 60L, totalSeconds % 60L);
+    }
+
+    private static String formatDebugTime(long differenceMs) {
+        long totalSeconds = Math.abs(differenceMs) / 1000L;
+        String time = (totalSeconds / 60L) + "min";
+        if (totalSeconds % 60L != 0) time += " " + String.format("%02ds", totalSeconds % 60L);
+        return differenceMs < 0 ? "-" + time : time;
+    }
+
+    private static void printTerritoryDefenseDebug() {
+        if (queuedAttackDefenses.isEmpty()) {
+            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No territory defence snapshots saved this session."));
+            return;
         }
 
-        activeAttackTerritories.removeIf(territory -> {
-            if (currentTerritories.contains(territory)) return false;
-            cachedDefenses.remove(territory);
-            return true;
-        });
-        activeAttackTerritories.addAll(currentTerritories);
+        long now = System.currentTimeMillis();
+        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eSaved territory defence snapshots:"));
+        queuedAttackDefenses.values().stream()
+                .sorted(Comparator.comparingLong(QueuedDefense::startsAt))
+                .forEach(attack -> McUtils.sendMessageToClient(Text.of("§7- §f" + attack.territory
+                        + "§7: " + (attack.defense == null ? "§cUnknown" : "§f" + attack.defense)
+                        + " §7(" + (attack.startsAt - now < 0 ? "§c" : "§a")
+                        + formatDebugTime(attack.startsAt - now) + "§7)"
+                        + (attack.used ? " §8(used)" : ""))));
     }
 
     private static String getCurrentTerritory() {
@@ -246,31 +398,37 @@ public class AttackTimer {
         return line;
     }
 
+    private record QueuedDefense(String territory, String defense, long startsAt, boolean used) {}
+
     private static void render(DrawContext ctx, RenderTickCounter tickCounter) {
         if (!WynnExtrasConfig.INSTANCE.attackTimerMenuEnabled) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.options.hudHidden) return;
 
-        List<String> attacks = getUpcomingAttacks();
+        long now = System.currentTimeMillis();
+        Map<String, QueuedDefense> visibleAttacks = new HashMap<>();
+        for (Map.Entry<String, QueuedDefense> entry : queuedAttackDefenses.entrySet()) {
+            if (entry.getValue().startsAt > now) visibleAttacks.put(entry.getKey(), entry.getValue());
+        }
+
+        // Keep displaying wars that were already queued when the client joined if the scoreboard
+        // knows about them, but do not save them as achievement snapshots.
+        for (String attack : getUpcomingAttacks()) {
+            String territory = getAttackTerritory(attack);
+            String key = territoryKey(territory);
+            if (territory.isEmpty() || visibleAttacks.containsKey(key)) continue;
+            String[] words = attack.split(" ", 2);
+            visibleAttacks.put(key, new QueuedDefense(territory, getDefenseLevel(territory),
+                    now + parseMinutes(words[0]) * 1000L, false));
+        }
+
+        List<QueuedDefense> attacks = new ArrayList<>(visibleAttacks.values());
+        attacks.sort(Comparator.comparingLong(QueuedDefense::startsAt));
         if (attacks.isEmpty()) {
-            for (String territory : activeAttackTerritories) {
-                cachedDefenses.remove(territory);
-            }
-            activeAttackTerritories.clear();
             soonestTerritory = null;
             return;
         }
-
-        // Sort by time ascending
-        attacks.sort(Comparator.comparingInt(a -> {
-            String[] words = a.split(" ");
-            return words.length > 0 ? parseMinutes(words[0]) : Integer.MAX_VALUE;
-        }));
-        clearFinishedAttackDefenses(attacks);
-
-        // Track soonest territory for beacon
-        String firstTerritory = getAttackTerritory(attacks.get(0));
-        if (!firstTerritory.isEmpty()) soonestTerritory = firstTerritory;
+        soonestTerritory = attacks.getFirst().territory;
 
         int x = WynnExtrasConfig.INSTANCE.attackTimerX;
         int y = WynnExtrasConfig.INSTANCE.attackTimerY;
@@ -279,13 +437,10 @@ public class AttackTimer {
         // Build display lines with defense if known
         String currentTerritory = getCurrentTerritory();
         List<Text> lines = new ArrayList<>();
-        for (String attack : attacks) {
-            String[] words = attack.split(" ");
-            String time = words.length > 0 ? words[0] : "";
-            String terr = getAttackTerritory(attack);
-            String def = getDefenseLevel(terr);
-            boolean isCurrentTerritory = currentTerritory != null && currentTerritory.equalsIgnoreCase(terr);
-            lines.add(buildAttackLine(time, terr, def, isCurrentTerritory));
+        for (QueuedDefense attack : attacks) {
+            String time = formatTimerTime(attack.startsAt - now);
+            boolean isCurrentTerritory = currentTerritory != null && currentTerritory.equalsIgnoreCase(attack.territory);
+            lines.add(buildAttackLine(time, attack.territory, attack.defense, isCurrentTerritory));
         }
 
         int maxW = 0;

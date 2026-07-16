@@ -1,12 +1,12 @@
 package julianh06.wynnextras.features.achievements;
 
-import com.wynntils.core.components.Models;
 import com.wynntils.models.emeralds.type.EmeraldUnits;
 import com.wynntils.models.raid.raids.RaidKind;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.event.RaidEndedEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
@@ -17,6 +17,7 @@ import julianh06.wynnextras.features.profileviewer.data.Profession;
 import julianh06.wynnextras.features.profileviewer.data.Raids;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.features.qol.AttackTimer;
 import julianh06.wynnextras.utils.BossBarUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.MinecraftClient;
@@ -34,6 +35,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @WEModule
 public class AchievementTracking {
@@ -55,8 +58,10 @@ public class AchievementTracking {
     private static final int CLASS_LEVEL_121 = 121;
     private static final int PROFESSION_LEVEL_MAX = 132;
     private static final long RICH_BANK_SCAN_INTERVAL_MS = 10_000L;
-    private static final long WAR_COOLDOWN_MS = 25_000L;
     private static final long WAR_API_REFRESH_INTERVAL_MS = 60_000L;
+    private static final long WAR_RESULT_GRACE_MS = 15_000L;
+    private static final Pattern TERRITORY_CAPTURED_PATTERN = Pattern.compile(
+            "Territory Captured.*?- Captured \\\"(?<territory>[^\\\"]+)\\\"", Pattern.DOTALL);
 
     /**
      * Raw content-completion value that equals 100%. Kept in sync with
@@ -86,9 +91,10 @@ public class AchievementTracking {
     private boolean aspectsSynced;
     private volatile boolean syncingAspects;
     private long nextRichBankScanAt;
-    private long lastWarDetected;
     private long nextWarApiSyncAt;
     private boolean warBossBarActive;
+    private String awaitingWarResultTerritory;
+    private long awaitingWarResultUntil;
     private String lastWarDefenseDebugState;
 
     public static void reloadAchievementsFromApi() {
@@ -171,7 +177,7 @@ public class AchievementTracking {
         if (unlockSimple("bank.rich", "Rich")) save();
     }
 
-    /** Uses the same Tower boss-bar detection and cooldown as the weekly war counter. */
+    /** Records the active tower; the achievement is only granted after the capture message. */
     private void trackWarAchievements() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
@@ -185,27 +191,50 @@ public class AchievementTracking {
                 warBossBarActive = true;
                 WynnExtras.LOGGER.info("[WE Achievement Debug] Tower boss bar detected: '{}', territory='{}'", name, territoryName);
             }
-
-            long now = System.currentTimeMillis();
-            if (now - lastWarDetected > WAR_COOLDOWN_MS) {
-                WarDefense defense = WarDefense.fromName(currentWarDefense(territoryName));
-                if (defense == null) return;
-
-                boolean alreadyUnlocked = achievements.isUnlocked(defense.achievementId);
-                boolean changed = unlockSimple(defense.achievementId, defense.displayName + " Defense tower");
-                WynnExtras.LOGGER.info("[WE Achievement Debug] War defence '{}' mapped to '{}'; alreadyUnlocked={}, changed={}",
-                        defense.displayName, defense.achievementId, alreadyUnlocked, changed);
-                if (changed) save();
-                lastWarDetected = now;
-            }
+            awaitingWarResultTerritory = territoryName;
+            awaitingWarResultUntil = Long.MAX_VALUE;
             return;
         }
 
         if (warBossBarActive) {
             WynnExtras.LOGGER.info("[WE Achievement Debug] Tower boss bar disappeared");
+            awaitingWarResultUntil = System.currentTimeMillis() + WAR_RESULT_GRACE_MS;
+        } else if (awaitingWarResultTerritory != null && System.currentTimeMillis() > awaitingWarResultUntil) {
+            awaitingWarResultTerritory = null;
+            awaitingWarResultUntil = 0;
         }
         warBossBarActive = false;
         lastWarDefenseDebugState = null;
+    }
+
+    @SubscribeEvent
+    private void onWarCaptured(ChatEvent event) {
+        if (achievements == null || awaitingWarResultTerritory == null) return;
+
+        Matcher matcher = TERRITORY_CAPTURED_PATTERN.matcher(event.message.getString());
+        if (!matcher.find()) return;
+        String territoryName = matcher.group("territory");
+        if (!awaitingWarResultTerritory.equalsIgnoreCase(territoryName)
+                || System.currentTimeMillis() > awaitingWarResultUntil) return;
+
+        String queuedDefense = AttackTimer.getQueuedAttackDefense(territoryName);
+        WarDefense defense = WarDefense.fromName(queuedDefense);
+        if (defense == null) {
+            logWarDefenseDebug("no-queued-defense:" + territoryName,
+                    "No defence snapshot from the queue for '" + territoryName + "'; not unlocking a war defence achievement");
+        } else {
+            AttackTimer.markQueuedAttackDefenseUsed(territoryName);
+            boolean alreadyUnlocked = achievements.isUnlocked(defense.achievementId);
+            boolean changed = unlockSimple(defense.achievementId, defense.displayName + " Defense tower");
+            logWarDefenseDebug("defense:" + queuedDefense,
+                    "Captured tower '" + territoryName + "' had queued defence '" + queuedDefense + "'");
+            WynnExtras.LOGGER.info("[WE Achievement Debug] War defence '{}' mapped to '{}'; alreadyUnlocked={}, changed={}",
+                    defense.displayName, defense.achievementId, alreadyUnlocked, changed);
+            if (changed) save();
+        }
+
+        awaitingWarResultTerritory = null;
+        awaitingWarResultUntil = 0;
     }
 
     private void syncWarCountFromApiIfDue() {
@@ -215,29 +244,6 @@ public class AchievementTracking {
 
         nextWarApiSyncAt = now + WAR_API_REFRESH_INTERVAL_MS;
         syncRaidCountsFromApi();
-    }
-
-    private String currentWarDefense(String territoryName) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null) return null;
-
-        try {
-            var poi = territoryName == null ? null : Models.Territory.getTerritoryPoiFromAdvancement(territoryName);
-            if (poi == null) {
-                logWarDefenseDebug("no-poi:" + territoryName, "No territory POI for '" + territoryName + "'");
-                return null;
-            }
-            if (poi.getTerritoryInfo() == null || poi.getTerritoryInfo().getDefences() == null) {
-                logWarDefenseDebug("no-defense:" + territoryName, "No defence data for '" + territoryName + "'");
-                return null;
-            }
-            String defense = poi.getTerritoryInfo().getDefences().name();
-            logWarDefenseDebug("defense:" + defense, "Territory '" + territoryName + "' reports defence '" + defense + "'");
-            return defense;
-        } catch (Exception exception) {
-            logWarDefenseDebug("exception:" + exception.getClass().getName(), "Failed to read war defence: " + exception);
-            return null;
-        }
     }
 
     private String getWarTerritoryName(String bossBarName) {
@@ -627,11 +633,10 @@ public class AchievementTracking {
 
         static WarDefense fromName(String name) {
             if (name == null) return null;
-            try {
-                return valueOf(name);
-            } catch (IllegalArgumentException ignored) {
-                return null;
+            for (WarDefense defense : values()) {
+                if (defense.displayName.equalsIgnoreCase(name)) return defense;
             }
+            return null;
         }
     }
 

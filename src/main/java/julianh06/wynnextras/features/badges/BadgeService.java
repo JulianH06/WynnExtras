@@ -119,7 +119,9 @@ public class BadgeService {
     }
 
     private static Text appendBadge(Text label, BadgeProfile profile) {
-        MutableText result = withoutKnownBadge(label);
+        if (hasKnownBadgeSuffix(label.getString())) return label;
+
+        MutableText result = label.copy();
         result.append(Text.literal(" "));
         result.append(BadgeCatalog.badgeText(profile.selectedIconId, profile.selectedColorId));
         return result;
@@ -561,14 +563,4 @@ public class BadgeService {
         return false;
     }
 
-    private static MutableText withoutKnownBadge(Text label) {
-        if (!hasKnownBadgeSuffix(label.getString()) || label.getSiblings().size() < 2) return label.copy();
-
-        MutableText result = label.copyContentOnly().setStyle(label.getStyle());
-        List<Text> siblings = label.getSiblings();
-        for (int i = 0; i < siblings.size() - 2; i++) {
-            result.append(siblings.get(i));
-        }
-        return result;
-    }
 }
