@@ -354,6 +354,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .sub("Provoke Timer")
                 .add(toggle("Enable Provoke Timer", "Show provoke timer on HUD",
                         () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
+                .add(visibleWhen(slider("Duration", "Duration of the provoke timer in seconds", 0, 10,
+                                () -> config.provokeTimerDuration, v -> config.provokeTimerDuration = v),
+                        () -> config.provokeTimerToggle))
                 .sub("Radiant HUD")
                 .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
                         () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))

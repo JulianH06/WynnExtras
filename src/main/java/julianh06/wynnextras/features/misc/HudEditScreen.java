@@ -90,7 +90,7 @@ public class HudEditScreen extends Screen {
 
         if (c.provokeTimerToggle) {
             int provokeColor = c.provokeTimerColor.getRGB();
-            elements.add(new HudElement("provoke", "Provoke: 3s",
+            elements.add(new HudElement("provoke", "Provoke: " + c.provokeTimerDuration + "s",
                     c.provokeTimerX, c.provokeTimerY, c.provokeTimerScale, c.provokeTimerAlignment, provokeColor));
         }
         if (c.totemTimerEnabled) {

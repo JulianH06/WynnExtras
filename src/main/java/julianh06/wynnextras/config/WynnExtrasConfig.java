@@ -427,6 +427,7 @@ public class WynnExtrasConfig {
     public float radiantHudScale = 1.0f;
 
     // ==================== PROVOKE TIMER HUD ====================
+    public int provokeTimerDuration = 5;
     public int provokeTimerX = -1;
     public int provokeTimerY = 20;
     public float provokeTimerScale = 1.0f;
