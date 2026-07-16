@@ -77,7 +77,7 @@ public class TetrisScreen extends Screen {
 
     @Override
     protected void applyBlur(DrawContext context) {
-        if (WynnExtrasConfig.INSTANCE.hideTetrisBackgroundBlur) super.applyBlur(context);
+        if (!WynnExtrasConfig.INSTANCE.hideTetrisBackgroundBlur) super.applyBlur(context);
     }
 
     private void updateBounds() {
