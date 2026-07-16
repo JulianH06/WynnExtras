@@ -461,6 +461,7 @@ public class WynnExtrasConfig {
     public int tetrisARR = 30;
     public int tetrisSDFDelay = 100;
     public int tetrisSDF = 30;
+    public boolean hideTetrisBackgroundBlur = false;
     public boolean tetris20GEnabled = false;
     public int tetris20GLevel = 20;
     public int tetrisMoveRightKey = GLFW.GLFW_KEY_RIGHT;

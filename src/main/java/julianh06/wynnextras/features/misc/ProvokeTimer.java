@@ -53,7 +53,7 @@ public class ProvokeTimer {
         }
 
         if (storedTicks != -1) {
-            timeToRender = storedTicks + 160 - clientTicks;
+            timeToRender = storedTicks + 60 - clientTicks;
 
             if (timeToRender >= 0) {
                 calculatedSeconds = timeToRender / 20;
@@ -93,7 +93,7 @@ public class ProvokeTimer {
 
         WynnExtrasConfig.Align align = WynnExtrasConfig.INSTANCE.provokeTimerAlignment;
 
-        int previewTw = mc.textRenderer.getWidth("Provoke: 7s");
+        int previewTw = mc.textRenderer.getWidth("Provoke: 3s");
 
         int textOffsetX;
         if (align == WynnExtrasConfig.Align.LEFT) {

@@ -741,6 +741,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
                 .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
                         0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
+                .add(toggle("Remove background blur", "Hide the background blur in the Tetris menu",
+                        () -> !config.hideTetrisBackgroundBlur, v -> config.hideTetrisBackgroundBlur = !v))
                 .add(toggle("20G after level", "Instant gravity after the selected level.",
                         () -> config.tetris20GEnabled, v -> config.tetris20GEnabled = v))
                 .add(visibleWhen(slider("20G Level", "Level where instant gravity starts",
@@ -1011,6 +1013,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
                 .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
                         0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
+                .add(toggle("Remove background blur", "Hide the background blur in the Tetris menu",
+                        () -> !config.hideTetrisBackgroundBlur, v -> config.hideTetrisBackgroundBlur = !v))
                 .add(toggle("20G after level", "Instant gravity after the selected level.",
                         () -> config.tetris20GEnabled, v -> config.tetris20GEnabled = v))
                 .add(visibleWhen(slider("20G Level", "Level where instant gravity starts",
