@@ -42,6 +42,8 @@ import julianh06.wynnextras.features.raid.RaidListData;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootTracker;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
+import julianh06.wynnextras.features.wci.WynnExtrasWciFeature;
+import julianh06.wynnextras.features.wci.service.WciTradeMarketSearchService;
 import julianh06.wynnextras.features.waypoints.data.WaypointData;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
@@ -184,6 +186,7 @@ public class WynnExtras implements ClientModInitializer {
 		WELoader.loadAll();
 		TickScheduler.init();
 		ChatEvent.register();
+		WciTradeMarketSearchService.register();
 
         new InitEvent().post();
 
@@ -237,6 +240,7 @@ public class WynnExtras implements ClientModInitializer {
 			CharacterBankData.INSTANCE.load();
 			BookshelfData.INSTANCE.load();
 			MiscBucketData.INSTANCE.load();
+			WynnExtrasWciFeature.loadPersistedCart();
 			BankOverlay2.invalidateBagTotalCache();
 			WynncraftApiHandler.load();
 

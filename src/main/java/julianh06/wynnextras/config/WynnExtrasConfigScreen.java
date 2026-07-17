@@ -496,6 +496,15 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
                         () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
+                .add(toggle("WCI Shopping Menu", "Show the WCI shopping list menu on Trade Market, bank, and crafting screens",
+                        () -> config.wciShoppingMenuEnabled, v -> config.wciShoppingMenuEnabled = v))
+                .add(toggle("Allow WCI menu outside supported screens", "Allows the WCI shopping menu to stay visible outside supported screens; confirmation dialogs remain blocked",
+                        () -> config.wciAllowPersistentMenu, v -> config.wciAllowPersistentMenu = v))
+                .add(toggle("WynnMarketSearch compatibility", "Temporarily suppresses WynnMarketSearch while WCI performs Trade Market row searches",
+                        () -> config.wciWynnMarketSearchCompatibility, v -> config.wciWynnMarketSearchCompatibility = v))
+                .add(keybind("Toggle WCI Shopping Menu", "Toggle the WCI shopping menu; opens pinned outside supported screens",
+                        () -> config.wciToggleKey, v -> config.wciToggleKey = v,
+                        DEFAULT_CONFIG.wciToggleKey))
                 .add(text("The preview is movable", "To change its position just drag it where you want"))
             .sub("Profession Overlay")
                 .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",

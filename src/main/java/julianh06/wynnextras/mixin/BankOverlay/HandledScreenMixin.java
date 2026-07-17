@@ -27,6 +27,9 @@ import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.misc.QuickRepair;
 import julianh06.wynnextras.features.mount.MountOverlay;
+import julianh06.wynnextras.features.wci.ui.WciScreenContext;
+import julianh06.wynnextras.features.wci.ui.WciShoppingMenuExtension;
+import julianh06.wynnextras.features.wci.ui.WciShoppingMenuLauncherButton;
 import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.SmoothGuiCompat;
 import net.minecraft.client.MinecraftClient;
@@ -82,6 +85,10 @@ public abstract class HandledScreenMixin {
 
     @Unique private QuickRepair quickRepairOverlay;
 
+    @Unique private WciShoppingMenuExtension wciShoppingMenuExtension;
+    @Unique private WciShoppingMenuLauncherButton wciShoppingMenuLauncherButton;
+    @Unique private boolean wciRenderedThisFrame = false;
+
     @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
     private void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci){
         if (WynnExtrasConfig.INSTANCE.toggleBankOverlay && currentOverlayType != BankOverlayType.NONE) {
@@ -94,6 +101,7 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        wciRenderedThisFrame = false;
         LunarCompat.recordHandledScreenMixinRender((HandledScreen<?>) (Object) this);
         // Encounter Selection Overlay (must render FIRST and cancel vanilla render so chest UI is fully hidden)
         {
@@ -149,6 +157,10 @@ public abstract class HandledScreenMixin {
             bankOverlay.render(context, mouseX, mouseY, delta);
             SmoothGuiCompat.pushIfNeeded(context, poppedSmoothGui && !ci.isCancelled());
             renderWynntilsBankPageJumpButtons(context, mouseX, mouseY, delta, (HandledScreen<?>) (Object) this);
+            if (isCustomBankOverlayReplacingVanilla() && ci.isCancelled()) {
+                renderWciShoppingMenu(context, mouseX, mouseY, delta, WciScreenContext.BANK_OVERLAY, true);
+                renderWciShoppingMenuLauncherButton(context, mouseX, mouseY, delta, true);
+            }
         }
 
         if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
@@ -210,8 +222,87 @@ public abstract class HandledScreenMixin {
         if (quickRepairOverlay == null) quickRepairOverlay = new QuickRepair();
         quickRepairOverlay.render(context, mouseX, mouseY, delta);
 
+        boolean wciBankOverlayPlacementMode = isWciBankOverlayPlacementMode();
+        renderWciShoppingMenu(context, mouseX, mouseY, delta,
+                currentWciScreenContext(wciBankOverlayPlacementMode), wciBankOverlayPlacementMode);
+        renderWciShoppingMenuLauncherButton(context, mouseX, mouseY, delta, wciBankOverlayPlacementMode);
+
         ProfessionOverlay.renderOnScreen(context);
         ItemComponentsDebugOverlay.render(context, mouseX, mouseY);
+    }
+
+    @Unique
+    private WciShoppingMenuExtension ensureWciShoppingMenuExtension() {
+        if (!WciShoppingMenuExtension.isVisible()) {
+            return null;
+        }
+        if (wciShoppingMenuExtension == null) {
+            wciShoppingMenuExtension = new WciShoppingMenuExtension();
+        }
+        return wciShoppingMenuExtension;
+    }
+
+    @Unique
+    private void renderWciShoppingMenu(DrawContext context, int mouseX, int mouseY, float delta,
+                                       WciScreenContext screenContext, boolean customBankOverlayActive) {
+        if (wciRenderedThisFrame) {
+            return;
+        }
+        if (!WciShoppingMenuExtension.shouldRender(screenContext)) {
+            return;
+        }
+        WciShoppingMenuExtension extension = ensureWciShoppingMenuExtension();
+        if (extension == null) {
+            return;
+        }
+        extension.setScreenContext(screenContext);
+        extension.setPlacementContext(screenContext.placementContext());
+        extension.render(context, mouseX, mouseY, delta);
+        wciRenderedThisFrame = true;
+    }
+
+    @Unique
+    private WciShoppingMenuLauncherButton ensureWciShoppingMenuLauncherButton() {
+        if (wciShoppingMenuLauncherButton == null) {
+            wciShoppingMenuLauncherButton = new WciShoppingMenuLauncherButton();
+        }
+        return wciShoppingMenuLauncherButton;
+    }
+
+    @Unique
+    private void renderWciShoppingMenuLauncherButton(DrawContext context, int mouseX, int mouseY, float delta,
+                                                     boolean customBankOverlayActive) {
+        ensureWciShoppingMenuLauncherButton().render(context, (HandledScreen<?>) (Object) this, mouseX, mouseY, delta,
+                customBankOverlayActive);
+    }
+
+    @Unique
+    private boolean isCustomBankOverlayReplacingVanilla() {
+        return WynnExtrasConfig.INSTANCE.toggleBankOverlay
+                && currentOverlayType != BankOverlayType.NONE;
+    }
+
+    @Unique
+    private boolean isWciBankOverlayPlacementMode() {
+        if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
+            return false;
+        }
+        if (currentOverlayType != BankOverlayType.NONE) {
+            return true;
+        }
+        return WciShoppingMenuLauncherButton.isBankLikeContainer(Models.Container.getCurrentContainer());
+    }
+
+    @Unique
+    private WciScreenContext currentWciScreenContext(boolean customBankOverlayActive) {
+        return WciScreenContext.detect((HandledScreen<?>) (Object) this, customBankOverlayActive);
+    }
+
+    @Unique
+    private void configureWciShoppingMenuExtension(WciShoppingMenuExtension extension, boolean customBankOverlayActive) {
+        WciScreenContext context = currentWciScreenContext(customBankOverlayActive);
+        extension.setScreenContext(context);
+        extension.setPlacementContext(context.placementContext());
     }
 
     @Unique
@@ -358,6 +449,21 @@ public abstract class HandledScreenMixin {
             return;
         }
 
+        boolean wciBankOverlayPlacementMode = isWciBankOverlayPlacementMode();
+        if (ensureWciShoppingMenuLauncherButton().mouseClicked(mouseX, mouseY, button, self, wciBankOverlayPlacementMode)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
+        WciShoppingMenuExtension wciExtension = ensureWciShoppingMenuExtension();
+        if (wciExtension != null) {
+            configureWciShoppingMenuExtension(wciExtension, wciBankOverlayPlacementMode);
+        }
+        if (wciExtension != null && wciExtension.mouseClicked(mouseX, mouseY, button)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
         // Trade Market Comparison Panel click handling
         if (TradeMarketComparisonPanel.handleClick(mouseX, mouseY, button, 1)) {
             cir.setReturnValue(true);
@@ -434,6 +540,13 @@ public abstract class HandledScreenMixin {
             return;
         }
 
+        boolean wciBankOverlayPlacementMode = isWciBankOverlayPlacementMode();
+        WciScreenContext releaseWciContext = currentWciScreenContext(wciBankOverlayPlacementMode);
+        if (ensureWciShoppingMenuLauncherButton().mouseReleased(button, releaseWciContext)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
         // Class Selection Overlay release (for drag-to-reorder)
         if (classSelectionOverlay != null) {
             classSelectionOverlay.onMouseReleased(mouseX, mouseY, button);
@@ -466,6 +579,14 @@ public abstract class HandledScreenMixin {
         if(craftingHelperOverlay != null && WynnExtrasConfig.INSTANCE.craftingHelperOverlay) {
             craftingHelperOverlay.mouseReleased(mouseX, mouseY, button);
         }
+
+        WciShoppingMenuExtension wciExtension = ensureWciShoppingMenuExtension();
+        if (wciExtension != null) {
+            configureWciShoppingMenuExtension(wciExtension, wciBankOverlayPlacementMode);
+        }
+        if (wciExtension != null && wciExtension.mouseReleased(mouseX, mouseY, button)) {
+            cir.setReturnValue(true);
+        }
     }
 
     @Inject(method = "mouseDragged", at = @At("HEAD"), cancellable = true)
@@ -495,16 +616,39 @@ public abstract class HandledScreenMixin {
             TradeMarketOverlay.handleMouseMove(mouseX, mouseY);
         }
 
+        boolean wciBankOverlayPlacementMode = isWciBankOverlayPlacementMode();
+        WciScreenContext dragWciContext = currentWciScreenContext(wciBankOverlayPlacementMode);
+        if (ensureWciShoppingMenuLauncherButton().mouseDragged(mouseX, mouseY, click.button(), dragWciContext)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
         if(bankOverlay != null) {
             if (bankOverlay.mouseDragged(mouseX, mouseY, click.button(), deltaX, deltaY)) {
                 cir.setReturnValue(true);
             }
+        }
+
+        WciShoppingMenuExtension wciExtension = ensureWciShoppingMenuExtension();
+        if (wciExtension != null) {
+            configureWciShoppingMenuExtension(wciExtension, wciBankOverlayPlacementMode);
+        }
+        if (wciExtension != null && wciExtension.mouseDragged(mouseX, mouseY, click.button(), deltaX, deltaY)) {
+            cir.setReturnValue(true);
         }
     }
 
     @Inject(method = "mouseScrolled", at = @At("HEAD"), cancellable = true)
     private void onMouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount, CallbackInfoReturnable<Boolean> cir) {
         if (ItemComponentsDebugOverlay.mouseScrolled(mouseX, mouseY, verticalAmount)) {
+            cir.setReturnValue(true);
+            return;
+        }
+        WciShoppingMenuExtension wciExtension = ensureWciShoppingMenuExtension();
+        if (wciExtension != null) {
+            configureWciShoppingMenuExtension(wciExtension, isWciBankOverlayPlacementMode());
+        }
+        if (wciExtension != null && wciExtension.mouseScrolled(mouseX, mouseY, verticalAmount)) {
             cir.setReturnValue(true);
             return;
         }
@@ -532,6 +676,8 @@ public abstract class HandledScreenMixin {
         heldItem = Items.AIR.getDefaultStack();
         craftingHelperOverlay = null;
         classSelectionOverlay = null;
+        wciShoppingMenuExtension = null;
+        wciShoppingMenuLauncherButton = null;
         BankOverlaySlotBridge.restoreAll();
     }
 
@@ -543,6 +689,8 @@ public abstract class HandledScreenMixin {
         BankOverlaySlotBridge.restoreAll();
         craftingHelperOverlay = null;
         classSelectionOverlay = null;
+        wciShoppingMenuExtension = null;
+        wciShoppingMenuLauncherButton = null;
         ItemComponentsDebugOverlay.reset();
 
         // Clear Trade Market Comparison on close
@@ -645,6 +793,23 @@ public abstract class HandledScreenMixin {
                 cir.cancel();
                 return;
             }
+        }
+
+        if (WciShoppingMenuExtension.isToggleKey(keyCode)) {
+            WciShoppingMenuExtension.toggleFromHotkey(currentWciScreenContext(isWciBankOverlayPlacementMode()));
+            cir.setReturnValue(true);
+            cir.cancel();
+            return;
+        }
+
+        WciShoppingMenuExtension wciExtension = ensureWciShoppingMenuExtension();
+        if (wciExtension != null) {
+            configureWciShoppingMenuExtension(wciExtension, isWciBankOverlayPlacementMode());
+        }
+        if (wciExtension != null && wciExtension.keyPressed(keyCode, scanCode, modifiers)) {
+            cir.setReturnValue(true);
+            cir.cancel();
+            return;
         }
 
         if(bankOverlay != null) {
