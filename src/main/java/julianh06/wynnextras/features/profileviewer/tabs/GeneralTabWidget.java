@@ -7,6 +7,7 @@ import julianh06.wynnextras.features.badges.BadgeService;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.features.profileviewer.ProfileTitleService;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
@@ -200,16 +201,9 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             }
         }
 
-        if(WETeam != null && PV.currentPlayerData.getUsername() != null) {
-            if (WETeam.contains(PV.currentPlayerData.getUsername())) {
-                ui.drawCenteredText("★★★ WynnExtras Team Member ★★★", x + 285, y + 720, WynncraftShaderColor.SHINE.color, 3f);
-            }
-        }
-
-        if(WEContributors != null && PV.currentPlayerData.getUsername() != null) {
-            if (WEContributors.contains(PV.currentPlayerData.getUsername())) {
-                ui.drawCenteredText("★★★ WynnExtras Contributor ★★★", x + 285, y + 720, WynncraftShaderColor.SHINE.color, 3f);
-            }
+        String profileTitle = ProfileTitleService.getTitle(PV.currentPlayerData.getUsername());
+        if (profileTitle != null) {
+            ui.drawCenteredText("★★★ " + profileTitle + " ★★★", x + 285, y + 720, WynncraftShaderColor.SHINE.color, 3f);
         }
     }
 

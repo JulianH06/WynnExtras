@@ -43,7 +43,9 @@ public class ClassSelectionData {
         public int color = 0;
         public double timePlayed = 0;
         public int level = 0;
-        public int xpPercent = 0;
+        public double xpPercent = -1;
+        public double contentProgress = -1;
+        public String location = "";
     }
 
     public static List<String> getClassCardOrder() {

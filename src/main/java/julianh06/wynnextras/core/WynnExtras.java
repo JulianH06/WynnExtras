@@ -34,6 +34,7 @@ import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.misc.QuickRepair;
 import julianh06.wynnextras.features.misc.TotemTimer;
 import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.profileviewer.ProfileTitleService;
 import julianh06.wynnextras.features.qol.EncounterOverlay;
 import julianh06.wynnextras.features.raid.*;
 import julianh06.wynnextras.features.raid.tna.TreeRoomMinimap;
@@ -176,6 +177,7 @@ public class WynnExtras implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		Core.init(MOD_ID);
+		ProfileTitleService.fetch();
 		CraftingDataService.getInstance().initialize();
 		updateVersionData();
 

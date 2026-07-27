@@ -96,7 +96,7 @@ public class WynncraftApiHandler {
         }
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.wynncraft.com/v3/map/loot-pools"))
+                .uri(URI.create("https://api.wynncraft.com/v3/map/loot-pools?level=120"))
                 .timeout(Duration.ofSeconds(8))
                 .GET()
                 .build();
@@ -229,6 +229,11 @@ public class WynncraftApiHandler {
     public String API_KEY;
 
     public static CompletableFuture<String> fetchUUID(String playerName) {
+        if (McUtils.player() != null
+                && playerName.equalsIgnoreCase(McUtils.player().getGameProfile().name())) {
+            return CompletableFuture.completedFuture(McUtils.player().getUuidAsString().replace("-", ""));
+        }
+
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.mojang.com/users/profiles/minecraft/" + playerName))
                 .timeout(Duration.ofSeconds(8))
@@ -240,13 +245,17 @@ public class WynncraftApiHandler {
                     int status = response.statusCode();
                     if (status == 404) return null;
                     if (status == 429) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                                Text.of("§cMojang API rate limit reached. Please wait a moment.")));
+                        if (BackendErrorLogger.error("mojang-profile-api", "Mojang API rate limit reached")) {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                    Text.of("§cMojang API rate limit reached. Please wait a moment.")));
+                        }
                         return null;
                     }
                     if (status != 200) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                                Text.of("§cMojang API error (" + status + "). Please try again.")));
+                        if (BackendErrorLogger.error("mojang-profile-api", "Mojang API error: " + status)) {
+                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                    Text.of("§cMojang API error (" + status + "). Please try again.")));
+                        }
                         return null;
                     }
                     try {

@@ -135,21 +135,15 @@ public class TreeRoomMinimap {
     }
 
     public static void render(DrawContext context, RenderTickCounter renderTickCounter) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.world == null) {
-            TnaApi.reset();
+        if (!isVisible()) {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc.player == null || mc.world == null) {
+                TnaApi.reset();
+            }
             return;
         }
 
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
-
-        if(!config.tnaTreeMap || config.showTreeMapOnlyWhileInsideOfTree && !TnaApi.inTree()) {
-            return;
-        }
-
-        if(!config.showTreeMapEverywhere && !TnaApi.inTreeRoom()) {
-            return;
-        }
 
         float scale = getEffectiveScale();
         context.getMatrices().pushMatrix();
@@ -177,6 +171,20 @@ public class TreeRoomMinimap {
 
         renderOverlay(context);
         context.getMatrices().popMatrix();
+    }
+
+    private static boolean isVisible() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player == null || mc.world == null) {
+            return false;
+        }
+
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        if (!config.tnaTreeMap || config.showTreeMapOnlyWhileInsideOfTree && !TnaApi.inTree()) {
+            return false;
+        }
+
+        return config.showTreeMapEverywhere || TnaApi.inTreeRoom();
     }
 
     public static void renderOverlay(DrawContext context) {
@@ -449,7 +457,7 @@ public class TreeRoomMinimap {
 
     public static boolean handleScroll(double mouseX, double mouseY, double verticalAmount) {
         WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
-        if (!config.tnaTreeMap) return false;
+        if (!isVisible()) return false;
         MinecraftClient mc = MinecraftClient.getInstance();
         boolean inEditScreen = mc.currentScreen instanceof InventoryScreen || mc.currentScreen instanceof ChatScreen;
         if (!inEditScreen) return false;

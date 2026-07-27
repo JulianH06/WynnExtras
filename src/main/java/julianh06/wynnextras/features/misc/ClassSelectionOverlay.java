@@ -96,8 +96,11 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private static final double DRAG_THRESHOLD = 5.0;
     private static final int MIN_FUZZY_MATCH_SCORE = 35;
     private static final int AMBIGUITY_SCORE_MARGIN = 6;
+    private static final int ICON_COLOR_MATCH_SCORE = 18;
+    private static final int ICON_COLOR_MISMATCH_PENALTY = 12;
     private static final int MAX_FUZZY_CANDIDATES_PER_CHARACTER = 8;
     private static final int STABLE_MATCH_SCORE = 1000;
+    private static final int REQUIRED_STABLE_SNAPSHOTS = 2;
 
     // Card layout cache (logical coords)
     private float[] cardLX = new float[15];
@@ -111,6 +114,8 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private final Map<String, String> lastHeldWeaponDetailCache = new HashMap<>();
     // Only run identity matching once per screen open
     private boolean identityMatched = false;
+    private String pendingIdentitySnapshot = "";
+    private int stableIdentitySnapshotCount = 0;
 
     // Vanilla toggle
     public static boolean vanillaMode = false;
@@ -235,6 +240,9 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         data.timePlayed = extractTimePlayed(stack);
         data.level = extractLevel(stack);
         data.xpPercent = extractXpPercent(stack);
+        ContentProgress contentProgress = extractContentProgress(stack);
+        data.contentProgress = contentProgress.found ? contentProgress.percent : -1;
+        data.location = extractLocation(stack);
         data.slotId = createSlotCharacterId(characterSlotIndex);
         data.fallbackId = createFallbackCharacterId(data, characterSlotIndex);
         return data;
@@ -342,19 +350,29 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return 0;
     }
 
-    private int extractXpPercent(ItemStack stack) {
+    private double extractXpPercent(ItemStack stack) {
         for (Text line : getTooltipLines(stack)) {
             String str = line.getString().replaceAll("\u00A7[0-9a-fk-or]", "").trim();
             if (str.contains("Level:") && str.contains("%")) {
                 int pIdx = str.indexOf('(');
                 int eIdx = str.indexOf('%');
                 if (pIdx >= 0 && eIdx > pIdx) {
-                    try { return Integer.parseInt(str.substring(pIdx + 1, eIdx).trim()); }
-                    catch (NumberFormatException e) { return 0; }
+                    try { return Double.parseDouble(str.substring(pIdx + 1, eIdx).trim()); }
+                    catch (NumberFormatException e) { return -1; }
                 }
             }
         }
-        return 0;
+        return -1;
+    }
+
+    private String extractLocation(ItemStack stack) {
+        for (Text line : getTooltipLines(stack)) {
+            String str = cleanTooltipLine(line);
+            int locationIndex = str.toLowerCase(Locale.ROOT).indexOf("location:");
+            if (locationIndex < 0) continue;
+            return str.substring(locationIndex + "location:".length()).trim().toLowerCase(Locale.ROOT);
+        }
+        return "";
     }
 
     /** Compute match score between a stored identity and current character data.
@@ -363,6 +381,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         String storedStableId = safeString(stored.stableId);
         String currentStableId = safeString(current.stableId);
         if (!storedStableId.isEmpty() && storedStableId.equals(currentStableId)) return STABLE_MATCH_SCORE;
+        if (!storedStableId.isEmpty() && !currentStableId.isEmpty()) return 0;
 
         String storedClass = safeString(stored.classType);
         String currentClass = safeString(current.classType);
@@ -373,7 +392,9 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         String storedName = safeString(stored.name);
         String currentName = safeString(current.name);
         if (!storedName.isEmpty() && storedName.equals(currentName)) score += 25;
-        if (stored.color != 0 && stored.color == current.color) score += 6;
+        if (stored.color != 0 && current.color != 0) {
+            score += stored.color == current.color ? ICON_COLOR_MATCH_SCORE : -ICON_COLOR_MISMATCH_PENALTY;
+        }
         // Time played: within 24h = strong, within 72h = weaker
         double timeDiff = Math.abs(stored.timePlayed - current.timePlayed);
         if (stored.timePlayed > 0 && current.timePlayed > 0) {
@@ -388,18 +409,29 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             else if (levelDiff > 0 && levelDiff <= 10) score += 8;
             else if (Math.abs(levelDiff) <= 2) score += 4; // small backward = rounding
         }
-        if (stored.xpPercent > 0 && current.xpPercent > 0) {
-            int xpDiff = Math.abs(stored.xpPercent - current.xpPercent);
-            if (xpDiff == 0) score += 3;
-            else if (xpDiff <= 5) score += 1;
+        if (stored.xpPercent >= 0 && current.xpPercent >= 0) {
+            double xpDiff = Math.abs(stored.xpPercent - current.xpPercent);
+            if (xpDiff <= 0.01) score += 5;
+            else if (xpDiff <= 5) score += 2;
+        }
+        if (stored.contentProgress >= 0 && current.contentProgress >= 0) {
+            double contentDiff = Math.abs(stored.contentProgress - current.contentProgress);
+            if (contentDiff <= 0.01) score += 8;
+            else if (contentDiff <= 2) score += 5;
+            else if (contentDiff <= 10) score += 2;
+        }
+        String storedLocation = safeString(stored.location);
+        String currentLocation = safeString(current.location);
+        if (!storedLocation.isEmpty() && storedLocation.equals(currentLocation)) {
+            score += 4;
         }
 
         return score >= MIN_FUZZY_MATCH_SCORE ? score : 0;
     }
 
     /** Match current characters to stored identities, returning UUID for each.
-     *  Uses stable ids when available, then an unambiguous optimal fuzzy assignment.
-     *  Updates stored identities only for accepted matches and new characters. */
+     *  Uses stable ids and exact snapshots first, then fuzzy matching. Any equally-sized
+     *  ambiguous remainder is assigned bijectively so existing cards cannot fall to the end. */
     private String[] matchCharacters(List<CharIdentity> currentChars) {
         Map<String, CharIdentity> stored = ClassSelectionData.getCharIdentities();
         if (stored == null) {
@@ -408,9 +440,17 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
         String[] uuids = new String[currentChars.size()];
         boolean[] currentUsed = new boolean[currentChars.size()];
+        boolean[] persistFreshIdentity = new boolean[currentChars.size()];
         Set<String> storedUsed = new HashSet<>();
         Set<String> assignedUuids = new HashSet<>();
-        boolean configChanged = false;
+        List<String> savedOrder = sanitizeSavedOrder(ClassSelectionData.getClassCardOrder());
+        LinkedHashSet<String> candidateStoredUuids = new LinkedHashSet<>();
+        for (String uuid : savedOrder) {
+            if (stored.containsKey(uuid)) candidateStoredUuids.add(uuid);
+        }
+        if (candidateStoredUuids.isEmpty() || candidateStoredUuids.size() < currentChars.size()) {
+            stored.keySet().stream().sorted().forEach(candidateStoredUuids::add);
+        }
 
         Map<String, String> stableIdToUuid = new HashMap<>();
         Set<String> duplicateStableIds = new HashSet<>();
@@ -434,19 +474,17 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             if (uuid == null || storedUsed.contains(uuid)) continue;
             uuids[i] = uuid;
             currentUsed[i] = true;
+            persistFreshIdentity[i] = true;
             storedUsed.add(uuid);
             assignedUuids.add(uuid);
+            WynnExtras.LOGGER.debug("[WynnExtras] Class identity matched by stable id: " + uuid);
         }
 
-        List<Integer> fuzzyCurrentIndices = new ArrayList<>();
-        for (int i = 0; i < currentChars.size(); i++) {
-            if (!currentUsed[i]) fuzzyCurrentIndices.add(i);
-        }
+        assignUniqueExactMatches(currentChars, stored, candidateStoredUuids, uuids, currentUsed,
+                persistFreshIdentity, storedUsed, assignedUuids);
 
-        List<String> fuzzyStoredUuids = new ArrayList<>();
-        for (String uuid : stored.keySet()) {
-            if (!storedUsed.contains(uuid)) fuzzyStoredUuids.add(uuid);
-        }
+        List<Integer> fuzzyCurrentIndices = getUnusedCurrentIndices(currentUsed);
+        List<String> fuzzyStoredUuids = getUnusedStoredUuids(candidateStoredUuids, storedUsed);
 
         int[][] fuzzyScores = buildFuzzyScoreMatrix(currentChars, fuzzyCurrentIndices, fuzzyStoredUuids, stored);
         int[] fuzzyAssignments = findBestFuzzyAssignment(fuzzyCurrentIndices, fuzzyStoredUuids, fuzzyScores);
@@ -461,68 +499,207 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
             uuids[currentIdx] = uuid;
             currentUsed[currentIdx] = true;
+            persistFreshIdentity[currentIdx] = true;
             storedUsed.add(uuid);
             assignedUuids.add(uuid);
+            WynnExtras.LOGGER.debug("[WynnExtras] Class identity matched fuzzily: " + uuid);
         }
 
-        Map<String, String> slotIdToUuid = buildUniqueIdentityIndex(stored, true, storedUsed);
-        for (int i = 0; i < currentChars.size(); i++) {
-            if (currentUsed[i]) continue;
-            String slotId = safeString(currentChars.get(i).slotId);
-            if (slotId.isEmpty()) continue;
-            String uuid = slotIdToUuid.get(slotId);
-            if (uuid == null || storedUsed.contains(uuid)) continue;
-            uuids[i] = uuid;
-            currentUsed[i] = true;
-            storedUsed.add(uuid);
-            assignedUuids.add(uuid);
-        }
+        assignAmbiguousRemainder(currentChars, stored, candidateStoredUuids, uuids, currentUsed,
+                storedUsed, assignedUuids);
 
-        // Assign deterministic ids for unmatched characters so the saved order remains stable.
         for (int i = 0; i < currentChars.size(); i++) {
             if (!currentUsed[i]) {
-                String newUuid = createDeterministicCharUuid(currentChars.get(i), assignedUuids);
+                String newUuid = createNewCharUuid(assignedUuids, stored);
                 uuids[i] = newUuid;
+                currentUsed[i] = true;
+                persistFreshIdentity[i] = true;
                 assignedUuids.add(newUuid);
+                WynnExtras.LOGGER.info("[WynnExtras] Created a new class identity: " + newUuid);
             }
         }
 
-        // Update stored identities with fresh data only after matching is decided.
+        if (!isValidCompleteAssignment(uuids)) {
+            WynnExtras.LOGGER.error("[WynnExtras] Refusing to persist invalid class identity assignment");
+            return createSafeTransientAssignment(currentChars.size());
+        }
+
+        boolean identitiesChanged = false;
         for (int i = 0; i < currentChars.size(); i++) {
+            if (!persistFreshIdentity[i]) continue;
             CharIdentity fresh = currentChars.get(i);
             fresh.uuid = uuids[i];
             if (!sameIdentity(stored.get(uuids[i]), fresh)) {
                 stored.put(uuids[i], fresh);
-                configChanged = true;
+                identitiesChanged = true;
             }
         }
-        if (configChanged) {
+        if (identitiesChanged) {
             ClassSelectionData.saveCharIdentities();
+        }
+
+        List<String> updatedOrder = new ArrayList<>(savedOrder);
+        if (updatedOrder.isEmpty()) {
+            updatedOrder.addAll(Arrays.asList(uuids));
+        } else {
+            for (String uuid : uuids) {
+                if (!updatedOrder.contains(uuid)) updatedOrder.add(uuid);
+            }
+        }
+        if (!updatedOrder.equals(savedOrder)) {
+            ClassSelectionData.setClassCardOrder(updatedOrder);
         }
 
         return uuids;
     }
 
-    private Map<String, String> buildUniqueIdentityIndex(Map<String, CharIdentity> stored, boolean useSlotId, Set<String> excludedUuids) {
-        Map<String, String> result = new HashMap<>();
-        Set<String> duplicates = new HashSet<>();
-        for (Map.Entry<String, CharIdentity> entry : stored.entrySet()) {
-            if (excludedUuids.contains(entry.getKey())) continue;
-            String key = useSlotId ? safeString(entry.getValue().slotId) : safeString(entry.getValue().stableId);
-            if (useSlotId && key.isEmpty() && safeString(entry.getValue().fallbackId).startsWith("slot-")) {
-                key = safeString(entry.getValue().fallbackId);
+    private void assignUniqueExactMatches(List<CharIdentity> currentChars, Map<String, CharIdentity> stored,
+                                          Set<String> candidates, String[] uuids, boolean[] currentUsed,
+                                          boolean[] persistFreshIdentity, Set<String> storedUsed,
+                                          Set<String> assignedUuids) {
+        boolean assigned;
+        do {
+            assigned = false;
+            for (int currentIdx = 0; currentIdx < currentChars.size(); currentIdx++) {
+                if (currentUsed[currentIdx]) continue;
+
+                List<String> exactCandidates = new ArrayList<>();
+                for (String uuid : candidates) {
+                    if (storedUsed.contains(uuid)) continue;
+                    if (isExactSnapshotMatch(stored.get(uuid), currentChars.get(currentIdx))) {
+                        exactCandidates.add(uuid);
+                    }
+                }
+                if (exactCandidates.size() != 1) continue;
+
+                String uuid = exactCandidates.getFirst();
+                int competingCurrentCount = 0;
+                for (int otherCurrent = 0; otherCurrent < currentChars.size(); otherCurrent++) {
+                    if (!currentUsed[otherCurrent]
+                            && isExactSnapshotMatch(stored.get(uuid), currentChars.get(otherCurrent))) {
+                        competingCurrentCount++;
+                    }
+                }
+                if (competingCurrentCount != 1) continue;
+
+                uuids[currentIdx] = uuid;
+                currentUsed[currentIdx] = true;
+                persistFreshIdentity[currentIdx] = true;
+                storedUsed.add(uuid);
+                assignedUuids.add(uuid);
+                assigned = true;
+                WynnExtras.LOGGER.debug("[WynnExtras] Class identity matched exactly: " + uuid);
             }
-            if (key.isEmpty()) continue;
-            if (result.containsKey(key)) {
-                duplicates.add(key);
-            } else {
-                result.put(key, entry.getKey());
+        } while (assigned);
+    }
+
+    private boolean isExactSnapshotMatch(CharIdentity stored, CharIdentity current) {
+        if (stored == null || current == null || !isClassCompatible(stored, current)) return false;
+
+        int comparedSignals = 0;
+        String storedName = safeString(stored.name);
+        String currentName = safeString(current.name);
+        if (!storedName.isEmpty() && !currentName.isEmpty()) {
+            if (!storedName.equals(currentName)) return false;
+            comparedSignals++;
+        }
+        if (stored.color != 0 && current.color != 0) {
+            if (stored.color != current.color) return false;
+            comparedSignals++;
+        }
+        if (stored.timePlayed > 0 && current.timePlayed > 0) {
+            if (Math.abs(stored.timePlayed - current.timePlayed) > 0.001) return false;
+            comparedSignals++;
+        }
+        if (stored.level > 0 && current.level > 0) {
+            if (stored.level != current.level) return false;
+            comparedSignals++;
+        }
+        if (stored.xpPercent >= 0 && current.xpPercent >= 0) {
+            if (Math.abs(stored.xpPercent - current.xpPercent) > 0.001) return false;
+            comparedSignals++;
+        }
+        if (stored.contentProgress >= 0 && current.contentProgress >= 0) {
+            if (Math.abs(stored.contentProgress - current.contentProgress) > 0.001) return false;
+            comparedSignals++;
+        }
+        String storedLocation = safeString(stored.location);
+        String currentLocation = safeString(current.location);
+        if (!storedLocation.isEmpty() && !currentLocation.isEmpty()) {
+            if (!storedLocation.equals(currentLocation)) return false;
+            comparedSignals++;
+        }
+        return comparedSignals >= 2;
+    }
+
+    private boolean isClassCompatible(CharIdentity stored, CharIdentity current) {
+        String storedStableId = safeString(stored.stableId);
+        String currentStableId = safeString(current.stableId);
+        if (!storedStableId.isEmpty() && !currentStableId.isEmpty() && !storedStableId.equals(currentStableId)) {
+            return false;
+        }
+        String storedClass = safeString(stored.classType);
+        String currentClass = safeString(current.classType);
+        return storedClass.isEmpty() || currentClass.isEmpty() || storedClass.equals(currentClass);
+    }
+
+    private void assignAmbiguousRemainder(List<CharIdentity> currentChars, Map<String, CharIdentity> stored,
+                                          Set<String> candidates, String[] uuids, boolean[] currentUsed,
+                                          Set<String> storedUsed, Set<String> assignedUuids) {
+        List<Integer> remainingCurrent = getUnusedCurrentIndices(currentUsed);
+        List<String> remainingStored = getUnusedStoredUuids(candidates, storedUsed);
+        if (remainingCurrent.isEmpty() || remainingStored.size() < remainingCurrent.size()) return;
+
+        int[][] scores = new int[remainingCurrent.size()][remainingStored.size()];
+        for (int i = 0; i < remainingCurrent.size(); i++) {
+            CharIdentity current = currentChars.get(remainingCurrent.get(i));
+            for (int j = 0; j < remainingStored.size(); j++) {
+                CharIdentity storedIdentity = stored.get(remainingStored.get(j));
+                if (!isClassCompatible(storedIdentity, current)) continue;
+                scores[i][j] = Math.max(1, matchScore(storedIdentity, current));
             }
         }
-        for (String duplicate : duplicates) {
-            result.remove(duplicate);
+
+        int[] assignments = findBestFuzzyAssignment(remainingCurrent, remainingStored, scores);
+        for (int i = 0; i < assignments.length; i++) {
+            if (assignments[i] < 0 || scores[i][assignments[i]] <= 0) return;
+        }
+
+        for (int i = 0; i < remainingCurrent.size(); i++) {
+            int currentIdx = remainingCurrent.get(i);
+            String uuid = remainingStored.get(assignments[i]);
+            uuids[currentIdx] = uuid;
+            currentUsed[currentIdx] = true;
+            storedUsed.add(uuid);
+            assignedUuids.add(uuid);
+        }
+        WynnExtras.LOGGER.info("[WynnExtras] Preserved positions for " + remainingCurrent.size()
+                + " ambiguous class identities without updating their stored snapshots");
+    }
+
+    private List<Integer> getUnusedCurrentIndices(boolean[] currentUsed) {
+        List<Integer> result = new ArrayList<>();
+        for (int i = 0; i < currentUsed.length; i++) {
+            if (!currentUsed[i]) result.add(i);
         }
         return result;
+    }
+
+    private List<String> getUnusedStoredUuids(Collection<String> candidates, Set<String> storedUsed) {
+        List<String> result = new ArrayList<>();
+        for (String uuid : candidates) {
+            if (!storedUsed.contains(uuid)) result.add(uuid);
+        }
+        return result;
+    }
+
+    private List<String> sanitizeSavedOrder(List<String> savedOrder) {
+        if (savedOrder == null || savedOrder.isEmpty()) return new ArrayList<>();
+        LinkedHashSet<String> unique = new LinkedHashSet<>();
+        for (String uuid : savedOrder) {
+            if (uuid != null && !uuid.isBlank()) unique.add(uuid);
+        }
+        return new ArrayList<>(unique);
     }
 
     private int[][] buildFuzzyScoreMatrix(List<CharIdentity> currentChars, List<Integer> currentIndices,
@@ -562,29 +739,28 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return false;
     }
 
-    private String createDeterministicCharUuid(CharIdentity data, Set<String> usedUuids) {
-        String base = safeString(data.stableId);
-        if (!base.isEmpty()) {
-            base = "stable-" + Integer.toHexString(base.hashCode());
-        } else {
-            base = safeString(data.fallbackId);
-        }
-        if (base.isEmpty()) {
-            base = "char-" + Integer.toHexString(Objects.hash(
-                    getCurrentPlayerKey(),
-                    safeString(data.name).toLowerCase(Locale.ROOT),
-                    safeString(data.classType).toLowerCase(Locale.ROOT),
-                    data.color
-            ));
-        }
-
-        String uuid = base;
-        int suffix = 2;
-        while (usedUuids.contains(uuid)) {
-            uuid = base + "-" + suffix;
-            suffix++;
-        }
+    private String createNewCharUuid(Set<String> usedUuids, Map<String, CharIdentity> stored) {
+        String uuid;
+        do {
+            uuid = "char-" + UUID.randomUUID().toString().substring(0, 8);
+        } while (usedUuids.contains(uuid) || stored.containsKey(uuid));
         return uuid;
+    }
+
+    private boolean isValidCompleteAssignment(String[] uuids) {
+        Set<String> unique = new HashSet<>();
+        for (String uuid : uuids) {
+            if (uuid == null || uuid.isBlank() || !unique.add(uuid)) return false;
+        }
+        return true;
+    }
+
+    private String[] createSafeTransientAssignment(int count) {
+        String[] result = new String[count];
+        for (int i = 0; i < count; i++) {
+            result[i] = "transient-" + i + "-" + UUID.randomUUID().toString().substring(0, 8);
+        }
+        return result;
     }
 
     private boolean sameIdentity(CharIdentity a, CharIdentity b) {
@@ -598,7 +774,9 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 && a.color == b.color
                 && Double.compare(a.timePlayed, b.timePlayed) == 0
                 && a.level == b.level
-                && a.xpPercent == b.xpPercent;
+                && Double.compare(a.xpPercent, b.xpPercent) == 0
+                && Double.compare(a.contentProgress, b.contentProgress) == 0
+                && Objects.equals(safeString(a.location), safeString(b.location));
     }
 
     private String safeString(String value) {
@@ -793,13 +971,15 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 charDataList.add(extractCharData(stack, i));
             }
 
-            if (!charDataList.isEmpty()) {
+            if (!charDataList.isEmpty() && isIdentitySnapshotStable(charSlotIndices, charDataList)) {
                 // Debug: log all character data once
                 if (!charDataDebugLogged) {
                     charDataDebugLogged = true;
                     for (CharIdentity cd : charDataList) {
                         WynnExtras.LOGGER.info("[WynnExtras] Char: name=" + cd.name + " class=" + cd.classType
-                                + " color=" + cd.color + " time=" + cd.timePlayed + " lv=" + cd.level + " xp=" + cd.xpPercent + "%");
+                                + " color=" + cd.color + " time=" + cd.timePlayed + " lv=" + cd.level
+                                + " xp=" + cd.xpPercent + "% content=" + cd.contentProgress
+                                + "% location=" + cd.location);
                     }
                 }
 
@@ -957,6 +1137,33 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     private record ClassCardTextLayout(float textStartYPx, float textSpacingPx, float detailTextScale,
                                        float bottomContentYPx, float progressLabelYPx, float textAreaBottomYPx) {}
+
+    private boolean isIdentitySnapshotStable(List<Integer> slotIndices, List<CharIdentity> chars) {
+        StringBuilder snapshot = new StringBuilder();
+        for (int i = 0; i < chars.size(); i++) {
+            CharIdentity data = chars.get(i);
+            snapshot.append(slotIndices.get(i)).append('|')
+                    .append(safeString(data.stableId)).append('|')
+                    .append(safeString(data.name)).append('|')
+                    .append(safeString(data.classType)).append('|')
+                    .append(data.color).append('|')
+                    .append(data.timePlayed).append('|')
+                    .append(data.level).append('|')
+                    .append(data.xpPercent).append('|')
+                    .append(data.contentProgress).append('|')
+                    .append(safeString(data.location)).append(';');
+        }
+
+        String currentSnapshot = snapshot.toString();
+        if (!currentSnapshot.equals(pendingIdentitySnapshot)) {
+            pendingIdentitySnapshot = currentSnapshot;
+            stableIdentitySnapshotCount = 1;
+            return false;
+        }
+
+        stableIdentitySnapshotCount++;
+        return stableIdentitySnapshotCount >= REQUIRED_STABLE_SNAPSHOTS;
+    }
 
     private void drawCharCard(DrawContext ctx, ItemStack stack, String charId, float cx, float cy,
                                boolean hovered, boolean dropTarget) {

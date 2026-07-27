@@ -2,6 +2,10 @@ package julianh06.wynnextras.features.achievements;
 
 import com.wynntils.models.emeralds.type.EmeraldUnits;
 import com.wynntils.models.raid.raids.RaidKind;
+import com.wynntils.core.components.Models;
+import com.wynntils.models.containers.Container;
+import com.wynntils.models.containers.containers.personal.AccountBankContainer;
+import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
 import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -15,13 +19,13 @@ import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.features.profileviewer.data.PlayerData;
 import julianh06.wynnextras.features.profileviewer.data.Profession;
 import julianh06.wynnextras.features.profileviewer.data.Raids;
-import julianh06.wynnextras.features.inventory.BankOverlay;
-import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.qol.AttackTimer;
 import julianh06.wynnextras.utils.BossBarUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.ClientBossBar;
+import net.minecraft.inventory.Inventory;
+import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
@@ -57,11 +61,10 @@ public class AchievementTracking {
     private static final int CLASS_LEVEL_120 = 120;
     private static final int CLASS_LEVEL_121 = 121;
     private static final int PROFESSION_LEVEL_MAX = 132;
-    private static final long RICH_BANK_SCAN_INTERVAL_MS = 10_000L;
     private static final long WAR_API_REFRESH_INTERVAL_MS = 60_000L;
     private static final long WAR_RESULT_GRACE_MS = 15_000L;
-    private static final Pattern TERRITORY_CAPTURED_PATTERN = Pattern.compile(
-            "Territory Captured.*?- Captured \\\"(?<territory>[^\\\"]+)\\\"", Pattern.DOTALL);
+    private static final Pattern TERRITORY_TAKEN_CONTROL_PATTERN = Pattern.compile(
+            "You have taken control of (?<territory>.+?) from \\[[^]]+]!");
 
     /**
      * Raw content-completion value that equals 100%. Kept in sync with
@@ -90,7 +93,6 @@ public class AchievementTracking {
     /** Ensures the aspect achievement sync only dispatches once the aspect catalogue is loaded. */
     private boolean aspectsSynced;
     private volatile boolean syncingAspects;
-    private long nextRichBankScanAt;
     private long nextWarApiSyncAt;
     private boolean warBossBarActive;
     private String awaitingWarResultTerritory;
@@ -102,6 +104,13 @@ public class AchievementTracking {
         AchievementTracking tracking = new AchievementTracking();
         tracking.syncRaidCountsFromApi();
         tracking.trySyncAspectAchievements();
+    }
+
+    public static void clearAchievements() {
+        achievements = Achievements.createDefaultAchievementSet();
+        pendingUnlockAnnouncements.clear();
+        unlockAnnouncementFlushTicks = -1;
+        Achievements.save();
     }
 
     @SubscribeEvent
@@ -154,25 +163,30 @@ public class AchievementTracking {
         syncRaidCountsFromApi();
     }
 
-    /** Checks the currently open bank page at most once every ten seconds. */
+    /** Checks the currently open account or character bank page. */
     private void checkRichBankAchievement() {
         if (achievements.isUnlocked("bank.rich")) return;
 
-        long now = System.currentTimeMillis();
-        if (now < nextRichBankScanAt) return;
-        nextRichBankScanAt = now + RICH_BANK_SCAN_INTERVAL_MS;
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
 
-        if (BankOverlay.currentOverlayType != BankOverlayType.ACCOUNT
-                && BankOverlay.currentOverlayType != BankOverlayType.CHARACTER) return;
-        if (BankOverlay.activeInvSlots.size() < 45) return;
+        Container container = Models.Container.getCurrentContainer();
+        if (!(container instanceof AccountBankContainer) && !(container instanceof CharacterBankContainer)) return;
 
-        for (int i = 0; i < 45; i++) {
-            Slot slot = BankOverlay.activeInvSlots.get(i);
-            if (slot == null || slot.getStack().getItem() != EmeraldUnits.LIQUID_EMERALD.getItemType()
-                    || slot.getStack().getCount() != 64) {
+        ScreenHandler handler = McUtils.containerMenu();
+        if (handler == null) return;
+
+        Inventory playerInventory = client.player.getInventory();
+        int bankSlotCount = 0;
+        for (Slot slot : handler.slots) {
+            if (slot.inventory == playerInventory) continue;
+            if (bankSlotCount == 45) break;
+            if (slot.getStack().getItem() != EmeraldUnits.LIQUID_EMERALD.getItemType() || slot.getStack().getCount() != 64) {
                 return;
             }
+            bankSlotCount++;
         }
+        if (bankSlotCount < 45) return;
 
         if (unlockSimple("bank.rich", "Rich")) save();
     }
@@ -211,9 +225,13 @@ public class AchievementTracking {
     private void onWarCaptured(ChatEvent event) {
         if (achievements == null || awaitingWarResultTerritory == null) return;
 
-        Matcher matcher = TERRITORY_CAPTURED_PATTERN.matcher(event.message.getString());
-        if (!matcher.find()) return;
-        String territoryName = matcher.group("territory");
+        String message = event.message.getString();
+        if (message.contains(":")) return;
+
+        Matcher controlMatcher = TERRITORY_TAKEN_CONTROL_PATTERN.matcher(message);
+        if (!controlMatcher.find()) return;
+
+        String territoryName = controlMatcher.group("territory");
         if (!awaitingWarResultTerritory.equalsIgnoreCase(territoryName)
                 || System.currentTimeMillis() > awaitingWarResultUntil) return;
 
