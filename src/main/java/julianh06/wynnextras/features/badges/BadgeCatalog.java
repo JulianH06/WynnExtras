@@ -7,8 +7,10 @@ import julianh06.wynnextras.features.achievements.Achievements;
 import julianh06.wynnextras.utils.color.ShaderColor;
 import julianh06.wynnextras.utils.color.ShaderColorCatalog;
 import net.minecraft.text.Style;
+import net.minecraft.text.StyleSpriteSource;
 import net.minecraft.text.Text;
 import net.minecraft.text.TextColor;
+import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +18,8 @@ import java.util.List;
 public final class BadgeCatalog {
     public static final String DEFAULT_ICON_ID = "spark";
     public static final String DEFAULT_COLOR_ID = "orange";
+    public static final String ORIGINAL_COLOR_ID = "original";
+    private static final Identifier BADGE_FONT = Identifier.of("wynnextras", "badges");
 
     private static final List<BadgeIcon> ICONS = List.of(
             new BadgeIcon(DEFAULT_ICON_ID, "\u2726", "Spark", null, null),
@@ -24,6 +28,7 @@ public final class BadgeCatalog {
             new BadgeIcon("heart", "\u2665", "Heart", null, null),
             new BadgeIcon("note", "\u266A", "Note", null, null),
             new BadgeIcon("notes", "\u266B", "Notes", null, null),
+            new BadgeIcon(CustomBadgeIcon.STEAMHAPPY), //TODO: add requirement for this
             new BadgeIcon("worm", "\uD83E\uDEB1", "Worm", AchievementId.RAID_NOTG, 2),
             new BadgeIcon("notg", "\u2737", "Idk what to call this", AchievementId.RAID_NOTG, 3),
             new BadgeIcon("paw", "\uD83D\uDC3E", "Paw", AchievementId.RAID_NOL, 2),
@@ -103,6 +108,7 @@ public final class BadgeCatalog {
             new BadgeColor("dark_green", 0x228B22, "Dark Green", null, null),
             new BadgeColor("gray", 0xAAAAAA, "Gray", null, null),
             new BadgeColor("white", 0xFFFFFF, "White", null, null),
+            new BadgeColor(ORIGINAL_COLOR_ID, 0xFFFFFF, null, "Original", null, null, true),
             new BadgeColor("rainbow", WynncraftShaderColor.RAINBOW.color.asInt(), "Rainbow", AchievementId.CONTENT_COMPLETION, null),
             new BadgeColor("sunset", ShaderColorCatalog.SUNSET, "Sunset", AchievementId.ULTIMATE_COMPLETIONIST, null),
             new BadgeColor("ocean", ShaderColorCatalog.OCEAN_FADE, "Ocean", AchievementId.MAX_LEVEL, null),
@@ -184,6 +190,18 @@ public final class BadgeCatalog {
         return isUnlocked(color.achievement(), color.minTier());
     }
 
+    public static boolean isCompatible(BadgeIcon icon, BadgeColor color) {
+        return !color.preservesOriginal() || icon.isCustom();
+    }
+
+    public static boolean isFade(BadgeColor color) {
+        if (color.shaderColor() != null) return true;
+        return switch (color.id()) {
+            case "rainbow", "shine", "gradient", "crimson" -> true;
+            default -> false;
+        };
+    }
+
     public static String requirement(AchievementId achievement, Integer minTier) {
         if (achievement == null) return "Unlocked by default";
         String suffix = minTier == null ? "" : " tier " + minTier;
@@ -204,12 +222,24 @@ public final class BadgeCatalog {
     public static Text badgeText(String iconId, String colorId) {
         BadgeIcon icon = icon(iconId);
         BadgeColor color = color(colorId);
-        return Text.literal(icon.glyph()).setStyle(Style.EMPTY.withColor(TextColor.fromRgb(color.currentRgb())));
+        if (!isCompatible(icon, color)) color = defaultColor();
+
+        String glyph = color.preservesOriginal() ? icon.originalGlyph() : icon.glyph();
+        Style style = Style.EMPTY.withColor(TextColor.fromRgb(color.currentRgb()));
+        if (icon.isCustom()) {
+            style = style.withFont(new StyleSpriteSource.Font(BADGE_FONT));
+        }
+        return Text.literal(glyph).setStyle(style);
     }
 
     public static Text colorPreviewText(String colorId) {
         BadgeColor color = color(colorId);
         return Text.literal("\u25CF").setStyle(Style.EMPTY.withColor(TextColor.fromRgb(color.currentRgb())));
+    }
+
+    public static Text colorPreviewText(String iconId, String colorId) {
+        BadgeColor color = color(colorId);
+        return color.preservesOriginal() ? badgeText(iconId, colorId) : colorPreviewText(colorId);
     }
 
     private static boolean isUnlocked(AchievementId achievement, Integer minTier) {
@@ -223,14 +253,26 @@ public final class BadgeCatalog {
         return achievements.isUnlocked(achievement.id());
     }
 
-    public record BadgeIcon(String id, String glyph, String displayName, AchievementId achievement, Integer minTier) {}
-    public record BadgeColor(String id, int rgb, ShaderColor shaderColor, String displayName, AchievementId achievement, Integer minTier) {
+    public record BadgeIcon(String id, String glyph, String originalGlyph, String displayName, AchievementId achievement, Integer minTier) {
+        public BadgeIcon(String id, String glyph, String displayName, AchievementId achievement, Integer minTier) {
+            this(id, glyph, null, displayName, achievement, minTier);
+        }
+
+        public BadgeIcon(CustomBadgeIcon icon) {
+            this(icon.id(), icon.tintedGlyph(), icon.originalGlyph(), icon.displayName(), icon.achievement(), icon.minTier());
+        }
+
+        public boolean isCustom() {
+            return originalGlyph != null;
+        }
+    }
+    public record BadgeColor(String id, int rgb, ShaderColor shaderColor, String displayName, AchievementId achievement, Integer minTier, boolean preservesOriginal) {
         public BadgeColor(String id, int rgb, String displayName, AchievementId achievement, Integer minTier) {
-            this(id, rgb, null, displayName, achievement, minTier);
+            this(id, rgb, null, displayName, achievement, minTier, false);
         }
 
         public BadgeColor(String id, ShaderColor shaderColor, String displayName, AchievementId achievement, Integer minTier) {
-            this(id, 0, shaderColor, displayName, achievement, minTier);
+            this(id, 0, shaderColor, displayName, achievement, minTier, false);
         }
 
         public int currentRgb() {
