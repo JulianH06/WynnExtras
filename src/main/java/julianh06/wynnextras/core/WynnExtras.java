@@ -34,6 +34,7 @@ import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.misc.QuickRepair;
 import julianh06.wynnextras.features.misc.TotemTimer;
 import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.features.profileviewer.ProfileTitleService;
 import julianh06.wynnextras.features.qol.EncounterOverlay;
 import julianh06.wynnextras.features.raid.*;
 import julianh06.wynnextras.features.raid.tna.TreeRoomMinimap;
@@ -52,7 +53,6 @@ import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.TickScheduler;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry;
 import net.fabricmc.loader.api.FabricLoader;
@@ -180,7 +180,8 @@ public class WynnExtras implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		Core.init(MOD_ID);
-		ClientLifecycleEvents.CLIENT_STARTED.register(client -> CraftingDataService.getInstance().initialize());
+		ProfileTitleService.fetch();
+		CraftingDataService.getInstance().initialize();
 		updateVersionData();
 
 		SpecialGuiElementRegistry.register(context -> new BannerGuiRenderer(context.vertexConsumers(), MinecraftClient.getInstance().getAtlasManager()));

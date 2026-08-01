@@ -113,7 +113,7 @@ public class BadgeService {
         tooltip.add(Text.literal("Icon: ").append(BadgeCatalog.badgeText(icon.id(), color.id())).append(" " + icon.displayName()));
         tooltip.addAll(badgeRequirementTooltip(icon.achievement(), icon.minTier(), achievements, loadStatus));
         tooltip.add(Text.empty());
-        tooltip.add(Text.literal("Color: ").append(BadgeCatalog.colorPreviewText(color.id())).append(" " + color.displayName()));
+        tooltip.add(Text.literal("Color: ").append(BadgeCatalog.colorPreviewText(icon.id(), color.id())).append(" " + color.displayName()));
         tooltip.addAll(badgeRequirementTooltip(color.achievement(), color.minTier(), achievements, loadStatus));
         return tooltip;
     }
@@ -551,6 +551,9 @@ public class BadgeService {
             if (stripped.endsWith(icon.glyph())) {
                 return stripped.substring(0, stripped.length() - icon.glyph().length()).trim();
             }
+            if (icon.originalGlyph() != null && stripped.endsWith(icon.originalGlyph())) {
+                return stripped.substring(0, stripped.length() - icon.originalGlyph().length()).trim();
+            }
         }
         return stripped;
     }
@@ -559,6 +562,7 @@ public class BadgeService {
         String stripped = value == null ? "" : value.trim();
         for (BadgeCatalog.BadgeIcon icon : BadgeCatalog.icons()) {
             if (stripped.endsWith(icon.glyph())) return true;
+            if (icon.originalGlyph() != null && stripped.endsWith(icon.originalGlyph())) return true;
         }
         return false;
     }

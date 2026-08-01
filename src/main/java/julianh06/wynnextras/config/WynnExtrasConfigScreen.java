@@ -433,6 +433,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.bankOverlayMaxRows == 1 && config.bankOverlayMaxColumns == 1))
                 .add(toggle("Hide empty rows", "Hides rows that only have locked pages",
                         () -> config.bankOverlayHideEmptyRows, v -> config.bankOverlayHideEmptyRows = v))
+                .add(toggle("Disable sticky nameplates", "Makes bank page nameplates scroll without sticking to the top",
+                        () -> config.disableStickyNameplates, v -> config.disableStickyNameplates = v))
                 .add(toggle("Bag Overlay", "Show crafter bag counts by raid/tier on bank screens",
                         () -> config.bankBagOverlay, v -> config.bankBagOverlay = v))
                 .add(visibleWhen(toggle("Show total bag count in bank overlay", "Shows you a breakdown of all crafter bags you have across all pages of your bank",

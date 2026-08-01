@@ -8,6 +8,7 @@ import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.event.api.WEEventBus;
+import julianh06.wynnextras.features.achievements.AchievementTracking;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -80,14 +81,26 @@ public class AttackTimer {
             null
     );
 
+    private static final SubCommand clearAchievementsDebugCommand = new SubCommand(
+            "clearAchievements",
+            "clears all locally stored WynnExtras achievements",
+            context -> {
+                AchievementTracking.clearAchievements();
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aCleared all stored achievements."));
+                return 1;
+            },
+            null,
+            null
+    );
+
     private static final Command debugCommand = new Command(
             "debug",
             "WynnExtras debug commands",
             context -> {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we debug territorydefences"));
+                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we debug <territorydefences|clearAchievements>"));
                 return 1;
             },
-            List.of(territoryDefencesDebugCommand),
+            List.of(territoryDefencesDebugCommand, clearAchievementsDebugCommand),
             null
     );
 

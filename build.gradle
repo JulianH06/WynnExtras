@@ -2,6 +2,7 @@ plugins {
 	id 'fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 	id 'com.gradleup.shadow' version "${shadow_version}"
+	id 'wynnextras.badge-resources'
 }
 
 version = project.mod_version

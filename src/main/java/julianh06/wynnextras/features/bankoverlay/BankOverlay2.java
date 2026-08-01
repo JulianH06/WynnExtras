@@ -180,6 +180,7 @@ public class BankOverlay2 extends WEHandledScreen {
     static float actualOffset = 0;
     private static boolean preserveScrollOnNextOverlay = false;
     private static boolean restoreScrollAfterLayout = false;
+    private static boolean deferPreservedScrollClamp = false;
     private static float preservedTargetOffset = 0;
     private static float preservedActualOffset = 0;
     private static boolean bankTypeSwitchInProgress = false;
@@ -373,6 +374,7 @@ public class BankOverlay2 extends WEHandledScreen {
             actualOffset = 0;
             targetOffset = 0;
             restoreScrollAfterLayout = false;
+            deferPreservedScrollClamp = false;
             initialBrowseScrollPending = true;
         }
         pages.clear();
@@ -721,7 +723,7 @@ public class BankOverlay2 extends WEHandledScreen {
             layoutExtraScrollHeight = 0;
             renderedCrossClassPages.clear();
             scissorx1 = xStart - 5;
-            scissory1 = yStart - (allCharactersBrowseMode || crossClassSearchActive ? 12 : 0);
+            scissory1 = yStart;
             scissorx2 = xStart + 166 * xFitAmount;
             scissory2 = yStart + 104 * (yFitAmount - 1) - 12;
 
@@ -796,7 +798,7 @@ public class BankOverlay2 extends WEHandledScreen {
                         estimatedExtraScrollHeight += CROSS_CLASS_GROUP_GAP;
                     }
                     int maxInitialOffset = getMaxScrollOffset(estimatedPageAmount, estimatedExtraScrollHeight);
-                    float initialOffset = MathHelper.clamp(getRowsForPageCount(accountCrossClassPages.size()) * 104f, 0, maxInitialOffset);
+                    float initialOffset = MathHelper.clamp(Math.floorDiv(accountCrossClassPages.size(), xFitAmount) * 104f, 0, maxInitialOffset);
                     actualOffset = initialOffset;
                     targetOffset = initialOffset;
                     initialBrowseScrollPending = false;
@@ -822,7 +824,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     float invX = xStart + (visuali % xFitAmount) * (162 + 4);
                     float invY = yStart + Math.floorDiv(visuali, xFitAmount) * (90 + 4 + 10) + extraYOffset - actualOffset;
                     page.setBounds((int) (invX * ui.getScaleFactor()), (int) (invY * ui.getScaleFactor()), (int) (164 * ui.getScaleFactor()), (int) (92 * ui.getScaleFactor()));
-                    boolean pageVisible = pageIntersectsClip(invY, 92, true);
+                    boolean pageVisible = pageIntersectsClip(invY, WynnExtrasConfig.INSTANCE.disableStickyNameplates ? 92 : 104, true);
                     boolean searching = searchInput != null && !searchInput.isEmpty();
 
                     if (!searching && !pageVisible && i != activeInv) {
@@ -966,9 +968,12 @@ public class BankOverlay2 extends WEHandledScreen {
         shownPages = pageAmount;
         int currentMaxOffset = getMaxScrollOffset(shownPages);
         if (restoreScrollAfterLayout) {
-            targetOffset = MathHelper.clamp(preservedTargetOffset, 0, currentMaxOffset);
-            actualOffset = MathHelper.clamp(preservedActualOffset, 0, currentMaxOffset);
-            restoreScrollAfterLayout = false;
+            if (!deferPreservedScrollClamp || !crossClassSearchLoading) {
+                targetOffset = MathHelper.clamp(preservedTargetOffset, 0, currentMaxOffset);
+                actualOffset = MathHelper.clamp(preservedActualOffset, 0, currentMaxOffset);
+                restoreScrollAfterLayout = false;
+                deferPreservedScrollClamp = false;
+            }
         }
         if (currentMaxOffset > 0) {
             int scrollBarHeight = (yFitAmount - 1) * 104 + (xFitAmount <= 2 ? 0 : 12);
@@ -1517,6 +1522,7 @@ public class BankOverlay2 extends WEHandledScreen {
         bankSyncid = 0;
         preserveScrollOnNextOverlay = false;
         restoreScrollAfterLayout = false;
+        deferPreservedScrollClamp = false;
         heldItem = Items.AIR.getDefaultStack();
         isReloading = false;
         resetReloadPageReadiness();
@@ -1904,11 +1910,6 @@ public class BankOverlay2 extends WEHandledScreen {
         return remainder == 0 ? visualIndex : visualIndex + (xFitAmount - remainder);
     }
 
-    private static int getRowsForPageCount(int pageCount) {
-        if (xFitAmount <= 0 || pageCount <= 0) return 0;
-        return (int) Math.ceil((double) pageCount / xFitAmount);
-    }
-
     private int drawCrossClassPages(DrawContext context, int mouseX, int mouseY, float delta, int xStart, int yStart, int visualIndex, int extraYOffset, List<CrossClassPageWidget> pagesToDraw) {
         for (CrossClassPageWidget ccPage : pagesToDraw) {
             float invX = xStart + (visualIndex % xFitAmount) * (162 + 4);
@@ -2047,6 +2048,10 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static void switchBankAndJumpToPage(BankOverlayType targetType, int pageIndex) {
+        switchBankAndJumpToPage(targetType, pageIndex, false);
+    }
+
+    private static void switchBankAndJumpToPage(BankOverlayType targetType, int pageIndex, boolean adjustTargetScroll) {
         if (isJumpInProgress()) return;
         if (currentOverlayType == targetType) {
             PageWidget.jumpToPage(pageIndex);
@@ -2059,7 +2064,8 @@ public class BankOverlay2 extends WEHandledScreen {
         clearHoverState(MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?> handledScreen ? handledScreen : null);
         preserveScrollOnNextOverlay = true;
         preservedActualOffset = actualOffset;
-        preservedTargetOffset = targetOffset;
+        preservedTargetOffset = adjustTargetScroll ? getSwitchTargetOffset(targetType) : targetOffset;
+        deferPreservedScrollClamp = !adjustTargetScroll && (allCharactersBrowseMode || crossClassSearchActive);
         bankTypeSwitchInProgress = true;
         bankTypeSwitchTargetApplied = false;
         bankTypeSwitchTargetType = targetType;
@@ -2100,6 +2106,17 @@ public class BankOverlay2 extends WEHandledScreen {
                     julianh06.wynnextras.utils.TickScheduler.runAfterTicks(80, () -> forceFinishBankTypeSwitch(targetType));
                 }
         );
+    }
+
+    private static float getSwitchTargetOffset(BankOverlayType targetType) {
+        if (targetType == BankOverlayType.ACCOUNT || !allCharactersBrowseMode || xFitAmount <= 0) return 0;
+
+        BankData accountData = AccountBankData.INSTANCE;
+        if (accountData == null || accountData.getBankPages() == null) return 0;
+        int accountPageCount = Math.min(
+                Math.max(accountData.getLastPage() + 1, accountData.getBankPages().size()),
+                ACCOUNT_BANK_MAX_PAGES);
+        return Math.floorDiv(accountPageCount, xFitAmount) * 104f;
     }
 
     private boolean shouldDeferMouseTweaksRightClick(double x, double y, int button) {
@@ -3989,7 +4006,8 @@ public class BankOverlay2 extends WEHandledScreen {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(ui == null) return;
-            if(y > botBorder || y + height < topBorder) {
+            int nameplateHeight = WynnExtrasConfig.INSTANCE.disableStickyNameplates ? 0 : 12;
+            if(y > botBorder || y + height + nameplateHeight < topBorder) {
                 setSlotsVisible(false);
                 return;
             }
@@ -4002,7 +4020,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     addChild(sign);
                 }
 
-                sign.setBounds(x, y - 10, width, 10);
+                positionNameSign();
                 ui.drawRect(x, y, width, height, PAGE_DIM_COLOR);
                 return;
             }
@@ -4014,7 +4032,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 addChild(sign);
             }
 
-            sign.setBounds(x, y - 10, width, 10);
+            positionNameSign();
 
             if(items.isEmpty()) {
                 setSlotsVisible(false);
@@ -4062,7 +4080,21 @@ public class BankOverlay2 extends WEHandledScreen {
                 addChild(sign);
             }
 
-            sign.setBounds(x, y - 10, width, 10);
+            positionNameSign();
+        }
+
+        @Override
+        public void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
+            this.ui = ui;
+            if (!visible || this.ui == null) return;
+            hovered = contains(mouseX, mouseY);
+            updateValues();
+            drawBackground(ctx, mouseX, mouseY, tickDelta);
+            drawContent(ctx, mouseX, mouseY, tickDelta);
+            drawForeground(ctx, mouseX, mouseY, tickDelta);
+            for (Widget child : children) {
+                child.draw(ctx, mouseX, mouseY, tickDelta, ui);
+            }
         }
 
         @Override
@@ -4322,6 +4354,15 @@ public class BankOverlay2 extends WEHandledScreen {
 
         public boolean isNameInputFocused() {
             return sign != null && sign.isInputFocused();
+        }
+
+        private void positionNameSign() {
+            int signY = y - 10;
+            if (!WynnExtrasConfig.INSTANCE.disableStickyNameplates && y < topBorder) {
+                int nextNameplateY = y + 104 - 10;
+                signY = Math.min(topBorder - 10, nextNameplateY - 15);
+            }
+            sign.setBounds(x, signY, width, 10);
         }
     }
 
@@ -4922,9 +4963,7 @@ public class BankOverlay2 extends WEHandledScreen {
             BankOverlayType targetType = currentOverlayType == BankOverlayType.CHARACTER
                     ? BankOverlayType.ACCOUNT
                     : BankOverlayType.CHARACTER;
-            switchBankAndJumpToPage(targetType, 0);
-            actualOffset = 0;
-            targetOffset = 0;
+            switchBankAndJumpToPage(targetType, 0, true);
             return true;
         }
     }
@@ -5196,7 +5235,7 @@ public class BankOverlay2 extends WEHandledScreen {
             String levelStr = !localBankPage && !isStaticStoragePage() && characterLevel > 0 ? " Lv." + characterLevel : "";
             String pageLabel = isPlayerInventoryPage() ? "Inventory" : "Page " + (pageNumber + 1);
             String prefix = isStaticStoragePage() || localBankPage ? "§e" : "§e@";
-            ui.drawText(prefix + name + levelStr + " §7" + pageLabel, x + 2, y - 9, YELLOW_TEXT_COLOR, 0.9f);
+            drawCrossClassLabel(ctx, prefix + name + levelStr + " §7" + pageLabel);
 
             if (pagePlaceholder) {
                 setSlotsVisible(false);
@@ -5250,6 +5289,16 @@ public class BankOverlay2 extends WEHandledScreen {
                 slot.setStack(stack);
                 slot.drawDirect(ctx, mouseX, mouseY, tickDelta, ui);
             }
+        }
+
+        private void drawCrossClassLabel(DrawContext ctx, String text) {
+            ctx.disableScissor();
+            ctx.enableScissor(scissorx1, scissory1 - 12, scissorx2, scissory2);
+            ui.updateContext(ctx, ui.getScaleFactor(), 0, 0);
+            ui.drawText(text, x + 2, y - 9, YELLOW_TEXT_COLOR, 0.9f);
+            ctx.disableScissor();
+            ctx.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
+            ui.updateContext(ctx, ui.getScaleFactor(), 0, 0);
         }
 
         private boolean isPlayerInventoryPage() {

@@ -39,6 +39,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
@@ -229,7 +230,9 @@ public abstract class HandledScreenMixin {
         renderWciShoppingMenuLauncherButton(context, mouseX, mouseY, delta, wciBankOverlayPlacementMode);
 
         ProfessionOverlay.renderOnScreen(context);
-        ItemComponentsDebugOverlay.render(context, mouseX, mouseY);
+        if (!(self instanceof InventoryScreen)) {
+            ItemComponentsDebugOverlay.render(context, mouseX, mouseY);
+        }
     }
 
     @Unique
@@ -409,7 +412,7 @@ public abstract class HandledScreenMixin {
         double mouseY = click.y();
         int button = click.button();
 
-        if (ItemComponentsDebugOverlay.mouseClicked(mouseX, mouseY, button)) {
+        if (!((Object) this instanceof InventoryScreen) && ItemComponentsDebugOverlay.mouseClicked(mouseX, mouseY, button)) {
             cir.setReturnValue(true);
             return;
         }
@@ -536,7 +539,7 @@ public abstract class HandledScreenMixin {
         double mouseY = click.y();
         int button = click.button();
 
-        if (ItemComponentsDebugOverlay.mouseReleased(mouseX, mouseY, button)) {
+        if (!((Object) this instanceof InventoryScreen) && ItemComponentsDebugOverlay.mouseReleased(mouseX, mouseY, button)) {
             cir.setReturnValue(true);
             return;
         }
@@ -595,7 +598,7 @@ public abstract class HandledScreenMixin {
         double mouseX = click.x();
         double mouseY = click.y();
 
-        if (ItemComponentsDebugOverlay.mouseDragged(mouseX, mouseY)) {
+        if (!((Object) this instanceof InventoryScreen) && ItemComponentsDebugOverlay.mouseDragged(mouseX, mouseY)) {
             cir.setReturnValue(true);
             return;
         }
@@ -641,7 +644,7 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "mouseScrolled", at = @At("HEAD"), cancellable = true)
     private void onMouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount, CallbackInfoReturnable<Boolean> cir) {
-        if (ItemComponentsDebugOverlay.mouseScrolled(mouseX, mouseY, verticalAmount)) {
+        if (!((Object) this instanceof InventoryScreen) && ItemComponentsDebugOverlay.mouseScrolled(mouseX, mouseY, verticalAmount)) {
             cir.setReturnValue(true);
             return;
         }
@@ -702,7 +705,9 @@ public abstract class HandledScreenMixin {
         classSelectionOverlay = null;
         wciShoppingMenuExtension = null;
         wciShoppingMenuLauncherButton = null;
-        ItemComponentsDebugOverlay.reset();
+        if (!((Object) this instanceof InventoryScreen)) {
+            ItemComponentsDebugOverlay.reset();
+        }
 
         // Clear Trade Market Comparison on close
         TradeMarketComparisonPanel.clearAllPanels();
@@ -780,6 +785,12 @@ public abstract class HandledScreenMixin {
             return;
         }
 
+        if (ItemComponentsDebugOverlay.handleKeyPressed(keyCode, modifiers)) {
+            cir.setReturnValue(true);
+            cir.cancel();
+            return;
+        }
+
         // F1 key in Trade Market for item comparison
         if (keyCode == GLFW.GLFW_KEY_F1 && TradeMarketComparisonPanel.isInTradeMarket()) {
             if (TradeMarketComparisonPanel.handleF1Press(focusedSlot)) {
@@ -798,7 +809,9 @@ public abstract class HandledScreenMixin {
             }
         }
 
-        if (WynnExtrasConfig.INSTANCE.debugItemComponentsKey != GLFW.GLFW_KEY_UNKNOWN && keyCode == WynnExtrasConfig.INSTANCE.debugItemComponentsKey) {
+        if (!((Object) this instanceof InventoryScreen)
+                && WynnExtrasConfig.INSTANCE.debugItemComponentsKey != GLFW.GLFW_KEY_UNKNOWN
+                && keyCode == WynnExtrasConfig.INSTANCE.debugItemComponentsKey) {
             if (ItemComponentsDebugOverlay.openHoveredStack((HandledScreen<?>) (Object) this)) {
                 cir.setReturnValue(true);
                 cir.cancel();
