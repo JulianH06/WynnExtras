@@ -234,6 +234,8 @@ public class WynnExtrasConfig {
     public int wciToggleKey = GLFW.GLFW_KEY_UNKNOWN;
     public boolean wciProfessionSpeed = false;
     public int wciCraftMultiplier = 1;
+    public int wciShoppingMenuWidth = 190;
+    public int wciShoppingMenuHeight = 222;
     public WciPosition wciShoppingMenuDefaultPosition = new WciPosition();
     public WciPosition wciShoppingMenuTradePosition = new WciPosition();
     public WciPosition wciShoppingMenuBankOverlayPosition = new WciPosition();
@@ -720,6 +722,8 @@ public class WynnExtrasConfig {
     }
 
     private void syncWciPositions() {
+        if (wciShoppingMenuWidth <= 0) wciShoppingMenuWidth = 190;
+        if (wciShoppingMenuHeight <= 0) wciShoppingMenuHeight = 222;
         if (wciShoppingMenuDefaultPosition == null) wciShoppingMenuDefaultPosition = new WciPosition();
         if (wciShoppingMenuTradePosition == null) wciShoppingMenuTradePosition = new WciPosition();
         if (wciShoppingMenuBankOverlayPosition == null) wciShoppingMenuBankOverlayPosition = new WciPosition();

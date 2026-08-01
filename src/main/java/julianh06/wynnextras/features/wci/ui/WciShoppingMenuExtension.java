@@ -29,6 +29,8 @@ import java.util.function.Supplier;
 public class WciShoppingMenuExtension extends WEMenuExtension {
     private static final int PANEL_WIDTH = 190;
     private static final int PANEL_HEIGHT = 222;
+    private static final int MIN_PANEL_WIDTH = 150;
+    private static final int MIN_PANEL_HEIGHT = 120;
     private static final int PANEL_MARGIN = 6;
     private static final int BANK_OVERLAY_DEFAULT_X = 736;
     private static final int BANK_OVERLAY_DEFAULT_Y = 63;
@@ -46,6 +48,9 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
     private static final int SCROLLBAR_GAP = 3;
     private static final int SCROLLBAR_MIN_THUMB_HEIGHT = 16;
     private static final int HEADER_DRAG_HEIGHT = 22;
+    private static final int RESIZE_GRIP_SIZE = 5;
+    private static final float SCROLL_SPEED = 0.3f;
+    private static final float SCROLL_SNAP = 0.02f;
     private static final float TITLE_SCALE = 1.0f;
     private static final float TEXT_SCALE = 0.75f;
     private static final CustomColor PANEL_BG = CustomColor.fromHexString("17120E").withAlpha(0.90f);
@@ -86,9 +91,12 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
             "Reload your bank tabs to refresh WCI counts.\nCounts may be missing until every bank tab is refreshed.";
     private static final long SCREEN_TRANSITION_STABILITY_MS = 450L;
     private static boolean menuPinnedByUser = false;
+    private static final WciHaveCountService HAVE_COUNT_SERVICE = new WciHaveCountService();
+    private static Screen activeScreen;
+    private static WciShoppingMenuExtension activeScreenExtension;
 
     private final ShoppingCartService service = WynnExtrasWciFeature.shoppingCartService();
-    private final WciHaveCountService haveCountService = new WciHaveCountService();
+    private final WciHaveCountService haveCountService = HAVE_COUNT_SERVICE;
     private final List<RowHit> rowHits = new ArrayList<>();
     private final MenuButton importButton = new MenuButton("Import", IMPORT_TOOLTIP, this::importClipboard);
     private final MenuButton clearButton = new MenuButton("Clear", CLEAR_TOOLTIP, this::clearCart);
@@ -102,7 +110,10 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
     private int panelY;
     private int panelW;
     private int panelH;
-    private int scrollOffset = 0;
+    private int lastRenderMouseX = -1;
+    private int lastRenderMouseY = -1;
+    private float scrollOffset = 0;
+    private float targetScrollOffset = 0;
     private ScrollbarLayout scrollbarLayout = ScrollbarLayout.hidden();
     private boolean draggingScrollbar = false;
     private int scrollbarDragOffsetY = 0;
@@ -110,6 +121,14 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
     private boolean panelDragMoved = false;
     private int dragOffsetX = 0;
     private int dragOffsetY = 0;
+    private ResizeEdges resizeEdges = ResizeEdges.NONE;
+    private int resizeStartMouseX = 0;
+    private int resizeStartMouseY = 0;
+    private int resizeStartX = 0;
+    private int resizeStartY = 0;
+    private int resizeStartWidth = PANEL_WIDTH;
+    private int resizeStartHeight = PANEL_HEIGHT;
+    private WciPlacementContext resizePlacementContext = WciPlacementContext.OTHER;
     private WciScreenContext screenContext = WciScreenContext.UNSUPPORTED;
     private WciPlacementContext placementContext = WciPlacementContext.OTHER;
     private WciPlacementContext dragPlacementContext = WciPlacementContext.OTHER;
@@ -216,6 +235,17 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
                 && keyCode == WynnExtrasConfig.INSTANCE.wciToggleKey;
     }
 
+    public static boolean handleGlobalMouseScrolled(double verticalAmount) {
+        Screen currentScreen = MinecraftClient.getInstance().currentScreen;
+        return currentScreen != null
+                && currentScreen == activeScreen
+                && activeScreenExtension != null
+                && activeScreenExtension.mouseScrolled(
+                        activeScreenExtension.lastRenderMouseX,
+                        activeScreenExtension.lastRenderMouseY,
+                        verticalAmount);
+    }
+
     public static WciShoppingMenuLauncherButton.Bounds closeButtonBounds(int panelX, int panelY, int panelWidth) {
         return new WciShoppingMenuLauncherButton.Bounds(
                 panelX + panelWidth - CLOSE_BUTTON_SIZE - CLOSE_BUTTON_RIGHT_MARGIN,
@@ -289,17 +319,27 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
             return;
         }
         Screen current = MinecraftClient.getInstance().currentScreen;
-        if (!(current instanceof HandledScreen<?> handledScreen)) {
+        HandledScreen<?> handledScreen = current instanceof HandledScreen<?> screen ? screen : null;
+        if (handledScreen == null
+                && screenContext != WciScreenContext.HUD
+                && screenContext != WciScreenContext.CHAT) {
             setButtonsVisible(false);
             rowHits.clear();
             return;
         }
+        if (current != null) {
+            activeScreen = current;
+            activeScreenExtension = this;
+            lastRenderMouseX = mouseX;
+            lastRenderMouseY = mouseY;
+        }
 
-        boolean screenStableForCounts = updateScreenTransitionState(handledScreen, System.currentTimeMillis());
+        boolean screenStableForCounts = handledScreen == null
+                || updateScreenTransitionState(handledScreen, System.currentTimeMillis());
         updatePanelBounds(handledScreen);
-        drawPanel();
+        drawPanel(mouseX, mouseY);
         layoutButtons();
-        drawRows(mouseX, mouseY, screenStableForCounts);
+        drawRows(mouseX, mouseY, delta, screenStableForCounts);
         applyTradeMarketStatus();
         drawStatus();
     }
@@ -328,6 +368,9 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
     public boolean mouseClicked(double x, double y, int button) {
         if (screenContext == WciScreenContext.BLOCKED_MODAL) return false;
         if (!shouldRender(screenContext)) return false;
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && startResize(x, y)) {
+            return true;
+        }
         if (super.mouseClicked(x, y, button)) {
             return true;
         }
@@ -360,12 +403,19 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
         if (screenContext == WciScreenContext.BLOCKED_MODAL) {
             cancelPanelDrag();
             cancelScrollbarDrag();
+            cancelResize();
             return false;
         }
         if (!shouldRender(screenContext)) {
             cancelPanelDrag();
             cancelScrollbarDrag();
+            cancelResize();
             return false;
+        }
+        if (resizeEdges.active() && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+            cancelResize();
+            WynnExtrasConfig.save();
+            return true;
         }
         if (draggingScrollbar && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             cancelScrollbarDrag();
@@ -387,12 +437,18 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
         if (screenContext == WciScreenContext.BLOCKED_MODAL) {
             cancelPanelDrag();
             cancelScrollbarDrag();
+            cancelResize();
             return false;
         }
         if (!shouldRender(screenContext)) {
             cancelPanelDrag();
             cancelScrollbarDrag();
+            cancelResize();
             return false;
+        }
+        if (resizeEdges.active() && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+            resizePanel((int) x, (int) y);
+            return true;
         }
         if (draggingScrollbar && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             updateScrollOffsetFromThumb((int) y - scrollbarDragOffsetY);
@@ -417,6 +473,73 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
         scrollbarDragOffsetY = 0;
     }
 
+    private boolean startResize(double mouseX, double mouseY) {
+        ResizeEdges edges = resizeEdgesAt(mouseX, mouseY);
+        if (!edges.active()) {
+            return false;
+        }
+        cancelPanelDrag();
+        cancelScrollbarDrag();
+        resizeEdges = edges;
+        resizeStartMouseX = (int) mouseX;
+        resizeStartMouseY = (int) mouseY;
+        resizeStartX = panelX;
+        resizeStartY = panelY;
+        resizeStartWidth = panelW;
+        resizeStartHeight = panelH;
+        resizePlacementContext = placementContext;
+        setPosition(WynnExtrasConfig.INSTANCE, resizePlacementContext, panelX, panelY);
+        return true;
+    }
+
+    private void resizePanel(int mouseX, int mouseY) {
+        int dx = mouseX - resizeStartMouseX;
+        int dy = mouseY - resizeStartMouseY;
+        int left = resizeStartX;
+        int top = resizeStartY;
+        int right = resizeStartX + resizeStartWidth;
+        int bottom = resizeStartY + resizeStartHeight;
+
+        if (resizeEdges.left()) {
+            left = Math.clamp(resizeStartX + dx, PANEL_MARGIN, right - MIN_PANEL_WIDTH);
+        } else if (resizeEdges.right()) {
+            right = Math.clamp(right + dx, left + MIN_PANEL_WIDTH, screenWidth - PANEL_MARGIN);
+        }
+        if (resizeEdges.top()) {
+            top = Math.clamp(resizeStartY + dy, PANEL_MARGIN, bottom - MIN_PANEL_HEIGHT);
+        } else if (resizeEdges.bottom()) {
+            bottom = Math.clamp(bottom + dy, top + MIN_PANEL_HEIGHT, screenHeight - PANEL_MARGIN);
+        }
+
+        panelX = left;
+        panelY = top;
+        panelW = right - left;
+        panelH = bottom - top;
+        WynnExtrasConfig.INSTANCE.wciShoppingMenuWidth = panelW;
+        WynnExtrasConfig.INSTANCE.wciShoppingMenuHeight = panelH;
+        setPosition(WynnExtrasConfig.INSTANCE, resizePlacementContext, panelX, panelY);
+    }
+
+    private void cancelResize() {
+        resizeEdges = ResizeEdges.NONE;
+        resizePlacementContext = WciPlacementContext.OTHER;
+    }
+
+    private ResizeEdges resizeEdgesAt(double mouseX, double mouseY) {
+        boolean withinHorizontalRange = mouseX >= panelX - RESIZE_GRIP_SIZE
+                && mouseX <= panelX + panelW + RESIZE_GRIP_SIZE;
+        boolean withinVerticalRange = mouseY >= panelY - RESIZE_GRIP_SIZE
+                && mouseY <= panelY + panelH + RESIZE_GRIP_SIZE;
+        if (!withinHorizontalRange || !withinVerticalRange) {
+            return ResizeEdges.NONE;
+        }
+        boolean left = Math.abs(mouseX - panelX) <= RESIZE_GRIP_SIZE;
+        boolean right = Math.abs(mouseX - (panelX + panelW)) <= RESIZE_GRIP_SIZE;
+        boolean top = Math.abs(mouseY - panelY) <= RESIZE_GRIP_SIZE;
+        boolean bottom = Math.abs(mouseY - (panelY + panelH)) <= RESIZE_GRIP_SIZE;
+        return new ResizeEdges(left, right, top, bottom);
+    }
+
     private boolean handleScrollbarClick(double x, double y) {
         if (!scrollbarLayout.visible()) {
             return false;
@@ -434,7 +557,8 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
     }
 
     private void updateScrollOffsetFromThumb(int thumbY) {
-        scrollOffset = scrollbarScrollOffset(scrollbarLayout, thumbY);
+        targetScrollOffset = scrollbarScrollOffset(scrollbarLayout, thumbY);
+        scrollOffset = targetScrollOffset;
     }
 
     public boolean mouseScrolled(double x, double y, double verticalAmount) {
@@ -445,16 +569,12 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
         int maxScroll = maxScroll(rows.size(), maxVisibleRows());
         if (maxScroll <= 0) return true;
 
-        int previousOffset = scrollOffset;
-        if (verticalAmount < 0) {
-            scrollOffset++;
-        } else if (verticalAmount > 0) {
-            scrollOffset--;
-        }
-        scrollOffset = clamp(scrollOffset, 0, maxScroll);
+        float previousOffset = targetScrollOffset;
+        targetScrollOffset = Math.clamp(targetScrollOffset - (float) verticalAmount, 0f, (float) maxScroll);
 
-        if (scrollOffset != previousOffset) {
-            status = "Rows " + (scrollOffset + 1) + "-" + Math.min(rows.size(), scrollOffset + maxVisibleRows())
+        if (targetScrollOffset != previousOffset) {
+            int firstRow = Math.clamp(Math.round(targetScrollOffset), 0, maxScroll);
+            status = "Rows " + (firstRow + 1) + "-" + Math.min(rows.size(), firstRow + maxVisibleRows())
                     + " of " + rows.size() + ".";
             statusError = false;
         }
@@ -470,13 +590,15 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
     }
 
     private void updatePanelBounds(HandledScreen<?> screen) {
-        int screenX = HandledScreenAccess.x(screen);
-        int screenY = HandledScreenAccess.y(screen);
-        int guiWidth = HandledScreenAccess.backgroundWidth(screen);
-        int guiHeight = HandledScreenAccess.backgroundHeight(screen);
+        int screenX = screen == null ? 0 : HandledScreenAccess.x(screen);
+        int screenY = screen == null ? 0 : HandledScreenAccess.y(screen);
+        int guiWidth = screen == null ? 0 : HandledScreenAccess.backgroundWidth(screen);
+        int guiHeight = screen == null ? 0 : HandledScreenAccess.backgroundHeight(screen);
 
-        panelW = Math.clamp(screenWidth - PANEL_MARGIN * 2, 150, PANEL_WIDTH);
-        panelH = Math.clamp(screenHeight - PANEL_MARGIN * 2, 120, PANEL_HEIGHT);
+        int maxWidth = Math.max(MIN_PANEL_WIDTH, screenWidth - PANEL_MARGIN * 2);
+        int maxHeight = Math.max(MIN_PANEL_HEIGHT, screenHeight - PANEL_MARGIN * 2);
+        panelW = Math.clamp(WynnExtrasConfig.INSTANCE.wciShoppingMenuWidth, MIN_PANEL_WIDTH, maxWidth);
+        panelH = Math.clamp(WynnExtrasConfig.INSTANCE.wciShoppingMenuHeight, MIN_PANEL_HEIGHT, maxHeight);
 
         PositionState savedPosition = positionState(WynnExtrasConfig.INSTANCE, placementContext);
         if (savedPosition.customPosition()) {
@@ -761,13 +883,31 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
         return Math.clamp(value, min, max);
     }
 
-    private void drawPanel() {
+    private void drawPanel(int mouseX, int mouseY) {
         ui.drawRect(panelX, panelY, panelW, panelH, PANEL_BG);
         drawBorder(panelX, panelY, panelW, panelH, PANEL_BORDER.asInt());
         ui.drawText("WCI Shopping", panelX + 8, panelY + 7, TEXT, TITLE_SCALE);
         ui.drawText("Have/Need", panelX + panelW - 56, listHeaderY(panelY), TEXT_DIM, TEXT_SCALE);
         drawContext.fill(panelX + 6, listDividerY(panelY), panelX + panelW - 6,
                 listDividerY(panelY) + 1, PANEL_ACCENT.asInt());
+        drawResizeHandles(mouseX, mouseY);
+    }
+
+    private void drawResizeHandles(int mouseX, int mouseY) {
+        ResizeEdges hoveredEdges = resizeEdges.active() ? resizeEdges : resizeEdgesAt(mouseX, mouseY);
+        int color = PANEL_ACCENT.withAlpha(0.75f).asInt();
+        if (hoveredEdges.left()) {
+            drawContext.fill(panelX, panelY, panelX + 2, panelY + panelH, color);
+        }
+        if (hoveredEdges.right()) {
+            drawContext.fill(panelX + panelW - 2, panelY, panelX + panelW, panelY + panelH, color);
+        }
+        if (hoveredEdges.top()) {
+            drawContext.fill(panelX, panelY, panelX + panelW, panelY + 2, color);
+        }
+        if (hoveredEdges.bottom()) {
+            drawContext.fill(panelX, panelY + panelH - 2, panelX + panelW, panelY + panelH, color);
+        }
     }
 
     private void drawBorder(int x, int y, int width, int height, int color) {
@@ -871,7 +1011,7 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
                 new WciShoppingMenuLauncherButton.Bounds(panelX + 8 + buttonWidth + gap, secondRowY, buttonWidth, BUTTON_HEIGHT));
     }
 
-    private void drawRows(int mouseX, int mouseY, boolean screenStableForCounts) {
+    private void drawRows(int mouseX, int mouseY, float delta, boolean screenStableForCounts) {
         rowHits.clear();
         List<RenderedRow> rows = rowsWithHaveCounts(screenStableForCounts);
         int listX = panelX + 7;
@@ -880,29 +1020,44 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
         int maxRows = maxVisibleRows();
         if (rows.isEmpty()) {
             scrollOffset = 0;
+            targetScrollOffset = 0;
             scrollbarLayout = ScrollbarLayout.hidden();
             ui.drawText("Cart is empty.", listX + 2, listY + 4, TEXT_DIM, TEXT_SCALE);
             return;
         }
 
-        scrollOffset = clamp(scrollOffset, 0, maxScroll(rows.size(), maxRows));
+        int maxScroll = maxScroll(rows.size(), maxRows);
+        targetScrollOffset = Math.clamp(targetScrollOffset, 0f, (float) maxScroll);
+        scrollOffset = smoothScroll(scrollOffset, targetScrollOffset, delta);
+        scrollOffset = Math.clamp(scrollOffset, 0f, (float) maxScroll);
         scrollbarLayout = scrollbarLayout(panelX, panelY, panelW, panelH, rows.size(), maxRows, scrollOffset);
         int rowContentWidth = scrollbarLayout.visible()
                 ? listW - SCROLLBAR_WIDTH - SCROLLBAR_GAP
                 : listW;
-        int renderedRows = Math.min(maxRows, rows.size() - scrollOffset);
-        for (int i = 0; i < renderedRows; i++) {
-            RenderedRow renderedRow = rows.get(scrollOffset + i);
+        int listBottom = panelY + panelH - 28;
+        int firstRow = Math.clamp((int) Math.floor(scrollOffset), 0, Math.max(0, rows.size() - 1));
+        int rowShift = Math.round((scrollOffset - firstRow) * ROW_HEIGHT);
+        int renderedRows = 0;
+        drawContext.enableScissor(listX, listY, listX + rowContentWidth, listBottom);
+        for (int rowIndex = firstRow; rowIndex < rows.size(); rowIndex++) {
+            int rowY = listY + (rowIndex - firstRow) * ROW_HEIGHT - rowShift;
+            if (rowY >= listBottom) break;
+            if (rowY + ROW_HEIGHT <= listY) continue;
+
+            RenderedRow renderedRow = rows.get(rowIndex);
             WciShoppingListFormatter.Row row = renderedRow.row();
-            int rowY = listY + i * ROW_HEIGHT;
-            rowHits.add(new RowHit(row, renderedRow.detail(), listX, rowY, rowContentWidth, ROW_HEIGHT - 1));
+            int hitY = Math.max(rowY, listY);
+            int hitBottom = Math.min(rowY + ROW_HEIGHT - 1, listBottom);
+            if (hitBottom > hitY) {
+                rowHits.add(new RowHit(row, renderedRow.detail(), listX, hitY, rowContentWidth, hitBottom - hitY));
+            }
 
             boolean hoveredRow = mouseX >= listX && mouseY >= rowY
                     && mouseX < listX + rowContentWidth
                     && mouseY < rowY + ROW_HEIGHT - 1;
             if (hoveredRow) {
                 ui.drawRect(listX, rowY, rowContentWidth, ROW_HEIGHT - 1, ROW_HOVER);
-            } else if (i % 2 == 0) {
+            } else if (rowIndex % 2 == 0) {
                 ui.drawRect(listX, rowY, rowContentWidth, ROW_HEIGHT - 1, ROW_BG);
             }
 
@@ -912,19 +1067,30 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
             ui.drawText(trimToWidth(row.displayNameWithTier(), rowContentWidth - 86, TEXT_SCALE),
                     listX + 37, rowY + 2, rowNameTextColor(row.type()), TEXT_SCALE);
             ui.drawText(haveNeed, listX + rowContentWidth - 38, rowY + 2, TEXT_DIM, TEXT_SCALE);
+            renderedRows++;
         }
+        drawContext.disableScissor();
 
-        if (rows.size() > renderedRows) {
-            String range = (scrollOffset + 1) + "-" + (scrollOffset + renderedRows) + " / " + rows.size();
+        if (maxScroll > 0) {
+            int lastRow = Math.min(rows.size(), firstRow + Math.max(1, renderedRows));
+            String range = (firstRow + 1) + "-" + lastRow + " / " + rows.size();
             ui.drawText(range, listX + 2, panelY + panelH - 23, TEXT_DIM, TEXT_SCALE);
             drawScrollbar(scrollbarLayout);
-            if (scrollOffset > 0) {
+            if (scrollOffset > 0f) {
                 ui.drawText("↑", listX + listW - 20, listY - 1, TEXT_DIM, TEXT_SCALE);
             }
-            if (scrollOffset + renderedRows < rows.size()) {
+            if (scrollOffset < maxScroll) {
                 ui.drawText("↓", listX + listW - 10, panelY + panelH - 23, TEXT_DIM, TEXT_SCALE);
             }
         }
+    }
+
+    private float smoothScroll(float current, float target, float delta) {
+        float diff = target - current;
+        if (Math.abs(diff) < SCROLL_SNAP || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) {
+            return target;
+        }
+        return current + diff * Math.min(1f, SCROLL_SPEED * Math.max(0f, delta));
     }
 
     private void drawScrollbar(ScrollbarLayout layout) {
@@ -948,8 +1114,10 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
             return List.of();
         }
 
-        boolean allowSnapshotRefresh = screenStableForCounts
-                && WciMenuRenderPolicy.allowsHaveCountRefresh(screenContext);
+        boolean allowSnapshotRefresh = WciMenuRenderPolicy.allowsHaveCountRefresh(screenContext)
+                && (screenStableForCounts
+                || screenContext == WciScreenContext.UNSUPPORTED
+                || screenContext == WciScreenContext.INVENTORY);
         WciHaveCountService.SnapshotResult snapshotResult = haveCountService.cachedSnapshot(allowSnapshotRefresh);
         WciHaveCountService.SourceSnapshot snapshot = snapshotResult.snapshot();
         int cartSize = entries.size();
@@ -1138,6 +1306,7 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
     private void clearCart() {
         service.clear();
         scrollOffset = 0;
+        targetScrollOffset = 0;
         if (WynnExtrasWciFeature.consumeSaveFailure()) {
             status = "Cart cleared; save failed.";
             statusError = true;
@@ -1345,6 +1514,17 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
             int rowCount,
             int visibleRows,
             int scrollOffset) {
+        return scrollbarLayout(panelX, panelY, panelW, panelH, rowCount, visibleRows, (float) scrollOffset);
+    }
+
+    static ScrollbarLayout scrollbarLayout(
+            int panelX,
+            int panelY,
+            int panelW,
+            int panelH,
+            int rowCount,
+            int visibleRows,
+            float scrollOffset) {
         int maxScroll = Math.max(0, rowCount - visibleRows);
         if (rowCount <= 0 || visibleRows <= 0 || maxScroll <= 0) {
             return ScrollbarLayout.hidden();
@@ -1357,7 +1537,7 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
                 trackHeight * Math.min(visibleRows, rowCount) / rowCount);
         thumbHeight = Math.min(thumbHeight, trackHeight);
         int thumbTravel = Math.max(0, trackHeight - thumbHeight);
-        int safeOffset = clamp(scrollOffset, 0, maxScroll);
+        float safeOffset = Math.clamp(scrollOffset, 0f, (float) maxScroll);
         int thumbY = trackY + (thumbTravel == 0 ? 0 : Math.round((float) thumbTravel * safeOffset / maxScroll));
         return new ScrollbarLayout(
                 true,
@@ -1463,6 +1643,14 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
         static ScrollbarLayout hidden() {
             var hidden = WciShoppingMenuLauncherButton.Bounds.hidden();
             return new ScrollbarLayout(false, hidden, hidden, 0);
+        }
+    }
+
+    private record ResizeEdges(boolean left, boolean right, boolean top, boolean bottom) {
+        private static final ResizeEdges NONE = new ResizeEdges(false, false, false, false);
+
+        private boolean active() {
+            return left || right || top || bottom;
         }
     }
 

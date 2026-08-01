@@ -13,6 +13,7 @@ import julianh06.wynnextras.features.wci.ui.WciScreenContext;
 import julianh06.wynnextras.features.wci.ui.WciShoppingMenuExtension;
 import julianh06.wynnextras.features.wci.ui.WciShoppingMenuLauncherButton;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 
 import java.nio.file.Path;
@@ -127,6 +128,12 @@ public final class WynnExtrasWciFeature {
     private static WciScreenContext currentScreenContext() {
         if (MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?> screen) {
             return WciScreenContext.detect(screen, false);
+        }
+        if (MinecraftClient.getInstance().currentScreen instanceof ChatScreen) {
+            return WciScreenContext.CHAT;
+        }
+        if (MinecraftClient.getInstance().currentScreen == null) {
+            return WciScreenContext.HUD;
         }
         return WciScreenContext.UNSUPPORTED;
     }

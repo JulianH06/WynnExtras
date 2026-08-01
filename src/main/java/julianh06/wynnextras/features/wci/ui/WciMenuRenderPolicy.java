@@ -40,7 +40,7 @@ public final class WciMenuRenderPolicy {
         }
         return switch (context) {
             case TRADE_MARKET, BANK_OVERLAY, BANK_VANILLA, CRAFTING -> WciRowPrimaryAction.TRADE_MARKET_SEARCH;
-            case TRADE_MARKET_FILTER, TRADE_MARKET_DETAIL, UNSUPPORTED -> WciRowPrimaryAction.COPY_ONLY;
+            case TRADE_MARKET_FILTER, TRADE_MARKET_DETAIL, INVENTORY, CHAT, HUD, UNSUPPORTED -> WciRowPrimaryAction.COPY_ONLY;
             case BLOCKED_MODAL -> WciRowPrimaryAction.NONE;
         };
     }
@@ -50,12 +50,7 @@ public final class WciMenuRenderPolicy {
     }
 
     public static boolean allowsHaveCountRefresh(WciScreenContext context) {
-        return context == WciScreenContext.TRADE_MARKET
-                || context == WciScreenContext.TRADE_MARKET_FILTER
-                || context == WciScreenContext.TRADE_MARKET_DETAIL
-                || context == WciScreenContext.BANK_OVERLAY
-                || context == WciScreenContext.BANK_VANILLA
-                || context == WciScreenContext.CRAFTING;
+        return context != null && context != WciScreenContext.BLOCKED_MODAL;
     }
 
     public static boolean shouldForwardClickToWci(WciScreenContext context, boolean insidePanel,

@@ -32,6 +32,7 @@ import julianh06.wynnextras.features.wci.ui.WciShoppingMenuExtension;
 import julianh06.wynnextras.features.wci.ui.WciShoppingMenuLauncherButton;
 import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.SmoothGuiCompat;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -679,6 +680,16 @@ public abstract class HandledScreenMixin {
         wciShoppingMenuExtension = null;
         wciShoppingMenuLauncherButton = null;
         BankOverlaySlotBridge.restoreAll();
+
+        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
+        ScreenMouseEvents.allowMouseScroll(self).register((screen, mouseX, mouseY, horizontalAmount, verticalAmount) -> {
+            WciShoppingMenuExtension extension = ensureWciShoppingMenuExtension();
+            if (extension == null) {
+                return true;
+            }
+            configureWciShoppingMenuExtension(extension, isWciBankOverlayPlacementMode());
+            return !extension.mouseScrolled(mouseX, mouseY, verticalAmount);
+        });
     }
 
     @Inject(method = "close", at = @At("HEAD"))

@@ -496,7 +496,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
                         () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
-                .add(toggle("WCI Shopping Menu", "Show the WCI shopping list menu on Trade Market, bank, and crafting screens",
+                .add(toggle("WCI Shopping Menu", "Show the WCI shopping list on the HUD and in Screens like the Trade Market or bank",
                         () -> config.wciShoppingMenuEnabled, v -> config.wciShoppingMenuEnabled = v))
                 .add(toggle("Allow WCI menu outside supported screens", "Allows the WCI shopping menu to stay visible outside supported screens; confirmation dialogs remain blocked",
                         () -> config.wciAllowPersistentMenu, v -> config.wciAllowPersistentMenu = v))

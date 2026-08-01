@@ -7,6 +7,7 @@ import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.wci.service.WciTextCleaner;
 import julianh06.wynnextras.features.wci.service.WciTradeMarketSlotMatcher;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.Slot;
 
@@ -19,6 +20,9 @@ public enum WciScreenContext {
     BANK_OVERLAY,
     BANK_VANILLA,
     CRAFTING,
+    INVENTORY,
+    CHAT,
+    HUD,
     BLOCKED_MODAL,
     UNSUPPORTED;
 
@@ -28,7 +32,10 @@ public enum WciScreenContext {
                 || this == TRADE_MARKET_DETAIL
                 || this == BANK_OVERLAY
                 || this == BANK_VANILLA
-                || this == CRAFTING;
+                || this == CRAFTING
+                || this == INVENTORY
+                || this == CHAT
+                || this == HUD;
     }
 
     public WciPlacementContext placementContext() {
@@ -36,13 +43,16 @@ public enum WciScreenContext {
             case TRADE_MARKET, TRADE_MARKET_FILTER, TRADE_MARKET_DETAIL -> WciPlacementContext.TRADE_MARKET;
             case BANK_OVERLAY -> WciPlacementContext.BANK_OVERLAY;
             case BANK_VANILLA -> WciPlacementContext.BANK_VANILLA;
-            case CRAFTING, BLOCKED_MODAL, UNSUPPORTED -> WciPlacementContext.OTHER;
+            case CRAFTING, INVENTORY, CHAT, HUD, BLOCKED_MODAL, UNSUPPORTED -> WciPlacementContext.OTHER;
         };
     }
 
     public static WciScreenContext detect(HandledScreen<?> screen, boolean customBankOverlayActive) {
         if (screen == null) {
             return UNSUPPORTED;
+        }
+        if (screen instanceof InventoryScreen) {
+            return INVENTORY;
         }
         Container container = Models.Container.getCurrentContainer();
         boolean tradeMarketMainScreen = hasTradeMarketSearchAndFilterSlot(screen);
