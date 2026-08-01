@@ -234,36 +234,14 @@ public class WynnExtrasConfig {
     public int wciToggleKey = GLFW.GLFW_KEY_UNKNOWN;
     public boolean wciProfessionSpeed = false;
     public int wciCraftMultiplier = 1;
-    public boolean wciShoppingMenuCustomPosition = false;
-    public int wciShoppingMenuX = -1;
-    public int wciShoppingMenuY = -1;
-    public boolean wciShoppingMenuTradeCustomPosition = false;
-    public int wciShoppingMenuTradeX = -1;
-    public int wciShoppingMenuTradeY = -1;
-    public boolean wciShoppingMenuBankCustomPosition = false;
-    public int wciShoppingMenuBankX = -1;
-    public int wciShoppingMenuBankY = -1;
-    public boolean wciShoppingMenuBankOverlayCustomPosition = false;
-    public int wciShoppingMenuBankOverlayX = -1;
-    public int wciShoppingMenuBankOverlayY = -1;
-    public boolean wciShoppingMenuBankVanillaCustomPosition = false;
-    public int wciShoppingMenuBankVanillaX = -1;
-    public int wciShoppingMenuBankVanillaY = -1;
-    public boolean wciLauncherButtonCustomPosition = false;
-    public int wciLauncherButtonX = -1;
-    public int wciLauncherButtonY = -1;
-    public boolean wciLauncherButtonTradeCustomPosition = false;
-    public int wciLauncherButtonTradeX = -1;
-    public int wciLauncherButtonTradeY = -1;
-    public boolean wciLauncherButtonBankCustomPosition = false;
-    public int wciLauncherButtonBankX = -1;
-    public int wciLauncherButtonBankY = -1;
-    public boolean wciLauncherButtonBankOverlayCustomPosition = false;
-    public int wciLauncherButtonBankOverlayX = -1;
-    public int wciLauncherButtonBankOverlayY = -1;
-    public boolean wciLauncherButtonBankVanillaCustomPosition = false;
-    public int wciLauncherButtonBankVanillaX = -1;
-    public int wciLauncherButtonBankVanillaY = -1;
+    public WciPosition wciShoppingMenuDefaultPosition = new WciPosition();
+    public WciPosition wciShoppingMenuTradePosition = new WciPosition();
+    public WciPosition wciShoppingMenuBankOverlayPosition = new WciPosition();
+    public WciPosition wciShoppingMenuBankVanillaPosition = new WciPosition();
+    public WciPosition wciLauncherButtonDefaultPosition = new WciPosition();
+    public WciPosition wciLauncherButtonTradePosition = new WciPosition();
+    public WciPosition wciLauncherButtonBankOverlayPosition = new WciPosition();
+    public WciPosition wciLauncherButtonBankVanillaPosition = new WciPosition();
     public boolean skillpointHelper = true;
     public boolean tradeMarketOverlay = false;
     public int tradeMarketOverlayX = 10;
@@ -704,6 +682,7 @@ public class WynnExtrasConfig {
         INSTANCE.syncAttackTimerColors();
         INSTANCE.syncTetrisSettings();
         INSTANCE.syncClassSelectionLines();
+        INSTANCE.syncWciPositions();
         if (INSTANCE.classSelectionContentProgressStyle == null) {
             INSTANCE.classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
         }
@@ -738,6 +717,36 @@ public class WynnExtrasConfig {
         tetrisSDFDelay = Math.clamp(tetrisSDFDelay, 0, 300);
         tetrisSDF = Math.clamp(tetrisSDF, 0, 100);
         tetris20GLevel = Math.clamp(tetris20GLevel, 1, 100);
+    }
+
+    private void syncWciPositions() {
+        if (wciShoppingMenuDefaultPosition == null) wciShoppingMenuDefaultPosition = new WciPosition();
+        if (wciShoppingMenuTradePosition == null) wciShoppingMenuTradePosition = new WciPosition();
+        if (wciShoppingMenuBankOverlayPosition == null) wciShoppingMenuBankOverlayPosition = new WciPosition();
+        if (wciShoppingMenuBankVanillaPosition == null) wciShoppingMenuBankVanillaPosition = new WciPosition();
+        if (wciLauncherButtonDefaultPosition == null) wciLauncherButtonDefaultPosition = new WciPosition();
+        if (wciLauncherButtonTradePosition == null) wciLauncherButtonTradePosition = new WciPosition();
+        if (wciLauncherButtonBankOverlayPosition == null) wciLauncherButtonBankOverlayPosition = new WciPosition();
+        if (wciLauncherButtonBankVanillaPosition == null) wciLauncherButtonBankVanillaPosition = new WciPosition();
+    }
+
+    public static class WciPosition {
+        public int x = -1;
+        public int y = -1;
+
+        public boolean isSet() {
+            return x >= 0 && y >= 0;
+        }
+
+        public void set(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        public void reset() {
+            x = -1;
+            y = -1;
+        }
     }
 
     public static void save() {

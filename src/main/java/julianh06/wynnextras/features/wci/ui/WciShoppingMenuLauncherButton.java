@@ -275,122 +275,34 @@ public final class WciShoppingMenuLauncherButton {
         WynnExtrasConfig.save();
     }
 
-    public static PositionState resetPositionState(PositionState ignored) {
-        return new PositionState(false, -1, -1);
-    }
-
     static void resetPosition(WynnExtrasConfig config) {
-        ContextPositionStates reset = resetPositionStates(positionStates(config));
-        applyPositionStates(config, reset);
-    }
-
-    public static ContextPositionStates resetPositionStates(ContextPositionStates ignored) {
-        PositionState reset = resetPositionState(null);
-        return new ContextPositionStates(reset, reset, reset, reset, reset);
-    }
-
-    public static PositionState selectPositionState(ContextPositionStates states, WciPlacementContext placementContext,
-                                                    boolean legacyFallback) {
-        PositionState contextState = switch (placementContext) {
-            case TRADE_MARKET -> states.tradeMarket();
-            case BANK_OVERLAY -> states.bankOverlay();
-            case BANK_VANILLA -> states.bankVanilla();
-            case OTHER -> states.legacy();
-        };
-        if (contextState.customPosition()) {
-            return contextState;
-        }
-        if (isBankContext(placementContext)) {
-            if (states.bank().customPosition()) {
-                return states.bank();
-            }
-            PositionState siblingBankState = siblingBankState(states, placementContext);
-            if (siblingBankState.customPosition()) {
-                return siblingBankState;
-            }
-        }
-        if (placementContext != WciPlacementContext.OTHER
-                && legacyFallback
-                && states.legacy().customPosition()) {
-            return states.legacy();
-        }
-        return contextState;
-    }
-
-    private static boolean isBankContext(WciPlacementContext placementContext) {
-        return placementContext == WciPlacementContext.BANK_OVERLAY
-                || placementContext == WciPlacementContext.BANK_VANILLA;
-    }
-
-    private static PositionState siblingBankState(ContextPositionStates states, WciPlacementContext placementContext) {
-        return placementContext == WciPlacementContext.BANK_OVERLAY
-                ? states.bankVanilla()
-                : states.bankOverlay();
-    }
-
-    private static ContextPositionStates positionStates(WynnExtrasConfig config) {
-        return new ContextPositionStates(
-                new PositionState(config.wciLauncherButtonCustomPosition, config.wciLauncherButtonX, config.wciLauncherButtonY),
-                new PositionState(config.wciLauncherButtonTradeCustomPosition, config.wciLauncherButtonTradeX,
-                        config.wciLauncherButtonTradeY),
-                new PositionState(config.wciLauncherButtonBankCustomPosition, config.wciLauncherButtonBankX,
-                        config.wciLauncherButtonBankY),
-                new PositionState(config.wciLauncherButtonBankOverlayCustomPosition, config.wciLauncherButtonBankOverlayX,
-                        config.wciLauncherButtonBankOverlayY),
-                new PositionState(config.wciLauncherButtonBankVanillaCustomPosition, config.wciLauncherButtonBankVanillaX,
-                        config.wciLauncherButtonBankVanillaY));
-    }
-
-    private static void applyPositionStates(WynnExtrasConfig config, ContextPositionStates states) {
-        PositionState legacy = states.legacy();
-        PositionState trade = states.tradeMarket();
-        PositionState bank = states.bank();
-        PositionState bankOverlay = states.bankOverlay();
-        PositionState bankVanilla = states.bankVanilla();
-        config.wciLauncherButtonCustomPosition = legacy.customPosition();
-        config.wciLauncherButtonX = legacy.x();
-        config.wciLauncherButtonY = legacy.y();
-        config.wciLauncherButtonTradeCustomPosition = trade.customPosition();
-        config.wciLauncherButtonTradeX = trade.x();
-        config.wciLauncherButtonTradeY = trade.y();
-        config.wciLauncherButtonBankCustomPosition = bank.customPosition();
-        config.wciLauncherButtonBankX = bank.x();
-        config.wciLauncherButtonBankY = bank.y();
-        config.wciLauncherButtonBankOverlayCustomPosition = bankOverlay.customPosition();
-        config.wciLauncherButtonBankOverlayX = bankOverlay.x();
-        config.wciLauncherButtonBankOverlayY = bankOverlay.y();
-        config.wciLauncherButtonBankVanillaCustomPosition = bankVanilla.customPosition();
-        config.wciLauncherButtonBankVanillaX = bankVanilla.x();
-        config.wciLauncherButtonBankVanillaY = bankVanilla.y();
+        config.wciLauncherButtonDefaultPosition.reset();
+        config.wciLauncherButtonTradePosition.reset();
+        config.wciLauncherButtonBankOverlayPosition.reset();
+        config.wciLauncherButtonBankVanillaPosition.reset();
     }
 
     private static void setPosition(WynnExtrasConfig config, WciPlacementContext placementContext, int x, int y) {
-        switch (placementContext) {
-            case TRADE_MARKET -> {
-                config.wciLauncherButtonTradeCustomPosition = true;
-                config.wciLauncherButtonTradeX = x;
-                config.wciLauncherButtonTradeY = y;
-            }
-            case BANK_OVERLAY -> {
-                config.wciLauncherButtonBankOverlayCustomPosition = true;
-                config.wciLauncherButtonBankOverlayX = x;
-                config.wciLauncherButtonBankOverlayY = y;
-            }
-            case BANK_VANILLA -> {
-                config.wciLauncherButtonBankVanillaCustomPosition = true;
-                config.wciLauncherButtonBankVanillaX = x;
-                config.wciLauncherButtonBankVanillaY = y;
-            }
-            case OTHER -> {
-                config.wciLauncherButtonCustomPosition = true;
-                config.wciLauncherButtonX = x;
-                config.wciLauncherButtonY = y;
-            }
-        }
+        position(config, placementContext).set(x, y);
+    }
+
+    private static PositionState positionState(WynnExtrasConfig config, WciPlacementContext placementContext) {
+        WynnExtrasConfig.WciPosition position = position(config, placementContext);
+        return new PositionState(position.isSet(), position.x, position.y);
+    }
+
+    private static WynnExtrasConfig.WciPosition position(WynnExtrasConfig config,
+                                                         WciPlacementContext placementContext) {
+        return switch (placementContext) {
+            case TRADE_MARKET -> config.wciLauncherButtonTradePosition;
+            case BANK_OVERLAY -> config.wciLauncherButtonBankOverlayPosition;
+            case BANK_VANILLA -> config.wciLauncherButtonBankVanillaPosition;
+            case OTHER -> config.wciLauncherButtonDefaultPosition;
+        };
     }
 
     private static int clamp(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
+        return Math.clamp(value, min, max);
     }
 
     private static boolean overlapsAny(Bounds bounds, List<Bounds> forbiddenAreas) {
@@ -426,7 +338,7 @@ public final class WciShoppingMenuLauncherButton {
         }
         int screenWidth = client.getWindow().getScaledWidth();
         int screenHeight = client.getWindow().getScaledHeight();
-        PositionState savedPosition = selectPositionState(positionStates(WynnExtrasConfig.INSTANCE), placementContext, true);
+        PositionState savedPosition = positionState(WynnExtrasConfig.INSTANCE, placementContext);
         if (savedPosition.customPosition()) {
             return clampSavedBounds(
                     savedPosition.x(),
@@ -532,11 +444,4 @@ public final class WciShoppingMenuLauncherButton {
     }
 
     public record PositionState(boolean customPosition, int x, int y) {}
-
-    public record ContextPositionStates(
-            PositionState legacy,
-            PositionState tradeMarket,
-            PositionState bank,
-            PositionState bankOverlay,
-            PositionState bankVanilla) {}
 }

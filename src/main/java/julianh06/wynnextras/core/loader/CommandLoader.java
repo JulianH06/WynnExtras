@@ -25,12 +25,8 @@ import julianh06.wynnextras.features.crafting.calc.ProfessionCalculatorScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.tetris.TetrisScreen;
-import julianh06.wynnextras.features.wci.ui.WciScreenContext;
-import julianh06.wynnextras.features.wci.ui.WciShoppingMenuExtension;
-import julianh06.wynnextras.features.wci.ui.WciShoppingMenuLauncherButton;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -194,50 +190,6 @@ public class CommandLoader implements WELoader {
             });
             base = base.then(ignorelist);
             alias = alias.then(ignorelist);
-
-            var wci = ClientCommandManager.literal("wci")
-                    .executes(ctx -> {
-                        WciShoppingMenuExtension.ToggleResult result =
-                                WciShoppingMenuExtension.toggleFromCommand(currentWciScreenContext());
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(result.message()));
-                        return 1;
-                    })
-                    .then(ClientCommandManager.literal("enable")
-                            .executes(ctx -> {
-                                WciShoppingMenuExtension.ToggleResult result =
-                                        WciShoppingMenuExtension.showFromCommand(currentWciScreenContext());
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(result.message()));
-                                return 1;
-                            }))
-                    .then(ClientCommandManager.literal("disable")
-                            .executes(ctx -> {
-                                WciShoppingMenuExtension.close();
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("WCI shopping menu disabled."));
-                                return 1;
-                            }))
-                    .then(ClientCommandManager.literal("clear")
-                            .executes(ctx -> {
-                                boolean saved = WciShoppingMenuExtension.clearFromCommand();
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(saved
-                                        ? "Cleared WCI shopping cart."
-                                        : "Cleared WCI shopping cart, but save failed."));
-                                return 1;
-                            }))
-                    .then(ClientCommandManager.literal("copy")
-                            .executes(ctx -> {
-                                WciShoppingMenuExtension.copyFromCommand();
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Copied WCI shopping list."));
-                                return 1;
-                            }))
-                    .then(ClientCommandManager.literal("resetposition")
-                            .executes(ctx -> {
-                                WciShoppingMenuExtension.resetPosition();
-                                WciShoppingMenuLauncherButton.resetPosition();
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("WCI positions reset."));
-                                return 1;
-                            }));
-            base = base.then(wci);
-            alias = alias.then(wci);
 
             dispatcher.register(base);
             dispatcher.register(baseLowerCase);
@@ -523,14 +475,6 @@ public class CommandLoader implements WELoader {
         current.executes(cmd::onExecute);
 
         return root;
-    }
-
-    private static WciScreenContext currentWciScreenContext() {
-        Screen screen = MinecraftClient.getInstance().currentScreen;
-        if (screen instanceof HandledScreen<?> handledScreen) {
-            return WciScreenContext.detect(handledScreen, false);
-        }
-        return WciScreenContext.UNSUPPORTED;
     }
 
     private static final Set<BombType> PROF_BOMBS = Set.of(BombType.PROFESSION_XP, BombType.PROFESSION_SPEED);

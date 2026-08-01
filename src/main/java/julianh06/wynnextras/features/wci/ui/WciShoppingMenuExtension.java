@@ -475,10 +475,10 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
         int guiWidth = HandledScreenAccess.backgroundWidth(screen);
         int guiHeight = HandledScreenAccess.backgroundHeight(screen);
 
-        panelW = Math.min(PANEL_WIDTH, Math.max(150, screenWidth - PANEL_MARGIN * 2));
-        panelH = Math.min(PANEL_HEIGHT, Math.max(120, screenHeight - PANEL_MARGIN * 2));
+        panelW = Math.clamp(screenWidth - PANEL_MARGIN * 2, 150, PANEL_WIDTH);
+        panelH = Math.clamp(screenHeight - PANEL_MARGIN * 2, 120, PANEL_HEIGHT);
 
-        PositionState savedPosition = selectPositionState(positionStates(WynnExtrasConfig.INSTANCE), placementContext, true);
+        PositionState savedPosition = positionState(WynnExtrasConfig.INSTANCE, placementContext);
         if (savedPosition.customPosition()) {
             WciShoppingMenuLauncherButton.Bounds savedBounds = clampPanelBounds(
                     savedPosition.x() < 0 ? PANEL_MARGIN : savedPosition.x(),
@@ -686,117 +686,29 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
                 panelHeight);
     }
 
-    public static PositionState resetPositionState(PositionState ignored) {
-        return new PositionState(false, -1, -1);
-    }
-
-    public static ContextPositionStates resetPositionStates(ContextPositionStates ignored) {
-        PositionState reset = resetPositionState(null);
-        return new ContextPositionStates(reset, reset, reset, reset, reset);
-    }
-
-    public static PositionState selectPositionState(ContextPositionStates states, WciPlacementContext placementContext,
-                                                    boolean legacyFallback) {
-        PositionState contextState = switch (placementContext) {
-            case TRADE_MARKET -> states.tradeMarket();
-            case BANK_OVERLAY -> states.bankOverlay();
-            case BANK_VANILLA -> states.bankVanilla();
-            case OTHER -> states.legacy();
-        };
-        if (contextState.customPosition()) {
-            return contextState;
-        }
-        if (isBankContext(placementContext)) {
-            if (states.bank().customPosition()) {
-                return states.bank();
-            }
-            PositionState siblingBankState = siblingBankState(states, placementContext);
-            if (siblingBankState.customPosition()) {
-                return siblingBankState;
-            }
-        }
-        if (placementContext != WciPlacementContext.OTHER
-                && legacyFallback
-                && states.legacy().customPosition()) {
-            return states.legacy();
-        }
-        return contextState;
-    }
-
-    private static boolean isBankContext(WciPlacementContext placementContext) {
-        return placementContext == WciPlacementContext.BANK_OVERLAY
-                || placementContext == WciPlacementContext.BANK_VANILLA;
-    }
-
-    private static PositionState siblingBankState(ContextPositionStates states, WciPlacementContext placementContext) {
-        return placementContext == WciPlacementContext.BANK_OVERLAY
-                ? states.bankVanilla()
-                : states.bankOverlay();
-    }
-
     static void resetPosition(WynnExtrasConfig config) {
-        applyPositionStates(config, resetPositionStates(positionStates(config)));
+        config.wciShoppingMenuDefaultPosition.reset();
+        config.wciShoppingMenuTradePosition.reset();
+        config.wciShoppingMenuBankOverlayPosition.reset();
+        config.wciShoppingMenuBankVanillaPosition.reset();
     }
 
-    private static ContextPositionStates positionStates(WynnExtrasConfig config) {
-        return new ContextPositionStates(
-                new PositionState(config.wciShoppingMenuCustomPosition, config.wciShoppingMenuX, config.wciShoppingMenuY),
-                new PositionState(config.wciShoppingMenuTradeCustomPosition, config.wciShoppingMenuTradeX,
-                        config.wciShoppingMenuTradeY),
-                new PositionState(config.wciShoppingMenuBankCustomPosition, config.wciShoppingMenuBankX,
-                        config.wciShoppingMenuBankY),
-                new PositionState(config.wciShoppingMenuBankOverlayCustomPosition, config.wciShoppingMenuBankOverlayX,
-                        config.wciShoppingMenuBankOverlayY),
-                new PositionState(config.wciShoppingMenuBankVanillaCustomPosition, config.wciShoppingMenuBankVanillaX,
-                        config.wciShoppingMenuBankVanillaY));
-    }
-
-    private static void applyPositionStates(WynnExtrasConfig config, ContextPositionStates states) {
-        PositionState legacy = states.legacy();
-        PositionState trade = states.tradeMarket();
-        PositionState bank = states.bank();
-        PositionState bankOverlay = states.bankOverlay();
-        PositionState bankVanilla = states.bankVanilla();
-        config.wciShoppingMenuCustomPosition = legacy.customPosition();
-        config.wciShoppingMenuX = legacy.x();
-        config.wciShoppingMenuY = legacy.y();
-        config.wciShoppingMenuTradeCustomPosition = trade.customPosition();
-        config.wciShoppingMenuTradeX = trade.x();
-        config.wciShoppingMenuTradeY = trade.y();
-        config.wciShoppingMenuBankCustomPosition = bank.customPosition();
-        config.wciShoppingMenuBankX = bank.x();
-        config.wciShoppingMenuBankY = bank.y();
-        config.wciShoppingMenuBankOverlayCustomPosition = bankOverlay.customPosition();
-        config.wciShoppingMenuBankOverlayX = bankOverlay.x();
-        config.wciShoppingMenuBankOverlayY = bankOverlay.y();
-        config.wciShoppingMenuBankVanillaCustomPosition = bankVanilla.customPosition();
-        config.wciShoppingMenuBankVanillaX = bankVanilla.x();
-        config.wciShoppingMenuBankVanillaY = bankVanilla.y();
+    private static PositionState positionState(WynnExtrasConfig config, WciPlacementContext context) {
+        WynnExtrasConfig.WciPosition position = position(config, context);
+        return new PositionState(position.isSet(), position.x, position.y);
     }
 
     private static void setPosition(WynnExtrasConfig config, WciPlacementContext placementContext, int x, int y) {
-        switch (placementContext) {
-            case TRADE_MARKET -> {
-                config.wciShoppingMenuTradeCustomPosition = true;
-                config.wciShoppingMenuTradeX = x;
-                config.wciShoppingMenuTradeY = y;
-            }
-            case BANK_OVERLAY -> {
-                config.wciShoppingMenuBankOverlayCustomPosition = true;
-                config.wciShoppingMenuBankOverlayX = x;
-                config.wciShoppingMenuBankOverlayY = y;
-            }
-            case BANK_VANILLA -> {
-                config.wciShoppingMenuBankVanillaCustomPosition = true;
-                config.wciShoppingMenuBankVanillaX = x;
-                config.wciShoppingMenuBankVanillaY = y;
-            }
-            case OTHER -> {
-                config.wciShoppingMenuCustomPosition = true;
-                config.wciShoppingMenuX = x;
-                config.wciShoppingMenuY = y;
-            }
-        }
+        position(config, placementContext).set(x, y);
+    }
+
+    private static WynnExtrasConfig.WciPosition position(WynnExtrasConfig config, WciPlacementContext context) {
+        return switch (context) {
+            case TRADE_MARKET -> config.wciShoppingMenuTradePosition;
+            case BANK_OVERLAY -> config.wciShoppingMenuBankOverlayPosition;
+            case BANK_VANILLA -> config.wciShoppingMenuBankVanillaPosition;
+            case OTHER -> config.wciShoppingMenuDefaultPosition;
+        };
     }
 
     private List<WciShoppingMenuLauncherButton.Bounds> forbiddenAreas(WciPlacementContext placementContext,
@@ -846,7 +758,7 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
     }
 
     private static int clampValue(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
+        return Math.clamp(value, min, max);
     }
 
     private void drawPanel() {
@@ -1516,7 +1428,7 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
     }
 
     private static int clamp(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
+        return Math.clamp(value, min, max);
     }
 
     private String trimToWidth(String text, int maxWidth, float textScale) {
@@ -1530,13 +1442,6 @@ public class WciShoppingMenuExtension extends WEMenuExtension {
     }
 
     public record PositionState(boolean customPosition, int x, int y) {}
-
-    public record ContextPositionStates(
-            PositionState legacy,
-            PositionState tradeMarket,
-            PositionState bank,
-            PositionState bankOverlay,
-            PositionState bankVanilla) {}
 
     public record ToggleResult(boolean open, boolean handled, String message) {}
 

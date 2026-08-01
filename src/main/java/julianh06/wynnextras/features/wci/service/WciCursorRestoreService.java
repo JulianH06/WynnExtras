@@ -35,13 +35,14 @@ public final class WciCursorRestoreService {
         }
     }
 
-    public static void armForSearchResults() {
+    public static boolean armForSearchResults() {
         if (pendingRestore == null) {
-            return;
+            return false;
         }
 
         MinecraftClient client = MinecraftClient.getInstance();
         pendingRestore = pendingRestore.arm(System.currentTimeMillis(), screenKey(client));
+        return true;
     }
 
     public static TickResult tick(MinecraftClient client) {

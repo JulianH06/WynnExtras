@@ -168,10 +168,11 @@ public final class WciTradeMarketSearchService {
             return;
         }
 
-        if (WciCursorRestoreService.tick(client) == WciCursorRestoreService.TickResult.RESTORED
+        WciCursorRestoreService.TickResult cursorRestoreResult = WciCursorRestoreService.tick(client);
+        if ((cursorRestoreResult == WciCursorRestoreService.TickResult.RESTORED
+                || cursorRestoreResult == WciCursorRestoreService.TickResult.TIMED_OUT)
                 && WORKFLOW.state() == WciTradeMarketWorkflowState.WAITING_FOR_RESULTS) {
             WORKFLOW.markResultsVisible(now);
-            releaseWynnMarketSearchSuppression();
         }
     }
 
@@ -254,9 +255,13 @@ public final class WciTradeMarketSearchService {
         if (client != null && client.player != null && client.player.networkHandler != null) {
             String name = searchName.get();
             client.player.networkHandler.sendChatMessage(name);
-            WciCursorRestoreService.armForSearchResults();
+            boolean cursorRestoreArmed = WciCursorRestoreService.armForSearchResults();
             WORKFLOW.markSearchQuerySent(now);
             publish(Status.SEARCHED, name);
+            releaseWynnMarketSearchSuppression();
+            if (!cursorRestoreArmed) {
+                WORKFLOW.markResultsVisible(now);
+            }
             return;
         }
 

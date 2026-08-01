@@ -156,27 +156,29 @@ public final class WciWynnMarketSearchCompat {
         private static final String GET_METHOD = "get";
         private static final String MARKET_SEARCH_FIELD = "marketSearch";
 
+        private Method getMethod;
+        private Field marketSearchField;
+
         @Override
         public boolean marketSearch() throws ReflectiveOperationException {
-            return field().getBoolean(config());
+            resolve();
+            return marketSearchField.getBoolean(getMethod.invoke(null));
         }
 
         @Override
         public void setMarketSearch(boolean enabled) throws ReflectiveOperationException {
-            field().setBoolean(config(), enabled);
+            resolve();
+            marketSearchField.setBoolean(getMethod.invoke(null), enabled);
         }
 
-        private static Object config() throws ReflectiveOperationException {
+        private synchronized void resolve() throws ReflectiveOperationException {
+            if (getMethod != null && marketSearchField != null) {
+                return;
+            }
             Class<?> configClass = Class.forName(CONFIG_CLASS);
-            Method getMethod = configClass.getMethod(GET_METHOD);
-            return getMethod.invoke(null);
-        }
-
-        private static Field field() throws ReflectiveOperationException {
-            Class<?> configClass = Class.forName(CONFIG_CLASS);
-            Field field = configClass.getDeclaredField(MARKET_SEARCH_FIELD);
-            field.setAccessible(true);
-            return field;
+            getMethod = configClass.getMethod(GET_METHOD);
+            marketSearchField = configClass.getDeclaredField(MARKET_SEARCH_FIELD);
+            marketSearchField.setAccessible(true);
         }
     }
 }
