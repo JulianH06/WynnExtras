@@ -498,16 +498,16 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
                         () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
-                .add(toggle("WCI Shopping Menu", "Show the WCI shopping list on the HUD and in Screens like the Trade Market or bank",
-                        () -> config.wciShoppingMenuEnabled, v -> config.wciShoppingMenuEnabled = v))
-                .add(toggle("Allow WCI menu outside supported screens", "Allows the WCI shopping menu to stay visible outside supported screens; confirmation dialogs remain blocked",
-                        () -> config.wciAllowPersistentMenu, v -> config.wciAllowPersistentMenu = v))
-                .add(toggle("WynnMarketSearch compatibility", "Temporarily suppresses WynnMarketSearch while WCI performs Trade Market row searches",
-                        () -> config.wciWynnMarketSearchCompatibility, v -> config.wciWynnMarketSearchCompatibility = v))
-                .add(keybind("Toggle WCI Shopping Menu", "Toggle the WCI shopping menu; opens pinned outside supported screens",
-                        () -> config.wciToggleKey, v -> config.wciToggleKey = v,
-                        DEFAULT_CONFIG.wciToggleKey))
                 .add(text("The preview is movable", "To change its position just drag it where you want"))
+                .add(toggle("Shopping List", "Show the shopping list on the HUD and in screens like the Trade Market or bank",
+                        () -> config.shoppingListMenuEnabled, v -> config.shoppingListMenuEnabled = v))
+                .add(toggle("Allow outside supported screens", "Allows the shopping list to stay visible outside supported screens; confirmation dialogs remain blocked",
+                        () -> config.shoppingListAllowPersistentMenu, v -> config.shoppingListAllowPersistentMenu = v))
+                .add(toggle("WynnMarketSearch compatibility", "Temporarily suppresses WynnMarketSearch while the shopping list performs Trade Market row searches",
+                        () -> config.shoppingListWynnMarketSearchCompatibility, v -> config.shoppingListWynnMarketSearchCompatibility = v))
+                .add(keybind("Toggle Shopping List", "Toggle the shopping list; opens pinned outside supported screens",
+                        () -> config.shoppingListToggleKey, v -> config.shoppingListToggleKey = v,
+                        DEFAULT_CONFIG.shoppingListToggleKey))
             .sub("Profession Overlay")
                 .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
                         () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))

@@ -43,9 +43,9 @@ import julianh06.wynnextras.features.raid.RaidListData;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootTracker;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
-import julianh06.wynnextras.features.wci.WynnExtrasWciFeature;
-import julianh06.wynnextras.features.wci.service.WciTradeMarketSearchService;
-import julianh06.wynnextras.features.wci.ui.WciShoppingHudOverlay;
+import julianh06.wynnextras.features.shoppinglist.ShoppingListFeature;
+import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTradeMarketSearchService;
+import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListHudOverlay;
 import julianh06.wynnextras.features.waypoints.data.WaypointData;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
@@ -53,6 +53,7 @@ import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.TickScheduler;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry;
 import net.fabricmc.loader.api.FabricLoader;
@@ -181,7 +182,7 @@ public class WynnExtras implements ClientModInitializer {
 	public void onInitializeClient() {
 		Core.init(MOD_ID);
 		ProfileTitleService.fetch();
-		CraftingDataService.getInstance().initialize();
+		ClientLifecycleEvents.CLIENT_STARTED.register(client -> CraftingDataService.getInstance().initialize());
 		updateVersionData();
 
 		SpecialGuiElementRegistry.register(context -> new BannerGuiRenderer(context.vertexConsumers(), MinecraftClient.getInstance().getAtlasManager()));
@@ -189,8 +190,8 @@ public class WynnExtras implements ClientModInitializer {
 		WELoader.loadAll();
 		TickScheduler.init();
 		ChatEvent.register();
-		WciTradeMarketSearchService.register();
-		WciShoppingHudOverlay.register();
+		ShoppingListTradeMarketSearchService.register();
+		ShoppingListHudOverlay.register();
 
         new InitEvent().post();
 
@@ -244,7 +245,7 @@ public class WynnExtras implements ClientModInitializer {
 			CharacterBankData.INSTANCE.load();
 			BookshelfData.INSTANCE.load();
 			MiscBucketData.INSTANCE.load();
-			WynnExtrasWciFeature.loadPersistedCart();
+			ShoppingListFeature.loadPersistedCart();
 			BankOverlay2.invalidateBagTotalCache();
 			WynncraftApiHandler.load();
 

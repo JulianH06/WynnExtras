@@ -229,22 +229,22 @@ public class WynnExtrasConfig {
     public boolean craftingHelperReverseOrder = false;
     public float craftingHelperHeightPercent = 0.6f;
     public int craftingHelperWidth = 165;
-    public boolean wciShoppingMenuEnabled = false;
-    public boolean wciAllowPersistentMenu = false;
-    public boolean wciWynnMarketSearchCompatibility = true;
-    public int wciToggleKey = GLFW.GLFW_KEY_UNKNOWN;
-    public boolean wciProfessionSpeed = false;
-    public int wciCraftMultiplier = 1;
-    public int wciShoppingMenuWidth = 190;
-    public int wciShoppingMenuHeight = 222;
-    public WciPosition wciShoppingMenuDefaultPosition = new WciPosition();
-    public WciPosition wciShoppingMenuTradePosition = new WciPosition();
-    public WciPosition wciShoppingMenuBankOverlayPosition = new WciPosition();
-    public WciPosition wciShoppingMenuBankVanillaPosition = new WciPosition();
-    public WciPosition wciLauncherButtonDefaultPosition = new WciPosition();
-    public WciPosition wciLauncherButtonTradePosition = new WciPosition();
-    public WciPosition wciLauncherButtonBankOverlayPosition = new WciPosition();
-    public WciPosition wciLauncherButtonBankVanillaPosition = new WciPosition();
+    public boolean shoppingListMenuEnabled = false;
+    public boolean shoppingListAllowPersistentMenu = false;
+    public boolean shoppingListWynnMarketSearchCompatibility = true;
+    public int shoppingListToggleKey = GLFW.GLFW_KEY_UNKNOWN;
+    public boolean shoppingListProfessionSpeed = false;
+    public int shoppingListCraftMultiplier = 1;
+    public int shoppingListMenuWidth = 190;
+    public int shoppingListMenuHeight = 222;
+    public ShoppingListPosition shoppingListMenuDefaultPosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListMenuTradePosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListMenuBankOverlayPosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListMenuBankVanillaPosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListLauncherButtonDefaultPosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListLauncherButtonTradePosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListLauncherButtonBankOverlayPosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListLauncherButtonBankVanillaPosition = new ShoppingListPosition();
     public boolean skillpointHelper = true;
     public boolean tradeMarketOverlay = false;
     public int tradeMarketOverlayX = 10;
@@ -685,7 +685,7 @@ public class WynnExtrasConfig {
         INSTANCE.syncAttackTimerColors();
         INSTANCE.syncTetrisSettings();
         INSTANCE.syncClassSelectionLines();
-        INSTANCE.syncWciPositions();
+        INSTANCE.syncShoppingListPositions();
         if (INSTANCE.classSelectionContentProgressStyle == null) {
             INSTANCE.classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
         }
@@ -722,20 +722,20 @@ public class WynnExtrasConfig {
         tetris20GLevel = Math.clamp(tetris20GLevel, 1, 100);
     }
 
-    private void syncWciPositions() {
-        if (wciShoppingMenuWidth <= 0) wciShoppingMenuWidth = 190;
-        if (wciShoppingMenuHeight <= 0) wciShoppingMenuHeight = 222;
-        if (wciShoppingMenuDefaultPosition == null) wciShoppingMenuDefaultPosition = new WciPosition();
-        if (wciShoppingMenuTradePosition == null) wciShoppingMenuTradePosition = new WciPosition();
-        if (wciShoppingMenuBankOverlayPosition == null) wciShoppingMenuBankOverlayPosition = new WciPosition();
-        if (wciShoppingMenuBankVanillaPosition == null) wciShoppingMenuBankVanillaPosition = new WciPosition();
-        if (wciLauncherButtonDefaultPosition == null) wciLauncherButtonDefaultPosition = new WciPosition();
-        if (wciLauncherButtonTradePosition == null) wciLauncherButtonTradePosition = new WciPosition();
-        if (wciLauncherButtonBankOverlayPosition == null) wciLauncherButtonBankOverlayPosition = new WciPosition();
-        if (wciLauncherButtonBankVanillaPosition == null) wciLauncherButtonBankVanillaPosition = new WciPosition();
+    private void syncShoppingListPositions() {
+        if (shoppingListMenuWidth <= 0) shoppingListMenuWidth = 190;
+        if (shoppingListMenuHeight <= 0) shoppingListMenuHeight = 222;
+        if (shoppingListMenuDefaultPosition == null) shoppingListMenuDefaultPosition = new ShoppingListPosition();
+        if (shoppingListMenuTradePosition == null) shoppingListMenuTradePosition = new ShoppingListPosition();
+        if (shoppingListMenuBankOverlayPosition == null) shoppingListMenuBankOverlayPosition = new ShoppingListPosition();
+        if (shoppingListMenuBankVanillaPosition == null) shoppingListMenuBankVanillaPosition = new ShoppingListPosition();
+        if (shoppingListLauncherButtonDefaultPosition == null) shoppingListLauncherButtonDefaultPosition = new ShoppingListPosition();
+        if (shoppingListLauncherButtonTradePosition == null) shoppingListLauncherButtonTradePosition = new ShoppingListPosition();
+        if (shoppingListLauncherButtonBankOverlayPosition == null) shoppingListLauncherButtonBankOverlayPosition = new ShoppingListPosition();
+        if (shoppingListLauncherButtonBankVanillaPosition == null) shoppingListLauncherButtonBankVanillaPosition = new ShoppingListPosition();
     }
 
-    public static class WciPosition {
+    public static class ShoppingListPosition {
         public int x = -1;
         public int y = -1;
 

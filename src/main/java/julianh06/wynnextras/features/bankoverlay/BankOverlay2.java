@@ -744,6 +744,10 @@ public class BankOverlay2 extends WEHandledScreen {
             if (searchInput != null && searchInput.contains("@")) {
                 searchInput = searchInput.replace("@", "").trim();
             }
+            if (!Objects.equals(activeSearchInput, searchInput)) {
+                activeSearchInput = searchInput == null ? "" : searchInput;
+                activeSearchQuery = SearchQueryParser.parse(activeSearchInput);
+            }
 
             if (characterBankUnavailable && !isCrossClassSearch) {
                 clearCrossClassSearchState();
@@ -755,19 +759,12 @@ public class BankOverlay2 extends WEHandledScreen {
                     lastCrossClassSearchQuery = cacheKey;
                     crossClassSearchActive = true;
                     crossClassPages.clear();
-                    boolean includeCurrentCharacter = effectiveAllCharactersBrowseMode && currentOverlayType != BankOverlayType.CHARACTER;
-                    boolean includeAccountBank = effectiveAllCharactersBrowseMode
-                            || currentOverlayType == BankOverlayType.MISC
-                            || currentOverlayType == BankOverlayType.BOOKSHELF;
-                    queueCrossClassSearch(cacheKey, searchInput, includeCurrentCharacter, includeAccountBank, effectiveAllCharactersBrowseMode);
+                    boolean includeCurrentCharacter = currentOverlayType != BankOverlayType.CHARACTER;
+                    queueCrossClassSearch(cacheKey, searchInput, includeCurrentCharacter, true, effectiveAllCharactersBrowseMode);
                 }
                 startQueuedCrossClassSearchIfReady();
                 applyCompletedCrossClassSearch(yStart);
             } else {
-                if (!Objects.equals(activeSearchInput, searchInput)) {
-                    activeSearchInput = searchInput == null ? "" : searchInput;
-                    activeSearchQuery = SearchQueryParser.parse(activeSearchInput);
-                }
                 // Clear cross-class results if not in cross-class mode
                 if (crossClassSearchActive) {
                     clearCrossClassSearchState();
@@ -3212,9 +3209,11 @@ public class BankOverlay2 extends WEHandledScreen {
         lines.add(net.minecraft.text.Text.literal("§7type:§fgear§7|§fbox§7|§fpowder§7|§fpotion§7|§ffood§7|§ftome§7|§ftool§7|"));
         lines.add(net.minecraft.text.Text.literal("§7      §fingredient§7|§fpouch§7|§fkey§7|§fhorse§7|§fscroll§7|§famplifier§7|"));
         lines.add(net.minecraft.text.Text.literal("§7      §fcharm§7|§ftrinket§7|§frune§7|§fmaterial"));
+        lines.add(net.minecraft.text.Text.literal("§7materialtier:§f1§7|§f2§7|§f3"));
         lines.add(net.minecraft.text.Text.literal("§7crafted:§ftrue§7|§ffalse"));
         lines.add(net.minecraft.text.Text.literal("§8Combine: §ftype:gear level:80-100 rarity:fabled"));
         lines.add(net.minecraft.text.Text.literal("§8Search-bar shortcuts: §fCtrl+C, Ctrl+V, Ctrl+X"));
+        lines.add(net.minecraft.text.Text.literal("§7ingredienttier:§f0§7|§f1§7|§f2§7|§f3"));
         context.drawTooltip(tr, lines, mouseX, mouseY);
     }
 
@@ -3415,6 +3414,22 @@ public class BankOverlay2 extends WEHandledScreen {
         if (mouseY < sortToggleY || mouseY >= sortToggleY + sortToggleH) return false;
         bagSortMode = bagSortMode == BagSortMode.BY_TYPE ? BagSortMode.BY_AMOUNT : BagSortMode.BY_TYPE;
         McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        return true;
+    }
+
+    public static boolean setSearchInput(String input) {
+        if (searchbar2 == null) {
+            return false;
+        }
+        searchbar2.setInputAndMoveCursorToEnd(input);
+        String normalizedInput = input == null ? "" : input.replace("@", "").trim();
+        activeSearchInput = normalizedInput;
+        activeSearchQuery = SearchQueryParser.parse(normalizedInput);
+        lastCrossClassSearchQuery = "";
+        invalidateLocalCrossClassPageCaches();
+        for (PageWidget page : pages) {
+            page.invalidateSearchCache();
+        }
         return true;
     }
 

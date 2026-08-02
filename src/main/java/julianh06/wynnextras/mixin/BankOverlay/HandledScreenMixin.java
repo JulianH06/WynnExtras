@@ -27,9 +27,10 @@ import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.misc.QuickRepair;
 import julianh06.wynnextras.features.mount.MountOverlay;
-import julianh06.wynnextras.features.wci.ui.WciScreenContext;
-import julianh06.wynnextras.features.wci.ui.WciShoppingMenuExtension;
-import julianh06.wynnextras.features.wci.ui.WciShoppingMenuLauncherButton;
+import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListScreenContext;
+import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListMenuExtension;
+import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListMenuLauncherButton;
+import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTradeMarketPurchaseService;
 import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.SmoothGuiCompat;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
@@ -87,9 +88,9 @@ public abstract class HandledScreenMixin {
 
     @Unique private QuickRepair quickRepairOverlay;
 
-    @Unique private WciShoppingMenuExtension wciShoppingMenuExtension;
-    @Unique private WciShoppingMenuLauncherButton wciShoppingMenuLauncherButton;
-    @Unique private boolean wciRenderedThisFrame = false;
+    @Unique private ShoppingListMenuExtension shoppingListMenuExtension;
+    @Unique private ShoppingListMenuLauncherButton shoppingListMenuLauncherButton;
+    @Unique private boolean shoppingListRenderedThisFrame = false;
 
     @Inject(method = "renderBackground", at = @At(value = "HEAD"), cancellable = true)
     private void renderBackground(DrawContext context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci){
@@ -103,7 +104,7 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        wciRenderedThisFrame = false;
+        shoppingListRenderedThisFrame = false;
         LunarCompat.recordHandledScreenMixinRender((HandledScreen<?>) (Object) this);
         // Encounter Selection Overlay (must render FIRST and cancel vanilla render so chest UI is fully hidden)
         {
@@ -160,8 +161,8 @@ public abstract class HandledScreenMixin {
             SmoothGuiCompat.pushIfNeeded(context, poppedSmoothGui && !ci.isCancelled());
             renderWynntilsBankPageJumpButtons(context, mouseX, mouseY, delta, (HandledScreen<?>) (Object) this);
             if (isCustomBankOverlayReplacingVanilla() && ci.isCancelled()) {
-                renderWciShoppingMenu(context, mouseX, mouseY, delta, WciScreenContext.BANK_OVERLAY, true);
-                renderWciShoppingMenuLauncherButton(context, mouseX, mouseY, delta, true);
+                renderShoppingListMenu(context, mouseX, mouseY, delta, ShoppingListScreenContext.BANK_OVERLAY, true);
+                renderShoppingListMenuLauncherButton(context, mouseX, mouseY, delta, true);
             }
         }
 
@@ -224,10 +225,12 @@ public abstract class HandledScreenMixin {
         if (quickRepairOverlay == null) quickRepairOverlay = new QuickRepair();
         quickRepairOverlay.render(context, mouseX, mouseY, delta);
 
-        boolean wciBankOverlayPlacementMode = isWciBankOverlayPlacementMode();
-        renderWciShoppingMenu(context, mouseX, mouseY, delta,
-                currentWciScreenContext(wciBankOverlayPlacementMode), wciBankOverlayPlacementMode);
-        renderWciShoppingMenuLauncherButton(context, mouseX, mouseY, delta, wciBankOverlayPlacementMode);
+        if (!(self instanceof InventoryScreen)) {
+            boolean shoppingListBankOverlayPlacementMode = isShoppingListBankOverlayPlacementMode();
+            renderShoppingListMenu(context, mouseX, mouseY, delta,
+                    currentShoppingListScreenContext(shoppingListBankOverlayPlacementMode), shoppingListBankOverlayPlacementMode);
+            renderShoppingListMenuLauncherButton(context, mouseX, mouseY, delta, shoppingListBankOverlayPlacementMode);
+        }
 
         ProfessionOverlay.renderOnScreen(context);
         if (!(self instanceof InventoryScreen)) {
@@ -236,47 +239,47 @@ public abstract class HandledScreenMixin {
     }
 
     @Unique
-    private WciShoppingMenuExtension ensureWciShoppingMenuExtension() {
-        if (!WciShoppingMenuExtension.isVisible()) {
+    private ShoppingListMenuExtension ensureShoppingListMenuExtension() {
+        if (!ShoppingListMenuExtension.isVisible()) {
             return null;
         }
-        if (wciShoppingMenuExtension == null) {
-            wciShoppingMenuExtension = new WciShoppingMenuExtension();
+        if (shoppingListMenuExtension == null) {
+            shoppingListMenuExtension = new ShoppingListMenuExtension();
         }
-        return wciShoppingMenuExtension;
+        return shoppingListMenuExtension;
     }
 
     @Unique
-    private void renderWciShoppingMenu(DrawContext context, int mouseX, int mouseY, float delta,
-                                       WciScreenContext screenContext, boolean customBankOverlayActive) {
-        if (wciRenderedThisFrame) {
+    private void renderShoppingListMenu(DrawContext context, int mouseX, int mouseY, float delta,
+                                       ShoppingListScreenContext screenContext, boolean customBankOverlayActive) {
+        if (shoppingListRenderedThisFrame) {
             return;
         }
-        if (!WciShoppingMenuExtension.shouldRender(screenContext)) {
+        if (!ShoppingListMenuExtension.shouldRender(screenContext)) {
             return;
         }
-        WciShoppingMenuExtension extension = ensureWciShoppingMenuExtension();
+        ShoppingListMenuExtension extension = ensureShoppingListMenuExtension();
         if (extension == null) {
             return;
         }
         extension.setScreenContext(screenContext);
         extension.setPlacementContext(screenContext.placementContext());
         extension.render(context, mouseX, mouseY, delta);
-        wciRenderedThisFrame = true;
+        shoppingListRenderedThisFrame = true;
     }
 
     @Unique
-    private WciShoppingMenuLauncherButton ensureWciShoppingMenuLauncherButton() {
-        if (wciShoppingMenuLauncherButton == null) {
-            wciShoppingMenuLauncherButton = new WciShoppingMenuLauncherButton();
+    private ShoppingListMenuLauncherButton ensureShoppingListMenuLauncherButton() {
+        if (shoppingListMenuLauncherButton == null) {
+            shoppingListMenuLauncherButton = new ShoppingListMenuLauncherButton();
         }
-        return wciShoppingMenuLauncherButton;
+        return shoppingListMenuLauncherButton;
     }
 
     @Unique
-    private void renderWciShoppingMenuLauncherButton(DrawContext context, int mouseX, int mouseY, float delta,
+    private void renderShoppingListMenuLauncherButton(DrawContext context, int mouseX, int mouseY, float delta,
                                                      boolean customBankOverlayActive) {
-        ensureWciShoppingMenuLauncherButton().render(context, (HandledScreen<?>) (Object) this, mouseX, mouseY, delta,
+        ensureShoppingListMenuLauncherButton().render(context, (HandledScreen<?>) (Object) this, mouseX, mouseY, delta,
                 customBankOverlayActive);
     }
 
@@ -287,24 +290,24 @@ public abstract class HandledScreenMixin {
     }
 
     @Unique
-    private boolean isWciBankOverlayPlacementMode() {
+    private boolean isShoppingListBankOverlayPlacementMode() {
         if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
             return false;
         }
         if (currentOverlayType != BankOverlayType.NONE) {
             return true;
         }
-        return WciShoppingMenuLauncherButton.isBankLikeContainer(Models.Container.getCurrentContainer());
+        return ShoppingListMenuLauncherButton.isBankLikeContainer(Models.Container.getCurrentContainer());
     }
 
     @Unique
-    private WciScreenContext currentWciScreenContext(boolean customBankOverlayActive) {
-        return WciScreenContext.detect((HandledScreen<?>) (Object) this, customBankOverlayActive);
+    private ShoppingListScreenContext currentShoppingListScreenContext(boolean customBankOverlayActive) {
+        return ShoppingListScreenContext.detect((HandledScreen<?>) (Object) this, customBankOverlayActive);
     }
 
     @Unique
-    private void configureWciShoppingMenuExtension(WciShoppingMenuExtension extension, boolean customBankOverlayActive) {
-        WciScreenContext context = currentWciScreenContext(customBankOverlayActive);
+    private void configureShoppingListMenuExtension(ShoppingListMenuExtension extension, boolean customBankOverlayActive) {
+        ShoppingListScreenContext context = currentShoppingListScreenContext(customBankOverlayActive);
         extension.setScreenContext(context);
         extension.setPlacementContext(context.placementContext());
     }
@@ -419,6 +422,7 @@ public abstract class HandledScreenMixin {
 
         // Encounter Selection overlay (intercept before anything else so vanilla slots aren't touched)
         HandledScreen<?> self = (HandledScreen<?>) (Object) this;
+        ShoppingListTradeMarketPurchaseService.handleAmountSlotClick(self, focusedSlot, button);
         if (julianh06.wynnextras.features.qol.EncounterOverlay.handleClick(mouseX, mouseY, self)) {
             cir.setReturnValue(true);
             return;
@@ -453,19 +457,21 @@ public abstract class HandledScreenMixin {
             return;
         }
 
-        boolean wciBankOverlayPlacementMode = isWciBankOverlayPlacementMode();
-        if (ensureWciShoppingMenuLauncherButton().mouseClicked(mouseX, mouseY, button, self, wciBankOverlayPlacementMode)) {
-            cir.setReturnValue(true);
-            return;
-        }
+        if (!(self instanceof InventoryScreen)) {
+            boolean shoppingListBankOverlayPlacementMode = isShoppingListBankOverlayPlacementMode();
+            if (ensureShoppingListMenuLauncherButton().mouseClicked(mouseX, mouseY, button, self, shoppingListBankOverlayPlacementMode)) {
+                cir.setReturnValue(true);
+                return;
+            }
 
-        WciShoppingMenuExtension wciExtension = ensureWciShoppingMenuExtension();
-        if (wciExtension != null) {
-            configureWciShoppingMenuExtension(wciExtension, wciBankOverlayPlacementMode);
-        }
-        if (wciExtension != null && wciExtension.mouseClicked(mouseX, mouseY, button)) {
-            cir.setReturnValue(true);
-            return;
+            ShoppingListMenuExtension shoppingListExtension = ensureShoppingListMenuExtension();
+            if (shoppingListExtension != null) {
+                configureShoppingListMenuExtension(shoppingListExtension, shoppingListBankOverlayPlacementMode);
+            }
+            if (shoppingListExtension != null && shoppingListExtension.mouseClicked(mouseX, mouseY, button)) {
+                cir.setReturnValue(true);
+                return;
+            }
         }
 
         // Trade Market Comparison Panel click handling
@@ -544,11 +550,13 @@ public abstract class HandledScreenMixin {
             return;
         }
 
-        boolean wciBankOverlayPlacementMode = isWciBankOverlayPlacementMode();
-        WciScreenContext releaseWciContext = currentWciScreenContext(wciBankOverlayPlacementMode);
-        if (ensureWciShoppingMenuLauncherButton().mouseReleased(button, releaseWciContext)) {
-            cir.setReturnValue(true);
-            return;
+        boolean shoppingListBankOverlayPlacementMode = isShoppingListBankOverlayPlacementMode();
+        if (!((Object) this instanceof InventoryScreen)) {
+            ShoppingListScreenContext releaseShoppingListContext = currentShoppingListScreenContext(shoppingListBankOverlayPlacementMode);
+            if (ensureShoppingListMenuLauncherButton().mouseReleased(button, releaseShoppingListContext)) {
+                cir.setReturnValue(true);
+                return;
+            }
         }
 
         // Class Selection Overlay release (for drag-to-reorder)
@@ -584,12 +592,14 @@ public abstract class HandledScreenMixin {
             craftingHelperOverlay.mouseReleased(mouseX, mouseY, button);
         }
 
-        WciShoppingMenuExtension wciExtension = ensureWciShoppingMenuExtension();
-        if (wciExtension != null) {
-            configureWciShoppingMenuExtension(wciExtension, wciBankOverlayPlacementMode);
-        }
-        if (wciExtension != null && wciExtension.mouseReleased(mouseX, mouseY, button)) {
-            cir.setReturnValue(true);
+        if (!((Object) this instanceof InventoryScreen)) {
+            ShoppingListMenuExtension shoppingListExtension = ensureShoppingListMenuExtension();
+            if (shoppingListExtension != null) {
+                configureShoppingListMenuExtension(shoppingListExtension, shoppingListBankOverlayPlacementMode);
+            }
+            if (shoppingListExtension != null && shoppingListExtension.mouseReleased(mouseX, mouseY, button)) {
+                cir.setReturnValue(true);
+            }
         }
     }
 
@@ -620,11 +630,13 @@ public abstract class HandledScreenMixin {
             TradeMarketOverlay.handleMouseMove(mouseX, mouseY);
         }
 
-        boolean wciBankOverlayPlacementMode = isWciBankOverlayPlacementMode();
-        WciScreenContext dragWciContext = currentWciScreenContext(wciBankOverlayPlacementMode);
-        if (ensureWciShoppingMenuLauncherButton().mouseDragged(mouseX, mouseY, click.button(), dragWciContext)) {
-            cir.setReturnValue(true);
-            return;
+        boolean shoppingListBankOverlayPlacementMode = isShoppingListBankOverlayPlacementMode();
+        if (!((Object) this instanceof InventoryScreen)) {
+            ShoppingListScreenContext dragShoppingListContext = currentShoppingListScreenContext(shoppingListBankOverlayPlacementMode);
+            if (ensureShoppingListMenuLauncherButton().mouseDragged(mouseX, mouseY, click.button(), dragShoppingListContext)) {
+                cir.setReturnValue(true);
+                return;
+            }
         }
 
         if(bankOverlay != null) {
@@ -633,12 +645,14 @@ public abstract class HandledScreenMixin {
             }
         }
 
-        WciShoppingMenuExtension wciExtension = ensureWciShoppingMenuExtension();
-        if (wciExtension != null) {
-            configureWciShoppingMenuExtension(wciExtension, wciBankOverlayPlacementMode);
-        }
-        if (wciExtension != null && wciExtension.mouseDragged(mouseX, mouseY, click.button(), deltaX, deltaY)) {
-            cir.setReturnValue(true);
+        if (!((Object) this instanceof InventoryScreen)) {
+            ShoppingListMenuExtension shoppingListExtension = ensureShoppingListMenuExtension();
+            if (shoppingListExtension != null) {
+                configureShoppingListMenuExtension(shoppingListExtension, shoppingListBankOverlayPlacementMode);
+            }
+            if (shoppingListExtension != null && shoppingListExtension.mouseDragged(mouseX, mouseY, click.button(), deltaX, deltaY)) {
+                cir.setReturnValue(true);
+            }
         }
     }
 
@@ -648,13 +662,15 @@ public abstract class HandledScreenMixin {
             cir.setReturnValue(true);
             return;
         }
-        WciShoppingMenuExtension wciExtension = ensureWciShoppingMenuExtension();
-        if (wciExtension != null) {
-            configureWciShoppingMenuExtension(wciExtension, isWciBankOverlayPlacementMode());
-        }
-        if (wciExtension != null && wciExtension.mouseScrolled(mouseX, mouseY, verticalAmount)) {
-            cir.setReturnValue(true);
-            return;
+        if (!((Object) this instanceof InventoryScreen)) {
+            ShoppingListMenuExtension shoppingListExtension = ensureShoppingListMenuExtension();
+            if (shoppingListExtension != null) {
+                configureShoppingListMenuExtension(shoppingListExtension, isShoppingListBankOverlayPlacementMode());
+            }
+            if (shoppingListExtension != null && shoppingListExtension.mouseScrolled(mouseX, mouseY, verticalAmount)) {
+                cir.setReturnValue(true);
+                return;
+            }
         }
         if (BankOverlay2.handleMouseScrolled(verticalAmount)) {
             cir.setReturnValue(true);
@@ -680,19 +696,21 @@ public abstract class HandledScreenMixin {
         heldItem = Items.AIR.getDefaultStack();
         craftingHelperOverlay = null;
         classSelectionOverlay = null;
-        wciShoppingMenuExtension = null;
-        wciShoppingMenuLauncherButton = null;
+        shoppingListMenuExtension = null;
+        shoppingListMenuLauncherButton = null;
         BankOverlaySlotBridge.restoreAll();
 
         HandledScreen<?> self = (HandledScreen<?>) (Object) this;
-        ScreenMouseEvents.allowMouseScroll(self).register((screen, mouseX, mouseY, horizontalAmount, verticalAmount) -> {
-            WciShoppingMenuExtension extension = ensureWciShoppingMenuExtension();
-            if (extension == null) {
-                return true;
-            }
-            configureWciShoppingMenuExtension(extension, isWciBankOverlayPlacementMode());
-            return !extension.mouseScrolled(mouseX, mouseY, verticalAmount);
-        });
+        if (!(self instanceof InventoryScreen)) {
+            ScreenMouseEvents.allowMouseScroll(self).register((screen, mouseX, mouseY, horizontalAmount, verticalAmount) -> {
+                ShoppingListMenuExtension extension = ensureShoppingListMenuExtension();
+                if (extension == null) {
+                    return true;
+                }
+                configureShoppingListMenuExtension(extension, isShoppingListBankOverlayPlacementMode());
+                return !extension.mouseScrolled(mouseX, mouseY, verticalAmount);
+            });
+        }
     }
 
     @Inject(method = "close", at = @At("HEAD"))
@@ -703,8 +721,8 @@ public abstract class HandledScreenMixin {
         BankOverlaySlotBridge.restoreAll();
         craftingHelperOverlay = null;
         classSelectionOverlay = null;
-        wciShoppingMenuExtension = null;
-        wciShoppingMenuLauncherButton = null;
+        shoppingListMenuExtension = null;
+        shoppingListMenuLauncherButton = null;
         if (!((Object) this instanceof InventoryScreen)) {
             ItemComponentsDebugOverlay.reset();
         }
@@ -819,21 +837,23 @@ public abstract class HandledScreenMixin {
             }
         }
 
-        if (WciShoppingMenuExtension.isToggleKey(keyCode)) {
-            WciShoppingMenuExtension.toggleFromHotkey(currentWciScreenContext(isWciBankOverlayPlacementMode()));
-            cir.setReturnValue(true);
-            cir.cancel();
-            return;
-        }
+        if (!((Object) this instanceof InventoryScreen)) {
+            if (ShoppingListMenuExtension.isToggleKey(keyCode)) {
+                ShoppingListMenuExtension.toggleFromHotkey(currentShoppingListScreenContext(isShoppingListBankOverlayPlacementMode()));
+                cir.setReturnValue(true);
+                cir.cancel();
+                return;
+            }
 
-        WciShoppingMenuExtension wciExtension = ensureWciShoppingMenuExtension();
-        if (wciExtension != null) {
-            configureWciShoppingMenuExtension(wciExtension, isWciBankOverlayPlacementMode());
-        }
-        if (wciExtension != null && wciExtension.keyPressed(keyCode, scanCode, modifiers)) {
-            cir.setReturnValue(true);
-            cir.cancel();
-            return;
+            ShoppingListMenuExtension shoppingListExtension = ensureShoppingListMenuExtension();
+            if (shoppingListExtension != null) {
+                configureShoppingListMenuExtension(shoppingListExtension, isShoppingListBankOverlayPlacementMode());
+            }
+            if (shoppingListExtension != null && shoppingListExtension.keyPressed(keyCode, scanCode, modifiers)) {
+                cir.setReturnValue(true);
+                cir.cancel();
+                return;
+            }
         }
 
         if(bankOverlay != null) {

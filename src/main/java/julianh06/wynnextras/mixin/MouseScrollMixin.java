@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin;
 
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
-import julianh06.wynnextras.features.wci.ui.WciShoppingMenuExtension;
+import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListMenuExtension;
 import net.minecraft.client.Mouse;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class MouseScrollMixin {
     @Inject(method = "onMouseScroll", at = @At("HEAD"), cancellable = true)
     private void onMouseScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
-        if (WciShoppingMenuExtension.handleGlobalMouseScrolled(vertical)) {
+        if (ShoppingListMenuExtension.handleGlobalMouseScrolled(vertical)) {
             ci.cancel();
             return;
         }
