@@ -14,6 +14,7 @@ import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTradeMarke
 import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTradeMarketSearchService;
 import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTextCleaner;
 import julianh06.wynnextras.utils.HandledScreenAccess;
+import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.WEMenuExtension;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
@@ -60,10 +61,9 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     private static final float SCROLL_SNAP = 0.02f;
     private static final float TITLE_SCALE = 1.0f;
     private static final float TEXT_SCALE = 0.75f;
-    private static final CustomColor PANEL_BG = CustomColor.fromHexString("17120E").withAlpha(0.90f);
-    private static final CustomColor PANEL_BORDER = CustomColor.fromHexString("6F543A");
-    private static final CustomColor PANEL_ACCENT = CustomColor.fromHexString("A87A4A");
-    private static final CustomColor TEXT = CustomColor.fromHexString("F3E8D8");
+    private static final int VANILLA_PANEL_SCALE = 4;
+    private static final int VANILLA_PANEL_SIDE_OFFSET = 3;
+    private static final int VANILLA_PANEL_BOTTOM_OFFSET = 3;
     private static final CustomColor TEXT_DIM = CustomColor.fromHexString("C7B9A7");
     private static final CustomColor MATERIAL_TEXT = CustomColor.fromHexString("8FC7D2");
     private static final CustomColor MATERIAL_DIM = CustomColor.fromHexString("83A9B0");
@@ -71,9 +71,8 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     private static final CustomColor INGREDIENT_DIM = CustomColor.fromHexString("C39A51");
     private static final CustomColor ROW_BG = CustomColor.fromHexString("1F1812").withAlpha(0.58f);
     private static final CustomColor ROW_HOVER = CustomColor.fromHexString("332519").withAlpha(0.78f);
-    private static final int SCROLL_TRACK = 0xCC2A2119;
-    private static final int SCROLL_THUMB = 0xFF8A6746;
-    private static final int BUTTON_CUSTOM_SCALE = 5;
+    private static final int BUTTON_NINE_SLICE_SCALE = 5;
+    private static final int BUTTON_CORNER_SIZE = 2;
     private static final String IMPORT_TOOLTIP = "Import a WynnBuilder crafting link from the clipboard.";
     private static final String CLEAR_TOOLTIP = "Clear the current shopping list.";
     private static final String SPEED_TOOLTIP = "Profession Speed: halves material needs only. Ingredients are unchanged.";
@@ -106,7 +105,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     private static float targetScrollOffset = 0;
     private ScrollbarLayout scrollbarLayout = ScrollbarLayout.hidden();
     private boolean draggingScrollbar = false;
-    private int scrollbarDragOffsetY = 0;
+    private double scrollbarDragOffsetY = 0;
     private boolean draggingPanel = false;
     private boolean panelDragMoved = false;
     private int dragOffsetX = 0;
@@ -431,7 +430,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
             return true;
         }
         if (draggingScrollbar && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            updateScrollOffsetFromThumb((int) y - scrollbarDragOffsetY);
+            updateScrollOffsetFromThumb(y - scrollbarDragOffsetY);
             return true;
         }
         if (draggingPanel && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
@@ -529,16 +528,15 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         }
         if (scrollbarLayout.thumb().contains(x, y)) {
             draggingScrollbar = true;
-            scrollbarDragOffsetY = (int) y - scrollbarLayout.thumb().y();
+            scrollbarDragOffsetY = y - scrollbarLayout.thumb().y();
             return true;
         }
-        updateScrollOffsetFromThumb((int) y - scrollbarLayout.thumb().height() / 2);
+        updateScrollOffsetFromThumb(y - scrollbarLayout.thumb().height() / 2d);
         return true;
     }
 
-    private void updateScrollOffsetFromThumb(int thumbY) {
-        targetScrollOffset = scrollbarScrollOffset(scrollbarLayout, thumbY);
-        scrollOffset = targetScrollOffset;
+    private void updateScrollOffsetFromThumb(double thumbY) {
+        targetScrollOffset = smoothScrollbarScrollOffset(scrollbarLayout, thumbY);
     }
 
     public boolean mouseScrolled(double x, double y, double verticalAmount) {
@@ -856,25 +854,26 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     }
 
     private void drawPanel(int mouseX, int mouseY) {
-        ui.drawRect(panelX, panelY, panelW, panelH, PANEL_BG);
-        drawBorder(panelX, panelY, panelW, panelH, PANEL_BORDER.asInt());
-        ui.drawText("Shopping List", panelX + 8, panelY + 7, TEXT, TITLE_SCALE);
+        int innerTopOffset = listTopY() - panelY - VANILLA_PANEL_SCALE;
+        ui.drawVanillaPanel(panelX, panelY, panelW, panelH, VANILLA_PANEL_SCALE,
+                VANILLA_PANEL_SIDE_OFFSET, VANILLA_PANEL_SIDE_OFFSET,
+                innerTopOffset, VANILLA_PANEL_BOTTOM_OFFSET);
+        CustomColor panelText = CustomColor.fromHexString("FFFFFF");
+        ui.drawText("Shopping List", panelX + 8, panelY + 7, panelText, TITLE_SCALE);
         if (purchaseContext != null) {
             String buyingText = "Buying " + purchaseContext.itemName()
                     + " | Have: " + purchaseContext.have()
                     + " | Need: " + purchaseContext.needed();
             ui.drawText(trimToWidth(buyingText, panelW - 16, TEXT_SCALE),
-                    panelX + 8, purchaseLabelY(), TEXT, TEXT_SCALE);
+                    panelX + 8, purchaseLabelY(), panelText, TEXT_SCALE);
         }
-        ui.drawText("Have/Need", panelX + panelW - 56, listHeaderY(), TEXT_DIM, TEXT_SCALE);
-        drawContext.fill(panelX + 6, listDividerY(), panelX + panelW - 6,
-                listDividerY() + 1, PANEL_ACCENT.asInt());
+        ui.drawText("Have/Need", panelX + panelW - 56, listHeaderY() - 2, panelText, TEXT_SCALE);
         drawResizeHandles(mouseX, mouseY);
     }
 
     private void drawResizeHandles(int mouseX, int mouseY) {
         ResizeEdges hoveredEdges = resizeEdges.active() ? resizeEdges : resizeEdgesAt(mouseX, mouseY);
-        int color = PANEL_ACCENT.withAlpha(0.75f).asInt();
+        int color = panelAccentColor();
         if (hoveredEdges.left()) {
             drawContext.fill(panelX, panelY, panelX + 2, panelY + panelH, color);
         }
@@ -887,13 +886,6 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         if (hoveredEdges.bottom()) {
             drawContext.fill(panelX, panelY + panelH - 2, panelX + panelW, panelY + panelH, color);
         }
-    }
-
-    private void drawBorder(int x, int y, int width, int height, int color) {
-        drawContext.fill(x, y, x + width, y + 1, color);
-        drawContext.fill(x, y + height - 1, x + width, y + height, color);
-        drawContext.fill(x, y, x + 1, y + height, color);
-        drawContext.fill(x + width - 1, y, x + width, y + height, color);
     }
 
     private List<String> hoveredControlTooltip() {
@@ -1005,10 +997,10 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         int rowContentWidth = scrollbarLayout.visible()
                 ? listW - SCROLLBAR_WIDTH - SCROLLBAR_GAP
                 : listW;
-        int listBottom = panelY + panelH - 7;
+        int listBottom = panelY + panelH - 5;
         int firstRow = Math.clamp((int) Math.floor(scrollOffset), 0, Math.max(0, rows.size() - 1));
         int rowShift = Math.round((scrollOffset - firstRow) * ROW_HEIGHT);
-        drawContext.enableScissor(listX, listY, listX + rowContentWidth, listBottom);
+        drawContext.enableScissor(listX, listY - 3, listX + rowContentWidth, listBottom);
         for (int rowIndex = firstRow; rowIndex < rows.size(); rowIndex++) {
             int rowY = listY + (rowIndex - firstRow) * ROW_HEIGHT - rowShift;
             if (rowY >= listBottom) break;
@@ -1060,11 +1052,11 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         drawContext.fill(layout.track().x(), layout.track().y(),
                 layout.track().x() + layout.track().width(),
                 layout.track().y() + layout.track().height(),
-                SCROLL_TRACK);
+                scrollbarTrackColor());
         drawContext.fill(layout.thumb().x(), layout.thumb().y(),
                 layout.thumb().x() + layout.thumb().width(),
                 layout.thumb().y() + layout.thumb().height(),
-                SCROLL_THUMB);
+                scrollbarThumbColor());
     }
 
     private List<RenderedRow> rowsWithHaveCounts(boolean screenStableForCounts) {
@@ -1423,6 +1415,10 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     }
 
     static int scrollbarScrollOffset(ScrollbarLayout layout, int thumbY) {
+        return Math.round(smoothScrollbarScrollOffset(layout, thumbY));
+    }
+
+    static float smoothScrollbarScrollOffset(ScrollbarLayout layout, double thumbY) {
         if (layout == null || !layout.visible() || layout.maxScroll() <= 0) {
             return 0;
         }
@@ -1430,9 +1426,9 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         if (thumbTravel == 0) {
             return 0;
         }
-        int clampedThumbY = clamp(thumbY, layout.track().y(), layout.track().y() + thumbTravel);
-        float ratio = (float) (clampedThumbY - layout.track().y()) / thumbTravel;
-        return clamp(Math.round(ratio * layout.maxScroll()), 0, layout.maxScroll());
+        double clampedThumbY = Math.clamp(thumbY, layout.track().y(), layout.track().y() + thumbTravel);
+        float ratio = (float) ((clampedThumbY - layout.track().y()) / thumbTravel);
+        return Math.clamp(ratio * layout.maxScroll(), 0f, (float) layout.maxScroll());
     }
 
     static CustomColor rowNameTextColor(RequirementType type) {
@@ -1444,43 +1440,19 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     }
 
     static int panelBorderColor() {
-        return PANEL_BORDER.asInt();
+        return UIUtils.getVanillaPanelBorderColor().asInt();
     }
 
     static int panelAccentColor() {
-        return PANEL_ACCENT.asInt();
+        return UIUtils.getVanillaPanelButtonFillColor().asInt();
     }
 
     static int scrollbarTrackColor() {
-        return SCROLL_TRACK;
+        return UIUtils.getVanillaPanelButtonOutlineColor().asInt();
     }
 
     static int scrollbarThumbColor() {
-        return SCROLL_THUMB;
-    }
-
-    static boolean usesWynnExtrasCustomButtonStyle() {
-        return BUTTON_CUSTOM_SCALE > 0;
-    }
-
-    static String importTooltipText() {
-        return IMPORT_TOOLTIP;
-    }
-
-    static String clearTooltipText() {
-        return CLEAR_TOOLTIP;
-    }
-
-    static String speedTooltipText() {
-        return SPEED_TOOLTIP;
-    }
-
-    static String amountTooltipText() {
-        return AMOUNT_TOOLTIP;
-    }
-
-    static String closeTooltipText() {
-        return CLOSE_TOOLTIP;
+        return UIUtils.getVanillaPanelButtonFillColor().withAlpha(0.5f).asInt();
     }
 
     private static int clamp(int value, int min, int max) {
@@ -1559,7 +1531,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButtonCustom(x, y, width, height, BUTTON_CUSTOM_SCALE, hovered, false);
+            ui.drawVanillaPanelButton(x, y, width, height, BUTTON_NINE_SLICE_SCALE, BUTTON_CORNER_SIZE, hovered);
             String label = labelSupplier == null ? "" : labelSupplier.get();
             ui.drawCenteredText(label, x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 0.75f);
         }
@@ -1580,7 +1552,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     private final class OutputButton extends Widget implements TooltipWidget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawButtonCustom(x, y, width, height, BUTTON_CUSTOM_SCALE, hovered, false);
+            ui.drawVanillaPanelButton(x, y, width, height, BUTTON_NINE_SLICE_SCALE, BUTTON_CORNER_SIZE, hovered);
             ui.drawCenteredText(outputButtonLabel(), x + width / 2f, y + height / 2f,
                     CustomColor.fromHexString("FFFFFF"), 0.75f);
         }
@@ -1599,10 +1571,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     private static final class HeaderCloseButton extends Widget implements TooltipWidget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            CustomColor bg = hovered
-                    ? CustomColor.fromHexString("7A3D2E").withAlpha(0.92f)
-                    : CustomColor.fromHexString("3A2A1F").withAlpha(0.88f);
-            ui.drawRect(x, y, width, height, bg);
+            ui.drawVanillaPanelButton(x, y, width, height, BUTTON_NINE_SLICE_SCALE, BUTTON_CORNER_SIZE, hovered);
             ui.drawCenteredText("X", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 0.75f);
         }
 
