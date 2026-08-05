@@ -265,7 +265,26 @@ public abstract class HandledScreenMixin {
         extension.setScreenContext(screenContext);
         extension.setPlacementContext(screenContext.placementContext());
         extension.render(context, mouseX, mouseY, delta);
+        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
+        if (extension.consumesHover(self, mouseX, mouseY)) {
+            BankOverlay2.suppressHoveredTooltip(self);
+        }
         shoppingListRenderedThisFrame = true;
+    }
+
+    @Inject(method = "drawMouseoverTooltip", at = @At("HEAD"), cancellable = true)
+    private void consumeTooltipBehindShoppingList(DrawContext context, int mouseX, int mouseY, CallbackInfo ci) {
+        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
+        if (self instanceof InventoryScreen) return;
+
+        boolean bankOverlayPlacementMode = isShoppingListBankOverlayPlacementMode();
+        ShoppingListMenuExtension extension = ensureShoppingListMenuExtension();
+        if (extension == null) return;
+        configureShoppingListMenuExtension(extension, bankOverlayPlacementMode);
+        if (!extension.consumesHover(self, mouseX, mouseY)) return;
+
+        BankOverlay2.suppressHoveredTooltip(self);
+        ci.cancel();
     }
 
     @Unique

@@ -581,7 +581,7 @@ public final class UIUtils {
     private static final int GENERIC_W  = 256;
     private static final int GENERIC_H  = 256;
 
-    public void drawVanillaPanel(float x, float y, float width, float height, int scale, int leftOffset, int rightOffset, int topOffset, int botOffset) {
+    public void drawVanillaPanel(float x, float y, float width, float height, int scale) {
         int tw = GENERIC_W, th = GENERIC_H;
 
         int uvWH = 4;
@@ -605,10 +605,18 @@ public final class UIUtils {
         // left/right edges
         drawImageExact(GENERIC_CONTAINER_TEX, x, y + scale - 2, scale, height - 2 * scale + 4, 0, 4, uvWH, 1, tw, th);
         drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y + scale - 2, scale, height - 2 * scale + 4, 172, 4, uvWH, 1, tw, th);
-        
+    }
+
+    public void drawVanillaPanel(float x, float y, float width, float height, int scale, int leftOffset, int rightOffset, int topOffset, int botOffset) {
+        int tw = GENERIC_W, th = GENERIC_H;
+
+        int uvWH = 4;
+
+        drawVanillaPanel(x, y, width, height, scale);
+
         /*
-        * INNER
-        * */
+         * INNER
+         * */
         // corners
         drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + topOffset, scale, scale, 6, 16, uvWH, uvWH, tw, th); // TL
         drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + topOffset, scale, scale, 166, 16, uvWH, uvWH, tw, th); // TR

@@ -18,4 +18,14 @@ public final class ShoppingListQuantityFormatter {
         }
         return stacks + " stx + " + remainder;
     }
+
+    public static String formatStackBreakdown(int count) {
+        int safeCount = Math.max(0, count);
+        int stacks = safeCount / STACK_SIZE;
+        int remainder = safeCount % STACK_SIZE;
+        if (remainder == 0) {
+            return stacks + " stx";
+        }
+        return stacks + " stx + " + remainder;
+    }
 }

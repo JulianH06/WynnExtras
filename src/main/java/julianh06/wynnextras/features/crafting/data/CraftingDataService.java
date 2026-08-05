@@ -130,6 +130,7 @@ public final class CraftingDataService {
     private volatile State state = State.NOT_LOADED;
     private volatile String unavailableReason = "";
     private volatile LoadedData data;
+    private volatile List<String> ingredientNames = List.of();
 
     private CraftingDataService() {}
 
@@ -188,6 +189,7 @@ public final class CraftingDataService {
 
     private void setLoadedData(LoadedData loaded) {
         data = loaded;
+        ingredientNames = buildIngredientNames(loaded);
         unavailableReason = "";
         WynncraftApiHandler.setCachedItemDatabase(loaded.itemDatabase());
         state = State.READY;
@@ -276,6 +278,24 @@ public final class CraftingDataService {
         if (powderIndex < 0 || powderIndex >= POWDER_ELEMENTS * POWDER_TIERS) return null;
         return POWDER_ELEMENT_NAMES[powderIndex / POWDER_TIERS] + " Powder "
                 + POWDER_TIER_NAMES[powderIndex % POWDER_TIERS];
+    }
+
+    public List<String> getIngredientNames() {
+        return ingredientNames;
+    }
+
+    private static List<String> buildIngredientNames(LoadedData loaded) {
+        if (loaded == null) return List.of();
+        List<String> names = new ArrayList<>(loaded.ingredientsByName().keySet());
+        for (int element = 0; element < POWDER_ELEMENTS; element++) {
+            for (String tier : POWDER_TIER_NAMES) {
+                names.add(POWDER_ELEMENT_NAMES[element] + " Powder " + tier);
+            }
+        }
+        return names.stream()
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER.thenComparing(String::compareTo))
+                .toList();
     }
 
     public RecipeData getRecipe(CraftableType type, Vector2i level) {

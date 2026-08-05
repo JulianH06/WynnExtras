@@ -3,10 +3,12 @@ package julianh06.wynnextras.mixin;
 import julianh06.wynnextras.features.chat.ChatManager;
 import julianh06.wynnextras.features.chat.mediapreview.ChatMediaPreview;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
+import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListMenuExtension;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.network.ClientPlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -26,6 +28,13 @@ public class ChatScreenMixin {
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMediaPreviewClick(Click click, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
         if (ChatMediaPreview.mouseClicked(click)) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
+    private void consumeShoppingListEditorKey(KeyInput input, CallbackInfoReturnable<Boolean> cir) {
+        if (ShoppingListMenuExtension.isEditorTextInputFocused()) {
             cir.setReturnValue(true);
         }
     }

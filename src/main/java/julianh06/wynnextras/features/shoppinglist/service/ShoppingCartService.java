@@ -27,6 +27,53 @@ public class ShoppingCartService {
         runAfterMutation(MutationType.CLEAR);
     }
 
+    public MutationResult addManual(ShoppingEntry entry, int amount, ExistingEntryPolicy policy) {
+        return mutate(null, entry, amount, policy);
+    }
+
+    public MutationResult edit(ShoppingEntry original, ShoppingEntry replacement, int amount,
+                               ExistingEntryPolicy policy) {
+        if (original == null || !cart.contains(original)) {
+            return MutationResult.error("Shopping list entry no longer exists");
+        }
+        return mutate(original, replacement, amount, policy);
+    }
+
+    public MutationResult remove(ShoppingEntry entry) {
+        if (entry == null || !cart.remove(entry)) {
+            return MutationResult.error("Shopping list entry no longer exists");
+        }
+        runAfterMutation(MutationType.REMOVE);
+        return MutationResult.success(cart.count(entry));
+    }
+
+    private MutationResult mutate(ShoppingEntry original, ShoppingEntry replacement, int amount,
+                                  ExistingEntryPolicy policy) {
+        if (replacement == null) return MutationResult.error("Shopping list entry is missing");
+        if (amount <= 0) return MutationResult.error("Amount must be positive");
+
+        boolean identityChanged = original == null || !original.equals(replacement);
+        if (identityChanged && cart.contains(replacement) && policy == null) {
+            return MutationResult.conflict(cart.count(replacement));
+        }
+
+        ShoppingCart snapshot = cart.copy();
+        try {
+            if (original != null) cart.remove(original);
+            if (identityChanged && snapshot.contains(replacement) && policy == ExistingEntryPolicy.ADD) {
+                int existing = original != null && original.equals(replacement) ? 0 : snapshot.count(replacement);
+                cart.set(replacement, Math.addExact(existing, amount));
+            } else {
+                cart.set(replacement, amount);
+            }
+            runAfterMutation(original == null ? MutationType.ADD : MutationType.EDIT);
+            return MutationResult.success(cart.count(replacement));
+        } catch (ArithmeticException | IllegalArgumentException ex) {
+            cart.replaceWith(snapshot);
+            return MutationResult.error(ex instanceof ArithmeticException ? "Amount is too large" : ex.getMessage());
+        }
+    }
+
     public ImportResult importUrl(String url) {
         ShoppingCart snapshot = cart.copy();
         try {
@@ -54,7 +101,39 @@ public class ShoppingCartService {
 
     public enum MutationType {
         IMPORT,
-        CLEAR
+        CLEAR,
+        ADD,
+        EDIT,
+        REMOVE
+    }
+
+    public enum ExistingEntryPolicy {
+        ADD,
+        REPLACE
+    }
+
+    public record MutationResult(MutationStatus status, int amount, String error) {
+        public static MutationResult success(int amount) {
+            return new MutationResult(MutationStatus.SUCCESS, amount, null);
+        }
+
+        public static MutationResult conflict(int amount) {
+            return new MutationResult(MutationStatus.CONFLICT, amount, null);
+        }
+
+        public static MutationResult error(String error) {
+            return new MutationResult(MutationStatus.ERROR, 0, error == null ? "Unknown error" : error);
+        }
+
+        public boolean success() {
+            return status == MutationStatus.SUCCESS;
+        }
+    }
+
+    public enum MutationStatus {
+        SUCCESS,
+        CONFLICT,
+        ERROR
     }
 
     public record ImportResult(boolean success, int importedEntries, int totalItems, String error) {

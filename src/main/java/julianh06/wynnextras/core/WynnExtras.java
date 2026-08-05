@@ -46,6 +46,7 @@ import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.shoppinglist.ShoppingListFeature;
 import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTradeMarketSearchService;
 import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListHudOverlay;
+import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListMenuExtension;
 import julianh06.wynnextras.features.waypoints.data.WaypointData;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
@@ -299,6 +300,7 @@ public class WynnExtras implements ClientModInitializer {
 			KeyInputEvent.init();
 
 			previousCallback = GLFW.glfwSetKeyCallback(MinecraftClient.getInstance().getWindow().getHandle(), (window, key, scancode, action, mods) -> {
+				if (ShoppingListMenuExtension.handleGlobalKeyInput(key, scancode, action, mods)) return;
 				if (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT || action == GLFW.GLFW_RELEASE) {
 					new KeyInputEvent(key, scancode, action, mods).post();//, character.get()).post();
 				}
@@ -315,6 +317,7 @@ public class WynnExtras implements ClientModInitializer {
 			});
 
 			previousCharCallback = GLFW.glfwSetCharCallback(MinecraftClient.getInstance().getWindow().getHandle(), (win, codepoint) -> {
+				if (ShoppingListMenuExtension.handleGlobalCharTyped((char) codepoint)) return;
 				if (BankOverlay.handleScreenCharTyped((char) codepoint)) return;
 
 				new CharInputEvent((char) codepoint).post();

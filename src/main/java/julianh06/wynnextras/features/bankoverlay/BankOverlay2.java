@@ -2453,6 +2453,10 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 
+    public static void suppressHoveredTooltip(HandledScreen<?> screen) {
+        clearHoverState(screen);
+    }
+
     private static void setHoveredSlot(ItemStack stack, int index, int inventoryIndex, int itemX, int itemY) {
         hoveredSlot = stack;
         hoveredIndex = index;
