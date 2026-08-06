@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.misc;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -18,6 +19,7 @@ import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.component.ComponentType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.glfw.GLFW;
@@ -388,7 +390,7 @@ public class ItemComponentsDebugOverlay {
         components = new ArrayList<>();
         for (ComponentType<?> type : types) {
             Object value = getComponent(stack, type);
-            components.add(new ComponentEntry(type, componentTypeName(type), value == null ? "<null>" : value.getClass().getSimpleName(), stack));
+            components.add(new ComponentEntry(type, componentTypeName(type), value == null ? "<null>" : value.getClass().getSimpleName(), value));
         }
     }
 
@@ -403,7 +405,7 @@ public class ItemComponentsDebugOverlay {
         long requestId = ++nextRequestId;
         entry.requestId = requestId;
         long requestSession = sessionId;
-        CompletableFuture.supplyAsync(() -> serializeComponent(entry.stackSnapshot, entry.type), DETAIL_SERIALIZER)
+        CompletableFuture.supplyAsync(() -> serializeComponent(entry.type, entry.value), DETAIL_SERIALIZER)
                 .handle((lines, throwable) -> {
                     if (throwable != null) {
                         lines = List.of("  <failed to serialize: " + throwable.getClass().getSimpleName() + ">");
@@ -428,10 +430,12 @@ public class ItemComponentsDebugOverlay {
         if (changed) clearSelection();
     }
 
-    private static List<String> serializeComponent(ItemStack stack, ComponentType<?> type) {
+    private static List<String> serializeComponent(ComponentType<?> type, Object value) {
         try {
-            Object value = getComponent(stack, type);
             if (value == null) return List.of("  null");
+            if (value instanceof Identifier identifier) {
+                return formatJson(new JsonPrimitive(identifier.toString()));
+            }
 
             DataResult<JsonElement> result = encodeComponent(type, value);
             JsonElement json = result.result().orElse(null);
@@ -528,7 +532,15 @@ public class ItemComponentsDebugOverlay {
         while (tr.getWidth(remaining) > maxWidth) {
             int split = findSplitIndex(tr, remaining, maxWidth);
             result.add(remaining.substring(0, split));
-            remaining = indent + remaining.substring(split).stripLeading();
+            String tail = remaining.substring(split).stripLeading();
+            String next = indent + tail;
+            if (next.length() >= remaining.length()) {
+                int forcedSplit = Math.min(remaining.length(), Math.max(split, indent.length() + 1));
+                result.set(result.size() - 1, remaining.substring(0, forcedSplit));
+                tail = remaining.substring(forcedSplit).stripLeading();
+                next = indent + tail;
+            }
+            remaining = next;
         }
         result.add(remaining);
         return result;
@@ -628,17 +640,17 @@ public class ItemComponentsDebugOverlay {
         private final ComponentType<?> type;
         private final String typeName;
         private final String valueType;
-        private final ItemStack stackSnapshot;
+        private final Object value;
         private boolean expanded;
         private boolean loading;
         private long requestId;
         private List<String> detailLines;
 
-        private ComponentEntry(ComponentType<?> type, String typeName, String valueType, ItemStack stackSnapshot) {
+        private ComponentEntry(ComponentType<?> type, String typeName, String valueType, Object value) {
             this.type = type;
             this.typeName = typeName;
             this.valueType = valueType;
-            this.stackSnapshot = stackSnapshot;
+            this.value = value;
         }
     }
 

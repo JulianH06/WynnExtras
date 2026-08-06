@@ -838,7 +838,8 @@ public class BankOverlay2 extends WEHandledScreen {
                     page.setItems(buildInventoryForIndex(i, false));
 
                     if(searching) {
-                        boolean containsSearch = page.containsSearch(searchInput, activeSearchQuery);
+                        boolean containsSearch = (i == activeInv && !WynnExtrasConfig.INSTANCE.bankOverlayExcludeActivePageFromSearches)
+                                || page.containsSearch(searchInput, activeSearchQuery);
 
                         if(!containsSearch) {
                             page.setEnabled(false);
@@ -3213,6 +3214,7 @@ public class BankOverlay2 extends WEHandledScreen {
         lines.add(net.minecraft.text.Text.literal("§7      §fingredient§7|§fpouch§7|§fkey§7|§fhorse§7|§fscroll§7|§famplifier§7|"));
         lines.add(net.minecraft.text.Text.literal("§7      §fcharm§7|§ftrinket§7|§frune§7|§fmaterial"));
         lines.add(net.minecraft.text.Text.literal("§7crafted:§ftrue§7|§ffalse"));
+        lines.add(net.minecraft.text.Text.literal("§7mountcolor:§f<primary color>§7 or §f<primary color>-<secondary color>"));
         lines.add(net.minecraft.text.Text.literal("§8Combine: §ftype:gear level:80-100 rarity:fabled"));
         lines.add(net.minecraft.text.Text.literal("§8Search-bar shortcuts: §fCtrl+C, Ctrl+V, Ctrl+X"));
         context.drawTooltip(tr, lines, mouseX, mouseY);
