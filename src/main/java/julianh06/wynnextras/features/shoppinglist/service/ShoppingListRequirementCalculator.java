@@ -12,7 +12,9 @@ public final class ShoppingListRequirementCalculator {
         if (entry != null
                 && entry.type() == RequirementType.MATERIAL
                 && professionSpeedEnabled) {
-            requiredPerCraft /= 2;
+            if (requiredPerCraft > 0) {
+                requiredPerCraft = Math.max(1, requiredPerCraft / 2);
+            }
         }
         long adjustedRequired = (long) requiredPerCraft * sanitizeOutputCount(outputCount);
         return adjustedRequired > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) adjustedRequired;

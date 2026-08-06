@@ -105,7 +105,8 @@ public class ShoppingListHaveCountService {
                 copyPages(miscBucketPages),
                 true,
                 bankCacheAvailable,
-                bankCacheAvailable && (bankCachePossiblyIncomplete || !hasAccountPages || !hasCharacterPages));
+                bankCacheAvailable && (bankCachePossiblyIncomplete || !hasAccountPages || !hasCharacterPages
+                        || !hasMiscPages));
         return count(entry, snapshot);
     }
 
@@ -132,6 +133,7 @@ public class ShoppingListHaveCountService {
             boolean hasMiscPages = hasCachedPages(miscPages);
             boolean bankCacheAvailable = hasAccountPages || hasCharacterPages || hasMiscPages;
             boolean bankCachePossiblyIncomplete = bankCacheAvailable && (!hasAccountPages || !hasCharacterPages
+                    || !hasMiscPages
                     || pagesPossiblyIncomplete(AccountBankData.INSTANCE)
                     || pagesPossiblyIncomplete(CharacterBankData.INSTANCE)
                     || pagesPossiblyIncomplete(MiscBucketData.INSTANCE));

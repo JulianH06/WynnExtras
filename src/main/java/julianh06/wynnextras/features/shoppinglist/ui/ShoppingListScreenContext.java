@@ -56,12 +56,15 @@ public enum ShoppingListScreenContext {
         }
         Container container = Models.Container.getCurrentContainer();
         boolean tradeMarketMainScreen = hasTradeMarketSearchAndFilterSlot(screen);
+        boolean tradeMarketPurchaseConfirmation = !tradeMarketMainScreen
+                && hasTradeMarketPurchaseConfirmationSignal(screen);
         return fromSignals(
                 screen.getTitle() == null ? "" : screen.getTitle().getString(),
                 TradeMarketComparisonPanel.isInTradeMarket(),
                 tradeMarketMainScreen,
                 !tradeMarketMainScreen && hasTradeMarketFilterSignal(screen),
                 !tradeMarketMainScreen && hasTradeMarketDetailSignal(screen),
+                tradeMarketPurchaseConfirmation,
                 ShoppingListMenuLauncherButton.isBankLikeContainer(container),
                 customBankOverlayActive,
                 container instanceof CraftingStationContainer);
@@ -87,7 +90,19 @@ public enum ShoppingListScreenContext {
                                                boolean bankLikeScreen,
                                                boolean customBankOverlayActive,
                                                boolean craftingScreen) {
-        if (isExplicitlyUnsupportedTitle(title)) {
+        return fromSignals(title, tradeMarketScreen, tradeMarketMainScreen, tradeMarketFilterScreen,
+                tradeMarketDetailScreen, false, bankLikeScreen, customBankOverlayActive, craftingScreen);
+    }
+
+    public static ShoppingListScreenContext fromSignals(String title, boolean tradeMarketScreen,
+                                               boolean tradeMarketMainScreen,
+                                               boolean tradeMarketFilterScreen,
+                                               boolean tradeMarketDetailScreen,
+                                               boolean tradeMarketPurchaseConfirmation,
+                                               boolean bankLikeScreen,
+                                               boolean customBankOverlayActive,
+                                               boolean craftingScreen) {
+        if (isExplicitlyUnsupportedTitle(title) || tradeMarketPurchaseConfirmation) {
             return BLOCKED_MODAL;
         }
         if (tradeMarketScreen || tradeMarketMainScreen || tradeMarketFilterScreen || tradeMarketDetailScreen) {
@@ -194,8 +209,19 @@ public enum ShoppingListScreenContext {
             if (label.contains("view trade")
                     || label.equals("buy")
                     || label.contains("buy now")
-                    || label.contains("confirm purchase")
                     || label.contains("claim items")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean hasTradeMarketPurchaseConfirmationSignal(HandledScreen<?> screen) {
+        if (screen == null || screen.getScreenHandler() == null) {
+            return false;
+        }
+        for (Slot slot : screen.getScreenHandler().slots) {
+            if (slot != null && slot.hasStack() && cleanSlotLabel(slot.getStack()).contains("confirm purchase")) {
                 return true;
             }
         }

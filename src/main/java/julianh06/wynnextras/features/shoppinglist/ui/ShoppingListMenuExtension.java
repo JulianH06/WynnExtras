@@ -1652,7 +1652,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
             setFocusedWidget(editorAmountInput);
             return;
         }
-        ShoppingListFeature.consumeSaveFailure();
+        notifySaveFailure();
         invalidateHaveCountCache();
         closeEditor();
     }
@@ -1712,8 +1712,10 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     private void importClipboard() {
         String clipboard = MinecraftClient.getInstance().keyboard.getClipboard();
         ShoppingCartService.ImportResult result = service.importUrl(clipboard);
-        if (result.success()) {
-            ShoppingListFeature.consumeSaveFailure();
+        if (!result.success()) {
+            WynnExtras.sendMessageToClient("§cShopping list import failed: " + result.error());
+        } else {
+            notifySaveFailure();
         }
         invalidateHaveCountCache();
     }
@@ -1722,8 +1724,14 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         service.clear();
         scrollOffset = 0;
         targetScrollOffset = 0;
-        ShoppingListFeature.consumeSaveFailure();
+        notifySaveFailure();
         invalidateHaveCountCache();
+    }
+
+    private void notifySaveFailure() {
+        if (ShoppingListFeature.consumeSaveFailure()) {
+            WynnExtras.sendMessageToClient("§cShopping list changed, but saving it failed.");
+        }
     }
 
     private void toggleProfessionSpeed() {

@@ -18,9 +18,12 @@ public final class ShoppingListTradeMarketPurchaseService {
     private static final String PURCHASE_MENU_TITLE_PREFIX = "\uDAFF\uDFE8\uE015";
     private static final int PURCHASE_ITEM_SLOT = 22;
     private static final int AMOUNT_SLOT = 31;
+    private static final long PENDING_CONTEXT_TIMEOUT_MS = 5_000L;
     private static final ShoppingListHaveCountService HAVE_COUNT_SERVICE = new ShoppingListHaveCountService();
 
     private static PurchaseContext pendingContext;
+    private static long pendingContextCreatedAtMs;
+    private static ChatScreen amountPromptScreen;
 
     private ShoppingListTradeMarketPurchaseService() {}
 
@@ -28,17 +31,38 @@ public final class ShoppingListTradeMarketPurchaseService {
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT || screen == null || screen.getTitle() == null
                 || !screen.getTitle().getString().startsWith(PURCHASE_MENU_TITLE_PREFIX)
                 || focusedSlot == null || focusedSlot.id != AMOUNT_SLOT) {
+            clear();
             return;
         }
 
         pendingContext = findContext(screen);
+        pendingContextCreatedAtMs = pendingContext == null ? 0L : System.currentTimeMillis();
+        amountPromptScreen = null;
     }
 
     public static PurchaseContext currentContext() {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (pendingContext == null || client == null || !(client.currentScreen instanceof ChatScreen)) {
+        if (pendingContext == null || client == null) {
             return null;
         }
+        if (amountPromptScreen != null) {
+            if (client.currentScreen == amountPromptScreen) {
+                return pendingContext;
+            }
+            clear();
+            return null;
+        }
+        if (!(client.currentScreen instanceof ChatScreen chatScreen)) {
+            if (System.currentTimeMillis() - pendingContextCreatedAtMs > PENDING_CONTEXT_TIMEOUT_MS) {
+                clear();
+            }
+            return null;
+        }
+        if (System.currentTimeMillis() - pendingContextCreatedAtMs > PENDING_CONTEXT_TIMEOUT_MS) {
+            clear();
+            return null;
+        }
+        amountPromptScreen = chatScreen;
         return pendingContext;
     }
 
@@ -103,6 +127,8 @@ public final class ShoppingListTradeMarketPurchaseService {
 
     private static void clear() {
         pendingContext = null;
+        pendingContextCreatedAtMs = 0L;
+        amountPromptScreen = null;
     }
 
     public record PurchaseContext(String itemName, int needed, int have) {
