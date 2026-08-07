@@ -230,7 +230,7 @@ public class WynnExtrasConfig {
     public float craftingHelperHeightPercent = 0.6f;
     public int craftingHelperWidth = 165;
     public boolean shoppingListMenuEnabled = false;
-    public boolean shoppingListAllowPersistentMenu = false;
+    public boolean shoppingListShowQuickToggleButton = true;
     public boolean shoppingListWynnMarketSearchCompatibility = true;
     public int shoppingListToggleKey = GLFW.GLFW_KEY_UNKNOWN;
     public boolean shoppingListProfessionSpeed = false;

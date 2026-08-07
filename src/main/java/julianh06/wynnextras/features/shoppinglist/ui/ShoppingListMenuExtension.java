@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.shoppinglist.ui;
 
 import com.wynntils.utils.colors.CustomColor;
+import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
@@ -28,6 +29,7 @@ import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.tooltip.HoveredTooltipPositioner;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
@@ -90,7 +92,6 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     private static final String CLOSE_KEYBIND_CONFIG_TOOLTIP = "You can bind this key in the wynnextras config.";
     private static final String ADD_TOOLTIP = "Add an ingredient or material manually.";
     private static final long SCREEN_TRANSITION_STABILITY_MS = 450L;
-    private static boolean menuPinnedByUser = false;
     private static final ShoppingListHaveCountService HAVE_COUNT_SERVICE = new ShoppingListHaveCountService();
     private static Screen activeScreen;
     private static ShoppingListMenuExtension activeScreenExtension;
@@ -211,17 +212,10 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     }
 
     public static ToggleResult showFromCommand(ShoppingListScreenContext context) {
-        if (!ShoppingListMenuRenderPolicy.canOpenFromCommand(context, WynnExtrasConfig.INSTANCE.shoppingListAllowPersistentMenu)) {
-            String message = context == ShoppingListScreenContext.BLOCKED_MODAL
-                    ? "Shopping List unavailable on this screen."
-                    : "Open Trade Market, Bank, or Crafting first.";
-            return new ToggleResult(false, false, message);
+        if (!ShoppingListMenuRenderPolicy.canOpenFromCommand(context)) {
+            return new ToggleResult(false, false, "Shopping List unavailable on this screen.");
         }
-        if (ShoppingListMenuRenderPolicy.shouldPinCommandOpen(context, WynnExtrasConfig.INSTANCE.shoppingListAllowPersistentMenu)) {
-            showPinned();
-        } else {
-            show();
-        }
+        show();
         return new ToggleResult(true, true, "Shopping list enabled.");
     }
 
@@ -230,24 +224,11 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
             close();
             return false;
         }
-        if (context == ShoppingListScreenContext.BLOCKED_MODAL) {
-            return false;
-        }
-        if (context != null && context.supportsShoppingListMenu()) {
-            show();
-        } else {
-            showPinned();
-        }
+        show();
         return true;
     }
 
     public static void show() {
-        menuPinnedByUser = false;
-        setEnabled(true);
-    }
-
-    public static void showPinned() {
-        menuPinnedByUser = true;
         setEnabled(true);
     }
 
@@ -258,16 +239,8 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         setEnabled(false);
     }
 
-    public static boolean isPinnedByUser() {
-        return menuPinnedByUser;
-    }
-
     public static boolean shouldRender(ShoppingListScreenContext context) {
-        return ShoppingListMenuRenderPolicy.shouldRenderMenu(
-                isOpen(),
-                context,
-                menuPinnedByUser,
-                WynnExtrasConfig.INSTANCE.shoppingListAllowPersistentMenu);
+        return ShoppingListMenuRenderPolicy.shouldRenderMenu(isOpen(), context);
     }
 
     public static boolean isToggleKey(int keyCode) {
@@ -318,9 +291,6 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     }
 
     private static void setEnabled(boolean enabled) {
-        if (!enabled) {
-            menuPinnedByUser = false;
-        }
         if (WynnExtrasConfig.INSTANCE.shoppingListMenuEnabled != enabled) {
             WynnExtrasConfig.INSTANCE.shoppingListMenuEnabled = enabled;
             WynnExtrasConfig.save();
@@ -348,13 +318,6 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        if (screenContext == ShoppingListScreenContext.BLOCKED_MODAL) {
-            setButtonsVisible(false);
-            setEditorWidgetsVisible(false);
-            rowHits.clear();
-            draggingPanel = false;
-            return;
-        }
         if (!shouldRender(screenContext)) {
             setButtonsVisible(false);
             setEditorWidgetsVisible(false);
@@ -420,7 +383,6 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
 
     @Override
     public boolean mouseClicked(double x, double y, int button) {
-        if (screenContext == ShoppingListScreenContext.BLOCKED_MODAL) return false;
         if (!shouldRender(screenContext)) return false;
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && startResize(x, y)) {
             return true;
@@ -469,6 +431,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         RowHit rowHit = rowAt(x, y);
         if (rowHit != null) {
             if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && rowHit.containsEdit(x, y)) {
+                playButtonClickSound();
                 openEditEditor(rowHit.entry(), rowHit.baseAmount());
             } else {
                 handleRowClick(rowHit.row(), button);
@@ -479,12 +442,6 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
 
     @Override
     public boolean mouseReleased(double x, double y, int button) {
-        if (screenContext == ShoppingListScreenContext.BLOCKED_MODAL) {
-            cancelPanelDrag();
-            cancelScrollbarDrag();
-            cancelResize();
-            return false;
-        }
         if (!shouldRender(screenContext)) {
             cancelPanelDrag();
             cancelScrollbarDrag();
@@ -513,12 +470,6 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
 
     @Override
     public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
-        if (screenContext == ShoppingListScreenContext.BLOCKED_MODAL) {
-            cancelPanelDrag();
-            cancelScrollbarDrag();
-            cancelResize();
-            return false;
-        }
         if (!shouldRender(screenContext)) {
             cancelPanelDrag();
             cancelScrollbarDrag();
@@ -640,7 +591,6 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     }
 
     public boolean mouseScrolled(double x, double y, double verticalAmount) {
-        if (screenContext == ShoppingListScreenContext.BLOCKED_MODAL) return false;
         if (!shouldRender(screenContext) || !containsPanel(x, y)) return false;
         if (isEditorOpen()) return true;
 
@@ -654,7 +604,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (screenContext == ShoppingListScreenContext.BLOCKED_MODAL || !shouldRender(screenContext)) {
+        if (!shouldRender(screenContext)) {
             return false;
         }
         if (isEditorOpen()) {
@@ -2098,6 +2048,10 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         String tooltipText();
     }
 
+    private static void playButtonClickSound() {
+        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+    }
+
     private static final class MenuButton extends Widget implements TooltipWidget {
         private final Supplier<String> labelSupplier;
         private final String tooltipText;
@@ -2123,6 +2077,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         @Override
         protected boolean onClick(int button) {
             if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+            playButtonClickSound();
             action.run();
             return true;
         }
@@ -2131,6 +2086,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         protected boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
             if (!focused || (keyCode != GLFW.GLFW_KEY_ENTER && keyCode != GLFW.GLFW_KEY_KP_ENTER
                     && keyCode != GLFW.GLFW_KEY_SPACE)) return false;
+            playButtonClickSound();
             action.run();
             return true;
         }
@@ -2151,7 +2107,9 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
 
         @Override
         protected boolean onClick(int button) {
-            return changeOutputCount(button);
+            boolean changed = changeOutputCount(button);
+            if (changed) playButtonClickSound();
+            return changed;
         }
 
         @Override
@@ -2170,6 +2128,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         @Override
         protected boolean onClick(int button) {
             if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
+            playButtonClickSound();
             closeEditor();
             ShoppingListMenuExtension.close();
             return true;
