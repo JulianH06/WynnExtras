@@ -572,17 +572,13 @@ public class WynncraftApiHandler {
         }
 
         try {
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(3))
-                    .build();
-
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://wynnextras.com/aspects?playerUuid=" + playerUUID))
                     .timeout(Duration.ofSeconds(8))
                     .GET()
                     .build();
 
-            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .handle((response, ex) -> {
 
                         if (ex != null) {

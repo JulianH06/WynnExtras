@@ -205,6 +205,7 @@ public class WynnExtrasConfig {
     public int bankOverlayMaxColumns = 3;
     public boolean showWynntilsBankPageJumpButtons = false;
     public boolean bankOverlayHideEmptyRows = false;
+    public boolean bankOverlayExcludeActivePageFromSearches = false;
     public boolean disableStickyNameplates = false;
     public boolean bankBagOverlay = false;
     public boolean showTotalBagsInBankOverlay = false;

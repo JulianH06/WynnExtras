@@ -63,6 +63,7 @@ public class AchievementTracking {
     private static final int PROFESSION_LEVEL_MAX = 132;
     private static final long WAR_API_REFRESH_INTERVAL_MS = 60_000L;
     private static final long WAR_RESULT_GRACE_MS = 15_000L;
+    private static final long ASPECT_SYNC_RETRY_DELAY_MS = 60_000L;
     private static final Pattern TERRITORY_TAKEN_CONTROL_PATTERN = Pattern.compile(
             "You have taken control of (?<territory>.+?) from \\[[^]]+]!");
 
@@ -93,6 +94,7 @@ public class AchievementTracking {
     /** Ensures the aspect achievement sync only dispatches once the aspect catalogue is loaded. */
     private boolean aspectsSynced;
     private volatile boolean syncingAspects;
+    private long nextAspectSyncAt;
     private long nextWarApiSyncAt;
     private boolean warBossBarActive;
     private String awaitingWarResultTerritory;
@@ -517,6 +519,7 @@ public class AchievementTracking {
     private boolean trySyncAspectAchievements() {
         if (achievements == null || McUtils.player() == null) return false;
         if (syncingAspects) return false;
+        if (System.currentTimeMillis() < nextAspectSyncAt) return false;
 
         List<ApiAspect> catalogue = WynncraftApiHandler.fetchAllAspects(); // kicks off the load on first call
         if (WynncraftApiHandler.INSTANCE.isFetchingAspects.get()) return false; // still loading — retry later
@@ -539,11 +542,16 @@ public class AchievementTracking {
                     syncingAspects = false;
                     if (applyAspectAchievements(result, snapshot)) {
                         aspectsSynced = true;
+                    } else {
+                        nextAspectSyncAt = System.currentTimeMillis() + ASPECT_SYNC_RETRY_DELAY_MS;
                     }
                 }))
                 .exceptionally(ex -> {
-                    syncingAspects = false;
-                    WynnExtras.LOGGER.error("[WynnExtras] Failed to sync aspect achievements: " + ex.getMessage());
+                    MinecraftClient.getInstance().execute(() -> {
+                        syncingAspects = false;
+                        nextAspectSyncAt = System.currentTimeMillis() + ASPECT_SYNC_RETRY_DELAY_MS;
+                        WynnExtras.LOGGER.error("[WynnExtras] Failed to sync aspect achievements: " + ex.getMessage());
+                    });
                     return null;
                 });
         return true;
