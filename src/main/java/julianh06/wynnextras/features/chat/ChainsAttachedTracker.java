@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.chat;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.state.RaidState;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.utils.BossBarUtils;
@@ -55,15 +55,13 @@ public class ChainsAttachedTracker {
     }
 
     private static void emit(int count) {
-        long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
-                ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()
-                : 0;
+        long currentTime = RaidState.currentRoomTime();
         String timestamp = RaidChatNotifier.formatTime(currentTime);
         String pbKey = "chains_" + count + "_of_6";
         String label = (count == 0) ? "Chainphase started" : count + "/6 Chains attached";
         String message = "§b" + label + " §c@ " + timestamp;
 
-        if (currentTime > 0 && Models.Raid.getCurrentRaid() != null) {
+        if (currentTime > 0) {
             Long pb = RaidChatNotifier.getPB(pbKey);
             if (pb == null || currentTime < pb) {
                 RaidChatNotifier.savePB(pbKey, currentTime);
@@ -75,6 +73,6 @@ public class ChainsAttachedTracker {
 
         final String finalMessage = message;
         MinecraftClient.getInstance().execute(() ->
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(finalMessage))));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(finalMessage))));
     }
 }

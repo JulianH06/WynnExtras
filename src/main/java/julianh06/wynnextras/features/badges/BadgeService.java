@@ -6,8 +6,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.wynntils.core.components.Models;
-import com.wynntils.mc.extension.EntityRenderStateExtension;
+import julianh06.wynnextras.duck.EntityRenderStateAccess;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
@@ -66,7 +66,7 @@ public class BadgeService {
     }
 
     public static Text appendBadge(EntityRenderState state, Text label) {
-        if (!WynnExtrasConfig.INSTANCE.showWynnExtrasBadges || label == null) return label;
+        if (!WynnExtrasConfig.INSTANCE.showWynnExtrasBadges || label == null || state == null) return label;
         if (hasKnownBadgeSuffix(label.getString())) return label;
 
         BadgeProfile profile = profileFor(state, label);
@@ -90,7 +90,7 @@ public class BadgeService {
 
     @SubscribeEvent
     public void onTick(TickEvent event) {
-        if (!Models.WorldState.onWorld()) return;
+        if (!MinecraftUtils.isOnWynncraft()) return;
 
         handleTick();
     }
@@ -285,7 +285,7 @@ public class BadgeService {
     }
 
     private static BadgeProfile profileFor(EntityRenderState state, Text label) {
-        Entity entity = state instanceof EntityRenderStateExtension extension ? extension.getEntity() : null;
+        Entity entity = ((EntityRenderStateAccess) state).wynnExtras$getEntity();
         if (entity instanceof PlayerEntity player) {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (mc.player != null && player.getUuid().equals(mc.player.getUuid())) {

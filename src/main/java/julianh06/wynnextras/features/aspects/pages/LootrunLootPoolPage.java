@@ -2,9 +2,8 @@ package julianh06.wynnextras.features.aspects.pages;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
@@ -587,7 +586,7 @@ public class LootrunLootPoolPage extends PageWidget {
                 String displayName = truncate(formatDisplayName(item), width / 2 - 30).replace("Unidentified ", "");
 
                 if (item.type.equals("shiny")) {
-                    ui.drawText(displayName.replace("⬡ ", ""), x + 20, textY, WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : WynncraftShaderColor.RAINBOW.color, 4f);
+                    ui.drawText(displayName.replace("⬡ ", ""), x + 20, textY, WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : CustomColor.RAINBOW, 4f);
                 } else {
                     ui.drawText(rarityColor + displayName, x + 20, textY, CustomColor.fromInt(0xFFFFFF), 2.8f);
                 }
@@ -965,7 +964,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 int buttonHeight = 30;
                 int scrollAreaHeight = height - buttonHeight;
 
@@ -996,7 +995,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
                 @Override
                 protected boolean onClick(int button) {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     isHold = true;
                     return true;
                 }
@@ -1032,7 +1031,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
             ResetTimeConfig.INSTANCE.refetch();
 
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }
@@ -1097,7 +1096,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             float maxOffset = getMax.get();
             int buttonWidth = Math.max(40, (int) (width * (width / (width + maxOffset))));
             int scrollAreaWidth = width - buttonWidth;
@@ -1128,7 +1127,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 isHold = true;
                 return true;
             }

@@ -92,18 +92,18 @@ public class RaidMemberDetector {
 //        }
 //
 //        inRaidSelectionScreen = false;
-//        Screen screen = McUtils.mc().currentScreen;
+//        Screen screen = MinecraftUtils.mc().currentScreen;
 //        if(screen != null) {
 //            if(screen.getTitle().getString().contains("Party Finder")) {
-//                if(McUtils.containerMenu().getSlot(10).getStack() != null) {
-//                    if(McUtils.containerMenu().getSlot(10).getStack().getName().getString().contains("Back")) {
+//                if(MinecraftUtils.containerMenu().getSlot(10).getStack() != null) {
+//                    if(MinecraftUtils.containerMenu().getSlot(10).getStack().getName().getString().contains("Back")) {
 //                        inRaidSelectionScreen = true;
 //                    }
 //                }
 //            }
 //            if(screen.getTitle().getString().contains("󏿡")) {
 //                for (int i = 0; i < 4; i++) {
-//                    ItemStack player = McUtils.containerMenu().getSlot(i + 18).getStack();
+//                    ItemStack player = MinecraftUtils.containerMenu().getSlot(i + 18).getStack();
 //                    if(player == null) return;
 //                    if(player.getItem() == Items.SNOW) return;
 //
@@ -126,7 +126,7 @@ public class RaidMemberDetector {
 //
 //                    members.set(i, outputName);
 //
-//                    ItemStack readyStack = McUtils.containerMenu().getSlot(i + 27).getStack();
+//                    ItemStack readyStack = MinecraftUtils.containerMenu().getSlot(i + 27).getStack();
 //                    if(readyStack == null) return;
 //                    if(readyStack.getName().getString().contains("Not")) {
 //                        ready.set(i, false);

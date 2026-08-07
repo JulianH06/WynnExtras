@@ -1,15 +1,8 @@
 package julianh06.wynnextras.features.crafting;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.models.character.type.ClassType;
-import com.wynntils.models.elements.type.Skill;
-import com.wynntils.models.gear.type.GearRequirements;
-import com.wynntils.models.items.items.game.CraftedGearItem;
-import com.wynntils.models.stats.type.DamageType;
-import com.wynntils.models.stats.type.StatPossibleValues;
-import com.wynntils.models.stats.type.StatType;
-import com.wynntils.utils.type.Pair;
-import com.wynntils.utils.type.RangedValue;
+import julianh06.wynnextras.features.crafting.model.*;
+import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
@@ -254,45 +247,6 @@ public record CraftingResult(
     }
 
      */
-
-    public boolean equalsIgnoreDurability(CraftedGearItem targetItem, boolean debug) {
-        if (this.type != CraftableType.fromGearType(targetItem.getGearType())) {
-            if (debug) WynnExtras.LOGGER.info("different type");
-            return false;
-        }
-
-        List<StatPossibleValues> targetIds = targetItem.getPossibleValues();
-
-        Set<StatType> targetTypes = targetIds.stream().map(StatPossibleValues::statType).collect(Collectors.toSet());
-        Set<StatType> thisTypes = possibleValues.stream().map(StatPossibleValues::statType).collect(Collectors.toSet());
-        if (!targetTypes.equals(thisTypes)) return false;
-
-        // Check each possible value against target
-        Map<StatType, Integer> targetMap = targetIds.stream().collect(Collectors.toMap(StatPossibleValues::statType, StatPossibleValues::baseValue));
-        for (StatPossibleValues possible : possibleValues) {
-            Integer target = targetMap.get(possible.statType());
-            if (possible.range().low() == 0 && possible.range().high() == 0) continue;
-            if (target == null || !possible.range().inRange(target)) {
-                //if (debug) WynnExtras.LOGGER.info("different id for " + possible + " target: " + target + "\n");
-                return false;
-            }
-        }
-
-        if (!requirementsMatch(targetItem.getRequirements(), this.requirements, debug)) {
-            if (debug) WynnExtras.LOGGER.info("different reqs\n" + targetItem.getRequirements() + "\n" + this.requirements);
-            return false;
-        }
-
-       /*
-       if(!this.health.inRange(targetItem.getHealth())) {
-           WynnExtras.LOGGER.info("health out of range\n" + targetItem.getHealth() + "\n" + this.health);
-           return false;
-       }
-        */
-        List<Pair<DamageType, RangedValue>> damages = targetItem.getDamages(); // TODO
-
-        return true;
-    }
 
     public String getAllInfoString() {
         return "Recipe{" +

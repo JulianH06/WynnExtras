@@ -1,8 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
@@ -185,13 +184,13 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
 
         if(WETeam != null && PV.currentPlayerData.getUsername() != null) {
             if (WETeam.contains(PV.currentPlayerData.getUsername())) {
-                ui.drawCenteredText("★★★ WynnExtras Team Member ★★★", x + 285, y + 720, WynncraftShaderColor.SHINE.color, 3f);
+                ui.drawCenteredText("★★★ WynnExtras Team Member ★★★", x + 285, y + 720, CustomColor.SHINE, 3f);
             }
         }
 
         if(WEContributors != null && PV.currentPlayerData.getUsername() != null) {
             if (WEContributors.contains(PV.currentPlayerData.getUsername())) {
-                ui.drawCenteredText("★★★ WynnExtras Contributor ★★★", x + 285, y + 720, WynncraftShaderColor.SHINE.color, 3f);
+                ui.drawCenteredText("★★★ WynnExtras Contributor ★★★", x + 285, y + 720, CustomColor.SHINE, 3f);
             }
         }
     }
@@ -291,7 +290,7 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             super(0, 0, 0, 0);
             this.guildString = guildString;
             this.action = () -> {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 parent.close();
                 GV.open(guildPrefix);
             };

@@ -6,9 +6,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
-import com.wynntils.core.text.StyledText;
-import com.wynntils.models.raid.raids.RaidKind;
-import com.wynntils.models.raid.type.RaidInfo;
+import julianh06.wynnextras.utils.text.StyledText;
 import julianh06.wynnextras.features.misc.ItemStackDeserializer;
 import julianh06.wynnextras.features.misc.ItemStackSerializer;
 import julianh06.wynnextras.features.misc.StyledTextAdapter;
@@ -40,7 +38,7 @@ public class RaidListData {
             .registerTypeAdapter(StyledText.class, new StyledTextAdapter());
 
     static Gson gson = builder
-            .registerTypeAdapter(RaidKind.class, new RaidKindAdapter(builder.create()))
+            .registerTypeAdapter(RaidSnapshot.class, new RaidSnapshotAdapter())
             .setPrettyPrinting()
             .create();
 
@@ -54,7 +52,8 @@ public class RaidListData {
             try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
                 RaidListData loaded = gson.fromJson(reader, RaidListData.class);
                 if (loaded != null) {
-                    loaded.raids.removeIf(raid -> raid == null || raid.raidInfo.getRaidKind() == null);
+                    loaded.raids.removeIf(raid -> raid == null || raid.raidInfo == null
+                            || raid.raidInfo.raidKind() == WERaidKind.UNKNOWN);
                     INSTANCE = loaded;
                 } else {
                     WynnExtras.LOGGER.error("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");

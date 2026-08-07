@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.abilitytree;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
@@ -33,7 +33,7 @@ public final class ApiAbilityPlanner {
      */
     public static List<AbilityMapData.Node> planFromSavedTree(TreeData savedTree) {
         if (savedTree == null || savedTree.className == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                     Text.of("Cannot plan ability tree: saved tree has no class.")
             ));
             return Collections.emptyList();
@@ -46,7 +46,7 @@ public final class ApiAbilityPlanner {
         if (classTree == null || classMap == null) {
             // Trigger async load and ask user to retry once done.
             AbilityTreeCache.loadClassTree(classKey);
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                     Text.of("Loading ability data for " + savedTree.className +
                             " from the Wynn API, please try again in a moment.")
             ));
@@ -57,7 +57,7 @@ public final class ApiAbilityPlanner {
         Set<String> desiredIds = extractDesiredAbilityIds(savedTree);
 
         if (desiredIds.isEmpty()) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                     Text.of("Saved tree has no unlocked abilities to load.")
             ));
             return Collections.emptyList();
@@ -68,7 +68,7 @@ public final class ApiAbilityPlanner {
             List<String> abilityIdOrder = planAbilityOrder(classTree, classMap, desiredIds);
             return mapIdsToNodes(abilityIdOrder, classMap);
         } catch (PlanningException ex) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                     Text.of("Cannot load ability tree: " + ex.getMessage())
             ));
             return Collections.emptyList();

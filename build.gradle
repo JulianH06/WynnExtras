@@ -28,6 +28,10 @@ repositories {
 		name = "Cloth Config"
 		url = "https://maven.shedaniel.me/"
 	}
+	maven {
+		name = "NeoForged"
+		url = "https://maven.neoforged.net/releases"
+	}
 
 	maven { url = "https://repo.maven.apache.org/maven2" }
 }
@@ -65,10 +69,13 @@ dependencies {
 
 	modImplementation("com.terraformersmc:modmenu:${project.modmenu_version}")
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	modImplementation "maven.modrinth:wynntils:v${project.wynntils_version}-fabric"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	shadowImpl 'org.reflections:reflections:0.10.2'
+	shadowImpl("net.neoforged:bus:${project.neoforged_bus_version}") {
+		exclude group: 'org.ow2.asm', module: 'asm'
+		exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
+	}
 }
 
 processResources {
@@ -114,6 +121,8 @@ tasks.named("shadowJar").configure {
 	configurations = [project.configurations.shadowImpl, project.configurations.shadowModImpl]
 	archiveClassifier.set('all')
 	exclude 'javassist/tools/rmi/AppletServer.class'
+	relocate 'net.neoforged.bus', 'julianh06.wynnextras.shadow.neoforged.bus'
+	relocate 'net.jodah.typetools', 'julianh06.wynnextras.shadow.typetools'
 }
 
 // configure the maven publication

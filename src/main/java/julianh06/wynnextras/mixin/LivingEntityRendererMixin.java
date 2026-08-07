@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-import com.wynntils.mc.extension.EntityRenderStateExtension;
+import julianh06.wynnextras.duck.EntityRenderStateAccess;
 import julianh06.wynnextras.features.misc.HuntedModeTracker;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.render.PlayerRenderFilter;
@@ -35,15 +35,9 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
     }
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-    private void onRender(S state, MatrixStack matrices, OrderedRenderCommandQueue renderQueue, CameraRenderState camera, CallbackInfo ci) {    EntityRenderStateExtension entityRenderStateExtension = state instanceof EntityRenderStateExtension ? ((EntityRenderStateExtension) state) : null;
-        if(entityRenderStateExtension != null) {
-            PlayerEntity player = entityRenderStateExtension.getEntity() instanceof PlayerEntity ? ((PlayerEntity) entityRenderStateExtension.getEntity()) : null;
-            if(player != null) {
-                if (PlayerRenderFilter.isHidden(player)) {
-                    ci.cancel();
-                }
-            }
-        }
+    private void onRender(S state, MatrixStack matrices, OrderedRenderCommandQueue renderQueue, CameraRenderState camera, CallbackInfo ci) {
+        Entity entity = ((EntityRenderStateAccess) state).wynnExtras$getEntity();
+        if (entity instanceof PlayerEntity player && PlayerRenderFilter.isHidden(player)) ci.cancel();
     }
 
     @ModifyExpressionValue(method = "hasLabel(Lnet/minecraft/entity/LivingEntity;D)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;getCameraEntity()Lnet/minecraft/entity/Entity;"))

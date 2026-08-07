@@ -1,6 +1,6 @@
 package julianh06.wynnextras.config.configoptions;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
@@ -42,7 +42,7 @@ public class ButtonOption extends ConfigOption {
         int bx = x + w - 75, by = y + 12;
         if (mx >= bx && mx < bx + 65 && my >= by && my < by + 20) {
             action.accept(null);
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
         return false;

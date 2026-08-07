@@ -4,11 +4,10 @@ import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.profession.type.ProfessionType;
-import com.wynntils.models.worlds.type.BombInfo;
-import com.wynntils.models.worlds.type.BombType;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.state.BombState;
+import julianh06.wynnextras.wynncraft.state.CharacterState;
+import julianh06.wynnextras.utils.enums.WEProfessionType;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -101,12 +100,12 @@ public class CommandLoader implements WELoader {
                                     case "toggle" -> {
                                         WynnExtrasConfig.INSTANCE.bombShareSuggestion = !WynnExtrasConfig.INSTANCE.bombShareSuggestion;
                                         WynnExtrasConfig.save();
-                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(WynnExtrasConfig.INSTANCE.bombShareSuggestion
+                                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(WynnExtrasConfig.INSTANCE.bombShareSuggestion
                                                 ? "§aBomb share suggestions enabled."
                                                 : "§aBomb share suggestions disabled."));
                                     }
                                     default ->
-                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel + ". Use all, guild, party, local, clipboard or toggle."));
+                                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel + ". Use all, guild, party, local, clipboard or toggle."));
                                 }
                                 return 1;
                             })
@@ -121,12 +120,12 @@ public class CommandLoader implements WELoader {
                                     .executes(ctx -> {
                                         String channel = StringArgumentType.getString(ctx, "channel").toLowerCase();
                                         String filterStr = StringArgumentType.getString(ctx, "filter").toLowerCase();
-                                        Set<BombType> bombFilter = switch (filterStr) {
+                                        Set<String> bombFilter = switch (filterStr) {
                                             case "all" -> null;
                                             case "prof" -> PROF_BOMBS;
                                             case "loot" -> LOOT_BOMBS;
                                             case "combat" -> COMBAT_BOMBS;
-                                            default -> { McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown filter: " + filterStr + ". Use prof, loot, or combat.")); yield null; }
+                                            default -> { MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown filter: " + filterStr + ". Use prof, loot, or combat.")); yield null; }
                                         };
                                         switch (channel) {
                                             case "all", "a" -> executeBombshareAll(bombFilter);
@@ -135,7 +134,7 @@ public class CommandLoader implements WELoader {
                                             case "local" -> executeBombshare(null, bombFilter);
                                             case "clipboard" -> copyBombshareToClipboard(bombFilter);
                                             default ->
-                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel));
+                                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown channel: " + channel));
                                         }
                                         return 1;
                                     })));
@@ -145,14 +144,14 @@ public class CommandLoader implements WELoader {
             var hide = ClientCommandManager.literal("hide")
                     .executes(ctx -> {
                         WynnExtrasConfig.INSTANCE.playerHiderToggle = !WynnExtrasConfig.INSTANCE.playerHiderToggle;
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                                 WynnExtrasConfig.INSTANCE.playerHiderToggle ? "§aEnabled Player Hider" : "§cDisabled Player Hider"));
                         WynnExtrasConfig.save();
                         return 1;
                     })
                     .then(ClientCommandManager.literal("war").executes(ctx -> {
                         WynnExtrasConfig.INSTANCE.hideAllPlayersInWar = !WynnExtrasConfig.INSTANCE.hideAllPlayersInWar;
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                                 WynnExtrasConfig.INSTANCE.hideAllPlayersInWar
                                         ? "§aEnabled Hide All Players in Wars (range: " + WynnExtrasConfig.INSTANCE.maxHideDistance + ")"
                                         : "§cDisabled Hide All Players in Wars"));
@@ -161,7 +160,7 @@ public class CommandLoader implements WELoader {
                     }))
                     .then(ClientCommandManager.literal("all").executes(ctx -> {
                         WynnExtrasConfig.INSTANCE.hideAllPlayers = !WynnExtrasConfig.INSTANCE.hideAllPlayers;
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                                 WynnExtrasConfig.INSTANCE.hideAllPlayers
                                         ? "§aEnabled Hide All Players (range: " + WynnExtrasConfig.INSTANCE.maxHideDistance + ")"
                                         : "§cDisabled Hide All Players"));
@@ -182,9 +181,9 @@ public class CommandLoader implements WELoader {
             var ignorelist = ClientCommandManager.literal("ignorelist").executes(ctx -> {
                 Set<String> ignored = julianh06.wynnextras.features.raid.PartyIgnoreOnRaid.getTrackedIgnored();
                 if (ignored.isEmpty()) {
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No players tracked as ignored yet. Run /ignore add <player> and the list will populate."));
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No players tracked as ignored yet. Run /ignore add <player> and the list will populate."));
                 } else {
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Ignored players (" + ignored.size() + "): §f" + String.join(", ", ignored)));
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Ignored players (" + ignored.size() + "): §f" + String.join(", ", ignored)));
                 }
                 return 1;
             });
@@ -200,7 +199,7 @@ public class CommandLoader implements WELoader {
             dispatcher.register(
                     ClientCommandManager.literal("pv")
                             .executes(ctx -> {
-                                PV.open(McUtils.playerName());
+                                PV.open(MinecraftUtils.playerName());
                                 return 1;
                             })
                             .then(
@@ -215,14 +214,14 @@ public class CommandLoader implements WELoader {
 
 //            dispatcher.register(
 //                    ClientCommandManager.literal("ri")
-//                            .executes(ctx -> { sendRaidInfo(McUtils.playerName()); return 1; })
+//                            .executes(ctx -> { sendRaidInfo(MinecraftUtils.playerName()); return 1; })
 //                            .then(ClientCommandManager.argument("player", StringArgumentType.word())
 //                                    .executes(ctx -> { sendRaidInfo(StringArgumentType.getString(ctx, "player")); return 1; }))
 //            );
 //
 //            dispatcher.register(
 //                    ClientCommandManager.literal("stats")
-//                            .executes(ctx -> { sendStats(McUtils.playerName()); return 1; })
+//                            .executes(ctx -> { sendStats(MinecraftUtils.playerName()); return 1; })
 //                            .then(ClientCommandManager.argument("player", StringArgumentType.word())
 //                                    .executes(ctx -> { sendStats(StringArgumentType.getString(ctx, "player")); return 1; }))
 //            );
@@ -245,11 +244,11 @@ public class CommandLoader implements WELoader {
 
             dispatcher.register(
                 ClientCommandManager.literal("dwoc").executes(ctx -> {
-                    if (McUtils.player() == null) return 0;
-                    McUtils.player().networkHandler.sendChatCommand("emote explode");
+                    if (MinecraftUtils.player() == null) return 0;
+                    MinecraftUtils.player().networkHandler.sendChatCommand("emote explode");
                     SCHEDULER.schedule(() -> {
                         MinecraftClient.getInstance().execute(() -> {
-                            McUtils.playSoundUI(SoundEvents.ENTITY_GENERIC_EXPLODE.value());
+                            MinecraftUtils.playSoundUI(SoundEvents.ENTITY_GENERIC_EXPLODE.value());
                         });
                     }, 600, TimeUnit.MILLISECONDS);
                     return 1;
@@ -262,7 +261,7 @@ public class CommandLoader implements WELoader {
                             .then(ClientCommandManager.literal("raidloot")
                                     .then(ClientCommandManager.literal("reset")
                                             .executes(ctx -> {
-                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we raidloot reset <all|session|notg|nol|tcc|tna>"));
+                                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we raidloot reset <all|session|notg|nol|tcc|tna>"));
                                                 return 1;
                                             })
                                             .then(ClientCommandManager.literal("all")
@@ -270,14 +269,14 @@ public class CommandLoader implements WELoader {
                                                         RaidLootConfig.INSTANCE.data.resetAll();
                                                         RaidLootConfig.INSTANCE.save();
                                                         RaidLootTrackerOverlay.refreshData();
-                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset all raid loot data!"));
+                                                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset all raid loot data!"));
                                                         return 1;
                                                     }))
                                             .then(ClientCommandManager.literal("session")
                                                     .executes(ctx -> {
                                                         RaidLootConfig.INSTANCE.data.resetSession();
                                                         RaidLootTrackerOverlay.refreshData();
-                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset session raid loot data!"));
+                                                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset session raid loot data!"));
                                                         return 1;
                                                     }))
                                             .then(ClientCommandManager.literal("notg")
@@ -285,7 +284,7 @@ public class CommandLoader implements WELoader {
                                                         RaidLootConfig.INSTANCE.data.resetRaid("NOTG");
                                                         RaidLootConfig.INSTANCE.save();
                                                         RaidLootTrackerOverlay.refreshData();
-                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset NOTG raid loot data!"));
+                                                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset NOTG raid loot data!"));
                                                         return 1;
                                                     }))
                                             .then(ClientCommandManager.literal("nol")
@@ -293,7 +292,7 @@ public class CommandLoader implements WELoader {
                                                         RaidLootConfig.INSTANCE.data.resetRaid("NOL");
                                                         RaidLootConfig.INSTANCE.save();
                                                         RaidLootTrackerOverlay.refreshData();
-                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset NOL raid loot data!"));
+                                                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset NOL raid loot data!"));
                                                         return 1;
                                                     }))
                                             .then(ClientCommandManager.literal("tcc")
@@ -301,7 +300,7 @@ public class CommandLoader implements WELoader {
                                                         RaidLootConfig.INSTANCE.data.resetRaid("TCC");
                                                         RaidLootConfig.INSTANCE.save();
                                                         RaidLootTrackerOverlay.refreshData();
-                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset TCC raid loot data!"));
+                                                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset TCC raid loot data!"));
                                                         return 1;
                                                     }))
                                             .then(ClientCommandManager.literal("tna")
@@ -309,7 +308,7 @@ public class CommandLoader implements WELoader {
                                                         RaidLootConfig.INSTANCE.data.resetRaid("TNA");
                                                         RaidLootConfig.INSTANCE.save();
                                                         RaidLootTrackerOverlay.refreshData();
-                                                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset TNA raid loot data!"));
+                                                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset TNA raid loot data!"));
                                                         return 1;
                                                     }))
                                     )
@@ -352,7 +351,7 @@ public class CommandLoader implements WELoader {
                                     .then(ClientCommandManager.literal("reload")
                                             .executes(ctx -> {
                                                 ProfessionOverlay.reload();
-                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aProfession overlay reloaded! Session XP reset, re-fetching data..."));
+                                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aProfession overlay reloaded! Session XP reset, re-fetching data..."));
                                                 return 1;
                                             })
                                     )
@@ -360,14 +359,14 @@ public class CommandLoader implements WELoader {
                                             .executes(ctx -> {
                                                 WynnExtrasConfig.INSTANCE.professionOverlayExactXp = !WynnExtrasConfig.INSTANCE.professionOverlayExactXp;
                                                 WynnExtrasConfig.save();
-                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                                                         WynnExtrasConfig.INSTANCE.professionOverlayExactXp ? "§aExact XP numbers enabled" : "§7Exact XP numbers disabled (using short format)"));
                                                 return 1;
                                             })
                                     )
                                     .then(ClientCommandManager.literal("set")
                                             .executes(ctx -> {
-                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we profession set <profession> <amount>"));
+                                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we profession set <profession> <amount>"));
                                                 return 1;
                                             })
                                             .then(ClientCommandManager.argument("profession", StringArgumentType.word())
@@ -375,19 +374,19 @@ public class CommandLoader implements WELoader {
                                                             .executes(ctx -> {
                                                                 String profName = StringArgumentType.getString(ctx, "profession");
                                                                 float amount = FloatArgumentType.getFloat(ctx, "amount");
-                                                                ProfessionType prof = ProfessionType.fromString(profName);
+                                                                WEProfessionType prof = WEProfessionType.fromString(profName);
                                                                 if (prof == null) {
-                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
                                                                     return 0;
                                                                 }
-                                                                String charId = Models.Character.getId();
-                                                                String className = Models.Character.getClassType() != null ? Models.Character.getClassType().getName() : "unknown";
+                                                                String charId = CharacterState.id().orElse(null);
+                                                                String className = CharacterState.className().orElse("unknown");
                                                                 if (charId == null || charId.isEmpty()) {
-                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected. Make sure you're logged into a class."));
+                                                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected. Make sure you're logged into a class."));
                                                                     return 0;
                                                                 }
                                                                 ProfessionOverlay.setOverflow(prof, amount);
-                                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " overflow XP to " + String.format("%.0f", amount) + " §7(class: " + className + ")"));
+                                                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " overflow XP to " + String.format("%.0f", amount) + " §7(class: " + className + ")"));
                                                                 return 1;
                                                             })
                                                     )
@@ -395,41 +394,41 @@ public class CommandLoader implements WELoader {
                                     )
                                     .then(ClientCommandManager.literal("goal")
                                             .executes(ctx -> {
-                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we profession goal <profession> <amount|clear>"));
+                                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we profession goal <profession> <amount|clear>"));
                                                 return 1;
                                             })
                                             .then(ClientCommandManager.argument("goalProfession", StringArgumentType.word())
                                                     .executes(ctx -> {
                                                         String profName = StringArgumentType.getString(ctx, "goalProfession");
-                                                        ProfessionType prof = ProfessionType.fromString(profName);
+                                                        WEProfessionType prof = WEProfessionType.fromString(profName);
                                                         if (prof == null) {
-                                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
                                                             return 0;
                                                         }
                                                         float goal = ProfessionOverlay.getGoal(prof);
                                                         float overflow = ProfessionOverlay.getOverflow(prof);
                                                         if (goal <= 0) {
-                                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No goal set for " + prof.getDisplayName() + ". Current overflow: " + String.format("%.0f", overflow)));
+                                                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No goal set for " + prof.getDisplayName() + ". Current overflow: " + String.format("%.0f", overflow)));
                                                         } else {
-                                                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§b" + prof.getDisplayName() + " goal: " + String.format("%.0f", goal) + " | Current: " + String.format("%.0f", overflow) + " | Remaining: " + String.format("%.0f", Math.max(0, goal - overflow))));
+                                                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§b" + prof.getDisplayName() + " goal: " + String.format("%.0f", goal) + " | Current: " + String.format("%.0f", overflow) + " | Remaining: " + String.format("%.0f", Math.max(0, goal - overflow))));
                                                         }
                                                         return 1;
                                                     })
                                                     .then(ClientCommandManager.literal("clear")
                                                             .executes(ctx -> {
                                                                 String profName = StringArgumentType.getString(ctx, "goalProfession");
-                                                                ProfessionType prof = ProfessionType.fromString(profName);
+                                                                WEProfessionType prof = WEProfessionType.fromString(profName);
                                                                 if (prof == null) {
-                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
                                                                     return 0;
                                                                 }
-                                                                String charId = Models.Character.getId();
+                                                                String charId = CharacterState.id().orElse(null);
                                                                 if (charId == null || charId.isEmpty()) {
-                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected."));
+                                                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected."));
                                                                     return 0;
                                                                 }
                                                                 ProfessionOverlay.clearGoal(prof);
-                                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aCleared " + prof.getDisplayName() + " goal."));
+                                                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aCleared " + prof.getDisplayName() + " goal."));
                                                                 return 1;
                                                             })
                                                     )
@@ -437,19 +436,19 @@ public class CommandLoader implements WELoader {
                                                             .executes(ctx -> {
                                                                 String profName = StringArgumentType.getString(ctx, "goalProfession");
                                                                 float amount = FloatArgumentType.getFloat(ctx, "goalAmount");
-                                                                ProfessionType prof = ProfessionType.fromString(profName);
+                                                                WEProfessionType prof = WEProfessionType.fromString(profName);
                                                                 if (prof == null) {
-                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
                                                                     return 0;
                                                                 }
-                                                                String charId = Models.Character.getId();
-                                                                String className = Models.Character.getClassType() != null ? Models.Character.getClassType().getName() : "unknown";
+                                                                String charId = CharacterState.id().orElse(null);
+                                                                String className = CharacterState.className().orElse("unknown");
                                                                 if (charId == null || charId.isEmpty()) {
-                                                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected."));
+                                                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected."));
                                                                     return 0;
                                                                 }
                                                                 ProfessionOverlay.setGoal(prof, amount);
-                                                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " goal to " + String.format("%.0f", amount) + " overflow XP §7(class: " + className + ")"));
+                                                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " goal to " + String.format("%.0f", amount) + " overflow XP §7(class: " + className + ")"));
                                                                 return 1;
                                                             })
                                                     )
@@ -477,11 +476,11 @@ public class CommandLoader implements WELoader {
         return root;
     }
 
-    private static final Set<BombType> PROF_BOMBS = Set.of(BombType.PROFESSION_XP, BombType.PROFESSION_SPEED);
-    private static final Set<BombType> LOOT_BOMBS = Set.of(BombType.LOOT, BombType.LOOT_CHEST);
-    private static final Set<BombType> COMBAT_BOMBS = Set.of(BombType.COMBAT_XP);
+    private static final Set<String> PROF_BOMBS = Set.of("PROFESSION_XP", "PROFESSION_SPEED");
+    private static final Set<String> LOOT_BOMBS = Set.of("LOOT", "LOOT_CHEST");
+    private static final Set<String> COMBAT_BOMBS = Set.of("COMBAT_XP");
 
-    private static String filterName(Set<BombType> filter) {
+    private static String filterName(Set<String> filter) {
         if (filter == null) return "";
         if (filter.equals(PROF_BOMBS)) return " prof";
         if (filter.equals(LOOT_BOMBS)) return " loot";
@@ -489,119 +488,50 @@ public class CommandLoader implements WELoader {
         return "";
     }
 
-    private static void executeBombshare(String chatPrefix, Set<BombType> filter) {
-        if (!Models.WorldState.onWorld()) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cYou must be on a world to use this command."));
-            return;
+    private static String buildBombshare(Set<String> filter) {
+        Map<String, List<String>> bombsByType = new LinkedHashMap<>();
+        Map<String, String> displayNames = new HashMap<>();
+        for (BombState.Bomb bomb : BombState.bombs()) {
+            if (!bomb.active() || filter != null && !filter.contains(bomb.type())) continue;
+            displayNames.put(bomb.type(), bomb.displayName());
+            bombsByType.computeIfAbsent(bomb.type(), ignored -> new ArrayList<>()).add(bomb.server());
         }
+        if (bombsByType.isEmpty()) return "[WynnExtras] No active" + filterName(filter) + " bombs!";
 
-        Map<BombType, List<String>> bombsByType = new LinkedHashMap<>();
-        for (BombInfo bomb : Models.Bomb.getBombBells()) {
-            if (!bomb.isActive()) continue;
-            if (filter != null && !filter.contains(bomb.bomb())) continue;
-            bombsByType.computeIfAbsent(bomb.bomb(), k -> new ArrayList<>()).add(bomb.server());
+        Map<String, String> shortNames = Map.of(
+                "PROFESSION_XP", "ProfXP", "PROFESSION_SPEED", "ProfSpeed",
+                "COMBAT_XP", "CombatXP", "DUNGEON", "Dungeon", "LOOT", "Loot", "LOOT_CHEST", "LootChest");
+        StringBuilder message = new StringBuilder("[WynnExtras]");
+        for (var entry : bombsByType.entrySet()) {
+            String name = shortNames.getOrDefault(entry.getKey(), displayNames.getOrDefault(entry.getKey(), entry.getKey()));
+            message.append(" [").append(name).append("] ").append(String.join(", ", entry.getValue()));
         }
+        return message.toString();
+    }
 
-        String message;
-        if (bombsByType.isEmpty()) {
-            message = "[WynnExtras] No active" + filterName(filter) + " bombs!";
-        } else {
-            StringBuilder sb = new StringBuilder("[WynnExtras]");
-            Map<BombType, String> shortNames = Map.of(
-                    BombType.PROFESSION_XP, "ProfXP",
-                    BombType.PROFESSION_SPEED, "ProfSpeed",
-                    BombType.COMBAT_XP, "CombatXP",
-                    BombType.DUNGEON, "Dungeon",
-                    BombType.LOOT, "Loot",
-                    BombType.LOOT_CHEST, "LootChest"
-            );
-            for (var entry : bombsByType.entrySet()) {
-                String name = shortNames.getOrDefault(entry.getKey(), entry.getKey().getDisplayName());
-                sb.append(" [").append(name).append("] ").append(String.join(", ", entry.getValue()));
-            }
-            message = sb.toString();
-        }
+    private static boolean canShareBombs() {
+        if (MinecraftUtils.isOnWynncraft()) return true;
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cYou must be on a world to use this command."));
+        return false;
+    }
 
-        if (chatPrefix == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
-        } else if (McUtils.player() != null) {
-            McUtils.player().networkHandler.sendChatCommand(chatPrefix + " " + message);
+    private static void executeBombshare(String chatPrefix, Set<String> filter) {
+        if (!canShareBombs()) return;
+        String message = buildBombshare(filter);
+        if (chatPrefix == null) MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
+        else if (MinecraftUtils.player() != null) MinecraftUtils.player().networkHandler.sendChatCommand(chatPrefix + " " + message);
+    }
+
+    private static void executeBombshareAll(Set<String> filter) {
+        if (canShareBombs() && MinecraftUtils.player() != null) {
+            MinecraftUtils.player().networkHandler.sendChatMessage(buildBombshare(filter));
         }
     }
 
-    private static void executeBombshareAll(Set<BombType> filter) {
-        if (!Models.WorldState.onWorld()) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cYou must be on a world to use this command."));
-            return;
-        }
-
-        Map<BombType, List<String>> bombsByType = new LinkedHashMap<>();
-        for (BombInfo bomb : Models.Bomb.getBombBells()) {
-            if (!bomb.isActive()) continue;
-            if (filter != null && !filter.contains(bomb.bomb())) continue;
-            bombsByType.computeIfAbsent(bomb.bomb(), k -> new ArrayList<>()).add(bomb.server());
-        }
-
-        String message;
-        if (bombsByType.isEmpty()) {
-            message = "[WynnExtras] No active" + filterName(filter) + " bombs!";
-        } else {
-            StringBuilder sb = new StringBuilder("[WynnExtras]");
-            Map<BombType, String> shortNames = Map.of(
-                    BombType.PROFESSION_XP, "ProfXP",
-                    BombType.PROFESSION_SPEED, "ProfSpeed",
-                    BombType.COMBAT_XP, "CombatXP",
-                    BombType.DUNGEON, "Dungeon",
-                    BombType.LOOT, "Loot",
-                    BombType.LOOT_CHEST, "LootChest"
-            );
-            for (var entry : bombsByType.entrySet()) {
-                String name = shortNames.getOrDefault(entry.getKey(), entry.getKey().getDisplayName());
-                sb.append(" [").append(name).append("] ").append(String.join(", ", entry.getValue()));
-            }
-            message = sb.toString();
-        }
-
-        if (McUtils.player() != null) {
-            McUtils.player().networkHandler.sendChatMessage(message);
-        }
-    }
-
-    private static void copyBombshareToClipboard(Set<BombType> filter) {
-        if (!Models.WorldState.onWorld()) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cYou must be on a world to use this command."));
-            return;
-        }
-
-        Map<BombType, List<String>> bombsByType = new LinkedHashMap<>();
-        for (BombInfo bomb : Models.Bomb.getBombBells()) {
-            if (!bomb.isActive()) continue;
-            if (filter != null && !filter.contains(bomb.bomb())) continue;
-            bombsByType.computeIfAbsent(bomb.bomb(), k -> new ArrayList<>()).add(bomb.server());
-        }
-
-        String message;
-        if (bombsByType.isEmpty()) {
-            message = "[WynnExtras] No active" + filterName(filter) + " bombs!";
-        } else {
-            StringBuilder sb = new StringBuilder("[WynnExtras]");
-            Map<BombType, String> shortNames = Map.of(
-                    BombType.PROFESSION_XP, "ProfXP",
-                    BombType.PROFESSION_SPEED, "ProfSpeed",
-                    BombType.COMBAT_XP, "CombatXP",
-                    BombType.DUNGEON, "Dungeon",
-                    BombType.LOOT, "Loot",
-                    BombType.LOOT_CHEST, "LootChest"
-            );
-            for (var entry : bombsByType.entrySet()) {
-                String name = shortNames.getOrDefault(entry.getKey(), entry.getKey().getDisplayName());
-                sb.append(" [").append(name).append("] ").append(String.join(", ", entry.getValue()));
-            }
-            message = sb.toString();
-        }
-
-        MinecraftClient.getInstance().keyboard.setClipboard(message);
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Copied bombshare to clipboard."));
+    private static void copyBombshareToClipboard(Set<String> filter) {
+        if (!canShareBombs()) return;
+        MinecraftClient.getInstance().keyboard.setClipboard(buildBombshare(filter));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Copied bombshare to clipboard."));
     }
 
     public static ArgumentBuilder<FabricClientCommandSource, ?> chainArguments(
@@ -619,11 +549,11 @@ public class CommandLoader implements WELoader {
     }
 
 //    private static void sendRaidInfo(String playerName) {
-//        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Fetching raid info for §e" + playerName + "§7..."));
+//        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Fetching raid info for §e" + playerName + "§7..."));
 //        MinecraftClient mc = MinecraftClient.getInstance();
 //        WynncraftApiHandler.fetchPlayerData(playerName).thenAccept(data -> mc.execute(() -> {
 //            if (data == null || data.getUsername() == null) {
-//                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo data found for " + playerName + " (API returned empty or error)."));
+//                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo data found for " + playerName + " (API returned empty or error)."));
 //                return;
 //            }
 //            Raids raids = (data.getGlobalData() != null) ? data.getGlobalData().getRaids() : null;
@@ -649,7 +579,7 @@ public class CommandLoader implements WELoader {
 //                }
 //            }
 //            if (list.isEmpty() && total == 0) {
-//                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+//                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
 //                        "§cNo raid data returned by the API. Run §e/we apikey§c for info on setting an API key."));
 //                return;
 //            }
@@ -663,20 +593,20 @@ public class CommandLoader implements WELoader {
 //            sb.append(" §7| TCC: §f").append(list.getOrDefault("The Canyon Colossus", 0));
 //            sb.append("\n§7TNA: §f").append(list.getOrDefault("The Nameless Anomaly", 0));
 //            sb.append(" §7| TWP: §f").append(twp);
-//            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
+//            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
 //        })).exceptionally(ex -> {
-//            mc.execute(() -> McUtils.sendMessageToClient(
+//            mc.execute(() -> MinecraftUtils.sendMessageToClient(
 //                    WynnExtras.addWynnExtrasPrefix("§cError fetching data: " + ex.getMessage())));
 //            return null;
 //        });
 //    }
 //
 //    private static void sendStats(String playerName) {
-//        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Fetching stats for §e" + playerName + "§7..."));
+//        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Fetching stats for §e" + playerName + "§7..."));
 //        MinecraftClient mc = MinecraftClient.getInstance();
 //        WynncraftApiHandler.fetchPlayerData(playerName).thenAccept(data -> mc.execute(() -> {
 //            if (data == null || data.getUsername() == null) {
-//                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+//                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
 //                        "§cNo data for " + playerName + ". If this is an authenticated request (fullResult), your API key may be missing/invalid. Run §e/we apikey§c for info."));
 //                return;
 //            }
@@ -690,7 +620,7 @@ public class CommandLoader implements WELoader {
 //
 //            if (data.getCharacters() == null || data.getCharacters().isEmpty()) {
 //                sb.append("§7(per-character data not in response — run §e/we apikey§7 for info on setting an API key)");
-//                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
+//                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
 //                return;
 //            }
 //
@@ -729,9 +659,9 @@ public class CommandLoader implements WELoader {
 //                sb.append("\n");
 //                if (++i >= 10) break; // cap at 10 chars so chat doesn't explode
 //            }
-//            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
+//            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(sb.toString()));
 //        })).exceptionally(ex -> {
-//            mc.execute(() -> McUtils.sendMessageToClient(
+//            mc.execute(() -> MinecraftUtils.sendMessageToClient(
 //                    WynnExtras.addWynnExtrasPrefix("§cError fetching data: " + ex.getMessage())));
 //            return null;
 //        });

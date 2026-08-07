@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.guildviewer;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -121,21 +121,21 @@ public class GV {
     }
 
     public static void openOwnGuild() {
-        WynncraftApiHandler.fetchPlayerData(McUtils.playerName()).thenAccept(playerData -> {
+        WynncraftApiHandler.fetchPlayerData(MinecraftUtils.playerName()).thenAccept(playerData -> {
             if (playerData == null) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Could not load your player data. Try again or use /gv [guild prefix]."));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Could not load your player data. Try again or use /gv [guild prefix]."));
                 return;
             }
 
             Guild guild = playerData.getGuild();
             if (guild == null || guild.getPrefix() == null || guild.getPrefix().isBlank()) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You are not in a guild. Usage: /gv [guild prefix]"));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You are not in a guild. Usage: /gv [guild prefix]"));
                 return;
             }
 
             open(guild.getPrefix());
         }).exceptionally(ex -> {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Could not determine your guild. Usage: /gv [guild prefix]"));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Could not determine your guild. Usage: /gv [guild prefix]"));
             WynnExtras.LOGGER.error("Error while getting own guild data: " + ex.getMessage());
             return null;
         });

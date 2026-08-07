@@ -1,7 +1,7 @@
 package julianh06.wynnextras.utils.UI;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -130,12 +130,12 @@ public class TextInputWidget extends Widget {
     public boolean onClick(int button) {
         if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             clearInput();
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             setFocused(true);
             return true;
         }
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
-        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         setFocused(true);
         cursorPos = input.length();
         selectionAnchor = cursorPos;
@@ -153,12 +153,12 @@ public class TextInputWidget extends Widget {
         }
         if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             clearInput();
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             setFocused(true);
             return true;
         }
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return false;
-        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         setFocused(true);
         cursorPos = getCursorIndexAt(mx, my);
         selectionAnchor = isShiftDown() ? selectionAnchor : cursorPos;

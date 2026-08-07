@@ -7,7 +7,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -124,7 +124,7 @@ public class WynncraftAuthManager {
     );
 
     public static void load() {
-        if (McUtils.player() == null) {
+        if (MinecraftUtils.player() == null) {
             WynnExtras.LOGGER.error("[WynnExtras] Cannot load Wynncraft auth - player not loaded");
             return;
         }
@@ -149,7 +149,7 @@ public class WynncraftAuthManager {
     }
 
     public static void save() {
-        if (McUtils.player() == null) {
+        if (MinecraftUtils.player() == null) {
             WynnExtras.LOGGER.error("[WynnExtras] Cannot save Wynncraft auth - player not loaded");
             return;
         }
@@ -497,7 +497,7 @@ public class WynncraftAuthManager {
     private static Path authPath() {
         return FabricLoader.getInstance()
                 .getConfigDir()
-                .resolve("wynnextras/" + McUtils.player().getUuid() + "/apikeyDoNotShare.json");
+                .resolve("wynnextras/" + MinecraftUtils.player().getUuid() + "/apikeyDoNotShare.json");
     }
 
     private static String getOAuthClientId() {

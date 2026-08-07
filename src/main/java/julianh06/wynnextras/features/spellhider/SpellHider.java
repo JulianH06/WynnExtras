@@ -2,13 +2,13 @@ package julianh06.wynnextras.features.spellhider;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.*;
-import com.wynntils.mc.extension.EntityExtension;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.InitEvent;
 import julianh06.wynnextras.event.SetEntityDataEvent;
 import julianh06.wynnextras.utils.EntityUtils;
 import julianh06.wynnextras.utils.ItemUtils;
+import julianh06.wynnextras.utils.EntityVisibility;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.NativeImage;
@@ -206,7 +206,7 @@ public class SpellHider {
             }
 
             if (hide) {
-                ((EntityExtension) entity).setRendered(false);
+                EntityVisibility.setRendered(entity, false);
             }
         }
     }
@@ -254,7 +254,7 @@ public class SpellHider {
         if (client.world == null) return;
         client.world.getEntities().forEach(entity -> {
             if (entity instanceof DisplayEntity.ItemDisplayEntity) {
-                ((EntityExtension) entity).setRendered(true);
+                EntityVisibility.setRendered(entity, true);
             }
         });
     }

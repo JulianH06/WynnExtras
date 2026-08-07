@@ -1,10 +1,10 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.inventory.WeightDisplay;
-import julianh06.wynnextras.utils.WynntilsHighlightUtils;
+import julianh06.wynnextras.utils.ItemHighlightRenderer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -71,7 +71,7 @@ public abstract class WeightScaleBackgroundMixin {
                 color & 0xFF,
                 alpha
         );
-        WynntilsHighlightUtils.drawHighlightTexture(
+        ItemHighlightRenderer.drawHighlightTexture(
                 context,
                 WynnExtrasConfig.INSTANCE.scaleBackgroundShape.texture(),
                 backgroundColor,

@@ -2,7 +2,7 @@ package julianh06.wynnextras.config;
 
 import julianh06.wynnextras.config.configoptions.*;
 import static julianh06.wynnextras.config.ConfigTheme.*;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.features.achievements.AchievementScreen;
 import julianh06.wynnextras.features.spellhider.SpellProfiles;
@@ -137,7 +137,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     AspectScreen.currentPage = AspectScreen.Page.AspectLootpool;
                 }, "Open"))
                 .add(button("Profile Viewer", "View your stats", (x) -> {
-                    PV.open(McUtils.playerName());
+                    PV.open(MinecraftUtils.playerName());
                 }, "Open"))
                 .add(button("Waypoints", "Open the Waypoints screen", (x) -> {
                     MinecraftClient.getInstance().setScreen(null);
@@ -558,7 +558,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(slider("Pitch", "Sound pitch",
                         0, 200, () -> (int)(config.soundPitch), v -> config.soundPitch = v))
                 .add(button("Sound Test", "Click the button to test the sound",
-                        v -> McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test")).endSub()
+                        v -> MinecraftUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test")).endSub()
             .sub("Premade Notifications")
                 .add(toggle("Lost Eye", "Lost Eye in TNA light room",
                         () -> config.lostEye, v -> config.lostEye = v))
@@ -1687,7 +1687,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         activeDropdown = null;
                         dropdownScroll = 0;
                         updateMaxScroll();
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }
                 }
@@ -1707,7 +1707,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 WynnExtrasConfig.save();
                 WynnExtrasConfig.load();
                 client.setScreen(parent);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
             //======== Cancel =========
@@ -1715,7 +1715,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 saveCurrentScreenState();
                 WynnExtrasConfig.load();
                 client.setScreen(parent);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
             //======== Edit HUD Position =========
@@ -1723,7 +1723,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 WynnExtrasConfig.save();
                 WynnExtrasConfig.load();
                 client.setScreen(new HudEditScreen(this));
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
@@ -1736,7 +1736,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 if (mx >= clearX && mx < clearX + 20) {
                     searchQuery = "";
                     onSearchQueryChanged();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
             }
@@ -1759,7 +1759,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     selectedCategory = i;
                     scrollOffset = 0; scrollTarget = 0;
                     updateMaxScroll();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 y += 28;
@@ -1772,12 +1772,12 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             if (my >= sidebarScrollbarThumbY && my < sidebarScrollbarThumbY + sidebarScrollbarThumbH) {
                 sidebarScrollbarDragging = true;
                 sidebarScrollbarDragOffset = my - sidebarScrollbarThumbY;
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             } else if (my >= sidebarScrollbarY && my < sidebarScrollbarY + sidebarScrollbarHeight) {
                 double clickPercent = (my - sidebarScrollbarY - sidebarScrollbarThumbH / 2.0) / (sidebarScrollbarHeight - sidebarScrollbarThumbH);
                 sidebarScrollTarget = MathHelper.clamp(clickPercent * sidebarMaxScroll, 0, sidebarMaxScroll);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
@@ -1787,12 +1787,12 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             if (my >= scrollbarThumbY && my < scrollbarThumbY + scrollbarThumbH) {
                 scrollbarDragging = true;
                 scrollbarDragOffset = my - scrollbarThumbY;
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             } else if (my >= scrollbarY && my < scrollbarY + scrollbarHeight) {
                 double clickPercent = (my - scrollbarY - scrollbarThumbH / 2.0) / (scrollbarHeight - scrollbarThumbH);
                 scrollTarget = MathHelper.clamp(clickPercent * maxScroll, 0, maxScroll);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
@@ -1826,7 +1826,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     scrollTarget = MathHelper.clamp(contentY + 5, 0, maxScroll);
                     scrollOffset = scrollTarget;
                 }
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
@@ -1847,7 +1847,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + SUBCATEGORY_HEADER_HEIGHT) && mx >= contentX && mx < contentX + contentW) {
                         sub.toggleExpanded();
                         updateMaxScroll();
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }
                     y += SUBCATEGORY_HEADER_HEIGHT + 5;

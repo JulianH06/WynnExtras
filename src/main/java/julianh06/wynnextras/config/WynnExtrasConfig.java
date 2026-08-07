@@ -419,6 +419,9 @@ public class WynnExtrasConfig {
     public boolean professionOverlayExactXp = false;
     public Map<String, Float> professionOverflowXp = new HashMap<>();
     public Map<String, Float> professionGoals = new HashMap<>();
+    public Map<String, Integer> professionLevels = new HashMap<>();
+    public Map<String, Integer> professionXpCurrent = new HashMap<>();
+    public Map<String, Integer> professionXpMax = new HashMap<>();
 
     // ==================== RADIANT HUD ====================
     public boolean radiantHudEnabled = false;
@@ -640,6 +643,9 @@ public class WynnExtrasConfig {
                 if (INSTANCE.raidPBs == null) INSTANCE.raidPBs = new HashMap<>();
                 if (INSTANCE.professionOverflowXp == null) INSTANCE.professionOverflowXp = new HashMap<>();
                 if (INSTANCE.professionGoals == null) INSTANCE.professionGoals = new HashMap<>();
+                if (INSTANCE.professionLevels == null) INSTANCE.professionLevels = new HashMap<>();
+                if (INSTANCE.professionXpCurrent == null) INSTANCE.professionXpCurrent = new HashMap<>();
+                if (INSTANCE.professionXpMax == null) INSTANCE.professionXpMax = new HashMap<>();
                 if (INSTANCE.classCardAccentColors == null) INSTANCE.classCardAccentColors = new HashMap<>();
                 if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
                 INSTANCE.syncClassSelectionLines();

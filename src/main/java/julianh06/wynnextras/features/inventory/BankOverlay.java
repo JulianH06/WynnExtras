@@ -1,18 +1,6 @@
 package julianh06.wynnextras.features.inventory;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.features.inventory.PersonalStorageUtilitiesFeature;
-import com.wynntils.handlers.item.ItemAnnotation;
-import com.wynntils.models.containers.Container;
-import com.wynntils.models.containers.containers.personal.AccountBankContainer;
-import com.wynntils.models.containers.containers.personal.BookshelfContainer;
-import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
-import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
-import com.wynntils.models.gear.type.GearType;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.items.game.CraftedGearItem;
-import com.wynntils.models.items.items.game.GearItem;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.CharInputEvent;
@@ -25,6 +13,11 @@ import julianh06.wynnextras.features.inventory.data.*;
 import julianh06.wynnextras.features.misc.ClassSelectionOverlay;
 import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
+import julianh06.wynnextras.wynncraft.state.CharacterState;
+import julianh06.wynnextras.wynncraft.item.WynnItemParser;
+import julianh06.wynnextras.compat.wynntils.WynntilsBankAdapter;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
@@ -46,7 +39,6 @@ import org.lwjgl.glfw.GLFW;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 @WEModule
@@ -55,7 +47,7 @@ public class BankOverlay {
     private static final Pattern MINECRAFT_FORMATTING_CODE_PATTERN = Pattern.compile("§[0-9a-fk-or]");
     public static final DefaultedList<Slot> playerInvSlots = DefaultedList.of();
     public static final DefaultedList<Slot> activeInvSlots = DefaultedList.of();
-    private static PersonalStorageUtilitiesFeature personalStorageUtils;
+    private static WynntilsBankAdapter.StorageHandle personalStorageUtils;
 
     public static BankData Pages;
 
@@ -63,7 +55,7 @@ public class BankOverlay {
 
     public static ItemStack heldItem = Items.AIR.getDefaultStack();
 
-    public static final Map<Integer, List<ItemAnnotation>> annotationCache = new HashMap<>();
+    public static final Map<Integer, List<WynntilsBankAdapter.AnnotationHandle>> annotationCache = new HashMap<>();
 
     private static EasyTextInput activeTextInput;
 
@@ -84,11 +76,11 @@ public class BankOverlay {
     private static long lastHeldWeaponCheckMs = 0;
     private static String lastPersistedHeldWeaponKey = "";
 
-    public static PersonalStorageUtilitiesFeature getPersonalStorageUtils() {
+    public static WynntilsBankAdapter.StorageHandle getPersonalStorageUtils() {
         return personalStorageUtils;
     }
 
-    public static void setPersonalStorageUtils(PersonalStorageUtilitiesFeature feature) {
+    public static void setPersonalStorageUtils(WynntilsBankAdapter.StorageHandle feature) {
         personalStorageUtils = feature;
     }
 
@@ -116,10 +108,7 @@ public class BankOverlay {
     }
 
     public static boolean syncCurrentCharacterId() {
-        String characterId = getCurrentCharacterIdFromCompass();
-        if (characterId == null) {
-            characterId = Models.Character.getId();
-        }
+        String characterId = CharacterState.id().orElseGet(BankOverlay::getCurrentCharacterIdFromCompass);
         if (characterId == null || characterId.isBlank() || "-".equals(characterId) || "null".equalsIgnoreCase(characterId)) {
             return false;
         }
@@ -235,7 +224,7 @@ public class BankOverlay {
 
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null || client.player == null) return;
-        if (!Models.WorldState.onWorld()) return;
+        if (!MinecraftUtils.isOnWynncraft()) return;
         boolean syncedCharacterId = syncCurrentCharacterId();
         if (!syncedCharacterId && !hasValidCurrentCharacterId()) return;
 
@@ -253,22 +242,7 @@ public class BankOverlay {
     private static boolean isWeapon(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
 
-        Optional<WynnItem> item = Models.Item.getWynnItem(stack);
-        if (item.isEmpty()) return false;
-
-        GearType gearType = null;
-        WynnItem wynnItem = item.get();
-        if (wynnItem instanceof GearItem gearItem) {
-            gearType = gearItem.getGearType();
-        } else if (wynnItem instanceof CraftedGearItem craftedGearItem) {
-            gearType = craftedGearItem.getGearType();
-        }
-
-        return gearType == GearType.SPEAR
-                || gearType == GearType.DAGGER
-                || gearType == GearType.BOW
-                || gearType == GearType.WAND
-                || gearType == GearType.RELIK;
+        return WynnItemParser.parse(stack).map(item -> item.gearType().isWeapon()).orElse(false);
     }
 
     private static String getStackKey(ItemStack stack) {
@@ -277,33 +251,26 @@ public class BankOverlay {
     }
 
     public static void updateOverlayType() {
-        Container container = Models.Container.getCurrentContainer();
-        switch (container) {
-            case AccountBankContainer accountBankContainer -> {
-                BankOverlay.currentOverlayType = BankOverlayType.ACCOUNT;
-                BankOverlay.currentData = AccountBankData.INSTANCE;
-                currentMaxPages = 21;
-            }
-            case CharacterBankContainer characterBankContainer -> {
-                BankOverlay.currentOverlayType = BankOverlayType.CHARACTER;
-                BankOverlay.syncCurrentCharacterId();
-                BankOverlay.currentData = CharacterBankData.INSTANCE;
-                currentMaxPages = 12;
-            }
-            case BookshelfContainer bookshelfContainer -> {
-                BankOverlay.currentOverlayType = BankOverlayType.BOOKSHELF;
-                BankOverlay.currentData = BookshelfData.INSTANCE;
-                currentMaxPages = 12;
-            }
-            case MiscBucketContainer miscBucketContainer -> {
-                BankOverlay.currentOverlayType = BankOverlayType.MISC;
-                BankOverlay.currentData = MiscBucketData.INSTANCE;
-                currentMaxPages = 12;
-            }
-            case null, default -> {
-                BankOverlay.currentOverlayType = BankOverlayType.NONE;
-                BankOverlay.currentData = null;
-            }
+        if (WynncraftMenuService.isCurrent(MenuType.ACCOUNT_BANK)) {
+            BankOverlay.currentOverlayType = BankOverlayType.ACCOUNT;
+            BankOverlay.currentData = AccountBankData.INSTANCE;
+            currentMaxPages = 21;
+        } else if (WynncraftMenuService.isCurrent(MenuType.CHARACTER_BANK)) {
+            BankOverlay.currentOverlayType = BankOverlayType.CHARACTER;
+            BankOverlay.syncCurrentCharacterId();
+            BankOverlay.currentData = CharacterBankData.INSTANCE;
+            currentMaxPages = 12;
+        } else if (WynncraftMenuService.isCurrent(MenuType.BOOKSHELF)) {
+            BankOverlay.currentOverlayType = BankOverlayType.BOOKSHELF;
+            BankOverlay.currentData = BookshelfData.INSTANCE;
+            currentMaxPages = 12;
+        } else if (WynncraftMenuService.isCurrent(MenuType.MISC_BUCKET)) {
+            BankOverlay.currentOverlayType = BankOverlayType.MISC;
+            BankOverlay.currentData = MiscBucketData.INSTANCE;
+            currentMaxPages = 12;
+        } else {
+            BankOverlay.currentOverlayType = BankOverlayType.NONE;
+            BankOverlay.currentData = null;
         }
     }
 
@@ -320,9 +287,9 @@ public class BankOverlay {
             MinecraftClient client = MinecraftClient.getInstance();
             if(client.player == null || client.world == null) { return; }
 
-            ScreenHandler currScreenHandler = McUtils.containerMenu();
+            ScreenHandler currScreenHandler = MinecraftUtils.containerMenu();
 
-            Screen currScreen = McUtils.mc().currentScreen;
+            Screen currScreen = MinecraftUtils.mc().currentScreen;
             if(currScreen == null) {
                 resetScrollRegistration();
                 return;

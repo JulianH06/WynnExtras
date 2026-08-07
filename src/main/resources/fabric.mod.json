@@ -50,14 +50,14 @@
         ]
 	},
 	"mixins": [
-      "wynnextras.mixins.json"
+      "wynnextras.mixins.json",
+      "wynnextras.wynntils.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.16.10",
 		"minecraft": "~1.21.4",
 		"java": ">=21",
-		"fabric-api": "*",
-		"wynntils": ">=3.3.4"
+		"fabric-api": "*"
 	},
 	"suggests": {
 		"modmenu": "*"

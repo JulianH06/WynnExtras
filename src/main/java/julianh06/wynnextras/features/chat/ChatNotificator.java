@@ -1,8 +1,7 @@
 package julianh06.wynnextras.features.chat;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
@@ -59,7 +58,7 @@ public class ChatNotificator {
     };
 
     public static void notify(Text message) {
-        if(message.getString().contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = Time.now().timestamp() + 90_000;
+        if(message.getString().contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = System.currentTimeMillis() + 90_000;
 
         handleBombshareSuggestion(message);
 
@@ -96,7 +95,7 @@ public class ChatNotificator {
         activeColor = WynnExtrasConfig.INSTANCE.textColor.getRGB() | 0xFF000000;
         startTimeMs = System.currentTimeMillis();
         expireTimeMs = System.currentTimeMillis() + WynnExtrasConfig.INSTANCE.textDurationInMs;
-        McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(WynnExtrasConfig.INSTANCE.notificationSound.getSoundId())), WynnExtrasConfig.INSTANCE.soundVolume / 100, WynnExtrasConfig.INSTANCE.soundPitch / 100);
+        MinecraftUtils.playSoundAmbient(SoundEvent.of(Identifier.of(WynnExtrasConfig.INSTANCE.notificationSound.getSoundId())), WynnExtrasConfig.INSTANCE.soundVolume / 100, WynnExtrasConfig.INSTANCE.soundPitch / 100);
     }
 
     private static void renderHud(DrawContext ctx, RenderTickCounter tickCounter) {
@@ -201,7 +200,7 @@ public class ChatNotificator {
                 text.append(Text.literal("  "))
                         .append(Text.literal("§c§n[Disable]").setStyle(Style.EMPTY
                                 .withClickEvent(new ClickEvent.RunCommand("/we bombshare toggle"))));
-                McUtils.sendMessageToClient(text);
+                MinecraftUtils.sendMessageToClient(text);
             });
             break;
         }

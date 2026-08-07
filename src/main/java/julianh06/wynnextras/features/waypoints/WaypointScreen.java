@@ -1,10 +1,10 @@
 package julianh06.wynnextras.features.waypoints;
 
 import com.google.gson.JsonSyntaxException;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.waypoints.data.Waypoint;
 import julianh06.wynnextras.features.waypoints.data.WaypointCategory;
@@ -470,7 +470,7 @@ public class WaypointScreen extends WEScreen {
             MainWidget.activePackage = waypointPackage;
             rebuildPackageWidgetsFromData();
             MainWidget.invalidateAllTabs();
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         }
 
         private void importPackageFromClipboard(double mx, double my) {
@@ -486,7 +486,7 @@ public class WaypointScreen extends WEScreen {
             } catch (Exception e) {
                 showFeedback("Failed to import package.", false, mx, my, ui);
             }
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         }
 
         private static class PackageWidget extends Widget {
@@ -598,7 +598,7 @@ public class WaypointScreen extends WEScreen {
                 if (isToggleHovered(mx, my)) {
                     WaypointActions.setPackageEnabled(waypointPackage, !waypointPackage.enabled);
                     MainWidget.invalidateAllTabs();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 clicked = true;
@@ -610,7 +610,7 @@ public class WaypointScreen extends WEScreen {
             @Override
             public boolean mouseReleased(double mx, double my, int button) {
                 if(clicked && !isDragging) {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     if(MainWidget.activePackage == waypointPackage) {
                         MainWidget.activePackage = null;
                     } else {
@@ -895,7 +895,7 @@ public class WaypointScreen extends WEScreen {
             protected boolean onClick(int button) {
                 activeTab = tab;
                 updateActiveTab();
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
 
@@ -942,7 +942,7 @@ public class WaypointScreen extends WEScreen {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 action.run();
                 return true;
             }
@@ -1210,7 +1210,7 @@ public class WaypointScreen extends WEScreen {
                 @Override
                 protected boolean onClick(int button) {
                     collapsed = !collapsed;
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
 
@@ -1240,7 +1240,7 @@ public class WaypointScreen extends WEScreen {
                     waypointToExpand = WaypointActions.createWaypoint(MainWidget.activePackage, category, pos);
                     WaypointsTabContent tab = MainWidget.waypointsTab;
                     if (tab != null) tab.invalidate();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 }
 
                 private boolean isIn(double mx, double my, int x, int y, int width, int height) {
@@ -1413,7 +1413,7 @@ public class WaypointScreen extends WEScreen {
 
                         if (isIn(mx, my, x + 25 + 135, y + COLLAPSED_HEIGHT + 18 + 232, Math.max(240, width - 185), 40)) {
                             categoryExpanded = !categoryExpanded;
-                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             return true;
                         }
 
@@ -1436,36 +1436,36 @@ public class WaypointScreen extends WEScreen {
                         }
                         if (isIn(mx, my, fieldX + actionW + actionGap, actionsY, actionW, 40)) {
                             waypointToExpand = WaypointActions.duplicateWaypoint(MainWidget.activePackage, waypoint);
-                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             WaypointsTabContent tab = MainWidget.waypointsTab;
                             if (tab != null) tab.invalidate();
                             return true;
                         }
                         if (isIn(mx, my, fieldX + (actionW + actionGap) * 2, actionsY, actionW, 40)) {
                             WaypointActions.deleteWaypoint(MainWidget.activePackage, waypoint);
-                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             WaypointsTabContent tab = MainWidget.waypointsTab;
                             if (tab != null) tab.invalidate();
                             return true;
                         }
                         if (isIn(mx, my, fieldX, visibilityY, toggleWidth, 40)) {
                             WaypointActions.setWaypointVisibility(waypoint, WaypointActions.VisibilityTarget.NAME, nextOverride(waypoint.showNameOverride));
-                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             return true;
                         }
                         if (isIn(mx, my, fieldX + toggleWidth + toggleGap, visibilityY, toggleWidth, 40)) {
                             WaypointActions.setWaypointVisibility(waypoint, WaypointActions.VisibilityTarget.BLOCK, nextOverride(waypoint.showOverride));
-                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             return true;
                         }
                         if (isIn(mx, my, fieldX, visibilityY + 48, toggleWidth, 40)) {
                             WaypointActions.setWaypointVisibility(waypoint, WaypointActions.VisibilityTarget.DISTANCE, nextOverride(waypoint.showDistanceOverride));
-                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             return true;
                         }
                         if (isIn(mx, my, fieldX + toggleWidth + toggleGap, visibilityY + 48, toggleWidth, 40)) {
                             WaypointActions.setWaypointVisibility(waypoint, WaypointActions.VisibilityTarget.SEE_THROUGH, nextOverride(waypoint.seeThroughOverride));
-                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             return true;
                         }
                     }
@@ -1474,7 +1474,7 @@ public class WaypointScreen extends WEScreen {
                         expanded = !expanded;
                         categoryExpanded = false;
                         setFocused(true);
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }
 
@@ -1495,7 +1495,7 @@ public class WaypointScreen extends WEScreen {
                             waypoint.setCategory(category);
                             categoryExpanded = false;
                             waypointToExpand = waypoint;
-                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             WaypointActions.setWaypointCategory(waypoint, category);
                             WaypointsTabContent tab = MainWidget.waypointsTab;
                             if (tab != null) tab.invalidate();
@@ -1664,7 +1664,7 @@ public class WaypointScreen extends WEScreen {
             }
 
             private void saveCategoryDefaults() {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 MainWidget.invalidateAllTabs();
             }
 
@@ -1906,7 +1906,7 @@ public class WaypointScreen extends WEScreen {
                         String categoryName = category.name == null || category.name.isBlank() ? "Category" : category.name;
                         openConfirm("Delete Category?", "Delete \"" + categoryName + "\"? Its waypoints will move to uncategorized.", () -> {
                             WaypointActions.deleteCategory(activePackage, category);
-                            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             MainWidget.invalidateAllTabs();
                         });
                         return true;
@@ -2034,7 +2034,7 @@ public class WaypointScreen extends WEScreen {
                 int buttonY = y + 445;
                 if (isIn(mx, my, contentX, buttonY, 180, 44)) {
                     WaypointActions.setPackageEnabled(activePackage, !activePackage.enabled);
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 if (isIn(mx, my, contentX + 200, buttonY, 180, 44)) {
@@ -2043,7 +2043,7 @@ public class WaypointScreen extends WEScreen {
                     WaypointData.INSTANCE.activePackage = copy;
                     if (sideBarWidget != null) sideBarWidget.rebuildPackageWidgetsFromData();
                     MainWidget.invalidateAllTabs();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 if (isIn(mx, my, contentX + 400, buttonY, 180, 44)) {
@@ -2053,7 +2053,7 @@ public class WaypointScreen extends WEScreen {
                     } catch (Exception e) {
                         showFeedback("Failed to export package.", false, mx, my, ui);
                     }
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 if (isIn(mx, my, contentX + 600, buttonY, 180, 44)) {
@@ -2065,7 +2065,7 @@ public class WaypointScreen extends WEScreen {
                         WaypointData.INSTANCE.activePackage = activePackage;
                         if (sideBarWidget != null) sideBarWidget.rebuildPackageWidgetsFromData();
                         MainWidget.invalidateAllTabs();
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     }, () -> new WaypointScreen(activePackage, null));
                     return true;
                 }

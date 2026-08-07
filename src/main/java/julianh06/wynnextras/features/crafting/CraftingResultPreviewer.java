@@ -1,11 +1,11 @@
 package julianh06.wynnextras.features.crafting;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
-import com.wynntils.models.gear.type.GearAttackSpeed;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.FontRenderer;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
+import julianh06.wynnextras.features.crafting.model.GearAttackSpeed;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.FontRenderer;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
@@ -73,7 +73,7 @@ public class CraftingResultPreviewer {
     }
 
     public static void onRender(DrawContext context) {
-        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
+        if (!WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)) return;
 
         if (!WynnExtrasConfig.INSTANCE.craftingPreviewOverlay) return;
 
@@ -118,8 +118,8 @@ public class CraftingResultPreviewer {
             currentHeight = height;
         }
 
-        if (McUtils.player() == null) return;
-        DefaultedList<ItemStack> stacks = McUtils.containerMenu().getStacks();
+        if (MinecraftUtils.player() == null) return;
+        DefaultedList<ItemStack> stacks = MinecraftUtils.containerMenu().getStacks();
         if (sameStacks(stacks, CraftingResultPreviewer.stacks))
             return; // probably a slot changed even but i dont wanna find it
         CraftingResultPreviewer.stacks = copyStacks(stacks);
@@ -242,7 +242,7 @@ public class CraftingResultPreviewer {
     }
 
     public static void handleClick(double mouseX, double mouseY, int button, int action) {
-        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
+        if (!WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)) return;
         if (currentWidth == 0 || currentHeight == 0) return;
 
         loadConfig();

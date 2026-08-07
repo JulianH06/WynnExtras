@@ -8,7 +8,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
@@ -191,12 +191,12 @@ public class WynncraftApiHandler {
                 String key = StringArgumentType.getString(context, "key");
                 if(key.equals("clear")) {
                     WynncraftAuthManager.clearApiKey();
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully cleared your api key.")));
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully cleared your api key.")));
                     return 1;
                 }
 
                 WynncraftAuthManager.setApiKey(key);
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully set your api key." +
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully set your api key." +
                         " It has been saved in your config. Don't share it publicly.")));
                 return 1;
             },
@@ -208,7 +208,7 @@ public class WynncraftApiHandler {
             "apikey",
             "",
             context -> {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("""
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("""
                         You can use either OAuth or an api key to authorize. OAuth is easier to setup but an api key
                         might give you more access (like for the semi-private stats of friends or guild members)
                         You can add an API key like this: "/WynnExtras apikey <your key>".
@@ -240,12 +240,12 @@ public class WynncraftApiHandler {
                     int status = response.statusCode();
                     if (status == 404) return null;
                     if (status == 429) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                                 Text.of("§cMojang API rate limit reached. Please wait a moment.")));
                         return null;
                     }
                     if (status != 200) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                                 Text.of("§cMojang API error (" + status + "). Please try again.")));
                         return null;
                     }
@@ -385,7 +385,7 @@ public class WynncraftApiHandler {
         return fetchUUID(playerName).thenCompose(rawUUID -> {
             if (rawUUID == null) {
                 if (verbose) {
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§cPlayername is incorrect or unknown.")));
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§cPlayername is incorrect or unknown.")));
                 }
                 return CompletableFuture.completedFuture(null);
             }
@@ -558,7 +558,7 @@ public class WynncraftApiHandler {
 
     public static CompletableFuture<FetchResult> fetchPlayerAspectData(String playerUUID) {
         if (playerUUID == null) {
-            McUtils.sendMessageToClient(Text.of("§cUUID is null!"));
+            MinecraftUtils.sendMessageToClient(Text.of("§cUUID is null!"));
             return CompletableFuture.completedFuture(null);
         }
 
@@ -616,7 +616,7 @@ public class WynncraftApiHandler {
     }
 
     public static void processAspects(Map<String, Pair<String, String>> map) {
-        if (McUtils.player() == null) {
+        if (MinecraftUtils.player() == null) {
             WynnExtras.LOGGER.error("Cannot upload aspects - player not loaded");
             return;
         }
@@ -688,18 +688,18 @@ public class WynncraftApiHandler {
                         .thenAccept(response -> {
                             int code = response.statusCode();
                             if (code == 401) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
                                 WynnExtras.LOGGER.error("Personal aspects upload auth error: " + response.body());
                             } else if (code >= 500) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cServer error - try again later"));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cServer error - try again later"));
                                 WynnExtras.LOGGER.error("Personal aspects upload error: " + code + " → " + response.body());
                             } else if(code != 200) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed (error " + code + ")"));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed (error " + code + ")"));
                                 WynnExtras.LOGGER.error("Personal aspects upload error: " + code + " → " + response.body());
                             }
                         })
                         .exceptionally(ex -> {
-                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed - check your connection"));
+                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed - check your connection"));
                             WynnExtras.LOGGER.error("Failed to upload personal aspects: " + ex.getMessage());
                             return null;
                         });
@@ -759,7 +759,7 @@ public class WynncraftApiHandler {
      * @param gambits List of gambits with name and description
      */
     public static void uploadGambits(List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry> gambits) {
-        if (McUtils.player() == null) {
+        if (MinecraftUtils.player() == null) {
             WynnExtras.LOGGER.error("Cannot upload gambits - player not loaded");
             return;
         }
@@ -803,9 +803,9 @@ public class WynncraftApiHandler {
                         .thenAccept(response -> {
                             int code = response.statusCode();
                             if(code == 401) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
                             } else if(code != 200) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading gambits: " + code));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading gambits: " + code));
                             }
                         })
                         .exceptionally(ex -> {
@@ -815,7 +815,7 @@ public class WynncraftApiHandler {
 
             } catch (Exception e) {
                 e.printStackTrace();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError preparing gambits upload"));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError preparing gambits upload"));
             }
         });
     }

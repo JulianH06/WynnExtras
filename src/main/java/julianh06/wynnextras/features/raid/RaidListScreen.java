@@ -1,14 +1,12 @@
 package julianh06.wynnextras.features.raid;
 
-import com.wynntils.core.text.StyledText;
-import com.wynntils.models.raid.raids.*;
-import com.wynntils.models.raid.type.RaidRoomInfo;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.render.FontRenderer;
-import com.wynntils.utils.render.RenderUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.TextShadow;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.utils.text.StyledText;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.render.FontRenderer;
+import julianh06.wynnextras.utils.render.RenderUtils;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.TextShadow;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
@@ -141,7 +139,7 @@ public class RaidListScreen extends Screen {
 
 
             if (yPos + 80 + currentCollapsedProgress.get(i) >= 0 && yPos <= screenHeight) {
-                Identifier raidTexture = getTexture(raid.raidInfo.getRaidKind());
+                Identifier raidTexture = getTexture(raid.raidInfo.raidKind());
                 RenderUtils.drawTexturedRect(context, ScrollTextureTopLeft, CustomColor.NONE, xStart, yPos, 12, 20, 12, 20);
                 RenderUtils.drawTexturedRect(context, ScrollTextureTopMid, CustomColor.NONE, xStart + 12, yPos, width - 24, 20, width - 24, 20);
                 RenderUtils.drawTexturedRect(context, ScrollTextureTopRight, CustomColor.NONE, xStart - 12 + width, yPos, 12, 20, 12, 20);
@@ -182,17 +180,17 @@ public class RaidListScreen extends Screen {
                          FontRenderer.getInstance().renderText(context, StyledText.fromString(name), xStart + 20, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                     }
                 }
-                Map<Integer, RaidRoomInfo> challenges = raid.raidInfo.getChallenges();
+                Map<Integer, RaidRoomData> challenges = raid.raidInfo.challenges();
                 if(challenges != null) {
                     for(int j = 0; j < challenges.size(); j++) {
                         if(currentCollapsedProgress.get(i) >= 20 * j) {
-                            RaidRoomInfo room = challenges.get(j + 1);
+                            RaidRoomData room = challenges.get(j + 1);
                             if (room == null) continue;
-                            long roomDuration = room.getRoomTotalTime();
-                            if(room.getRoomEndTime() == -1) roomDuration = -1;
-                            String roomString = room.getRoomName() + ": " + formatDuration(roomDuration);
+                            long roomDuration = room.totalTime();
+                            if(room.endTime() == -1) roomDuration = -1;
+                            String roomString = room.name() + ": " + formatDuration(roomDuration);
 //                                16 for nol because parasite
-                            if(raid.raidInfo.getRaidKind() instanceof OrphionsNexusOfLightRaid) {
+                            if(raid.raidInfo.raidKind() == WERaidKind.NOL) {
                                 FontRenderer.getInstance().renderText(context, StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 20, yPos + 24 + j * 16, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                             } else {
                                 FontRenderer.getInstance().renderText(context, StyledText.fromString(roomString), xStart + width - textRenderer.getWidth(roomString) - 20, yPos + 26 + j * 20, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
@@ -205,7 +203,7 @@ public class RaidListScreen extends Screen {
                 RenderUtils.drawTexturedRect(context, ScrollTextureBottomMid, CustomColor.NONE, xStart + 12, yPos + 20 + currentCollapsedProgress.get(i), width - 24, 20, width - 24, 20);
                 RenderUtils.drawTexturedRect(context, ScrollTextureBottomRight, CustomColor.NONE, xStart - 12 + width, yPos + 20 + currentCollapsedProgress.get(i), 12, 20, 12, 20);
                 if (raidTexture != null) RenderUtils.drawTexturedRect(context, raidTexture, CustomColor.NONE, xStart + width / 2 - 15, yPos - 5, 30, 30, 30, 30);
-                FontRenderer.getInstance().renderText(context, StyledText.fromString(raid.raidInfo.getRaidKind().getRaidName()), xStart + 10, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
+                FontRenderer.getInstance().renderText(context, StyledText.fromString(raid.raidInfo.raidKind().displayName()), xStart + 10, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 FontRenderer.getInstance().renderText(context, StyledText.fromString(convertTime(raid.raidEndTime)), xStart + width - textRenderer.getWidth(convertTime(raid.raidEndTime)) - 8, (int) (yPos + 6), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 FontRenderer.getInstance().renderText(context, StyledText.fromString(formatDuration(raid.duration)), xStart + width - textRenderer.getWidth(formatDuration(raid.duration)) - 8, (int) (yPos + 26 + currentCollapsedProgress.get(i)), CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP, TextShadow.NORMAL, 1.0f);
                 if(raid.completed) {
@@ -300,16 +298,14 @@ public class RaidListScreen extends Screen {
         super.close();
     }
 
-    public Identifier getTexture(RaidKind raidKind) {
-        // Wynntils 4.1.9 renamed The Wartorn Palace abbreviation from "TWP" to "WTP".
-        // Accept both so the texture lookup works on either Wynntils version.
-        return switch (raidKind.getAbbreviation()) {
-            case "NOG" -> NOTGTexture;
-            case "TNA" -> TNATexture;
-            case "NOL" -> NOLTexture;
-            case "TCC" -> TCCTexture;
-            case "TWP", "WTP" -> TWPTexture;
-            default -> null;
+    public Identifier getTexture(WERaidKind raidKind) {
+        return switch (raidKind) {
+            case NOTG -> NOTGTexture;
+            case TNA -> TNATexture;
+            case NOL -> NOLTexture;
+            case TCC -> TCCTexture;
+            case TWP -> TWPTexture;
+            case UNKNOWN -> null;
         };
     }
 
@@ -448,23 +444,23 @@ public class RaidListScreen extends Screen {
                 continue;
             }
 
-            if(NOTGFilterButton.isActive && raid.raidInfo.getRaidKind() instanceof NestOfTheGrootslangsRaid) {
+            if(NOTGFilterButton.isActive && raid.raidInfo.raidKind() == WERaidKind.NOTG) {
                 result.add(raid);
                 continue;
             }
-            if(NOLFilterButton.isActive && raid.raidInfo.getRaidKind() instanceof OrphionsNexusOfLightRaid) {
+            if(NOLFilterButton.isActive && raid.raidInfo.raidKind() == WERaidKind.NOL) {
                 result.add(raid);
                 continue;
             }
-            if(TCCFilterButton.isActive && raid.raidInfo.getRaidKind() instanceof TheCanyonColossusRaid) {
+            if(TCCFilterButton.isActive && raid.raidInfo.raidKind() == WERaidKind.TCC) {
                 result.add(raid);
                 continue;
             }
-            if(TNAFilterButton.isActive && raid.raidInfo.getRaidKind() instanceof TheNamelessAnomalyRaid) {
+            if(TNAFilterButton.isActive && raid.raidInfo.raidKind() == WERaidKind.TNA) {
                 result.add(raid);
                 continue;
             }
-            if(TWPFilterButton.isActive && raid.raidInfo.getRaidKind() instanceof TheWartornPalaceRaid) {
+            if(TWPFilterButton.isActive && raid.raidInfo.raidKind() == WERaidKind.TWP) {
                 result.add(raid);
                 continue;
             }

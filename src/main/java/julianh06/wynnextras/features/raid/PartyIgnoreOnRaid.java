@@ -1,8 +1,7 @@
 package julianh06.wynnextras.features.raid;
 
-import com.wynntils.core.components.Handlers;
-import com.wynntils.core.components.Models;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.state.PartyState;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.ChatEvent;
@@ -33,26 +32,30 @@ public class PartyIgnoreOnRaid {
 
     public static void onRaidStarted() {
         if (!WynnExtrasConfig.INSTANCE.autoIgnorePartyInRaid) return;
-        // /party list is already queued in RaidStartEventMixin; wait for Wynntils to parse it.
+        PartyState.requestRefresh();
         TickScheduler.runAfterTicks(40, PartyIgnoreOnRaid::ignoreCurrentParty);
     }
 
     private static void ignoreCurrentParty() {
         if (!WynnExtrasConfig.INSTANCE.autoIgnorePartyInRaid) return;
-        List<String> members;
-        try { members = Models.Party.getPartyMembers(); } catch (Exception e) { return; }
+        if (PartyState.isStale()) {
+            PartyState.requestRefresh();
+            TickScheduler.runAfterTicks(20, PartyIgnoreOnRaid::ignoreCurrentParty);
+            return;
+        }
+        List<String> members = PartyState.members();
         if (members == null || members.isEmpty()) return;
-        String self = McUtils.playerName();
+        String self = MinecraftUtils.playerName();
         int count = 0;
         for (String name : members) {
             if (name == null || name.isEmpty()) continue;
             if (self != null && name.equalsIgnoreCase(self)) continue;
-            Handlers.Command.queueCommand("ignore add " + name);
+            PartyState.sendCommand("ignore add " + name);
             autoIgnoredThisRaid.add(name);
             count++;
         }
         if (count > 0) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                     Text.of("§7Auto-ignored " + count + " party " + (count == 1 ? "member" : "members") + " for this raid.")));
         }
     }
@@ -62,10 +65,10 @@ public class PartyIgnoreOnRaid {
         if (autoIgnoredThisRaid.isEmpty()) return;
         int count = autoIgnoredThisRaid.size();
         for (String name : autoIgnoredThisRaid) {
-            Handlers.Command.queueCommand("ignore remove " + name);
+            PartyState.sendCommand("ignore remove " + name);
         }
         autoIgnoredThisRaid.clear();
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                 Text.of("§7Un-ignored " + count + " party " + (count == 1 ? "member" : "members") + ".")));
     }
 

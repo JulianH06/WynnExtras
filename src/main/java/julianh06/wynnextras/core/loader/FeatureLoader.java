@@ -9,16 +9,21 @@ import java.util.Set;
 
 public class FeatureLoader implements WELoader {
     public FeatureLoader() {
-        Reflections reflections = new Reflections("julianh06.wynnextras");
-
-        Set<Class<?>> featureClasses = reflections.getTypesAnnotatedWith(WEModule.class);
+        Set<Class<?>> featureClasses;
+        try {
+            Reflections reflections = new Reflections("julianh06.wynnextras");
+            featureClasses = reflections.getTypesAnnotatedWith(WEModule.class);
+        } catch (Throwable throwable) {
+            Core.LOGGER.logError("Failed to discover WynnExtras modules", throwable);
+            return;
+        }
 
         for (Class<?> clazz: featureClasses) {
             try {
                 Object instance = clazz.getDeclaredConstructor().newInstance();
                 WEEventBus.registerEventListener(instance);
-            } catch (Exception e) {
-                Core.LOGGER.logError("Failed to load module: " + clazz.getName(), e);
+            } catch (Throwable throwable) {
+                Core.LOGGER.logError("Failed to load module: " + clazz.getName(), throwable);
             }
         }
     }

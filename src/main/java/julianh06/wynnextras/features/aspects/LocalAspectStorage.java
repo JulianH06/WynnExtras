@@ -2,7 +2,7 @@ package julianh06.wynnextras.features.aspects;
 
 import julianh06.wynnextras.core.WynnExtras;
 import com.google.gson.*;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Pair;
 
@@ -19,8 +19,8 @@ public class LocalAspectStorage {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private static Path getPlayerDir() {
-        if (McUtils.player() == null) return null;
-        String uuid = McUtils.player().getUuidAsString();
+        if (MinecraftUtils.player() == null) return null;
+        String uuid = MinecraftUtils.player().getUuidAsString();
         Path dir = FabricLoader.getInstance().getConfigDir().resolve("wynnextras").resolve("aspects").resolve(uuid);
         try { Files.createDirectories(dir); } catch (IOException e) {
             WynnExtras.LOGGER.error("Failed to create aspects directory: " + e.getMessage());
@@ -39,7 +39,7 @@ public class LocalAspectStorage {
     }
 
     public static void save(Map<String, Pair<String, String>> map) {
-        if (McUtils.player() == null) return;
+        if (MinecraftUtils.player() == null) return;
         Path file = getDataFile();
         if (file == null) return;
 

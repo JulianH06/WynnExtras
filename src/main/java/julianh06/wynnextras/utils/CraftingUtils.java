@@ -1,15 +1,10 @@
 package julianh06.wynnextras.utils;
 
 import julianh06.wynnextras.features.crafting.data.CraftingDataService;
-import com.wynntils.core.components.Managers;
-import com.wynntils.features.tooltips.ItemStatInfoFeature;
-import com.wynntils.handlers.tooltip.type.TooltipIdentificationDecorator;
-import com.wynntils.models.elements.type.Skill;
-import com.wynntils.models.ingredients.type.IngredientInfo;
-import com.wynntils.models.stats.type.StatPossibleValues;
-import com.wynntils.utils.mc.KeyboardUtils;
-import com.wynntils.utils.type.Pair;
-import com.wynntils.utils.type.RangedValue;
+import julianh06.wynnextras.features.crafting.model.IngredientInfo;
+import julianh06.wynnextras.features.crafting.model.RangedValue;
+import julianh06.wynnextras.features.crafting.model.Skill;
+import julianh06.wynnextras.features.crafting.model.StatPossibleValues;
 
 import java.util.*;
 import java.util.function.Function;
@@ -137,10 +132,4 @@ public class CraftingUtils {
         }
     }
 
-    // everything has private access its annoying so im just checking keyboard
-    public static TooltipIdentificationDecorator getDecorator() {
-        ItemStatInfoFeature feature = Managers.Feature.getFeatureInstance(ItemStatInfoFeature.class);
-        // ctr is roll chances and ctr+shift is internal roll neither of which we want on crafted
-        return feature.identificationDecorations.get() && !KeyboardUtils.isControlDown() ? feature.getIdentificationDecorator() : null;
-    }
 }

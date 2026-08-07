@@ -1,9 +1,8 @@
 package julianh06.wynnextras.features.aspects.pages;
 
 import com.google.gson.JsonObject;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
@@ -457,7 +456,7 @@ public class RaidItemsPage extends PageWidget {
 
                 if ("shiny".equals(item.type)) {
                     ui.drawText(drawName.replace("⬡ ", ""), textX + 20, textY,
-                            WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : WynncraftShaderColor.RAINBOW.color, textScale);
+                            WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : CustomColor.RAINBOW, textScale);
                 } else {
                     ui.drawText(rarityColor + drawName, textX + 20, textY, CustomColor.fromInt(0xFFFFFF), textScale);
                 }
@@ -571,7 +570,7 @@ public class RaidItemsPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 int buttonHeight = 30;
                 int scrollAreaHeight = height - buttonHeight;
 
@@ -601,7 +600,7 @@ public class RaidItemsPage extends PageWidget {
 
                 @Override
                 protected boolean onClick(int button) {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     isHold = true;
                     return true;
                 }
@@ -693,7 +692,7 @@ public class RaidItemsPage extends PageWidget {
             loading = false;
             available = false;
             WynncraftApiHandler.clearOfficialLootPoolsCache();
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }
@@ -754,7 +753,7 @@ public class RaidItemsPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             float maxOffset = getMax.get();
             int buttonWidth = Math.max(40, (int) (width * (width / (width + maxOffset))));
             int scrollAreaWidth = width - buttonWidth;
@@ -785,7 +784,7 @@ public class RaidItemsPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 isHold = true;
                 return true;
             }

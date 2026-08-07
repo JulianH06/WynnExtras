@@ -1,16 +1,14 @@
 package julianh06.wynnextras.features.crafting;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
-import com.wynntils.models.profession.type.ProfessionType;
-import com.wynntils.models.worlds.type.BombInfo;
-import com.wynntils.models.worlds.type.BombType;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
-import com.wynntils.utils.type.Time;
-import com.wynntils.utils.wynn.ContainerUtils;
+import julianh06.wynnextras.wynncraft.state.BombState;
+import julianh06.wynnextras.utils.enums.WEProfessionType;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
+import julianh06.wynnextras.utils.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
 import julianh06.wynnextras.features.crafting.data.CraftingDataService;
@@ -97,8 +95,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
     private static RecipeState state = RecipeState.NONE;
 
-    private final static Map<ProfessionType, Map<RecipeState, Float>> lastOffset = new HashMap<>();
-    private final static Map<ProfessionType, RecipeState> lastState = new HashMap<>();
+    private final static Map<WEProfessionType, Map<RecipeState, Float>> lastOffset = new HashMap<>();
+    private final static Map<WEProfessionType, RecipeState> lastState = new HashMap<>();
 
     private static boolean resizingTop = false;
     private static boolean resizingBottom = false;
@@ -158,8 +156,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         preparedMaterialNames.clear();
         preparedMaterialCounts.clear();
 
-        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
-        ProfessionType type = container.getProfessionType();
+        WEProfessionType type = WynncraftMenuService.currentCraftingProfession().orElse(null);
 
         if (type == null) return;
 
@@ -183,12 +180,12 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
-        if (!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
+        if (!WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)) return;
+        if (!(MinecraftUtils.screen() instanceof HandledScreen<?> screen)) return;
 
         if (state == null) state = RecipeState.NONE;
 
-        ProfessionType type = container.getProfessionType();
+        WEProfessionType type = WynncraftMenuService.currentCraftingProfession().orElse(null);
         lastState.put(type, state);
 
         int xStart = HandledScreenAccess.x(screen) + HandledScreenAccess.backgroundWidth(screen);
@@ -196,7 +193,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         int screenY = HandledScreenAccess.y(screen);
         int backgroundHeight = HandledScreenAccess.backgroundHeight(screen);
 
-        boolean big = (type == null || type == ProfessionType.ALCHEMISM || type == ProfessionType.COOKING || type == ProfessionType.SCRIBING);
+        boolean big = (type == null || type == WEProfessionType.ALCHEMISM || type == WEProfessionType.COOKING || type == WEProfessionType.SCRIBING);
         int selBtnHeight = big ? 0 : 20;
         int helperPadding = big ? 18 : 14;
         int maxNineSliceH = 14 * 38 + helperPadding;
@@ -233,8 +230,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         currentWidgetWidth = widgetWidth;
         currentMaxWidgetWidth = getMaxWidgetWidth(screen, xStart);
 
-        if (profSpeedBombWidget == null) profSpeedBombWidget = new ProfBombWidget(BombType.PROFESSION_SPEED);
-        if (profXpBombWidget == null) profXpBombWidget = new ProfBombWidget(BombType.PROFESSION_XP);
+        if (profSpeedBombWidget == null) profSpeedBombWidget = new ProfBombWidget("PROFESSION_SPEED");
+        if (profXpBombWidget == null) profXpBombWidget = new ProfBombWidget("PROFESSION_XP");
         profSpeedBombWidget.refresh();
         profXpBombWidget.refresh();
 
@@ -255,9 +252,9 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         profSpeedBombWidget.draw(ctx, mouseX, mouseY, delta, ui);
         profXpBombWidget.draw(ctx, mouseX, mouseY, delta, ui);
 
-        boolean dontShowWorldText = profSpeedBombWidget.bomb != null && profSpeedBombWidget.bomb.server().equals(Models.WorldState.getCurrentWorldName());
+        boolean dontShowWorldText = profSpeedBombWidget.bomb != null && profSpeedBombWidget.bomb.server().equals(BombState.currentWorld());
 
-        if (profXpBombWidget.bomb != null && profXpBombWidget.bomb.server().equals(Models.WorldState.getCurrentWorldName()))
+        if (profXpBombWidget.bomb != null && profXpBombWidget.bomb.server().equals(BombState.currentWorld()))
             dontShowWorldText = true;
 
         if ((profXpBombWidget.isActive || profSpeedBombWidget.isActive) && !dontShowWorldText) {
@@ -323,9 +320,9 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         if (helperWidget.recipeData == null) {
             IRecipeData data = getRecipeDataInstance(type);
             if (
-                    type == ProfessionType.SCRIBING ||
-                            type == ProfessionType.ALCHEMISM ||
-                            type == ProfessionType.COOKING ||
+                    type == WEProfessionType.SCRIBING ||
+                            type == WEProfessionType.ALCHEMISM ||
+                            type == WEProfessionType.COOKING ||
                             state != RecipeState.NONE
             ) helperWidget.setRecipeData(data);
         }
@@ -403,7 +400,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         try {
             boolean hasOutput = false;
             for (int slot : RESULT_SLOTS) {
-                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                ItemStack stack = MinecraftUtils.containerMenu().getSlot(slot).getStack();
                 if (stack != null && !stack.isEmpty()) {
                     String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
                     if (!name.isEmpty() && !name.contains("Crafted Item Slot")) {
@@ -467,7 +464,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         return Math.max(MIN_WIDGET_WIDTH, screen.width - xStart - 20);
     }
 
-    private void setupSelectionWidget(SelectionWidget selectionWidget, ProfessionType type, int i, int maxWidgets, int xStart, int yStart, int widgetWidth) {
+    private void setupSelectionWidget(SelectionWidget selectionWidget, WEProfessionType type, int i, int maxWidgets, int xStart, int yStart, int widgetWidth) {
         int spacing = 4;
 
         int totalSpacing = spacing * (maxWidgets - 1);
@@ -481,7 +478,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         selectionWidget.setText(getSelectorText(type, i));
     }
 
-    private String getSelectorText(ProfessionType type, int i) {
+    private String getSelectorText(WEProfessionType type, int i) {
         return switch (type) {
             case ARMOURING -> switch (i) {
                 case 0 -> "Helmet";
@@ -625,7 +622,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             return;
         }
 
-        if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) {
+        if (!WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)) {
             wbStatusMessage = "Not at a crafting station.";
             return;
         }
@@ -648,7 +645,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         if (recipeData.type().isWeapon()) CraftingResultPreviewer.setImportedAttackSpeed(craft.attackSpeed());
 
         // Verify correct crafting station
-        ProfessionType stationProf = container.getProfessionType();
+        WEProfessionType stationProf = WynncraftMenuService.currentCraftingProfession().orElse(null);
         if (stationProf != recipeData.skill()) {
             wbStatusMessage = "Wrong station! The recipe needs " + recipeData.skill().getDisplayName() + ", you are at a " + stationProf.getDisplayName() + " station.";
             return;
@@ -711,11 +708,11 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         // Reset all crafting slots first (not counted in progress)
         try {
             for (int slot : new int[]{0, 9, 2, 3, 11, 12, 20, 21}) {
-                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                ItemStack stack = MinecraftUtils.containerMenu().getSlot(slot).getStack();
                 if (stack != null && !stack.isEmpty()) {
                     String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
                     if (!name.contains("Material Slot") && !name.contains("Ingredient Slot") && !name.isEmpty()) {
-                        ContainerUtils.clickOnSlot(slot, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+                        ContainerUtils.clickOnSlot(slot, MinecraftUtils.containerMenu().syncId, 0, MinecraftUtils.containerMenu().getStacks());
                     }
                 }
             }
@@ -751,7 +748,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
             // Check if slot 13 still shows "Incomplete Recipe"
             try {
-                ItemStack craftSlot = McUtils.containerMenu().getSlot(13).getStack();
+                ItemStack craftSlot = MinecraftUtils.containerMenu().getSlot(13).getStack();
                 String craftName = craftSlot.getCustomName() != null ? craftSlot.getCustomName().getString() : "";
                 if (craftName.contains("Incomplete")) {
                     wbStatusMessage = "Missing materials or ingredients!";
@@ -763,7 +760,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
             // Auto Start: shift-click the craft button (slot 13) after filling
             if (WynnExtrasConfig.INSTANCE.craftingAutoStart) {
-                ContainerUtils.shiftClickOnSlot(13, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+                ContainerUtils.shiftClickOnSlot(13, MinecraftUtils.containerMenu().syncId, 0, MinecraftUtils.containerMenu().getStacks());
                 wbStatusMessage = "Crafting!";
             }
             return;
@@ -775,7 +772,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         Integer next = WB_CLICK_QUEUE.poll();
         if (next == null) return;
 
-        ContainerUtils.clickOnSlot(next, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+        ContainerUtils.clickOnSlot(next, MinecraftUtils.containerMenu().syncId, 0, MinecraftUtils.containerMenu().getStacks());
         wbLastClick = now;
         wbClicksDone++;
     }
@@ -824,7 +821,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
     private static int countInventoryItems(String itemName) {
         int count = 0;
-        for (Slot slot : McUtils.containerMenu().slots) {
+        for (Slot slot : MinecraftUtils.containerMenu().slots) {
             try {
                 if (!(slot.inventory instanceof PlayerInventory)) continue;
                 if (slot.getStack().getCustomName() == null) continue;
@@ -838,7 +835,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
     private static void queueInventoryItem(ItemRequirement requirement, Map<Integer, Integer> queuedBySlot) {
         int remaining = requirement.amount();
-        for (Slot slot : McUtils.containerMenu().slots) {
+        for (Slot slot : MinecraftUtils.containerMenu().slots) {
             try {
                 if (remaining <= 0) return;
                 if (!(slot.inventory instanceof PlayerInventory)) continue;
@@ -892,12 +889,12 @@ public class CraftingHelperOverlay extends WEMenuExtension {
      * Read ingredient names currently in the crafting slots and save them.
      */
     private static void captureCurrentIngredients() {
-        if (McUtils.containerMenu() == null) return;
+        if (MinecraftUtils.containerMenu() == null) return;
         List<String> ingNames = new ArrayList<>();
         boolean hasAny = false;
         for (int slot : INGREDIENT_SLOTS) {
             try {
-                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                ItemStack stack = MinecraftUtils.containerMenu().getSlot(slot).getStack();
                 String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
                 if (!name.isEmpty() && !name.contains("Ingredient Slot")) {
                     ingNames.add(name);
@@ -919,13 +916,13 @@ public class CraftingHelperOverlay extends WEMenuExtension {
      * Read material names currently in the crafting slots and save them.
      */
     private static void captureCurrentMaterials() {
-        if (McUtils.containerMenu() == null) return;
+        if (MinecraftUtils.containerMenu() == null) return;
         List<String> matNames = new ArrayList<>();
         List<Integer> matCounts = new ArrayList<>();
         boolean hasAny = false;
         for (int slot : new int[]{0, 9}) {
             try {
-                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                ItemStack stack = MinecraftUtils.containerMenu().getSlot(slot).getStack();
                 String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
                 if (!name.isEmpty() && !name.contains("Material Slot")) {
                     matNames.add(name);
@@ -949,13 +946,13 @@ public class CraftingHelperOverlay extends WEMenuExtension {
     }
 
     private static void updatePreparedMaterialSnapshot() {
-        if (McUtils.containerMenu() == null) return;
+        if (MinecraftUtils.containerMenu() == null) return;
         List<String> matNames = new ArrayList<>();
         List<Integer> matCounts = new ArrayList<>();
         boolean hasAny = false;
         for (int slot : new int[]{0, 9}) {
             try {
-                ItemStack stack = McUtils.containerMenu().getSlot(slot).getStack();
+                ItemStack stack = MinecraftUtils.containerMenu().getSlot(slot).getStack();
                 String name = stack.getCustomName() != null ? stack.getCustomName().getString() : "";
                 if (!name.isEmpty() && !name.contains("Material Slot")) {
                     matNames.add(name);
@@ -992,7 +989,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
     }
 
     private void reuseLast() {
-        if (McUtils.containerMenu() == null) return;
+        if (MinecraftUtils.containerMenu() == null) return;
 
         if (lastMaterialNames.isEmpty() && lastIngredientNames.isEmpty()) {
             wbStatusMessage = "No previous craft to reuse.";
@@ -1029,7 +1026,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         // Reset all crafting slots immediately
         for (int slot : new int[]{0, 9, 2, 3, 11, 12, 20, 21}) {
-            ContainerUtils.clickOnSlot(slot, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+            ContainerUtils.clickOnSlot(slot, MinecraftUtils.containerMenu().syncId, 0, MinecraftUtils.containerMenu().getStacks());
         }
 
         Map<Integer, Integer> queuedBySlot = new HashMap<>();
@@ -1066,7 +1063,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         };
     }
 
-    private static IRecipeData getRecipeDataInstance(ProfessionType type) {
+    private static IRecipeData getRecipeDataInstance(WEProfessionType type) {
         if (state == null) return null;
 
         return switch (type) {
@@ -1180,10 +1177,10 @@ public class CraftingHelperOverlay extends WEMenuExtension {
     }
 
     private static ItemStack findInventoryMaterial(IMaterial material) {
-        if (McUtils.containerMenu() == null) {
+        if (MinecraftUtils.containerMenu() == null) {
             return null;
         }
-        List<Slot> slots = McUtils.containerMenu().slots;
+        List<Slot> slots = MinecraftUtils.containerMenu().slots;
         for (Slot slot : slots) {
             try {
                 if (!(slot.inventory instanceof PlayerInventory)) {
@@ -1270,10 +1267,10 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             ctx.enableScissor(scissorX1, scissorY1, scissorX2, scissorY2);
 
-            if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return;
-            ProfessionType type = container.getProfessionType();
+            WEProfessionType type = WynncraftMenuService.currentCraftingProfession().orElse(null);
+            if (type == null) return;
 
-            if (state == RecipeState.NONE && type != ProfessionType.ALCHEMISM && type != ProfessionType.COOKING && type != ProfessionType.SCRIBING) {
+            if (state == RecipeState.NONE && type != WEProfessionType.ALCHEMISM && type != WEProfessionType.COOKING && type != WEProfessionType.SCRIBING) {
                 ui.drawCenteredText("Select the type", x + width / 2f, y + height / 2f - 10, CustomColor.fromHexString("FF0000"), 1.5f);
                 ui.drawCenteredText("you want to craft.", x + width / 2f, y + height / 2f + 10, CustomColor.fromHexString("FF0000"), 1.5f);
             }
@@ -1355,8 +1352,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         }
 
         private static void resetMaterialSlots() {
-            ContainerUtils.clickOnSlot(0, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
-            ContainerUtils.clickOnSlot(9, McUtils.containerMenu().syncId, 0, McUtils.containerMenu().getStacks());
+            ContainerUtils.clickOnSlot(0, MinecraftUtils.containerMenu().syncId, 0, MinecraftUtils.containerMenu().getStacks());
+            ContainerUtils.clickOnSlot(9, MinecraftUtils.containerMenu().syncId, 0, MinecraftUtils.containerMenu().getStacks());
             CLICK_QUEUE.clear();
         }
 
@@ -1390,7 +1387,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
                     ui.drawCenteredText(String.valueOf(level + 4), x + width * 0.9f, y + 3 * height / 4f - 1, 0.85f);
                 }
 
-                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer)) return;
+                if (!WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)) return;
 
                 checkClick();
             }
@@ -1399,12 +1396,12 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             protected boolean onClick(int button) {
                 if (!helperWidget.hovered) return false;
 
-                if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer))
+                if (!WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION))
                     return false;
 
                 statusMessage = "";
 
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 
                 List<Pair<IMaterial, Integer>> materials = recipeData.getMaterials(this.level);
 
@@ -1428,7 +1425,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             private void clickMaterial(Pair<IMaterial, Integer> material) {
                 int materialAmount = material.getSecond();
 
-                List<Slot> slots = McUtils.containerMenu().slots;
+                List<Slot> slots = MinecraftUtils.containerMenu().slots;
                 int available = 0;
 
                 boolean canClick = false;
@@ -1455,11 +1452,11 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             }
 
             private void checkClick() {
-                if(McUtils.containerMenu().getSlot(0) == null) return;
-                if(McUtils.containerMenu().getSlot(9) == null) return;
+                if(MinecraftUtils.containerMenu().getSlot(0) == null) return;
+                if(MinecraftUtils.containerMenu().getSlot(9) == null) return;
 
-                ItemStack stackSlot0 = McUtils.containerMenu().getSlot(0).getStack();
-                ItemStack stackSlot9 = McUtils.containerMenu().getSlot(9).getStack();
+                ItemStack stackSlot0 = MinecraftUtils.containerMenu().getSlot(0).getStack();
+                ItemStack stackSlot9 = MinecraftUtils.containerMenu().getSlot(9).getStack();
 
                 if (stackSlot0.getCustomName() == null) return;
                 if (stackSlot9.getCustomName() == null) return;
@@ -1470,18 +1467,18 @@ public class CraftingHelperOverlay extends WEMenuExtension {
                     return;
 
                 isClicking = true;
-                if (!CLICK_QUEUE.isEmpty() && lastClick < Time.now().timestamp() - 1) {
+                if (!CLICK_QUEUE.isEmpty() && lastClick < System.currentTimeMillis() - 1) {
                     Integer next = CLICK_QUEUE.poll();
                     if (next == null) return;
 
                     ContainerUtils.clickOnSlot(
                             next,
-                            McUtils.containerMenu().syncId,
+                            MinecraftUtils.containerMenu().syncId,
                             0,
-                            McUtils.containerMenu().getStacks()
+                            MinecraftUtils.containerMenu().getStacks()
                     );
 
-                    lastClick = Time.now().timestamp();
+                    lastClick = System.currentTimeMillis();
                 } else if (CLICK_QUEUE.isEmpty()) isClicking = false;
             }
         }
@@ -1526,14 +1523,14 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
             if (state == clickedState) return true;
 
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 
             state = clickedState;
 
             helperWidget.recipeData = null;
 
-            if (!(Models.Container.getCurrentContainer() instanceof CraftingStationContainer container)) return true;
-            ProfessionType type = container.getProfessionType();
+            WEProfessionType type = WynncraftMenuService.currentCraftingProfession().orElse(null);
+            if (type == null) return true;
 
             targetOffset = 0;
 
@@ -1599,7 +1596,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             int buttonHeight = 17;
             int scrollAreaHeight = height - buttonHeight;
 
@@ -1629,7 +1626,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 isHeld = true;
                 return true;
             }
@@ -1676,19 +1673,19 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             if (!visible || !enabled || !contains((int) mx, (int) my)) return false;
             if (isDisabled || isFilling) return true;
             setFocused(true);
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             if (onClickCallback != null) onClickCallback.accept(this);
             return true;
         }
     }
 
     private static class ProfBombWidget extends Widget {
-        final BombType type;
-        public BombInfo bomb;
+        final String type;
+        public BombState.Bomb bomb;
         public boolean isActive;
         public String text = "";
 
-        public ProfBombWidget(BombType type) {
+        public ProfBombWidget(String type) {
             super(0, 0, 0, 0);
             this.type = type;
         }
@@ -1706,22 +1703,22 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         public void refresh() {
             try {
                 if (bomb != null) {
-                    if (bomb.server().equals(Models.WorldState.getCurrentWorldName())) hovered = false;
+                    if (bomb.server().equals(BombState.currentWorld())) hovered = false;
                 }
 
-                String currentWorld = Models.WorldState.getCurrentWorldName();
+                String currentWorld = BombState.currentWorld();
                 isActive = false;
                 bomb = null;
                 text = "";
 
-                for (BombInfo bomb : Models.Bomb.getBombBells()) {
-                    if (bomb.bomb() == type) {
+                for (BombState.Bomb bomb : BombState.bombs()) {
+                    if (bomb.type().equals(type)) {
                         isActive = true;
                         if (bomb.server().equals(currentWorld)) {
                             this.bomb = bomb;
                             break;
                         }
-                        if (this.bomb == null || bomb.getRemainingLong() > this.bomb.getRemainingLong()) {
+                        if (this.bomb == null || bomb.remainingLong() > this.bomb.remainingLong()) {
                             this.bomb = bomb;
                         }
                     }
@@ -1731,20 +1728,20 @@ public class CraftingHelperOverlay extends WEMenuExtension {
                     String worldColor = bomb.server().equals(currentWorld) ? "§a" : "§f";
                     worldColor += (hovered ? "§n" : "");
                     String bombType = "?";
-                    if (type == BombType.PROFESSION_SPEED) bombType = "Speed";
-                    if (type == BombType.PROFESSION_XP) bombType = "XP";
+                    if (type.equals("PROFESSION_SPEED")) bombType = "Speed";
+                    if (type.equals("PROFESSION_XP")) bombType = "XP";
 
-                    text = "§6" + (hovered ? "§n" : "") + "Profession " + bombType + " §7" + (hovered ? "§n" : "") + "on " + worldColor + bomb.server() + " §6" + (hovered ? "§n" : "") + "(" + bomb.getRemainingString() + ")";
+                    text = "§6" + (hovered ? "§n" : "") + "Profession " + bombType + " §7" + (hovered ? "§n" : "") + "on " + worldColor + bomb.server() + " §6" + (hovered ? "§n" : "") + "(" + bomb.remainingString() + ")";
 
-                    if (bomb.getRemainingLong() < 30000) {
-                        long seconds = Time.now().timestamp() / 1000;
+                    if (bomb.remainingLong() < 30000) {
+                        long seconds = System.currentTimeMillis() / 1000;
 
                         String color = (seconds % 2 == 0) ? "§c" : "§4";
                         color += (hovered ? "§n" : "");
 
                         text = color + "Profession " + bombType + " on "
                                 + bomb.server()
-                                + " (" + bomb.getRemainingString() + ") (EXPIRING SOON)";
+                                + " (" + bomb.remainingString() + ") (EXPIRING SOON)";
                     }
                 }
             } catch (Exception ignored) {
@@ -1754,13 +1751,13 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         @Override
         protected boolean onClick(int button) {
             if (bomb == null) return true;
-            if (bomb.server().equals(Models.WorldState.getCurrentWorldName())) return true;
+            if (bomb.server().equals(BombState.currentWorld())) return true;
 
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             MinecraftClient client = MinecraftClient.getInstance();
 
             if (client.player != null) {
-                McUtils.setScreen(null);
+                MinecraftUtils.setScreen(null);
                 client.player.networkHandler.sendChatCommand("switch " + bomb.server());
             }
 

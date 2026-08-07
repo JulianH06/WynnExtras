@@ -1,11 +1,8 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.models.gear.type.GearType;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.items.game.CraftedGearItem;
-import com.wynntils.models.items.items.game.GearItem;
-import com.wynntils.core.components.Models;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.item.GearType;
+import julianh06.wynnextras.wynncraft.item.WynnItemParser;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.item.ItemStack;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -36,17 +33,9 @@ public class TotemTimer {
     public record TotemInfo(String owner, String timeText, String toxoplasmosisText, boolean estimated) {}
     private record TotemLineInfo(String timeText, String toxoplasmosisText) {}
 
-    /** True if the stack is a relik — including crafted reliks, which are CraftedGearItem
-     *  not GearItem and were previously ignored, leaving the timer stuck on stale data
-     *  when switching to/from a crafted relik. */
     private static boolean isRelik(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        Optional<WynnItem> opt = Models.Item.getWynnItem(stack);
-        if (opt.isEmpty()) return false;
-        WynnItem item = opt.get();
-        if (item instanceof GearItem gear) return gear.getGearType() == GearType.RELIK;
-        if (item instanceof CraftedGearItem crafted) return crafted.getGearType() == GearType.RELIK;
-        return false;
+        return WynnItemParser.parse(stack).map(item -> item.gearType() == GearType.RELIK).orElse(false);
     }
 
     private static float parseSeconds(String timeText) {
@@ -142,7 +131,7 @@ public class TotemTimer {
 
             tickCounter++;
             WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
-            String playerName = McUtils.playerName();
+            String playerName = MinecraftUtils.playerName();
 
             // Warning check + sound runs every tick
             if (c.totemTimerWarningText || c.totemTimerWarningSound) {
@@ -156,7 +145,7 @@ public class TotemTimer {
                 }
             }
             if (warningActive && c.totemTimerWarningSound) {
-                McUtils.playSoundAmbient(
+                MinecraftUtils.playSoundAmbient(
                     SoundEvent.of(Identifier.of("block.note_block.pling")),
                     c.totemTimerWarningSoundVolume / 100, 2.0f
                 );

@@ -3,10 +3,10 @@ package julianh06.wynnextras.features.misc;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.profession.type.ProfessionType;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.CappedValue;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.wynncraft.state.CharacterState;
+import julianh06.wynnextras.wynncraft.state.ProfessionState;
+import julianh06.wynnextras.utils.enums.WEProfessionType;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
@@ -40,9 +40,9 @@ public class ProfessionOverlay {
     private static final long XP_PER_100_PERCENT_AT_132 = 66_287_449L;
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
-    private static ProfessionType lastProfession = null;
+    private static WEProfessionType lastProfession = null;
 
-    public static ProfessionType getLastProfession() {
+    public static WEProfessionType getLastProfession() {
         return lastProfession;
     }
     private static int lastProfessionLevel = 0;
@@ -72,39 +72,39 @@ public class ProfessionOverlay {
 
     public record LeaderboardEntry(int rank, long playerXp, long nextPlayerXp) {}
 
-    private static String getOverflowKey(ProfessionType profession) {
-        String charId = Models.Character.getId();
+    private static String getOverflowKey(WEProfessionType profession) {
+        String charId = CharacterState.id().orElse(null);
         if (charId == null || charId.isEmpty()) charId = "unknown";
         return charId + ":" + profession.getDisplayName();
     }
 
-    public static float getOverflow(ProfessionType profession) {
+    public static float getOverflow(WEProfessionType profession) {
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
         if (c.professionOverflowXp == null) return 0;
         return c.professionOverflowXp.getOrDefault(getOverflowKey(profession), 0f);
     }
 
-    public static void setOverflow(ProfessionType profession, float amount) {
+    public static void setOverflow(WEProfessionType profession, float amount) {
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
         if (c.professionOverflowXp == null) c.professionOverflowXp = new HashMap<>();
         c.professionOverflowXp.put(getOverflowKey(profession), amount);
         WynnExtrasConfig.save();
     }
 
-    public static float getGoal(ProfessionType profession) {
+    public static float getGoal(WEProfessionType profession) {
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
         if (c.professionGoals == null) return 0;
         return c.professionGoals.getOrDefault(getOverflowKey(profession), 0f);
     }
 
-    public static void setGoal(ProfessionType profession, float amount) {
+    public static void setGoal(WEProfessionType profession, float amount) {
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
         if (c.professionGoals == null) c.professionGoals = new HashMap<>();
         c.professionGoals.put(getOverflowKey(profession), amount);
         WynnExtrasConfig.save();
     }
 
-    public static void clearGoal(ProfessionType profession) {
+    public static void clearGoal(WEProfessionType profession) {
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
         if (c.professionGoals == null) return;
         c.professionGoals.remove(getOverflowKey(profession));
@@ -140,7 +140,7 @@ public class ProfessionOverlay {
 
             // Convert API profession name to ProfessionType display name
             String apiName = entry.getKey(); // e.g. "mining", "armouring"
-            ProfessionType profType = ProfessionType.fromString(apiName);
+            WEProfessionType profType = WEProfessionType.fromString(apiName);
             if (profType == null) continue;
 
             String key = charIdClean + ":" + profType.getDisplayName();
@@ -157,9 +157,9 @@ public class ProfessionOverlay {
         WynnExtrasConfig.save();
     }
 
-    public static void onXpGain(ProfessionType profession, float gainedXpRaw) {
+    public static void onXpGain(WEProfessionType profession, float gainedXpRaw) {
         lastProfession = profession;
-        lastProfessionLevel = Models.Profession.getLevel(profession);
+        lastProfessionLevel = ProfessionState.level(profession);
         lastXpGainTime = System.currentTimeMillis();
 
         // Track history
@@ -195,7 +195,7 @@ public class ProfessionOverlay {
         }
 
         // Track overflow
-        int level = Models.Profession.getLevel(profession);
+        int level = ProfessionState.level(profession);
         if (level >= 132) {
             WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
             if (c.professionOverflowXp == null) c.professionOverflowXp = new HashMap<>();
@@ -224,11 +224,11 @@ public class ProfessionOverlay {
         cachedXpPerHour.clear();
 
         // Re-fetch overflow from API
-        if (McUtils.player() != null) {
-            String playerName = McUtils.player().getName().getString();
+        if (MinecraftUtils.player() != null) {
+            String playerName = MinecraftUtils.player().getName().getString();
             julianh06.wynnextras.utils.WynncraftApiHandler.fetchPlayerData(playerName).thenAccept(playerData -> {
                 if (playerData == null) return;
-                String characterId = Models.Character.getId();
+                String characterId = CharacterState.id().orElse(null);
                 if (characterId == null || characterId.isEmpty()) return;
 
                 Map<String, CharacterData> characters = playerData.getCharacters();
@@ -252,18 +252,18 @@ public class ProfessionOverlay {
      * Fetch leaderboard data for all max-level professions on the current character.
      */
     public static void fetchLeaderboardForAllProfessions() {
-        if (McUtils.player() == null) return;
-        String playerUuid = McUtils.player().getUuidAsString();
+        if (MinecraftUtils.player() == null) return;
+        String playerUuid = MinecraftUtils.player().getUuidAsString();
 
-        for (ProfessionType prof : ProfessionType.values()) {
-            int level = Models.Profession.getLevel(prof);
+        for (WEProfessionType prof : WEProfessionType.values()) {
+            int level = ProfessionState.level(prof);
             if (level < 132) continue;
 
             fetchLeaderboardForProfession(prof, playerUuid);
         }
     }
 
-    private static void fetchLeaderboardForProfession(ProfessionType profession, String playerUuid) {
+    private static void fetchLeaderboardForProfession(WEProfessionType profession, String playerUuid) {
         // API uses lowercase profession name + "Level"
         String profName = profession.name().toLowerCase();
         String url = "https://api.wynncraft.com/v3/leaderboards/" + profName + "Level?resultLimit=999";
@@ -343,8 +343,8 @@ public class ProfessionOverlay {
     /**
      * Static version of getOverflowKey that uses current character ID.
      */
-    private static String getOverflowKeyStatic(ProfessionType profession) {
-        String charId = Models.Character.getId();
+    private static String getOverflowKeyStatic(WEProfessionType profession) {
+        String charId = CharacterState.id().orElse(null);
         if (charId == null || charId.isEmpty()) charId = "unknown";
         return charId + ":" + profession.getDisplayName();
     }
@@ -383,7 +383,7 @@ public class ProfessionOverlay {
     private static void doRender(DrawContext ctx) {
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
         if (!c.professionOverlayEnabled) return;
-        if (!Models.WorldState.onWorld()) return;
+        if (!MinecraftUtils.isOnWynncraft()) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
         if (lastProfession == null) return;
@@ -392,7 +392,7 @@ public class ProfessionOverlay {
         if (elapsed > DISPLAY_DURATION_MS) return;
 
         int level = lastProfessionLevel;
-        CappedValue xp = Models.Profession.getXP(lastProfession);
+        ProfessionState.Xp xp = ProfessionState.xp(lastProfession);
         String key = getOverflowKey(lastProfession);
 
         // Line 1: Profession name + level

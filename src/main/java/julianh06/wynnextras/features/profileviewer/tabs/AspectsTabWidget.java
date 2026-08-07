@@ -1,15 +1,14 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.handlers.item.ItemAnnotation;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.Texture;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.Texture;
 import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
-import julianh06.wynnextras.utils.WynntilsHighlightUtils;
+import julianh06.wynnextras.utils.ItemHighlightRenderer;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.features.profileviewer.data.Aspect;
 import julianh06.wynnextras.features.profileviewer.data.User;
@@ -60,7 +59,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
     private InfoWidget infoWidget = null;
 
-    private static Map<Integer, List<ItemAnnotation>> annotationCache = new HashMap<>();
 
     public enum Page {Overview, Warrior, Shaman, Mage, Archer, Assassin}
 
@@ -75,7 +73,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         if (!openedAspectPage) {
             openedAspectPage = true;
-            highlightTexture = WynntilsHighlightUtils.getConfiguredHighlightTexture();
+            highlightTexture = ItemHighlightRenderer.getConfiguredHighlightTexture();
             currentPlayerAspectData = null;
             fetchStatus = null;
             currentPage = Page.Overview;
@@ -367,7 +365,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         ctx.getMatrices().pushMatrix();
         ctx.getMatrices().scale((float)(1.0 / PVScreen.currentMatrixScale), (float)(1.0 / PVScreen.currentMatrixScale));
-        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, currentHovered.getTooltip(Item.TooltipContext.DEFAULT, McUtils.player(), TooltipType.BASIC),
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, currentHovered.getTooltip(Item.TooltipContext.DEFAULT, MinecraftUtils.player(), TooltipType.BASIC),
                 (int)(mouseX * PVScreen.currentMatrixScale), (int)(mouseY * PVScreen.currentMatrixScale));
         ctx.getMatrices().popMatrix();
     }
@@ -424,7 +422,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             super(0, 0, 0, 0);
             this.page = page;
             this.action = () -> {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 currentPage = page;
             };
         }
@@ -560,7 +558,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             }
 
             if (!Objects.equals(color, CustomColor.NONE)) {
-                WynntilsHighlightUtils.drawHighlightTexture(
+                ItemHighlightRenderer.drawHighlightTexture(
                     ctx,
                     highlightTexture,
                     color, x / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF());
@@ -581,7 +579,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             ctx.getMatrices().popMatrix();
 
             if(playerAspect == null || playerAspect.getAmount() <= 1) {
-                WynntilsHighlightUtils.drawHighlightTexture(
+                ItemHighlightRenderer.drawHighlightTexture(
                     ctx,
                     highlightTexture,
                     CustomColor.fromHexString("000000"), x / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF());

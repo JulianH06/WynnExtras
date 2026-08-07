@@ -1,7 +1,6 @@
 package julianh06.wynnextras.features.inventory;
 
 import com.google.gson.*;
-import com.wynntils.models.gear.type.GearTier;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.Core;
@@ -249,7 +248,7 @@ public class WeightDisplay {
 
     public static boolean isTrackedMythic(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        return itemCache.containsKey(extractCleanName(stack)) && ItemUtils.isTier(stack, GearTier.MYTHIC);
+        return itemCache.containsKey(extractCleanName(stack)) && ItemUtils.isTier(stack, "MYTHIC");
     }
 
     public static boolean isUnidentified(ItemStack stack) {
@@ -304,16 +303,7 @@ public class WeightDisplay {
     }
 
     private static boolean isItemStatInfoFeatureEnabled() {
-        try {
-            Class<?> featureClass = Class.forName("com.wynntils.features.tooltips.ItemStatInfoFeature");
-            Class<?> managersClass = Class.forName("com.wynntils.core.components.Managers");
-            Object featureManager = managersClass.getField("Feature").get(null);
-            Object feature = featureManager.getClass().getMethod("getFeatureInstance", Class.class).invoke(featureManager, featureClass);
-            if (feature == null) return false;
-            return (boolean) feature.getClass().getMethod("isEnabled").invoke(feature);
-        } catch (Exception e) {
-            return false;
-        }
+        return julianh06.wynnextras.compat.wynntils.WynntilsTooltipAdapter.isItemStatInfoEnabled();
     }
 
     public static void getWeightsFromWynnpool() {

@@ -1,11 +1,11 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.core.components.Models;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.chat.mediapreview.ChatMediaPreview;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
@@ -43,7 +43,7 @@ public abstract class ChatClickMixin {
                 return;
             }
             if (!WynnExtrasConfig.INSTANCE.chatClickPV) return;
-            if (!Models.WorldState.onWorld()) return;
+            if (!MinecraftUtils.isOnWynncraft()) return;
 
             String username = null;
             String guildTag = null;

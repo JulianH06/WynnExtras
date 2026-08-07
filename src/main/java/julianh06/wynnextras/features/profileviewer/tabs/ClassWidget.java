@@ -1,8 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
@@ -50,7 +49,7 @@ public class ClassWidget extends Widget {
         this.characterData = characterData;
         this.isAtiveCharacter = isAtiveCharacter;
         this.action = () -> {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             if(PVScreen.selectedCharacter == characterData) {
                 PVScreen.selectedCharacter = null;
                 return;
@@ -100,7 +99,7 @@ public class ClassWidget extends Widget {
             int totalLevel = characterData.getTotalLevel();
             CustomColor levelColor;
             if (characterData.getContentCompletion() >= MAX_CONTENT_COMPLETION && !WynnExtrasConfig.INSTANCE.removeChroma) {
-                levelColor = WynncraftShaderColor.RAINBOW.color;
+                levelColor = CustomColor.RAINBOW;
             } else {
                 levelColor = CustomColor.fromHexString("FFFFFF");
             }

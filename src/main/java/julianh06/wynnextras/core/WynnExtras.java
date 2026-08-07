@@ -1,13 +1,12 @@
 package julianh06.wynnextras.core;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.*;
 import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
-import julianh06.wynnextras.features.achievements.AchievementTracking;
 import julianh06.wynnextras.features.achievements.Achievements;
 import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
@@ -45,7 +44,6 @@ import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.waypoints.data.WaypointData;
 import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
-import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.TickScheduler;
 import net.fabricmc.api.ClientModInitializer;
@@ -86,7 +84,7 @@ public class WynnExtras implements ClientModInitializer {
 			"",
 			context -> {
                 try {
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal("")).append(Text.literal("https://discord.gg/UbC6vZDaD5").setStyle(Style.EMPTY
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal("")).append(Text.literal("https://discord.gg/UbC6vZDaD5").setStyle(Style.EMPTY
                             .withColor(Formatting.AQUA)
                             .withUnderline(true)
                             .withClickEvent(new ClickEvent.OpenUrl(new URI("https://discord.gg/UbC6vZDaD5"))))
@@ -116,7 +114,7 @@ public class WynnExtras implements ClientModInitializer {
 			"version",
 			"",
 			context -> {
-				McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You are using version " + CurrentVersionData.INSTANCE.version));
+				MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You are using version " + CurrentVersionData.INSTANCE.version));
 				return 1;
 			},
 			null,
@@ -165,11 +163,11 @@ public class WynnExtras implements ClientModInitializer {
 	}
 
 	public static void sendMessageToClient(Text text) {
-		McUtils.sendMessageToClient(addWynnExtrasPrefix(text));
+		MinecraftUtils.sendMessageToClient(addWynnExtrasPrefix(text));
 	}
 
 	public static void sendMessageToClient(String text) {
-		McUtils.sendMessageToClient(addWynnExtrasPrefix(text));
+		MinecraftUtils.sendMessageToClient(addWynnExtrasPrefix(text));
 	}
 
 
@@ -284,61 +282,61 @@ public class WynnExtras implements ClientModInitializer {
 		testInvSize = slots.size() - 36;
 	}
 
-	@SubscribeEvent(priority = EventPriority.LOWEST)
-	public void initKeyInputEvent(TickEvent event) {
-		if(!KeyInputEvent.initialized && MinecraftClient.getInstance().getWindow() != null) {
-			KeyInputEvent.init();
-
-			previousCallback = GLFW.glfwSetKeyCallback(MinecraftClient.getInstance().getWindow().getHandle(), (window, key, scancode, action, mods) -> {
-				if (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT || action == GLFW.GLFW_RELEASE) {
-					new KeyInputEvent(key, scancode, action, mods).post();//, character.get()).post();
-				}
-
-				if (BankOverlay.currentOverlayType != BankOverlayType.NONE
-						&& BankOverlay2.isAnyTextInputFocused()
-						&& key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
-
-				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)) return;
-
-				if (previousCallback != null) {
-					previousCallback.invoke(window, key, scancode, action, mods);
-				}
-			});
-
-			previousCharCallback = GLFW.glfwSetCharCallback(MinecraftClient.getInstance().getWindow().getHandle(), (win, codepoint) -> {
-				if (BankOverlay.handleScreenCharTyped((char) codepoint)) return;
-
-				new CharInputEvent((char) codepoint).post();
-				if (previousCharCallback != null) {
-					previousCharCallback.invoke(win, codepoint);
-				}
-			});
-		}
-	}
+//	@SubscribeEvent(priority = EventPriority.LOWEST)
+//	public void initKeyInputEvent(TickEvent event) {
+//		if(!KeyInputEvent.initialized && MinecraftClient.getInstance().getWindow() != null) {
+//			KeyInputEvent.init();
+//
+//			previousCallback = GLFW.glfwSetKeyCallback(MinecraftClient.getInstance().getWindow().getHandle(), (window, key, scancode, action, mods) -> {
+//				if (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT || action == GLFW.GLFW_RELEASE) {
+//					new KeyInputEvent(key, scancode, action, mods).post();//, character.get()).post();
+//				}
+//
+//				if (BankOverlay.currentOverlayType != BankOverlayType.NONE
+//						&& BankOverlay2.isAnyTextInputFocused()
+//						&& key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
+//
+//				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)) return;
+//
+//				if (previousCallback != null) {
+//					previousCallback.invoke(window, key, scancode, action, mods);
+//				}
+//			});
+//
+//			previousCharCallback = GLFW.glfwSetCharCallback(MinecraftClient.getInstance().getWindow().getHandle(), (win, codepoint) -> {
+//				if (BankOverlay.handleScreenCharTyped((char) codepoint)) return;
+//
+//				new CharInputEvent((char) codepoint).post();
+//				if (previousCharCallback != null) {
+//					previousCharCallback.invoke(win, codepoint);
+//				}
+//			});
+//		}
+//	}
 
 	private static int ticksUntilNotify = -1;
 
-	@SubscribeEvent
-	public void onWorldChange(WorldChangeEvent event) {
-		if (latestVersion != null && !CurrentVersionData.INSTANCE.version.equals(latestVersion)) {
-			ticksUntilNotify = 50; //small delay
-		}
-	}
+//	@SubscribeEvent
+//	public void onWorldChange(WorldChangeEvent event) {
+//		if (latestVersion != null && !CurrentVersionData.INSTANCE.version.equals(latestVersion)) {
+//			ticksUntilNotify = 50; //small delay
+//		}
+//	}
 
 	private static int normalGUIScale = -1;
 
-	@SubscribeEvent
-	public void onClientTick(TickEvent event) {
-		WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
-		EncounterOverlay.clearLatchIfNoContainerOpen();
-		if(config.differentGUIScale) {
-			if (MinecraftClient.getInstance().currentScreen == null) {
-				restoreNormalGuiScale();
-			}
-		}
-
-		tickVersionNotificationCountdown();
-	}
+//	@SubscribeEvent
+//	public void onClientTick(TickEvent event) {
+//		WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+//		EncounterOverlay.clearLatchIfNoContainerOpen();
+//		if(config.differentGUIScale) {
+//			if (MinecraftClient.getInstance().currentScreen == null) {
+//				restoreNormalGuiScale();
+//			}
+//		}
+//
+//		tickVersionNotificationCountdown();
+//	}
 
 	private static void tickVersionNotificationCountdown() {
 		if (ticksUntilNotify < 0) return;
@@ -376,12 +374,12 @@ public class WynnExtras implements ClientModInitializer {
 		Instant now = Instant.now();
 		if (lastNotificationTime == null || Duration.between(lastNotificationTime, now).compareTo(COOLDOWN) >= 0) {
 			lastNotificationTime = now;
-			McUtils.sendMessageToClient(
+			MinecraftUtils.sendMessageToClient(
 				addWynnExtrasPrefix(Text.of("§aA new version of WynnExtras is available: §b" + latestVersion + "§a! You're currently using version §b" + currentVersion + "§a. You can download it now on Modrinth!"))
 			);
 
 			if(isLunarClient()) {
-				McUtils.sendMessageToClient(
+				MinecraftUtils.sendMessageToClient(
 					addWynnExtrasPrefix(Text.of("§aSeems like you are using Lunar Client. Some features might not work correctly with Lunar. We recommend using a different launcher like prism or Modrinth."))
 				);
 			}

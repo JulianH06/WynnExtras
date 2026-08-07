@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.tetris;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import net.minecraft.client.MinecraftClient;
@@ -188,7 +188,7 @@ public class TetrisScreen extends Screen {
         pieceTouchedGround = false;
         lockResets = 0;
         lockStartMax = 0;
-        McUtils.playSoundUI(SoundEvents.BLOCK_GLASS_PLACE);
+        MinecraftUtils.playSoundUI(SoundEvents.BLOCK_GLASS_PLACE);
         int tSpinType = getTSpinType();
         lastActionWasRotation = false;
         removeLayer();

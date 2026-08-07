@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.profileviewer;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.features.abilitytree.TreeData;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
@@ -30,7 +30,7 @@ public class SaveButtonWidget extends Widget {
         super(0, 0, 0, 0);
         this.action = () -> {
             if(classTree == null) {
-                McUtils.sendMessageToClient(Text.of("Error while setting classtree, try again"));
+                MinecraftUtils.sendMessageToClient(Text.of("Error while setting classtree, try again"));
                 return;
             }
             TreeLoader.savePlayerAbilityTree(playerName, characterUUID, className.toLowerCase(), skillPoints, classMap, classTree, playerTree);

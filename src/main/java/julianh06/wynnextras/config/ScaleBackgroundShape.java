@@ -1,6 +1,6 @@
 package julianh06.wynnextras.config;
 
-import com.wynntils.utils.render.Texture;
+import julianh06.wynnextras.utils.render.Texture;
 
 public enum ScaleBackgroundShape {
     CIRCLE(Texture.HIGHLIGHT_CIRCLE_OPAQUE),

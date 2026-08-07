@@ -1,7 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
@@ -219,8 +218,8 @@ public class AspectScanning {
 
             // Don't close screen early - let the normal pagination complete
             // Only close if we've searched all pages (0-6 = 7 pages total)
-            if (SearchedPages > 6 && McUtils.mc().currentScreen != null) {
-                McUtils.mc().currentScreen.close();
+            if (SearchedPages > 6 && MinecraftUtils.mc().currentScreen != null) {
+                MinecraftUtils.mc().currentScreen.close();
             }
             return result;
         }
@@ -355,7 +354,7 @@ public class AspectScanning {
             return;
         } else if (maintracking.scanDone && maintracking.pagesToGoBack <= 0) {
             maintracking.returnedToFirstPage = true;
-            maintracking.lastAspectRewardScan = Time.now().timestamp();
+            maintracking.lastAspectRewardScan = System.currentTimeMillis();
             return;
         }
 
@@ -512,7 +511,7 @@ public class AspectScanning {
             maintracking.setNextPage(true);
             // Show progress message matching UI page numbers (don't show for page 0 which is active aspects)
             if(SearchedPages > 0) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Scanning page " + (SearchedPages) + "/6..."));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Scanning page " + (SearchedPages) + "/6..."));
             }
         }
         else{
@@ -616,7 +615,7 @@ public class AspectScanning {
                 lastGambitUploadReset = ResetTimeConfig.INSTANCE.getCurrentGambitReset();
             }
         } catch (Exception e) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError detecting gambit: " + e.getMessage()));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError detecting gambit: " + e.getMessage()));
         }
     }
 
@@ -731,7 +730,7 @@ public class AspectScanning {
                 }
             }
         } catch (Exception e) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError scanning preview chest: " + e.getMessage()));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError scanning preview chest: " + e.getMessage()));
             e.printStackTrace();
         }
     }

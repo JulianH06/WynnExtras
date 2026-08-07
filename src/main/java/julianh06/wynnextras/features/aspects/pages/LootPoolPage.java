@@ -1,10 +1,9 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.*;
@@ -128,9 +127,9 @@ public class LootPoolPage extends PageWidget {
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("CET"));
         fetchOfficialLootPools(false);
 
-        if (!fetchedPersonalProgress && McUtils.player() != null) {
+        if (!fetchedPersonalProgress && MinecraftUtils.player() != null) {
             fetchedPersonalProgress = true;
-            String playerUUID = McUtils.player().getUuidAsString();
+            String playerUUID = MinecraftUtils.player().getUuidAsString();
             WynncraftApiHandler.fetchPlayerAspectData(playerUUID).thenAccept(result -> {
                 Map<String, com.mojang.datafixers.util.Pair<Integer, String>> newPersonalAspectProgress = new HashMap<>();
                 if (result != null && result.status() == WynncraftApiHandler.FetchStatus.OK && result.user() != null) {
@@ -496,7 +495,7 @@ public class LootPoolPage extends PageWidget {
                 scoreString = "MAXED";
             }
 
-            ui.drawCenteredText(raidNames[raid.ordinal()], x + width / 2f, y + textureWidth - 20, (max && !WynnExtrasConfig.INSTANCE.removeChroma) ? WynncraftShaderColor.RAINBOW.color : CustomColor.fromHexString("FFFFFF"));
+            ui.drawCenteredText(raidNames[raid.ordinal()], x + width / 2f, y + textureWidth - 20, (max && !WynnExtrasConfig.INSTANCE.removeChroma) ? CustomColor.RAINBOW : CustomColor.fromHexString("FFFFFF"));
 
             scoreWidget.scoreString = scoreString;
             int scoreWidth = MinecraftClient.getInstance().textRenderer.getWidth(scoreString);
@@ -775,7 +774,7 @@ public class LootPoolPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 int buttonHeight = 30;
                 int scrollAreaHeight = height - buttonHeight;
 
@@ -806,7 +805,7 @@ public class LootPoolPage extends PageWidget {
 
                 @Override
                 protected boolean onClick(int button) {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     isHold = true;
                     return true;
                 }
@@ -832,7 +831,7 @@ public class LootPoolPage extends PageWidget {
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 if(scoreString.isEmpty()) return;
 
-                if(scoreString.equals("MAXED") && !WynnExtrasConfig.INSTANCE.removeChroma) ui.drawText(scoreString, x, y, WynncraftShaderColor.RAINBOW.color);
+                if(scoreString.equals("MAXED") && !WynnExtrasConfig.INSTANCE.removeChroma) ui.drawText(scoreString, x, y, CustomColor.RAINBOW);
                 else ui.drawText((hovered ? "§n" : "") + scoreString, x, y, CustomColor.fromHexString("c0c0c0"));
 
                 if(hovered) {
@@ -887,7 +886,7 @@ public class LootPoolPage extends PageWidget {
                 CustomColor textColor = isNotOwned ? CustomColor.fromHexString("808080") : CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
                 if (isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
-                    textColor = WynncraftShaderColor.RAINBOW.color;
+                    textColor = CustomColor.RAINBOW;
                 } else if (!isNotOwned) {
                     rarityColorCode = getAspectColorCode(aspect);
                 }
@@ -950,7 +949,7 @@ public class LootPoolPage extends PageWidget {
             @Override
             protected boolean onClick(int button) {
                 if(!parent.isHovered()) return false;
-                McUtils.playSoundUI(SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK);
+                MinecraftUtils.playSoundUI(SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK);
                 FavoriteAspectsData.INSTANCE.toggleFavorite(aspect.name);
                 return true;
             }
@@ -977,7 +976,7 @@ public class LootPoolPage extends PageWidget {
                 importFeedback = "§7No new favorites to import";
             }
             importFeedbackTime = System.currentTimeMillis();
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }
@@ -998,7 +997,7 @@ public class LootPoolPage extends PageWidget {
             hideMax = !hideMax;
             clearLootPoolWidgetAspects();
 
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }
@@ -1019,7 +1018,7 @@ public class LootPoolPage extends PageWidget {
             onlyFavorites = !onlyFavorites;
             clearLootPoolWidgetAspects();
 
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }
@@ -1050,7 +1049,7 @@ public class LootPoolPage extends PageWidget {
 
             clearLootPoolWidgetAspects();
 
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }
@@ -1113,7 +1112,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             float maxOffset = getMax.get();
             int buttonWidth = Math.max(40, (int) (width * (width / (width + maxOffset))));
             int scrollAreaWidth = width - buttonWidth;
@@ -1144,7 +1143,7 @@ public class LootPoolPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 isHold = true;
                 return true;
             }

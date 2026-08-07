@@ -1,6 +1,6 @@
 package julianh06.wynnextras.config;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -223,20 +223,20 @@ public class StringListEditorScreen extends Screen {
             if (mx >= px + pw - 115 && mx < px + pw - 68 && my >= inputY && my < inputY + 24) {
                 if (!input1.isEmpty()) {
                     saveCurrentInput();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 }
                 return true;
             }
             if (mx >= px + pw - 63 && mx < px + pw - 16 && my >= inputY && my < inputY + 24) {
                 clearInputs();
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         } else {
             if (mx >= px + pw - 60 && mx < px + pw - 15 && my >= inputY && my < inputY + 24) {
                 if (!input1.isEmpty()) {
                     saveCurrentInput();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 }
                 return true;
             }
@@ -246,12 +246,12 @@ public class StringListEditorScreen extends Screen {
         if (mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24) {
             setter.accept(items);
             client.setScreen(parent);
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
         if (mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24) {
             client.setScreen(parent);
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
 
@@ -263,12 +263,12 @@ public class StringListEditorScreen extends Screen {
                     items.remove(i);
                     if (editingIndex == i) clearInputs();
                     else if (editingIndex > i) editingIndex--;
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 if (mx >= px + 15 && mx < px + pw - 50) {
                     loadItemForEditing(i);
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
             }

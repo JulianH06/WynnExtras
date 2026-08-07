@@ -1,10 +1,8 @@
 package julianh06.wynnextras.features.abilitytree;
 
 import com.google.gson.*;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.character.type.SavableSkillPointSet;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
+import julianh06.wynnextras.wynncraft.state.StatusEffectState;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -107,7 +105,7 @@ public class TreeLoader {
     }
 
     public static boolean loadSkillpoints = false;
-    public static SavableSkillPointSet skillPointSet;
+    public static int[] skillPointSet;
     public static boolean loadingSkillpoints = false;
 
     private static final int CLICK_CONFIRM_TIMEOUT_TICKS = 1;
@@ -172,8 +170,7 @@ public class TreeLoader {
             ClientPlayerEntity player = client.player;
 
             ticksSinceLastAction++;
-            boolean hasTreeManipulation = Models.StatusEffect.getStatusEffects().stream()
-                    .anyMatch(effect -> effect.getName().getStringWithoutFormatting().equals("Tree Manipulation"));
+            boolean hasTreeManipulation = StatusEffectState.hasEffect("Tree Manipulation");
             //hasTreeManipulation = false;
             if (ticksSinceLastAction < GUI_SETTLE_TICKS) return;
 
@@ -182,7 +179,7 @@ public class TreeLoader {
                 if (pendingReset.ticksWaiting >= RESET_CLICK_TIMEOUT) {
                     pendingReset.attempts++;
                     if (pendingReset.attempts > MAX_RESET_ATTEMPTS) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Reset failed due to lag, please try again.")));
+                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Reset failed due to lag, please try again.")));
                         resetAll();
                         pendingReset = null;
                         return;
@@ -222,7 +219,7 @@ public class TreeLoader {
 
             if (hasTreeManipulation && inTreeMenu && !resetMenuWasOpened) {
                 client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 54 + 4, 1, SlotActionType.QUICK_MOVE, client.player);
-                lastResetTryClick = Time.now().timestamp();
+                lastResetTryClick = System.currentTimeMillis();
                 resetMenuWasOpened = true;
                 wasReset = true;
                 return;
@@ -243,7 +240,7 @@ public class TreeLoader {
                         pendingReset.ticksWaiting = 0;
                         return;
                     } else {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Couldn't reset your tree. You either canceled exited the menu or you don't have 3 Ability Shards in your Inventory")));
+                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Couldn't reset your tree. You either canceled exited the menu or you don't have 3 Ability Shards in your Inventory")));
                         resetAll();
                         return;
                     }
@@ -277,7 +274,7 @@ public class TreeLoader {
 
 
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
-            if(Time.now().timestamp() - lastResetTryClick < 1000) return;
+            if(System.currentTimeMillis() - lastResetTryClick < 1000) return;
 
             if (abilitiesToClick2 == null || abilitiesToClick2.isEmpty()) {
                 abilityClickTicks[0] = 0;
@@ -311,7 +308,7 @@ public class TreeLoader {
             if (pendingPageSwitch.get()) {
                 pageSwitchTicks.incrementAndGet();
 
-                List<ItemStack> inv = new ArrayList<>(McUtils.containerMenu().getStacks());
+                List<ItemStack> inv = new ArrayList<>(MinecraftUtils.containerMenu().getStacks());
                 boolean changed = false;
                 int i = 0;
                 for(ItemStack stack : prevPageStacks.get()) {
@@ -349,8 +346,8 @@ public class TreeLoader {
             if (failCycles.get() >= MAX_FAIL_CYCLES) {
                 WynnExtras.LOGGER.debug("[TreeLoader] MAX_FAIL_CYCLES hit | stuck on='{}'", abilitiesToClick2.isEmpty() ? "none" : abilitiesToClick2.getFirst().toString());
                 resetAll();
-                if(McUtils.mc().currentScreen != null) McUtils.mc().currentScreen.close();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Something went wrong! Try again")));
+                if(MinecraftUtils.mc().currentScreen != null) MinecraftUtils.mc().currentScreen.close();
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Something went wrong! Try again")));
                 abilitiesToClick2 = null;
                 abilityClickTicks[0] = 0;
                 failCycles.set(0);
@@ -386,15 +383,15 @@ public class TreeLoader {
             if(abilitiesToClick2 == null) return;
             if(abilitiesToClick2.isEmpty()) {
                 resetAll();
-                if(McUtils.mc().currentScreen != null) McUtils.mc().currentScreen.close();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Finished loading the ability tree." + (loadSkillpoints ? " Continuing with skill points. " : ""))));
+                if(MinecraftUtils.mc().currentScreen != null) MinecraftUtils.mc().currentScreen.close();
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Finished loading the ability tree." + (loadSkillpoints ? " Continuing with skill points. " : ""))));
                 if(skillPointSet != null) {
                     int currentSlot = player.getInventory().getSelectedSlot();
                     player.getInventory().setSelectedSlot(7);
                     client.interactionManager.interactItem(player, Hand.MAIN_HAND);
                     player.getInventory().setSelectedSlot(currentSlot);
                     loadingSkillpoints = true;
-                    finishedTreeTime = Time.now().timestamp();
+                    finishedTreeTime = System.currentTimeMillis();
 //                    loadSkillpoints(skillPointSet);
                 }
                 return;
@@ -415,7 +412,7 @@ public class TreeLoader {
             }
             int pageOffset = abilityNode.meta.page - currentPage[0];
             if (pageOffset != 0 && !pendingPageSwitch.get()) {
-                List<ItemStack> inv = new ArrayList<>(McUtils.containerMenu().getStacks());
+                List<ItemStack> inv = new ArrayList<>(MinecraftUtils.containerMenu().getStacks());
                 prevPageStacks.set(inv);
 
                 String direction = pageOffset > 0 ? "Next Page" : "Previous Page";
@@ -456,14 +453,14 @@ public class TreeLoader {
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
             if(!loadingSkillpoints || skillPointSet == null) return;
 
-            if(Time.now().timestamp() - finishedTreeTime < 600) {
-                MinecraftClient.getInstance().interactionManager.clickSlot(screen.getScreenHandler().syncId, 4, 0, SlotActionType.QUICK_MOVE,McUtils.player());
+            if(System.currentTimeMillis() - finishedTreeTime < 600) {
+                MinecraftClient.getInstance().interactionManager.clickSlot(screen.getScreenHandler().syncId, 4, 0, SlotActionType.QUICK_MOVE,MinecraftUtils.player());
 
                 return;
             }
 
             int finishedSkillPoints = 0;
-            int[] pointArray = skillPointSet.getSkillPointsAsArray();
+            int[] pointArray = skillPointSet;
             for (int i = 0; i < 5; i++) {
                 int remainingPoints = pointArray[i];
                 if(remainingPoints == 0) {
@@ -473,31 +470,31 @@ public class TreeLoader {
 
                 if(remainingPoints % 5 == 0) {
                     //11
-                    //MinecraftClient.getInstance().player.networkHandler.sendPacket(new ClientCommandC2SPacket(McUtils.player(), ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY));
-                    MinecraftClient.getInstance().interactionManager.clickSlot(screen.getScreenHandler().syncId, 11 + i, 0, SlotActionType.QUICK_MOVE,McUtils.player());
+                    //MinecraftClient.getInstance().player.networkHandler.sendPacket(new ClientCommandC2SPacket(MinecraftUtils.player(), ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY));
+                    MinecraftClient.getInstance().interactionManager.clickSlot(screen.getScreenHandler().syncId, 11 + i, 0, SlotActionType.QUICK_MOVE,MinecraftUtils.player());
                     //clickSlotHelper(11 + i, screen, MinecraftClient.getInstance());
 
-                    //McUtils.containerMenu().onSlotClick(11 + i, 0, SlotActionType.QUICK_MOVE, McUtils.player());
-                    //MinecraftClient.getInstance().player.networkHandler.sendPacket(new ClientCommandC2SPacket(McUtils.player(), ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY));
+                    //MinecraftUtils.containerMenu().onSlotClick(11 + i, 0, SlotActionType.QUICK_MOVE, MinecraftUtils.player());
+                    //MinecraftClient.getInstance().player.networkHandler.sendPacket(new ClientCommandC2SPacket(MinecraftUtils.player(), ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY));
 
                     pointArray[i] -= 5;
                     break;
                 }
 
                 clickSlotHelper(11 + i, screen, MinecraftClient.getInstance());
-                //McUtils.containerMenu().onSlotClick(11 + i, 0, SlotActionType.PICKUP, McUtils.player());
+                //MinecraftUtils.containerMenu().onSlotClick(11 + i, 0, SlotActionType.PICKUP, MinecraftUtils.player());
                 pointArray[i]--;
                 break;
             }
 
             if(finishedSkillPoints == 5) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Finished assigning skill points.")));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Finished assigning skill points.")));
                 skillPointSet = null;
                 loadingSkillpoints = false;
                 return;
             }
 
-            skillPointSet = new SavableSkillPointSet(pointArray);
+            skillPointSet = pointArray;
         });
     }
 
@@ -620,7 +617,7 @@ public class TreeLoader {
 
             ItemStack archetypeItem;
             try {
-                archetypeItem = McUtils.inventory().getStack(at.slot);
+                archetypeItem = MinecraftUtils.inventory().getStack(at.slot);
             } catch (Exception ex) {
                 continue;
             }
@@ -846,13 +843,13 @@ public class TreeLoader {
     public static void savePlayerAbilityTree(String playerName, String characterUUID, String className, SkillPoints skillPoints, AbilityMapData classMap, AbilityTreeData classTree, AbilityMapData playerTree) {
         try {
             if (characterUUID == null) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Couldnt save tree: characterUUID == null")));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Couldnt save tree: characterUUID == null")));
                 return;
             }
             String abilityApiUrl = "https://api.wynncraft.com/v3/player/" + playerName + "/characters/" + characterUUID + "/abilities";
             String abilityResponse = makeHttpRequest(abilityApiUrl);
             if (abilityResponse == null) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Failed to fetch ability tree data: abilityResponse == null")));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Failed to fetch ability tree data: abilityResponse == null")));
                 return;
             }
 
@@ -902,18 +899,18 @@ public class TreeLoader {
                 String prettyJson = gson.toJson(out);
                 writer.write(prettyJson);
                 writer.flush();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("The Ability tree was saved successfully. Use /Wynnextras tree (or /we tree) to view or load it.")));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("The Ability tree was saved successfully. Use /Wynnextras tree (or /we tree) to view or load it.")));
                 TreeData.loadAll();
                 return;
             } catch (IOException e) {
                 WynnExtras.LOGGER.error("[WynnExtras] Couldn't write ability tree file:");
                 e.printStackTrace();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Failed to save ability tree file")));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Failed to save ability tree file")));
             }
         } catch (Exception e) {
             WynnExtras.LOGGER.error("[WynnExtras] Error fetching ability tree:");
             e.printStackTrace();
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Error fetching ability tree")));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Error fetching ability tree")));
         }
     }
 
@@ -927,19 +924,19 @@ public class TreeLoader {
             Path filePath = treesDir.resolve(fileName);
 
             if (Files.deleteIfExists(filePath)) {
-                McUtils.sendMessageToClient(
+                MinecraftUtils.sendMessageToClient(
                         WynnExtras.addWynnExtrasPrefix(Text.of("The Ability tree was deleted successfully."))
                 );
                 TreeData.loadAll(); // Liste neu laden
             } else {
-                McUtils.sendMessageToClient(
+                MinecraftUtils.sendMessageToClient(
                         WynnExtras.addWynnExtrasPrefix(Text.of("Ability tree file not found: " + fileName))
                 );
             }
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Couldn't delete ability tree file:");
             e.printStackTrace();
-            McUtils.sendMessageToClient(
+            MinecraftUtils.sendMessageToClient(
                     WynnExtras.addWynnExtrasPrefix(Text.of("Failed to delete ability tree file"))
             );
         }
@@ -966,10 +963,10 @@ public class TreeLoader {
                 reader.close();
                 return response.toString();
             } else if (responseCode == 403) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("HTTP Request failed: 403")));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("HTTP Request failed: 403")));
                 return null;
             } else if (responseCode == 401) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("HTTP Request failed: 401")));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("HTTP Request failed: 401")));
                 return null;
             } else {
                 WynnExtras.LOGGER.error("[WynnExtras] HTTP Error: " + responseCode);

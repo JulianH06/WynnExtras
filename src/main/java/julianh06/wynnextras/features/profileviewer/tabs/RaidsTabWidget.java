@@ -1,9 +1,8 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
@@ -117,34 +116,34 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
 
         if(ranking != null && currentStatus == Status.ALL) {
             NOTGRank = ranking.getOrDefault("grootslangCompletion", -1L);
-            if(NOTGRank <= 100 && NOTGRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgColor = WynncraftShaderColor.RAINBOW.color;
+            if(NOTGRank <= 100 && NOTGRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgColor = CustomColor.RAINBOW;
 
             NOLRank = ranking.getOrDefault("orphionCompletion", -1L);
-            if(NOLRank <= 100 && NOLRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolColor = WynncraftShaderColor.RAINBOW.color;
+            if(NOLRank <= 100 && NOLRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolColor = CustomColor.RAINBOW;
 
             TCCRank = ranking.getOrDefault("colossusCompletion", -1L);
-            if(TCCRank <= 100 && TCCRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccColor = WynncraftShaderColor.RAINBOW.color;
+            if(TCCRank <= 100 && TCCRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccColor = CustomColor.RAINBOW;
 
             TNARank = ranking.getOrDefault("namelessCompletion", -1L);
-            if(TNARank <= 100 && TNARank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaColor = WynncraftShaderColor.RAINBOW.color;
+            if(TNARank <= 100 && TNARank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaColor = CustomColor.RAINBOW;
 
             TWPRank = ranking.getOrDefault("frumaCompletion", -1L);
-            if(TWPRank <= 100 && TWPRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpColor = WynncraftShaderColor.RAINBOW.color;
+            if(TWPRank <= 100 && TWPRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpColor = CustomColor.RAINBOW;
 
             NOTGSRRank = ranking.getOrDefault("grootslangSrPlayers", -1L);
-            if(NOTGSRRank <= 100 && NOTGSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgSRColor = WynncraftShaderColor.RAINBOW.color;
+            if(NOTGSRRank <= 100 && NOTGSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgSRColor = CustomColor.RAINBOW;
 
             NOLSRRank = ranking.getOrDefault("orphionSrPlayers", -1L);
-            if(NOLSRRank <= 100 && NOLSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolSRColor = WynncraftShaderColor.RAINBOW.color;
+            if(NOLSRRank <= 100 && NOLSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolSRColor = CustomColor.RAINBOW;
 
             TCCSRRank = ranking.getOrDefault("colossusSrPlayers", -1L);
-            if(TCCSRRank <= 100 && TCCSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccSRColor = WynncraftShaderColor.RAINBOW.color;
+            if(TCCSRRank <= 100 && TCCSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccSRColor = CustomColor.RAINBOW;
 
             TNASRRank = ranking.getOrDefault("namelessSrPlayers", -1L);
-            if(TNASRRank <= 100 && TNASRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaSRColor = WynncraftShaderColor.RAINBOW.color;
+            if(TNASRRank <= 100 && TNASRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaSRColor = CustomColor.RAINBOW;
 
             TWPSRRank = ranking.getOrDefault("frumaSrPlayers", -1L);
-            if(TWPSRRank <= 100 && TWPSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpSRColor = WynncraftShaderColor.RAINBOW.color;
+            if(TWPSRRank <= 100 && TWPSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpSRColor = CustomColor.RAINBOW;
 
             if(NOTGRank != -1) {
                 ui.drawText("Completion Rank #" + formatter.format(NOTGRank), x + 240f, y + 195f, notgColor, 3f);

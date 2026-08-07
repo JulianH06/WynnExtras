@@ -6,8 +6,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.wynntils.core.text.StyledText;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.text.StyledText;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
@@ -492,9 +492,9 @@ public class Achievements {
                 .thenAccept(response -> {
                     int code = response.statusCode();
                     if(code == 401) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
                     } else if(code != 200) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading achievements: " + code));
+                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading achievements: " + code));
                     }
                 })
                 .exceptionally(ex -> {

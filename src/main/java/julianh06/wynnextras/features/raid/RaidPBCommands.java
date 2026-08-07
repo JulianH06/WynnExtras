@@ -4,7 +4,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -33,13 +33,13 @@ public class RaidPBCommands {
                         .toList();
 
                 if (filteredPBs.isEmpty()) {
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(filter == null ? "§7No raid PBs saved." : "§7No raid PBs found for §e" + filter + "§7."));
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(filter == null ? "§7No raid PBs saved." : "§7No raid PBs found for §e" + filter + "§7."));
                     return 1;
                 }
 
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(filter == null ? "§eRaid PBs:" : "§eRaid PBs matching §f" + filter + "§e:"));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(filter == null ? "§eRaid PBs:" : "§eRaid PBs matching §f" + filter + "§e:"));
                 filteredPBs.stream()
-                        .forEach(entry -> McUtils.sendMessageToClient(Text.of("§7" + entry.getKey() + ": §f" + RaidChatNotifier.formatTime(entry.getValue()))));
+                        .forEach(entry -> MinecraftUtils.sendMessageToClient(Text.of("§7" + entry.getKey() + ": §f" + RaidChatNotifier.formatTime(entry.getValue()))));
                 return 1;
             },
             null,
@@ -51,7 +51,7 @@ public class RaidPBCommands {
             "",
             context -> {
                 int count = RaidChatNotifier.resetAllPBs();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset " + count + " raid PB" + (count == 1 ? "" : "s") + "."));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset " + count + " raid PB" + (count == 1 ? "" : "s") + "."));
                 return 1;
             },
             null,
@@ -71,7 +71,7 @@ public class RaidPBCommands {
             "pbs",
             "",
             context -> {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we pbs list, /we pbs reset <pb>, /we pbs reset all"));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we pbs list, /we pbs reset <pb>, /we pbs reset all"));
                 return 1;
             },
             List.of(listCmd, resetCmd),
@@ -83,17 +83,17 @@ public class RaidPBCommands {
         try {
             key = StringArgumentType.getString(context, "pb");
         } catch (IllegalArgumentException ignored) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUsage: /we pbs reset <pb> or /we pbs reset all"));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUsage: /we pbs reset <pb> or /we pbs reset all"));
             return 0;
         }
 
         String matchingKey = findPBKey(key);
         if (matchingKey != null && RaidChatNotifier.resetPB(matchingKey)) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset raid PB §e" + matchingKey + "§a."));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aReset raid PB §e" + matchingKey + "§a."));
             return 1;
         }
 
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown raid PB: " + key));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown raid PB: " + key));
         return 0;
     }
 

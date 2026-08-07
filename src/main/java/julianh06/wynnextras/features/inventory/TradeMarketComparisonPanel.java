@@ -1,8 +1,6 @@
 package julianh06.wynnextras.features.inventory;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.utils.mc.TooltipUtils;
+import julianh06.wynnextras.utils.TooltipUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import net.minecraft.client.MinecraftClient;
@@ -16,7 +14,6 @@ import net.minecraft.text.Text;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Trade Market Item Comparison Panel
@@ -244,16 +241,11 @@ public class TradeMarketComparisonPanel {
     }
 
     private static List<Text> getFallbackTooltip(ItemStack stack, MinecraftClient mc) {
-        Optional<WynnItem> wynnItemOpt = Models.Item.getWynnItem(stack);
-        if (wynnItemOpt.isPresent()) {
-            return new ArrayList<>(TooltipUtils.getWynnItemTooltip(stack, wynnItemOpt.get()));
-        } else {
-            return new ArrayList<>(stack.getTooltip(
-                    net.minecraft.item.Item.TooltipContext.DEFAULT,
-                    mc.player,
-                    net.minecraft.item.tooltip.TooltipType.BASIC
-            ));
-        }
+        return new ArrayList<>(stack.getTooltip(
+                net.minecraft.item.Item.TooltipContext.DEFAULT,
+                mc.player,
+                net.minecraft.item.tooltip.TooltipType.BASIC
+        ));
     }
 
     public static void clearAllPanels() {

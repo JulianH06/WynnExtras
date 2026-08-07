@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.chat.mediapreview;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
@@ -27,12 +27,12 @@ public class ChatMediaPreviewCommand {
     );
 
     private static void sendTestLink(String label, String url) {
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§dMedia Preview Test §7(" + label + "): §f" + url)));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§dMedia Preview Test §7(" + label + "): §f" + url)));
     }
 
     private static void sendStatus() {
         if (WynnExtrasConfig.INSTANCE.chatMediaPreviewEnabled) return;
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(
                 "§eChat Media Preview is disabled. Enable it in /we config > Chat to hover these test links.")));
     }
 }

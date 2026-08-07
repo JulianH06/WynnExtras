@@ -1,10 +1,9 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.properties.DurableItemProperty;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.wynn.ContainerUtils;
+import julianh06.wynnextras.wynncraft.item.WynnItemParser;
+import julianh06.wynnextras.wynncraft.item.WynnItemData;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
@@ -22,7 +21,6 @@ import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -73,7 +71,7 @@ public class QuickRepair extends WEMenuExtension {
             boolean keyDown = GLFW.glfwGetKey(window, key) == GLFW.GLFW_PRESS;
             if (keyDown && !keyWasDown) {
                 startRepair();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aRepairing..."));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aRepairing..."));
             }
             keyWasDown = keyDown;
 
@@ -81,7 +79,7 @@ public class QuickRepair extends WEMenuExtension {
 
             if (spamCooldown > 0) { spamCooldown--; return; }
 
-            ScreenHandler menu = McUtils.containerMenu();
+            ScreenHandler menu = MinecraftUtils.containerMenu();
             if (menu == null) return;
 
             if (title.equals(BLACKSMITH_TITLE)) {
@@ -134,7 +132,7 @@ public class QuickRepair extends WEMenuExtension {
             emptySlotTicks = 0;
             lastNextPageSignature = null;
             client.execute(() -> client.player.closeHandledScreen());
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aAll items under the threshold of " + WynnExtrasConfig.INSTANCE.quickRepairDurabilityThreshold +  "% repaired!"));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aAll items under the threshold of " + WynnExtrasConfig.INSTANCE.quickRepairDurabilityThreshold +  "% repaired!"));
         }
     }
 
@@ -172,12 +170,9 @@ public class QuickRepair extends WEMenuExtension {
         Integer loreDurability = getLoreDurabilityPercentage(tooltip);
         if (loreDurability != null) return loreDurability;
 
-        try {
-            Optional<WynnItem> wynnItem = Models.Item.getWynnItem(stack);
-            if (wynnItem.isPresent() && wynnItem.get() instanceof DurableItemProperty durable) {
-                return durable.getDurability().getPercentageInt();
-            }
-        } catch (Exception ignored) {}
+        Integer parsedDurability = WynnItemParser.parse(stack)
+                .flatMap(item -> item.durability()).map(WynnItemData.Amount::percentage).orElse(null);
+        if (parsedDurability != null) return parsedDurability;
 
         if (!stack.isDamageable() || stack.getMaxDamage() <= 0) return null;
 
@@ -223,7 +218,7 @@ public class QuickRepair extends WEMenuExtension {
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
         if (!WynnExtrasConfig.INSTANCE.quickRepairEnabled) return;
-        if (!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
+        if (!(MinecraftUtils.screen() instanceof HandledScreen<?> screen)) return;
         if (!screen.getTitle().getString().equals(BLACKSMITH_TITLE) && !screen.getTitle().getString().equals(REPAIR_TITLE)) return;
 
         if (repairButton == null) {
@@ -258,7 +253,7 @@ public class QuickRepair extends WEMenuExtension {
         @Override
         protected boolean onClick(int button) {
             startRepair();
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aRepairing..."));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aRepairing..."));
             return true;
         }
     }

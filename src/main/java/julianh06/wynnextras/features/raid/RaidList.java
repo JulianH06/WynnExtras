@@ -36,10 +36,11 @@ public class RaidList {
         long raidEndTime = System.currentTimeMillis();
 
         // Debug logging
-        WynnExtras.LOGGER.info("[WynnExtras] Raid ended - type: " + event.getRaid().getRaidKind().getRaidName());
+        if (event.getRaid() == null) return;
+        WynnExtras.LOGGER.info("[WynnExtras] Raid ended - type: " + event.getRaid().raidKind().displayName());
         WynnExtras.LOGGER.info("[WynnExtras] Raid end time: " + raidEndTime);
-        WynnExtras.LOGGER.info("[WynnExtras] Raid start time from event: " + event.getRaid().getRaidStartTime());
-        WynnExtras.LOGGER.info("[WynnExtras] Time in raid (ms): " + event.getRaid().getTimeInRaid());
+        WynnExtras.LOGGER.info("[WynnExtras] Raid start time from event: " + event.getRaid().raidStartTime());
+        WynnExtras.LOGGER.info("[WynnExtras] Time in raid (ms): " + event.getRaid().timeInRaid());
 
         if(event instanceof RaidEndedEvent.Completed) {
             INSTANCE.raids.add(new RaidData(event.getRaid(), members, raidEndTime, true));

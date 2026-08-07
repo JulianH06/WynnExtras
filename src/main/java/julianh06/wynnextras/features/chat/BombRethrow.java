@@ -2,8 +2,8 @@ package julianh06.wynnextras.features.chat;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.wynn.ContainerUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.ContainerUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
@@ -71,7 +71,7 @@ public class BombRethrow {
         BombMapping mapping = getExpiredBombMapping(event.message.getString());
         if (mapping == null) return;
 
-        MinecraftClient.getInstance().send(() -> McUtils.sendMessageToClient(
+        MinecraftClient.getInstance().send(() -> MinecraftUtils.sendMessageToClient(
                 WynnExtras.addWynnExtrasPrefix(Text.literal(""))
                         .append(Text.literal("§e§nClick here to rethrow " + mapping.commandName()).setStyle(Style.EMPTY
                                 .withClickEvent(new ClickEvent.RunCommand("/we rethrowbomb " + mapping.commandName()))))
@@ -123,7 +123,7 @@ public class BombRethrow {
         }
 
         if (mapping == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnsupported bomb type: " + bombType));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnsupported bomb type: " + bombType));
             return;
         }
 
@@ -190,7 +190,7 @@ public class BombRethrow {
     }
 
     private static void fail(String message) {
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
         pendingRequest = null;
     }
 

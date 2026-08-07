@@ -1,17 +1,9 @@
 package julianh06.wynnextras.mixin.BankOverlay;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.Container;
-import com.wynntils.models.containers.containers.CharacterInfoContainer;
-import com.wynntils.models.containers.containers.CharacterSelectionContainer;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
-import com.wynntils.models.containers.containers.ItemIdentifierContainer;
-import com.wynntils.models.containers.containers.personal.AccountBankContainer;
-import com.wynntils.models.containers.containers.personal.BookshelfContainer;
-import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
-import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
-import com.wynntils.screens.container.widgets.PersonalStorageUtilitiesWidget;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.compat.wynntils.WynntilsBankAdapter;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.InventoryKeyPressEvent;
@@ -32,6 +24,7 @@ import julianh06.wynnextras.utils.SmoothGuiCompat;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -130,13 +123,8 @@ public abstract class HandledScreenMixin {
         // Only create BankOverlay2 for bank-type containers to avoid expensive
         // initialization on every GUI open
         if (isBankScreen == null) {
-            Container container = Models.Container.getCurrentContainer();
-            if (container != null) {
-                isBankScreen = container instanceof AccountBankContainer ||
-                    container instanceof CharacterBankContainer ||
-                    container instanceof BookshelfContainer ||
-                    container instanceof MiscBucketContainer;
-            }
+            isBankScreen = WynncraftMenuService.isCurrentAny(
+                    MenuType.ACCOUNT_BANK, MenuType.CHARACTER_BANK, MenuType.BOOKSHELF, MenuType.MISC_BUCKET);
         }
 
         if (Boolean.TRUE.equals(isBankScreen) || currentOverlayType != BankOverlayType.NONE) {
@@ -219,7 +207,7 @@ public abstract class HandledScreenMixin {
         if (!BankOverlay2.shouldShowWynntilsPageJumpButtons()) return;
 
         for (Element child : screen.children()) {
-            if (child instanceof PersonalStorageUtilitiesWidget widget) {
+            if (isPersonalStorageUtilitiesWidget(child) && child instanceof Drawable widget) {
                 context.getMatrices().pushMatrix();
                 context.getMatrices().translate(0, -WYNNTILS_BANK_WIDGET_Y_OFFSET);
                 widget.render(context, mouseX, mouseY + WYNNTILS_BANK_WIDGET_Y_OFFSET, delta);
@@ -237,14 +225,14 @@ public abstract class HandledScreenMixin {
         double translatedMouseY = mouseY + WYNNTILS_BANK_WIDGET_Y_OFFSET;
 
         for (Element child : screen.children()) {
-            if (!(child instanceof PersonalStorageUtilitiesWidget widget)) continue;
+            if (!isPersonalStorageUtilitiesWidget(child)) continue;
 
-            if (widget.isMouseOver(mouseX, translatedMouseY)) {
+            if (child.isMouseOver(mouseX, translatedMouseY)) {
                 BankOverlay2.saveActivePageSnapshot();
-                return widget.mouseClicked(new Click(mouseX, translatedMouseY, click.buttonInfo()), doubleClick);
+                return child.mouseClicked(new Click(mouseX, translatedMouseY, click.buttonInfo()), doubleClick);
             }
 
-            if (widget.isMouseOver(mouseX, mouseY)) {
+            if (child.isMouseOver(mouseX, mouseY)) {
                 return true;
             }
         }
@@ -255,8 +243,7 @@ public abstract class HandledScreenMixin {
     @Unique
     private void renderCharacterSelectionHighlight(DrawContext context, HandledScreen<?> screen) {
         // Only in character selection menu
-        Container container = Models.Container.getCurrentContainer();
-        if (!(container instanceof CharacterSelectionContainer)) return;
+        if (!WynncraftMenuService.isCurrent(MenuType.CLASS_SELECTION)) return;
 
         String targetName = julianh06.wynnextras.features.bankoverlay.BankOverlay2.getTargetCharacterNameForClassMenu();
         if (targetName == null || targetName.isEmpty()) return;
@@ -371,7 +358,7 @@ public abstract class HandledScreenMixin {
         }
 
         if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
-            if (identifierOverlay != null && Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
+            if (identifierOverlay != null && WynncraftMenuService.isCurrent(MenuType.ITEM_IDENTIFIER)) {
                 identifierOverlay.mouseClicked(mouseX, mouseY, button);
             }
         }
@@ -386,7 +373,7 @@ public abstract class HandledScreenMixin {
             }
         }
 
-        if (craftingHelperOverlay != null && Models.Container.getCurrentContainer() instanceof CraftingStationContainer && WynnExtrasConfig.INSTANCE.craftingHelperOverlay) {
+        if (craftingHelperOverlay != null && WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION) && WynnExtrasConfig.INSTANCE.craftingHelperOverlay) {
             craftingHelperOverlay.mouseClicked(mouseX, mouseY, button);
         }
 
@@ -401,7 +388,7 @@ public abstract class HandledScreenMixin {
             }
         }
 
-        if (Models.Container.getCurrentContainer() instanceof CharacterInfoContainer
+        if (WynncraftMenuService.isCurrent(MenuType.CHARACTER_INFO)
                 && WynnExtrasConfig.INSTANCE.skillpointHelper
                 && CompassMenuOverlay.isSelectingWeapon()) {
             if (compassMenuOverlay != null) {
@@ -413,11 +400,16 @@ public abstract class HandledScreenMixin {
         }
 
         if (compassMenuOverlay != null
-                && Models.Container.getCurrentContainer() instanceof CharacterInfoContainer
+                && WynncraftMenuService.isCurrent(MenuType.CHARACTER_INFO)
                 && WynnExtrasConfig.INSTANCE.skillpointHelper
                 && !CompassMenuOverlay.isSelectingWeapon()) {
             compassMenuOverlay.mouseClicked(mouseX, mouseY, button);
         }
+    }
+
+    @Unique
+    private static boolean isPersonalStorageUtilitiesWidget(Element element) {
+        return WynntilsBankAdapter.isPersonalStorageWidget(element);
     }
 
 
@@ -566,12 +558,12 @@ public abstract class HandledScreenMixin {
             return;
         }
 
-        ScreenHandler currScreenHandler = McUtils.containerMenu();
+        ScreenHandler currScreenHandler = MinecraftUtils.containerMenu();
         if (currScreenHandler == null) {
             return;
         }
 
-        Screen currScreen = McUtils.mc().currentScreen;
+        Screen currScreen = MinecraftUtils.mc().currentScreen;
         if (currScreen == null) {
             return;
         }
@@ -654,7 +646,7 @@ public abstract class HandledScreenMixin {
                 if (touchHoveredSlot != null) {
                     MinecraftClient mc = MinecraftClient.getInstance();
                     if (((julianh06.wynnextras.mixin.Accessor.KeybindingAccessor) mc.options.swapHandsKey).getBoundKey().getCode() == keyCode) {
-                        ScreenHandler handler = McUtils.containerMenu();
+                        ScreenHandler handler = MinecraftUtils.containerMenu();
                         if (handler != null) {
                             int slotIndex = touchHoveredSlot.id;
                             mc.interactionManager.clickSlot(handler.syncId, slotIndex, 40, net.minecraft.screen.slot.SlotActionType.SWAP, mc.player);

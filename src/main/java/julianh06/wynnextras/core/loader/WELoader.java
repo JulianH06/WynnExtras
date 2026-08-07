@@ -8,17 +8,21 @@ import java.util.Set;
 
 public interface WELoader {
     static void loadAll() {
-        Reflections reflections = new Reflections("julianh06.wynnextras.core.loader");
-
-        Set<Class<? extends WELoader>> loaderClasses = reflections.getSubTypesOf(WELoader.class);
+        Set<Class<? extends WELoader>> loaderClasses;
+        try {
+            Reflections reflections = new Reflections("julianh06.wynnextras.core.loader");
+            loaderClasses = reflections.getSubTypesOf(WELoader.class);
+        } catch (Throwable throwable) {
+            WynnExtras.LOGGER.error("Failed to discover WynnExtras loaders", throwable);
+            return;
+        }
 
         for (Class<? extends WELoader> clazz : loaderClasses) {
             try {
                 WELoader loader = clazz.getDeclaredConstructor().newInstance();
                 WEEventBus.registerEventListener(loader);
-            } catch (Exception e) {
-                WynnExtras.LOGGER.error("Failed to load WELoader: " + clazz.getName());
-                e.printStackTrace();
+            } catch (Throwable throwable) {
+                WynnExtras.LOGGER.error("Failed to load WELoader: " + clazz.getName(), throwable);
             }
         }
     }

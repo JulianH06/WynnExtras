@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.mc.extension.EntityRenderStateExtension;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.duck.EntityRenderStateAccess;
 import julianh06.wynnextras.features.misc.CurseTracker;
 import julianh06.wynnextras.utils.EntityShader;
 import net.minecraft.client.MinecraftClient;
@@ -27,8 +27,8 @@ public class EntityRenderManagerShaderMixin {
     private <S extends EntityRenderState> void we$beforeRender(S state, CameraRenderState camera, double x, double y, double z, MatrixStack matrices, OrderedRenderCommandQueue queue, CallbackInfo ci) {
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
         if (!c.curseTrackerEnabled || !c.curseTrackerColorMobs) return;
-        if (!(state instanceof EntityRenderStateExtension ext)) return;
-        Entity entity = ext.getEntity();
+        if (!(state instanceof EntityRenderStateAccess access)) return;
+        Entity entity = access.wynnExtras$getEntity();
         if (entity == null) return;
         if (entity == MinecraftClient.getInstance().player) return;
         if (entity instanceof PlayerEntity) return;

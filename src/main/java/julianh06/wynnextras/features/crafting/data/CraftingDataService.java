@@ -3,15 +3,9 @@ package julianh06.wynnextras.features.crafting.data;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.elements.type.Skill;
-import com.wynntils.models.ingredients.type.IngredientInfo;
-import com.wynntils.models.ingredients.type.IngredientPosition;
-import com.wynntils.models.profession.type.ProfessionType;
-import com.wynntils.models.stats.type.StatType;
-import com.wynntils.models.wynnitem.type.ItemMaterial;
-import com.wynntils.utils.type.Pair;
-import com.wynntils.utils.type.RangedValue;
+import julianh06.wynnextras.features.crafting.model.*;
+import julianh06.wynnextras.utils.Pair;
+import julianh06.wynnextras.utils.enums.WEProfessionType;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.MinecraftClient;
@@ -48,7 +42,7 @@ public final class CraftingDataService {
 
     public record RecipeData(
             CraftableType type,
-            ProfessionType skill,
+            WEProfessionType skill,
             List<Material> materials,
             Vector2i healthOrDamage,
             Vector2i durability,
@@ -237,7 +231,7 @@ public final class CraftingDataService {
             Integer id = recipeIds.get(mappingName);
 
             CraftableType type = parseCraftableType(requiredString(object, "type"));
-            ProfessionType profession = parseProfession(requiredString(object, "skill"));
+            WEProfessionType profession = parseProfession(requiredString(object, "skill"));
             Vector2i level = range(object, "level", 1);
             Vector2i durability = type.isConsumable() ? optionalRange(object, "durability", 1000)
                     : range(object, "durability", 1000);
@@ -294,7 +288,7 @@ public final class CraftingDataService {
             String name = requiredString(object, "displayName");
             JsonObject requirements = requiredObject(object.get("requirements"), name + ".requirements");
             int level = requiredInt(requirements, "level");
-            List<ProfessionType> professions = new ArrayList<>();
+            List<WEProfessionType> professions = new ArrayList<>();
             for (JsonElement skill : requiredArray(requirements, "skills")) {
                 professions.add(parseProfession(skill.getAsString()));
             }
@@ -304,7 +298,7 @@ public final class CraftingDataService {
             if (identificationsElement != null && !identificationsElement.isJsonNull()) {
                 JsonObject ids = requiredObject(identificationsElement, name + ".identifications");
                 for (Map.Entry<String, JsonElement> entry : ids.entrySet()) {
-                    StatType statType = Models.Stat.fromApiName(entry.getKey());
+                    StatType statType = StatType.fromApiName(entry.getKey());
                     if (statType == null) throw new IllegalStateException("Unknown Wynncraft identification " + entry.getKey());
                     JsonObject range = requiredObject(entry.getValue(), name + "." + entry.getKey());
                     identifications.add(new Pair<>(statType,
@@ -332,7 +326,7 @@ public final class CraftingDataService {
             JsonObject consumable = requiredObject(object.get("consumableOnlyIDs"), name + ".consumableOnlyIDs");
             int tier = parseTier(requiredString(object, "tier"));
             IngredientInfo ingredient = new IngredientInfo(name, tier, level, Optional.of(requiredString(object, "internalName")),
-                    new ItemMaterial(ItemStack.EMPTY), List.copyOf(professions), skillRequirements, Map.copyOf(positionModifiers), List.of(),
+                    ItemStack.EMPTY, List.copyOf(professions), skillRequirements, Map.copyOf(positionModifiers), List.of(),
                     requiredInt(consumable, "duration") / 1000, requiredInt(consumable, "charges"),
                     requiredInt(itemOnly, "durabilityModifier") / 1000, List.copyOf(identifications));
             if (result.put(name, ingredient) != null) throw new IllegalStateException("Duplicate ingredient " + name);
@@ -422,9 +416,9 @@ public final class CraftingDataService {
         }
     }
 
-    private static ProfessionType parseProfession(String value) {
+    private static WEProfessionType parseProfession(String value) {
         try {
-            return ProfessionType.valueOf(value.toUpperCase(Locale.ROOT));
+            return WEProfessionType.valueOf(value.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             throw new IllegalStateException("Unknown crafting profession " + value, e);
         }
@@ -464,9 +458,9 @@ public final class CraftingDataService {
         }
         Map<IngredientPosition, Integer> positions = new EnumMap<>(IngredientPosition.class);
         for (IngredientPosition position : IngredientPosition.values()) positions.put(position, 0);
-        return new IngredientInfo(name, 0, 0, Optional.empty(), new ItemMaterial(ItemStack.EMPTY),
-                List.of(ProfessionType.ARMOURING, ProfessionType.TAILORING, ProfessionType.WEAPONSMITHING,
-                        ProfessionType.WOODWORKING, ProfessionType.JEWELING),
+        return new IngredientInfo(name, 0, 0, Optional.empty(), ItemStack.EMPTY,
+                List.of(WEProfessionType.ARMOURING, WEProfessionType.TAILORING, WEProfessionType.WEAPONSMITHING,
+                        WEProfessionType.WOODWORKING, WEProfessionType.JEWELING),
                 List.copyOf(requirements), Map.copyOf(positions), List.of(), 0, 0,
                 POWDER_DURABILITY[tier], List.of());
     }

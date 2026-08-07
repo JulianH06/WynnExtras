@@ -1,9 +1,9 @@
 package julianh06.wynnextras.features.inventory.data;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.item.WynnItemData;
+import julianh06.wynnextras.wynncraft.item.WynnItemParser;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.utils.SearchQueryParser;
 import net.fabricmc.loader.api.FabricLoader;
@@ -104,10 +104,10 @@ public class CrossClassBankSearch {
     }
 
     public static SearchRequest createRequest(String query, boolean includeCurrentCharacter, boolean includeAccountBank, boolean allPages) {
-        if (McUtils.player() == null) return null;
+        if (MinecraftUtils.player() == null) return null;
 
         Path configDir = FabricLoader.getInstance().getConfigDir()
-                .resolve("wynnextras/" + McUtils.player().getUuid().toString());
+                .resolve("wynnextras/" + MinecraftUtils.player().getUuid().toString());
 
         Map<Integer, List<ItemStack>> accountBankPages = includeAccountBank
                 ? snapshotAccountBankPages()
@@ -209,14 +209,8 @@ public class CrossClassBankSearch {
                 for (ItemStack stack : pageItems) {
                     if (stack == null || stack.isEmpty()) continue;
 
-                    // Get WynnItem if available
-                    WynnItem wynnItem = null;
-                    Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(stack);
-                    if (optWynnItem.isPresent()) {
-                        wynnItem = optWynnItem.get();
-                    }
-
-                    if (SearchQueryParser.matches(stack, wynnItem, query)) {
+                    WynnItemData itemModel = WynnItemParser.parse(stack).orElse(null);
+                    if (SearchQueryParser.matches(stack, itemModel, query)) {
                         matchingItems.add(stack);
                     }
                 }
@@ -237,10 +231,10 @@ public class CrossClassBankSearch {
 
     public static ItemStack findLastHeldWeaponForClassSelection(String stableId, String name, String classType, int level,
                                                                 boolean requireUniqueBankMatch) {
-        if (McUtils.player() == null) return ItemStack.EMPTY;
+        if (MinecraftUtils.player() == null) return ItemStack.EMPTY;
 
         Path configDir = FabricLoader.getInstance().getConfigDir()
-                .resolve("wynnextras/" + McUtils.player().getUuid().toString());
+                .resolve("wynnextras/" + MinecraftUtils.player().getUuid().toString());
         if (!Files.exists(configDir)) return ItemStack.EMPTY;
 
         return findLastHeldWeapon(configDir, stableId, name, classType, level, requireUniqueBankMatch);
@@ -431,10 +425,8 @@ public class CrossClassBankSearch {
                 List<ItemStack> matchingItems = new ArrayList<>();
                 for (ItemStack stack : pageItems) {
                     if (stack == null || stack.isEmpty()) continue;
-                    WynnItem wynnItem = null;
-                    Optional<WynnItem> opt = Models.Item.getWynnItem(stack);
-                    if (opt.isPresent()) wynnItem = opt.get();
-                    if (SearchQueryParser.matches(stack, wynnItem, query)) {
+                    WynnItemData itemModel = WynnItemParser.parse(stack).orElse(null);
+                    if (SearchQueryParser.matches(stack, itemModel, query)) {
                         matchingItems.add(stack);
                     }
                 }
@@ -619,12 +611,8 @@ public class CrossClassBankSearch {
 
     private static boolean matchesStack(ItemStack stack, SearchQueryParser.ParsedQuery query) {
         if (stack == null || stack.isEmpty()) return false;
-        WynnItem wynnItem = null;
-        Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(stack);
-        if (optWynnItem.isPresent()) {
-            wynnItem = optWynnItem.get();
-        }
-        return SearchQueryParser.matches(stack, wynnItem, query);
+        WynnItemData itemModel = WynnItemParser.parse(stack).orElse(null);
+        return SearchQueryParser.matches(stack, itemModel, query);
     }
 
     private static boolean hasSavedPlayerInventory(BankData data) {

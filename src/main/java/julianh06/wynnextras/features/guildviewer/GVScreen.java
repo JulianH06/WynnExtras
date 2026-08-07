@@ -1,9 +1,9 @@
 package julianh06.wynnextras.features.guildviewer;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.RenderUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.guildviewer.data.GuildData;
 import julianh06.wynnextras.features.profileviewer.OpenInBrowserButton;
@@ -468,13 +468,13 @@ public class GVScreen extends WEScreen {
         }
 
         if(openInBrowserButton.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             openInBrowserButton.click();
             return false;
         }
         if(searchBar != null) {
             if (searchBar.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 searchBar.click();
                 return false;
             } else {
@@ -685,7 +685,7 @@ public class GVScreen extends WEScreen {
             this.member = member;
             this.action = () -> {
                 if(!mouseInMenu) return;
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 parent.close();
                 PV.open(member.username);
             };
@@ -794,7 +794,7 @@ public class GVScreen extends WEScreen {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             int buttonHeight = 30;
             int scrollAreaHeight = height - buttonHeight;
 
@@ -824,7 +824,7 @@ public class GVScreen extends WEScreen {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 isHeld = true;
                 return true;
             }

@@ -1,9 +1,6 @@
 package julianh06.wynnextras.features.loader;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.containers.CharacterInfoContainer;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.misc.CompassMenuOverlay;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -11,6 +8,8 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.Text;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 
 public class SkillPointLoader {
     private static SkillPointLoader INSTANCE;
@@ -31,7 +30,7 @@ public class SkillPointLoader {
 
     public void load(int strength, int dexterity, int intelligence, int defence, int agility) {
         if (loading) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                     Text.of("Skill point assignment is already running.")));
             return;
         }
@@ -42,9 +41,9 @@ public class SkillPointLoader {
         this.defence = defence;
         this.agility = agility;
         this.loading = true;
-        this.startTime = Time.now().timestamp();
+        this.startTime = System.currentTimeMillis();
 
-        if(Models.Container.getCurrentContainer() != null && Models.Container.getCurrentContainer() instanceof CharacterInfoContainer) return;
+        if (WynncraftMenuService.isCurrent(MenuType.CHARACTER_INFO)) return;
 
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) { reset(); return; }
@@ -75,7 +74,7 @@ public class SkillPointLoader {
             SkillPointLoader spl = getInstance();
             if (!spl.loading) return;
 
-            if (Time.now().timestamp() - spl.startTime < OPEN_MENU_WAIT_MS) {
+            if (System.currentTimeMillis() - spl.startTime < OPEN_MENU_WAIT_MS) {
                 client.interactionManager.clickSlot(
                         screen.getScreenHandler().syncId,
                         4, 0, SlotActionType.QUICK_MOVE, client.player);
@@ -120,7 +119,7 @@ public class SkillPointLoader {
             spl.agility      = points[4];
 
             if (finishedCount == 5) {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                         Text.of("Finished assigning skill points.")));
                 spl.reset();
             }

@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.achievements;
 
-import com.wynntils.models.raid.raids.RaidKind;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.features.raid.WERaidKind;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
@@ -96,13 +96,13 @@ public class AchievementTracking {
 
         // Once per launch, reconcile our self-counted raid totals (and class/content/profession
         // achievements) against the Wynncraft API.
-        if (!raidCountsSynced && McUtils.player() != null) {
+        if (!raidCountsSynced && MinecraftUtils.player() != null) {
             raidCountsSynced = true;
             syncRaidCountsFromApi();
         }
 
         // Once the aspect catalogue has finished loading, evaluate the aspect achievements.
-        if (!aspectsSynced && McUtils.player() != null) {
+        if (!aspectsSynced && MinecraftUtils.player() != null) {
             trySyncAspectAchievements();
         }
     }
@@ -116,7 +116,7 @@ public class AchievementTracking {
         if (!(event instanceof RaidEndedEvent.Completed)) return;
         if (achievements == null || event.getRaid() == null) return;
 
-        RaidType type = RaidType.fromKind(event.getRaid().getRaidKind());
+        RaidType type = RaidType.fromKind(event.getRaid().raidKind());
         if (type == null) return;
 
         Integer current = achievements.getCount(type.achievementId);
@@ -128,7 +128,7 @@ public class AchievementTracking {
     }
 
     private void announce(String message) {
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(message)));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(message)));
     }
 
     private void tickUnlockAnnouncements() {
@@ -180,7 +180,7 @@ public class AchievementTracking {
                 .append(Text.literal("[Hover here to view them]").setStyle(Style.EMPTY
                         .withColor(Formatting.YELLOW)
                         .withHoverEvent(new HoverEvent.ShowText(tooltip))));
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
     }
 
     /**
@@ -189,9 +189,9 @@ public class AchievementTracking {
      * response arrives on a background thread.
      */
     private void syncRaidCountsFromApi() {
-        if (achievements == null || McUtils.player() == null) return;
+        if (achievements == null || MinecraftUtils.player() == null) return;
 
-        String username = McUtils.player().getGameProfile().name();
+        String username = MinecraftUtils.player().getGameProfile().name();
         if (username == null || username.isEmpty()) return;
 
         WynncraftApiHandler.fetchPlayerData(username)
@@ -333,7 +333,7 @@ public class AchievementTracking {
      * Failed player-aspect requests are retried later instead of marking the launch as synced.
      */
     private boolean trySyncAspectAchievements() {
-        if (achievements == null || McUtils.player() == null) return false;
+        if (achievements == null || MinecraftUtils.player() == null) return false;
         if (syncingAspects) return false;
 
         List<ApiAspect> catalogue = WynncraftApiHandler.fetchAllAspects(); // kicks off the load on first call
@@ -350,7 +350,7 @@ public class AchievementTracking {
                 .count();
         if (classCount < 5) return false;
 
-        String uuid = McUtils.player().getUuidAsString();
+        String uuid = MinecraftUtils.player().getUuidAsString();
         syncingAspects = true;
         WynncraftApiHandler.fetchPlayerAspectData(uuid)
                 .thenAccept(result -> MinecraftClient.getInstance().execute(() -> {
@@ -466,8 +466,7 @@ public class AchievementTracking {
 
     /**
      * The five raids tracked by completion achievements. Matched against the in-game raid via
-     * {@link RaidKind#getRaidName()}, which is identical to the key Wynncraft's API uses in the
-     * raid completion map.
+     * The display names are identical to the keys returned by Wynncraft's API.
      */
     private enum RaidType {
         TNA("raid.tna", "The Nameless Anomaly"),
@@ -495,9 +494,9 @@ public class AchievementTracking {
             return 0;
         }
 
-        static RaidType fromKind(RaidKind kind) {
+        static RaidType fromKind(WERaidKind kind) {
             if (kind == null) return null;
-            String raidName = kind.getRaidName();
+            String raidName = kind.displayName();
             for (RaidType type : values()) {
                 if (type.displayName.equals(raidName)) return type;
             }

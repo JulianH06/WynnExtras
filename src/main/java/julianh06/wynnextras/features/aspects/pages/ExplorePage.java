@@ -1,7 +1,7 @@
 //package julianh06.wynnextras.features.aspects.pages;
 //
-//import com.wynntils.utils.colors.CustomColor;
-//import com.wynntils.utils.mc.McUtils;
+//import julianh06.wynnextras.utils.colors.CustomColor;
+//import julianh06.wynnextras.utils.MinecraftUtils;
 //import julianh06.wynnextras.features.aspects.AspectScreen;
 //import julianh06.wynnextras.features.aspects.oldPages.AspectScreenHost;
 //import julianh06.wynnextras.features.profileviewer.WynncraftApiHandler;
@@ -174,7 +174,7 @@
 ////                    logicalMouseY >= FILTER_Y && logicalMouseY <= FILTER_Y + FILTER_BUTTON_HEIGHT) {
 ////                if (sortMode != i) {
 ////                    sortMode = i;
-////                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+////                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 ////                }
 ////                return true;
 ////            }
@@ -198,7 +198,7 @@
 ////            if (logicalMouseX >= x && logicalMouseX <= x + ENTRY_WIDTH &&
 ////                    logicalMouseY >= y && logicalMouseY <= y + ENTRY_HEIGHT) {
 ////                // Click on player - search for their aspects
-////                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+////                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 ////                host.searchPlayer(player.getPlayerName());
 ////                return true;
 ////            }

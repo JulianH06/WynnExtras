@@ -1,7 +1,7 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.inventory.BankOverlay;
@@ -24,7 +24,7 @@ public class PressableWidgetMixin {
                 ci.cancel();
                 return;
             }
-            if(WynnExtrasConfig.INSTANCE.craftingHelperOverlay && Models.Container.getCurrentContainer() instanceof CraftingStationContainer) ci.cancel();
-        } catch (Exception ignored) {}
+            if(WynnExtrasConfig.INSTANCE.craftingHelperOverlay && WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)) ci.cancel();
+        } catch (Throwable ignored) {}
     }
 }

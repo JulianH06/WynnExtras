@@ -14,7 +14,7 @@ public class ModMixinPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         try {
             String classPath = targetClassName.replace('.', '/') + ".class";
-            boolean exists = getClass().getClassLoader().getResourceAsStream(classPath) != null;
+            boolean exists = getClass().getClassLoader().getResource(classPath) != null;
 
             if (!exists) {
                 LogManager.getLogger("WynnExtras").warn(
@@ -23,7 +23,7 @@ public class ModMixinPlugin implements IMixinConfigPlugin {
                 );
             }
             return exists;
-        } catch (Exception ignored) { return false; }
+        } catch (Throwable ignored) { return false; }
     }
 
     @Override public void onLoad(String mixinPackage) {}

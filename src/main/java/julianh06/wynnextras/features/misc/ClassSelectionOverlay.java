@@ -1,16 +1,13 @@
 package julianh06.wynnextras.features.misc;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.utils.colors.CommonColors;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
-import com.wynntils.utils.wynn.ContainerUtils;
-import com.wynntils.core.events.MixinHelper;
-import com.wynntils.mc.event.ContainerClickEvent;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.RenderUtils;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
+import julianh06.wynnextras.utils.ContainerUtils;
+import julianh06.wynnextras.compat.wynntils.WynntilsEventAdapter;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.UIUtils;
@@ -734,7 +731,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             scanCustomBackgrounds();
         }
         if (bgTexture != null) {
-            RenderUtils.drawTexturedRect(ctx, bgTexture, CommonColors.WHITE,
+            RenderUtils.drawTexturedRect(ctx, bgTexture, CustomColor.WHITE,
                     0, 0, screenWidth, screenHeight,
                     0, 0, bgImgW, bgImgH, bgImgW, bgImgH);
         }
@@ -1021,7 +1018,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         }
         boolean completionChroma = hasCompletionChroma(progress);
         CustomColor charNameColor = completionChroma && usesCompletionChromaForName()
-                ? WynncraftShaderColor.RAINBOW.color
+                ? CustomColor.RAINBOW
                 : CustomColor.fromHexString("FFFFFF");
         float textX = cx + px(iconXPx + iconAreaPx + 16);
         float textMaxWPx = cardLW / (float) scaleFactor - (textX - cx) / (float) scaleFactor - 8;
@@ -1034,7 +1031,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             String detail = truncateToWidth(details.get(i), textMaxWPx, textLayout.detailTextScale);
             drawOverlayText(detail, textX, cy + px(textLayout.textStartYPx + (i + 1) * textLayout.textSpacingPx),
                     completionChroma && usesCompletionChromaForLines()
-                            ? WynncraftShaderColor.RAINBOW.color
+                            ? CustomColor.RAINBOW
                             : accent, textLayout.detailTextScale);
         }
 
@@ -1373,7 +1370,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             WynnExtrasConfig.INSTANCE.customClassSelectionEnabled = !WynnExtrasConfig.INSTANCE.customClassSelectionEnabled;
             vanillaMode = !WynnExtrasConfig.INSTANCE.customClassSelectionEnabled;
             WynnExtrasConfig.save();
@@ -1546,12 +1543,11 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     private void clickSlot(int slotIndex, int mouseButton) {
         try {
-            ContainerClickEvent event = new ContainerClickEvent(McUtils.containerMenu(), slotIndex, SlotActionType.PICKUP, mouseButton);
-            MixinHelper.post(event);
-            if (event.isCanceled()) return;
+            if (WynntilsEventAdapter.postContainerClick(
+                    MinecraftUtils.containerMenu(), slotIndex, SlotActionType.PICKUP, mouseButton)) return;
 
-            ContainerUtils.clickOnSlot(slotIndex, McUtils.containerMenu().syncId,
-                    mouseButton, McUtils.containerMenu().getStacks());
+            ContainerUtils.clickOnSlot(slotIndex, MinecraftUtils.containerMenu().syncId,
+                    mouseButton, MinecraftUtils.containerMenu().getStacks());
         } catch (Exception e) {}
     }
 
@@ -1613,7 +1609,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     private List<ItemStack> getStacks() {
-        try { return McUtils.containerMenu().getStacks(); }
+        try { return MinecraftUtils.containerMenu().getStacks(); }
         catch (Exception e) { return null; }
     }
 

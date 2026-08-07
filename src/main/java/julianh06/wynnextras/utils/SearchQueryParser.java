@@ -1,16 +1,9 @@
 package julianh06.wynnextras.utils;
 
-import com.wynntils.models.gear.type.GearType;
-import com.wynntils.models.gear.type.ConsumableType;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.items.game.*;
-import com.wynntils.models.gear.type.GearTier;
-import com.wynntils.models.character.type.ClassType;
-import com.wynntils.models.items.properties.ClassableItemProperty;
-import com.wynntils.models.items.properties.GearTierItemProperty;
-import com.wynntils.models.items.properties.LeveledItemProperty;
-import com.wynntils.models.profession.type.ProfessionType;
-import com.wynntils.models.stats.type.StatActualValue;
+import julianh06.wynnextras.wynncraft.item.GearType;
+import julianh06.wynnextras.wynncraft.item.ItemCategory;
+import julianh06.wynnextras.wynncraft.item.WynnItemData;
+import julianh06.wynnextras.wynncraft.item.WynnItemParser;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
@@ -187,10 +180,12 @@ public class SearchQueryParser {
     private static final Pattern LORE_COMBAT_LEVEL_PATTERN = Pattern.compile("Combat Lv\\.? ?Min:? ?§?f?(\\d+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern LORE_LEVEL_MIN_PATTERN = Pattern.compile("(?:Min\\.? )?Lv\\.?:? ?§?f?(\\d+)", Pattern.CASE_INSENSITIVE);
 
-    public static boolean matches(ItemStack stack, WynnItem wynnItem, ParsedQuery query) {
+    public static boolean matches(ItemStack stack, WynnItemData item, ParsedQuery query) {
         if (query == null || !query.hasFilters()) {
             return true;
         }
+
+        WynnItemData wynnItem = item != null ? item : WynnItemParser.parse(stack).orElse(null);
 
         String itemName = "";
         if (stack.getComponents() != null && stack.getComponents().get(DataComponentTypes.CUSTOM_NAME) != null) {
@@ -212,7 +207,8 @@ public class SearchQueryParser {
         String fullLore = null;
         if (query.minLevel != null || query.maxLevel != null) {
             fullLore = getLoreAsString(stack);
-            Integer itemLevel = getItemLevel(wynnItem, fullLore);
+            Integer itemLevel = wynnItem != null && wynnItem.level().isPresent()
+                    ? wynnItem.level().getAsInt() : parseLevelFromLore(fullLore);
             if (itemLevel == null) {
                 return false;
             }
@@ -233,12 +229,7 @@ public class SearchQueryParser {
         if (query.rarities != null && !query.rarities.isEmpty()) {
             String itemRarity = null;
 
-            if (wynnItem instanceof GearTierItemProperty tierItem) {
-                GearTier tier = tierItem.getGearTier();
-                if (tier != null) {
-                    itemRarity = tier.name().toLowerCase();
-                }
-            }
+            if (wynnItem != null && wynnItem.tier() != null) itemRarity = wynnItem.tier().name().toLowerCase();
 
             if (itemRarity == null) {
                 if (fullLore == null) fullLore = getLoreAsString(stack);
@@ -262,7 +253,7 @@ public class SearchQueryParser {
         }
 
         if (query.crafted != null) {
-            boolean isCrafted = wynnItem instanceof CraftedGearItem || wynnItem instanceof CraftedConsumableItem;
+            boolean isCrafted = wynnItem != null && wynnItem.crafted();
             if (query.crafted != isCrafted) {
                 return false;
             }
@@ -293,8 +284,8 @@ public class SearchQueryParser {
         }
 
         if (query.identified != null) {
-            boolean isIdentified = wynnItem instanceof GearItem;
-            boolean isUnidentified = wynnItem instanceof GearBoxItem;
+            boolean isIdentified = wynnItem != null && wynnItem.category() == ItemCategory.GEAR && !wynnItem.unidentified();
+            boolean isUnidentified = wynnItem != null && wynnItem.unidentified();
             if (query.identified && !isIdentified) return false;
             if (!query.identified && !isUnidentified) return false;
         }
@@ -342,14 +333,6 @@ public class SearchQueryParser {
         return null;
     }
 
-    private static Integer getItemLevel(WynnItem wynnItem, String lore) {
-        if (wynnItem instanceof LeveledItemProperty leveledItem) {
-            int level = leveledItem.getLevel();
-            if (level > 0) return level;
-        }
-        return parseLevelFromLore(lore);
-    }
-
     private static String parseRarityFromLore(String lore) {
         String loreLower = lore.toLowerCase();
         if (loreLower.contains("mythic")) return "mythic";
@@ -362,75 +345,47 @@ public class SearchQueryParser {
         return null;
     }
 
-    private static boolean matchesClass(WynnItem wynnItem, String classType) {
-        ClassType requiredClass = getRequiredClass(wynnItem);
-        if (requiredClass == null || requiredClass == ClassType.NONE) return false;
-        return requiredClass.name().equalsIgnoreCase(classType)
-                || requiredClass.getName().equalsIgnoreCase(classType)
-                || requiredClass.getFullName().equalsIgnoreCase(classType);
-    }
-
-    private static ClassType getRequiredClass(WynnItem wynnItem) {
-        if (wynnItem instanceof ClassableItemProperty classableItem) return classableItem.getRequiredClass();
-        if (wynnItem instanceof CharmItem charmItem) return charmItem.getRequiredClass();
-        if (wynnItem instanceof TomeItem tomeItem) return tomeItem.getRequiredClass();
-        if (wynnItem instanceof CraftedConsumableItem consumableItem) return consumableItem.getRequiredClass();
-        return null;
+    private static boolean matchesClass(WynnItemData item, String classType) {
+        return item != null && item.requiredClass().name().equalsIgnoreCase(classType);
     }
 
     /** Matches the profession query against the item's profession metadata.
      *  Currently only IngredientItem exposes profession types directly via Wynntils.
      *  Crafted items don't have a simple profession getter, so users can fall back
      *  to combining `crafted:true` with a text search for the profession name. */
-    private static boolean matchesProfession(WynnItem wynnItem, String prof) {
-        if (wynnItem == null || prof == null) return false;
-        String needle = prof.toLowerCase();
-        if (wynnItem instanceof IngredientItem ing) {
-            for (ProfessionType t : ing.getProfessionTypes()) {
-                if (t.name().toLowerCase().contains(needle)) return true;
-            }
-        }
-        return false;
+    private static boolean matchesProfession(WynnItemData item, String profession) {
+        return item != null && profession != null
+                && item.profession().map(value -> value.contains(profession.toLowerCase())).orElse(false);
     }
 
-    private static boolean matchesType(WynnItem wynnItem, String type) {
-        if (wynnItem == null) return false;
+    private static boolean matchesType(WynnItemData item, String type) {
+        if (item == null) return false;
+        ItemCategory category = item.category();
         return switch (type) {
-            case "gear" -> wynnItem instanceof GearItem || wynnItem instanceof CraftedGearItem;
-            case "box" -> wynnItem instanceof GearBoxItem;
-            case "powder" -> wynnItem instanceof PowderItem;
-            case "potion" -> wynnItem instanceof PotionItem || wynnItem instanceof MultiHealthPotionItem
-                    || isCraftedConsumableType(wynnItem, ConsumableType.POTION);
-            case "food" -> isCraftedConsumableType(wynnItem, ConsumableType.FOOD);
-            case "tome" -> wynnItem instanceof TomeItem;
-            case "tool" -> wynnItem instanceof GatheringToolItem;
-            case "ingredient" -> wynnItem instanceof IngredientItem;
-            case "pouch" -> wynnItem instanceof EmeraldPouchItem;
-            case "key" -> wynnItem instanceof DungeonKeyItem;
-            case "horse" -> wynnItem instanceof MountItem;
-            case "scroll" -> wynnItem instanceof TeleportScrollItem
-                    || isCraftedConsumableType(wynnItem, ConsumableType.SCROLL);
-            case "amplifier" -> wynnItem instanceof AmplifierItem;
-            case "charm" -> wynnItem instanceof CharmItem;
-            case "trinket" -> wynnItem instanceof TrinketItem;
-            case "rune" -> wynnItem instanceof RuneItem;
-            case "material" -> wynnItem instanceof MaterialItem;
+            case "gear" -> category == ItemCategory.GEAR;
+            case "box" -> category == ItemCategory.GEAR_BOX;
+            case "powder" -> category == ItemCategory.POWDER;
+            case "potion" -> category == ItemCategory.POTION;
+            case "food" -> category == ItemCategory.FOOD;
+            case "tome" -> category == ItemCategory.TOME;
+            case "tool" -> category == ItemCategory.TOOL;
+            case "ingredient" -> category == ItemCategory.INGREDIENT;
+            case "pouch" -> category == ItemCategory.EMERALD_POUCH;
+            case "key" -> category == ItemCategory.DUNGEON_KEY;
+            case "horse" -> category == ItemCategory.HORSE;
+            case "scroll" -> category == ItemCategory.TELEPORT_SCROLL;
+            case "amplifier" -> category == ItemCategory.AMPLIFIER;
+            case "charm" -> category == ItemCategory.CHARM;
+            case "trinket" -> category == ItemCategory.TRINKET;
+            case "rune" -> category == ItemCategory.RUNE;
+            case "material" -> category == ItemCategory.MATERIAL;
             default -> false;
         };
     }
 
-    private static boolean isCraftedConsumableType(WynnItem wynnItem, ConsumableType type) {
-        return wynnItem instanceof CraftedConsumableItem consumableItem
-                && consumableItem.getConsumableType() == type;
-    }
-
-    private static boolean matchesSlot(WynnItem wynnItem, String slot) {
-        GearType gearType = null;
-        if (wynnItem instanceof GearItem gear) gearType = gear.getGearType();
-        else if (wynnItem instanceof CraftedGearItem gear) gearType = gear.getGearType();
-        else if (wynnItem instanceof GearBoxItem box) gearType = box.getGearType();
-        if (gearType == null) return false;
-
+    private static boolean matchesSlot(WynnItemData item, String slot) {
+        if (item == null) return false;
+        GearType gearType = item.gearType();
         return switch (slot) {
             case "helmet" -> gearType == GearType.HELMET;
             case "chestplate" -> gearType == GearType.CHESTPLATE;
@@ -444,36 +399,29 @@ public class SearchQueryParser {
             case "ring" -> gearType == GearType.RING;
             case "bracelet" -> gearType == GearType.BRACELET;
             case "necklace" -> gearType == GearType.NECKLACE;
-            case "weapon" -> gearType == GearType.SPEAR || gearType == GearType.DAGGER ||
-                    gearType == GearType.BOW || gearType == GearType.WAND || gearType == GearType.RELIK;
-            case "armor" -> gearType == GearType.HELMET || gearType == GearType.CHESTPLATE ||
-                    gearType == GearType.LEGGINGS || gearType == GearType.BOOTS;
-            case "accessory" -> gearType == GearType.RING || gearType == GearType.BRACELET ||
-                    gearType == GearType.NECKLACE;
+            case "weapon" -> gearType.isWeapon();
+            case "armor" -> gearType.isArmor();
+            case "accessory" -> gearType.isAccessory();
             default -> false;
         };
     }
 
-    private static boolean matchesId(WynnItem wynnItem, String idName, String op, Integer value) {
-        if (!(wynnItem instanceof GearItem gear)) return false;
-        List<StatActualValue> ids;
-        try { ids = gear.getIdentifications(); } catch (Exception e) { return false; }
-        if (ids == null || ids.isEmpty()) return false;
-
-        for (StatActualValue stat : ids) {
-            String statName = stat.statType().getDisplayName().toLowerCase().replaceAll("[^a-z0-9]", "");
-            String apiName = stat.statType().getApiName().toLowerCase().replaceAll("[^a-z0-9]", "");
-            String key = stat.statType().getKey().toLowerCase().replaceAll("[^a-z0-9]", "");
-            String search = idName.replaceAll("[^a-z0-9]", "");
-
-            if (statName.contains(search) || apiName.contains(search) || key.contains(search)) {
+    private static boolean matchesId(WynnItemData item, String idName, String op, Integer value) {
+        if (item == null) return false;
+        String search = normalize(idName);
+        for (var entry : item.identifications().entrySet()) {
+            if (entry.getKey().contains(search)) {
                 if (op == null || value == null) return true;
-                int actual = stat.value();
+                int actual = entry.getValue();
                 if (">".equals(op)) return actual > value;
                 if ("<".equals(op)) return actual < value;
             }
         }
         return false;
+    }
+
+    private static String normalize(String value) {
+        return value == null ? "" : value.toLowerCase().replaceAll("[^a-z0-9]", "");
     }
 
     public static boolean hasAdvancedFilters(String input) {

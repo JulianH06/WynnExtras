@@ -1,0 +1,24 @@
+{
+  "required": false,
+  "package": "julianh06.wynnextras.compat.wynntils.mixin",
+  "plugin": "julianh06.wynnextras.mixin.ModMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 0
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  },
+  "client": [
+    "CustomNametagRendererFeatureMixin",
+    "GuildMapScreenMixin",
+    "NetManagerMixin"
+  ],
+  "mixins": [
+    "ContainerScrollFeatureMixin",
+    "FunctionManagerMixin",
+    "ItemStatInfoFeatureMixin",
+    "PersonalStorageUtilitiesFeatureMixin",
+    "TooltipFittingFeatureMixin"
+  ]
+}

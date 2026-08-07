@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.qol;
 
-import com.wynntils.core.components.Models;
+import julianh06.wynnextras.wynncraft.state.TerritoryState;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.event.api.WEEventBus;
@@ -78,6 +78,7 @@ public class AttackTimer {
                     String[] parts = clean.split(":\\s*", 2);
                     if (parts.length == 2) {
                         cachedDefenses.put(territory, parts[1].trim());
+                        TerritoryState.cacheDefense(territory, parts[1].trim());
                         lastSelfLookupTerritory = territory;
                         lastSelfLookupAt = System.currentTimeMillis();
                     }
@@ -98,6 +99,7 @@ public class AttackTimer {
             Matcher m = DEFENSE_BROADCAST.matcher(raw);
             if (m.find()) {
                 cachedDefenses.put(m.group("terr").trim(), m.group("def").trim());
+                TerritoryState.cacheDefense(m.group("terr").trim(), m.group("def").trim());
                 return;
             }
 
@@ -176,16 +178,10 @@ public class AttackTimer {
         String cached = cachedDefenses.get(territory);
         if (cached != null) return cached;
 
-        try {
-            var poi = Models.Territory.getTerritoryPoiFromAdvancement(territory);
-            if (poi == null || poi.getTerritoryInfo() == null) return null;
-            String def = strip(poi.getTerritoryInfo().getDefences().getAsString()).trim();
-            if (def.isEmpty()) return null;
-            cachedDefenses.put(territory, def);
-            return def;
-        } catch (Exception ignored) {
-            return null;
-        }
+        String def = TerritoryState.defense(territory).map(AttackTimer::strip).orElse("").trim();
+        if (def.isEmpty()) return null;
+        cachedDefenses.put(territory, def);
+        return def;
     }
 
     private static int parseMinutes(String time) {
@@ -220,13 +216,7 @@ public class AttackTimer {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return null;
 
-        try {
-            Vec3d position = new Vec3d(mc.player.getX(), mc.player.getY(), mc.player.getZ());
-            var profile = Models.Territory.getTerritoryProfileForPosition(position);
-            return profile == null ? null : profile.getName();
-        } catch (Exception ignored) {
-            return null;
-        }
+        return TerritoryState.currentTerritory().orElse(null);
     }
 
     private static MutableText styledPart(String text, int color, boolean bold) {

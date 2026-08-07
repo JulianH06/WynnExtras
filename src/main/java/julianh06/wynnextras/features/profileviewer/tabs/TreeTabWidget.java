@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.SaveButtonWidget;
@@ -166,7 +166,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         }
 
 
-        //ctx.drawTooltip(McUtils.mc().textRenderer, Text.of(AbilityTreeCache.getClassTree(className).pages.get("1").get("bash").name), mouseX, mouseX);
+        //ctx.drawTooltip(MinecraftUtils.mc().textRenderer, Text.of(AbilityTreeCache.getClassTree(className).pages.get("1").get("bash").name), mouseX, mouseX);
 
 
         AbilityMapData playerTree = AbilityTreeCache.getPlayerTree(characterUUID);

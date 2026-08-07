@@ -1,8 +1,6 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CommonColors;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
+import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
@@ -53,9 +51,9 @@ public class ProfessionsTabWidget extends PVScreen.TabWidget {
             if(i < 4) {
                 ui.drawImage(profTexture, x + 210 + i * 408, y + 60, 192, 192);
                 if(level == 132) {
-                    levelColor = WynnExtrasConfig.INSTANCE.removeChroma ? CommonColors.RED : WynncraftShaderColor.RAINBOW.color;
+                    levelColor = WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.RED : CustomColor.RAINBOW;
                 } else if (level >= 110) {
-                    levelColor = CommonColors.YELLOW;
+                    levelColor = CustomColor.YELLOW;
                 } else {
                     levelColor = CustomColor.fromHexString("FFFFFF");
                 }
@@ -71,9 +69,9 @@ public class ProfessionsTabWidget extends PVScreen.TabWidget {
             } else {
                 ui.drawImage(profTexture, x + 132 + (i - 4) * 204, y + 600, 96, 96);
                 if(level == 132) {
-                    levelColor = WynnExtrasConfig.INSTANCE.removeChroma ? CommonColors.RED : WynncraftShaderColor.RAINBOW.color;
+                    levelColor = WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.RED : CustomColor.RAINBOW;
                 } else if (level >= 103) {
-                    levelColor = CommonColors.YELLOW;
+                    levelColor = CustomColor.YELLOW;
                 } else {
                     levelColor = CustomColor.fromHexString("FFFFFF");
                 }
