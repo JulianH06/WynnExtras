@@ -56,9 +56,6 @@ public class PVScreen extends WEScreen {
     public static List<TabButton> tabButtons = new ArrayList<>();
     public static List<CharacterButton> characterButtons = new ArrayList<>();
 
-    public static List<String> WETeam = List.of("JulianH06", "Teslanator", "pat_crafter07");
-    public static List<String> WEContributors = List.of("Mikecraft1224", "elwood24", "LegendaryVirus", "BaltrazYT", "LookingForSleep", "SidOfThe7Cs", "drzxm", "theoplegends", "Tabytac", "Zatzou", "Rafii2198");
-
     static Identifier tabLeft = Identifier.of("wynnextras", "textures/gui/profileviewer/tableft.png");
     static Identifier tabMid = Identifier.of("wynnextras", "textures/gui/profileviewer/tabmid.png");
     static Identifier tagRight = Identifier.of("wynnextras", "textures/gui/profileviewer/tabright.png");
@@ -240,7 +237,6 @@ public class PVScreen extends WEScreen {
         }
         addedNewest = false;
         registerScrolling();
-        //addRootWidget(hier jetzt alle verschiedenen tabs);
     }
 
     @Override

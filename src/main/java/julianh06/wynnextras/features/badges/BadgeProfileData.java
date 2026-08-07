@@ -9,6 +9,7 @@ import net.minecraft.client.MinecraftClient;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 public final class BadgeProfileData {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -18,7 +19,13 @@ public final class BadgeProfileData {
 
     public static BadgeProfile getLocalProfile() {
         if (localProfile == null) load();
+        String oldIcon = localProfile.selectedIconId;
+        String oldColor = localProfile.selectedColorId;
         localProfile.sanitize(true);
+        if (!Objects.equals(localProfile.selectedIconId, oldIcon)
+                || !Objects.equals(localProfile.selectedColorId, oldColor)) {
+            saveLocalProfile();
+        }
         return localProfile;
     }
 
@@ -26,7 +33,10 @@ public final class BadgeProfileData {
         BadgeCatalog.BadgeIcon icon = BadgeCatalog.icon(iconId);
         if (!BadgeCatalog.isUnlocked(icon)) return;
         BadgeProfile profile = getLocalProfile();
+        if (icon.id().equals(profile.selectedIconId)) return;
+        profile.previousIconId = profile.selectedIconId;
         profile.selectedIconId = icon.id();
+        profile.sanitize(true);
         save();
     }
 
@@ -34,6 +44,9 @@ public final class BadgeProfileData {
         BadgeCatalog.BadgeColor color = BadgeCatalog.color(colorId);
         if (!BadgeCatalog.isUnlocked(color)) return;
         BadgeProfile profile = getLocalProfile();
+        if (!BadgeCatalog.isCompatible(BadgeCatalog.icon(profile.selectedIconId), color)) return;
+        if (color.id().equals(profile.selectedColorId)) return;
+        profile.previousColorId = profile.selectedColorId;
         profile.selectedColorId = color.id();
         save();
     }
@@ -57,18 +70,25 @@ public final class BadgeProfileData {
         String oldIcon = localProfile.selectedIconId;
         String oldColor = localProfile.selectedColorId;
         localProfile.sanitize(true);
-        if (!localProfile.selectedIconId.equals(oldIcon) || !localProfile.selectedColorId.equals(oldColor)) save();
+        if (!Objects.equals(localProfile.selectedIconId, oldIcon)
+                || !Objects.equals(localProfile.selectedColorId, oldColor)) {
+            saveLocalProfile();
+        }
     }
 
     public static void save() {
+        if (localProfile == null) load();
+        saveLocalProfile();
+    }
+
+    private static void saveLocalProfile() {
         Path path = profilePath();
         if (path == null) return;
         try {
             Files.createDirectories(path.getParent());
-            BadgeProfile profile = getLocalProfile();
-            profile.uuid = currentUuid();
-            profile.username = currentUsername();
-            Files.writeString(path, GSON.toJson(profile));
+            localProfile.uuid = currentUuid();
+            localProfile.username = currentUsername();
+            Files.writeString(path, GSON.toJson(localProfile));
         } catch (IOException e) {
             WynnExtras.LOGGER.error("[WynnExtras] Failed to save badge profile: " + e.getMessage());
         }

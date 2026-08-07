@@ -5,6 +5,7 @@ import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.event.RaidEndedEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
@@ -13,8 +14,16 @@ import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.features.profileviewer.data.PlayerData;
 import julianh06.wynnextras.features.profileviewer.data.Profession;
 import julianh06.wynnextras.features.profileviewer.data.Raids;
+import julianh06.wynnextras.features.qol.AttackTimer;
+import julianh06.wynnextras.utils.BossBarUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.hud.ClientBossBar;
+import net.minecraft.inventory.Inventory;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
@@ -27,6 +36,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @WEModule
 public class AchievementTracking {
@@ -46,6 +57,12 @@ public class AchievementTracking {
     /** Combat level cap a class must reach to count toward the {@code class.levelXXX} achievements. */
     private static final int CLASS_LEVEL_120 = 120;
     private static final int CLASS_LEVEL_121 = 121;
+    private static final int PROFESSION_LEVEL_MAX = 132;
+    private static final long WAR_API_REFRESH_INTERVAL_MS = 60_000L;
+    private static final long WAR_RESULT_GRACE_MS = 15_000L;
+    private static final long ASPECT_SYNC_RETRY_DELAY_MS = 60_000L;
+    private static final Pattern TERRITORY_TAKEN_CONTROL_PATTERN = Pattern.compile(
+            "You have taken control of (?<territory>.+?) from \\[[^]]+]!");
 
     /**
      * Raw content-completion value that equals 100%. Kept in sync with
@@ -74,12 +91,25 @@ public class AchievementTracking {
     /** Ensures the aspect achievement sync only dispatches once the aspect catalogue is loaded. */
     private boolean aspectsSynced;
     private volatile boolean syncingAspects;
+    private long nextAspectSyncAt;
+    private long nextWarApiSyncAt;
+    private boolean warBossBarActive;
+    private String awaitingWarResultTerritory;
+    private long awaitingWarResultUntil;
+    private String lastWarDefenseDebugState;
 
     public static void reloadAchievementsFromApi() {
         if (achievements == null) Achievements.load();
         AchievementTracking tracking = new AchievementTracking();
         tracking.syncRaidCountsFromApi();
         tracking.trySyncAspectAchievements();
+    }
+
+    public static void clearAchievements() {
+        achievements = Achievements.createDefaultAchievementSet();
+        pendingUnlockAnnouncements.clear();
+        unlockAnnouncementFlushTicks = -1;
+        Achievements.save();
     }
 
     @SubscribeEvent
@@ -94,11 +124,16 @@ public class AchievementTracking {
         }
         if (achievements == null) return;
 
-        // Once per launch, reconcile our self-counted raid totals (and class/content/profession
-        // achievements) against the Wynncraft API.
+        checkRichBankAchievement();
+        trackWarAchievements();
+
+        // Once per launch, reconcile raid, war, class, content and profession achievements against the API.
         if (!raidCountsSynced && MinecraftUtils.player() != null) {
             raidCountsSynced = true;
+            nextWarApiSyncAt = System.currentTimeMillis() + WAR_API_REFRESH_INTERVAL_MS;
             syncRaidCountsFromApi();
+        } else {
+            syncWarCountFromApiIfDue();
         }
 
         // Once the aspect catalogue has finished loading, evaluate the aspect achievements.
@@ -125,6 +160,122 @@ public class AchievementTracking {
         save();
 
         syncRaidCountsFromApi();
+    }
+
+    /** Checks the currently open account or character bank page. */
+    private void checkRichBankAchievement() {
+        if (achievements.isUnlocked("bank.rich")) return;
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+
+        if (!WynncraftMenuService.isCurrentAny(MenuType.ACCOUNT_BANK, MenuType.CHARACTER_BANK)) return;
+
+        ScreenHandler handler = MinecraftUtils.containerMenu();
+        if (handler == null) return;
+
+        Inventory playerInventory = client.player.getInventory();
+        int bankSlotCount = 0;
+        for (Slot slot : handler.slots) {
+            if (slot.inventory == playerInventory) continue;
+            if (bankSlotCount == 45) break;
+            String name = slot.getStack().getName().getString().replaceAll("§[0-9a-fk-or]", "").trim();
+            if (!name.equalsIgnoreCase("Liquid Emerald") || slot.getStack().getCount() != 64) {
+                return;
+            }
+            bankSlotCount++;
+        }
+        if (bankSlotCount < 45) return;
+
+        if (unlockSimple("bank.rich", "Rich")) save();
+    }
+
+    /** Records the active tower; the achievement is only granted after the capture message. */
+    private void trackWarAchievements() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return;
+
+        for (ClientBossBar bar : BossBarUtils.getBossBars(client.inGameHud.getBossBarHud())) {
+            String name = bar.getName().getString();
+            if (name == null || !name.replaceAll("§[0-9a-fk-or]", "").contains("Tower")) continue;
+            String territoryName = getWarTerritoryName(name);
+
+            if (!warBossBarActive) {
+                warBossBarActive = true;
+                WynnExtras.LOGGER.info("[WE Achievement Debug] Tower boss bar detected: '{}', territory='{}'", name, territoryName);
+            }
+            awaitingWarResultTerritory = territoryName;
+            awaitingWarResultUntil = Long.MAX_VALUE;
+            return;
+        }
+
+        if (warBossBarActive) {
+            WynnExtras.LOGGER.info("[WE Achievement Debug] Tower boss bar disappeared");
+            awaitingWarResultUntil = System.currentTimeMillis() + WAR_RESULT_GRACE_MS;
+        } else if (awaitingWarResultTerritory != null && System.currentTimeMillis() > awaitingWarResultUntil) {
+            awaitingWarResultTerritory = null;
+            awaitingWarResultUntil = 0;
+        }
+        warBossBarActive = false;
+        lastWarDefenseDebugState = null;
+    }
+
+    @SubscribeEvent
+    private void onWarCaptured(ChatEvent event) {
+        if (achievements == null || awaitingWarResultTerritory == null) return;
+
+        String message = event.message.getString();
+        if (message.contains(":")) return;
+
+        Matcher controlMatcher = TERRITORY_TAKEN_CONTROL_PATTERN.matcher(message);
+        if (!controlMatcher.find()) return;
+
+        String territoryName = controlMatcher.group("territory");
+        if (!awaitingWarResultTerritory.equalsIgnoreCase(territoryName)
+                || System.currentTimeMillis() > awaitingWarResultUntil) return;
+
+        String queuedDefense = AttackTimer.getQueuedAttackDefense(territoryName);
+        WarDefense defense = WarDefense.fromName(queuedDefense);
+        if (defense == null) {
+            logWarDefenseDebug("no-queued-defense:" + territoryName,
+                    "No defence snapshot from the queue for '" + territoryName + "'; not unlocking a war defence achievement");
+        } else {
+            AttackTimer.markQueuedAttackDefenseUsed(territoryName);
+            boolean alreadyUnlocked = achievements.isUnlocked(defense.achievementId);
+            boolean changed = unlockSimple(defense.achievementId, defense.displayName + " Defense tower");
+            logWarDefenseDebug("defense:" + queuedDefense,
+                    "Captured tower '" + territoryName + "' had queued defence '" + queuedDefense + "'");
+            WynnExtras.LOGGER.info("[WE Achievement Debug] War defence '{}' mapped to '{}'; alreadyUnlocked={}, changed={}",
+                    defense.displayName, defense.achievementId, alreadyUnlocked, changed);
+            if (changed) save();
+        }
+
+        awaitingWarResultTerritory = null;
+        awaitingWarResultUntil = 0;
+    }
+
+    private void syncWarCountFromApiIfDue() {
+        if (MinecraftUtils.player() == null) return;
+        long now = System.currentTimeMillis();
+        if (now < nextWarApiSyncAt) return;
+
+        nextWarApiSyncAt = now + WAR_API_REFRESH_INTERVAL_MS;
+        syncRaidCountsFromApi();
+    }
+
+    private String getWarTerritoryName(String bossBarName) {
+        String name = bossBarName.replaceAll("§[0-9a-fk-or]", "");
+        int towerIndex = name.indexOf(" Tower");
+        if (towerIndex == -1) return null;
+
+        name = name.substring(0, towerIndex).replaceFirst("^\\[[^]]+]\\s*", "").trim();
+        return name.isEmpty() ? null : name;
+    }
+
+    private void logWarDefenseDebug(String state, String message) {
+        if (state.equals(lastWarDefenseDebugState)) return;
+        lastWarDefenseDebugState = state;
+        WynnExtras.LOGGER.info("[WE Achievement Debug] {}", message);
     }
 
     private void announce(String message) {
@@ -207,6 +358,7 @@ public class AchievementTracking {
 
         boolean changed = false;
         changed |= reconcileRaids(data);
+        changed |= reconcileWars(data);
         changed |= evaluateCharacterAchievements(data);
         if (changed) save();
     }
@@ -234,6 +386,12 @@ public class AchievementTracking {
         return changed;
     }
 
+    private boolean reconcileWars(PlayerData data) {
+        if (data.getGlobalData() == null) return false;
+        return applyTieredCount("war.completion", Math.max(0, data.getGlobalData().getWars()),
+                Achievements.WAR_TARGETS, "wars completed");
+    }
+
     /**
      * Evaluates the class-level, content-completion and profession achievements from the per-character
      * data in a single Wynncraft API response. Returns true if any achievement state changed.
@@ -245,6 +403,8 @@ public class AchievementTracking {
         int classesAt120 = 0;
         int classesAt121 = 0;
         boolean contentComplete = false;
+        boolean ultimateCompletionist = false;
+        boolean maxLevel = false;
 
         Map<String, Integer> gatheringLevels = new HashMap<>();
         Map<String, Integer> craftingLevels = new HashMap<>();
@@ -261,6 +421,15 @@ public class AchievementTracking {
             Map<String, Profession> professions = character.getProfessions();
             if (professions == null) continue;
 
+            if (character.getContentCompletion() >= CONTENT_COMPLETION_MAX
+                    && allProfessionsAtLevel(professions, PROFESSION_LEVEL_MAX)) {
+                ultimateCompletionist = true;
+            }
+            if (character.getLevel() >= CLASS_LEVEL_121
+                    && allProfessionsAtLevel(professions, PROFESSION_LEVEL_MAX)) {
+                maxLevel = true;
+            }
+
             for (String prof : GATHERING_PROFESSIONS) {
                 gatheringLevels.merge(prof, professionLevel(professions, prof), Math::max);
             }
@@ -276,6 +445,8 @@ public class AchievementTracking {
         changed |= applyTieredCount("class.level121", classesAt121, Achievements.CLASS_COUNT_TARGETS, "class(es) at Level 121");
 
         if (contentComplete) changed |= unlockSimple("content.completion", "100% Content Completion");
+        if (ultimateCompletionist) changed |= unlockSimple("content.ultimate_completionist", "Ultimate Completionist");
+        if (maxLevel) changed |= unlockSimple("class.max_level", "Max Level");
 
         changed |= applyTieredCount("prof.gather.100", countProfessionsAtLevel(gatheringLevels, GATHERING_PROFESSIONS, 100), Achievements.GATHERING_PROFESSION_TARGETS, "gathering profession(s) at Level 100");
         changed |= applyTieredCount("prof.gather.115", countProfessionsAtLevel(gatheringLevels, GATHERING_PROFESSIONS, 115), Achievements.GATHERING_PROFESSION_TARGETS, "gathering profession(s) at Level 115");
@@ -293,6 +464,16 @@ public class AchievementTracking {
             if (professionLevels.getOrDefault(profession, 0) >= level) count++;
         }
         return count;
+    }
+
+    private static boolean allProfessionsAtLevel(Map<String, Profession> professions, int level) {
+        for (String profession : GATHERING_PROFESSIONS) {
+            if (professionLevel(professions, profession) < level) return false;
+        }
+        for (String profession : CRAFTING_PROFESSIONS) {
+            if (professionLevel(professions, profession) < level) return false;
+        }
+        return true;
     }
 
     private static int professionLevel(Map<String, Profession> professions, String key) {
@@ -335,6 +516,7 @@ public class AchievementTracking {
     private boolean trySyncAspectAchievements() {
         if (achievements == null || MinecraftUtils.player() == null) return false;
         if (syncingAspects) return false;
+        if (System.currentTimeMillis() < nextAspectSyncAt) return false;
 
         List<ApiAspect> catalogue = WynncraftApiHandler.fetchAllAspects(); // kicks off the load on first call
         if (WynncraftApiHandler.INSTANCE.isFetchingAspects.get()) return false; // still loading — retry later
@@ -357,11 +539,16 @@ public class AchievementTracking {
                     syncingAspects = false;
                     if (applyAspectAchievements(result, snapshot)) {
                         aspectsSynced = true;
+                    } else {
+                        nextAspectSyncAt = System.currentTimeMillis() + ASPECT_SYNC_RETRY_DELAY_MS;
                     }
                 }))
                 .exceptionally(ex -> {
-                    syncingAspects = false;
-                    WynnExtras.LOGGER.error("[WynnExtras] Failed to sync aspect achievements: " + ex.getMessage());
+                    MinecraftClient.getInstance().execute(() -> {
+                        syncingAspects = false;
+                        nextAspectSyncAt = System.currentTimeMillis() + ASPECT_SYNC_RETRY_DELAY_MS;
+                        WynnExtras.LOGGER.error("[WynnExtras] Failed to sync aspect achievements: " + ex.getMessage());
+                    });
                     return null;
                 });
         return true;
@@ -449,6 +636,30 @@ public class AchievementTracking {
         UnlockAnnouncement(String message, String tooltipLine) {
             this.message = message;
             this.tooltipLine = tooltipLine;
+        }
+    }
+
+    private enum WarDefense {
+        VERY_LOW("war.defence.very_low", "Very Low"),
+        LOW("war.defence.low", "Low"),
+        MEDIUM("war.defence.medium", "Medium"),
+        HIGH("war.defence.high", "High"),
+        VERY_HIGH("war.defence.very_high", "Very High");
+
+        final String achievementId;
+        final String displayName;
+
+        WarDefense(String achievementId, String displayName) {
+            this.achievementId = achievementId;
+            this.displayName = displayName;
+        }
+
+        static WarDefense fromName(String name) {
+            if (name == null) return null;
+            for (WarDefense defense : values()) {
+                if (defense.displayName.equalsIgnoreCase(name)) return defense;
+            }
+            return null;
         }
     }
 

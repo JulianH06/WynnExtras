@@ -3,11 +3,14 @@ package julianh06.wynnextras.features.crafting.data;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import julianh06.wynnextras.features.crafting.model.*;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.enums.WEProfessionType;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.ItemStack;
 import org.joml.Vector2i;
@@ -16,6 +19,11 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,12 +82,23 @@ public final class CraftingDataService {
             Map<String, JsonObject> itemDatabase
     ) {}
 
+    record CachedPayloads(
+            int schemaVersion,
+            long fetchedAt,
+            String recipes,
+            String items,
+            String ingredientMap,
+            String wynnBuilderRecipes
+    ) {}
+
     private static final URI RECIPES_URI = URI.create("https://api.wynncraft.com/v3/item/recipe/database?full_result");
     private static final URI ITEMS_URI = URI.create("https://api.wynncraft.com/v3/item/database?fullResult");
     private static final URI INGREDIENT_MAP_URI = URI.create("https://raw.githubusercontent.com/wynnbuilder-beta/wynnbuilder-beta.github.io/master/data/baseline/maps/ing_map.json");
     private static final URI WYNNBUILDER_DATA_URI = URI.create("https://api.github.com/repos/wynnbuilder-beta/wynnbuilder-beta.github.io/contents/data?ref=master");
     private static final String WYNNBUILDER_RAW_DATA_BASE = "https://raw.githubusercontent.com/wynnbuilder-beta/wynnbuilder-beta.github.io/master/data/";
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+    private static final int CACHE_SCHEMA_VERSION = 1;
+    private static final Gson CACHE_GSON = new GsonBuilder().create();
     // WynnBuilder synthesizes these IDs in js/load_ing.js; no JSON mapping exists.
     private static final int FIRST_POWDER_INGREDIENT_ID = 4001;
     private static final int POWDER_ELEMENTS = 5;
@@ -105,6 +124,7 @@ public final class CraftingDataService {
     private volatile State state = State.NOT_LOADED;
     private volatile String unavailableReason = "";
     private volatile LoadedData data;
+    private volatile List<String> ingredientNames = List.of();
 
     private CraftingDataService() {}
 
@@ -115,6 +135,17 @@ public final class CraftingDataService {
     public void initialize() {
         if (!started.compareAndSet(false, true)) return;
         state = State.LOADING;
+
+        CachedPayloads cachedPayloads = readCache(cachePath());
+        if (cachedPayloads != null) {
+            try {
+                setLoadedData(buildData(cachedPayloads.recipes(), cachedPayloads.items(),
+                        cachedPayloads.ingredientMap(), cachedPayloads.wynnBuilderRecipes()));
+                WynnExtras.LOGGER.info("Loaded crafting data from local cache");
+            } catch (RuntimeException ex) {
+                WynnExtras.LOGGER.warn("Ignoring invalid crafting data cache: " + rootMessage(ex));
+            }
+        }
 
         CompletableFuture<String> recipes = fetch("Wynncraft recipes", RECIPES_URI);
         CompletableFuture<String> items = fetch("Wynncraft items", ITEMS_URI);
@@ -127,18 +158,82 @@ public final class CraftingDataService {
                         MinecraftClient.getInstance())
                 .whenComplete((loaded, throwable) -> {
                     if (throwable != null) {
-                        data = null;
-                        unavailableReason = rootMessage(throwable);
-                        state = State.UNAVAILABLE;
-                        WynnExtras.LOGGER.error("Crafting data unavailable for this session: " + unavailableReason);
+                        String reason = rootMessage(throwable);
+                        if (data == null) {
+                            unavailableReason = reason;
+                            state = State.UNAVAILABLE;
+                            WynnExtras.LOGGER.error("Crafting data unavailable for this session: " + reason);
+                        } else {
+                            WynnExtras.LOGGER.warn("Could not refresh crafting data; using local cache: " + reason);
+                        }
                         return;
                     }
-                    data = loaded;
-                    WynncraftApiHandler.setCachedItemDatabase(loaded.itemDatabase());
-                    state = State.READY;
+                    setLoadedData(loaded);
+                    writeCache(cachePath(), new CachedPayloads(
+                            CACHE_SCHEMA_VERSION,
+                            System.currentTimeMillis(),
+                            recipes.join(),
+                            items.join(),
+                            ingredientMap.join(),
+                            wynnBuilderRecipes.join()));
                     WynnExtras.LOGGER.info("Loaded " + loaded.ingredientsByName().size() + " crafting ingredients and "
                             + loaded.recipesByWynnBuilderId().size() + " recipes");
                 });
+    }
+
+    private void setLoadedData(LoadedData loaded) {
+        data = loaded;
+        ingredientNames = buildIngredientNames(loaded);
+        unavailableReason = "";
+        WynncraftApiHandler.setCachedItemDatabase(loaded.itemDatabase());
+        state = State.READY;
+    }
+
+    private static Path cachePath() {
+        return FabricLoader.getInstance().getConfigDir()
+                .resolve("wynnextras")
+                .resolve("cache")
+                .resolve("crafting_data.json");
+    }
+
+    static CachedPayloads readCache(Path path) {
+        if (path == null || !Files.isRegularFile(path)) return null;
+        try {
+            CachedPayloads cached = CACHE_GSON.fromJson(Files.readString(path), CachedPayloads.class);
+            if (cached == null
+                    || cached.schemaVersion() != CACHE_SCHEMA_VERSION
+                    || isBlank(cached.recipes())
+                    || isBlank(cached.items())
+                    || isBlank(cached.ingredientMap())
+                    || isBlank(cached.wynnBuilderRecipes())) {
+                return null;
+            }
+            return cached;
+        } catch (IOException | RuntimeException ex) {
+            return null;
+        }
+    }
+
+    static boolean writeCache(Path path, CachedPayloads payloads) {
+        if (path == null || payloads == null) return false;
+        Path temp = path.resolveSibling(path.getFileName() + ".tmp");
+        try {
+            Files.createDirectories(path.getParent());
+            Files.writeString(temp, CACHE_GSON.toJson(payloads));
+            try {
+                Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException ex) {
+                Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING);
+            }
+            return true;
+        } catch (IOException | RuntimeException ex) {
+            WynnExtras.LOGGER.warn("Could not write crafting data cache: " + ex.getMessage());
+            return false;
+        }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     public State getState() {
@@ -177,6 +272,24 @@ public final class CraftingDataService {
         if (powderIndex < 0 || powderIndex >= POWDER_ELEMENTS * POWDER_TIERS) return null;
         return POWDER_ELEMENT_NAMES[powderIndex / POWDER_TIERS] + " Powder "
                 + POWDER_TIER_NAMES[powderIndex % POWDER_TIERS];
+    }
+
+    public List<String> getIngredientNames() {
+        return ingredientNames;
+    }
+
+    private static List<String> buildIngredientNames(LoadedData loaded) {
+        if (loaded == null) return List.of();
+        List<String> names = new ArrayList<>(loaded.ingredientsByName().keySet());
+        for (int element = 0; element < POWDER_ELEMENTS; element++) {
+            for (String tier : POWDER_TIER_NAMES) {
+                names.add(POWDER_ELEMENT_NAMES[element] + " Powder " + tier);
+            }
+        }
+        return names.stream()
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER.thenComparing(String::compareTo))
+                .toList();
     }
 
     public RecipeData getRecipe(CraftableType type, Vector2i level) {

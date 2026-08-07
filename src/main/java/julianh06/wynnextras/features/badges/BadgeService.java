@@ -12,7 +12,15 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.event.TickEvent;
+import julianh06.wynnextras.event.WorldChangeEvent;
+import julianh06.wynnextras.features.achievements.Achievement;
+import julianh06.wynnextras.features.achievements.AchievementId;
+import julianh06.wynnextras.features.achievements.AchievementTracking;
+import julianh06.wynnextras.features.achievements.Achievements;
+import julianh06.wynnextras.features.achievements.ProgressAchievement;
+import julianh06.wynnextras.features.achievements.TieredAchievement;
 import julianh06.wynnextras.utils.ApiRequestHelper;
+import julianh06.wynnextras.utils.BackendErrorLogger;
 import julianh06.wynnextras.utils.MojangAuth;
 import net.minecraft.client.render.entity.state.EntityRenderState;
 import net.minecraft.client.MinecraftClient;
@@ -20,13 +28,17 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.neoforged.bus.api.SubscribeEvent;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -45,12 +57,18 @@ public class BadgeService {
     private static final String HEARTBEAT_URL = "http://wynnextras.com/wynnextras-users/heartbeat";
     private static final String ACTIVE_URL = "http://wynnextras.com/wynnextras-users/active";
     private static final String ACTIVE_DETAILS_URL = "http://wynnextras.com/wynnextras-users/active/details";
+    private static final String ACHIEVEMENTS_URL = "https://wynnextras.com/achievements?playerUuid=";
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final Gson GSON = new GsonBuilder().create();
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[A-Za-z0-9_]{3,16}$");
+    private static final long ACHIEVEMENT_RETRY_DELAY_MS = 60_000;
 
     private static final Map<String, BadgeProfile> profilesByUuid = new ConcurrentHashMap<>();
     private static final Map<String, BadgeProfile> profilesByUsername = new ConcurrentHashMap<>();
+    private static final Map<String, Achievements> achievementsByUuid = new ConcurrentHashMap<>();
+    private static final Map<String, Long> achievementRetryAtByUuid = new ConcurrentHashMap<>();
+    private static final Map<String, AchievementLoadStatus> achievementLoadStatusByUuid = new ConcurrentHashMap<>();
+    private static final Achievements achievementDefinitions = Achievements.createDefaultAchievementSet();
     private static long lastSyncTime = 0;
     private static final long SYNC_INTERVAL_MS = 1_200_000; // 20 minutes
 
@@ -72,10 +90,206 @@ public class BadgeService {
         BadgeProfile profile = profileFor(state, label);
         if (profile == null) return label;
 
+        return appendBadge(label, profile);
+    }
+
+    public static Text appendBadge(UUID uuid, String username, Text label) {
+        if (!WynnExtrasConfig.INSTANCE.showWynnExtrasBadges || label == null) return label;
+
+        BadgeProfile profile = getBadgeProfile(uuid, username);
+        return profile == null ? label : appendBadge(label, profile);
+    }
+
+    public static List<Text> getBadgeTooltip(UUID uuid, String username) {
+        if (!WynnExtrasConfig.INSTANCE.showWynnExtrasBadges) return List.of();
+
+        BadgeProfile profile = getBadgeProfile(uuid, username);
+        if (profile == null) return List.of();
+
+        BadgeCatalog.BadgeIcon icon = BadgeCatalog.icon(profile.selectedIconId);
+        BadgeCatalog.BadgeColor color = BadgeCatalog.color(profile.selectedColorId);
+        Achievements achievements = achievementsForTooltip(uuid);
+        AchievementLoadStatus loadStatus = achievementLoadStatus(uuid);
+        List<Text> tooltip = new ArrayList<>();
+        tooltip.add(Text.literal("WynnExtras Badge").formatted(Formatting.GOLD));
+        tooltip.add(Text.literal("Icon: ").append(BadgeCatalog.badgeText(icon.id(), color.id())).append(" " + icon.displayName()));
+        tooltip.addAll(badgeRequirementTooltip(icon.achievement(), icon.minTier(), achievements, loadStatus));
+        tooltip.add(Text.empty());
+        tooltip.add(Text.literal("Color: ").append(BadgeCatalog.colorPreviewText(icon.id(), color.id())).append(" " + color.displayName()));
+        tooltip.addAll(badgeRequirementTooltip(color.achievement(), color.minTier(), achievements, loadStatus));
+        return tooltip;
+    }
+
+    private static Text appendBadge(Text label, BadgeProfile profile) {
+        if (hasKnownBadgeSuffix(label.getString())) return label;
+
         MutableText result = label.copy();
         result.append(Text.literal(" "));
         result.append(BadgeCatalog.badgeText(profile.selectedIconId, profile.selectedColorId));
         return result;
+    }
+
+    private static BadgeProfile getBadgeProfile(UUID uuid, String username) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (uuid != null && mc.player != null && uuid.equals(mc.player.getUuid())) {
+            return BadgeProfileData.getLocalProfile();
+        }
+
+        if (uuid != null) {
+            BadgeProfile profile = profilesByUuid.get(BadgeProfile.normalizeUuid(uuid.toString()));
+            if (profile != null) return profile;
+        }
+
+        if (username == null || username.isBlank()) return null;
+        return profilesByUsername.get(username.toLowerCase());
+    }
+
+    private static List<Text> badgeRequirementTooltip(AchievementId achievementId, Integer minTier, Achievements achievements, AchievementLoadStatus loadStatus) {
+        if (achievementId == null) {
+            return List.of(Text.of("§aUnlocked by default"));
+        }
+
+        Achievement achievement = (achievements == null ? achievementDefinitions : achievements).getById(achievementId.id());
+        if (achievement == null) {
+            return List.of(Text.of(BadgeCatalog.requirement(achievementId, minTier)));
+        }
+
+        List<Text> tooltip = new ArrayList<>();
+        tooltip.add(Text.of("§6" + achievement.getTitle() + (minTier == null ? "" : " (Tier " + minTier + ")")));
+        tooltip.add(Text.of("§7" + achievement.getDescription()));
+        if (achievement instanceof TieredAchievement tiered) {
+            tooltip.add(Text.of("§8Tiers: " + tierMilestones(tiered)));
+        }
+        tooltip.add(Text.of("§8Progress: " + (achievements == null ? progressLoadText(loadStatus) : progressText(achievement))));
+        return tooltip;
+    }
+
+    private static String progressText(Achievement achievement) {
+        if (achievement instanceof TieredAchievement tiered) {
+            List<Integer> targets = tiered.getLevelTargets();
+            int maxTarget = targets.isEmpty() ? 0 : targets.getLast();
+            int level = tiered.getCurrentLevel();
+            if (achievement.isUnlocked() || level >= targets.size()) {
+                return tiered.getCurrent() + "/" + maxTarget + " Tier " + tiered.getCurrentLevel() + " (MAX)";
+            }
+            int maxTier = Math.max(1, targets.size());
+            return tiered.getCurrent() + "/" + targets.get(level) + " Tier " + tiered.getCurrentLevel() + "/" + maxTier;
+        }
+        if (achievement.isUnlocked()) return "Unlocked";
+        if (achievement instanceof ProgressAchievement progress) {
+            return progress.getCurrent() + "/" + progress.getTarget();
+        }
+        return "Locked";
+    }
+
+    private static String progressLoadText(AchievementLoadStatus status) {
+        return switch (status) {
+            case NOT_FOUND -> "Not uploaded";
+            case FAILED -> "Unavailable";
+            case LOADING -> "Loading...";
+        };
+    }
+
+    private static Achievements achievementsForTooltip(UUID uuid) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (uuid != null && mc.player != null && uuid.equals(mc.player.getUuid())) {
+            return AchievementTracking.achievements;
+        }
+
+        String normalizedUuid = uuid == null ? null : BadgeProfile.normalizeUuid(uuid.toString());
+        if (normalizedUuid == null) return null;
+
+        Achievements achievements = achievementsByUuid.get(normalizedUuid);
+        if (achievements == null) fetchAchievements(normalizedUuid);
+        return achievements;
+    }
+
+    private static AchievementLoadStatus achievementLoadStatus(UUID uuid) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (uuid != null && mc.player != null && uuid.equals(mc.player.getUuid())) return AchievementLoadStatus.LOADING;
+
+        String normalizedUuid = uuid == null ? null : BadgeProfile.normalizeUuid(uuid.toString());
+        if (normalizedUuid == null) return AchievementLoadStatus.FAILED;
+        return achievementLoadStatusByUuid.getOrDefault(normalizedUuid, AchievementLoadStatus.LOADING);
+    }
+
+    private static void fetchAchievements(String playerUuid) {
+        long now = System.currentTimeMillis();
+        if (achievementsByUuid.containsKey(playerUuid) || now < achievementRetryAtByUuid.getOrDefault(playerUuid, 0L)) return;
+
+        achievementRetryAtByUuid.put(playerUuid, now + ACHIEVEMENT_RETRY_DELAY_MS);
+        achievementLoadStatusByUuid.put(playerUuid, AchievementLoadStatus.LOADING);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(ACHIEVEMENTS_URL + playerUuid))
+                .GET()
+                .build();
+
+        HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenAccept(response -> {
+                    if (response.statusCode() == 200) {
+                        Achievements achievements = parseAchievements(response.body());
+                        if (achievements != null) {
+                            achievementsByUuid.put(playerUuid, achievements);
+                            achievementLoadStatusByUuid.remove(playerUuid);
+                            return;
+                        }
+                    }
+
+                    achievementLoadStatusByUuid.put(playerUuid,
+                            response.statusCode() == 404 ? AchievementLoadStatus.NOT_FOUND : AchievementLoadStatus.FAILED);
+                    if (response.statusCode() != 404) {
+                        BackendErrorLogger.error("achievement-fetch", "Achievement fetch failed: " + response.statusCode());
+                    }
+                })
+                .exceptionally(ex -> {
+                    achievementLoadStatusByUuid.put(playerUuid, AchievementLoadStatus.FAILED);
+                    BackendErrorLogger.error("achievement-fetch", "Failed to fetch achievements: " + ex.getMessage());
+                    return null;
+                });
+    }
+
+    private static Achievements parseAchievements(String responseBody) {
+        try {
+            JsonObject response = GSON.fromJson(responseBody, JsonObject.class);
+            if (response == null || !response.has("achievements") || !response.get("achievements").isJsonArray()) return null;
+
+            Achievements achievements = Achievements.createDefaultAchievementSet();
+            for (JsonElement element : response.getAsJsonArray("achievements")) {
+                if (!element.isJsonObject()) continue;
+
+                JsonObject state = element.getAsJsonObject();
+                String id = jsonString(state, "id");
+                if (id == null) continue;
+
+                Integer current = state.has("current") && state.get("current").isJsonPrimitive()
+                        ? state.get("current").getAsInt() : null;
+                boolean unlocked = state.has("unlocked") && state.get("unlocked").getAsBoolean();
+                achievements.applyRemoteState(id, unlocked, current);
+            }
+            return achievements;
+        } catch (Exception e) {
+            WynnExtras.LOGGER.error("[WynnExtras] Error parsing achievement response", e);
+            return null;
+        }
+    }
+
+    private enum AchievementLoadStatus {
+        LOADING,
+        NOT_FOUND,
+        FAILED
+    }
+
+    private static String tierMilestones(TieredAchievement achievement) {
+        List<Integer> targets = achievement.getLevelTargets();
+        if (targets.isEmpty()) return "";
+
+        StringBuilder tiers = new StringBuilder();
+        for (int i = 0; i < targets.size(); i++) {
+            if (i > 0) tiers.append("/");
+            tiers.append(targets.get(i));
+        }
+        return tiers.toString();
     }
 
     public static void syncWithServerSoon() {
@@ -91,8 +305,12 @@ public class BadgeService {
     @SubscribeEvent
     public void onTick(TickEvent event) {
         if (!MinecraftUtils.isOnWynncraft()) return;
-
         handleTick();
+    }
+
+    @SubscribeEvent
+    public void onWorldChange(WorldChangeEvent event) {
+        syncWithServerSoon();
     }
 
     private static void handleTick() {
@@ -107,17 +325,13 @@ public class BadgeService {
         lastSyncTime = System.currentTimeMillis();
         BadgeProfileData.load();
 
-        MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
-            if (wynnextrasToken == null) {
-                WynnExtras.LOGGER.error("[WynnExtras] Failed to get auth data for badge sync");
-                return;
-            }
+        getActiveUsers();
+        getActiveUserDetails();
 
-            sendHeartbeat(wynnextrasToken);
-            getActiveUsers();
-            getActiveUserDetails();
+        MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
+            if (wynnextrasToken != null) sendHeartbeat(wynnextrasToken);
         }).exceptionally(e -> {
-            WynnExtras.LOGGER.error("[WynnExtras] Error getting auth data: " + e.getMessage());
+            BackendErrorLogger.error("badge-auth", "Error getting auth data for badge sync: " + e.getMessage());
             return null;
         });
     }
@@ -133,9 +347,11 @@ public class BadgeService {
 
                 if (response.statusCode() == 200) {
                     parseDetailsResponse(response.body());
+                } else {
+                    BackendErrorLogger.error("badge-details", "Badge details fetching failed: " + response.statusCode());
                 }
             } catch (Exception e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Badge details fetching error: " + e.getMessage());
+                BackendErrorLogger.error("badge-details", "Badge details fetching error: " + e.getMessage());
             }
         });
     }
@@ -152,10 +368,10 @@ public class BadgeService {
                 if (response.statusCode() == 200) {
                     parseResponse(response.body());
                 } else {
-                    WynnExtras.LOGGER.error("[WynnExtras] Badge fetching failed: " + response.statusCode());
+                    BackendErrorLogger.error("badge-active-users", "Badge fetching failed: " + response.statusCode());
                 }
             } catch (Exception e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Badge fetching error: " + e.getMessage());
+                BackendErrorLogger.error("badge-active-users", "Badge fetching error: " + e.getMessage());
             }
         });
     }
@@ -178,11 +394,11 @@ public class BadgeService {
 
                 ApiRequestHelper.sendWithAuthRetry(request, body).thenAccept(response -> {
                     if (response.statusCode() != 200) {
-                        WynnExtras.LOGGER.error("[WynnExtras] Badge heartbeat failed: " + response.statusCode());
+                        BackendErrorLogger.error("badge-heartbeat", "Badge heartbeat failed: " + response.statusCode());
                     }
                 });
             } catch (Exception e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Badge heartbeat error: " + e.getMessage());
+                BackendErrorLogger.error("badge-heartbeat", "Badge heartbeat error: " + e.getMessage());
             }
         });
     }
@@ -338,6 +554,9 @@ public class BadgeService {
             if (stripped.endsWith(icon.glyph())) {
                 return stripped.substring(0, stripped.length() - icon.glyph().length()).trim();
             }
+            if (icon.originalGlyph() != null && stripped.endsWith(icon.originalGlyph())) {
+                return stripped.substring(0, stripped.length() - icon.originalGlyph().length()).trim();
+            }
         }
         return stripped;
     }
@@ -346,7 +565,9 @@ public class BadgeService {
         String stripped = value == null ? "" : value.trim();
         for (BadgeCatalog.BadgeIcon icon : BadgeCatalog.icons()) {
             if (stripped.endsWith(icon.glyph())) return true;
+            if (icon.originalGlyph() != null && stripped.endsWith(icon.originalGlyph())) return true;
         }
         return false;
     }
+
 }

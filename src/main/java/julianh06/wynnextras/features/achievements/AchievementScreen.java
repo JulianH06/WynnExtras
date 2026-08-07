@@ -20,8 +20,10 @@ import net.minecraft.util.math.MathHelper;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -47,7 +49,11 @@ public class AchievementScreen extends WEScreen {
     private static final int BADGE_COLOR_CELL_H = BADGE_ICON_CELL;
     private static final int BADGE_COLOR_ROW_H = BADGE_ICON_ROW_H;
     private static final int BADGE_CELL_GAP = 10;
-    private static final int BADGE_SECTION_GAP = 32;
+    private static final int BADGE_SECTION_GAP = 48;
+    private static final int BADGE_SEARCH_WIDTH = 260;
+    private static final int BADGE_SEARCH_HEIGHT = 23;
+    private static final int BADGE_FILTER_WIDTH = 92;
+    private static final int BADGE_FILTER_GAP = 8;
     private static final int REWARD_PREVIEW_W = 38;
     private static final int REWARD_PREVIEW_H = 34;
     private static final int REWARD_PREVIEW_GAP = 8;
@@ -64,23 +70,48 @@ public class AchievementScreen extends WEScreen {
             "aspect.max.all.archer",
             "aspect.max.all.assassin"
     );
+    private static final List<String> WAR_ACHIEVEMENT_ORDER = List.of(
+            "war.completion",
+            "war.defence.very_low",
+            "war.defence.low",
+            "war.defence.medium",
+            "war.defence.high",
+            "war.defence.very_high"
+    );
 
+    private static final BadgeScreenSessionState SESSION_STATE = new BadgeScreenSessionState();
     private Tab tab = Tab.ACHIEVEMENTS;
-    private float scroll;
-    private float targetScroll;
-    private float iconScroll;
-    private float targetIconScroll;
-    private float colorScroll;
-    private float targetColorScroll;
+    private float scroll = SESSION_STATE.achievementScroll;
+    private float targetScroll = SESSION_STATE.targetAchievementScroll;
+    private float iconScroll = SESSION_STATE.iconScroll;
+    private float targetIconScroll = SESSION_STATE.targetIconScroll;
+    private float colorScroll = SESSION_STATE.colorScroll;
+    private float targetColorScroll = SESSION_STATE.targetColorScroll;
     private float maxAchievementScroll;
     private boolean achievementScrollbarDragging;
     private double achievementScrollbarDragOffset;
     private HorizontalScrollTarget horizontalScrollDragging;
     private double horizontalScrollDragOffset;
     private List<Text> hoveredBadgeTooltip = List.of();
+    private TextInputWidget iconSearchBar;
+    private TextInputWidget colorSearchBar;
+    private TabButtonWidget achievementsTabButton;
+    private TabButtonWidget badgesTabButton;
+    private AchievementScrollBarWidget achievementScrollBarWidget;
+    private HorizontalBadgeScrollBarWidget iconScrollBarWidget;
+    private HorizontalBadgeScrollBarWidget colorScrollBarWidget;
+    private final Map<String, CategoryHeaderWidget> categoryHeaderWidgets = new LinkedHashMap<>();
+    private final Map<String, BadgeIconWidget> badgeIconWidgets = new LinkedHashMap<>();
+    private final Map<String, BadgeColorWidget> badgeColorWidgets = new LinkedHashMap<>();
+    private final Map<BadgeFilter, BadgeFilterButtonWidget> badgeFilterWidgets = new EnumMap<>(BadgeFilter.class);
+    private UnlockFilterMode iconUnlockFilter = SESSION_STATE.iconUnlockFilter;
+    private SpecialFilterMode imageIconFilter = SESSION_STATE.imageIconFilter;
+    private UnlockFilterMode colorUnlockFilter = SESSION_STATE.colorUnlockFilter;
+    private SpecialFilterMode fadeColorFilter = SESSION_STATE.fadeColorFilter;
     private String initialBadgeIconId;
     private String initialBadgeColorId;
     private boolean handledClose;
+    private boolean scrollHandlerRegistered;
     private static final Map<String, Boolean> CATEGORY_EXPANDED = new LinkedHashMap<>();
 
     public AchievementScreen() {
@@ -106,33 +137,35 @@ public class AchievementScreen extends WEScreen {
     protected void init() {
         super.init();
         captureInitialBadgeProfile();
-        rootWidgets.clear();
-        ScreenMouseEvents.afterMouseScroll(this).register((screen, mouseX, mouseY, horizontalAmount, verticalAmount, consumed) -> {
-            double mx = mouseX / matrixScale;
-            double my = mouseY / matrixScale;
-            if (tab == Tab.BADGES && scrollBadgeRow(mx, my, horizontalAmount, verticalAmount)) {
+        initializeRootWidgets();
+        if (!scrollHandlerRegistered) {
+            ScreenMouseEvents.afterMouseScroll(this).register((screen, mouseX, mouseY, horizontalAmount, verticalAmount, consumed) -> {
+                double mx = mouseX / matrixScale;
+                double my = mouseY / matrixScale;
+                if (tab == Tab.BADGES && scrollBadgeRow(mx, my, horizontalAmount, verticalAmount)) {
+                    return true;
+                }
+                if (tab == Tab.ACHIEVEMENTS) {
+                    targetScroll -= (float) verticalAmount * 34f;
+                    clampScroll();
+                }
                 return true;
-            }
-            if (tab == Tab.ACHIEVEMENTS) {
-                targetScroll -= (float) verticalAmount * 34f;
-                clampScroll();
-            }
-            return true;
-        });
+            });
+            scrollHandlerRegistered = true;
+        }
     }
 
     @Override
     public void removed() {
+        saveSessionState();
         uploadBadgeProfileIfChanged();
         super.removed();
     }
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-        rootWidgets.clear();
         hoveredBadgeTooltip = List.of();
-        addRootWidget(new TabButtonWidget(Tab.ACHIEVEMENTS, 25, 58, 180, 34, "Achievements"));
-        addRootWidget(new TabButtonWidget(Tab.BADGES, 215, 58, 180, 34, "Badges"));
+        hideDynamicWidgets();
 
         scroll = smoothScroll(scroll, targetScroll, tickDelta);
         iconScroll = smoothScroll(iconScroll, targetIconScroll, tickDelta);
@@ -142,6 +175,57 @@ public class AchievementScreen extends WEScreen {
 
         if (tab == Tab.ACHIEVEMENTS) drawAchievements(ctx, mouseX, mouseY);
         else drawBadges(ctx, mouseX, mouseY);
+    }
+
+    private void initializeRootWidgets() {
+        if (achievementsTabButton == null) {
+            achievementsTabButton = new TabButtonWidget(Tab.ACHIEVEMENTS, 25, 58, 180, 34, "Achievements");
+            badgesTabButton = new TabButtonWidget(Tab.BADGES, 215, 58, 180, 34, "Badges");
+            achievementScrollBarWidget = new AchievementScrollBarWidget();
+            iconScrollBarWidget = new HorizontalBadgeScrollBarWidget(HorizontalScrollTarget.ICONS);
+            colorScrollBarWidget = new HorizontalBadgeScrollBarWidget(HorizontalScrollTarget.COLORS);
+
+            for (AchievementCategory category : achievementCategories()) {
+                categoryHeaderWidgets.put(category.key(), new CategoryHeaderWidget(category));
+            }
+            for (BadgeCatalog.BadgeIcon icon : BadgeCatalog.icons()) {
+                badgeIconWidgets.put(icon.id(), new BadgeIconWidget(icon));
+            }
+            for (BadgeCatalog.BadgeColor color : BadgeCatalog.colors()) {
+                badgeColorWidgets.put(color.id(), new BadgeColorWidget(color));
+            }
+            for (BadgeFilter filter : BadgeFilter.values()) {
+                badgeFilterWidgets.put(filter, new BadgeFilterButtonWidget(filter));
+            }
+        }
+
+        registerRootWidget(achievementsTabButton);
+        registerRootWidget(badgesTabButton);
+        for (CategoryHeaderWidget widget : categoryHeaderWidgets.values()) registerRootWidget(widget);
+        registerRootWidget(achievementScrollBarWidget);
+        registerRootWidget(iconSearchBar());
+        registerRootWidget(colorSearchBar());
+        for (BadgeFilterButtonWidget widget : badgeFilterWidgets.values()) registerRootWidget(widget);
+        for (BadgeIconWidget widget : badgeIconWidgets.values()) registerRootWidget(widget);
+        registerRootWidget(iconScrollBarWidget);
+        for (BadgeColorWidget widget : badgeColorWidgets.values()) registerRootWidget(widget);
+        registerRootWidget(colorScrollBarWidget);
+    }
+
+    private void registerRootWidget(Widget widget) {
+        if (!rootWidgets.contains(widget)) addRootWidget(widget);
+    }
+
+    private void hideDynamicWidgets() {
+        for (CategoryHeaderWidget widget : categoryHeaderWidgets.values()) widget.setVisible(false);
+        achievementScrollBarWidget.setVisible(false);
+        iconSearchBar.setVisible(false);
+        colorSearchBar.setVisible(false);
+        for (BadgeFilterButtonWidget widget : badgeFilterWidgets.values()) widget.setVisible(false);
+        for (BadgeIconWidget widget : badgeIconWidgets.values()) widget.setVisible(false);
+        iconScrollBarWidget.setVisible(false);
+        for (BadgeColorWidget widget : badgeColorWidgets.values()) widget.setVisible(false);
+        colorScrollBarWidget.setVisible(false);
     }
 
     @Override
@@ -201,7 +285,11 @@ public class AchievementScreen extends WEScreen {
         enableLogicalScissor(ctx, x, ACHIEVEMENT_VIEWPORT_TOP, width, achievementViewportHeight());
         for (AchievementCategory category : categories) {
             if (intersectsAchievementViewport(y, headerH)) {
-                addRootWidget(new CategoryHeaderWidget(category, x, y, width, headerH));
+                CategoryHeaderWidget widget = categoryHeaderWidgets.get(category.key());
+                if (widget != null) {
+                    widget.update(category, x, y, width, headerH);
+                    widget.setVisible(true);
+                }
             }
             y += headerH + 5;
             if (!category.expanded()) continue;
@@ -217,33 +305,42 @@ public class AchievementScreen extends WEScreen {
 
         updateMaxScroll(y + Math.round(scroll) - ACHIEVEMENT_VIEWPORT_TOP);
         if (maxAchievementScroll > 0) {
-            addRootWidget(new AchievementScrollBarWidget());
+            achievementScrollBarWidget.updateBounds();
+            achievementScrollBarWidget.setVisible(true);
         }
     }
 
     private void drawBadges(DrawContext ctx, int mouseX, int mouseY) {
-        BadgeProfile profile = BadgeProfileData.getLocalProfile();
         int x = 24;
         int y = badgeIconLabelY();
         int w = layoutWidth() - 48;
 
-        drawText("Icons", x, y, TEXT_MAIN);
-        drawIconRow(ctx, mouseX, mouseY, x, badgeIconRowY(), w, profile);
+        int searchX = x + textRenderer.getWidth("Icons") + 16;
+        drawRect(x, y - 6, searchX - x - 7, BADGE_SEARCH_HEIGHT, PARCHMENT);
+        drawText("Icons", x + 4, y + 2, TEXT_MAIN);
+        drawBadgeSearchBar(iconSearchBar(), searchX, y - 6);
+        drawBadgeFilterButtons(searchX + BADGE_SEARCH_WIDTH + BADGE_FILTER_GAP, y - 6,
+                BadgeFilter.ICON_UNLOCK, BadgeFilter.ICON_IMAGE);
+        drawIconRow(ctx, mouseX, mouseY, x, badgeIconRowY(), w);
 
         y = badgeColorLabelY();
-        drawText("Colors", x, y, TEXT_MAIN);
-        drawColorRow(ctx, mouseX, mouseY, x, badgeColorRowY(), w, profile);
-        targetScroll = 0;
-        scroll = 0;
+        searchX = x + textRenderer.getWidth("Colors") + 16;
+        drawRect(x, y - 6, searchX - x - 7, BADGE_SEARCH_HEIGHT, PARCHMENT);
+        drawText("Colors", x + 4, y + 2, TEXT_MAIN);
+        drawBadgeSearchBar(colorSearchBar(), searchX, y - 6);
+        drawBadgeFilterButtons(searchX + BADGE_SEARCH_WIDTH + BADGE_FILTER_GAP, y - 6,
+                BadgeFilter.COLOR_UNLOCK, BadgeFilter.COLOR_FADE);
+        drawColorRow(ctx, mouseX, mouseY, x, badgeColorRowY(), w);
     }
 
-    private void drawIconRow(DrawContext ctx, int mouseX, int mouseY, int x, int y, int width, BadgeProfile profile) {
-        int totalW = BadgeCatalog.icons().size() * (BADGE_ICON_CELL + BADGE_CELL_GAP) - BADGE_CELL_GAP;
+    private void drawIconRow(DrawContext ctx, int mouseX, int mouseY, int x, int y, int width) {
+        List<BadgeCatalog.BadgeIcon> icons = filteredBadgeIcons();
+        int totalW = badgeRowWidth(icons.size(), BADGE_ICON_CELL);
         targetIconScroll = MathHelper.clamp(targetIconScroll, 0, Math.max(0, totalW - width));
         iconScroll = MathHelper.clamp(iconScroll, 0, Math.max(0, totalW - width));
 
         int i = 0;
-        for (BadgeCatalog.BadgeIcon icon : BadgeCatalog.icons()) {
+        for (BadgeCatalog.BadgeIcon icon : icons) {
             int cx = x + i * (BADGE_ICON_CELL + BADGE_CELL_GAP) - Math.round(iconScroll);
             int cy = y;
             if (cx + BADGE_ICON_CELL < x || cx > x + width) {
@@ -251,21 +348,28 @@ public class AchievementScreen extends WEScreen {
                 continue;
             }
             if (inside(mouseX, mouseY, cx, cy, BADGE_ICON_CELL, BADGE_ICON_CELL) && inside(mouseX, mouseY, x, y, width, BADGE_ICON_CELL)) {
-                hoveredBadgeTooltip = badgeRequirementTooltip(icon.achievement(), icon.minTier());
+                hoveredBadgeTooltip = badgeIconTooltip(icon);
             }
-            addRootWidget(new BadgeIconWidget(icon, cx, cy, x, y, width, BADGE_ICON_CELL));
+            BadgeIconWidget widget = badgeIconWidgets.get(icon.id());
+            if (widget != null) {
+                widget.updateBounds(cx, cy, x, y, width, BADGE_ICON_CELL);
+                widget.setVisible(true);
+            }
             i++;
         }
-        addRootWidget(new HorizontalBadgeScrollBarWidget(HorizontalScrollTarget.ICONS, x, y + BADGE_ICON_ROW_H, width, 5, totalW));
+        if (icons.isEmpty()) drawCenteredText("No matching icons", x + width / 2f, y + 38, TEXT_DIM);
+        iconScrollBarWidget.update(x, y + BADGE_ICON_ROW_H, width, 5, totalW);
+        iconScrollBarWidget.setVisible(totalW > width);
     }
 
-    private void drawColorRow(DrawContext ctx, int mouseX, int mouseY, int x, int y, int width, BadgeProfile profile) {
-        int totalW = BadgeCatalog.colors().size() * (BADGE_COLOR_CELL_W + BADGE_CELL_GAP) - BADGE_CELL_GAP;
+    private void drawColorRow(DrawContext ctx, int mouseX, int mouseY, int x, int y, int width) {
+        List<BadgeCatalog.BadgeColor> colors = filteredBadgeColors();
+        int totalW = badgeRowWidth(colors.size(), BADGE_COLOR_CELL_W);
         targetColorScroll = MathHelper.clamp(targetColorScroll, 0, Math.max(0, totalW - width));
         colorScroll = MathHelper.clamp(colorScroll, 0, Math.max(0, totalW - width));
 
         int i = 0;
-        for (BadgeCatalog.BadgeColor color : BadgeCatalog.colors()) {
+        for (BadgeCatalog.BadgeColor color : colors) {
             int cx = x + i * (BADGE_COLOR_CELL_W + BADGE_CELL_GAP) - Math.round(colorScroll);
             int cy = y;
             if (cx + BADGE_COLOR_CELL_W < x || cx > x + width) {
@@ -273,12 +377,181 @@ public class AchievementScreen extends WEScreen {
                 continue;
             }
             if (inside(mouseX, mouseY, cx, cy, BADGE_COLOR_CELL_W, BADGE_COLOR_CELL_H) && inside(mouseX, mouseY, x, y, width, BADGE_COLOR_CELL_H)) {
-                hoveredBadgeTooltip = badgeRequirementTooltip(color.achievement(), color.minTier());
+                hoveredBadgeTooltip = badgeColorTooltip(color);
             }
-            addRootWidget(new BadgeColorWidget(color, cx, cy, x, y, width, BADGE_COLOR_CELL_H));
+            BadgeColorWidget widget = badgeColorWidgets.get(color.id());
+            if (widget != null) {
+                widget.updateBounds(cx, cy, x, y, width, BADGE_COLOR_CELL_H);
+                widget.setVisible(true);
+            }
             i++;
         }
-        addRootWidget(new HorizontalBadgeScrollBarWidget(HorizontalScrollTarget.COLORS, x, y + BADGE_COLOR_ROW_H, width, 5, totalW));
+        if (colors.isEmpty()) drawCenteredText("No matching colors", x + width / 2f, y + 38, TEXT_DIM);
+        colorScrollBarWidget.update(x, y + BADGE_COLOR_ROW_H, width, 5, totalW);
+        colorScrollBarWidget.setVisible(totalW > width);
+    }
+
+    private TextInputWidget iconSearchBar() {
+        if (iconSearchBar == null) {
+            iconSearchBar = createBadgeSearchBar("Search icons...", HorizontalScrollTarget.ICONS);
+            iconSearchBar.setInput(SESSION_STATE.iconSearch);
+        }
+        return iconSearchBar;
+    }
+
+    private TextInputWidget colorSearchBar() {
+        if (colorSearchBar == null) {
+            colorSearchBar = createBadgeSearchBar("Search colors...", HorizontalScrollTarget.COLORS);
+            colorSearchBar.setInput(SESSION_STATE.colorSearch);
+        }
+        return colorSearchBar;
+    }
+
+    private TextInputWidget createBadgeSearchBar(String placeholder, HorizontalScrollTarget target) {
+        TextInputWidget searchBar = new TextInputWidget(0, 0, 0, 0, 0, 0);
+        searchBar.setPlaceholder(placeholder);
+        searchBar.setBackgroundColor(CustomColor.fromInt(PANEL));
+        searchBar.setFocusedColor(CustomColor.fromInt(PANEL_HOVER));
+        searchBar.setTextColor(CustomColor.fromInt(TEXT_MAIN));
+        searchBar.setPlaceholderColor(CustomColor.fromInt(TEXT_DIM));
+        searchBar.setCursorColor(CustomColor.fromInt(TEXT_MAIN));
+        searchBar.setSelectionColor(CustomColor.fromInt(0xAA876141));
+        searchBar.setMaxLength(64);
+        searchBar.setOnChange(value -> resetBadgeRowScroll(target));
+        return searchBar;
+    }
+
+    private void drawBadgeSearchBar(TextInputWidget searchBar, int x, int y) {
+        searchBar.setBounds(
+                Math.round(uiX(x)),
+                Math.round(uiY(y)),
+                Math.round(uiX(BADGE_SEARCH_WIDTH)),
+                Math.round(uiY(BADGE_SEARCH_HEIGHT)));
+        searchBar.setTextOffset(Math.round(uiX(7)), Math.round(uiY(7)));
+        searchBar.setTextScale(uiTextScale());
+        searchBar.setVisible(true);
+    }
+
+    private void drawBadgeFilterButtons(int x, int y, BadgeFilter... filters) {
+        for (BadgeFilter filter : filters) {
+            BadgeFilterButtonWidget widget = badgeFilterWidgets.get(filter);
+            widget.setBounds(x, y, BADGE_FILTER_WIDTH, BADGE_SEARCH_HEIGHT);
+            widget.setVisible(true);
+            x += BADGE_FILTER_WIDTH + BADGE_FILTER_GAP;
+        }
+    }
+
+    private void resetBadgeRowScroll(HorizontalScrollTarget target) {
+        setTargetHorizontalScroll(target, 0);
+        if (target == HorizontalScrollTarget.ICONS) iconScroll = 0;
+        else colorScroll = 0;
+        if (horizontalScrollDragging == target) horizontalScrollDragging = null;
+    }
+
+    private List<BadgeCatalog.BadgeIcon> filteredBadgeIcons() {
+        String query = badgeSearchQuery(iconSearchBar);
+        return BadgeCatalog.icons().stream()
+                .filter(icon -> {
+                    boolean unlocked = BadgeCatalog.isUnlocked(icon);
+                    if (!matchesUnlockFilter(unlocked, iconUnlockFilter)) return false;
+                    if (!matchesSpecialFilter(icon.isCustom(), imageIconFilter)) return false;
+                    return query.isEmpty() || matchesBadgeSearch(query, icon.id(), icon.displayName());
+                })
+                .toList();
+    }
+
+    private List<BadgeCatalog.BadgeColor> filteredBadgeColors() {
+        String query = badgeSearchQuery(colorSearchBar);
+        BadgeCatalog.BadgeIcon selectedIcon = BadgeCatalog.icon(BadgeProfileData.getLocalProfile().selectedIconId);
+        return BadgeCatalog.colors().stream()
+                .filter(color -> {
+                    boolean unlocked = BadgeCatalog.isUnlocked(color) && BadgeCatalog.isCompatible(selectedIcon, color);
+                    if (!matchesUnlockFilter(unlocked, colorUnlockFilter)) return false;
+                    if (!matchesSpecialFilter(BadgeCatalog.isFade(color), fadeColorFilter)) return false;
+                    return query.isEmpty() || matchesBadgeSearch(query, color.id(), color.displayName());
+                })
+                .toList();
+    }
+
+    private String badgeSearchQuery(TextInputWidget searchBar) {
+        return searchBar == null ? "" : searchBar.getInput().trim().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean matchesBadgeSearch(String query, String id, String displayName) {
+        return id.toLowerCase(Locale.ROOT).contains(query)
+                || displayName.toLowerCase(Locale.ROOT).contains(query);
+    }
+
+    private int badgeRowWidth(int entryCount, int cellWidth) {
+        if (entryCount == 0) return 0;
+        return entryCount * (cellWidth + BADGE_CELL_GAP) - BADGE_CELL_GAP;
+    }
+
+    private boolean matchesSpecialFilter(boolean special, SpecialFilterMode mode) {
+        return switch (mode) {
+            case ALL -> true;
+            case HIDE -> !special;
+            case ONLY -> special;
+        };
+    }
+
+    private boolean matchesUnlockFilter(boolean unlocked, UnlockFilterMode mode) {
+        return switch (mode) {
+            case ALL -> true;
+            case ONLY_UNLOCKED -> unlocked;
+            case ONLY_LOCKED -> !unlocked;
+        };
+    }
+
+    private String badgeFilterLabel(BadgeFilter filter) {
+        return switch (filter) {
+            case ICON_UNLOCK -> iconUnlockFilter.label;
+            case ICON_IMAGE -> specialFilterLabel(filter.label, imageIconFilter);
+            case COLOR_UNLOCK -> colorUnlockFilter.label;
+            case COLOR_FADE -> specialFilterLabel(filter.label, fadeColorFilter);
+        };
+    }
+
+    private String specialFilterLabel(String category, SpecialFilterMode mode) {
+        return switch (mode) {
+            case ALL -> "All";
+            case HIDE -> "Hide " + category;
+            case ONLY -> "Only " + category;
+        };
+    }
+
+    private int badgeFilterAccent(BadgeFilter filter) {
+        return switch (filter) {
+            case ICON_UNLOCK -> iconUnlockFilter.accent;
+            case ICON_IMAGE -> imageIconFilter.accent;
+            case COLOR_UNLOCK -> colorUnlockFilter.accent;
+            case COLOR_FADE -> fadeColorFilter.accent;
+        };
+    }
+
+    private void toggleBadgeFilter(BadgeFilter filter, boolean backwards) {
+        switch (filter) {
+            case ICON_UNLOCK -> iconUnlockFilter = backwards ? iconUnlockFilter.previous() : iconUnlockFilter.next();
+            case ICON_IMAGE -> imageIconFilter = backwards ? imageIconFilter.previous() : imageIconFilter.next();
+            case COLOR_UNLOCK -> colorUnlockFilter = backwards ? colorUnlockFilter.previous() : colorUnlockFilter.next();
+            case COLOR_FADE -> fadeColorFilter = backwards ? fadeColorFilter.previous() : fadeColorFilter.next();
+        }
+        resetBadgeRowScroll(filter.target);
+    }
+
+    private void saveSessionState() {
+        SESSION_STATE.achievementScroll = scroll;
+        SESSION_STATE.targetAchievementScroll = targetScroll;
+        SESSION_STATE.iconScroll = iconScroll;
+        SESSION_STATE.targetIconScroll = targetIconScroll;
+        SESSION_STATE.colorScroll = colorScroll;
+        SESSION_STATE.targetColorScroll = targetColorScroll;
+        if (iconSearchBar != null) SESSION_STATE.iconSearch = iconSearchBar.getInput();
+        if (colorSearchBar != null) SESSION_STATE.colorSearch = colorSearchBar.getInput();
+        SESSION_STATE.iconUnlockFilter = iconUnlockFilter;
+        SESSION_STATE.imageIconFilter = imageIconFilter;
+        SESSION_STATE.colorUnlockFilter = colorUnlockFilter;
+        SESSION_STATE.fadeColorFilter = fadeColorFilter;
     }
 
     private List<Achievement> allAchievements() {
@@ -302,6 +575,7 @@ public class AchievementScreen extends WEScreen {
         Map<String, List<Achievement>> grouped = new LinkedHashMap<>();
         grouped.put("General", new ArrayList<>());
         grouped.put("Raids", new ArrayList<>());
+        grouped.put("Warring", new ArrayList<>());
         grouped.put("Aspects", new ArrayList<>());
         grouped.put("Gathering", new ArrayList<>());
         grouped.put("Crafting", new ArrayList<>());
@@ -317,6 +591,8 @@ public class AchievementScreen extends WEScreen {
             String key = entry.getKey();
             if ("Aspects".equals(key)) {
                 entry.getValue().sort(Comparator.comparingInt(this::aspectSortIndex).thenComparing(Achievement::getId));
+            } else if ("Warring".equals(key)) {
+                entry.getValue().sort(Comparator.comparingInt(this::warSortIndex).thenComparing(Achievement::getId));
             } else {
                 entry.getValue().sort(Comparator.comparing(Achievement::getId));
             }
@@ -331,10 +607,16 @@ public class AchievementScreen extends WEScreen {
         return index == -1 ? Integer.MAX_VALUE : index;
     }
 
+    private int warSortIndex(Achievement achievement) {
+        int index = WAR_ACHIEVEMENT_ORDER.indexOf(achievement.getId());
+        return index == -1 ? Integer.MAX_VALUE : index;
+    }
+
     private String categoryName(Achievement achievement) {
         String id = achievement.getId();
         if (id == null) return "General";
         if (id.startsWith("raid.")) return "Raids";
+        if (id.startsWith("war.")) return "Warring";
         if (id.startsWith("aspect.")) return "Aspects";
         if (id.startsWith("prof.gather.")) return "Gathering";
         if (id.startsWith("prof.craft.")) return "Crafting";
@@ -392,7 +674,8 @@ public class AchievementScreen extends WEScreen {
             int rx = x + width - rewardW;
             drawText("Reward", rx, y + 5, TEXT_DIM);
             for (RewardPreview reward : rewards) {
-                drawRewardPreview(ctx, rx, y + rowH / 2 - REWARD_PREVIEW_H / 2 + 6, reward);
+                drawRewardPreview(ctx, rx, y + rowH / 2 - REWARD_PREVIEW_H / 2 + 6, reward,
+                        isRewardUnlocked(achievement, reward));
                 rx += REWARD_PREVIEW_W + REWARD_PREVIEW_GAP;
             }
         }
@@ -420,9 +703,15 @@ public class AchievementScreen extends WEScreen {
         return rewards;
     }
 
-    private void drawRewardPreview(DrawContext ctx, int x, int y, RewardPreview reward) {
+    private boolean isRewardUnlocked(Achievement achievement, RewardPreview reward) {
+        if (reward.minTier() == null) return achievement.isUnlocked();
+        return achievement instanceof TieredAchievement tiered
+                && tiered.getCurrentLevel() >= reward.minTier();
+    }
+
+    private void drawRewardPreview(DrawContext ctx, int x, int y, RewardPreview reward, boolean unlocked) {
         drawRect(x, y, REWARD_PREVIEW_W, REWARD_PREVIEW_H, BG_DARK);
-        drawRect(x, y, REWARD_PREVIEW_W, 2, BORDER_LIGHT);
+        drawRect(x, y, REWARD_PREVIEW_W, 2, unlocked ? GREEN : RED);
         drawRect(x, y + REWARD_PREVIEW_H - 2, REWARD_PREVIEW_W, 2, BORDER);
         Text preview = reward.type() == RewardType.COLOR
                 ? BadgeCatalog.colorPreviewText(reward.colorId())
@@ -470,14 +759,14 @@ public class AchievementScreen extends WEScreen {
 
         int iconY = badgeIconRowY();
         if (inside(mx, my, x, iconY, w, BADGE_ICON_ROW_H + 2)) {
-            int totalW = BadgeCatalog.icons().size() * (BADGE_ICON_CELL + BADGE_CELL_GAP) - BADGE_CELL_GAP;
+            int totalW = badgeRowWidth(filteredBadgeIcons().size(), BADGE_ICON_CELL);
             targetIconScroll = MathHelper.clamp(targetIconScroll - (float) amount * 34f, 0, Math.max(0, totalW - w));
             return true;
         }
 
         int colorY = badgeColorRowY();
         if (inside(mx, my, x, colorY, w, BADGE_COLOR_ROW_H + 2)) {
-            int totalW = BadgeCatalog.colors().size() * (BADGE_COLOR_CELL_W + BADGE_CELL_GAP) - BADGE_CELL_GAP;
+            int totalW = badgeRowWidth(filteredBadgeColors().size(), BADGE_COLOR_CELL_W);
             targetColorScroll = MathHelper.clamp(targetColorScroll - (float) amount * 34f, 0, Math.max(0, totalW - w));
             return true;
         }
@@ -524,9 +813,9 @@ public class AchievementScreen extends WEScreen {
 
     private int horizontalScrollContentWidth(HorizontalScrollTarget target) {
         if (target == HorizontalScrollTarget.ICONS) {
-            return BadgeCatalog.icons().size() * (BADGE_ICON_CELL + BADGE_CELL_GAP) - BADGE_CELL_GAP;
+            return badgeRowWidth(filteredBadgeIcons().size(), BADGE_ICON_CELL);
         }
-        return BadgeCatalog.colors().size() * (BADGE_COLOR_CELL_W + BADGE_CELL_GAP) - BADGE_CELL_GAP;
+        return badgeRowWidth(filteredBadgeColors().size(), BADGE_COLOR_CELL_W);
     }
 
     private void setHorizontalScrollFromThumb(HorizontalScrollTarget target, double thumbLeft) {
@@ -674,6 +963,23 @@ public class AchievementScreen extends WEScreen {
         return tooltip;
     }
 
+    private List<Text> badgeIconTooltip(BadgeCatalog.BadgeIcon icon) {
+        List<Text> tooltip = new ArrayList<>();
+        tooltip.add(Text.of("§6" + icon.displayName() + (icon.isCustom() ? " (Image Icon)" : "")));
+        tooltip.addAll(badgeRequirementTooltip(icon.achievement(), icon.minTier()));
+        return tooltip;
+    }
+
+    private List<Text> badgeColorTooltip(BadgeCatalog.BadgeColor color) {
+        List<Text> tooltip = new ArrayList<>();
+        tooltip.add(Text.of("§6" + color.displayName()));
+        if (color.preservesOriginal()) {
+            tooltip.add(Text.of("§7Only available for image icons."));
+        }
+        tooltip.addAll(badgeRequirementTooltip(color.achievement(), color.minTier()));
+        return tooltip;
+    }
+
     private void drawRect(float x, float y, float width, float height, int color) {
         if (ui == null) return;
         ui.drawRect(uiX(x), uiY(y), uiX(width), uiY(height), CustomColor.fromInt(color));
@@ -763,19 +1069,48 @@ public class AchievementScreen extends WEScreen {
         protected boolean onClick(int button) {
             if (button != 0) return false;
             tab = buttonTab;
-            targetScroll = 0;
-            scroll = 0;
+            playClick();
+            return true;
+        }
+    }
+
+    private class BadgeFilterButtonWidget extends LogicalWidget {
+        private final BadgeFilter filter;
+
+        private BadgeFilterButtonWidget(BadgeFilter filter) {
+            super(0, 0, 0, 0);
+            this.filter = filter;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            int accent = badgeFilterAccent(filter);
+            boolean active = accent != RED;
+            drawRect(x, y, width, height, active ? (hovered ? PARCHMENT_HOVER : PARCHMENT) : (hovered ? PANEL_HOVER : PANEL));
+            drawRect(x, y, width, 2, accent);
+            drawCenteredText(badgeFilterLabel(filter), x + width / 2f, y + 8, active ? TEXT_MAIN : TEXT_DIM);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if (button != 0 && button != 1) return false;
+            toggleBadgeFilter(filter, button == 1);
             playClick();
             return true;
         }
     }
 
     private class CategoryHeaderWidget extends LogicalWidget {
-        private final AchievementCategory category;
+        private AchievementCategory category;
 
-        private CategoryHeaderWidget(AchievementCategory category, int x, int y, int width, int height) {
-            super(x, y, width, height);
+        private CategoryHeaderWidget(AchievementCategory category) {
+            super(0, 0, 0, 0);
             this.category = category;
+        }
+
+        private void update(AchievementCategory category, int x, int y, int width, int height) {
+            this.category = category;
+            setBounds(x, y, width, height);
         }
 
         @Override
@@ -805,13 +1140,17 @@ public class AchievementScreen extends WEScreen {
     }
 
     private abstract class BadgeCellWidget extends LogicalWidget {
-        private final int viewportX;
-        private final int viewportY;
-        private final int viewportWidth;
-        private final int viewportHeight;
+        private int viewportX;
+        private int viewportY;
+        private int viewportWidth;
+        private int viewportHeight;
 
-        private BadgeCellWidget(int x, int y, int width, int height, int viewportX, int viewportY, int viewportWidth, int viewportHeight) {
-            super(x, y, width, height);
+        private BadgeCellWidget(int width, int height) {
+            super(0, 0, width, height);
+        }
+
+        protected final void updateBounds(int x, int y, int viewportX, int viewportY, int viewportWidth, int viewportHeight) {
+            setPosition(x, y);
             this.viewportX = viewportX;
             this.viewportY = viewportY;
             this.viewportWidth = viewportWidth;
@@ -834,8 +1173,8 @@ public class AchievementScreen extends WEScreen {
     private class BadgeIconWidget extends BadgeCellWidget {
         private final BadgeCatalog.BadgeIcon icon;
 
-        private BadgeIconWidget(BadgeCatalog.BadgeIcon icon, int x, int y, int viewportX, int viewportY, int viewportWidth, int viewportHeight) {
-            super(x, y, BADGE_ICON_CELL, BADGE_ICON_CELL, viewportX, viewportY, viewportWidth, viewportHeight);
+        private BadgeIconWidget(BadgeCatalog.BadgeIcon icon) {
+            super(BADGE_ICON_CELL, BADGE_ICON_CELL);
             this.icon = icon;
         }
 
@@ -847,7 +1186,8 @@ public class AchievementScreen extends WEScreen {
             drawPanel(ctx, x, y, width, height, hovered, selected ? GOLD : (unlocked ? BORDER_LIGHT : RED));
             drawScaledBadgeText(ctx, BadgeCatalog.badgeText(icon.id(), profile.selectedColorId), x + width / 2, y + 13, 1.8f, true);
             drawCenteredText(trimText(icon.displayName(), width - 8), x + width / 2, y + 52, unlocked ? TEXT_MAIN : TEXT_DIM);
-            if (!unlocked) drawCenteredText("Locked", x + width / 2, y + 68, RED);
+            if (selected) drawCenteredText("Selected", x + width / 2, y + 68, GOLD);
+            else if (!unlocked) drawCenteredText("Locked", x + width / 2, y + 68, RED);
         }
 
         @Override
@@ -862,25 +1202,35 @@ public class AchievementScreen extends WEScreen {
     private class BadgeColorWidget extends BadgeCellWidget {
         private final BadgeCatalog.BadgeColor color;
 
-        private BadgeColorWidget(BadgeCatalog.BadgeColor color, int x, int y, int viewportX, int viewportY, int viewportWidth, int viewportHeight) {
-            super(x, y, BADGE_COLOR_CELL_W, BADGE_COLOR_CELL_H, viewportX, viewportY, viewportWidth, viewportHeight);
+        private BadgeColorWidget(BadgeCatalog.BadgeColor color) {
+            super(BADGE_COLOR_CELL_W, BADGE_COLOR_CELL_H);
             this.color = color;
         }
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             BadgeProfile profile = BadgeProfileData.getLocalProfile();
-            boolean unlocked = BadgeCatalog.isUnlocked(color);
+            boolean unlocked = BadgeCatalog.isUnlocked(color)
+                    && BadgeCatalog.isCompatible(BadgeCatalog.icon(profile.selectedIconId), color);
             boolean selected = color.id().equals(profile.selectedColorId);
             drawPanel(ctx, x, y, width, height, hovered, selected ? GOLD : (unlocked ? BORDER_LIGHT : RED));
-            drawScaledBadgeText(ctx, BadgeCatalog.colorPreviewText(color.id()), x + width / 2, y + 12, 2.25f, true);
+            drawScaledBadgeText(ctx, BadgeCatalog.colorPreviewText(profile.selectedIconId, color.id()), x + width / 2, y + 12, 2.25f, true);
+            if (BadgeCatalog.isFade(color)) {
+                drawCenteredText("Fade color", x + width / 2, y + 37, TEXT_DIM);
+            }
             drawCenteredText(trimText(color.displayName(), width - 8), x + width / 2, y + 52, unlocked ? TEXT_MAIN : TEXT_DIM);
-            if (!unlocked) drawCenteredText("Locked", x + width / 2, y + 68, RED);
+            if (selected) drawCenteredText("Selected", x + width / 2, y + 68, GOLD);
+            else if (!unlocked) drawCenteredText("Locked", x + width / 2, y + 68, RED);
         }
 
         @Override
         protected boolean onClick(int button) {
-            if (button != 0 || !BadgeCatalog.isUnlocked(color)) return false;
+            BadgeProfile profile = BadgeProfileData.getLocalProfile();
+            if (button != 0
+                    || !BadgeCatalog.isUnlocked(color)
+                    || !BadgeCatalog.isCompatible(BadgeCatalog.icon(profile.selectedIconId), color)) {
+                return false;
+            }
             BadgeProfileData.setColor(color.id());
             playClick();
             return true;
@@ -889,7 +1239,11 @@ public class AchievementScreen extends WEScreen {
 
     private class AchievementScrollBarWidget extends LogicalWidget {
         private AchievementScrollBarWidget() {
-            super(layoutWidth() - 16, ACHIEVEMENT_VIEWPORT_TOP, 6, achievementViewportHeight());
+            super(0, 0, 0, 0);
+        }
+
+        private void updateBounds() {
+            setBounds(layoutWidth() - 16, ACHIEVEMENT_VIEWPORT_TOP, 6, achievementViewportHeight());
         }
 
         @Override
@@ -930,11 +1284,15 @@ public class AchievementScreen extends WEScreen {
 
     private class HorizontalBadgeScrollBarWidget extends LogicalWidget {
         private final HorizontalScrollTarget target;
-        private final int contentWidth;
+        private int contentWidth;
 
-        private HorizontalBadgeScrollBarWidget(HorizontalScrollTarget target, int x, int y, int width, int height, int contentWidth) {
-            super(x, y, width, height);
+        private HorizontalBadgeScrollBarWidget(HorizontalScrollTarget target) {
+            super(0, 0, 0, 0);
             this.target = target;
+        }
+
+        private void update(int x, int y, int width, int height, int contentWidth) {
+            setBounds(x, y, width, height);
             this.contentWidth = contentWidth;
         }
 
@@ -971,6 +1329,94 @@ public class AchievementScreen extends WEScreen {
     private enum HorizontalScrollTarget {
         ICONS,
         COLORS
+    }
+
+    private enum BadgeFilter {
+        ICON_UNLOCK("Status", HorizontalScrollTarget.ICONS),
+        ICON_IMAGE("Image", HorizontalScrollTarget.ICONS),
+        COLOR_UNLOCK("Status", HorizontalScrollTarget.COLORS),
+        COLOR_FADE("Fade", HorizontalScrollTarget.COLORS);
+
+        private final String label;
+        private final HorizontalScrollTarget target;
+
+        BadgeFilter(String label, HorizontalScrollTarget target) {
+            this.label = label;
+            this.target = target;
+        }
+    }
+
+    private enum UnlockFilterMode {
+        ALL("All", GREEN),
+        ONLY_UNLOCKED("Only Unlocked", GOLD),
+        ONLY_LOCKED("Only Locked", RED);
+
+        private final String label;
+        private final int accent;
+
+        UnlockFilterMode(String label, int accent) {
+            this.label = label;
+            this.accent = accent;
+        }
+
+        private UnlockFilterMode next() {
+            return switch (this) {
+                case ALL -> ONLY_UNLOCKED;
+                case ONLY_UNLOCKED -> ONLY_LOCKED;
+                case ONLY_LOCKED -> ALL;
+            };
+        }
+
+        private UnlockFilterMode previous() {
+            return switch (this) {
+                case ALL -> ONLY_LOCKED;
+                case ONLY_UNLOCKED -> ALL;
+                case ONLY_LOCKED -> ONLY_UNLOCKED;
+            };
+        }
+    }
+
+    private enum SpecialFilterMode {
+        ALL(GREEN),
+        HIDE(RED),
+        ONLY(GOLD);
+
+        private final int accent;
+
+        SpecialFilterMode(int accent) {
+            this.accent = accent;
+        }
+
+        private SpecialFilterMode next() {
+            return switch (this) {
+                case ALL -> HIDE;
+                case HIDE -> ONLY;
+                case ONLY -> ALL;
+            };
+        }
+
+        private SpecialFilterMode previous() {
+            return switch (this) {
+                case ALL -> ONLY;
+                case HIDE -> ALL;
+                case ONLY -> HIDE;
+            };
+        }
+    }
+
+    private static class BadgeScreenSessionState {
+        private float achievementScroll;
+        private float targetAchievementScroll;
+        private float iconScroll;
+        private float targetIconScroll;
+        private float colorScroll;
+        private float targetColorScroll;
+        private String iconSearch = "";
+        private String colorSearch = "";
+        private UnlockFilterMode iconUnlockFilter = UnlockFilterMode.ALL;
+        private SpecialFilterMode imageIconFilter = SpecialFilterMode.ALL;
+        private UnlockFilterMode colorUnlockFilter = UnlockFilterMode.ALL;
+        private SpecialFilterMode fadeColorFilter = SpecialFilterMode.ALL;
     }
 
     private record AchievementCategory(String key, List<Achievement> achievements) {

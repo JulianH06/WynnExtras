@@ -56,6 +56,7 @@ public class RaidChatNotifier {
     private static boolean allowReceivedMessage(Text message) {
         String raw = stripColorCodes(message.getString());
         TnaApi.handleMessage(raw);
+        RaidState.observeChat(raw);
 
         if (!shouldBlockRaidTimestampMessage(raw)) return true;
 

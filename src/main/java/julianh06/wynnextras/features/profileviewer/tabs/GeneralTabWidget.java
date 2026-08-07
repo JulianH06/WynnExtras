@@ -2,9 +2,11 @@ package julianh06.wynnextras.features.profileviewer.tabs;
 
 import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.features.badges.BadgeService;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.features.profileviewer.ProfileTitleService;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
@@ -15,6 +17,7 @@ import net.minecraft.client.render.entity.state.EntityRenderState;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.EntityPose;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -40,6 +43,9 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
     private GuildButtonWidget guildButtonWidget = null;
 
     private PVScreen pvScreen;
+    private List<Text> badgeTooltip = List.of();
+    private int badgeTooltipMouseX;
+    private int badgeTooltipMouseY;
 
     public GeneralTabWidget(PVScreen pvScreen) {
         super(0, 0, 100, 100);
@@ -92,7 +98,19 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             ui.drawImage(rankBadge,  x + 15, y + 18, rankBadgeWidth, 27);
         }
 
-        ui.drawText(" " + PV.currentPlayerData.getUsername(), x + 10 + rankBadgeWidth,  y + 21, CustomColor.fromHexString(rankColorHexString), 3f);
+        int playerNameX = x + 10 + rankBadgeWidth;
+        Text playerName = BadgeService.appendBadge(PV.currentPlayerData.getUuid(), PV.currentPlayerData.getUsername(), Text.literal(" " + PV.currentPlayerData.getUsername()));
+        ui.drawText(playerName, playerNameX, y + 21, CustomColor.fromHexString(rankColorHexString), 3f);
+
+        int playerNameWidth = MinecraftClient.getInstance().textRenderer.getWidth(playerName) * 3;
+        if (mouseX >= ui.sx(playerNameX) && mouseX < ui.sx(playerNameX) + ui.sw(playerNameWidth)
+                && mouseY >= ui.sy(y + 15) && mouseY < ui.sy(y + 48)) {
+            badgeTooltip = BadgeService.getBadgeTooltip(PV.currentPlayerData.getUuid(), PV.currentPlayerData.getUsername());
+            badgeTooltipMouseX = mouseX;
+            badgeTooltipMouseY = mouseY;
+        } else {
+            badgeTooltip = List.of();
+        }
 
         if (PV.currentPlayerData.isOnline()) {
             PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, x + 15, y + 60, 33, 33, ui);
@@ -182,17 +200,19 @@ public class GeneralTabWidget extends PVScreen.TabWidget {
             }
         }
 
-        if(WETeam != null && PV.currentPlayerData.getUsername() != null) {
-            if (WETeam.contains(PV.currentPlayerData.getUsername())) {
-                ui.drawCenteredText("★★★ WynnExtras Team Member ★★★", x + 285, y + 720, CustomColor.SHINE, 3f);
-            }
+        String profileTitle = ProfileTitleService.getTitle(PV.currentPlayerData.getUsername());
+        if (profileTitle != null) {
+            ui.drawCenteredText("★★★ " + profileTitle + " ★★★", x + 285, y + 720, CustomColor.SHINE, 3f);
         }
+    }
 
-        if(WEContributors != null && PV.currentPlayerData.getUsername() != null) {
-            if (WEContributors.contains(PV.currentPlayerData.getUsername())) {
-                ui.drawCenteredText("★★★ WynnExtras Contributor ★★★", x + 285, y + 720, CustomColor.SHINE, 3f);
-            }
-        }
+    @Override
+    protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if (badgeTooltip.isEmpty()) return;
+
+        ctx.drawTooltip(MinecraftUtils.mc().textRenderer, badgeTooltip,
+                (int) (badgeTooltipMouseX * PVScreen.currentMatrixScale),
+                (int) (badgeTooltipMouseY * PVScreen.currentMatrixScale));
     }
     static float playerRotationY = 0;
 

@@ -75,6 +75,11 @@ public class TetrisScreen extends Screen {
         pieceTouchedGround = false;
     }
 
+    @Override
+    protected void applyBlur(DrawContext context) {
+        if (!WynnExtrasConfig.INSTANCE.hideTetrisBackgroundBlur) super.applyBlur(context);
+    }
+
     private void updateBounds() {
         boardScale = Math.min(this.height / 250f, (this.width - 160) / 100f);
         boardScale = Math.max(boardScale, 0.5f);
@@ -84,7 +89,7 @@ public class TetrisScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        try { if (client != null) super.applyBlur(context); } catch (Exception ignored) {}
+        try { if (client != null) applyBlur(context); } catch (Exception ignored) {}
 
         if (ui == null) ui = new UIUtils(context, 1.0, 0, 0);
         else ui.updateContext(context, 1.0, 0, 0);

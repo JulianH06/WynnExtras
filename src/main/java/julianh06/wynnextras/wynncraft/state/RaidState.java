@@ -15,6 +15,10 @@ import julianh06.wynnextras.wynncraft.menu.MenuType;
 import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.ClientBossBar;
+import net.minecraft.scoreboard.Scoreboard;
+import net.minecraft.scoreboard.ScoreboardEntry;
+import net.minecraft.scoreboard.ScoreboardObjective;
+import net.minecraft.text.Text;
 import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.LinkedHashMap;
@@ -56,7 +60,11 @@ public final class RaidState {
 
     @SubscribeEvent
     public void onChat(ChatEvent event) {
-        String message = clean(event.message.getString());
+        observeChat(event.message.getString());
+    }
+
+    public static void observeChat(String rawMessage) {
+        String message = clean(rawMessage);
         if (message.contains(": ")) return;
         WERaidKind detected = detectKind(message);
         if (detected != WERaidKind.UNKNOWN && !isInRaid()) start(detected);
@@ -74,6 +82,45 @@ public final class RaidState {
         }
     }
 
+    public static void observeTitle(Text title) {
+        if (title == null) return;
+        String text = clean(title.getString());
+        String lower = text.toLowerCase(Locale.ROOT);
+        if (lower.contains("raid completed")) {
+            end(EndStatus.COMPLETED);
+            return;
+        }
+        if (lower.contains("raid failed")) {
+            end(EndStatus.FAILED);
+            return;
+        }
+
+        WERaidKind detected = detectKind(text);
+        if (detected != WERaidKind.UNKNOWN) start(detected);
+    }
+
+    public static void observeScoreboard() {
+        try {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.world == null) return;
+            Scoreboard scoreboard = client.world.getScoreboard();
+            for (ScoreboardObjective objective : scoreboard.getObjectives()) {
+                for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
+                    String line = clean(entry.name().getString());
+                    if (line.equals("Challenge Completed!")) {
+                        completeRoom();
+                        continue;
+                    }
+                    if (line.startsWith("Too many players have") || line.equals("You ran out of time!")) {
+                        end(EndStatus.FAILED);
+                        continue;
+                    }
+                    startRoomFromSignal(line);
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
     @SubscribeEvent
     public void onTick(TickEvent event) {
         if (event.ticks % 5 != 0) return;
@@ -86,8 +133,8 @@ public final class RaidState {
                 if (!isInRaid()) start(detected);
                 else raidKind = detected;
             }
-            if (isInRaid() && looksLikeRoomBar(text)) updateRoomName(text);
         }
+        observeScoreboard();
         if (isInRaid() && WynncraftMenuService.isCurrent(MenuType.RAID_REWARD)) phase = Phase.REWARD;
     }
 
@@ -99,10 +146,10 @@ public final class RaidState {
         if (System.currentTimeMillis() - endedAt < 5_000) return;
         raidKind = detected == null ? WERaidKind.UNKNOWN : detected;
         phase = Phase.STARTING;
-        room = 1;
-        roomName = "Room 1";
+        room = 0;
+        roomName = "Unknown Room";
         startTime = System.currentTimeMillis();
-        roomStartTime = startTime;
+        roomStartTime = 0;
         endStatus = EndStatus.NONE;
         ROOMS.clear();
         RaidChatNotifier.resetCounters();
@@ -115,12 +162,10 @@ public final class RaidState {
         long now = System.currentTimeMillis();
         long elapsed = now - roomStartTime;
         ROOMS.put(room, new RaidRoomData(roomName, elapsed, now));
-        RaidChatNotifier.onRoomCompleted(new CompletedRoom(raidKind.name(), raidKind.abbreviation(), room,
+        RaidChatNotifier.onRoomCompleted(new CompletedRoom(stableRaidKey(raidKind), raidKind.abbreviation(), room,
                 roomName, elapsed, totalChallenges(raidKind)));
-        room++;
-        roomName = "Room " + room;
-        roomStartTime = now;
-        phase = Phase.ROOM;
+        roomStartTime = 0;
+        phase = Phase.STARTING;
     }
 
     private static void end(EndStatus status) {
@@ -143,16 +188,65 @@ public final class RaidState {
         roomStartTime = 0;
     }
 
-    private static void updateRoomName(String text) {
-        String clean = text.replaceAll("(?i)\\s*(?:-|\\|).*", "").trim();
-        if (clean.isBlank() || clean.equalsIgnoreCase(raidKind.displayName())) return;
-        roomName = clean;
-        if (phase == Phase.STARTING) phase = Phase.ROOM;
+    private static void startRoomFromSignal(String line) {
+        if (!isInRaid() || roomStartTime > 0 || line.isBlank()) return;
+        int nextRoom = ROOMS.size() + 1;
+        String detectedName = roomName(raidKind, nextRoom, line);
+        if (detectedName == null) return;
+
+        room = nextRoom;
+        roomName = detectedName;
+        roomStartTime = System.currentTimeMillis();
+        phase = Phase.ROOM;
     }
 
-    private static boolean looksLikeRoomBar(String text) {
-        String lower = text.toLowerCase(Locale.ROOT);
-        return lower.contains("challenge") || lower.contains("objective") || lower.contains("room");
+    private static String roomName(WERaidKind kind, int index, String line) {
+        return switch (kind) {
+            case NOTG -> switch (index) {
+                case 1 -> match(line, "Hold the platform", "Slimey Platform", "Hold and defend", "Tower Defense");
+                case 2 -> match(line, "Collect 10 Slimy Goo", "Slime Gathering");
+                case 3 -> match(line, "Have a player pick up", "Tunnel Traversal", "2 players must", "Minibosses");
+                case 4 -> match(line, "Slay the Restless", "Grootslang Wyrmling");
+                default -> null;
+            };
+            case NOL -> switch (index) {
+                case 1 -> match(line, "Hold the tower", "Decaying Tower");
+                case 2 -> match(line, "Kill all Crystalline", "Cloud Decay", "Collect 10 Light", "Light Gathering");
+                case 3 -> match(line, "Purify the decaying", "Light Tower", "Escort your party to", "Invisible Maze");
+                case 4 -> match(line, "Save Him.", "Orphion");
+                case 5 -> match(line, "Finish that which He", "The Parasite");
+                default -> null;
+            };
+            case TCC -> switch (index) {
+                case 1 -> match(line, "Hold the Upper and", "2 Platforms", "Use water on", "Lava Lake");
+                case 2 -> match(line, "Find and reach the", "Labyrinth", "Wake the ancient", "Golem Escort");
+                case 3 -> match(line, "Activate 4 Binding", "Binding Seal");
+                case 4 -> match(line, "Calm the canyon's", "The Canyon Colossus");
+                default -> null;
+            };
+            case TNA -> switch (index) {
+                case 1 -> match(line, "One player must take", "Flooding Canyon", "Hold the stump for", "Sunken Grotto");
+                case 2 -> match(line, "Find and kill", "Nameless Cave", "Offer souls to the", "Weeping Soulroot");
+                case 3 -> match(line, "Protect the Bulb", "Blueshift Wilds", "Collect 5 Void Matter", "Twisted Jungle");
+                case 4 -> match(line, "Survive.", "The ##### Anomaly");
+                default -> null;
+            };
+            case TWP -> switch (index) {
+                case 1 -> match(line, "Fight through the", "Grand Aisles", "Collect the sonic", "Regal Ballroom");
+                case 2 -> match(line, "Slay the Knightmare", "Statuary Hall");
+                case 3 -> match(line, "Rip out the artifact", "The Spire's Shadow");
+                case 4 -> match(line, "Unknown", "Anathema");
+                default -> null;
+            };
+            case UNKNOWN -> null;
+        };
+    }
+
+    private static String match(String line, String... signalsAndNames) {
+        for (int i = 0; i + 1 < signalsAndNames.length; i += 2) {
+            if (line.contains(signalsAndNames[i])) return signalsAndNames[i + 1];
+        }
+        return null;
     }
 
     private static WERaidKind detectKind(String text) {
@@ -167,9 +261,20 @@ public final class RaidState {
 
     private static int totalChallenges(WERaidKind kind) {
         return switch (kind) {
-            case NOTG -> 3;
-            case NOL, TCC, TNA, TWP -> 4;
+            case NOTG, TCC, TNA, TWP -> 4;
+            case NOL -> 5;
             default -> 0;
+        };
+    }
+
+    private static String stableRaidKey(WERaidKind kind) {
+        return switch (kind) {
+            case NOTG -> "NestOfTheGrootslangs";
+            case NOL -> "OrphionsNexusOfLight";
+            case TCC -> "TheCanyonColossus";
+            case TNA -> "TheNamelessAnomaly";
+            case TWP -> "TheWartornPalace";
+            case UNKNOWN -> "?";
         };
     }
 

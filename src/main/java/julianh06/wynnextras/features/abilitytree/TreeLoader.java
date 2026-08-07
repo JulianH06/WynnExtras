@@ -432,7 +432,7 @@ public class TreeLoader {
                 pendingClick.ticksWaiting = 0;
 
                 if (fastMode) {
-                    abilityClickTicks[0] = 0; // keine Pause
+                    abilityClickTicks[0] = 0; // no delay
                 } else {
                     abilityClickTicks[0] = 1; // minimal delay
                 }
@@ -500,20 +500,20 @@ public class TreeLoader {
 
     public static String extractAbilityNameFromHtml(String html) {
         if (html == null) return null;
-        // 1) Entferne HTML-Tags, ersetze sie durch ein Leerzeichen damit Worte nicht zusammenlaufen
+        // 1) Remove HTML tags and replace them with spaces so words do not merge.
         String plain = html.replaceAll("<[^>]+>", " ");
-        // 2) Entferne Minecraft-Farb-/Formatcodes (§x)
+        // 2) Remove Minecraft color and formatting codes (§x).
         plain = plain.replaceAll("§.", "");
-        // 3) Unescape einiger häufiger Entities
+        // 3) Unescape common entities.
         plain = plain.replace("&nbsp;", " ")
                 .replace("&amp;", "&")
                 .replace("&#39;", "'")
                 .replace("&quot;", "\"");
-        // 4) Normalisiere typographische Apostrophe auf ASCII-Apostroph
+        // 4) Normalize typographic apostrophes to ASCII apostrophes.
         plain = plain.replace('\u2019', '\'').replace('\u2018', '\'');
-        // 5) Entferne Steuerzeichen, collapse multiple whitespaces, trim
+        // 5) Remove control characters, collapse whitespace, and trim.
         plain = plain.replaceAll("[\\p{C}]+", " ").replaceAll("\\s+", " ").trim();
-        // 6) Falls der Name in Klammern oder mit vorangestellten/trailenden Satzzeichen bleibt, säubere Ränder
+        // 6) Remove surrounding punctuation if it remains around the name.
         plain = plain.replaceAll("^[\\p{Punct}\\s]+", "").replaceAll("[\\p{Punct}\\s]+$", "");
         return plain.isEmpty() ? null : plain;
     }
@@ -574,8 +574,6 @@ public class TreeLoader {
         return result;
     }
 
-    // Hilfsfunktionen oben in deiner Klasse
-
     private static String normalizeArchetypeKey(String display) {
         if (display == null) return null;
         return (display + " Archetype").toLowerCase();
@@ -589,7 +587,7 @@ public class TreeLoader {
             String plain = line.replaceAll("<[^>]+>", "").replaceAll("§.", "").trim();
             Matcher m = archetypeLine.matcher(plain);
             if (m.find()) {
-                return Optional.of(m.group(1).trim()); // z.B. "Paladin" (ohne das Wort "Archetype")
+                return Optional.of(m.group(1).trim()); // e.g. "Paladin" (without the word "Archetype")
             }
         }
         return Optional.empty();
@@ -597,7 +595,7 @@ public class TreeLoader {
 
     public static Optional<Integer> extractCountFromComponentsString(String componentsToString) {
         if (componentsToString == null) return Optional.empty();
-        String plain = componentsToString.replaceAll("§.", ""); // alle Farb-/Formatcodes entfernen
+        String plain = componentsToString.replaceAll("§.", ""); // remove all color and formatting codes
         Pattern p = Pattern.compile("\\b(\\d+)\\/(\\d+)\\b");
         Matcher m = p.matcher(plain);
         if (m.find()) {
@@ -684,11 +682,11 @@ public class TreeLoader {
             unlockedNodes.addAll(unlocked);
         }
 
-        // Status für DFS / Toposort
+        // State for DFS / topological sort
         Set<String> visiting = new HashSet<>();
         Set<String> visited = new HashSet<>();
 
-        // Archetype-Counts (öffnet Knoten wenn genug Archetype-Punkte vorhanden)
+        // Archetype counts (unlocks nodes when enough archetype points are available)
         Map<String, Integer> archetypeCounts = getArchetypeCounts(archetypes);
         // Ensure archetypeCounts keys are normalized (already done in getArchetypeCounts)
 
@@ -722,7 +720,7 @@ public class TreeLoader {
                     int need = arReq.amount;
                     int have = arcKey == null ? 0 : archetypeCounts.getOrDefault(arcKey, 0);
                     if (have < need) {
-                        return false; // hier wird bei denen dann returned
+                        return false;
                     }
                 }
 
@@ -750,7 +748,7 @@ public class TreeLoader {
                     stack.push(node);
                     unlocked.add(key);
 
-                    // Archetype-Extraction: falls die Ability eine Archetype-Anzeigezeile hat, erhöhe den passenden Counter
+                    // Extract the archetype and increment its counter when the ability exposes one.
                     try {
                         Optional<String> optDisplay = extractArchetypeInfo(node.description);
                         if (optDisplay.isPresent()) {
@@ -772,7 +770,7 @@ public class TreeLoader {
 
         Resolver resolver = new Resolver();
 
-        // Versuche alle Knoten zu lösen; Knoten, die wegen Archetype-Requirements nicht gelöst werden können, werden später erneut geprüft
+        // Resolve all nodes; nodes blocked by archetype requirements are retried later.
         for (AbilityTreeData.Ability a : nodes) {
             if (a == null || a.name == null) continue;
             String key = a.name.toLowerCase();
@@ -780,7 +778,7 @@ public class TreeLoader {
             resolver.resolve(key);
         }
 
-        // Wiederholte Versuche falls Archetype-Abhängigkeiten später erfüllt werden
+        // Retry when archetype dependencies are fulfilled later.
         boolean progress;
         do {
             progress = false;
@@ -793,7 +791,7 @@ public class TreeLoader {
             }
         } while (progress);
 
-        // Stack in richtige Reihenfolge umwandeln (first resolved -> first in list)
+        // Convert the stack to the correct order (first resolved -> first in list)
         while (!stack.isEmpty()) result.add(stack.removeLast());
 
         return result;
@@ -822,7 +820,7 @@ public class TreeLoader {
         return null;
     }
 
-    // Hilfsmethode: bereinigt HTML/Farbcodes, normalisiert Apostrophe/Hyphen und collapsed whitespace
+    // Helper: removes HTML/color codes, normalizes apostrophes and hyphens, and collapses whitespace.
     private static String normalizeDisplay(String s) {
         if (s == null) return "";
         // remove tags -> replace with space so words don't merge
@@ -927,7 +925,7 @@ public class TreeLoader {
                 MinecraftUtils.sendMessageToClient(
                         WynnExtras.addWynnExtrasPrefix(Text.of("The Ability tree was deleted successfully."))
                 );
-                TreeData.loadAll(); // Liste neu laden
+                TreeData.loadAll(); // reload the list
             } else {
                 MinecraftUtils.sendMessageToClient(
                         WynnExtras.addWynnExtrasPrefix(Text.of("Ability tree file not found: " + fileName))

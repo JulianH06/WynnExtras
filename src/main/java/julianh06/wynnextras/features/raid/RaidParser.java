@@ -39,20 +39,20 @@ public class RaidParser {
             return null;
         }
 
-        // 1. Relativangabe mit Suffix: -<Zahl><Einheit>
-        //    z.B. -1d, -5h, -30m, -10s
+        // 1. Relative value with a suffix: -<number><unit>
+        //    e.g. -1d, -5h, -30m, -10s
         if (raw.startsWith("-")) {
             String rel = raw.substring(1);
-            // Suche alle "<Zahl><Einheit>" Paare
+            // Find all "<number><unit>" pairs.
             Pattern p = Pattern.compile("(\\d+)([dhms])");
             Matcher m = p.matcher(rel);
 
-            // Wenn kein einziger Treffer, abbrechen
+            // Stop when there are no matches.
             if (!m.find()) {
                 return null;
             }
 
-            // Summe aller Teil-Dauern
+            // Sum all partial durations.
             Duration total = Duration.ZERO;
             m.reset();
             while (m.find()) {
@@ -65,35 +65,35 @@ public class RaidParser {
                 }
             }
 
-            // Mindestens 1 Sekunde relativ?
+            // Must be at least one second.
             if (total.isZero()) {
                 return null;
             }
             return LocalDateTime.now().minus(total);
         }
 
-        // 2. Absolutes Datum + Zeit (ISO-Format): "yyyy-MM-dd'T'HH:mm[:ss]"
+        // 2. Absolute date and time (ISO format): "yyyy-MM-dd'T'HH:mm[:ss]"
         DateTimeFormatter[] formatters = {
                 DateTimeFormatter.ISO_LOCAL_DATE_TIME,                     // 2025-09-02T14:30:00
-                DateTimeFormatter.ofPattern("yyyy-MM-dd['/'HH:mm]"),       // 2025-09-02 oder 2025-09-02T14:30
+                DateTimeFormatter.ofPattern("yyyy-MM-dd['/'HH:mm]"),       // 2025-09-02 or 2025-09-02T14:30
         };
 
         for (var fmt : formatters) {
             try {
-                // Versuche erst LocalDateTime, sonst LocalDate + atStartOfDay()
+                // Try LocalDateTime first, otherwise LocalDate + atStartOfDay().
                 return LocalDateTime.parse(raw, fmt);
             } catch (DateTimeParseException e1) {
-                // Falls reines Datum erwartet wird
+                // Handle a date without a time.
                 try {
                     LocalDate date = LocalDate.parse(raw, fmt);
                     return date.atStartOfDay();
                 } catch (DateTimeParseException e2) {
-                    // nächster Formatter
+                    // next formatter
                 }
             }
         }
 
-        // 3. Keine gültige Angabe
+        // 3. No valid input
         return null;
     }
 }

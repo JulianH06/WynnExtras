@@ -30,6 +30,7 @@
     "RaidLootOverlayClickMixin",
     "RaidLootOverlayScreenMixin",
     "SpriteContentsMixin",
+    "TextFieldWidgetMixin",
     "WeightScaleBackgroundMixin",
     "WorldRendererAccessor",
     "Accessor.BannerBlockEntityRendererAccessor",

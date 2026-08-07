@@ -14,6 +14,8 @@ import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.concurrent.CompletableFuture;
 
+import julianh06.wynnextras.utils.BackendErrorLogger;
+
 public class ResetTimeConfig {
     public static final ResetTimeConfig INSTANCE = new ResetTimeConfig();
 
@@ -60,12 +62,12 @@ public class ResetTimeConfig {
                 return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .handle((response, ex) -> {
                         if (ex != null || response == null) {
-                            WynnExtras.LOGGER.error("[WynnExtras] Failed to fetch reset times: " + (ex != null ? ex.getMessage() : "null response"));
+                            BackendErrorLogger.error("reset-times", "Failed to fetch reset times: " + (ex != null ? ex.getMessage() : "null response"));
                             fetching = false;
                             return null;
                         }
                         if (response.statusCode() != 200) {
-                            WynnExtras.LOGGER.error("[WynnExtras] Failed to fetch reset times, Invalid status: " + response.statusCode());
+                            BackendErrorLogger.error("reset-times", "Failed to fetch reset times, invalid status: " + response.statusCode());
                             fetching = false;
                             return null;
                         }
@@ -95,7 +97,7 @@ public class ResetTimeConfig {
                         return null;
                     });
             } catch (Exception e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Failed to fetch reset times, using defaults: " + e.getMessage());
+                BackendErrorLogger.error("reset-times", "Failed to fetch reset times, using defaults: " + e.getMessage());
             }
             fetching = false;
             return null;

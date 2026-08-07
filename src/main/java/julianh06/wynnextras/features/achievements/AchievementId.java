@@ -2,6 +2,9 @@ package julianh06.wynnextras.features.achievements;
 
 public enum AchievementId {
     CONTENT_COMPLETION("content.completion"),
+    ULTIMATE_COMPLETIONIST("content.ultimate_completionist"),
+    MAX_LEVEL("class.max_level"),
+    RICH("bank.rich"),
 
     ASPECT_MAX_ALL("aspect.max.all"),
     ASPECT_MAX_ALL_MYTHIC("aspect.max.all.mythic"),
@@ -18,6 +21,13 @@ public enum AchievementId {
     RAID_NOL("raid.nol"),
     RAID_TWP("raid.twp"),
     RAID_TCC("raid.tcc"),
+
+    WAR_COMPLETION("war.completion"),
+    WAR_DEFENCE_VERY_LOW("war.defence.very_low"),
+    WAR_DEFENCE_LOW("war.defence.low"),
+    WAR_DEFENCE_MEDIUM("war.defence.medium"),
+    WAR_DEFENCE_HIGH("war.defence.high"),
+    WAR_DEFENCE_VERY_HIGH("war.defence.very_high"),
 
     PROF_GATHER_100("prof.gather.100"),
     PROF_GATHER_115("prof.gather.115"),

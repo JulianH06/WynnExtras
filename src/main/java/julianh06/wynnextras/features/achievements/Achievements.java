@@ -13,6 +13,7 @@ import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.misc.StyledTextAdapter;
 import julianh06.wynnextras.utils.ApiRequestHelper;
+import julianh06.wynnextras.utils.BackendErrorLogger;
 import julianh06.wynnextras.utils.InstantTypeAdapter;
 import julianh06.wynnextras.utils.MojangAuth;
 import net.fabricmc.loader.api.FabricLoader;
@@ -51,6 +52,12 @@ public class Achievements {
         registerDefaultAchievements(false);
     }
 
+    public static Achievements createDefaultAchievementSet() {
+        Achievements achievements = new Achievements();
+        achievements.populateAll();
+        return achievements;
+    }
+
     private Achievement simple(String id, String title, String description, boolean secret) {
         Achievement achievement = new Achievement();
         achievement.id = id;
@@ -86,6 +93,8 @@ public class Achievements {
     /** Tier targets shared by every per-raid completion achievement. */
     public static final List<Integer> RAID_TARGETS = List.of(5, 25, 100, 250, 1000);
 
+    public static final List<Integer> WAR_TARGETS = List.of(100, 250, 1000, 2500);
+
     /** Tier targets for "get N classes to a level cap" achievements. */
     public static final List<Integer> CLASS_COUNT_TARGETS = List.of(1, 2, 3, 4, 5);
 
@@ -115,10 +124,20 @@ public class Achievements {
         changed |= registerDefault(tiered("raid.twp",  "The Wartorn Palace",       "Complete The Wartorn Palace",        false, RAID_TARGETS), onlyMissing);
         changed |= registerDefault(tiered("raid.tcc",  "The Canyon Colossus",      "Complete The Canyon Colossus",       false, RAID_TARGETS), onlyMissing);
 
+        changed |= registerDefault(tiered("war.completion", "Warrer", "Complete wars", false, WAR_TARGETS), onlyMissing);
+        changed |= registerDefault(simple("war.defence.very_low", "Very Low Defence", "Defeat a tower with Very Low defences", false), onlyMissing);
+        changed |= registerDefault(simple("war.defence.low", "Low Defence", "Defeat a tower with Low defences", false), onlyMissing);
+        changed |= registerDefault(simple("war.defence.medium", "Medium Defence", "Defeat a tower with Medium defences", false), onlyMissing);
+        changed |= registerDefault(simple("war.defence.high", "High Defence", "Defeat a tower with High defences", false), onlyMissing);
+        changed |= registerDefault(simple("war.defence.very_high", "Very High Defence", "Defeat a tower with Very High defences", false), onlyMissing);
+
         changed |= registerDefault(tiered("class.level120", "Level 120 Classes", "Get classes to Combat Level 120", false, CLASS_COUNT_TARGETS), onlyMissing);
         changed |= registerDefault(tiered("class.level121", "Level 121 Classes", "Get classes to Combat Level 121", false, CLASS_COUNT_TARGETS), onlyMissing);
 
         changed |= registerDefault(simple("content.completion", "Completionist", "Reach 100% content completion on a class", false), onlyMissing);
+        changed |= registerDefault(simple("content.ultimate_completionist", "Ultimate Completionist", "Reach 100% content completion and Level 132 in every profession on one class", false), onlyMissing);
+        changed |= registerDefault(simple("class.max_level", "Max Level", "Reach Combat Level 121 and Level 132 in every profession on one class", false), onlyMissing);
+        changed |= registerDefault(simple("bank.rich", "Rich", "Fill every slot in a bank page with exactly one stack of Liquid Emeralds", false), onlyMissing);
 
         changed |= registerDefault(tiered("aspect.max.all", "Aspect Completionist", "Max aspects", false, ALL_ASPECT_TARGETS), onlyMissing);
         changed |= registerDefault(tiered("aspect.max.all.mythic", "Mythic Completionist", "Max Mythic aspects", false, MYTHIC_ASPECT_TARGETS), onlyMissing);
@@ -231,6 +250,14 @@ public class Achievements {
         Achievement a = byId.get(id);
         if (!(a instanceof TieredAchievement)) return false;
         ((TieredAchievement) a).setCurrent(count);
+        return true;
+    }
+
+    public boolean applyRemoteState(String id, boolean unlocked, Integer current) {
+        Achievement achievement = byId.get(id);
+        if (achievement == null) return false;
+
+        applyState(achievement, unlocked, current);
         return true;
     }
 
@@ -477,7 +504,6 @@ public class Achievements {
         return MojangAuth.getWEToken().thenCompose(wynnextrasToken ->
         {
         if (wynnextrasToken == null) {
-            WynnExtras.LOGGER.error("Failed to authenticate with Mojang for achievement upload");
             return CompletableFuture.completedFuture(null);
         }
 
@@ -492,13 +518,17 @@ public class Achievements {
                 .thenAccept(response -> {
                     int code = response.statusCode();
                     if(code == 401) {
-                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                        if (BackendErrorLogger.error("achievement-upload", "Achievement upload authentication failed")) {
+                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                        }
                     } else if(code != 200) {
-                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading achievements: " + code));
+                        if (BackendErrorLogger.error("achievement-upload", "Achievement upload failed: " + code)) {
+                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading achievements: " + code));
+                        }
                     }
                 })
                 .exceptionally(ex -> {
-                    WynnExtras.LOGGER.error("Failed to upload achievements: " + ex.getMessage());
+                    BackendErrorLogger.error("achievement-upload", "Failed to upload achievements: " + ex.getMessage());
                     return null;
                 });
         });

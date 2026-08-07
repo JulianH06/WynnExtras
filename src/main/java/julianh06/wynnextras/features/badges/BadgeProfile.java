@@ -5,6 +5,8 @@ public class BadgeProfile {
     public String username;
     public String selectedIconId = BadgeCatalog.DEFAULT_ICON_ID;
     public String selectedColorId = BadgeCatalog.DEFAULT_COLOR_ID;
+    public String previousIconId;
+    public String previousColorId;
 
     public BadgeProfile() {}
 
@@ -20,13 +22,29 @@ public class BadgeProfile {
     }
 
     public void sanitize(boolean enforceUnlocks) {
-        if (!BadgeCatalog.isKnownIcon(selectedIconId) || (enforceUnlocks && !BadgeCatalog.isUnlocked(BadgeCatalog.icon(selectedIconId)))) {
-            selectedIconId = BadgeCatalog.DEFAULT_ICON_ID;
+        if (!isUsableIcon(selectedIconId, enforceUnlocks)) {
+            selectedIconId = isUsableIcon(previousIconId, enforceUnlocks)
+                    ? previousIconId
+                    : BadgeCatalog.DEFAULT_ICON_ID;
         }
-        if (!BadgeCatalog.isKnownColor(selectedColorId) || (enforceUnlocks && !BadgeCatalog.isUnlocked(BadgeCatalog.color(selectedColorId)))) {
-            selectedColorId = BadgeCatalog.DEFAULT_COLOR_ID;
+        if (!isUsableColor(selectedColorId, enforceUnlocks)) {
+            selectedColorId = isUsableColor(previousColorId, enforceUnlocks)
+                    ? previousColorId
+                    : BadgeCatalog.DEFAULT_COLOR_ID;
         }
         uuid = normalizeUuid(uuid);
+    }
+
+    private boolean isUsableIcon(String iconId, boolean enforceUnlocks) {
+        return BadgeCatalog.isKnownIcon(iconId)
+                && (!enforceUnlocks || BadgeCatalog.isUnlocked(BadgeCatalog.icon(iconId)));
+    }
+
+    private boolean isUsableColor(String colorId, boolean enforceUnlocks) {
+        if (!BadgeCatalog.isKnownColor(colorId)) return false;
+        BadgeCatalog.BadgeColor color = BadgeCatalog.color(colorId);
+        return BadgeCatalog.isCompatible(BadgeCatalog.icon(selectedIconId), color)
+                && (!enforceUnlocks || BadgeCatalog.isUnlocked(color));
     }
 
     public static String normalizeUuid(String uuid) {

@@ -396,6 +396,51 @@ public final class UIUtils {
         drawContext.drawGuiTexture(RenderPipelines.GUI_TEXTURED, sprite, (int) sx(x), (int) sy(y), sw(width), sh(height));
     }
 
+    public void drawVanillaPanelButton(float x, float y, float width, float height, int scale, int cornerPixels,
+                                       boolean hovered) {
+        ContainerButtonColors colors = getContainerButtonColors();
+        CustomColor border = hovered ? colors.hoverBorder() : colors.topBorder();
+        float pixel = scale / 5f;
+        int corner = Math.max(1, cornerPixels);
+        float cornerSize = corner * pixel;
+
+        drawRect(x + cornerSize, y, width - cornerSize * 2, pixel, border);
+        for (int i = 1; i <= corner; i++) {
+            float inset = (corner - i) * pixel;
+            float rowY = y + i * pixel;
+            drawRect(x + inset, rowY, cornerSize, pixel, border);
+            drawRect(x + width - inset - cornerSize, rowY, cornerSize, pixel, border);
+            drawRect(x + inset + cornerSize, rowY,
+                    width - (inset + cornerSize) * 2, pixel, colors.fill());
+        }
+
+        float middleY = y + (corner + 1) * pixel;
+        float lowerCornerY = y + height - (corner + 1) * pixel;
+        drawRect(x + pixel, middleY, width - pixel * 2, lowerCornerY - middleY, colors.fill());
+        drawRect(x, middleY, pixel, lowerCornerY - middleY, border);
+        drawRect(x + width - pixel, middleY, pixel, lowerCornerY - middleY, border);
+
+        float highlightY = lowerCornerY - pixel;
+        drawRect(x + (corner + 1) * pixel, highlightY,
+                width - (corner + 1) * pixel * 2, pixel, colors.highlight());
+        for (int i = 1; i <= corner; i++) {
+            float inset = (corner + 1 - i) * pixel;
+            float rowY = highlightY - i * pixel;
+            drawRect(x + inset, rowY, pixel, pixel, colors.highlight());
+            drawRect(x + width - inset - pixel, rowY, pixel, pixel, colors.highlight());
+        }
+
+        for (int i = corner; i >= 1; i--) {
+            float inset = (corner - i) * pixel;
+            float rowY = y + height - (i + 1) * pixel;
+            drawRect(x + inset, rowY, cornerSize, pixel, border);
+            drawRect(x + width - inset - cornerSize, rowY, cornerSize, pixel, border);
+            drawRect(x + inset + cornerSize, rowY,
+                    width - (inset + cornerSize) * 2, pixel, colors.bottom());
+        }
+        drawRect(x + cornerSize, y + height - pixel, width - cornerSize * 2, pixel, border);
+    }
+
     public void drawButtonCustom(float x, float y, float width, float height, int scale, boolean hovered, boolean darkMode) {
         if(width > scale * 2 || height > scale * 2) {
             RenderUtils.drawRect(
@@ -536,7 +581,7 @@ public final class UIUtils {
     private static final int GENERIC_W  = 256;
     private static final int GENERIC_H  = 256;
 
-    public void drawVanillaPanel(float x, float y, float width, float height, int scale, int leftOffset, int rightOffset, int topOffset, int botOffset) {
+    public void drawVanillaPanel(float x, float y, float width, float height, int scale) {
         int tw = GENERIC_W, th = GENERIC_H;
 
         int uvWH = 4;
@@ -560,26 +605,34 @@ public final class UIUtils {
         // left/right edges
         drawImageExact(GENERIC_CONTAINER_TEX, x, y + scale - 2, scale, height - 2 * scale + 4, 0, 4, uvWH, 1, tw, th);
         drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y + scale - 2, scale, height - 2 * scale + 4, 172, 4, uvWH, 1, tw, th);
-        
+    }
+
+    public void drawVanillaPanel(float x, float y, float width, float height, int scale, int leftOffset, int rightOffset, int topOffset, int botOffset) {
+        int tw = GENERIC_W, th = GENERIC_H;
+
+        int uvWH = 4;
+
+        drawVanillaPanel(x, y, width, height, scale);
+
         /*
-        * INNER
-        * */
+         * INNER
+         * */
         // corners
-        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + topOffset, scale, scale, 7, 15, uvWH, uvWH, tw, th); // TL
-        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + topOffset, scale, scale, 165, 15, uvWH, uvWH, tw, th); // TR
-        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + height - scale - botOffset, scale, scale, 7, 124, uvWH, uvWH, tw, th); // BL
-        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + height - scale - botOffset, scale, scale, 165, 124, uvWH, uvWH, tw, th); // BR
+        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + topOffset, scale, scale, 6, 16, uvWH, uvWH, tw, th); // TL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + topOffset, scale, scale, 166, 16, uvWH, uvWH, tw, th); // TR
+        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + height - scale - botOffset, scale, scale, 6, 125, uvWH, uvWH, tw, th); // BL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + height - scale - botOffset, scale, scale, 166, 125, uvWH, uvWH, tw, th); // BR
 
         // fill
         drawImageExact(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + scale + topOffset, width - leftOffset - rightOffset - scale * 2, height - topOffset - botOffset - scale * 2, 16, 20, 1, 1, tw, th);
 
         // top/bot edges
         drawImageExact(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + topOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 16, 1, uvWH, tw, th);
-        drawImageExact(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + height - scale - botOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 123,  1, uvWH, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale + leftOffset, y + height - scale - botOffset, width - leftOffset - rightOffset - scale * 2, scale, 8, 125,  1, uvWH, tw, th);
 
         // left/right edges
-        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 7, 21, uvWH, 1, tw, th);
-        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 165, 120, uvWH, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + leftOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 6, 21, uvWH, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale - rightOffset, y + scale + topOffset, scale, height - topOffset - botOffset - scale * 2, 166, 120, uvWH, 1, tw, th);
     }
 
     public void drawNineSlice(float x, float y, float width, float height, int scale, Identifier l, Identifier r, Identifier t, Identifier b, Identifier tl, Identifier tr, Identifier bl, Identifier br, CustomColor fillColor) {
@@ -685,6 +738,7 @@ public final class UIUtils {
     private static CustomColor cachedSepHoveredDark = null;
     private static CustomColor cachedPanelBg = null;
     private static CustomColor cachedPanelBorder = null;
+    private static ContainerButtonColors cachedContainerButtonColors = null;
 
     public static void clearSeparatorCache() {
         cachedSepNormal = null;
@@ -693,6 +747,7 @@ public final class UIUtils {
         cachedSepHoveredDark = null;
         cachedPanelBg = null;
         cachedPanelBorder = null;
+        cachedContainerButtonColors = null;
     }
 
     /**
@@ -797,4 +852,57 @@ public final class UIUtils {
         return lum < 100f;
     }
 
+    private static ContainerButtonColors getContainerButtonColors() {
+        if (cachedContainerButtonColors == null) {
+            int[] fill = sampleSpriteAt(GENERIC_CONTAINER_TEX, 16, 20);
+            int[] topBorder = sampleSpriteAt(GENERIC_CONTAINER_TEX, 8, 16);
+            int[] bottom = sampleSpriteAt(GENERIC_CONTAINER_TEX, 8, 20);
+            if (fill == null) fill = new int[]{204, 167, 111};
+            if (topBorder == null) topBorder = new int[]{79, 52, 44};
+            if (bottom == null) bottom = new int[]{188, 134, 91};
+            CustomColor fillColor = toColor(fill, 1f);
+            cachedContainerButtonColors = new ContainerButtonColors(
+                    fillColor,
+                    toColor(topBorder, 1f),
+                    toColor(bottom, 1f),
+                    brightenContainerButtonFill(fillColor),
+                    brightenContainerButtonHover(fillColor));
+        }
+        return cachedContainerButtonColors;
+    }
+
+    public static CustomColor getVanillaPanelButtonOutlineColor() {
+        return getContainerButtonColors().topBorder();
+    }
+
+    public static CustomColor getVanillaPanelButtonFillColor() {
+        return getContainerButtonColors().fill();
+    }
+
+    private static CustomColor brightenContainerButtonFill(CustomColor color) {
+        int rgb = color.asInt();
+        int red = rgb >> 16 & 0xFF;
+        int green = rgb >> 8 & 0xFF;
+        int blue = rgb & 0xFF;
+        float[] hsb = Color.RGBtoHSB(red, green, blue, null);
+        float saturationWeight = Math.clamp(hsb[1] / 0.45f, 0f, 1f);
+        float saturation = hsb[1] * (1.05f - 0.15f * saturationWeight);
+        float brightness = Math.clamp(hsb[2] + (14f - 2f * saturationWeight) / 255f, 0f, 1f);
+        return CustomColor.fromInt(Color.HSBtoRGB(hsb[0] - 0.001f * saturationWeight, saturation, brightness) & 0xFFFFFF);
+    }
+
+    private static CustomColor brightenContainerButtonHover(CustomColor color) {
+        int rgb = color.asInt();
+        int red = rgb >> 16 & 0xFF;
+        int green = rgb >> 8 & 0xFF;
+        int blue = rgb & 0xFF;
+        float[] hsb = Color.RGBtoHSB(red, green, blue, null);
+        float saturationWeight = Math.clamp(hsb[1] / 0.45f, 0f, 1f);
+        float saturation = Math.max(0f, (hsb[1] - 0.055f) * 0.705f);
+        float brightness = Math.clamp(hsb[2] + (42f - 6f * saturationWeight) / 255f, 0f, 1f);
+        return CustomColor.fromInt(Color.HSBtoRGB(hsb[0] + 0.00015f * saturationWeight, saturation, brightness) & 0xFFFFFF);
+    }
+
+    private record ContainerButtonColors(CustomColor fill, CustomColor topBorder, CustomColor bottom,
+                                         CustomColor highlight, CustomColor hoverBorder) {}
 }

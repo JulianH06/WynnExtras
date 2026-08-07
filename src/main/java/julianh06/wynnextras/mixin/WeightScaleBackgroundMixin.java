@@ -5,6 +5,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.inventory.WeightDisplay;
 import julianh06.wynnextras.utils.ItemHighlightRenderer;
+import julianh06.wynnextras.features.misc.SlotNumberDebugger;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -82,6 +83,8 @@ public abstract class WeightScaleBackgroundMixin {
 
     @Inject(method = "drawSlot", at = @At("TAIL"))
     private void drawComparisonBorder(DrawContext context, Slot slot, int mx, int my, CallbackInfo ci) {
+        SlotNumberDebugger.render(context, slot);
+
         if (!isInTradeMarket()) return;
         if (!TradeMarketComparisonPanel.hasAnyComparison()) return;
 

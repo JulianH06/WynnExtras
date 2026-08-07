@@ -11,6 +11,8 @@ import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,14 +33,17 @@ public class SearchQueryParser {
             String idName,
             String idOp,
             Integer idValue,
-            Boolean identified
+            Integer materialTier,
+            Integer ingredientTier,
+            Boolean identified,
+            String mountColor
     ) {
         public boolean hasFilters() {
             return minLevel != null || maxLevel != null || classType != null ||
                     (rarities != null && !rarities.isEmpty()) || profession != null ||
                     minMainScale != null || maxMainScale != null ||
                     crafted != null || type != null || slot != null ||
-                    idName != null || identified != null ||
+                    idName != null || materialTier != null || ingredientTier != null || identified != null || mountColor != null ||
                     (textSearch != null && !textSearch.isEmpty());
         }
     }
@@ -52,14 +57,31 @@ public class SearchQueryParser {
     private static final Pattern TYPE_PATTERN = Pattern.compile("type:(gear|box|powder|potion|food|tome|tool|ingredient|pouch|key|horse|scroll|amplifier|charm|trinket|rune|material)", Pattern.CASE_INSENSITIVE);
     private static final Pattern SLOT_PATTERN = Pattern.compile("slot:(helmet|chestplate|leggings|boots|spear|dagger|bow|wand|relik|ring|bracelet|necklace|weapon|armor|accessory)", Pattern.CASE_INSENSITIVE);
     private static final Pattern ID_PATTERN = Pattern.compile("id:(\\w+)(?:([><])(\\d+))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MATERIAL_TIER_PATTERN = Pattern.compile("materialtier:([1-3])", Pattern.CASE_INSENSITIVE);
+    private static final Pattern INGREDIENT_TIER_PATTERN = Pattern.compile("ingredienttier:([0-3])", Pattern.CASE_INSENSITIVE);
+    private static final Pattern COMPONENT_PROFESSION_TIER_PATTERN = Pattern.compile("profession[_\\s-]*tier[_\\s-]*([0-3])", Pattern.CASE_INSENSITIVE);
     private static final Pattern IDENTIFIED_PATTERN = Pattern.compile("identified:(true|false)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MOUNT_COLOR_PATTERN = Pattern.compile("mountcolor:([a-z]+(?:-[a-z]+)?)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MOUNT_COLOR_LORE_PATTERN = Pattern.compile("([a-z]+)-([a-z]+)", Pattern.CASE_INSENSITIVE);
+    private static final Set<String> HORSE_PRIMARY_COLORS = Set.of(
+            "cherry", "bay", "chestnut", "gold", "tan", "beige", "black", "gray", "silver", "white");
+    private static final Set<String> HORSE_SECONDARY_COLORS = Set.of(
+            "sable", "rich", "reddish", "dawn", "dusk", "fawn", "night", "ash", "argent", "pale");
+    private static final Set<String> WYVERN_PRIMARY_COLORS = Set.of(
+            "azure", "cerulean", "bronze", "ebony", "fledge", "golden", "hollow", "infernal", "jade", "mystic");
+    private static final Set<String> WYVERN_SECONDARY_COLORS = Set.of(
+            "cinder", "horn", "kander", "onyx", "quartz", "sapphire", "rose", "shell", "ivory", "tusk");
+    private static final Set<String> ADASAUR_PRIMARY_COLORS = Set.of(
+            "crimson", "dust", "amber", "emerald", "cobalt", "dusk", "plum", "sable", "ash", "albino");
+    private static final Set<String> ADASAUR_SECONDARY_COLORS = Set.of(
+            "blood", "rose", "tawny", "moss", "royal", "misty", "maroon", "raven", "sage", "bleach");
 
     private static String cachedInput = null;
     private static ParsedQuery cachedQuery = null;
 
     public static synchronized ParsedQuery parse(String input) {
         if (input == null || input.isEmpty()) {
-            return new ParsedQuery(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            return new ParsedQuery(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
         }
         if (input.equals(cachedInput) && cachedQuery != null) {
             return cachedQuery;
@@ -159,6 +181,20 @@ public class SearchQueryParser {
             remaining = remaining.replace(idMatcher.group(), "").trim();
         }
 
+        Integer materialTier = null;
+        Matcher materialTierMatcher = MATERIAL_TIER_PATTERN.matcher(remaining);
+        if (materialTierMatcher.find()) {
+            materialTier = Integer.parseInt(materialTierMatcher.group(1));
+            remaining = remaining.replace(materialTierMatcher.group(), "").trim();
+        }
+
+        Integer ingredientTier = null;
+        Matcher ingredientTierMatcher = INGREDIENT_TIER_PATTERN.matcher(remaining);
+        if (ingredientTierMatcher.find()) {
+            ingredientTier = Integer.parseInt(ingredientTierMatcher.group(1));
+            remaining = remaining.replace(ingredientTierMatcher.group(), "").trim();
+        }
+
         Boolean identified = null;
         Matcher identifiedMatcher = IDENTIFIED_PATTERN.matcher(remaining);
         if (identifiedMatcher.find()) {
@@ -166,11 +202,18 @@ public class SearchQueryParser {
             remaining = remaining.replace(identifiedMatcher.group(), "").trim();
         }
 
+        String mountColor = null;
+        Matcher mountColorMatcher = MOUNT_COLOR_PATTERN.matcher(remaining);
+        if (mountColorMatcher.find()) {
+            mountColor = mountColorMatcher.group(1).toLowerCase(Locale.ROOT);
+            remaining = remaining.replace(mountColorMatcher.group(), "").trim();
+        }
+
         String textSearch = remaining.isEmpty() ? null : remaining;
 
         ParsedQuery result = new ParsedQuery(textSearch, minLevel, maxLevel, classType,
                 rarities.isEmpty() ? null : rarities, profession, minMainScale, maxMainScale,
-                crafted, type, slot, idName, idOp, idValue, identified);
+                crafted, type, slot, idName, idOp, idValue, materialTier, ingredientTier, identified, mountColor);
         cachedInput = input;
         cachedQuery = result;
         return result;
@@ -283,11 +326,29 @@ public class SearchQueryParser {
             }
         }
 
+        if (query.materialTier != null) {
+            Integer materialTier = getMaterialTier(stack, wynnItem);
+            if (materialTier == null || !materialTier.equals(query.materialTier)) {
+                return false;
+            }
+        }
+
+        if (query.ingredientTier != null) {
+            Integer ingredientTier = getIngredientTier(stack, wynnItem);
+            if (ingredientTier == null || !ingredientTier.equals(query.ingredientTier)) {
+                return false;
+            }
+        }
+
         if (query.identified != null) {
             boolean isIdentified = wynnItem != null && wynnItem.category() == ItemCategory.GEAR && !wynnItem.unidentified();
             boolean isUnidentified = wynnItem != null && wynnItem.unidentified();
             if (query.identified && !isIdentified) return false;
             if (!query.identified && !isUnidentified) return false;
+        }
+
+        if (query.mountColor != null && !matchesMountColor(stack, query.mountColor)) {
+            return false;
         }
 
         return true;
@@ -304,6 +365,59 @@ public class SearchQueryParser {
             sb.append(line.getString()).append(" ");
         }
         return sb.toString();
+    }
+
+    private static Integer getMaterialTier(ItemStack stack, WynnItemData wynnItem) {
+        if (wynnItem != null && wynnItem.category() != ItemCategory.MATERIAL) {
+            return null;
+        }
+
+        String components = String.valueOf(stack.getComponents()).toLowerCase();
+        if (wynnItem == null && !components.contains("profession_material")) {
+            return null;
+        }
+        return getComponentProfessionTier(components);
+    }
+
+    private static Integer getIngredientTier(ItemStack stack, WynnItemData wynnItem) {
+        if (wynnItem != null && wynnItem.category() != ItemCategory.INGREDIENT) {
+            return null;
+        }
+
+        String components = String.valueOf(stack.getComponents()).toLowerCase();
+        if (wynnItem == null && !components.contains("profession_ingredient")) {
+            return null;
+        }
+        return getComponentProfessionTier(components);
+    }
+
+    private static Integer getComponentProfessionTier(String components) {
+        Matcher matcher = COMPONENT_PROFESSION_TIER_PATTERN.matcher(components == null ? "" : components);
+        return matcher.find() ? Integer.parseInt(matcher.group(1)) : null;
+    }
+
+    private static boolean matchesMountColor(ItemStack stack, String searchedColor) {
+        LoreComponent lore = stack.get(DataComponentTypes.LORE);
+        if (lore == null) return false;
+
+        for (Text line : lore.lines()) {
+            Matcher matcher = MOUNT_COLOR_LORE_PATTERN.matcher(line.getString().toLowerCase(Locale.ROOT));
+            while (matcher.find()) {
+                String primary = matcher.group(1);
+                String secondary = matcher.group(2);
+                if (!isMountColorPair(primary, secondary)) continue;
+                if (primary.contains(searchedColor)
+                        || secondary.contains(searchedColor)
+                        || (primary + "-" + secondary).contains(searchedColor)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isMountColorPair(String primary, String secondary) {
+        return HORSE_PRIMARY_COLORS.contains(primary) && HORSE_SECONDARY_COLORS.contains(secondary)
+                || WYVERN_PRIMARY_COLORS.contains(primary) && WYVERN_SECONDARY_COLORS.contains(secondary)
+                || ADASAUR_PRIMARY_COLORS.contains(primary) && ADASAUR_SECONDARY_COLORS.contains(secondary);
     }
 
     private static Integer parseLevelFromLore(String lore) {

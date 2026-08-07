@@ -486,11 +486,11 @@ public class TreeScreen extends WEScreen {
 //            hoveredLocal = mouseX >= sx && mouseY >= sy && mouseX < sx + sw && mouseY < sy + sh;
 //            int fill = hoveredLocal ? 0xFFEFEFEF : 0xFFFFFFFF;
 //
-//            // zeichne Hintergrund über UIUtils
+//            // draw background through UIUtils
 ////            ui.drawRect(x, y, width, height, CustomColor.fromInt(fill));
 //            ui.drawButton(x, y, width, height, 12, hovered);
 //
-//            // zeichne Text über UIUtils (zentriert oder linksbündig)
+//            // draw text through UIUtils (centered or left-aligned)
 //            ui.drawCenteredText(textForIndex(id), x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 6f);
         }
 

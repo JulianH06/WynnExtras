@@ -35,7 +35,7 @@ public class AbilityMapData {
         public static class IconValue {
             public String id;
             public String name;
-            public Object customModelData; // kann String oder Objekt sein
+            public Object customModelData; // can be a String or an object
         }
     }
 
@@ -53,11 +53,11 @@ public class AbilityMapData {
         }
     }
 
-    // Annahme: imports für net.minecraft.*
+    // Assumes imports for net.minecraft.*
     public static Optional<ItemStack> iconToItemStack(Object metaIcon) {
         if (metaIcon == null) return Optional.empty();
 
-        // Fall: Icon-Objekt
+        // Case: icon object
         if (metaIcon instanceof AbilityMapData.Icon) {
             AbilityMapData.Icon icon = (AbilityMapData.Icon) metaIcon;
             if (icon.value == null) return Optional.empty();
@@ -83,7 +83,7 @@ public class AbilityMapData {
                             if (iv.customModelData != null) {
                                 Integer cmd = parseCustomModelInt(iv.customModelData);
                                 if (cmd != null) putCustomModelData(stack, cmd);
-                                // sonst: hier komplexes NBT parsen falls notwendig
+                                // Otherwise, parse complex NBT here if needed.
                             }
                             return Optional.of(stack);
                         }
@@ -95,7 +95,7 @@ public class AbilityMapData {
             return Optional.empty();
         }
 
-        // Fall: metaIcon ist direkt ein String (z.B. "connector_up_down" oder "minecraft:stone")
+        // Case: metaIcon is directly a String (e.g. "connector_up_down" or "minecraft:stone")
         if (metaIcon instanceof String) {
             String val = (String) metaIcon;
             Identifier id = Identifier.tryParse(val);
@@ -103,7 +103,7 @@ public class AbilityMapData {
                 Item item = Registries.ITEM.get(id);
                 if (item != Items.AIR) return Optional.of(new ItemStack(item));
             }
-            // String kann auch connector-Name sein -> kein ItemStack
+            // The String can also be a connector name -> no ItemStack
             return Optional.empty();
         }
 

@@ -354,6 +354,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .sub("Provoke Timer")
                 .add(toggle("Enable Provoke Timer", "Show provoke timer on HUD",
                         () -> config.provokeTimerToggle, v -> config.provokeTimerToggle = v))
+                .add(visibleWhen(slider("Duration", "Duration of the provoke timer in seconds", 0, 10,
+                                () -> config.provokeTimerDuration, v -> config.provokeTimerDuration = v),
+                        () -> config.provokeTimerToggle))
                 .sub("Radiant HUD")
                 .add(toggle("Enable Radiant HUD", "Show radiant aspect tracking overlay",
                         () -> config.radiantHudEnabled, v -> config.radiantHudEnabled = v))
@@ -430,12 +433,16 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.bankOverlayMaxRows == 1 && config.bankOverlayMaxColumns == 1))
                 .add(toggle("Hide empty rows", "Hides rows that only have locked pages",
                         () -> config.bankOverlayHideEmptyRows, v -> config.bankOverlayHideEmptyRows = v))
+                .add(toggle("Disable sticky nameplates", "Makes bank page nameplates scroll without sticking to the top",
+                        () -> config.disableStickyNameplates, v -> config.disableStickyNameplates = v))
                 .add(toggle("Bag Overlay", "Show crafter bag counts by raid/tier on bank screens",
                         () -> config.bankBagOverlay, v -> config.bankBagOverlay = v))
                 .add(visibleWhen(toggle("Show total bag count in bank overlay", "Shows you a breakdown of all crafter bags you have across all pages of your bank",
                         () -> config.showTotalBagsInBankOverlay, v -> config.showTotalBagsInBankOverlay = v), () -> config.bankBagOverlay))
                 .add(visibleWhen(slider("Max Wynntils annotation calculations per frame", "Limits the amount of Wynntils item annotation calculations being done each frame to reduce lag", 10, 200,
                         () -> config.maxAnnotationCalculationsPerFrame, v -> config.maxAnnotationCalculationsPerFrame = v), () -> config.toggleBankOverlay))
+                .add(toggle("Exclude active page from searches", "Hide the currently open page when it has no matching items",
+                        () -> config.bankOverlayExcludeActivePageFromSearches, v -> config.bankOverlayExcludeActivePageFromSearches = v))
                 .add(toggle("Allow all characters mode on ironman classes", "Shows cross-class bank data while playing an ironman class",
                         () -> config.allowAllCharactersModeOnIronmanClasses, v -> config.allowAllCharactersModeOnIronmanClasses = v))
                 .endSub()
@@ -494,6 +501,16 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
                         () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
                 .add(text("The preview is movable", "To change its position just drag it where you want"))
+            .sub("Shopping List")
+                .add(toggle("Shopping List", "Show the shopping list on the HUD and in screens like the Trade Market or bank",
+                        () -> config.shoppingListMenuEnabled, v -> config.shoppingListMenuEnabled = v))
+                .add(toggle("Show quick toggle button", "Show the quick toggle button in menus",
+                        () -> config.shoppingListShowQuickToggleButton, v -> config.shoppingListShowQuickToggleButton = v))
+                .add(toggle("WynnMarketSearch compatibility", "Temporarily suppresses WynnMarketSearch while the shopping list performs Trade Market row searches",
+                        () -> config.shoppingListWynnMarketSearchCompatibility, v -> config.shoppingListWynnMarketSearchCompatibility = v))
+                .add(keybind("Toggle Shopping List", "Toggle the shopping list",
+                        () -> config.shoppingListToggleKey, v -> config.shoppingListToggleKey = v,
+                        DEFAULT_CONFIG.shoppingListToggleKey))
             .sub("Profession Overlay")
                 .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
                         () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))
@@ -678,7 +695,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(text("Achievement upload notice", "If the toggle above is enabled, your achievements will be uploaded, the server currently does not have a use case for them but we will add some in the future. One example being that we want to show a users achievements in the profile viewer"))
                 .add(toggle("Achievement unlock messages", "Show chat messages when you unlock WynnExtras achievements",
                         () -> config.showAchievementUnlockMessages, v -> config.showAchievementUnlockMessages = v))
-                .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
+                .add(toggle("WynnExtras Player Badges", "Display a badge for other players who also use WynnExtras!",
                         () -> config.showWynnExtrasBadges, v -> config.showWynnExtrasBadges = v))
                 .add(button("Achievements & Badges", "Open achievements and select your badge icon and color", (x) -> {
                     WEScreen.open(AchievementScreen::new);
@@ -741,6 +758,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
                 .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
                         0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
+                .add(toggle("Remove background blur", "Hide the background blur in the Tetris menu",
+                        () -> config.hideTetrisBackgroundBlur, v -> config.hideTetrisBackgroundBlur = v))
                 .add(toggle("20G after level", "Instant gravity after the selected level.",
                         () -> config.tetris20GEnabled, v -> config.tetris20GEnabled = v))
                 .add(visibleWhen(slider("20G Level", "Level where instant gravity starts",
@@ -1011,6 +1030,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
                 .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
                         0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
+                .add(toggle("Remove background blur", "Hide the background blur in the Tetris menu",
+                        () -> config.hideTetrisBackgroundBlur, v -> config.hideTetrisBackgroundBlur = v))
                 .add(toggle("20G after level", "Instant gravity after the selected level.",
                         () -> config.tetris20GEnabled, v -> config.tetris20GEnabled = v))
                 .add(visibleWhen(slider("20G Level", "Level where instant gravity starts",
@@ -1074,7 +1095,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(text("Achievement upload notice", "If the toggle above is enabled, your achievements will be uploaded, the server currently does not have a use case for them but we will add some in the future. One example being that we want to show a users achievements in the profile viewer"))
                 .add(toggle("Achievement unlock messages", "Show chat messages when you unlock WynnExtras achievements",
                         () -> config.showAchievementUnlockMessages, v -> config.showAchievementUnlockMessages = v))
-                .add(toggle("WynnExtras Player Badges", "Display a badge above other players who also use WynnExtras!",
+                .add(toggle("WynnExtras Player Badges", "Display a badge for other players who also use WynnExtras!",
                         () -> config.showWynnExtrasBadges, v -> config.showWynnExtrasBadges = v))
                 .add(button("Achievements & Badges", "Open achievements and select your badge icon and color", (x) -> {
                     WEScreen.open(AchievementScreen::new);
