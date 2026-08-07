@@ -40,6 +40,8 @@ public class SearchQueryParser {
             String idName,
             String idOp,
             Integer idValue,
+            Integer materialTier,
+            Integer ingredientTier,
             Boolean identified,
             String mountColor
     ) {
@@ -48,7 +50,7 @@ public class SearchQueryParser {
                     (rarities != null && !rarities.isEmpty()) || profession != null ||
                     minMainScale != null || maxMainScale != null ||
                     crafted != null || type != null || slot != null ||
-                    idName != null || identified != null || mountColor != null ||
+                    idName != null || materialTier != null || ingredientTier != null || identified != null || mountColor != null ||
                     (textSearch != null && !textSearch.isEmpty());
         }
     }
@@ -62,6 +64,9 @@ public class SearchQueryParser {
     private static final Pattern TYPE_PATTERN = Pattern.compile("type:(gear|box|powder|potion|food|tome|tool|ingredient|pouch|key|horse|scroll|amplifier|charm|trinket|rune|material)", Pattern.CASE_INSENSITIVE);
     private static final Pattern SLOT_PATTERN = Pattern.compile("slot:(helmet|chestplate|leggings|boots|spear|dagger|bow|wand|relik|ring|bracelet|necklace|weapon|armor|accessory)", Pattern.CASE_INSENSITIVE);
     private static final Pattern ID_PATTERN = Pattern.compile("id:(\\w+)(?:([><])(\\d+))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MATERIAL_TIER_PATTERN = Pattern.compile("materialtier:([1-3])", Pattern.CASE_INSENSITIVE);
+    private static final Pattern INGREDIENT_TIER_PATTERN = Pattern.compile("ingredienttier:([0-3])", Pattern.CASE_INSENSITIVE);
+    private static final Pattern COMPONENT_PROFESSION_TIER_PATTERN = Pattern.compile("profession[_\\s-]*tier[_\\s-]*([0-3])", Pattern.CASE_INSENSITIVE);
     private static final Pattern IDENTIFIED_PATTERN = Pattern.compile("identified:(true|false)", Pattern.CASE_INSENSITIVE);
     private static final Pattern MOUNT_COLOR_PATTERN = Pattern.compile("mountcolor:([a-z]+(?:-[a-z]+)?)", Pattern.CASE_INSENSITIVE);
     private static final Pattern MOUNT_COLOR_LORE_PATTERN = Pattern.compile("([a-z]+)-([a-z]+)", Pattern.CASE_INSENSITIVE);
@@ -83,7 +88,7 @@ public class SearchQueryParser {
 
     public static synchronized ParsedQuery parse(String input) {
         if (input == null || input.isEmpty()) {
-            return new ParsedQuery(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+            return new ParsedQuery(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
         }
         if (input.equals(cachedInput) && cachedQuery != null) {
             return cachedQuery;
@@ -183,6 +188,20 @@ public class SearchQueryParser {
             remaining = remaining.replace(idMatcher.group(), "").trim();
         }
 
+        Integer materialTier = null;
+        Matcher materialTierMatcher = MATERIAL_TIER_PATTERN.matcher(remaining);
+        if (materialTierMatcher.find()) {
+            materialTier = Integer.parseInt(materialTierMatcher.group(1));
+            remaining = remaining.replace(materialTierMatcher.group(), "").trim();
+        }
+
+        Integer ingredientTier = null;
+        Matcher ingredientTierMatcher = INGREDIENT_TIER_PATTERN.matcher(remaining);
+        if (ingredientTierMatcher.find()) {
+            ingredientTier = Integer.parseInt(ingredientTierMatcher.group(1));
+            remaining = remaining.replace(ingredientTierMatcher.group(), "").trim();
+        }
+
         Boolean identified = null;
         Matcher identifiedMatcher = IDENTIFIED_PATTERN.matcher(remaining);
         if (identifiedMatcher.find()) {
@@ -201,7 +220,7 @@ public class SearchQueryParser {
 
         ParsedQuery result = new ParsedQuery(textSearch, minLevel, maxLevel, classType,
                 rarities.isEmpty() ? null : rarities, profession, minMainScale, maxMainScale,
-                crafted, type, slot, idName, idOp, idValue, identified, mountColor);
+                crafted, type, slot, idName, idOp, idValue, materialTier, ingredientTier, identified, mountColor);
         cachedInput = input;
         cachedQuery = result;
         return result;
@@ -316,6 +335,20 @@ public class SearchQueryParser {
             }
         }
 
+        if (query.materialTier != null) {
+            Integer materialTier = getMaterialTier(stack, wynnItem);
+            if (materialTier == null || !materialTier.equals(query.materialTier)) {
+                return false;
+            }
+        }
+
+        if (query.ingredientTier != null) {
+            Integer ingredientTier = getIngredientTier(stack, wynnItem);
+            if (ingredientTier == null || !ingredientTier.equals(query.ingredientTier)) {
+                return false;
+            }
+        }
+
         if (query.identified != null) {
             boolean isIdentified = wynnItem instanceof GearItem;
             boolean isUnidentified = wynnItem instanceof GearBoxItem;
@@ -343,6 +376,43 @@ public class SearchQueryParser {
         return sb.toString();
     }
 
+    private static Integer getMaterialTier(ItemStack stack, WynnItem wynnItem) {
+        if (wynnItem instanceof MaterialItem materialItem) {
+            int tier = materialItem.getQualityTier();
+            if (tier >= 1 && tier <= 3) {
+                return tier;
+            }
+        } else if (wynnItem != null) {
+            return null;
+        }
+
+        String components = String.valueOf(stack.getComponents()).toLowerCase();
+        if (!components.contains("profession_material")) {
+            return null;
+        }
+        return getComponentProfessionTier(components);
+    }
+
+    private static Integer getIngredientTier(ItemStack stack, WynnItem wynnItem) {
+        if (wynnItem instanceof IngredientItem ingredientItem) {
+            int tier = ingredientItem.getQualityTier();
+            return tier >= 0 && tier <= 3 ? tier : null;
+        } else if (wynnItem != null) {
+            return null;
+        }
+
+        String components = String.valueOf(stack.getComponents()).toLowerCase();
+        if (!components.contains("profession_ingredient")) {
+            return null;
+        }
+        return getComponentProfessionTier(components);
+    }
+
+    private static Integer getComponentProfessionTier(String components) {
+        Matcher matcher = COMPONENT_PROFESSION_TIER_PATTERN.matcher(components == null ? "" : components);
+        return matcher.find() ? Integer.parseInt(matcher.group(1)) : null;
+    }
+  
     private static boolean matchesMountColor(ItemStack stack, String searchedColor) {
         LoreComponent lore = stack.get(DataComponentTypes.LORE);
         if (lore == null) return false;

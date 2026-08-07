@@ -230,6 +230,22 @@ public class WynnExtrasConfig {
     public boolean craftingHelperReverseOrder = false;
     public float craftingHelperHeightPercent = 0.6f;
     public int craftingHelperWidth = 165;
+    public boolean shoppingListMenuEnabled = false;
+    public boolean shoppingListShowQuickToggleButton = true;
+    public boolean shoppingListWynnMarketSearchCompatibility = true;
+    public int shoppingListToggleKey = GLFW.GLFW_KEY_UNKNOWN;
+    public boolean shoppingListProfessionSpeed = false;
+    public int shoppingListCraftMultiplier = 1;
+    public int shoppingListMenuWidth = 190;
+    public int shoppingListMenuHeight = 222;
+    public ShoppingListPosition shoppingListMenuDefaultPosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListMenuTradePosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListMenuBankOverlayPosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListMenuBankVanillaPosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListLauncherButtonDefaultPosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListLauncherButtonTradePosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListLauncherButtonBankOverlayPosition = new ShoppingListPosition();
+    public ShoppingListPosition shoppingListLauncherButtonBankVanillaPosition = new ShoppingListPosition();
     public boolean skillpointHelper = true;
     public boolean tradeMarketOverlay = false;
     public int tradeMarketOverlayX = 10;
@@ -670,6 +686,7 @@ public class WynnExtrasConfig {
         INSTANCE.syncAttackTimerColors();
         INSTANCE.syncTetrisSettings();
         INSTANCE.syncClassSelectionLines();
+        INSTANCE.syncShoppingListPositions();
         if (INSTANCE.classSelectionContentProgressStyle == null) {
             INSTANCE.classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
         }
@@ -704,6 +721,38 @@ public class WynnExtrasConfig {
         tetrisSDFDelay = Math.clamp(tetrisSDFDelay, 0, 300);
         tetrisSDF = Math.clamp(tetrisSDF, 0, 100);
         tetris20GLevel = Math.clamp(tetris20GLevel, 1, 100);
+    }
+
+    private void syncShoppingListPositions() {
+        if (shoppingListMenuWidth <= 0) shoppingListMenuWidth = 190;
+        if (shoppingListMenuHeight <= 0) shoppingListMenuHeight = 222;
+        if (shoppingListMenuDefaultPosition == null) shoppingListMenuDefaultPosition = new ShoppingListPosition();
+        if (shoppingListMenuTradePosition == null) shoppingListMenuTradePosition = new ShoppingListPosition();
+        if (shoppingListMenuBankOverlayPosition == null) shoppingListMenuBankOverlayPosition = new ShoppingListPosition();
+        if (shoppingListMenuBankVanillaPosition == null) shoppingListMenuBankVanillaPosition = new ShoppingListPosition();
+        if (shoppingListLauncherButtonDefaultPosition == null) shoppingListLauncherButtonDefaultPosition = new ShoppingListPosition();
+        if (shoppingListLauncherButtonTradePosition == null) shoppingListLauncherButtonTradePosition = new ShoppingListPosition();
+        if (shoppingListLauncherButtonBankOverlayPosition == null) shoppingListLauncherButtonBankOverlayPosition = new ShoppingListPosition();
+        if (shoppingListLauncherButtonBankVanillaPosition == null) shoppingListLauncherButtonBankVanillaPosition = new ShoppingListPosition();
+    }
+
+    public static class ShoppingListPosition {
+        public int x = -1;
+        public int y = -1;
+
+        public boolean isSet() {
+            return x >= 0 && y >= 0;
+        }
+
+        public void set(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        public void reset() {
+            x = -1;
+            y = -1;
+        }
     }
 
     public static void save() {

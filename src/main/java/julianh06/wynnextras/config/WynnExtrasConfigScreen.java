@@ -501,6 +501,16 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
                         () -> config.craftingPreviewBackground, v -> config.craftingPreviewBackground = v))
                 .add(text("The preview is movable", "To change its position just drag it where you want"))
+            .sub("Shopping List")
+                .add(toggle("Shopping List", "Show the shopping list on the HUD and in screens like the Trade Market or bank",
+                        () -> config.shoppingListMenuEnabled, v -> config.shoppingListMenuEnabled = v))
+                .add(toggle("Show quick toggle button", "Show the quick toggle button in menus",
+                        () -> config.shoppingListShowQuickToggleButton, v -> config.shoppingListShowQuickToggleButton = v))
+                .add(toggle("WynnMarketSearch compatibility", "Temporarily suppresses WynnMarketSearch while the shopping list performs Trade Market row searches",
+                        () -> config.shoppingListWynnMarketSearchCompatibility, v -> config.shoppingListWynnMarketSearchCompatibility = v))
+                .add(keybind("Toggle Shopping List", "Toggle the shopping list",
+                        () -> config.shoppingListToggleKey, v -> config.shoppingListToggleKey = v,
+                        DEFAULT_CONFIG.shoppingListToggleKey))
             .sub("Profession Overlay")
                 .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
                         () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))

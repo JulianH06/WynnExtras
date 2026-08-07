@@ -20,10 +20,10 @@ import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
-import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.crafting.calc.ProfessionCalculatorScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
+import julianh06.wynnextras.features.misc.SlotNumberDebugger;
 import julianh06.wynnextras.features.tetris.TetrisScreen;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.client.gui.screen.Screen;
@@ -331,7 +331,7 @@ public class CommandLoader implements WELoader {
                             .then(ClientCommandManager.literal("debug")
                                     .then(ClientCommandManager.literal("slot")
                                             .executes(ctx -> {
-                                                TradeMarketComparisonPanel.toggleSlotDebug();
+                                                SlotNumberDebugger.toggle();
                                                 return 1;
                                             })
                                     )

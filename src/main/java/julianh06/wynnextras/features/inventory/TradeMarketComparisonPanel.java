@@ -116,6 +116,8 @@ public class TradeMarketComparisonPanel {
             "\uDAFF\uDFE8\uE00F", // Browse
             "\uDAFF\uDFE8\uE010", // Search Results
             "\uDAFF\uDFE8\uE011", // Item listing / search
+            "\uDAFF\uDFE8\uE012", // Trade Market subscreen
+            "\uDAFF\uDFE8\uE015", // Trade Market subscreen
             "Trade Market"
     );
 
