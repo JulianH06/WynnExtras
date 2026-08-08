@@ -10,7 +10,9 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public final class WynntilsFunctionAdapter {
     private static boolean attempted;
@@ -88,9 +90,12 @@ public final class WynntilsFunctionAdapter {
         constructor.visitMaxs(0, 0);
         constructor.visitEnd();
 
+        Set<String> emitted = new HashSet<>();
         for (Method method : functionClass.getMethods()) {
-            if (!Modifier.isAbstract(method.getModifiers())) continue;
-            emitMethod(writer, method);
+            if (Modifier.isStatic(method.getModifiers()) || Modifier.isFinal(method.getModifiers())) continue;
+            if (!Modifier.isAbstract(method.getModifiers()) && !isFunctionOverride(method.getName())) continue;
+            String key = method.getName() + Type.getMethodDescriptor(method);
+            if (emitted.add(key)) emitMethod(writer, method);
         }
         writer.visitEnd();
         return MethodHandles.lookup().defineClass(writer.toByteArray());
@@ -104,6 +109,7 @@ public final class WynntilsFunctionAdapter {
         switch (method.getName()) {
             case "getName" -> visitor.visitLdcInsn("wynnextras_raid_drop");
             case "getTypeName" -> visitor.visitLdcInsn("WynnExtrasFunction");
+            case "getReturnTypeName" -> visitor.visitLdcInsn("Long");
             case "getValue" -> {
                 visitor.visitVarInsn(Opcodes.ALOAD, 1);
                 visitor.visitMethodInsn(Opcodes.INVOKESTATIC, owner, "raidValue", "(Ljava/lang/Object;)Ljava/lang/Object;", false);
@@ -125,6 +131,11 @@ public final class WynntilsFunctionAdapter {
         emitObjectReturn(visitor, Type.getReturnType(method));
         visitor.visitMaxs(0, 0);
         visitor.visitEnd();
+    }
+
+    private static boolean isFunctionOverride(String name) {
+        return name.equals("getName") || name.equals("getTypeName") || name.equals("getReturnTypeName")
+                || name.equals("getValue") || name.equals("getArgumentsBuilder") || name.equals("getTranslation");
     }
 
     private static void emitObjectReturn(MethodVisitor visitor, Type returnType) {
