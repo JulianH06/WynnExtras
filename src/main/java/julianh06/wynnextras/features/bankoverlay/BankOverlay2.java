@@ -89,9 +89,9 @@ import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 
 public class BankOverlay2 extends WEHandledScreen {
     private static final boolean MOUSE_TWEAKS_LOADED = FabricLoader.getInstance().isModLoaded("mousetweaks");
-    private static final Pattern POTIONS_USES_PATTERN = Pattern.compile("\\[(\\d+)/(\\d+)]");
     private static final Pattern MINECRAFT_FORMATTING_CODE_PATTERN = Pattern.compile("\u00a7[0-9a-fk-or]");
     private static final Pattern PAGE_RANK_REQUIREMENT_PATTERN = Pattern.compile("(?i)(?:only available to|requires(?: a)? rank:?|rank required:?)\\s+([A-Za-z0-9+]+)");
+    private static final Pattern PAGE_NUMBER_PATTERN = Pattern.compile("(?i)\\bPage\\s+(\\d+)\\b");
     private static ItemStack hoveredSlot = Items.AIR.getDefaultStack();
     private static int hoveredX = -1;
     private static int hoveredY = -1;
@@ -104,15 +104,18 @@ public class BankOverlay2 extends WEHandledScreen {
     static WynntilsBankAdapter.FeatureHandle unidentifiedItemIconFeature;
     static WynntilsBankAdapter.FeatureHandle itemFavoriteFeature;
     static WynntilsBankAdapter.FeatureHandle durabilityOverlayFeature;
+    static WynntilsBankAdapter.FeatureHandle emeraldPouchFillArcFeature;
     private static WynntilsBankAdapter.FeatureHandle itemGuessFeature;
     private static WynntilsBankAdapter.FeatureHandle emeraldCountFeature;
     private static int cachedEmeraldAmount = Integer.MIN_VALUE;
     private static String[] cachedEmeraldAmounts = new String[0];
     private static boolean itemHighlightEnabled = false;
     private static boolean itemTextOverlayEnabled = false;
+    private static boolean itemTextRenderInInv = false;
     private static boolean unidentifiedItemIconEnabled = false;
     private static boolean itemFavoriteEnabled = false;
     private static boolean durabilityOverlayEnabled = false;
+    private static boolean emeraldPouchFillArcEnabled = false;
     private static final Identifier buttonBackground = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbg.png");
     private static final Identifier buttonBackgroundShort = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbgshort.png");
     private static final Identifier buttonBackgroundDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/buttonsbg_dark.png");
@@ -172,6 +175,9 @@ public class BankOverlay2 extends WEHandledScreen {
     private static boolean bankTypeSwitchTargetApplied = false;
     private static BankOverlayType bankTypeSwitchTargetType = BankOverlayType.NONE;
     private static int bankTypeSwitchTargetPage = -1;
+    private static int pageJumpTarget = -1;
+    private static int pageJumpObservedPage = -1;
+    private static long pageJumpLastActionAt = 0L;
     private static TextRenderer frameTextRenderer;
     private static int bankSyncid = 0;
     private static int xFitAmount = 0;
@@ -388,7 +394,9 @@ public class BankOverlay2 extends WEHandledScreen {
         scissory2 = 0;
 
         refreshDurabilityCfg();
+        refreshEmeraldPouchCfg();
         refreshHighlightCfg();
+        refreshItemTextOverlayCfg();
 
     }
 
@@ -558,6 +566,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         initializeOverlayState();
         syncActivePageFromWynntilsQuickJump();
+        continuePageJump();
 
         float snapValue = 0.5f;
 
@@ -602,10 +611,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     } else {
                         reloadCurrentPage++;
                         resetReloadPageReadiness();
-                        activeInv = reloadCurrentPage;
-                        try {
-                            WynntilsBankAdapter.jumpToDestination(BankOverlay.getPersonalStorageUtils(), reloadCurrentPage + 1);
-                        } catch (Exception ignored) {}
+                        jumpToBankPage(reloadCurrentPage);
                         retryLoad();
                     }
                 }
@@ -1072,7 +1078,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     context,
                     DARK_BORDER_COLOR,
                     xRemain / 2 - 2 - 7, yRemain / 2 - 15,
-                    xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 1
+                    xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10, 1
             );
         } else {
             RenderUtils.drawRect(
@@ -1085,7 +1091,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     context,
                     LIGHT_BORDER_COLOR,
                     xRemain / 2 - 2 - 7, yRemain / 2 - 15,
-                    xRemain / 2 - 2 - 7 + xFitAmount * (162 + 4) + 11, yRemain / 2 - 15 + (yFitAmount - 1) * (90 + 4 + 10) + 10, 1
+                    xFitAmount * (162 + 4) + 11, (yFitAmount - 1) * (90 + 4 + 10) + 10, 1
             );
         }
     }
@@ -1116,6 +1122,111 @@ public class BankOverlay2 extends WEHandledScreen {
             return menu.getSlot(52).getStack();
         } catch (Exception ignored) {
             return Items.AIR.getDefaultStack();
+        }
+    }
+
+    private static ItemStack getLeftPageButton() {
+        try {
+            ScreenHandler menu = MinecraftUtils.containerMenu();
+            if (menu == null) return Items.AIR.getDefaultStack();
+            return menu.getSlot(51).getStack();
+        } catch (Exception ignored) {
+            return Items.AIR.getDefaultStack();
+        }
+    }
+
+    private static int parsePageNumber(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return -1;
+        Matcher nameMatcher = PAGE_NUMBER_PATTERN.matcher(
+                MINECRAFT_FORMATTING_CODE_PATTERN.matcher(stack.getName().getString()).replaceAll(""));
+        if (nameMatcher.find()) return Integer.parseInt(nameMatcher.group(1));
+
+        if (stack.getComponents() == null) return -1;
+        var lore = stack.getComponents().get(DataComponentTypes.LORE);
+        if (lore == null) return -1;
+        for (Text line : lore.lines()) {
+            Matcher matcher = PAGE_NUMBER_PATTERN.matcher(
+                    MINECRAFT_FORMATTING_CODE_PATTERN.matcher(line.getString()).replaceAll(""));
+            if (matcher.find()) return Integer.parseInt(matcher.group(1));
+        }
+        return -1;
+    }
+
+    private static int detectLiveBankPageIndex() {
+        int nextPage = parsePageNumber(getRightPageButton());
+        if (nextPage >= 2) return nextPage - 2;
+        int previousPage = parsePageNumber(getLeftPageButton());
+        if (previousPage >= 1) return previousPage;
+        return -1;
+    }
+
+    private static boolean jumpToBankPage(int pageIndex) {
+        int maxPage = Math.max(0, BankOverlay.getCurrentMaxPages() - 1);
+        if (pageIndex < 0 || pageIndex > maxPage) return false;
+
+        activeInv = pageIndex;
+        shouldWait = true;
+        shouldWaitSince = System.currentTimeMillis();
+        clearAnnotationCache(pageIndex);
+        retryLoad();
+
+        pageJumpTarget = pageIndex;
+        pageJumpObservedPage = -1;
+        pageJumpLastActionAt = 0L;
+        continuePageJump();
+        return true;
+    }
+
+    private static void continuePageJump() {
+        if (pageJumpTarget < 0) return;
+        ScreenHandler menu = MinecraftUtils.containerMenu();
+        if (menu == null || menu.slots.size() <= 52) return;
+
+        int currentPage = detectLiveBankPageIndex();
+        if (currentPage < 0) return;
+        if (currentPage == pageJumpTarget) {
+            activeInv = currentPage;
+            shouldWait = false;
+            shouldWaitSince = 0L;
+            pageJumpTarget = -1;
+            pageJumpObservedPage = -1;
+            pageJumpLastActionAt = 0L;
+            retryLoad();
+            clearAnnotationCache(currentPage);
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (currentPage == pageJumpObservedPage && now - pageJumpLastActionAt < 1_500L) return;
+        pageJumpObservedPage = currentPage;
+        pageJumpLastActionAt = now;
+
+        int currentPageNumber = currentPage + 1;
+        int targetPageNumber = pageJumpTarget + 1;
+        int difference = targetPageNumber - currentPageNumber;
+        if (Math.abs(difference) == 1) {
+            int navigationSlot = difference > 0 ? 52 : 51;
+            ContainerUtils.clickOnSlot(navigationSlot, menu.syncId, 0, menu.getStacks());
+            return;
+        }
+
+        int maxQuickJump = currentOverlayType == BankOverlayType.ACCOUNT ? 17 : 11;
+        int nearestQuickJump = 1;
+        for (int destination = 1; destination <= maxQuickJump; destination += 2) {
+            if (Math.abs(targetPageNumber - destination) < Math.abs(targetPageNumber - nearestQuickJump)) {
+                nearestQuickJump = destination;
+            }
+        }
+
+        boolean quickJumpForward = difference > 0 && nearestQuickJump > currentPageNumber;
+        boolean quickJumpBackward = difference < 0 && nearestQuickJump < currentPageNumber;
+        if (quickJumpForward || quickJumpBackward) {
+            int navigationSlot = quickJumpForward ? 52 : 51;
+            int hotbarKey = (nearestQuickJump - 1) / 2;
+            ContainerUtils.pressKeyOnSlot(navigationSlot, menu.syncId, hotbarKey, menu.getStacks());
+        } else {
+            int navigationSlot = difference > 0 ? 52 : 51;
+            ContainerUtils.clickOnSlot(navigationSlot, menu.syncId, 0, menu.getStacks());
         }
     }
 
@@ -1343,10 +1454,8 @@ public class BankOverlay2 extends WEHandledScreen {
         resetReloadPageReadiness();
         reloadNextPageCustomModelData = null;
         int maxReturnPage = currentData == null ? BankOverlay.getCurrentMaxPages() - 1 : currentData.getLastPage() - 1;
-        activeInv = MathHelper.clamp(Math.max(0, reloadOriginalPage), 0, Math.max(0, maxReturnPage));
-        try {
-            WynntilsBankAdapter.jumpToDestination(BankOverlay.getPersonalStorageUtils(), activeInv + 1);
-        } catch (Exception ignored) {}
+        int returnPage = MathHelper.clamp(Math.max(0, reloadOriginalPage), 0, Math.max(0, maxReturnPage));
+        jumpToBankPage(returnPage);
         retryLoad();
         if (Pages != null) Pages.saveAsyncDebounced();
     }
@@ -1508,6 +1617,9 @@ public class BankOverlay2 extends WEHandledScreen {
         resetReloadPageReadiness();
         reloadNextPageCustomModelData = null;
         pendingMouseTweaksRightClick = null;
+        pageJumpTarget = -1;
+        pageJumpObservedPage = -1;
+        pageJumpLastActionAt = 0L;
         BankOverlay.resetScrollRegistration();
         BankOverlaySlotBridge.restoreAll();
         clearHoverState(MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?> handledScreen ? handledScreen : null);
@@ -2539,11 +2651,7 @@ public class BankOverlay2 extends WEHandledScreen {
                         shouldWaitSince = System.currentTimeMillis();
                         retryLoad();
                         WynntilsBankAdapter.setLastPage(BankOverlay.getPersonalStorageUtils(), 99);
-                        try {
-                            WynntilsBankAdapter.jumpToDestination(BankOverlay.getPersonalStorageUtils(), activeInv + 1);
-                        } catch (Exception e) {
-                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils. Please create a bug report on discord if this still appears after you have enabled."));
-                        }
+                        jumpToBankPage(activeInv);
                     }
                     List<ItemStack> cached = Pages.getBankPages().get(activeInv);
                     if (cached != null && j < cached.size()) liveBankPageItems.add(cached.get(j));
@@ -2684,17 +2792,44 @@ public class BankOverlay2 extends WEHandledScreen {
         } catch (Exception ignored) {}
     }
 
+    private static boolean emeraldPouchRenderInInv = false;
+
+    private static void refreshEmeraldPouchCfg() {
+        try {
+            if (emeraldPouchFillArcFeature == null)
+                emeraldPouchFillArcFeature = WynntilsBankAdapter.getFeature("EmeraldPouchFillArcFeature").orElse(null);
+            emeraldPouchRenderInInv = WynntilsBankAdapter.booleanConfig(
+                    emeraldPouchFillArcFeature, "renderFillArcInventory");
+        } catch (Exception ignored) {
+            emeraldPouchRenderInInv = false;
+        }
+    }
+
     // Cached highlight-texture config so we don't reflect into Wynntils config options
     // on every slot draw (was 1 lookup per highlighted slot per frame).
     private static Texture highlightTexture = Texture.HIGHLIGHT_WYNN;
+    private static boolean highlightRenderInInv = false;
 
     private static void refreshHighlightCfg() {
         try {
             if (itemHighlightFeature == null)
                 itemHighlightFeature = WynntilsBankAdapter.getFeature("ItemHighlightFeature").orElse(null);
             highlightTexture = ItemHighlightRenderer.getConfiguredHighlightTexture();
+            highlightRenderInInv = WynntilsBankAdapter.booleanConfig(itemHighlightFeature, "inventoryHighlightEnabled");
         } catch (Exception ignored) {
             highlightTexture = Texture.HIGHLIGHT_WYNN;
+            highlightRenderInInv = false;
+        }
+    }
+
+    private static void refreshItemTextOverlayCfg() {
+        try {
+            if (itemTextOverlayFeature == null)
+                itemTextOverlayFeature = WynntilsBankAdapter.getFeature("ItemTextOverlayFeature").orElse(null);
+            itemTextRenderInInv = WynntilsBankAdapter.booleanConfig(
+                    itemTextOverlayFeature, "inventoryTextOverlayEnabled");
+        } catch (Exception ignored) {
+            itemTextRenderInInv = false;
         }
     }
 
@@ -2705,6 +2840,14 @@ public class BankOverlay2 extends WEHandledScreen {
             durabilityOverlayEnabled = WynntilsBankAdapter.isEnabled(durabilityOverlayFeature);
         } catch (Exception ignored) {
             durabilityOverlayEnabled = false;
+        }
+
+        try {
+            if (emeraldPouchFillArcFeature == null)
+                emeraldPouchFillArcFeature = WynntilsBankAdapter.getFeature("EmeraldPouchFillArcFeature").orElse(null);
+            emeraldPouchFillArcEnabled = WynntilsBankAdapter.isEnabled(emeraldPouchFillArcFeature);
+        } catch (Exception ignored) {
+            emeraldPouchFillArcEnabled = false;
         }
 
         try {
@@ -2744,10 +2887,6 @@ public class BankOverlay2 extends WEHandledScreen {
         return stack == null || stack.isEmpty() || stack.getItem() == Items.AIR;
     }
 
-    private static ItemStack copyForRenderMutation(ItemStack original, ItemStack current) {
-        return current == original ? original.copy() : current;
-    }
-
     private static ItemStack withoutVanillaDurabilityModelData(ItemStack stack) {
         CustomModelDataComponent modelData = stack.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA);
         if (modelData == null || modelData.floats().size() <= 1) {
@@ -2772,38 +2911,28 @@ public class BankOverlay2 extends WEHandledScreen {
         return renderStack;
     }
 
-    private static void renderDurabilityRing(DrawContext context, ItemStack stack, WynnItemData item, int x, int y) {
-        try {
-            if (item == null || item.durability().isEmpty()) return;
-            float fraction = item.durability().get().fraction();
-            int colorInt = MathHelper.hsvToRgb(fraction / 3.0F, 1.0F, 1.0F);
-            RenderUtils.drawArc(context, CustomColor.fromInt(colorInt).withAlpha(190), x - 2, y - 2, fraction, 8, 10);
-        } catch (Exception ignored) {}
+    private static void renderDurabilityOverlay(DrawContext context, ItemStack stack, int x, int y) {
+        if (!durabilityOverlayEnabled || !durabilityRenderInInv) return;
+        if (WynntilsBankAdapter.drawFeature(durabilityOverlayFeature, "drawDurability", context, stack, x, y)) return;
+
+        String method = switch (durabilityMode) {
+            case "BAR" -> "drawDurabilityBar";
+            case "PERCENTAGE" -> "drawDurabilityPercentage";
+            default -> "drawDurabilityArc";
+        };
+        WynntilsBankAdapter.drawFeature(durabilityOverlayFeature, method, context, stack, x, y);
     }
 
-    private static void renderEmeraldPouchRing(DrawContext context, WynnItemData item, int x, int y) {
-        if (item == null || item.emeraldPouch().isEmpty()) return;
-        float fraction = item.emeraldPouch().get().fraction();
-        int colorInt = MathHelper.hsvToRgb((1.0F - fraction) / 3.0F, 1.0F, 1.0F);
-        CustomColor color = CustomColor.fromInt(colorInt).withAlpha(160);
-
-        RenderUtils.drawArc(context, color, x - 2, y - 2, Math.min(1.0F, fraction), 8, 10);
+    private static void renderEmeraldPouchRing(DrawContext context, ItemStack stack, int x, int y) {
+        if (!emeraldPouchFillArcEnabled || !emeraldPouchRenderInInv) return;
+        WynntilsBankAdapter.drawFeature(emeraldPouchFillArcFeature, "drawFilledArc", context, stack, x, y);
     }
 
     private static CustomColor getHighlightColor(ItemStack stack) {
-         if(isEmptyStack(stack)) return CustomColor.NONE;
-         WynnItemData item = WynnItemParser.parse(stack).orElse(null);
-         if (item == null) return CustomColor.NONE;
-         return switch (item.tier()) {
-             case MYTHIC -> CustomColor.fromHexString("AA00AA").withAlpha(110);
-             case FABLED -> CustomColor.fromHexString("FF5555").withAlpha(100);
-             case LEGENDARY -> CustomColor.fromHexString("55FFFF").withAlpha(90);
-             case RARE -> CustomColor.fromHexString("FF55FF").withAlpha(80);
-             case UNIQUE -> CustomColor.fromHexString("FFFF55").withAlpha(70);
-             case SET -> CustomColor.fromHexString("55FF55").withAlpha(80);
-             case CRAFTED -> CustomColor.fromHexString("00AAAA").withAlpha(80);
-             default -> CustomColor.NONE;
-         };
+         if (isEmptyStack(stack) || !itemHighlightEnabled || !highlightRenderInInv) {
+             return CustomColor.NONE;
+         }
+         return WynntilsBankAdapter.getHighlightColor(itemHighlightFeature, stack).orElse(CustomColor.NONE);
     }
 
     private static void renderHighlightOverlay(DrawContext context, CustomColor color, int x, int y) {
@@ -2817,28 +2946,26 @@ public class BankOverlay2 extends WEHandledScreen {
          }
     }
 
-    private static void renderItemOverlays(DrawContext context, ItemStack stack, int x, int y, Optional<WynnItemData> item) {
-        if (itemTextOverlayEnabled) {
+    private static void renderItemOverlays(DrawContext context, ItemStack stack, int x, int y) {
+        if (itemTextOverlayEnabled && itemTextRenderInInv) {
             try {
                 WynntilsBankAdapter.drawFeature(itemTextOverlayFeature, "drawTextOverlay", context, stack, x, y, false);
             } catch (Exception ignored) {}
         }
 
-        if (item.isPresent()) {
-            if (unidentifiedItemIconEnabled) {
-                WynntilsBankAdapter.drawFeature(unidentifiedItemIconFeature, "drawIcon", context, stack, x, y, 100);
-            }
-            if(itemFavoriteEnabled && WynntilsBankAdapter.isFavorited(itemFavoriteFeature, stack)) {
-                RenderUtils.drawScalingTexturedRect(
-                        context,
-                        Texture.FAVORITE_ICON.identifier(),
-                        x + 10,
-                        y,
-                        9,
-                        9,
-                        Texture.FAVORITE_ICON.width(),
-                        Texture.FAVORITE_ICON.height());
-            }
+        if (unidentifiedItemIconEnabled) {
+            WynntilsBankAdapter.drawFeature(unidentifiedItemIconFeature, "drawIcon", context, stack, x, y, 100);
+        }
+        if(itemFavoriteEnabled && WynntilsBankAdapter.isFavorited(itemFavoriteFeature, stack)) {
+            RenderUtils.drawScalingTexturedRect(
+                    context,
+                    Texture.FAVORITE_ICON.identifier(),
+                    x + 10,
+                    y,
+                    9,
+                    9,
+                    Texture.FAVORITE_ICON.width(),
+                    Texture.FAVORITE_ICON.height());
         }
     }
 
@@ -2857,7 +2984,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         if (SearchQueryParser.matches(stack, wynnItem, activeSearchQuery)) {
             // Item matches - draw green border
-            RenderUtils.drawRectBorders(context, SEARCH_MATCH_COLOR, x, y, x + 16, y + 16, 1);
+            RenderUtils.drawRectBorders(context, SEARCH_MATCH_COLOR, x, y, 16, 16, 1);
         } else {
             // Item doesn't match - dim it
             RenderUtils.drawRect(context, SEARCH_DIM_COLOR, x - 1, y - 1, 18, 18);
@@ -3808,6 +3935,8 @@ public class BankOverlay2 extends WEHandledScreen {
             int p = WynntilsBankAdapter.getCurrentPage();
             if (p > 0) return p - 1;
         } catch (Exception ignored) {}
+        int detected = detectLiveBankPageIndex();
+        if (detected >= 0) return detected;
         if (BankOverlay.activeInv != -1) return BankOverlay.activeInv;
         return -1;
     }
@@ -4167,7 +4296,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
                     ui.drawCenteredText(loadingText, x + width / 2f, y + height / 2f, WHITE_TEXT_COLOR, 1.5f);
                 } else {
-                    ui.drawRectBorders(x, y + 0.5f, x + 164, y + 92, YELLOW_TEXT_COLOR);
+                    ui.drawRectBorders(x, y + 0.5f, width, height - 0.5f, YELLOW_TEXT_COLOR);
                 }
                 CustomColor color = (!shouldWait)
                         ? YELLOW_TEXT_COLOR
@@ -4275,20 +4404,13 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         private static void jumpToPage(int pageIndex) {
-            if(BankOverlay.getPersonalStorageUtils() == null) return;
             if (BankOverlay.isCharacterBankMissingCharacterId()) return;
             if (pageIndex < 0 || pageIndex >= BankOverlay.getCurrentMaxPages()) return;
 
             storeActivePageSnapshot();
             clearHoverState(MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?> handledScreen ? handledScreen : null);
 
-            activeInv = pageIndex;
-            try {
-                WynntilsBankAdapter.jumpToDestination(BankOverlay.getPersonalStorageUtils(), activeInv + 1);
-            } catch (Exception e) {
-                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils. Please create a bug report on discord if this still appears after you have enabled."));
-                return;
-            }
+            if (!jumpToBankPage(pageIndex)) return;
             clearAnnotationCache(activeInv);
             retryLoad();
         }
@@ -4371,11 +4493,6 @@ public class BankOverlay2 extends WEHandledScreen {
         private CustomModelDataComponent cachedDurabilityModelData = null;
         private int cachedDurabilityModelCount = -1;
         private ItemStack cachedDurabilityModelOutput = null;
-        private ItemStack cachedRenderStateInput = null;
-        private Object cachedRenderStateComponents = null;
-        private int cachedRenderStateCount = -1;
-        private ItemStack cachedRenderStateStack = null;
-        private boolean cachedRenderStateOne = false;
 
         public SlotWidget(ItemStack stack, int index, boolean isInventorySlot, int inventoryIndex) {
             super(0, 0, 0, 0);
@@ -4427,7 +4544,7 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             if(isEmptyStack(stack)) {
-                renderSearchOverlay(ctx, stack, null, x + 1, y + 1);
+                renderSearchOverlay(ctx, stack, null, itemX, itemY);
                 return;
             }
 
@@ -4443,41 +4560,35 @@ public class BankOverlay2 extends WEHandledScreen {
                 cachedSearchInput = null;
                 cachedSearchMatch = false;
                 cachedHighlightColor = null;
-                cachedRenderStateInput = null;
-                cachedRenderStateComponents = null;
-                cachedRenderStateCount = -1;
-                cachedRenderStateStack = null;
-                cachedRenderStateOne = false;
             }
 
             if (cachedWynnItem == null) cachedWynnItem = asWynnItem(stack);
             Optional<WynnItemData> item = cachedWynnItem;
-            ItemStack renderStack = getCachedRenderStack(item);
-            boolean renderOne = cachedRenderStateOne;
+            ItemStack renderStack = getCachedRenderStack();
 
-            renderEmeraldPouchRing(ctx, item.orElse(null), x + 1, y + 1);
             if (cachedHighlightColor == null) {
                 cachedHighlightColor = getHighlightColor(stack);
             }
-            renderHighlightOverlay(ctx, cachedHighlightColor, x + 1, y + 1);
+            renderHighlightOverlay(ctx, cachedHighlightColor, itemX, itemY);
 
             WynnModItemOverlayBridge.renderPre(ctx, stack, itemX, itemY);
             ctx.drawItem(renderStack, itemX, itemY);
 
-            renderDurabilityRing(ctx, stack, item.orElse(null), x + 1, y + 1);
+            renderDurabilityOverlay(ctx, stack, itemX, itemY);
 
             try {
                 ctx.drawStackOverlay(
                         frameTextRenderer != null ? frameTextRenderer : MinecraftClient.getInstance().textRenderer,
                         renderStack,
                         itemX,
-                        itemY,
-                        renderOne ? "1" : null
+                        itemY
                 );
             } catch (Exception ignored) {}
 
+            renderEmeraldPouchRing(ctx, stack, itemX, itemY);
+
             WynnModItemOverlayBridge.renderPost(ctx, stack, itemX, itemY);
-            renderItemOverlays(ctx, stack, x + 1, y + 1, item);
+            renderItemOverlays(ctx, stack, itemX, itemY);
 
             // Inline cached search overlay (uses the frame-level parsed query).
             if (activeSearchInput != null && !activeSearchInput.isEmpty()) {
@@ -4486,9 +4597,9 @@ public class BankOverlay2 extends WEHandledScreen {
                     cachedSearchInput = activeSearchInput;
                 }
                 if (cachedSearchMatch) {
-                    RenderUtils.drawRectBorders(ctx, SEARCH_MATCH_COLOR, x + 1, y + 1, x + 17, y + 17, 1);
+                    RenderUtils.drawRectBorders(ctx, SEARCH_MATCH_COLOR, itemX, itemY, 16, 16, 1);
                 } else {
-                    RenderUtils.drawRect(ctx, SEARCH_DIM_COLOR, x, y, 18, 18);
+                    RenderUtils.drawRect(ctx, SEARCH_DIM_COLOR, itemX - 1, itemY - 1, 18, 18);
                 }
             }
 
@@ -4510,58 +4621,12 @@ public class BankOverlay2 extends WEHandledScreen {
                 this.cachedDurabilityModelData = null;
                 this.cachedDurabilityModelCount = -1;
                 this.cachedDurabilityModelOutput = null;
-                this.cachedRenderStateInput = null;
-                this.cachedRenderStateComponents = null;
-                this.cachedRenderStateCount = -1;
-                this.cachedRenderStateStack = null;
-                this.cachedRenderStateOne = false;
             }
         }
 
-        private ItemStack getCachedRenderStack(Optional<WynnItemData> item) {
-            Object components = stack.getComponents();
-            int count = stack.getCount();
-            if (stack == cachedRenderStateInput
-                    && components == cachedRenderStateComponents
-                    && count == cachedRenderStateCount
-                    && cachedRenderStateStack != null) {
-                return cachedRenderStateStack;
-            }
-
-            ItemStack renderStack = stack;
-            boolean renderOne = false;
-            if (item.isPresent()) {
-                WynnItemData data = item.get();
-                if (data.consumableUses().isPresent()) {
-                    renderStack = copyForRenderMutation(stack, renderStack);
-                    int uses = data.consumableUses().getAsInt();
-                    renderStack.setCount(Math.max(1, uses));
-                    renderOne = uses == 1;
-                }
-            }
-
-            if (stack.getItem() == Items.POTION) {
-                try {
-                    Text customName = stack.getCustomName();
-                    String customNameStr = customName != null ? customName.getString() : null;
-                    if (customNameStr != null && customNameStr.contains("Potions")) {
-                        Matcher matcher = POTIONS_USES_PATTERN.matcher(customNameStr);
-
-                        if (matcher.find()) {
-                            int remainingUses = Integer.parseInt(matcher.group(1));
-                            renderStack = copyForRenderMutation(stack, renderStack);
-                            renderStack.setCount(remainingUses);
-                        }
-                    }
-                } catch (Exception ignored) {}
-            }
-
-            cachedRenderStateInput = stack;
-            cachedRenderStateComponents = components;
-            cachedRenderStateCount = count;
-            cachedRenderStateStack = withoutVanillaDurabilityModelDataCached(renderStack);
-            cachedRenderStateOne = renderOne;
-            return cachedRenderStateStack;
+        private ItemStack getCachedRenderStack() {
+            if (!durabilityOverlayEnabled || !durabilityRenderInInv) return stack;
+            return withoutVanillaDurabilityModelDataCached(stack);
         }
 
         private ItemStack withoutVanillaDurabilityModelDataCached(ItemStack renderStack) {
@@ -4745,13 +4810,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 if (isJumpInProgress()) return true;
                 if (BankOverlay.isCharacterBankMissingCharacterId()) return false;
                 storeActivePageSnapshot();
-                activeInv = inventoryIndex;
-                try {
-                    WynntilsBankAdapter.jumpToDestination(BankOverlay.getPersonalStorageUtils(), inventoryIndex + 1);
-                } catch (Exception e) {
-                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils. Please create a bug report on discord if this still appears after you have enabled."));
-                    return true;
-                }
+                if (!jumpToBankPage(inventoryIndex)) return true;
                 clearAnnotationCache(inventoryIndex);
             }
             return true;
@@ -4780,13 +4839,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     if (isJumpInProgress()) return true;
                     if (BankOverlay.isCharacterBankMissingCharacterId()) return false;
                     storeActivePageSnapshot();
-                    activeInv = inventoryIndex;
-                    try {
-                        WynntilsBankAdapter.jumpToDestination(BankOverlay.getPersonalStorageUtils(), inventoryIndex + 1);
-                    } catch (Exception e) {
-                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils. Please create a bug report on discord if this still appears after you have enabled."));
-                        return true;
-                    }
+                    if (!jumpToBankPage(inventoryIndex)) return true;
                     clearAnnotationCache(inventoryIndex);
                 }
                 return true;
@@ -5019,11 +5072,7 @@ public class BankOverlay2 extends WEHandledScreen {
                 isReloading = true;
                 resetReloadPageReadiness();
                 reloadNextPageCustomModelData = null;
-                activeInv = 0;
-                try {
-                    WynntilsBankAdapter.jumpToDestination(BankOverlay.getPersonalStorageUtils(), 1);
-                } catch (Exception e) {
-                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Please enable the \"Personal Storage Utilities\" feature in Wynntils."));
+                if (!jumpToBankPage(0)) {
                     isReloading = false;
                     return false;
                 }
@@ -5049,7 +5098,7 @@ public class BankOverlay2 extends WEHandledScreen {
             MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             WynnExtrasConfig.INSTANCE.toggleBankOverlay = !WynnExtrasConfig.INSTANCE.toggleBankOverlay;
             if(WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
-                activeInv = LunarCompat.isLunarClient() ? Math.max(0, activeInv) : WynntilsBankAdapter.getCurrentPage() - 1;
+                activeInv = Math.max(0, getCurrentBankPageNumber());
             }
             WynnExtrasConfig.save();
             return false;
@@ -5345,7 +5394,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     : isMiscBucketPage() ? "55FFFF"
                     : isTomeBookshelfPage() ? "AA55FF"
                     : "FFAA00";
-            ui.drawRectBorders(x, y + 0.5f, x + 164, y + 92, CustomColor.fromHexString(borderColor));
+            ui.drawRectBorders(x, y + 0.5f, width, height - 0.5f, CustomColor.fromHexString(borderColor));
 
             // Hint text
             String hint;

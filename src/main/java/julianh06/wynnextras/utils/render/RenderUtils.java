@@ -57,7 +57,7 @@ public final class RenderUtils {
                                         CustomColor color, float x, float y, float width, float height, float u, float v,
                                         float uWidth, float vHeight, int textureWidth, int textureHeight) {
         context.drawTexture(pipeline, texture, Math.round(x), Math.round(y), u, v, Math.round(width),
-                Math.round(height), Math.round(uWidth), Math.round(vHeight), textureWidth, textureHeight);
+                Math.round(height), Math.round(uWidth), Math.round(vHeight), textureWidth, textureHeight, color.asInt());
     }
 
     public static void drawTexturedRect(DrawContext context, Object texture, CustomColor color,

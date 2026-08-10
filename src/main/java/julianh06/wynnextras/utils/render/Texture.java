@@ -11,9 +11,11 @@ public enum Texture {
     EMERALD_COUNT_BACKGROUND("ui_components/emerald_count_background.png", 24, 24),
     HIGHLIGHT_WYNN("ui_components/sprites/highlight_wynn.png", 32, 32),
     HIGHLIGHT_TAG("ui_components/sprites/highlight_tag.png", 32, 32),
+    HIGHLIGHT_CIRCLE_TRANSPARENT("ui_components/sprites/highlight_circle_transparent.png", 32, 32),
     HIGHLIGHT_CIRCLE_OPAQUE("ui_components/sprites/highlight_circle_opaque.png", 32, 32),
     HIGHLIGHT_CIRCLE_OUTLINE_LARGE("ui_components/sprites/highlight_circle_outline_large.png", 32, 32),
     HIGHLIGHT_CIRCLE_OUTLINE_SMALL("ui_components/sprites/highlight_circle_outline_small.png", 32, 32),
+    HIGHLIGHT_BOX_TRANSPARENT("ui_components/sprites/highlight_box_transparent.png", 32, 32),
     HIGHLIGHT_BOX_OPAQUE("ui_components/sprites/highlight_box_opaque.png", 32, 32),
     HIGHLIGHT_BOX_GRADIENT_1("ui_components/sprites/highlight_box_gradient_1.png", 32, 32),
     HIGHLIGHT_BOX_GRADIENT_2("ui_components/sprites/highlight_box_gradient_2.png", 32, 32);

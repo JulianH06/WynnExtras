@@ -3,6 +3,7 @@ package julianh06.wynnextras.wynncraft.item;
 import julianh06.wynnextras.wynncraft.state.CharacterClass;
 import julianh06.wynnextras.wynncraft.state.SkillPoint;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
@@ -35,6 +36,8 @@ public final class WynnItemParser {
     private static final Pattern DURABILITY = Pattern.compile("(?i)durability\\D*(\\d+)\\s*/\\s*(\\d+)");
     private static final Pattern USES = Pattern.compile("(?i)(?:uses|charges)\\D*(\\d+)(?:\\s*/\\s*\\d+)?");
     private static final Pattern POUCH = Pattern.compile("(?i)(?:emeralds?|value|capacity)\\D*(\\d[\\d,]*)\\s*/\\s*(\\d[\\d,]*)");
+    private static final Pattern POUCH_TIER = Pattern.compile("(?i)emerald pouch\\s*\\[tier\\s+(\\d+)]");
+    private static final Pattern POUCH_VALUE = Pattern.compile("^([\\d\\s,]+)²");
     private static final Pattern CLASS = Pattern.compile("(?i)class\\s+(?:req(?:uirement)?|required)\\D*([a-z ]+)");
     private static final Pattern IDENTIFICATION = Pattern.compile("^([+-]\\d+)\\s+(.+)$");
 
@@ -72,7 +75,7 @@ public final class WynnItemParser {
         String all = String.join("\n", lore);
         String lower = (name + "\n" + all).toLowerCase(Locale.ROOT);
 
-        ItemTier tier = tier(lower);
+        ItemTier tier = tier(stack, lower);
         boolean crafted = tier == ItemTier.CRAFTED || lower.contains("crafted item") || lower.contains("crafted by");
         boolean unidentified = lower.contains("unidentified");
         GearType gearType = gearType(stack, lower);
@@ -98,7 +101,7 @@ public final class WynnItemParser {
         Integer level = firstNumber(LEVEL, all);
         WynnItemData.Amount durability = amount(DURABILITY, all);
         Integer uses = firstNumber(USES, all);
-        WynnItemData.Amount pouch = category == ItemCategory.EMERALD_POUCH ? amount(POUCH, all) : null;
+        WynnItemData.Amount pouch = category == ItemCategory.EMERALD_POUCH ? emeraldPouch(name, lore, all) : null;
         String profession = profession(lower);
 
         return Optional.of(new WynnItemData(name, category, gearType, tier, requirements, bonuses,
@@ -113,16 +116,51 @@ public final class WynnItemParser {
         return result;
     }
 
-    private static ItemTier tier(String text) {
+    private static ItemTier tier(ItemStack stack, String text) {
+        CustomModelDataComponent modelData = stack.getComponents().get(DataComponentTypes.CUSTOM_MODEL_DATA);
+        if (modelData != null) {
+            for (String value : modelData.strings()) {
+                if (!value.startsWith("item_tier_")) continue;
+                try {
+                    return ItemTier.valueOf(value.substring("item_tier_".length()).toUpperCase(Locale.ROOT));
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
         if (text.contains("mythic")) return ItemTier.MYTHIC;
         if (text.contains("fabled")) return ItemTier.FABLED;
         if (text.contains("legendary")) return ItemTier.LEGENDARY;
         if (text.contains("unique")) return ItemTier.UNIQUE;
-        if (text.contains(" rare item") || text.startsWith("rare item")) return ItemTier.RARE;
+        if (text.contains("rare item")) return ItemTier.RARE;
         if (text.contains("set item")) return ItemTier.SET;
         if (text.contains("crafted")) return ItemTier.CRAFTED;
         if (text.contains("normal item") || text.contains("common item")) return ItemTier.NORMAL;
         return ItemTier.UNKNOWN;
+    }
+
+    private static WynnItemData.Amount emeraldPouch(String name, List<String> lore, String all) {
+        Matcher tierMatcher = POUCH_TIER.matcher(name);
+        if (!tierMatcher.matches()) return amount(POUCH, all);
+
+        int tier = number(tierMatcher.group(1));
+        if (tier <= 0) return null;
+
+        int value = 0;
+        if (!lore.isEmpty()) {
+            Matcher valueMatcher = POUCH_VALUE.matcher(lore.getFirst());
+            if (valueMatcher.find()) value = formattedNumber(valueMatcher.group(1));
+        }
+
+        int slots = switch (tier % 3) {
+            case 0 -> 54;
+            case 1 -> 9;
+            case 2 -> 27;
+            default -> 0;
+        };
+        long capacity = tier >= 7
+                ? (long) (tier - 6) * 262_144
+                : tier >= 4 ? (long) slots * 4_096 : (long) slots * 64;
+        if (capacity <= 0 || capacity > Integer.MAX_VALUE) return null;
+        return new WynnItemData.Amount(value, (int) capacity);
     }
 
     private static ItemCategory category(String text, ItemTier tier, GearType gearType, boolean crafted, boolean unidentified) {
@@ -206,6 +244,14 @@ public final class WynnItemParser {
     private static int number(String value) {
         try {
             return Integer.parseInt(value.replace(",", ""));
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
+    }
+
+    private static int formattedNumber(String value) {
+        try {
+            return Integer.parseInt(value.replaceAll("[\\s,]", ""));
         } catch (NumberFormatException ignored) {
             return 0;
         }

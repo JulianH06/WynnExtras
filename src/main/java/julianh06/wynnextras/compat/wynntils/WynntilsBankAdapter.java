@@ -11,6 +11,8 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class WynntilsBankAdapter {
     public record EmeraldUnit(String symbol, ItemStack stack) {}
@@ -22,6 +24,10 @@ public final class WynntilsBankAdapter {
     private record ModelsBinding(Object bank, Method getCurrentPage, Object emerald, Method getAmount) {}
     private record FeaturesBinding(Object manager, Method getFeatureInstance) {}
     private record EmeraldBinding(Object[] units, Method symbol, Method stack) {}
+    private record ColorBinding(Method red, Method green, Method blue, Method alpha) {}
+    private record FeatureMethodKey(Class<?> type, String name, int parameters) {}
+
+    private static final Map<FeatureMethodKey, Optional<Method>> FEATURE_METHODS = new ConcurrentHashMap<>();
 
     private static final WynntilsCapability<ModelsBinding> MODELS = new WynntilsCapability<>("bank-models", () -> {
         Class<?> models = WynntilsCompat.requireClass("com.wynntils.core.components.Models");
@@ -39,6 +45,10 @@ public final class WynntilsBankAdapter {
         Class<? extends Enum> type = WynntilsCompat.requireClass(
                 "com.wynntils.models.emeralds.type.EmeraldUnits").asSubclass(Enum.class);
         return new EmeraldBinding(type.getEnumConstants(), type.getMethod("getSymbol"), type.getMethod("getItemStack"));
+    });
+    private static final WynntilsCapability<ColorBinding> COLORS = new WynntilsCapability<>("bank-highlight-colors", () -> {
+        Class<?> type = WynntilsCompat.requireClass("com.wynntils.utils.colors.CustomColor");
+        return new ColorBinding(type.getMethod("r"), type.getMethod("g"), type.getMethod("b"), type.getMethod("a"));
     });
 
     private WynntilsBankAdapter() {}
@@ -63,6 +73,22 @@ public final class WynntilsBankAdapter {
             }
             if (type == null) return null;
             Object feature = binding.getFeatureInstance.invoke(binding.manager, type);
+            if (feature != null) {
+                cacheFeatureMethod(feature.getClass(), "isEnabled", 0);
+                switch (simpleClassName) {
+                    case "ItemHighlightFeature" -> cacheFeatureMethod(feature.getClass(), "getHighlightColor", 2);
+                    case "ItemTextOverlayFeature" -> cacheFeatureMethod(feature.getClass(), "drawTextOverlay", 5);
+                    case "UnidentifiedItemIconFeature" -> cacheFeatureMethod(feature.getClass(), "drawIcon", 5);
+                    case "ItemFavoriteFeature" -> cacheFeatureMethod(feature.getClass(), "isFavorited", 1);
+                    case "DurabilityOverlayFeature" -> {
+                        cacheFeatureMethod(feature.getClass(), "drawDurability", 4);
+                        cacheFeatureMethod(feature.getClass(), "drawDurabilityArc", 4);
+                        cacheFeatureMethod(feature.getClass(), "drawDurabilityBar", 4);
+                        cacheFeatureMethod(feature.getClass(), "drawDurabilityPercentage", 4);
+                    }
+                    case "EmeraldPouchFillArcFeature" -> cacheFeatureMethod(feature.getClass(), "drawFilledArc", 4);
+                }
+            }
             return feature == null ? null : new FeatureHandle(feature);
         });
     }
@@ -77,6 +103,11 @@ public final class WynntilsBankAdapter {
             Object config = option instanceof Optional<?> optional ? optional.orElse(null) : null;
             if (config == null) return Texture.HIGHLIGHT_WYNN;
             Object highlight = config.getClass().getMethod("get").invoke(config);
+            if (highlight instanceof Enum<?> value) {
+                try {
+                    return Texture.valueOf("HIGHLIGHT_" + value.name());
+                } catch (IllegalArgumentException ignored) {}
+            }
             Object texture = highlight.getClass().getMethod("texture").invoke(highlight);
             if (texture instanceof Enum<?> value) return Texture.valueOf(value.name());
         } catch (Throwable ignored) {}
@@ -84,7 +115,7 @@ public final class WynntilsBankAdapter {
     }
 
     public static boolean isEnabled(FeatureHandle feature) {
-        Object value = invoke(feature == null ? null : feature.value, "isEnabled");
+        Object value = invokeFeature(feature, "isEnabled");
         return value instanceof Boolean enabled && enabled;
     }
 
@@ -104,20 +135,29 @@ public final class WynntilsBankAdapter {
         return value instanceof Enum<?> enumValue ? enumValue.name() : fallback;
     }
 
-    public static void drawFeature(FeatureHandle feature, String method, DrawContext context, ItemStack stack,
-                                   int x, int y, Object... extra) {
+    public static boolean drawFeature(FeatureHandle feature, String method, DrawContext context, ItemStack stack,
+                                      int x, int y, Object... extra) {
         List<Object> args = new ArrayList<>(List.of(context, stack, x, y));
         for (Object value : extra) args.add(value);
-        invoke(feature == null ? null : feature.value, method, args.toArray());
+        return invokeFeatureVoid(feature, method, args.toArray());
     }
 
     public static boolean isFavorited(FeatureHandle feature, ItemStack stack) {
-        Object result = invoke(feature == null ? null : feature.value, "isFavorited", stack);
+        Object result = invokeFeature(feature, "isFavorited", stack);
         return result instanceof Boolean value && value;
     }
 
-    public static void jumpToDestination(StorageHandle feature, int page) {
-        invoke(feature == null ? null : feature.value, "jumpToDestination", page);
+    public static Optional<julianh06.wynnextras.utils.colors.CustomColor> getHighlightColor(
+            FeatureHandle feature, ItemStack stack) {
+        Object color = invokeFeature(feature, "getHighlightColor", stack, false);
+        if (color == null) return Optional.empty();
+        return COLORS.invoke(binding -> {
+            int red = ((Number) binding.red.invoke(color)).intValue();
+            int green = ((Number) binding.green.invoke(color)).intValue();
+            int blue = ((Number) binding.blue.invoke(color)).intValue();
+            int alpha = ((Number) binding.alpha.invoke(color)).intValue();
+            return Optional.of(new julianh06.wynnextras.utils.colors.CustomColor(red, green, blue, alpha));
+        }).orElseGet(Optional::empty);
     }
 
     public static void setLastPage(StorageHandle handle, int page) {
@@ -232,5 +272,46 @@ public final class WynntilsBankAdapter {
             }
         } catch (Throwable ignored) {}
         return null;
+    }
+
+    private static void cacheFeatureMethod(Class<?> type, String name, int parameters) {
+        FeatureMethodKey key = new FeatureMethodKey(type, name, parameters);
+        FEATURE_METHODS.computeIfAbsent(key, ignored -> {
+            for (Class<?> current = type; current != null; current = current.getSuperclass()) {
+                for (Method method : current.getDeclaredMethods()) {
+                    if (!method.getName().equals(name) || method.getParameterCount() != parameters) continue;
+                    if (!method.trySetAccessible()) return Optional.empty();
+                    return Optional.of(method);
+                }
+            }
+            return Optional.empty();
+        });
+    }
+
+    private static Object invokeFeature(FeatureHandle feature, String name, Object... args) {
+        if (feature == null || feature.value == null) return null;
+        FeatureMethodKey key = new FeatureMethodKey(feature.value.getClass(), name, args.length);
+        cacheFeatureMethod(key.type, name, args.length);
+        Method method = FEATURE_METHODS.getOrDefault(key, Optional.empty()).orElse(null);
+        if (method == null) return null;
+        try {
+            return method.invoke(feature.value, args);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static boolean invokeFeatureVoid(FeatureHandle feature, String name, Object... args) {
+        if (feature == null || feature.value == null) return false;
+        FeatureMethodKey key = new FeatureMethodKey(feature.value.getClass(), name, args.length);
+        cacheFeatureMethod(key.type, name, args.length);
+        Method method = FEATURE_METHODS.getOrDefault(key, Optional.empty()).orElse(null);
+        if (method == null) return false;
+        try {
+            method.invoke(feature.value, args);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 }
