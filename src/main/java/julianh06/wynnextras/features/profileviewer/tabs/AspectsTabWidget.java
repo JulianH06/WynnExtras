@@ -48,6 +48,9 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
     private static ItemStack currentHovered;
     private static Texture highlightTexture = Texture.HIGHLIGHT_WYNN;
+    private static final float WYNNTILS_ITEM_BACKGROUND_SIZE = 180f;
+    private static final float STANDALONE_ITEM_BACKGROUND_SIZE = 110f;
+    private static final CustomColor LOCKED_ASPECT_TINT = new CustomColor(0, 0, 0, 96);
 
     public static User currentPlayerAspectData;
     public static WynncraftApiHandler.FetchStatus fetchStatus;
@@ -558,10 +561,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             }
 
             if (!Objects.equals(color, CustomColor.NONE)) {
-                ItemHighlightRenderer.drawHighlightTexture(
-                    ctx,
-                    highlightTexture,
-                    color, x / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF());
+                drawItemBackground(ctx, color);
             }
             ItemStack stack;
 
@@ -575,14 +575,11 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
             ctx.getMatrices().pushMatrix();
             ctx.getMatrices().scale(5 / ui.getScaleFactorF(), 5 / ui.getScaleFactorF());
-            ctx.drawItem(stack, x / 5 + 2, y / 5 + 2);
+            ctx.drawItem(stack, x / 5 + 3, y / 5 + 2);
             ctx.getMatrices().popMatrix();
 
             if(playerAspect == null || playerAspect.getAmount() <= 1) {
-                ItemHighlightRenderer.drawHighlightTexture(
-                    ctx,
-                    highlightTexture,
-                    CustomColor.fromHexString("000000"), x / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF());
+                drawItemBackground(ctx, LOCKED_ASPECT_TINT);
                 ui.drawCenteredText("Not", x + 50, y, CustomColor.fromHexString("808080"));
                 ui.drawCenteredText("Unlocked", x + 50, y + 100, CustomColor.fromHexString("808080"), 2.5f);
             } else {
@@ -593,6 +590,27 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             if(hovered) {
                 currentHovered = stack;
             }
+        }
+
+        private void drawItemBackground(DrawContext ctx, CustomColor color) {
+            float scale = ui.getScaleFactorF();
+
+            if (ItemHighlightRenderer.usesWynntilsHighlights()) {
+                float backgroundX = (x + (width - WYNNTILS_ITEM_BACKGROUND_SIZE) / 2f) / scale;
+                float backgroundY = (y + (height - WYNNTILS_ITEM_BACKGROUND_SIZE) / 2f) / scale;
+                float backgroundSize = WYNNTILS_ITEM_BACKGROUND_SIZE / scale;
+                ItemHighlightRenderer.drawHighlightTexture(
+                        ctx, highlightTexture, color,
+                        backgroundX, backgroundY, backgroundSize, backgroundSize);
+                return;
+            }
+
+            float backgroundX = (x + (width - STANDALONE_ITEM_BACKGROUND_SIZE) / 2f) / scale;
+            float backgroundY = (y + (height - STANDALONE_ITEM_BACKGROUND_SIZE) / 2f) / scale;
+            float backgroundSize = STANDALONE_ITEM_BACKGROUND_SIZE / scale;
+            ItemHighlightRenderer.drawHighlightTexture(
+                    ctx, null, color,
+                    backgroundX, backgroundY, backgroundSize, backgroundSize);
         }
     }
 

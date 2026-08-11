@@ -1,24 +1,31 @@
 package julianh06.wynnextras.utils;
 
 import julianh06.wynnextras.compat.wynntils.WynntilsBankAdapter;
+import julianh06.wynnextras.compat.wynntils.WynntilsCompat;
 import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.utils.render.RenderUtils;
 import julianh06.wynnextras.utils.render.Texture;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 
 public final class ItemHighlightRenderer {
+    private static final int DEFAULT_HIGHLIGHT_SIZE = 32;
     private static final Identifier HIGHLIGHT_ATLAS = Identifier.of("wynntils", "textures/ui_components/highlight.png");
+    private static final Identifier CIRCLE =
+            Identifier.of("wynnextras", "textures/gui/profileviewer/circle.png");
     private static boolean useHighlightAtlas = false;
 
     private ItemHighlightRenderer() {}
 
+    public static boolean usesWynntilsHighlights() {
+        return WynntilsCompat.isLoaded();
+    }
+
     public static Texture getConfiguredHighlightTexture() {
         Texture texture = WynntilsBankAdapter.getConfiguredHighlightTexture();
-        if (FabricLoader.getInstance().isModLoaded("wynntils")) {
+        if (usesWynntilsHighlights()) {
             ResourceManager resources = MinecraftClient.getInstance().getResourceManager();
             useHighlightAtlas = resources.getResource(texture.identifier()).isEmpty()
                     && resources.getResource(HIGHLIGHT_ATLAS).isPresent();
@@ -30,37 +37,23 @@ public final class ItemHighlightRenderer {
 
     public static void drawHighlightTexture(DrawContext context, Texture texture, CustomColor color,
                                             float x, float y, float width, float height) {
-        Texture resolved = texture == null ? Texture.HIGHLIGHT_WYNN : texture;
-        if (FabricLoader.getInstance().isModLoaded("wynntils")) {
-            if (useHighlightAtlas) {
-                RenderUtils.drawTexturedRect(context, HIGHLIGHT_ATLAS, color, x, y, width, height,
-                        highlightIndex(resolved) * 18f, 0, 18, 18, 256, 256);
-            } else {
-                RenderUtils.drawSprite(context, resolved, color, x, y, width, height);
-            }
+        if (!usesWynntilsHighlights() || texture == null) {
+            RenderUtils.drawTexturedRect(context, CIRCLE, color.withAlpha(0.35f), x, y, width, height, 64, 64);
+            return;
+        }
+
+        if (useHighlightAtlas) {
+            RenderUtils.drawTexturedRect(context, HIGHLIGHT_ATLAS, color, x, y, width, height,
+                    highlightIndex(texture) * 18f, 0, 18, 18, 256, 256);
         } else {
-            drawFallback(context, resolved, color, x, y, width, height);
+            RenderUtils.drawSprite(context, texture, color, x, y, width, height);
         }
     }
 
     public static void drawHighlightTexture(DrawContext context, Texture texture, CustomColor color, float x, float y) {
-        Texture resolved = texture == null ? Texture.HIGHLIGHT_WYNN : texture;
-        drawHighlightTexture(context, resolved, color, x, y, resolved.width(), resolved.height());
-    }
-
-    private static void drawFallback(DrawContext context, Texture texture, CustomColor color,
-                                     float x, float y, float width, float height) {
-        switch (texture) {
-            case HIGHLIGHT_CIRCLE_OUTLINE_LARGE, HIGHLIGHT_CIRCLE_OUTLINE_SMALL, HIGHLIGHT_TAG ->
-                    RenderUtils.drawRectBorders(context, color, x, y, width, height, 1);
-            case HIGHLIGHT_WYNN ->
-                    RenderUtils.drawRect(context, color, x + width / 4f, y + height / 4f, width / 2f, height / 2f);
-            case HIGHLIGHT_CIRCLE_TRANSPARENT, HIGHLIGHT_BOX_TRANSPARENT,
-                 HIGHLIGHT_CIRCLE_OPAQUE, HIGHLIGHT_BOX_OPAQUE,
-                 HIGHLIGHT_BOX_GRADIENT_1, HIGHLIGHT_BOX_GRADIENT_2 ->
-                    RenderUtils.drawRect(context, color, x, y, width, height);
-            default -> {}
-        }
+        float width = texture == null ? DEFAULT_HIGHLIGHT_SIZE : texture.width();
+        float height = texture == null ? DEFAULT_HIGHLIGHT_SIZE : texture.height();
+        drawHighlightTexture(context, texture, color, x, y, width, height);
     }
 
     private static int highlightIndex(Texture texture) {
