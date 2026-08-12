@@ -9,7 +9,7 @@ import julianh06.wynnextras.utils.render.FontRenderer;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
-import julianh06.wynnextras.features.crafting.data.CraftingDataService;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.Item;
@@ -78,8 +78,8 @@ public class CraftingResultPreviewer {
         if (!WynnExtrasConfig.INSTANCE.craftingPreviewOverlay) return;
 
         loadConfig();
-        CraftingDataService dataService = CraftingDataService.getInstance();
-        if (dataService.getState() != CraftingDataService.State.READY) {
+        WynnDataService dataService = WynnDataService.getInstance();
+        if (dataService.getState() != WynnDataService.State.READY) {
             Text status = Text.literal(dataService.getStatusMessage());
             context.drawText(MinecraftClient.getInstance().textRenderer, status, xPos, yPos, 0xFFFF5555, true);
             currentWidth = MinecraftClient.getInstance().textRenderer.getWidth(status);

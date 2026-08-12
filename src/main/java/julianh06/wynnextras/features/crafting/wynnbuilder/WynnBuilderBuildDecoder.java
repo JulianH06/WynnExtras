@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.crafting.wynnbuilder;
 
-import julianh06.wynnextras.features.crafting.data.CraftingDataService;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,14 +25,14 @@ public final class WynnBuilderBuildDecoder {
                 && WynnBuilderBase64.charToInt(hash.charAt(0)) >= VECTOR_FLAG_MIN;
     }
 
-    public static List<DecodedCraft> decode(String payload, CraftingDataService dataService) {
+    public static List<DecodedCraft> decode(String payload, WynnDataService dataService) {
         String hash = normalize(payload);
         if (!isBuildHash(hash)) return List.of();
-        if (dataService == null || dataService.getState() != CraftingDataService.State.READY) {
+        if (dataService == null || dataService.getState() != WynnDataService.State.READY) {
             throw new IllegalStateException("Crafting data is not ready");
         }
         return decode(hash, recipeId -> {
-            CraftingDataService.RecipeData recipe = dataService.getRecipeByWynnBuilderId(recipeId);
+            WynnDataService.RecipeData recipe = dataService.getRecipeByWynnBuilderId(recipeId);
             return recipe == null ? null : recipe.type().isWeapon();
         });
     }

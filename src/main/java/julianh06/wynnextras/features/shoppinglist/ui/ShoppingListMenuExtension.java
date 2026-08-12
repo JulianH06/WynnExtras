@@ -3,7 +3,7 @@ package julianh06.wynnextras.features.shoppinglist.ui;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
-import julianh06.wynnextras.features.crafting.data.CraftingDataService;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.features.shoppinglist.ShoppingListFeature;
 import julianh06.wynnextras.features.shoppinglist.cart.ShoppingEntry;
 import julianh06.wynnextras.features.shoppinglist.model.RequirementType;
@@ -1392,8 +1392,8 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
             if (row.type() == RequirementType.MATERIAL && row.materialTier() > 0) {
                 searchInput += " materialtier:" + row.materialTier();
             } else if (row.type() == RequirementType.INGREDIENT
-                    && CraftingDataService.getInstance().getPowder(row.displayName()) == null) {
-                var ingredient = CraftingDataService.getInstance().getIngredient(row.displayName());
+                    && WynnDataService.getInstance().getPowder(row.displayName()) == null) {
+                var ingredient = WynnDataService.getInstance().getIngredient(row.displayName());
                 if (ingredient != null) {
                     searchInput += " ingredienttier:" + ingredient.tier();
                 }

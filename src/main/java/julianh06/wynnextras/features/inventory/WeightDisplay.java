@@ -5,9 +5,9 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.Core;
 import julianh06.wynnextras.event.KeyInputEvent;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.utils.HandledScreenAccess;
 import julianh06.wynnextras.utils.ItemUtils;
-import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -267,34 +267,18 @@ public class WeightDisplay {
     }
 
     public static void populateStatRangesFromDatabase() {
-        int retries = 30;
-        while (WynncraftApiHandler.getCachedItemDatabase() == null && retries-- > 0) {
-            // sleep shouldnt cause any problems here cause this function is only called asynchronously
-            try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
-        }
-        if (WynncraftApiHandler.getCachedItemDatabase() == null) {
-            return;
-        }
+        WynnDataService.WynnDataSnapshot snapshot = WynnDataService.getInstance().snapshot();
+        if (snapshot == null) return;
 
         Map<String, List<StatRangeCandidate>> candidatesByDisplayName = new HashMap<>();
-        for (Map.Entry<String, JsonObject> databaseEntry
-                : WynncraftApiHandler.getCachedItemDatabase().entrySet()) {
-            JsonObject itemJson = databaseEntry.getValue();
-            if (!itemJson.has("identifications")) continue;
-
-            String internalName = itemJson.has("internalName")
-                    ? itemJson.get("internalName").getAsString()
-                    : databaseEntry.getKey();
-            String displayName = itemJson.has("displayName")
-                    ? itemJson.get("displayName").getAsString()
-                    : internalName;
-            Map<String, float[]> ranges = extractStatRanges(itemJson.getAsJsonObject("identifications"));
+        for (WynnDataService.ItemData item : snapshot.items()) {
+            Map<String, float[]> ranges = extractStatRanges(item.identifications());
             if (ranges.isEmpty()) continue;
 
-            StatRangeCandidate candidate = new StatRangeCandidate(internalName, Map.copyOf(ranges));
-            candidatesByDisplayName.computeIfAbsent(displayName, ignored -> new ArrayList<>()).add(candidate);
-            if (!displayName.equals(internalName)) {
-                candidatesByDisplayName.computeIfAbsent(internalName, ignored -> new ArrayList<>()).add(candidate);
+            StatRangeCandidate candidate = new StatRangeCandidate(item.internalName(), Map.copyOf(ranges));
+            candidatesByDisplayName.computeIfAbsent(item.displayName(), ignored -> new ArrayList<>()).add(candidate);
+            if (!item.displayName().equals(item.internalName())) {
+                candidatesByDisplayName.computeIfAbsent(item.internalName(), ignored -> new ArrayList<>()).add(candidate);
             }
         }
 
@@ -315,14 +299,13 @@ public class WeightDisplay {
         weightCacheByHash.clear();
     }
 
-    private static Map<String, float[]> extractStatRanges(JsonObject ids) {
+    private static Map<String, float[]> extractStatRanges(Map<String, WynnDataService.StatValue> ids) {
         Map<String, float[]> ranges = new HashMap<>();
-        for (Map.Entry<String, JsonElement> entry : ids.entrySet()) {
-            if (!entry.getValue().isJsonObject()) continue;
-            JsonObject rangeObj = entry.getValue().getAsJsonObject();
-            if (!rangeObj.has("min") || !rangeObj.has("max")) continue;
-            float a = Math.abs(rangeObj.get("min").getAsFloat());
-            float b = Math.abs(rangeObj.get("max").getAsFloat());
+        for (Map.Entry<String, WynnDataService.StatValue> entry : ids.entrySet()) {
+            WynnDataService.StatValue value = entry.getValue();
+            if (!value.isRange()) continue;
+            float a = Math.abs(value.minimum().floatValue());
+            float b = Math.abs(value.maximum().floatValue());
             ranges.put(entry.getKey(), new float[]{Math.min(a, b), Math.max(a, b)});
         }
         return ranges;

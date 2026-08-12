@@ -12,7 +12,7 @@ import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
 import julianh06.wynnextras.features.crafting.data.MaterialTextureResolver;
-import julianh06.wynnextras.features.crafting.data.CraftingDataService;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.features.guildviewer.BannerGuiRenderer;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
@@ -181,7 +181,7 @@ public class WynnExtras implements ClientModInitializer {
 	public void onInitializeClient() {
 		Core.init(MOD_ID);
 		ProfileTitleService.fetch();
-		ClientLifecycleEvents.CLIENT_STARTED.register(client -> CraftingDataService.getInstance().initialize());
+		ClientLifecycleEvents.CLIENT_STARTED.register(client -> WynnDataService.getInstance().initialize());
 		updateVersionData();
 
 		SpecialGuiElementRegistry.register(context -> new BannerGuiRenderer(context.vertexConsumers(), MinecraftClient.getInstance().getAtlasManager()));
@@ -248,10 +248,8 @@ public class WynnExtras implements ClientModInitializer {
 			BankOverlay2.invalidateBagTotalCache();
 			WynncraftApiHandler.load();
 
-			CompletableFuture<Void> itemDatabaseFuture = WynncraftApiHandler.fetchItemDatabase()
-					.thenAccept(WynncraftApiHandler::setCachedItemDatabase);
 			CompletableFuture<Void> weightProfilesFuture = CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool);
-			CompletableFuture.allOf(itemDatabaseFuture, weightProfilesFuture)
+			CompletableFuture.allOf(WynnDataService.getInstance().initialize(), weightProfilesFuture)
 					.thenRunAsync(WeightDisplay::populateStatRangesFromDatabase);
 		});
 

@@ -4,7 +4,7 @@ import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.crafting.model.*;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
-import julianh06.wynnextras.features.crafting.data.CraftingDataService;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.utils.CraftingUtils;
 import org.joml.Vector2d;
 import org.joml.Vector2i;
@@ -85,7 +85,7 @@ public class Recipe {
         this.materials = materials;
         this.level = level;
         updateMultipliers();
-        CraftingDataService.RecipeData ranges = CraftingDataService.getInstance().getRecipe(type, level);
+        WynnDataService.RecipeData ranges = WynnDataService.getInstance().getRecipe(type, level);
         if (ranges == null) {
             dura = null;
             healthOrDmg = null;
@@ -110,7 +110,7 @@ public class Recipe {
 
     public void setLevel(Vector2i level) {
         this.level = level;
-        CraftingDataService.RecipeData ranges = CraftingDataService.getInstance().getRecipe(type, level);
+        WynnDataService.RecipeData ranges = WynnDataService.getInstance().getRecipe(type, level);
         if (ranges == null) {
             WynnExtras.LOGGER.error("cannot set recipe to lvl " + this.level + " no constant found");
             return;
@@ -119,7 +119,7 @@ public class Recipe {
         this.healthOrDmg = ranges.healthOrDamage();
     }
 
-    public void setConstants(CraftingDataService.RecipeData data) {
+    public void setConstants(WynnDataService.RecipeData data) {
         this.level = data.level();
         this.dura = type.isConsumable() ? data.duration() : data.durability();
         this.healthOrDmg = data.healthOrDamage();
@@ -221,7 +221,7 @@ public class Recipe {
 
         for (IngredientInfo ingredient : ingredients) {
             if (ingredient == null) continue;
-            CraftingDataService.PowderData powder = CraftingDataService.getInstance().getPowder(ingredient.name());
+            WynnDataService.PowderData powder = WynnDataService.getInstance().getPowder(ingredient.name());
             if (powder == null) continue;
             if (conversions[powder.element()] == 0) order.add(powder.element());
             conversions[powder.element()] += powder.conversion() / 200.0;
@@ -314,7 +314,7 @@ public class Recipe {
                 }
             }
             if (basic) {
-                CraftingDataService.RecipeData data = CraftingDataService.getInstance().getRecipe(getType(), getLevel());
+                WynnDataService.RecipeData data = WynnDataService.getInstance().getRecipe(getType(), getLevel());
                 if (data == null) return null;
                 return new CraftingResult(
                         new Recipe(this),

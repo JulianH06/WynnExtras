@@ -57,17 +57,8 @@ public class WynncraftApiHandler {
     // Lock object for synchronizing array access
     public transient final Object aspectLock = new Object();
 
-    private static Map<String, JsonObject> cachedItemDatabase;
     private static CompletableFuture<List<ApiLootPool>> officialLootPoolsFuture;
     private static List<ApiLootPool> officialLootPoolsCache;
-
-    public static Map<String, JsonObject> getCachedItemDatabase() {
-        return cachedItemDatabase;
-    }
-
-    public static void setCachedItemDatabase(Map<String, JsonObject> itemDatabase) {
-        cachedItemDatabase = itemDatabase;
-    }
 
     public static class ApiLootPool {
         public String name;
@@ -931,58 +922,6 @@ public class WynncraftApiHandler {
             e.printStackTrace();
             return CompletableFuture.completedFuture(null);
         }
-    }
-
-    public static CompletableFuture<Map<String, JsonObject>> fetchItemDatabase() {
-        HttpRequest request = WynncraftAuthManager.applyWynncraftAuth(HttpRequest.newBuilder()
-                .uri(URI.create("https://api.wynncraft.com/v3/item/database?fullResult"))
-                .GET())
-                .build();
-
-        return WynncraftAuthManager.sendWynncraftRequest(request)
-                .thenApply(HttpResponse::body)
-                .thenApply(WynncraftApiHandler::parseItemDatabase);
-    }
-
-    private static Map<String, JsonObject> parseItemDatabase(String json) {
-        JsonElement root = JsonParser.parseString(json);
-        Map<String, JsonObject> result = new HashMap<>();
-        if (root.isJsonArray()) {
-            for (JsonElement el : root.getAsJsonArray()) {
-                JsonObject obj = el.getAsJsonObject();
-                String name = obj.has("internalName") ? obj.get("internalName").getAsString()
-                            : obj.has("displayName")  ? obj.get("displayName").getAsString()
-                            : null;
-                if (name != null) putPreferredItem(result, name, obj);
-            }
-            return Map.copyOf(result);
-        }
-
-        if (!root.isJsonObject()) return Map.of();
-        for (Map.Entry<String, JsonElement> entry : root.getAsJsonObject().entrySet()) {
-            if (!entry.getValue().isJsonObject()) continue;
-            JsonObject obj = entry.getValue().getAsJsonObject();
-            String name = obj.has("internalName") ? obj.get("internalName").getAsString()
-                    : obj.has("displayName") ? obj.get("displayName").getAsString()
-                    : entry.getKey();
-            putPreferredItem(result, name, obj);
-        }
-        return Map.copyOf(result);
-    }
-
-    private static void putPreferredItem(Map<String, JsonObject> result, String name, JsonObject item) {
-        JsonObject existing = result.putIfAbsent(name, item.deepCopy());
-        if (existing == null) return;
-
-        boolean existingIngredient = isIngredient(existing);
-        boolean currentIngredient = isIngredient(item);
-        if (existingIngredient && !currentIngredient) result.put(name, item.deepCopy());
-        WynnExtras.LOGGER.warn("Ignoring duplicate item database entry for " + name);
-    }
-
-    private static boolean isIngredient(JsonObject item) {
-        JsonElement type = item.get("type");
-        return type != null && type.isJsonPrimitive() && "ingredient".equals(type.getAsString());
     }
 
     public static CompletableFuture<AbilityMapData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {

@@ -1,12 +1,12 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import com.google.gson.JsonObject;
 import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.LootrunLootPoolData;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.Widget;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
@@ -462,12 +462,12 @@ public class RaidItemsPage extends PageWidget {
                 }
 
                 if (hovering && mouseY * ui.getScaleFactorF() > listTop) {
-                    JsonObject jsonItem = LootrunLootPoolPage.LootPoolWidget.findApiItem(item.name);
+                    WynnDataService.ItemData apiItem = LootrunLootPoolPage.LootPoolWidget.findApiItem(item);
                     hoveredTooltip = item.tooltip != null && !item.tooltip.isEmpty()
                             ? LootrunLootPoolPage.LootPoolWidget.buildFallbackTooltip(item, rarityColor, displayName)
-                            : jsonItem == null
+                            : apiItem == null
                                     ? LootrunLootPoolPage.LootPoolWidget.buildFallbackTooltip(item, rarityColor, displayName)
-                                    : LootrunLootPoolPage.LootPoolWidget.buildTooltipFromApi(item, jsonItem, rarityColor, displayName);
+                                    : LootrunLootPoolPage.LootPoolWidget.buildTooltipFromApi(item, apiItem, rarityColor, displayName);
                 }
             }
 

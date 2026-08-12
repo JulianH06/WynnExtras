@@ -1,6 +1,6 @@
 package julianh06.wynnextras.utils;
 
-import julianh06.wynnextras.features.crafting.data.CraftingDataService;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.features.crafting.model.IngredientInfo;
 import julianh06.wynnextras.features.crafting.model.RangedValue;
 import julianh06.wynnextras.features.crafting.model.Skill;
@@ -11,7 +11,7 @@ import java.util.function.Function;
 
 public class CraftingUtils {
     public static IngredientInfo getIng(String name) {
-        return CraftingDataService.getInstance().getIngredient(name);
+        return WynnDataService.getInstance().getIngredient(name);
     }
 
     public static StatPossibleValues applyMultiplier(StatPossibleValues value, Double multiplier) {

@@ -11,7 +11,7 @@ import julianh06.wynnextras.utils.render.VerticalAlignment;
 import julianh06.wynnextras.utils.ContainerUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
-import julianh06.wynnextras.features.crafting.data.CraftingDataService;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
 import julianh06.wynnextras.features.crafting.data.VcitCompat;
@@ -616,8 +616,8 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             return;
         }
 
-        CraftingDataService dataService = CraftingDataService.getInstance();
-        if (dataService.getState() != CraftingDataService.State.READY) {
+        WynnDataService dataService = WynnDataService.getInstance();
+        if (dataService.getState() != WynnDataService.State.READY) {
             wbStatusMessage = dataService.getStatusMessage();
             return;
         }
@@ -637,7 +637,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             return;
         }
 
-        CraftingDataService.RecipeData recipeData = dataService.getRecipeByWynnBuilderId(craft.recipeId());
+        WynnDataService.RecipeData recipeData = dataService.getRecipeByWynnBuilderId(craft.recipeId());
         if (recipeData == null) {
             wbStatusMessage = "Unknown recipe ID: " + craft.recipeId();
             return;
@@ -651,7 +651,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             return;
         }
 
-        List<CraftingDataService.Material> materials = recipeData.materials();
+        List<WynnDataService.Material> materials = recipeData.materials();
         if (materials == null || materials.size() < 2) {
             wbStatusMessage = "Could not determine materials for this recipe.";
             return;
@@ -659,7 +659,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         List<ItemRequirement> requirements = new ArrayList<>();
         for (int m = 0; m < 2; m++) {
-            CraftingDataService.Material mat = materials.get(m);
+            WynnDataService.Material mat = materials.get(m);
             requirements.add(new ItemRequirement("materials", normalizeMaterialName(mat.item()), mat.amount()));
         }
 

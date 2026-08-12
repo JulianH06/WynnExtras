@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.shoppinglist.service;
 
-import julianh06.wynnextras.features.crafting.data.CraftingDataService;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.features.crafting.wynnbuilder.DecodedCraft;
 import julianh06.wynnextras.features.crafting.wynnbuilder.WynnBuilderBuildDecoder;
 import julianh06.wynnextras.features.shoppinglist.model.IngredientRequirement;
@@ -16,13 +16,13 @@ import java.util.List;
 import java.util.Locale;
 
 public class WynnBuilderDecoder {
-    private final CraftingDataService dataService;
+    private final WynnDataService dataService;
 
     public WynnBuilderDecoder() {
-        this(CraftingDataService.getInstance());
+        this(WynnDataService.getInstance());
     }
 
-    public WynnBuilderDecoder(CraftingDataService dataService) {
+    public WynnBuilderDecoder(WynnDataService dataService) {
         this.dataService = dataService;
     }
 
@@ -30,7 +30,7 @@ public class WynnBuilderDecoder {
         if (input == null || input.isBlank()) {
             throw new IllegalArgumentException("WynnBuilder URL must not be blank");
         }
-        if (dataService.getState() != CraftingDataService.State.READY) {
+        if (dataService.getState() != WynnDataService.State.READY) {
             throw new IllegalStateException(dataService.getStatusMessage());
         }
 
@@ -55,7 +55,7 @@ public class WynnBuilderDecoder {
     }
 
     private List<IngredientRequirement> requirements(DecodedCraft craft) {
-        CraftingDataService.RecipeData recipe = dataService.getRecipeByWynnBuilderId(craft.recipeId());
+        WynnDataService.RecipeData recipe = dataService.getRecipeByWynnBuilderId(craft.recipeId());
         if (recipe == null) {
             throw new IllegalArgumentException("Unknown WynnBuilder recipe ID: " + craft.recipeId());
         }
@@ -77,9 +77,9 @@ public class WynnBuilderDecoder {
                     0));
         }
 
-        List<CraftingDataService.Material> materials = recipe.materials();
+        List<WynnDataService.Material> materials = recipe.materials();
         for (int index = 0; index < materials.size(); index++) {
-            CraftingDataService.Material material = materials.get(index);
+            WynnDataService.Material material = materials.get(index);
             int tier = index == 0 ? craft.mat1Tier() : craft.mat2Tier();
             requirements.add(IngredientRequirement.material(
                     IngredientNormalizer.key(material.item()),
