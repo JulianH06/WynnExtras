@@ -2805,19 +2805,15 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 
-    // Cached highlight-texture config so we don't reflect into Wynntils config options
-    // on every slot draw (was 1 lookup per highlighted slot per frame).
-    private static Texture highlightTexture = Texture.HIGHLIGHT_WYNN;
     private static boolean highlightRenderInInv = false;
 
     private static void refreshHighlightCfg() {
         try {
             if (itemHighlightFeature == null)
                 itemHighlightFeature = WynntilsBankAdapter.getFeature("ItemHighlightFeature").orElse(null);
-            highlightTexture = ItemHighlightRenderer.getConfiguredHighlightTexture();
+            ItemHighlightRenderer.refreshWynntilsHighlightTexture();
             highlightRenderInInv = WynntilsBankAdapter.booleanConfig(itemHighlightFeature, "inventoryHighlightEnabled");
         } catch (Exception ignored) {
-            highlightTexture = Texture.HIGHLIGHT_WYNN;
             highlightRenderInInv = false;
         }
     }
@@ -2938,9 +2934,8 @@ public class BankOverlay2 extends WEHandledScreen {
     private static void renderHighlightOverlay(DrawContext context, CustomColor color, int x, int y) {
          if (!Objects.equals(color, CustomColor.NONE)) {
              try {
-                 ItemHighlightRenderer.drawHighlightTexture(
+                 ItemHighlightRenderer.drawWynntilsHighlightTexture(
                      context,
-                     highlightTexture,
                      color, (float)(x - 8), (float)(y - 8), 32.0F, 32.0F);
              } catch (Exception ignored) {}
          }

@@ -33,11 +33,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class WeightDisplay {
     public record WeightData(String weightName, Map<String, Float> identifications, Float score) {}
     public record ItemData(String name, List<WeightData> data, int index) {}
+    private record ParsedIdentification(String apiKey, String rawValue, float current) {}
+    private record StatRangeCandidate(String internalName, Map<String, float[]> ranges) {}
 
     public static final Map<String, ItemData> itemCache = new ConcurrentHashMap<>();
     public static final Map<Integer, ItemData> weightCacheByHash = new ConcurrentHashMap<>();
     public static final Map<String, Map<String, float[]>> itemStatRanges = new ConcurrentHashMap<>();
     public static final Map<Integer, Map<String, Float>> tooltipIdentCache = new ConcurrentHashMap<>();
+    private static final Map<String, List<StatRangeCandidate>> itemStatRangeCandidates = new ConcurrentHashMap<>();
 
     private static boolean upPressed = false;
     private static boolean downPressed = false;
@@ -70,6 +73,10 @@ public class WeightDisplay {
              String cleanName = extractCleanName(stack);
              if (!isTrackedMythic(stack)) return;
              if (isUnidentified(stack)) return;
+
+             // Fabric builds the vanilla tooltip before Wynntils replaces its rendered lines.
+             // Snapshot the original item lore here so all later consumers use Wynncraft's values.
+             captureOriginalIdentifications(stack, cleanName);
 
              if (upPressed || downPressed) {
                  MinecraftClient mc = MinecraftClient.getInstance();
@@ -163,47 +170,100 @@ public class WeightDisplay {
     }
 
     private static Map<String, Float> extractIdentificationsFromLore(ItemStack stack, String itemName) {
-        var lore = stack.get(DataComponentTypes.LORE);
-        if (lore == null || lore.lines().isEmpty()) {
-            return Map.of();
-        }
-
-        Map<String, float[]> ranges = itemStatRanges.get(itemName);
-        if (ranges == null) {
-            return Map.of();
-        }
-
-        Map<String, Float> result = new HashMap<>();
-        for (Text line : lore.lines()) {
-            String raw = line.getString();
-            java.util.regex.Matcher m = VANILLA_PATTERN.matcher(raw);
-            if (!m.matches()) continue;
-
-            String statName = m.group(1).strip();
-            String rawValue = m.group(2);
-            String[] keyAndRaw = resolveIdentKey(statName, rawValue);
-            String apiKey = keyAndRaw[0];
-
-            float[] range = ranges.get(apiKey);
-            if (range == null) {
-                continue;
+        try {
+            var lore = stack.get(DataComponentTypes.LORE);
+            if (lore == null || lore.lines().isEmpty()) {
+                return Map.of();
             }
 
-            java.util.regex.Matcher numM = java.util.regex.Pattern.compile("[+-]?([\\d,]+(?:\\.\\d+)?)").matcher(rawValue);
-            if (!numM.find()) continue;
-            float current = Float.parseFloat(numM.group(1).replace(",", ""));
+            List<ParsedIdentification> parsed = new ArrayList<>();
+            for (Text line : lore.lines()) {
+                String raw = line.getString();
+                java.util.regex.Matcher m = VANILLA_PATTERN.matcher(raw);
+                if (!m.matches()) continue;
 
-            float min = range[0], max = range[1];
-            if (max == min) continue;
+                String statName = m.group(1).strip();
+                String rawValue = m.group(2);
+                String[] keyAndRaw = resolveIdentKey(statName, rawValue);
+                String apiKey = keyAndRaw[0];
 
-            float percent = (current - min) / (max - min) * 100f;
-            if(apiKey.contains("SpellCost") ^ rawValue.contains("-")) { //Invert for negative stats or (exclusive) if it's a spell cost stat
-                percent = 100 - percent;
+                java.util.regex.Matcher numM = java.util.regex.Pattern.compile("[+-]?([\\d,]+(?:\\.\\d+)?)").matcher(rawValue);
+                if (!numM.find()) continue;
+                float current = Float.parseFloat(numM.group(1).replace(",", ""));
+                parsed.add(new ParsedIdentification(apiKey, rawValue, current));
             }
-            percent = Math.clamp(percent, 0f, 100f);
-            result.put(apiKey, percent);
+
+            Map<String, float[]> ranges = selectStatRanges(itemName, parsed);
+            if (ranges == null) return Map.of();
+
+            Map<String, Float> result = new HashMap<>();
+            for (ParsedIdentification identification : parsed) {
+                String apiKey = identification.apiKey();
+                String rawValue = identification.rawValue();
+                float[] range = ranges.get(apiKey);
+                if (range == null) continue;
+                float min = range[0], max = range[1];
+                if (max == min) continue;
+
+                float percent = (identification.current() - min) / (max - min) * 100f;
+                if(apiKey.contains("SpellCost") ^ rawValue.contains("-")) { //Invert for negative stats or (exclusive) if it's a spell cost stat
+                    percent = 100 - percent;
+                }
+                percent = Math.clamp(percent, 0f, 100f);
+                result.put(apiKey, percent);
+            }
+            return result;
+        } catch (RuntimeException ignored) {
+            return Map.of();
         }
-        return result;
+    }
+
+    private static Map<String, float[]> selectStatRanges(
+            String itemName,
+            List<ParsedIdentification> identifications
+    ) {
+        List<StatRangeCandidate> candidates = itemStatRangeCandidates.get(itemName);
+        if (candidates == null || candidates.isEmpty()) return itemStatRanges.get(itemName);
+
+        StatRangeCandidate best = null;
+        double bestPenalty = Double.POSITIVE_INFINITY;
+        int bestMatches = -1;
+        boolean bestExactInternalName = false;
+
+        for (StatRangeCandidate candidate : candidates) {
+            double penalty = 0d;
+            int matches = 0;
+            for (ParsedIdentification identification : identifications) {
+                float[] range = candidate.ranges().get(identification.apiKey());
+                if (range == null) continue;
+                matches++;
+                float span = Math.max(1f, range[1] - range[0]);
+                if (identification.current() < range[0]) {
+                    penalty += (range[0] - identification.current()) / span;
+                } else if (identification.current() > range[1]) {
+                    penalty += (identification.current() - range[1]) / span;
+                }
+            }
+
+            boolean exactInternalName = itemName.equals(candidate.internalName());
+            if (penalty < bestPenalty
+                    || (Double.compare(penalty, bestPenalty) == 0 && matches > bestMatches)
+                    || (Double.compare(penalty, bestPenalty) == 0 && matches == bestMatches
+                    && exactInternalName && !bestExactInternalName)) {
+                best = candidate;
+                bestPenalty = penalty;
+                bestMatches = matches;
+                bestExactInternalName = exactInternalName;
+            }
+        }
+        return best == null ? itemStatRanges.get(itemName) : best.ranges();
+    }
+
+    private static void captureOriginalIdentifications(ItemStack stack, String itemName) {
+        Map<String, Float> identifications = extractIdentificationsFromLore(stack, itemName);
+        if (!identifications.isEmpty()) {
+            tooltipIdentCache.put(stack.getComponents().hashCode(), Map.copyOf(identifications));
+        }
     }
 
     public static void populateStatRangesFromDatabase() {
@@ -216,25 +276,56 @@ public class WeightDisplay {
             return;
         }
 
-        for (String itemName : itemCache.keySet()) {
-            com.google.gson.JsonObject itemJson = WynncraftApiHandler.getCachedItemDatabase().get(itemName);
-            if (itemJson == null || !itemJson.has("identifications")) continue;
+        Map<String, List<StatRangeCandidate>> candidatesByDisplayName = new HashMap<>();
+        for (Map.Entry<String, JsonObject> databaseEntry
+                : WynncraftApiHandler.getCachedItemDatabase().entrySet()) {
+            JsonObject itemJson = databaseEntry.getValue();
+            if (!itemJson.has("identifications")) continue;
 
-            com.google.gson.JsonObject ids = itemJson.getAsJsonObject("identifications");
-            Map<String, float[]> ranges = new HashMap<>();
-            for (Map.Entry<String, com.google.gson.JsonElement> entry : ids.entrySet()) {
-                if (!entry.getValue().isJsonObject()) continue;
-                com.google.gson.JsonObject rangeObj = entry.getValue().getAsJsonObject();
-                if (!rangeObj.has("min") || !rangeObj.has("max")) continue;
-                float a = Math.abs(rangeObj.get("min").getAsFloat());
-                float b = Math.abs(rangeObj.get("max").getAsFloat());
-                float[] range = new float[]{Math.min(a, b), Math.max(a, b)};
-                ranges.put(entry.getKey(), range);
-            }
-            if (!ranges.isEmpty()) {
-                itemStatRanges.put(itemName, ranges);
+            String internalName = itemJson.has("internalName")
+                    ? itemJson.get("internalName").getAsString()
+                    : databaseEntry.getKey();
+            String displayName = itemJson.has("displayName")
+                    ? itemJson.get("displayName").getAsString()
+                    : internalName;
+            Map<String, float[]> ranges = extractStatRanges(itemJson.getAsJsonObject("identifications"));
+            if (ranges.isEmpty()) continue;
+
+            StatRangeCandidate candidate = new StatRangeCandidate(internalName, Map.copyOf(ranges));
+            candidatesByDisplayName.computeIfAbsent(displayName, ignored -> new ArrayList<>()).add(candidate);
+            if (!displayName.equals(internalName)) {
+                candidatesByDisplayName.computeIfAbsent(internalName, ignored -> new ArrayList<>()).add(candidate);
             }
         }
+
+        itemStatRanges.clear();
+        itemStatRangeCandidates.clear();
+        for (String itemName : itemCache.keySet()) {
+            List<StatRangeCandidate> candidates = candidatesByDisplayName.get(itemName);
+            if (candidates == null || candidates.isEmpty()) continue;
+
+            List<StatRangeCandidate> ordered = candidates.stream()
+                    .distinct()
+                    .sorted(Comparator.comparing(candidate -> !itemName.equals(candidate.internalName())))
+                    .toList();
+            itemStatRangeCandidates.put(itemName, ordered);
+            itemStatRanges.put(itemName, ordered.getFirst().ranges());
+        }
+        tooltipIdentCache.clear();
+        weightCacheByHash.clear();
+    }
+
+    private static Map<String, float[]> extractStatRanges(JsonObject ids) {
+        Map<String, float[]> ranges = new HashMap<>();
+        for (Map.Entry<String, JsonElement> entry : ids.entrySet()) {
+            if (!entry.getValue().isJsonObject()) continue;
+            JsonObject rangeObj = entry.getValue().getAsJsonObject();
+            if (!rangeObj.has("min") || !rangeObj.has("max")) continue;
+            float a = Math.abs(rangeObj.get("min").getAsFloat());
+            float b = Math.abs(rangeObj.get("max").getAsFloat());
+            ranges.put(entry.getKey(), new float[]{Math.min(a, b), Math.max(a, b)});
+        }
+        return ranges;
     }
 
     public static String extractCleanName(ItemStack stack) {
@@ -384,7 +475,7 @@ public class WeightDisplay {
             Map.entry("Jump Height", "jumpHeight"),
             Map.entry("Poison", "poison"),
             Map.entry("Loot", "lootBonus"),
-            Map.entry("Combat Experience", "xpBonus")
+            Map.entry("Combat Experience", "combatExperience")
     );
 
     private static String fallbackCamelCase(String stat) {

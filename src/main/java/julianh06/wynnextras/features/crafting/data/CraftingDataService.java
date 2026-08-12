@@ -384,7 +384,13 @@ public final class CraftingDataService {
         for (JsonElement element : root.getAsJsonArray()) {
             JsonObject object = requiredObject(element, "item");
             String name = requiredString(object, "internalName");
-            if (result.put(name, object.deepCopy()) != null) throw new IllegalStateException("Duplicate item " + name);
+            JsonObject existing = result.putIfAbsent(name, object.deepCopy());
+            if (existing == null) continue;
+
+            boolean existingIngredient = "ingredient".equals(optionalString(existing, "type"));
+            boolean currentIngredient = "ingredient".equals(optionalString(object, "type"));
+            if (existingIngredient && !currentIngredient) result.put(name, object.deepCopy());
+            WynnExtras.LOGGER.warn("Ignoring duplicate item database entry for " + name);
         }
         return Map.copyOf(result);
     }

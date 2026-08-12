@@ -1,9 +1,9 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.compat.wynntils.WynntilsCompat;
 import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.utils.MinecraftUtils;
-import julianh06.wynnextras.utils.render.Texture;
 import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
@@ -47,7 +47,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
     static Identifier dungeonBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/aspecttabbackground_dark.png");
 
     private static ItemStack currentHovered;
-    private static Texture highlightTexture = Texture.HIGHLIGHT_WYNN;
     private static final float WYNNTILS_ITEM_BACKGROUND_SIZE = 180f;
     private static final float STANDALONE_ITEM_BACKGROUND_SIZE = 110f;
     private static final CustomColor LOCKED_ASPECT_TINT = new CustomColor(0, 0, 0, 96);
@@ -76,7 +75,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         if (!openedAspectPage) {
             openedAspectPage = true;
-            highlightTexture = ItemHighlightRenderer.getConfiguredHighlightTexture();
+            ItemHighlightRenderer.refreshWynntilsHighlightTexture();
             currentPlayerAspectData = null;
             fetchStatus = null;
             currentPage = Page.Overview;
@@ -595,12 +594,12 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
         private void drawItemBackground(DrawContext ctx, CustomColor color) {
             float scale = ui.getScaleFactorF();
 
-            if (ItemHighlightRenderer.usesWynntilsHighlights()) {
+            if (WynntilsCompat.isLoaded()) {
                 float backgroundX = (x + (width - WYNNTILS_ITEM_BACKGROUND_SIZE) / 2f) / scale;
                 float backgroundY = (y + (height - WYNNTILS_ITEM_BACKGROUND_SIZE) / 2f) / scale;
                 float backgroundSize = WYNNTILS_ITEM_BACKGROUND_SIZE / scale;
-                ItemHighlightRenderer.drawHighlightTexture(
-                        ctx, highlightTexture, color,
+                ItemHighlightRenderer.drawWynntilsHighlightTexture(
+                        ctx, color,
                         backgroundX, backgroundY, backgroundSize, backgroundSize);
                 return;
             }
@@ -608,8 +607,8 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             float backgroundX = (x + (width - STANDALONE_ITEM_BACKGROUND_SIZE) / 2f) / scale;
             float backgroundY = (y + (height - STANDALONE_ITEM_BACKGROUND_SIZE) / 2f) / scale;
             float backgroundSize = STANDALONE_ITEM_BACKGROUND_SIZE / scale;
-            ItemHighlightRenderer.drawHighlightTexture(
-                    ctx, null, color,
+            ItemHighlightRenderer.drawStandaloneHighlight(
+                    ctx, color,
                     backgroundX, backgroundY, backgroundSize, backgroundSize);
         }
     }

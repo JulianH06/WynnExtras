@@ -2,6 +2,7 @@ package julianh06.wynnextras.utils.render;
 
 import net.minecraft.util.Identifier;
 
+// These textures are unavailable without Wynntils installed, avoid using them
 public enum Texture {
     FAVORITE_ICON("icons/generic/favorite_icon.png", 18, 18),
     WYNN_MAP_TEXTURES("map/map_borders/wynn_map_textures.png", 126, 256),

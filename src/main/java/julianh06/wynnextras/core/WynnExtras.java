@@ -248,7 +248,11 @@ public class WynnExtras implements ClientModInitializer {
 			BankOverlay2.invalidateBagTotalCache();
 			WynncraftApiHandler.load();
 
-			CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool).thenRunAsync(WeightDisplay::populateStatRangesFromDatabase);
+			CompletableFuture<Void> itemDatabaseFuture = WynncraftApiHandler.fetchItemDatabase()
+					.thenAccept(WynncraftApiHandler::setCachedItemDatabase);
+			CompletableFuture<Void> weightProfilesFuture = CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool);
+			CompletableFuture.allOf(itemDatabaseFuture, weightProfilesFuture)
+					.thenRunAsync(WeightDisplay::populateStatRangesFromDatabase);
 		});
 
 		// Flush any pending (debounced) achievement upload when leaving a server, so a change made
