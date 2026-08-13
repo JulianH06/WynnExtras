@@ -13,16 +13,22 @@ import java.util.List;
 public final class ContainerUtils {
     private ContainerUtils() {}
 
-    public static void clickOnSlot(int slot, int syncId, int mouseButton, List<ItemStack> ignoredStacks) {
-        click(slot, syncId, mouseButton, SlotActionType.PICKUP);
+
+
+    public static void clickOnSlot(int slot, int syncId, int mouseButton, List<ItemStack> stacks) {
+        click(slot, syncId, mouseButton, SlotActionType.PICKUP, stacks);
     }
 
-    public static void shiftClickOnSlot(int slot, int syncId, int mouseButton, List<ItemStack> ignoredStacks) {
-        click(slot, syncId, mouseButton, SlotActionType.QUICK_MOVE);
+    public static void shiftClickOnSlot(int slot, int syncId, int mouseButton, List<ItemStack> stacks) {
+        click(slot, syncId, mouseButton, SlotActionType.QUICK_MOVE, stacks);
     }
 
     public static void pressKeyOnSlot(int slot, int syncId, int hotbarKey, List<ItemStack> stacks) {
-        if (MinecraftUtils.mc() == null) return;
+        click(slot, syncId, hotbarKey, SlotActionType.SWAP, stacks);
+    }
+
+    private static void click(int slot, int syncId, int button, SlotActionType action, List<ItemStack> stacks) {
+        if (MinecraftUtils.mc() == null || stacks == null) return;
         if (MinecraftUtils.mc().getNetworkHandler() == null || slot < 0 || slot >= stacks.size()) return;
         try {
             ComponentChangesHash.ComponentHasher hasher = MinecraftUtils.mc().getNetworkHandler().getComponentHasher();
@@ -33,16 +39,11 @@ public final class ContainerUtils {
                     syncId,
                     0,
                     (short) slot,
-                    (byte) hotbarKey,
-                    SlotActionType.SWAP,
+                    (byte) button,
+                    action,
                     modifiedStacks,
                     clickedStack
             ));
         } catch (Throwable ignored) {}
-    }
-
-    private static void click(int slot, int syncId, int mouseButton, SlotActionType action) {
-        if (MinecraftUtils.mc().interactionManager == null || MinecraftUtils.localPlayerOrNull() == null) return;
-        MinecraftUtils.mc().interactionManager.clickSlot(syncId, slot, mouseButton, action, MinecraftUtils.player());
     }
 }
