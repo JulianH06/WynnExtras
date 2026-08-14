@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 @WEModule
 public class WynncraftApiHandler {
     public static WynncraftApiHandler INSTANCE = new WynncraftApiHandler();
+    private static volatile Boolean lastSyncedAspectPublished;
 
     public transient final AtomicInteger aspectFetchGeneration = new AtomicInteger(0);
     public transient final AtomicBoolean isFetchingAspects = new AtomicBoolean(false);
@@ -619,6 +620,9 @@ public class WynncraftApiHandler {
 
         LocalAspectStorage.save(map);
 
+        if (WynnExtrasConfig.INSTANCE.doNotPublishOwnAspects) {
+            return;
+        }
 
         if(WynnExtras.isOnBeta()) {
             return;
@@ -705,6 +709,83 @@ public class WynncraftApiHandler {
                 e.printStackTrace();
             }
         });
+    }
+
+    /** Updates whether stored personal aspects are publicly visible. */
+    public static void syncAspectPublication(boolean published, boolean uploadWhenPublished) {
+        MojangAuth.getWEToken().thenAccept(token -> {
+            if (token != null) syncAspectPublication(token, published, uploadWhenPublished);
+        }).exceptionally(ex -> {
+            BackendErrorLogger.error("aspect-publication", "Could not update aspect publication: " + ex.getMessage());
+            return null;
+        });
+    }
+
+    /** Uses an already acquired token so periodic privacy sync does not trigger a second login. */
+    public static void syncAspectPublication(String token, boolean uploadWhenPublished) {
+        syncAspectPublication(token, !WynnExtrasConfig.INSTANCE.doNotPublishOwnAspects, uploadWhenPublished);
+    }
+
+    private static void syncAspectPublication(String token, boolean published, boolean uploadWhenPublished) {
+        if (token == null) return;
+        JsonObject body = new JsonObject();
+        body.addProperty("published", published);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://wynnextras.com/aspects/publication"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", token)
+                .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                .timeout(Duration.ofSeconds(8))
+                .build();
+
+        ApiRequestHelper.sendWithAuthRetry(request, body)
+                .thenAccept(response -> {
+                    if (response == null) return;
+                    if (response.statusCode() == 200) {
+                        lastSyncedAspectPublished = published;
+                        if (published && uploadWhenPublished) uploadStoredAspects(token);
+                    } else {
+                        BackendErrorLogger.error("aspect-publication", "Aspect publication update failed: " + response.statusCode());
+                    }
+                })
+                .exceptionally(ex -> {
+                    BackendErrorLogger.error("aspect-publication", "Aspect publication update failed: " + ex.getMessage());
+                    return null;
+                });
+    }
+
+    public static boolean needsAspectPublicationSync() {
+        boolean published = !WynnExtrasConfig.INSTANCE.doNotPublishOwnAspects;
+        return lastSyncedAspectPublished == null || lastSyncedAspectPublished != published;
+    }
+
+    private static void uploadStoredAspects(String token) {
+        JsonArray aspects = LocalAspectStorage.load();
+        if (aspects == null || aspects.isEmpty()) return;
+
+        JsonObject payload = new JsonObject();
+        payload.addProperty("modVersion", CurrentVersionData.INSTANCE.version);
+        payload.add("aspects", aspects.deepCopy());
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://wynnextras.com/aspects"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", token)
+                .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                .timeout(Duration.ofSeconds(8))
+                .build();
+
+        ApiRequestHelper.sendWithAuthRetry(request, payload)
+                .thenAccept(response -> {
+                    if (response != null && response.statusCode() != 200) {
+                        BackendErrorLogger.error("aspect-upload", "Stored aspect sync failed: " + response.statusCode());
+                    }
+                })
+                .exceptionally(ex -> {
+                    BackendErrorLogger.error("aspect-upload", "Stored aspect sync failed: " + ex.getMessage());
+                    return null;
+                });
     }
 
     public static int parseAspectAmount(Pair<String, String> aspect) {

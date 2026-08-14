@@ -379,6 +379,11 @@ public class WynnExtrasConfig {
     public boolean uploadAchievements = true;
     public boolean showAchievementUnlockMessages = true;
 
+    // ==================== PRIVACY ====================
+    public boolean anonymizeTelemetry = false;
+    public boolean doNotPublishOwnBadge = false;
+    public boolean doNotPublishOwnAspects = false;
+
     // ==================== CHAT PEEK ====================
     public boolean chatPeekEnabled = false;
     public int chatPeekKey = GLFW.GLFW_KEY_Y;

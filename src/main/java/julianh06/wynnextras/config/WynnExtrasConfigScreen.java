@@ -5,12 +5,14 @@ import static julianh06.wynnextras.config.ConfigTheme.*;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.features.achievements.AchievementScreen;
+import julianh06.wynnextras.features.badges.BadgeService;
 import julianh06.wynnextras.features.spellhider.SpellProfiles;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.tetris.TetrisScreen;
 import julianh06.wynnextras.utils.LinkUtils;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -51,6 +53,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     private final Screen parent;
     private final WynnExtrasConfig config;
+    private final boolean originalAnonymizeTelemetry;
+    private final boolean originalDoNotPublishOwnBadge;
+    private final boolean originalDoNotPublishOwnAspects;
 
     // ==================== STATE ====================
     private static int lastSelectedCategory = 0;
@@ -95,6 +100,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         super(Text.literal("WynnExtras Configuration"));
         this.parent = parent;
         this.config = WynnExtrasConfig.INSTANCE;
+        this.originalAnonymizeTelemetry = config.anonymizeTelemetry;
+        this.originalDoNotPublishOwnBadge = config.doNotPublishOwnBadge;
+        this.originalDoNotPublishOwnAspects = config.doNotPublishOwnAspects;
         initCategories();
     }
 
@@ -119,7 +127,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     )))
             .sub("Links")
                 .add(button("Discord", "Join the WynnExtras Discord server", (x) -> {
-                    LinkUtils.openLink("https://discord.gg/UbC6vZDaD5");
+                    LinkUtils.openLink("https://wynnextras.com/discord");
                 }, "Open"))
                 .add(button("Modrinth", "WynnExtras on Modrinth", (x) -> {
                     LinkUtils.openLink("https://modrinth.com/mod/wynnextras");
@@ -838,6 +846,16 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
             .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
                     () -> config.removeChroma, v -> config.removeChroma = v))
+            .sub("Privacy")
+                .add(toggle("Anonymize Telemetry", "Use an anonymous identifier instead of associating usage statistics with your Minecraft UUID",
+                        () -> config.anonymizeTelemetry, v -> config.anonymizeTelemetry = v))
+                .add(toggle("Do Not Publish Own Badge", "Hide your WynnExtras badge from other players and stop uploading it",
+                        () -> config.doNotPublishOwnBadge, v -> config.doNotPublishOwnBadge = v))
+                .add(toggle("Do Not Publish Own Aspects", "Hide your personal aspects and stop uploading them",
+                        () -> config.doNotPublishOwnAspects, v -> config.doNotPublishOwnAspects = v))
+                .add(button("Privacy policy", "You can find more information here", (x) -> {
+                    LinkUtils.openLink("https://wynnextras.com/privacy");
+                }, "Open"))
             .sub("Debug")
                 .add(keybind("Item Components Key", "Show the hovered container item's components in a debug window",
                         () -> config.debugItemComponentsKey, v -> config.debugItemComponentsKey = v,
@@ -1727,6 +1745,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 saveCurrentScreenState();
                 WynnExtrasConfig.save();
                 WynnExtrasConfig.load();
+                applyPrivacyChanges();
                 client.setScreen(parent);
                 MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
@@ -2175,6 +2194,17 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
     private void saveCurrentScreenState() {
         restoreExpandedSubsBeforeSearch();
         saveLastScreenState(selectedCategory, scrollTarget, categories);
+    }
+
+    private void applyPrivacyChanges() {
+        WynnExtrasConfig saved = WynnExtrasConfig.INSTANCE;
+        if (originalAnonymizeTelemetry != saved.anonymizeTelemetry
+                || originalDoNotPublishOwnBadge != saved.doNotPublishOwnBadge) {
+            BadgeService.syncWithServerSoon();
+        }
+        if (originalDoNotPublishOwnAspects != saved.doNotPublishOwnAspects) {
+            WynncraftApiHandler.syncAspectPublication(!saved.doNotPublishOwnAspects, !saved.doNotPublishOwnAspects);
+        }
     }
 
     private static void saveLastScreenState(int selectedCategory, double scrollTarget, List<Category> categories) {
