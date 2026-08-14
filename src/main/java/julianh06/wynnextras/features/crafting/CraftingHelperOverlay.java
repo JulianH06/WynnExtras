@@ -1508,7 +1508,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             if (state == null) return;
             ui.drawButton(x, y - 2, width + 2, height + 3, hovered);
             if (index == state.ordinal() - 1)
-                ui.drawRectBorders(x + 2, y - 1, x + width, y + height - 1, CustomColor.fromHexString("FFFF00"));
+                ui.drawRectBorders(x + 2, y - 1, width - 2, height, CustomColor.fromHexString("FFFF00"));
             ui.drawCenteredText(truncateToWidth(text, Math.max(0, width - 6), 1f), x + width / 2f, y + height / 2f, 1f);
         }
 

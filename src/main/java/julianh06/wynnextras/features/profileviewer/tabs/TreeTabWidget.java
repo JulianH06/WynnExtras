@@ -372,7 +372,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
                         }
                         int yStart = y + 75 + ability.coordinates.y * 75 - PVScreen.scrollOffset + (450 * (ability.page - 1));
                         if(yStart - 25 > y && yStart - 25 < y + 630) {
-                            ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, x + ability.coordinates.x * 75 + 943 + 90, yStart - 7 + 90, CustomColor.fromHexString("FFFF00"));
+                            ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, 90, 90, CustomColor.fromHexString("FFFF00"));
                         }
                     }
                 }

@@ -234,7 +234,7 @@ public class TreeScreen extends WEScreen {
                             }
                             int yStart = y - 25 + ability.coordinates.y * 75 - rightScrollOffset + (450 * (ability.page - 1));
                             if (yStart + 75 > y) {
-                                ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, x + ability.coordinates.x * 75 + 943 + 90, yStart - 7 + 90, CustomColor.fromHexString("FFFF00"));
+                                ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, 90, 90, CustomColor.fromHexString("FFFF00"));
                             }
                         }
                     }
