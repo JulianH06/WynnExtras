@@ -226,7 +226,6 @@ public class WynnExtrasConfig {
     public boolean craftingPreviewBackground = true;
     public int craftingPreviewOverlayX = 20;
     public int craftingPreviewOverlayY = 20;
-    public boolean craftingDynamicTextures = false;
     public boolean craftingHelperReverseOrder = false;
     public float craftingHelperHeightPercent = 0.6f;
     public int craftingHelperWidth = 165;

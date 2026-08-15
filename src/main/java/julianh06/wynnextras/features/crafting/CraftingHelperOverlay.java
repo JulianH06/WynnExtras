@@ -14,7 +14,6 @@ import julianh06.wynnextras.features.crafting.data.CraftableType;
 import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.IRecipeData;
-import julianh06.wynnextras.features.crafting.data.VcitCompat;
 import julianh06.wynnextras.features.crafting.data.recipes.AlchemismRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.CookingRecipes;
 import julianh06.wynnextras.features.crafting.data.recipes.ScribingRecipes;
@@ -42,10 +41,8 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
@@ -1101,7 +1098,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         };
     }
 
-    private static void drawRecipe(DrawContext ctx, int x, int y, int width, int height, int level,
+    private static void drawRecipe(int x, int y, int width, int height, int level,
                                    IRecipeData recipe, UIUtils ui) {
         if (recipe == null) return;
 
@@ -1114,11 +1111,11 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         float separatorX = x + width * 0.8f;
         int materialTextWidth = Math.max(0, (int) (separatorX - (x + 20) - 4));
 
-        drawMaterialIcon(ctx, ui, materials.getFirst().getFirst(), x + 3, y + 2, 14);
+        drawMaterialIcon(ui, materials.getFirst().getFirst(), x + 3, y + 2, 14);
         String firstText = formatMaterialText(materials.getFirst().getFirst().getName(), materials.getFirst().getSecond(), materialTextWidth, 0.85f);
         ui.drawText(firstText, x + 20, y + height / 4f + 1, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 0.85f);
 
-        drawMaterialIcon(ctx, ui, materials.get(1).getFirst(), x + 3, y + 16, 14);
+        drawMaterialIcon(ui, materials.get(1).getFirst(), x + 3, y + 16, 14);
         String secondText = formatMaterialText(materials.get(1).getFirst().getName(), materials.get(1).getSecond(), materialTextWidth, 0.85f);
         ui.drawText(secondText, x + 20, y + 3 * height / 4f - 1, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 0.85f);
     }
@@ -1157,64 +1154,9 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         return (int) Math.ceil(textRenderer.getWidth(text) * textScale);
     }
 
-    private static void drawMaterialIcon(DrawContext ctx, UIUtils ui, IMaterial material, float x, float y, float size) {
-        ItemStack stack = buildMaterialStack(material);
-        if (shouldUseVcit(stack)) {
-            drawItemScaled(ctx, ui, stack, size);
-            return;
-        }
+    private static void drawMaterialIcon(UIUtils ui, IMaterial material, float x, float y, float size) {
         ui.drawImage(material.getTexture(), x, y, size, size);
     }
-
-    private static ItemStack buildMaterialStack(IMaterial material) {
-        ItemStack inventoryMatch = findInventoryMaterial(material);
-        if (inventoryMatch != null && !inventoryMatch.isEmpty()) {
-            return inventoryMatch;
-        }
-        ItemStack stack = new ItemStack(Items.POTION);
-        stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Refined " + material.getName() + " "));
-        return stack;
-    }
-
-    private static ItemStack findInventoryMaterial(IMaterial material) {
-        if (MinecraftUtils.containerMenu() == null) {
-            return null;
-        }
-        List<Slot> slots = MinecraftUtils.containerMenu().slots;
-        for (Slot slot : slots) {
-            try {
-                if (!(slot.inventory instanceof PlayerInventory)) {
-                    continue;
-                }
-                ItemStack stack = slot.getStack();
-                if (stack == null || stack.isEmpty()) {
-                    continue;
-                }
-                Text name = stack.getCustomName();
-                if (name != null && name.getString().contains(material.getName())) {
-                    return stack;
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        return null;
-    }
-
-    private static boolean shouldUseVcit(ItemStack stack) {
-        if (!WynnExtrasConfig.INSTANCE.craftingDynamicTextures) {
-            return false;
-        }
-        return VcitCompat.hasModel(stack);
-    }
-
-    private static void drawItemScaled(DrawContext ctx, UIUtils ui, ItemStack stack, float size) {
-        float scale = (float) ui.sw(size) / 16.0f;
-        ctx.getMatrices().pushMatrix();
-        ctx.getMatrices().scale(scale, scale);
-        ctx.drawItem(stack, 0, 0);
-        ctx.getMatrices().popMatrix();
-    }
-
 
     private enum RecipeState {
         NONE,
@@ -1375,7 +1317,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
             protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
                 //ui.drawRect(x, y, width, height, hovered ? CustomColor.fromHexString("FF0000") : CustomColor.fromHexString("FFFFFF"));
                 ui.drawButton(x, y, width, height, hovered && helperWidget.hovered);
-                drawRecipe(ctx, x, y, width, height, level, recipeData, ui);
+                drawRecipe(x, y, width, height, level, recipeData, ui);
                 ui.drawLine(x + width * 0.8f, y + 2, x + width * 0.8f, y + height - 3, 1f, UIUtils.getVanillaSeparatorColor(hovered && helperWidget.hovered));
                 if (level < 100) {
                     ui.drawCenteredText(String.valueOf(Math.max(1, level)), x + width * 0.9f, y + height / 4f + 1, 0.85f);

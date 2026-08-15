@@ -498,8 +498,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
                         () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
-                .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
-                        () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
                 .add(toggle("Reverse crafting helper order", "Show recipes from lowest to highest level",
                         () -> config.craftingHelperReverseOrder, v -> config.craftingHelperReverseOrder = v))
                 .add(toggle("Auto Start", "Automatically start crafting when a recipe is loaded",
