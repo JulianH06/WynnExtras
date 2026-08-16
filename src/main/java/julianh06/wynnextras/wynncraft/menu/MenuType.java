@@ -9,6 +9,7 @@ public enum MenuType {
     BOOKSHELF,
     CRAFTING_STATION,
     CHARACTER_INFO,
+    TOME,
     CLASS_SELECTION,
     ITEM_IDENTIFIER,
     TRADE_MARKET,

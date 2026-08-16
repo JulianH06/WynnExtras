@@ -21,7 +21,7 @@ public class LocalAspectStorage {
     private static Path getPlayerDir() {
         if (MinecraftUtils.player() == null) return null;
         String uuid = MinecraftUtils.player().getUuidAsString();
-        Path dir = FabricLoader.getInstance().getConfigDir().resolve("wynnextras").resolve("aspects").resolve(uuid);
+        Path dir = FabricLoader.getInstance().getConfigDir().resolve("wynnextras").resolve(uuid).resolve("aspects");
         try { Files.createDirectories(dir); } catch (IOException e) {
             WynnExtras.LOGGER.error("Failed to create aspects directory: " + e.getMessage());
         }

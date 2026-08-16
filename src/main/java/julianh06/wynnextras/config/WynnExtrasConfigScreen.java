@@ -825,6 +825,18 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Crowd sourcing")
                 .add(toggle("Gambits", "Help gather the current gambits so others can see them with /we gambits",
                         () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v))
+            .endSub()
+                .sub("Privacy")
+                .add(toggle("Anonymize Telemetry", "Use an anonymous identifier instead of associating usage statistics with your Minecraft UUID",
+                        () -> config.anonymizeTelemetry, v -> config.anonymizeTelemetry = v))
+                .add(toggle("Do Not Publish Own Badge", "Hide your WynnExtras badge from other players and stop uploading it",
+                        () -> config.doNotPublishOwnBadge, v -> config.doNotPublishOwnBadge = v))
+                .add(toggle("Do Not Publish Own Aspects", "Hide your personal aspects and stop uploading them",
+                        () -> config.doNotPublishOwnAspects, v -> config.doNotPublishOwnAspects = v))
+                .add(button("Privacy policy", "You can find more information here", (x) -> {
+                    LinkUtils.openLink("https://wynnextras.com/privacy");
+                }, "Open"))
+            .endSub()
             .add(toggle("Show Own Nametag", "Render your nametag above your head",
                     () -> config.showOwnNametag, v -> config.showOwnNametag = v))
             .add(toggle("Custom GUI Scale", "Use different scale inside of inventories",
@@ -844,16 +856,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
             .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
                     () -> config.removeChroma, v -> config.removeChroma = v))
-            .sub("Privacy")
-                .add(toggle("Anonymize Telemetry", "Use an anonymous identifier instead of associating usage statistics with your Minecraft UUID",
-                        () -> config.anonymizeTelemetry, v -> config.anonymizeTelemetry = v))
-                .add(toggle("Do Not Publish Own Badge", "Hide your WynnExtras badge from other players and stop uploading it",
-                        () -> config.doNotPublishOwnBadge, v -> config.doNotPublishOwnBadge = v))
-                .add(toggle("Do Not Publish Own Aspects", "Hide your personal aspects and stop uploading them",
-                        () -> config.doNotPublishOwnAspects, v -> config.doNotPublishOwnAspects = v))
-                .add(button("Privacy policy", "You can find more information here", (x) -> {
-                    LinkUtils.openLink("https://wynnextras.com/privacy");
-                }, "Open"))
             .sub("Debug")
                 .add(keybind("Item Components Key", "Show the hovered container item's components in a debug window",
                         () -> config.debugItemComponentsKey, v -> config.debugItemComponentsKey = v,

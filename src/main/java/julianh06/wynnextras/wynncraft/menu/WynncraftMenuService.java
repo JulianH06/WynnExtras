@@ -13,6 +13,7 @@ public final class WynncraftMenuService {
     private static final String MISC_BUCKET_TITLE = "\uDAFF\uDFF0\uE00F\uDAFF\uDF68\uF004";
     private static final String BOOKSHELF_TITLE = "\uDAFF\uDFF0\uE00F\uDAFF\uDF68\uF005";
     private static final String CHARACTER_INFO_TITLE = "\uDAFF\uDFDC\uE003";
+    private static final String TOME_TITLE = "\uDAFF\uDFDB\uE005";
     private static final String CHARACTER_SELECTION_TITLE = "\uDAFF\uDFD5\uE01F";
     private static final String ITEM_IDENTIFIER_TITLE = "\uDAFF\uDFF8\uE018";
     private static final String CRAFTING_STATION_TITLE_PREFIX = "\uDAFF\uDFF8\uE053\uDAFF\uDF80";
@@ -56,6 +57,7 @@ public final class WynncraftMenuService {
         if (MISC_BUCKET_TITLE.equals(title)) return MenuType.MISC_BUCKET;
         if (BOOKSHELF_TITLE.equals(title)) return MenuType.BOOKSHELF;
         if (CHARACTER_INFO_TITLE.equals(title)) return MenuType.CHARACTER_INFO;
+        if (TOME_TITLE.equals(title)) return MenuType.TOME;
         if (CHARACTER_SELECTION_TITLE.equals(title)) return MenuType.CLASS_SELECTION;
         if (ITEM_IDENTIFIER_TITLE.equals(title)) return MenuType.ITEM_IDENTIFIER;
         if (craftingProfession(title) != null) return MenuType.CRAFTING_STATION;

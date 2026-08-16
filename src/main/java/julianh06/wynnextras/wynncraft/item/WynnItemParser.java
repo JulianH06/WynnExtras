@@ -7,7 +7,10 @@ import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
+import net.minecraft.text.Style;
+import net.minecraft.text.StyleSpriteSource;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -31,8 +34,6 @@ public final class WynnItemParser {
     };
 
     private static final Pattern LEVEL = Pattern.compile("(?i)(?:combat\\s+)?(?:lv\\.?|level)(?:\\s+min)?\\D{0,6}(\\d{1,3})");
-    private static final Pattern REQUIREMENT = Pattern.compile("(?i)(strength|dexterity|intelligence|defen[cs]e|agility)(?:\\s+(?:min|req(?:uired)?))?\\D{0,8}(\\d{1,3})");
-    private static final Pattern BONUS = Pattern.compile("(?i)([+-]\\d{1,3})\\s+(strength|dexterity|intelligence|defen[cs]e|agility)\\b");
     private static final Pattern DURABILITY = Pattern.compile("(?i)durability\\D*(\\d+)\\s*/\\s*(\\d+)");
     private static final Pattern USES = Pattern.compile("(?i)(?:uses|charges)\\D*(\\d+)(?:\\s*/\\s*\\d+)?");
     private static final Pattern POUCH = Pattern.compile("(?i)(?:emeralds?|value|capacity)\\D*(\\d[\\d,]*)\\s*/\\s*(\\d[\\d,]*)");
@@ -86,15 +87,12 @@ public final class WynnItemParser {
         EnumMap<SkillPoint, Integer> bonuses = new EnumMap<>(SkillPoint.class);
         Map<String, Integer> ids = new LinkedHashMap<>();
         for (String line : lore) {
-            Matcher requirement = REQUIREMENT.matcher(line);
-            if (requirement.find() && line.toLowerCase(Locale.ROOT).matches(".*(?:min|req|required).*")) {
-                requirements.put(skill(requirement.group(1)), number(requirement.group(2)));
-            }
-            Matcher bonus = BONUS.matcher(line);
-            if (bonus.find()) bonuses.put(skill(bonus.group(2)), number(bonus.group(1)));
             Matcher identification = IDENTIFICATION.matcher(line.trim());
             if (identification.find()) ids.put(normalize(identification.group(2)), number(identification.group(1)));
         }
+        WynnTooltipParser.SkillStats styledStats = WynnTooltipParser.parseSkillStats(styledLore(stack));
+        requirements.putAll(styledStats.requirements());
+        bonuses.putAll(styledStats.bonuses());
 
         Matcher classMatcher = CLASS.matcher(all);
         CharacterClass requiredClass = classMatcher.find() ? CharacterClass.parse(classMatcher.group(1)) : CharacterClass.UNKNOWN;
@@ -113,6 +111,23 @@ public final class WynnItemParser {
         if (component == null) return List.of();
         List<String> result = new ArrayList<>(component.lines().size());
         for (Text line : component.lines()) result.add(clean(line.getString()));
+        return result;
+    }
+
+    private static List<List<WynnTooltipParser.Segment>> styledLore(ItemStack stack) {
+        LoreComponent component = stack.get(DataComponentTypes.LORE);
+        if (component == null) return List.of();
+        List<List<WynnTooltipParser.Segment>> result = new ArrayList<>(component.lines().size());
+        for (Text line : component.lines()) {
+            List<WynnTooltipParser.Segment> segments = new ArrayList<>();
+            line.visit((style, string) -> {
+                String font = null;
+                if (style.getFont() instanceof StyleSpriteSource.Font(Identifier id)) font = id.toString();
+                segments.add(new WynnTooltipParser.Segment(font, string));
+                return Optional.empty();
+            }, Style.EMPTY);
+            result.add(List.copyOf(segments));
+        }
         return result;
     }
 
@@ -200,7 +215,7 @@ public final class WynnItemParser {
         if (text.contains(" wand")) return GearType.WAND;
         if (text.contains(" relik")) return GearType.RELIK;
 
-        boolean weaponStats = text.contains("damage:") || text.contains("attack speed");
+        boolean weaponStats = WynnTooltipParser.hasWeaponStats(text);
         if (weaponStats) {
             CharacterClass required = CharacterClass.parse(text);
             return switch (required) {
@@ -234,11 +249,6 @@ public final class WynnItemParser {
     private static Integer firstNumber(Pattern pattern, String text) {
         Matcher matcher = pattern.matcher(text);
         return matcher.find() ? number(matcher.group(1)) : null;
-    }
-
-    private static SkillPoint skill(String value) {
-        String normalized = value.toUpperCase(Locale.ROOT);
-        return normalized.startsWith("DEFEN") ? SkillPoint.DEFENCE : SkillPoint.valueOf(normalized);
     }
 
     private static int number(String value) {

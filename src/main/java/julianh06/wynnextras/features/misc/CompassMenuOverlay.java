@@ -5,6 +5,7 @@ import julianh06.wynnextras.utils.TooltipUtils;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.loader.SkillPointLoader;
+import julianh06.wynnextras.features.tomes.TomeState;
 import julianh06.wynnextras.utils.HandledScreenAccess;
 import julianh06.wynnextras.utils.UI.WEMenuExtension;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -42,6 +43,18 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     static boolean selectingWeapon = false;
     static ItemStack selectedWeapon = null;
+    private static StatusType statusType = StatusType.IDLE;
+    private static String statusPrimary = "";
+    private static String statusSecondary = "";
+    private static String calculationError;
+
+    public enum StatusType {
+        IDLE,
+        INFO,
+        PROGRESS,
+        SUCCESS,
+        ERROR
+    }
 
     public CompassMenuOverlay() {
         for (int i = 0; i < 4; i++) {
@@ -73,8 +86,7 @@ public class CompassMenuOverlay extends WEMenuExtension {
         ItemStack clicked = focused.getStack();
         WynnItemData item = WynnItemParser.parse(clicked).orElse(null);
         if (item == null || item.category() != ItemCategory.GEAR || !item.gearType().isWeapon()) {
-            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                    Text.of("That's not a valid weapon. Click a weapon item.")));
+            setStatus(StatusType.ERROR, "That is not a valid weapon.", "Select a weapon item or skip selection.");
             return true;
         }
 
@@ -102,9 +114,13 @@ public class CompassMenuOverlay extends WEMenuExtension {
         autoAssignButton.setBounds((int) (xStart + (backgroundWidth - buttonWidth) / 2f), (int) (itemYStart + 22), buttonWidth, 17);
 
         ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("§6Skillpoint helper:"), xStart + backgroundWidth / 2f, yStart + 8, CustomColor.fromHexString("FFFFFF"), 1f);
-        ui.drawCenteredText(Text.of("§7This is an experimental feature, new items"), xStart + backgroundWidth / 2f, (float) (itemYStart + (selectingWeapon ? 57 : 43)), CustomColor.fromHexString("FFFFFF"), 0.67f);
-        ui.drawCenteredText(Text.of("§7and crafteds might not be recognized yet"), xStart + backgroundWidth / 2f, (float) (itemYStart + (selectingWeapon ? 63 : 50)), CustomColor.fromHexString("FFFFFF"), 0.67f);
-        if(selectingWeapon) ui.drawCenteredText(Text.of("§eClick on a weapon if you want to include it in the calculation."), xStart + backgroundWidth / 2f, (float) (itemYStart + 47), CustomColor.fromHexString("FFFFFF"), 0.8f);
+        CustomColor statusColor = statusColor();
+        if (!statusPrimary.isEmpty()) {
+            ui.drawCenteredText(statusPrimary, xStart + backgroundWidth / 2f, itemYStart + 47, statusColor, 0.72f);
+        }
+        if (!statusSecondary.isEmpty()) {
+            ui.drawCenteredText(statusSecondary, xStart + backgroundWidth / 2f, itemYStart + 54, statusColor, 0.67f);
+        }
 
         backgroundWidth -= 32;
         for(int i = 0; i < 4; i++) {
@@ -116,7 +132,6 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        renderHoveredTooltip(ctx, mouseX, mouseY);
     }
 
     public void renderHoveredTooltip(DrawContext ctx, int mouseX, int mouseY) {
@@ -195,6 +210,10 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
         @Override
         protected boolean onClick(int button) {
+            if (SkillPointLoader.getInstance().isLoading()) {
+                setStatus(StatusType.INFO, "Skill point assignment is already running.");
+                return true;
+            }
             if (selectingWeapon) {
                 selectedWeapon = null;
                 selectingWeapon = false;
@@ -204,34 +223,23 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
             selectedWeapon = null;
             selectingWeapon = true;
-            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                    Text.of("Click a weapon in your inventory, or skip weapon selection.")));
+            setStatus(StatusType.INFO, "Click on a weapon in your inventory", "or click Skip weapon selection.");
             return true;
         }
     }
 
     private static void startAssignment() {
+        setStatus(StatusType.INFO, "Calculating required skill points...");
+        calculationError = null;
         int[] required = calculateRequiredSkillPoints(selectedWeapon);
+        if (calculationError != null) {
+            setStatus(StatusType.ERROR, "An equipped item was not recognized:", calculationError);
+            return;
+        }
         if (required == null) {
-            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                    Text.of("No skill point requirements found.")));
+            setStatus(StatusType.ERROR, "No skill point requirements found.");
             return;
         }
-
-        boolean alreadySatisfied =
-                SkillPointState.assigned(SkillPoint.STRENGTH) >= required[0] &&
-                        SkillPointState.assigned(SkillPoint.DEXTERITY) >= required[1] &&
-                        SkillPointState.assigned(SkillPoint.INTELLIGENCE) >= required[2] &&
-                        SkillPointState.assigned(SkillPoint.DEFENCE) >= required[3] &&
-                        SkillPointState.assigned(SkillPoint.AGILITY) >= required[4];
-
-        if (alreadySatisfied) {
-            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                    Text.of("Requirements already satisfied.")));
-            return;
-        }
-
-        if(required.length < 5) return;
 
         SkillPointLoader.getInstance().load(required[0], required[1], required[2], required[3], required[4]);
     }
@@ -266,12 +274,13 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
         List<List<Integer>> permutations = new ArrayList<>();
         generatePermutations(indices, 0, permutations);
+        int[] tomeBonuses = TomeState.guildSkillBonuses();
 
         for (List<Integer> perm : permutations) {
             List<SolvableItem> order = new ArrayList<>();
             for (int idx : perm) order.add(nonWeaponItems.get(idx));
 
-            int[] candidate = evaluateOrder(order, weaponItem);
+            int[] candidate = evaluateOrder(order, weaponItem, tomeBonuses);
 
             if (best == null || isBetter(candidate, best)) {
                 best = candidate;
@@ -284,8 +293,8 @@ public class CompassMenuOverlay extends WEMenuExtension {
         return best;
     }
 
-    private static int[] evaluateOrder(List<SolvableItem> order, SolvableItem weapon) {
-        int[] current = new int[5];
+    private static int[] evaluateOrder(List<SolvableItem> order, SolvableItem weapon, int[] baseBonuses) {
+        int[] current = Arrays.copyOf(baseBonuses, 5);
         int[] assigned = new int[5];
 
         for (SolvableItem entry : order) {
@@ -377,9 +386,7 @@ public class CompassMenuOverlay extends WEMenuExtension {
         if (stack == null || stack.isEmpty()) return null;
         Optional<WynnItemData> data = WynnItemParser.parse(stack);
         if (data.isEmpty()) {
-            try {
-                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4Warning: The following item is not recognized and ignored in the calculation: " + stack.getCustomName().getString()));
-            } catch (Exception ignored) {}
+            calculationError = stack.getName().getString();
             return null;
         }
 
@@ -397,5 +404,29 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     public static void setSelectingWeapon(boolean selectingWeapon) {
         CompassMenuOverlay.selectingWeapon = selectingWeapon;
+    }
+
+    public static void setStatus(StatusType type, String primary) {
+        setStatus(type, primary, "");
+    }
+
+    public static void setStatus(StatusType type, String primary, String secondary) {
+        statusType = type == null ? StatusType.IDLE : type;
+        statusPrimary = primary == null ? "" : primary;
+        statusSecondary = secondary == null ? "" : secondary;
+    }
+
+    public static void clearStatus() {
+        setStatus(StatusType.IDLE, "", "");
+    }
+
+    private static CustomColor statusColor() {
+        return switch (statusType) {
+            case IDLE -> CustomColor.fromHexString("B7B7B7");
+            case INFO -> CustomColor.fromHexString("FFE080");
+            case PROGRESS -> CustomColor.fromHexString("55FFFF");
+            case SUCCESS -> CustomColor.fromHexString("55FF55");
+            case ERROR -> CustomColor.fromHexString("FF5555");
+        };
     }
 }

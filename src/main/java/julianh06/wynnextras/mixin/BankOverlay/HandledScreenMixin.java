@@ -224,6 +224,11 @@ public abstract class HandledScreenMixin {
         if (!(self instanceof InventoryScreen)) {
             ItemComponentsDebugOverlay.render(context, mouseX, mouseY);
         }
+        if (compassMenuOverlay != null
+                && WynnExtrasConfig.INSTANCE.skillpointHelper
+                && WynncraftMenuService.isCurrent(MenuType.CHARACTER_INFO)) {
+            compassMenuOverlay.renderHoveredTooltip(context, mouseX, mouseY);
+        }
     }
 
     @Unique

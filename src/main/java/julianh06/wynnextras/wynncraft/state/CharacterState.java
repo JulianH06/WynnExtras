@@ -4,6 +4,7 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.DisconnectEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.event.WorldChangeEvent;
+import julianh06.wynnextras.features.tomes.TomeState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
@@ -63,6 +64,7 @@ public final class CharacterState {
         if (event.ticks % 5 != 0) return;
         update();
         SkillPointState.updateFromCurrentMenu();
+        TomeState.updateFromCurrentMenu();
     }
 
     @SubscribeEvent

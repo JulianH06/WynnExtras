@@ -7,28 +7,36 @@ import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class SkillPointState {
     private static final Pattern NUMBER = Pattern.compile("(?:^|\\D)(\\d{1,3})(?:\\D|$)");
-    private static final Pattern AVAILABLE = Pattern.compile("(?i)(?:available|remaining)\\s+(?:skill\\s*)?points?\\D*(\\d{1,3})");
+    private static final Pattern AVAILABLE = Pattern.compile("(?i)(?:available|remaining|unassigned|unused)\\s+(?:skill\\s*)?points?\\D*(\\d{1,3})");
     private static final Map<SkillPoint, Integer> ASSIGNED = new EnumMap<>(SkillPoint.class);
     private static int available;
+    private static boolean availableKnown;
+    private static String sourceCharacterId;
     private static long updatedAt;
 
     private SkillPointState() {}
 
     public static int assigned(SkillPoint skill) {
-        return skill == null ? 0 : ASSIGNED.getOrDefault(skill, 0);
+        return skill == null || !isCurrentCharacter() ? 0 : ASSIGNED.getOrDefault(skill, 0);
     }
 
     public static int available() {
         return available;
+    }
+
+    public static boolean isAvailableKnown() {
+        return availableKnown && isCurrentCharacter();
     }
 
     public static long updatedAt() {
@@ -43,7 +51,7 @@ public final class SkillPointState {
             if (screen.getScreenHandler().slots.size() < 16) return;
 
             EnumMap<SkillPoint, Integer> parsed = new EnumMap<>(SkillPoint.class);
-            int parsedAvailable = 0;
+            Integer parsedAvailable = null;
             boolean found = false;
             for (int i = 0; i < 5; i++) {
                 ItemStack stack = screen.getScreenHandler().slots.get(11 + i).getStack();
@@ -53,15 +61,34 @@ public final class SkillPointState {
                     parsed.put(SkillPoint.values()[i], value);
                     found = true;
                 }
-                Matcher availableMatcher = AVAILABLE.matcher(text);
-                if (availableMatcher.find()) parsedAvailable = safeInt(availableMatcher.group(1));
             }
             if (!found) return;
+            if (client.player != null) {
+                Matcher availableMatcher = AVAILABLE.matcher(stackText(client.player.getInventory().getStack(7)));
+                if (availableMatcher.find()) {
+                    parsedAvailable = safeInt(availableMatcher.group(1));
+                }
+            }
+            if (parsedAvailable == null) {
+                for (Slot slot : screen.getScreenHandler().slots) {
+                    Matcher availableMatcher = AVAILABLE.matcher(stackText(slot.getStack()));
+                    if (availableMatcher.find()) {
+                        parsedAvailable = safeInt(availableMatcher.group(1));
+                        break;
+                    }
+                }
+            }
             ASSIGNED.clear();
             ASSIGNED.putAll(parsed);
-            available = parsedAvailable;
+            availableKnown = parsedAvailable != null;
+            available = parsedAvailable == null ? 0 : parsedAvailable;
+            sourceCharacterId = CharacterState.id().orElse(null);
             updatedAt = System.currentTimeMillis();
         } catch (Throwable ignored) {}
+    }
+
+    private static boolean isCurrentCharacter() {
+        return sourceCharacterId != null && Objects.equals(sourceCharacterId, CharacterState.id().orElse(null));
     }
 
     static Integer parseAssigned(String text, SkillPoint skill) {
