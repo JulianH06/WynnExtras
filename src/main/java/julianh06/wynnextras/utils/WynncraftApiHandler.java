@@ -46,10 +46,17 @@ public class WynncraftApiHandler {
     public transient final AtomicBoolean isFetchingAspects = new AtomicBoolean(false);
     private static final long ASPECT_FETCH_RETRY_DELAY_MS = 60_000;
 
-    // Reuse HttpClient instance instead of creating new ones
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    // Creating the HttpClient can block for several seconds, dont initialize it on the render thread.
+    // All requests share the same client.
+    private static final CompletableFuture<HttpClient> HTTP_CLIENT_FUTURE = CompletableFuture.supplyAsync(() ->
+            HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5))
+                    .build());
+
+    private static CompletableFuture<HttpResponse<String>> sendAsync(HttpRequest request) {
+        return HTTP_CLIENT_FUTURE.thenCompose(client ->
+                client.sendAsync(request, HttpResponse.BodyHandlers.ofString()));
+    }
 
     // Use synchronized list to prevent concurrent modification
     public transient List<ApiAspect> aspectList = java.util.Collections.synchronizedList(new ArrayList<>());
@@ -93,7 +100,7 @@ public class WynncraftApiHandler {
                 .GET()
                 .build();
 
-        officialLootPoolsFuture = HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        officialLootPoolsFuture = sendAsync(request)
                 .thenApply(response -> {
                     if (response.statusCode() != 200) {
                         WynnExtras.LOGGER.error("Failed to fetch official loot pools: " + response.statusCode());
@@ -232,7 +239,7 @@ public class WynncraftApiHandler {
                 .GET()
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendAsync(request)
                 .thenApply(response -> {
                     int status = response.statusCode();
                     if (status == 404) return null;
@@ -284,7 +291,7 @@ public class WynncraftApiHandler {
                 .GET()
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendAsync(request)
             .thenApply(response -> {
                 if (response.statusCode() != 200) {
                     WynnExtras.LOGGER.error("Aspect API returned status " + response.statusCode() + " for " + className);
@@ -570,7 +577,7 @@ public class WynncraftApiHandler {
                     .GET()
                     .build();
 
-            return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            return sendAsync(request)
                     .handle((response, ex) -> {
 
                         if (ex != null) {
@@ -909,17 +916,13 @@ public class WynncraftApiHandler {
      */
     public static CompletableFuture<List<LeaderboardEntry>> fetchLeaderboard(int limit) {
         try {
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(3))
-                    .build();
-
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://wynnextras.com/aspects/leaderboard?limit=" + limit))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
 
-            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            return sendAsync(request)
                     .thenApply(response -> {
                         if (response.statusCode() != 200) {
                             BackendErrorLogger.error("aspect-leaderboard", "Failed to fetch leaderboard: " + response.statusCode());
@@ -958,17 +961,13 @@ public class WynncraftApiHandler {
      */
     public static CompletableFuture<List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry>> fetchCrowdsourcedGambits() {
         try {
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(3))
-                    .build();
-
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://wynnextras.com/gambit"))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
 
-            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            return sendAsync(request)
                     .thenApply(response -> {
                         if (response.statusCode() != 200) {
                             BackendErrorLogger.error("gambit-fetch", "Failed to fetch crowdsourced gambits: " + response.statusCode());
@@ -1022,7 +1021,7 @@ public class WynncraftApiHandler {
                 .GET()
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendAsync(request)
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAbilityMapData);
     }
@@ -1033,7 +1032,7 @@ public class WynncraftApiHandler {
                 .GET()
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendAsync(request)
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAbilityTreeData);
     }
