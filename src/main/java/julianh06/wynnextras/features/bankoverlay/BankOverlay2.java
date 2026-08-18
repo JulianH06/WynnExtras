@@ -49,7 +49,6 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
 import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
@@ -4962,10 +4961,7 @@ public class BankOverlay2 extends WEHandledScreen {
             if (BankOverlay.isCharacterBankMissingCharacterId()) return true;
             ScreenHandler currScreenHandler = MinecraftUtils.containerMenu();
             if(currScreenHandler == null) { return false; }
-            if(InputUtil.isKeyPressed(
-                MinecraftClient.getInstance().getWindow(),
-                ((KeybindingAccessor) MinecraftClient.getInstance().options.sneakKey).getBoundKey().getCode())
-            ) {
+            if (MinecraftClient.getInstance().options.sneakKey.isPressed()) {
                 shiftClickOnSlot(46, currScreenHandler.syncId, button, currScreenHandler.getStacks());
             } else {
                 clickOnSlot(46, currScreenHandler.syncId, button, currScreenHandler.getStacks());

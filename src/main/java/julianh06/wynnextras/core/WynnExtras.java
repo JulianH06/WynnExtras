@@ -47,7 +47,6 @@ import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTradeMarke
 import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListHudOverlay;
 import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListMenuExtension;
 import julianh06.wynnextras.features.waypoints.data.WaypointData;
-import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
 import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.TickScheduler;
@@ -58,6 +57,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.*;
 import net.minecraft.text.ClickEvent;
@@ -307,7 +307,7 @@ public class WynnExtras implements ClientModInitializer {
 
 				if (BankOverlay.currentOverlayType != BankOverlayType.NONE
 						&& BankOverlay2.isAnyTextInputFocused()
-						&& key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
+						&& MinecraftClient.getInstance().options.inventoryKey.matchesKey(new KeyInput(key, scancode, mods))) return;
 
 				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)) return;
 

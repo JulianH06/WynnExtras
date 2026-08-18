@@ -1,7 +1,6 @@
 {
   "required": false,
   "package": "julianh06.wynnextras.mixin",
-  "plugin": "julianh06.wynnextras.mixin.ModMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "injectors": {
     "defaultRequire": 0
@@ -39,7 +38,6 @@
     "Accessor.BannerBlockEntityRendererAccessor",
     "Accessor.HandledScreenAccessor",
     "Accessor.ItemRenderStateAccessor",
-    "Accessor.KeybindingAccessor",
     "BankOverlay.DrawContextMixin",
     "BankOverlay.HandledScreenMixin",
     "Invoker.GameRendererInvoker",

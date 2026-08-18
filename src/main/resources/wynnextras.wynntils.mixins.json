@@ -1,7 +1,6 @@
 {
   "required": false,
   "package": "julianh06.wynnextras.compat.wynntils.mixin",
-  "plugin": "julianh06.wynnextras.mixin.ModMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "injectors": {
     "defaultRequire": 0

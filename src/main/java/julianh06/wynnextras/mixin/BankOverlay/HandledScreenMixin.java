@@ -878,7 +878,7 @@ public abstract class HandledScreenMixin {
                 Slot touchHoveredSlot = bankOverlay.getTouchHoveredSlot();
                 if (touchHoveredSlot != null) {
                     MinecraftClient mc = MinecraftClient.getInstance();
-                    if (((julianh06.wynnextras.mixin.Accessor.KeybindingAccessor) mc.options.swapHandsKey).getBoundKey().getCode() == keyCode) {
+                    if (mc.options.swapHandsKey.matchesKey(new KeyInput(keyCode, scanCode, modifiers))) {
                         ScreenHandler handler = MinecraftUtils.containerMenu();
                         if (handler != null) {
                             int slotIndex = touchHoveredSlot.id;
