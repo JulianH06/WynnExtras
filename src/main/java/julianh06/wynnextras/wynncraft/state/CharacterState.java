@@ -6,6 +6,7 @@ import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.tomes.TomeState;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
@@ -15,7 +16,9 @@ import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.text.Text;
 import net.neoforged.bus.api.SubscribeEvent;
 
+import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,7 +26,8 @@ import java.util.regex.Pattern;
 public final class CharacterState {
     private static final Pattern CHARACTER_ID = Pattern.compile("^[a-z0-9]{8}$");
     private static final Pattern LEVEL = Pattern.compile("(?i)(?:combat\\s+)?(?:level|lv\\.?)\\D{0,5}(\\d{1,3})");
-    private static final Pattern WORLD = Pattern.compile("(?i)\\b(WC\\d+)\\b");
+    private static final Pattern WORLD = Pattern.compile("(?i)\\b((?:NA|EU|AS)\\d+)\\b");
+    private static final UUID WORLD_NAME_UUID = UUID.fromString("16ff7452-714f-2752-b3cd-c3cb2068f6af");
 
     private static String id;
     private static CharacterClass characterClass = CharacterClass.UNKNOWN;
@@ -89,11 +93,14 @@ public final class CharacterState {
             String compassId = characterIdFromCompass(client.player.getInventory().getStack(7));
             if (compassId != null) id = compassId;
 
+            String playerListWorld = worldFromPlayerList(client);
+            if (playerListWorld != null) world = playerListWorld;
+
             Scoreboard scoreboard = client.world.getScoreboard();
             for (ScoreboardObjective objective : scoreboard.getObjectives()) {
-                parseLine(objective.getDisplayName().getString());
+                parseLine(objective.getDisplayName().getString(), playerListWorld == null);
                 for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
-                    parseLine(entry.name().getString());
+                    parseLine(entry.name().getString(), playerListWorld == null);
                 }
             }
             updatedAt = System.currentTimeMillis();
@@ -111,14 +118,28 @@ public final class CharacterState {
         return null;
     }
 
-    private static void parseLine(String value) {
+    private static String worldFromPlayerList(MinecraftClient client) {
+        if (client.getNetworkHandler() == null) return null;
+        PlayerListEntry entry = client.getNetworkHandler().getPlayerListEntry(WORLD_NAME_UUID);
+        if (entry == null || entry.getDisplayName() == null) return null;
+        return worldFromText(entry.getDisplayName().getString());
+    }
+
+    static String worldFromText(String value) {
+        Matcher matcher = WORLD.matcher(clean(value));
+        return matcher.find() ? matcher.group(1).toUpperCase(Locale.ROOT) : null;
+    }
+
+    private static void parseLine(String value, boolean parseWorld) {
         String clean = clean(value);
         CharacterClass parsedClass = CharacterClass.parse(clean);
         if (parsedClass != CharacterClass.UNKNOWN) characterClass = parsedClass;
         Matcher levelMatcher = LEVEL.matcher(clean);
         if (levelMatcher.find()) level = safeInt(levelMatcher.group(1), level);
-        Matcher worldMatcher = WORLD.matcher(clean);
-        if (worldMatcher.find()) world = worldMatcher.group(1).toUpperCase();
+        if (parseWorld) {
+            String parsedWorld = worldFromText(clean);
+            if (parsedWorld != null) world = parsedWorld;
+        }
     }
 
     private static String clean(String value) {
