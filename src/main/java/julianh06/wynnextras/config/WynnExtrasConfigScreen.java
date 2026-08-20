@@ -837,6 +837,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     LinkUtils.openLink("https://wynnextras.com/privacy");
                 }, "Open"))
             .endSub()
+            .add(toggle("Mount color backgrounds", "Use the mount's primary color as its item background",
+                    () -> config.mountPrimaryColorBackground, v -> config.mountPrimaryColorBackground = v))
             .add(toggle("Show Own Nametag", "Render your nametag above your head",
                     () -> config.showOwnNametag, v -> config.showOwnNametag = v))
             .add(toggle("Custom GUI Scale", "Use different scale inside of inventories",
@@ -865,6 +867,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         category("New", 0xFF00bad5)
         .excludeFromSearch()
         .add(text("", "All features added in this update. Toggle any of them on or off."))
+            .sub("Mounts")
+                .add(toggle("Mount color backgrounds", "Use the mount's primary color as its item background",
+                        () -> config.mountPrimaryColorBackground, v -> config.mountPrimaryColorBackground = v))
+            .endSub()
             .sub("TNA Tree Room")
                 .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
                         () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))

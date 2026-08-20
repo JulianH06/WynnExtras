@@ -2,6 +2,7 @@ package julianh06.wynnextras.utils;
 
 import julianh06.wynnextras.wynncraft.item.GearType;
 import julianh06.wynnextras.wynncraft.item.ItemCategory;
+import julianh06.wynnextras.wynncraft.item.MountColorParser;
 import julianh06.wynnextras.wynncraft.item.WynnItemData;
 import julianh06.wynnextras.wynncraft.item.WynnItemParser;
 import net.minecraft.component.DataComponentTypes;
@@ -62,19 +63,6 @@ public class SearchQueryParser {
     private static final Pattern COMPONENT_PROFESSION_TIER_PATTERN = Pattern.compile("profession[_\\s-]*tier[_\\s-]*([0-3])", Pattern.CASE_INSENSITIVE);
     private static final Pattern IDENTIFIED_PATTERN = Pattern.compile("identified:(true|false)", Pattern.CASE_INSENSITIVE);
     private static final Pattern MOUNT_COLOR_PATTERN = Pattern.compile("mountcolor:([a-z]+(?:-[a-z]+)?)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern MOUNT_COLOR_LORE_PATTERN = Pattern.compile("([a-z]+)-([a-z]+)", Pattern.CASE_INSENSITIVE);
-    private static final Set<String> HORSE_PRIMARY_COLORS = Set.of(
-            "cherry", "bay", "chestnut", "gold", "tan", "beige", "black", "gray", "silver", "white");
-    private static final Set<String> HORSE_SECONDARY_COLORS = Set.of(
-            "sable", "rich", "reddish", "dawn", "dusk", "fawn", "night", "ash", "argent", "pale");
-    private static final Set<String> WYVERN_PRIMARY_COLORS = Set.of(
-            "azure", "cerulean", "bronze", "ebony", "fledge", "golden", "hollow", "infernal", "jade", "mystic");
-    private static final Set<String> WYVERN_SECONDARY_COLORS = Set.of(
-            "cinder", "horn", "kander", "onyx", "quartz", "sapphire", "rose", "shell", "ivory", "tusk");
-    private static final Set<String> ADASAUR_PRIMARY_COLORS = Set.of(
-            "crimson", "dust", "amber", "emerald", "cobalt", "dusk", "plum", "sable", "ash", "albino");
-    private static final Set<String> ADASAUR_SECONDARY_COLORS = Set.of(
-            "blood", "rose", "tawny", "moss", "royal", "misty", "maroon", "raven", "sage", "bleach");
 
     private static String cachedInput = null;
     private static ParsedQuery cachedQuery = null;
@@ -397,27 +385,11 @@ public class SearchQueryParser {
     }
 
     private static boolean matchesMountColor(ItemStack stack, String searchedColor) {
-        LoreComponent lore = stack.get(DataComponentTypes.LORE);
-        if (lore == null) return false;
-
-        for (Text line : lore.lines()) {
-            Matcher matcher = MOUNT_COLOR_LORE_PATTERN.matcher(line.getString().toLowerCase(Locale.ROOT));
-            while (matcher.find()) {
-                String primary = matcher.group(1);
-                String secondary = matcher.group(2);
-                if (!isMountColorPair(primary, secondary)) continue;
-                if (primary.contains(searchedColor)
-                        || secondary.contains(searchedColor)
-                        || (primary + "-" + secondary).contains(searchedColor)) return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean isMountColorPair(String primary, String secondary) {
-        return HORSE_PRIMARY_COLORS.contains(primary) && HORSE_SECONDARY_COLORS.contains(secondary)
-                || WYVERN_PRIMARY_COLORS.contains(primary) && WYVERN_SECONDARY_COLORS.contains(secondary)
-                || ADASAUR_PRIMARY_COLORS.contains(primary) && ADASAUR_SECONDARY_COLORS.contains(secondary);
+        return MountColorParser.parse(stack)
+                .map(colors -> colors.primary().contains(searchedColor)
+                        || colors.secondary().contains(searchedColor)
+                        || (colors.primary() + "-" + colors.secondary()).contains(searchedColor))
+                .orElse(false);
     }
 
     private static Integer parseLevelFromLore(String lore) {

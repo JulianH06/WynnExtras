@@ -23,6 +23,7 @@
     "ItemModelManagerMixin",
     "LivingEntityRendererMixin",
     "MouseScrollMixin",
+    "MountColorBackgroundMixin",
     "OrderedRenderCommandQueueImplMixin",
     "PerspectiveMixin",
     "PlayerEntityRendererMixin",

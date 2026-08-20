@@ -251,6 +251,7 @@ public class WynnExtrasConfig {
     public int tradeMarketOverlayY = 10;
     public boolean tradeMarketOverlayBackground = true;
     public boolean showMountHelper = false;
+    public boolean mountPrimaryColorBackground = false;
 
     // ==================== RAID ====================
     public boolean toggleRaidTimestamps = true;
