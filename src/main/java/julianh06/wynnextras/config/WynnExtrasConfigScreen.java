@@ -568,9 +568,21 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
                 .add(sliderF("Duration (ms)", "How long notification shows",
                         500, 10000, 100, () -> (float) config.textDurationInMs, v -> config.textDurationInMs = v.intValue()))
-                .add(sliderF("Fade in duration (ms)", "How long should the text fade in",
+                .add(dropdown("Entrance effect", "How the notification enters",
+                        WynnExtrasConfig.NotifierAnimation.class, () -> config.notifierAnimation, v -> config.notifierAnimation = v))
+                .add(visibleWhen(dropdown("Entrance direction", "Direction of the entrance animation",
+                                WynnExtrasConfig.NotifierAnimationDirection.class,
+                                () -> config.notifierEntranceDirection, v -> config.notifierEntranceDirection = v),
+                        () -> config.notifierAnimation != null && config.notifierAnimation.isDirectional()))
+                .add(sliderF("Entrance duration (ms)", "How long the entrance animation takes",
                         0, 5000, 50, () -> (float) config.notifierFadeInMs, v -> config.notifierFadeInMs = v.intValue()))
-                .add(sliderF("Fade out duration (ms)", "How long should the text fade out",
+                .add(dropdown("Exit effect", "How the notification exits",
+                        WynnExtrasConfig.NotifierExitAnimation.class, () -> config.notifierExitAnimation, v -> config.notifierExitAnimation = v))
+                .add(visibleWhen(dropdown("Exit direction", "Direction of the exit animation",
+                                WynnExtrasConfig.NotifierAnimationDirection.class,
+                                () -> config.notifierExitDirection, v -> config.notifierExitDirection = v),
+                        () -> config.notifierExitAnimation != null && config.notifierExitAnimation.isDirectional()))
+                .add(sliderF("Exit duration (ms)", "How long the exit animation takes",
                         0, 5000, 50, () -> (float) config.notifierFadeOutMs, v -> config.notifierFadeOutMs = v.intValue()))
                 .add(dropdown("Text Color", "Notification color",
                         WynnExtrasConfig.TextColor.class, () -> config.textColor, v -> config.textColor = v))

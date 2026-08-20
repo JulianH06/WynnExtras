@@ -16,6 +16,80 @@ import java.util.*;
 
 public class WynnExtrasConfig {
     public enum Align { LEFT, CENTER, RIGHT }
+    public enum NotifierAnimation {
+        APPEAR("Appear"),
+        FADE("Fade"),
+        FLY_IN("Fly in"),
+        PEEK_IN("Peek in"),
+        WIPE("Wipe"),
+        ZOOM("Zoom"),
+        PINWHEEL("Pinwheel"),
+        BOUNCE("Bounce"),
+        EXPAND("Expand"),
+        FADED_SWIVEL("Faded swivel");
+
+        private final String displayName;
+
+        NotifierAnimation(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+
+        public boolean isDirectional() {
+            return this == FLY_IN || this == PEEK_IN || this == WIPE;
+        }
+    }
+
+    public enum NotifierExitAnimation {
+        DISAPPEAR("Disappear"),
+        FADE("Fade"),
+        FLY_OUT("Fly out"),
+        PEEK_OUT("Peek out"),
+        WIPE("Wipe"),
+        ZOOM("Zoom"),
+        PINWHEEL("Pinwheel"),
+        BOUNCE("Bounce"),
+        CONTRACT("Contract"),
+        FADED_SWIVEL("Faded swivel");
+
+        private final String displayName;
+
+        NotifierExitAnimation(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+
+        public boolean isDirectional() {
+            return this == FLY_OUT || this == PEEK_OUT || this == WIPE;
+        }
+    }
+
+    public enum NotifierAnimationDirection {
+        LEFT("Left"),
+        RIGHT("Right"),
+        TOP("Top"),
+        BOTTOM("Bottom");
+
+        private final String displayName;
+
+        NotifierAnimationDirection(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
     public enum ClassSelectionContentProgressStyle {
         LINE("Line"),
         PROGRESS_BAR("Progress Bar"),
@@ -139,6 +213,10 @@ public class WynnExtrasConfig {
     public int notifierY = -1;  // -1 = auto (30% from top)
     public float notifierScale = 3.0f;
     public Align notifierAlignment = Align.CENTER;
+    public NotifierAnimation notifierAnimation = NotifierAnimation.FADE;
+    public NotifierAnimationDirection notifierEntranceDirection = NotifierAnimationDirection.TOP;
+    public NotifierExitAnimation notifierExitAnimation = NotifierExitAnimation.FADE;
+    public NotifierAnimationDirection notifierExitDirection = NotifierAnimationDirection.BOTTOM;
     public int notifierFadeInMs = 250;
     public int notifierFadeOutMs = 250;
 
@@ -680,6 +758,18 @@ public class WynnExtrasConfig {
                 if (INSTANCE.classSelectionCompletionChromaMode == null) {
                     INSTANCE.classSelectionCompletionChromaMode = ClassSelectionCompletionChromaMode.NAME_AND_LINES;
                 }
+                if (INSTANCE.notifierAnimation == null) {
+                    INSTANCE.notifierAnimation = NotifierAnimation.FADE;
+                }
+                if (INSTANCE.notifierExitAnimation == null) {
+                    INSTANCE.notifierExitAnimation = NotifierExitAnimation.FADE;
+                }
+                if (INSTANCE.notifierEntranceDirection == null) {
+                    INSTANCE.notifierEntranceDirection = NotifierAnimationDirection.BOTTOM;
+                }
+                if (INSTANCE.notifierExitDirection == null) {
+                    INSTANCE.notifierExitDirection = NotifierAnimationDirection.BOTTOM;
+                }
                 //if (INSTANCE.configProfiles == null) INSTANCE.configProfiles = new LinkedHashMap<>();
                 if (INSTANCE.weeklyWars == null) INSTANCE.weeklyWars = new ArrayList<>();
                 if (INSTANCE.hudColorOverrides == null) INSTANCE.hudColorOverrides = new HashMap<>();
@@ -703,6 +793,18 @@ public class WynnExtrasConfig {
         }
         if (INSTANCE.classSelectionCompletionChromaMode == null) {
             INSTANCE.classSelectionCompletionChromaMode = ClassSelectionCompletionChromaMode.NAME_AND_LINES;
+        }
+        if (INSTANCE.notifierAnimation == null) {
+            INSTANCE.notifierAnimation = NotifierAnimation.FADE;
+        }
+        if (INSTANCE.notifierExitAnimation == null) {
+            INSTANCE.notifierExitAnimation = NotifierExitAnimation.FADE;
+        }
+        if (INSTANCE.notifierEntranceDirection == null) {
+            INSTANCE.notifierEntranceDirection = NotifierAnimationDirection.BOTTOM;
+        }
+        if (INSTANCE.notifierExitDirection == null) {
+            INSTANCE.notifierExitDirection = NotifierAnimationDirection.BOTTOM;
         }
     }
 
