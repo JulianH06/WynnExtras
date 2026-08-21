@@ -24,9 +24,11 @@ import net.minecraft.util.Pair;
 
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -224,6 +226,7 @@ public class WynncraftApiHandler {
 
     private static final String BASE_URL = "https://api.wynncraft.com/v3/player/";
     private static final String BASE_URL_GUILD = "https://api.wynncraft.com/v3/guild/";
+    private static final String BASE_URL_SEARCH = "https://api.wynncraft.com/v3/search/";
 
     public String API_KEY;
 
@@ -275,13 +278,43 @@ public class WynncraftApiHandler {
 
     public static CompletableFuture<GuildData> fetchGuildData(String prefix) {
         HttpRequest request = WynncraftAuthManager.applyWynncraftAuth(HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL_GUILD + "prefix/" + prefix + "?identifier=uuid"))
+                .uri(URI.create(BASE_URL_GUILD + "prefix/" + encodePathSegment(prefix) + "?identifier=uuid"))
                 .GET())
                 .build();
 
         return WynncraftAuthManager.sendWynncraftRequest(request)
-                .thenApply(HttpResponse::body)
-                .thenApply(WynncraftApiHandler::parseGuildData);
+                .thenCompose(response -> {
+                    if (response.statusCode() == 200) {
+                        try {
+                            return CompletableFuture.completedFuture(parseGuildData(response.body()));
+                        } catch (Exception e) {
+                            WynnExtras.LOGGER.warn("Invalid guild detail response for " + prefix + ": " + e.getMessage());
+                        }
+                    } else {
+                        WynnExtras.LOGGER.warn("Guild detail API returned HTTP " + response.statusCode() + " for " + prefix);
+                    }
+
+                    return fetchGuildSummary(prefix);
+                });
+    }
+
+    private static CompletableFuture<GuildData> fetchGuildSummary(String query) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL_SEARCH + encodePathSegment(query)))
+                .timeout(Duration.ofSeconds(8))
+                .GET()
+                .build();
+
+        return sendAsync(request).thenApply(response -> {
+            if (response.statusCode() != 200) {
+                throw new IllegalStateException("Wynncraft guild search returned HTTP " + response.statusCode());
+            }
+            return parseGuildSummary(response.body(), query);
+        });
+    }
+
+    private static String encodePathSegment(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     public static CompletableFuture<List<ApiAspect>> fetchAspectList(String className) {
@@ -1046,9 +1079,57 @@ public class WynncraftApiHandler {
     }
 
     private static GuildData parseGuildData(String json) {
-        Gson gson = new Gson();
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) {
+            throw new IllegalStateException("Guild detail response is not an object");
+        }
 
-        return gson.fromJson(json, GuildData.class);
+        GuildData guildData = new Gson().fromJson(root, GuildData.class);
+        if (guildData == null || guildData.name == null || guildData.prefix == null || guildData.members == null) {
+            throw new IllegalStateException("Guild detail response is missing required fields");
+        }
+        return guildData;
+    }
+
+    private static GuildData parseGuildSummary(String json, String query) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) {
+            throw new IllegalStateException("Guild search response is not an object");
+        }
+
+        JsonObject result = root.getAsJsonObject();
+        GuildData summary = findGuildSummary(result.getAsJsonObject("guildsPrefix"), query);
+        if (summary == null) summary = findGuildSummary(result.getAsJsonObject("guilds"), query);
+        return summary;
+    }
+
+    private static GuildData findGuildSummary(JsonObject guilds, String query) {
+        if (guilds == null) return null;
+
+        for (Map.Entry<String, JsonElement> entry : guilds.entrySet()) {
+            if (!entry.getValue().isJsonObject()) continue;
+            JsonObject guild = entry.getValue().getAsJsonObject();
+            String name = jsonString(guild, "name");
+            String prefix = jsonString(guild, "prefix");
+            if (!query.equalsIgnoreCase(name) && !query.equalsIgnoreCase(prefix)) continue;
+            if (!guild.has("level") || guild.get("level").isJsonNull()
+                    || !guild.has("members") || guild.get("members").isJsonNull()) {
+                throw new IllegalStateException("Guild search response is missing required fields");
+            }
+
+            GuildData result = new GuildData();
+            result.summaryOnly = true;
+            result.uuid = entry.getKey();
+            result.name = name;
+            result.prefix = prefix;
+            result.level = guild.get("level").getAsInt();
+            result.created = jsonString(guild, "created");
+            result.members = new GuildData.Members();
+            result.members.total = guild.get("members").getAsInt();
+            return result;
+        }
+
+        return null;
     }
 
     private static User parsePlayerAspectData(String json) {

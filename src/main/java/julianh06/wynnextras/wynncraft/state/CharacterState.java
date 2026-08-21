@@ -5,7 +5,10 @@ import julianh06.wynnextras.event.DisconnectEvent;
 import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.tomes.TomeState;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
@@ -91,7 +94,13 @@ public final class CharacterState {
             if (client == null || client.player == null || client.world == null) return;
 
             String compassId = characterIdFromCompass(client.player.getInventory().getStack(7));
-            if (compassId != null) id = compassId;
+            if (compassId != null && !compassId.equals(id)) {
+                id = compassId;
+                characterClass = CharacterClass.UNKNOWN;
+                level = 0;
+            }
+
+            updateFromCurrentMenu(client);
 
             String playerListWorld = worldFromPlayerList(client);
             if (playerListWorld != null) world = playerListWorld;
@@ -128,6 +137,25 @@ public final class CharacterState {
     static String worldFromText(String value) {
         Matcher matcher = WORLD.matcher(clean(value));
         return matcher.find() ? matcher.group(1).toUpperCase(Locale.ROOT) : null;
+    }
+
+    static void updateCharacterInfo(String className, int combatLevel) {
+        CharacterClass parsedClass = CharacterClass.parse(className);
+        if (parsedClass != CharacterClass.UNKNOWN) characterClass = parsedClass;
+        if (combatLevel > 0) level = combatLevel;
+        if (parsedClass != CharacterClass.UNKNOWN || combatLevel > 0) updatedAt = System.currentTimeMillis();
+    }
+
+    private static void updateFromCurrentMenu(MinecraftClient client) {
+        if (!WynncraftMenuService.isCurrent(MenuType.CHARACTER_INFO)) return;
+        if (!(client.currentScreen instanceof HandledScreen<?> screen)) return;
+        if (screen.getScreenHandler().slots.size() <= 7) return;
+
+        ItemStack characterInfo = screen.getScreenHandler().slots.get(7).getStack();
+        if (characterInfo == null || characterInfo.isEmpty()) return;
+        parseLine(characterInfo.getName().getString(), false);
+        LoreComponent lore = characterInfo.get(DataComponentTypes.LORE);
+        if (lore != null) for (Text line : lore.lines()) parseLine(line.getString(), false);
     }
 
     private static void parseLine(String value, boolean parseWorld) {

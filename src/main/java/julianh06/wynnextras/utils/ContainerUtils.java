@@ -16,18 +16,26 @@ public final class ContainerUtils {
 
 
     public static void clickOnSlot(int slot, int syncId, int mouseButton, List<ItemStack> stacks) {
-        click(slot, syncId, mouseButton, SlotActionType.PICKUP, stacks);
+        click(slot, syncId, 0, mouseButton, SlotActionType.PICKUP, stacks);
+    }
+
+    public static void clickOnSlot(int slot, int syncId, int revision, int mouseButton, List<ItemStack> stacks) {
+        click(slot, syncId, revision, mouseButton, SlotActionType.PICKUP, stacks);
     }
 
     public static void shiftClickOnSlot(int slot, int syncId, int mouseButton, List<ItemStack> stacks) {
-        click(slot, syncId, mouseButton, SlotActionType.QUICK_MOVE, stacks);
+        click(slot, syncId, 0, mouseButton, SlotActionType.QUICK_MOVE, stacks);
+    }
+
+    public static void shiftClickOnSlot(int slot, int syncId, int revision, int mouseButton, List<ItemStack> stacks) {
+        click(slot, syncId, revision, mouseButton, SlotActionType.QUICK_MOVE, stacks);
     }
 
     public static void pressKeyOnSlot(int slot, int syncId, int hotbarKey, List<ItemStack> stacks) {
-        click(slot, syncId, hotbarKey, SlotActionType.SWAP, stacks);
+        click(slot, syncId, 0, hotbarKey, SlotActionType.SWAP, stacks);
     }
 
-    private static void click(int slot, int syncId, int button, SlotActionType action, List<ItemStack> stacks) {
+    private static void click(int slot, int syncId, int revision, int button, SlotActionType action, List<ItemStack> stacks) {
         if (MinecraftUtils.mc() == null || stacks == null) return;
         if (MinecraftUtils.mc().getNetworkHandler() == null || slot < 0 || slot >= stacks.size()) return;
         try {
@@ -37,7 +45,7 @@ public final class ContainerUtils {
             ItemStackHash clickedStack = ItemStackHash.fromItemStack(stacks.get(slot), hasher);
             MinecraftUtils.mc().getNetworkHandler().sendPacket(new ClickSlotC2SPacket(
                     syncId,
-                    0,
+                    revision,
                     (short) slot,
                     (byte) button,
                     action,

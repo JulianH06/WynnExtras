@@ -169,7 +169,7 @@ public class DungeonsTabWidget extends PVScreen.TabWidget {
                         Text.of("§4in 2023. The corrupted version has not been"),
                         Text.of("§4updated yet and is still playable in the forgery.")
                     ),
-                mouseX, mouseY);
+                    (int)(mouseX * PVScreen.currentMatrixScale), (int)(mouseY * PVScreen.currentMatrixScale));
             }
         }
     }

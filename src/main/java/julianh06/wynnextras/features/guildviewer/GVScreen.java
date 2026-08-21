@@ -210,6 +210,23 @@ public class GVScreen extends WEScreen {
 
         ui.drawText("[" + GV.currentGuildData.prefix + "] " + GV.currentGuildData.name, xStart + 19, yStart + 19);
 
+        if (GV.currentGuildData.summaryOnly) {
+            ui.drawCenteredText("Members: " + GV.currentGuildData.members.total, textX, yStart + 30);
+            ui.drawCenteredText("Level " + GV.currentGuildData.level, xStart + 285, yStart + 590);
+            if (GV.currentGuildData.created != null && !GV.currentGuildData.created.isBlank()) {
+                Instant instant = Instant.parse(GV.currentGuildData.created);
+                DateTimeFormatter formatter = DateTimeFormatter
+                        .ofLocalizedDate(FormatStyle.MEDIUM)
+                        .withLocale(Locale.getDefault())
+                        .withZone(ZoneId.systemDefault());
+                ui.drawCenteredText("Created: " + formatter.format(instant), xStart + 285, yStart + 630);
+            }
+            ui.drawCenteredText("Detailed guild data is currently unavailable from the Wynncraft API.", textX, yStart + 330);
+            darkModeToggleWidget.draw(context, mouseX, mouseY, delta, ui);
+            context.getMatrices().popMatrix();
+            return;
+        }
+
         PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, xStart + 15, yStart + 60, 33, 33, ui);
 
         ui.drawText("Online: " + GV.currentGuildData.online + "/" + GV.currentGuildData.members.total, xStart + 57, yStart + 66, CustomColor.fromHexString("FFFFFF"), 3f);
@@ -700,13 +717,16 @@ public class GVScreen extends WEScreen {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            Identifier backgroundDark;
+            Identifier backgroundLight;
             if(hovered && mouseInMenu) {
-                if(member.online) PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDarkOnline, classBackgroundTextureHoveredOnline, x, y, width, height, ui);
-                else PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureHoveredDark, classBackgroundTextureHovered, x, y, width, height, ui);
+                backgroundDark = member.online ? classBackgroundTextureHoveredDarkOnline : classBackgroundTextureHoveredDark;
+                backgroundLight = member.online ? classBackgroundTextureHoveredOnline : classBackgroundTextureHovered;
             } else {
-                if(member.online) PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDarkOnline, classBackgroundTextureOnline, x, y, width, height, ui);
-                else PVScreen.DarkModeToggleWidget.drawImageWithFade(classBackgroundTextureDark, classBackgroundTexture,  x, y, width, height, ui);
+                backgroundDark = member.online ? classBackgroundTextureDarkOnline : classBackgroundTextureDark;
+                backgroundLight = member.online ? classBackgroundTextureOnline : classBackgroundTexture;
             }
+            drawSmoothImageWithFade(ctx, backgroundDark, backgroundLight, x, y, width, height);
             //ui.drawRect(x, y, width, height);
             ui.drawCenteredText(member.username, x + 175, y + 60);
 
@@ -723,13 +743,22 @@ public class GVScreen extends WEScreen {
             ui.drawCenteredText("Contributed: " + formatLong(member.contributed), x + 175, y + 120);
 
             if(member.online) {
-                PVScreen.DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, x + 18, y + 6, 18, 18, ui);
+                drawSmoothImageWithFade(ctx, onlineCircleTextureDark, onlineCircleTexture, x + 18, y + 6, 18, 18);
                 if (member.server != null && !member.server.isEmpty()) {
                     float serverTextWidth = MinecraftClient.getInstance().textRenderer.getWidth(member.server) * SERVER_TEXT_SCALE;
                     float serverTextX = x + SERVER_TEXT_X + Math.max(0f, (FOUR_CHARACTER_SERVER_TEXT_WIDTH - serverTextWidth) / 2f);
                     ui.drawText("§a" + member.server, serverTextX, y + 8, CustomColor.fromHexString("FFFFFF"), SERVER_TEXT_SCALE);
                 }
             }
+        }
+
+        private void drawSmoothImageWithFade(DrawContext ctx, Identifier dark, Identifier light,
+                                             float x, float y, float width, float height) {
+            float screenY = ui.sy(y);
+            ctx.getMatrices().pushMatrix();
+            ctx.getMatrices().translate(0, screenY - Math.round(screenY));
+            PVScreen.DarkModeToggleWidget.drawImageWithFade(dark, light, x, y, width, height, ui);
+            ctx.getMatrices().popMatrix();
         }
 
         public static String formatLong(long value) {

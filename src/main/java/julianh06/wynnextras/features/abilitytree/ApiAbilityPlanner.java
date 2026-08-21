@@ -155,7 +155,7 @@ public final class ApiAbilityPlanner {
         Map<String, String> abilityIdToArchKey = buildAbilityArchetypeMap(tree);
 
         // Simulate unlocks with full constraints.
-        return simulateUnlockOrder(abilitiesById, desired, abilityIdToArchKey);
+        return simulateUnlockOrder(abilitiesById, desired, abilityIdToArchKey, adjacency, rootId);
     }
 
     private static Map<String, AbilityTreeData.Ability> buildAbilityIndex(AbilityTreeData tree) {
@@ -375,12 +375,22 @@ public final class ApiAbilityPlanner {
 
     private static List<String> simulateUnlockOrder(Map<String, AbilityTreeData.Ability> abilitiesById,
                                                     Set<String> desired,
-                                                    Map<String, String> abilityIdToArchKey)
+                                                    Map<String, String> abilityIdToArchKey,
+                                                    Map<String, List<String>> adjacency,
+                                                    String rootId)
             throws PlanningException {
 
         Set<String> unlocked = new HashSet<>();
         Map<String, Integer> archetypeCounts = new HashMap<>();
         List<String> order = new ArrayList<>();
+        Map<String, Integer> dependentCounts = new HashMap<>();
+        int currentPage = 1;
+
+        for (String id : desired) {
+            AbilityTreeData.Ability ability = abilitiesById.get(id);
+            if (ability == null || ability.requirements == null || ability.requirements.NODE == null) continue;
+            dependentCounts.merge(ability.requirements.NODE, 1, Integer::sum);
+        }
 
         while (unlocked.size() < desired.size()) {
             String bestId = null;
@@ -390,12 +400,13 @@ public final class ApiAbilityPlanner {
                 if (unlocked.contains(id)) continue;
                 AbilityTreeData.Ability a = abilitiesById.get(id);
                 if (a == null) continue;
-                if (!canUnlockNow(a, unlocked, archetypeCounts)) continue;
+                if (!canUnlockNow(id, a, unlocked, archetypeCounts, adjacency, rootId)) continue;
 
                 if (bestId == null) {
                     bestId = id;
                     bestAbility = a;
-                } else if (isVisuallyBefore(a, bestAbility)) {
+                } else if (isBetterCandidate(id, a, bestId, bestAbility, currentPage,
+                        dependentCounts, abilityIdToArchKey)) {
                     bestId = id;
                     bestAbility = a;
                 }
@@ -410,6 +421,7 @@ public final class ApiAbilityPlanner {
 
             unlocked.add(bestId);
             order.add(bestId);
+            currentPage = bestAbility.page;
 
             String archKey = abilityIdToArchKey.get(bestId);
             if (archKey != null && !archKey.isEmpty()) {
@@ -420,9 +432,25 @@ public final class ApiAbilityPlanner {
         return order;
     }
 
-    private static boolean canUnlockNow(AbilityTreeData.Ability a,
+    private static boolean canUnlockNow(String id,
+                                        AbilityTreeData.Ability a,
                                         Set<String> unlocked,
-                                        Map<String, Integer> archetypeCounts) {
+                                        Map<String, Integer> archetypeCounts,
+                                        Map<String, List<String>> adjacency,
+                                        String rootId) {
+
+        if (unlocked.isEmpty()) {
+            if (!id.equals(rootId)) return false;
+        } else {
+            boolean connected = false;
+            for (String neighbor : adjacency.getOrDefault(id, List.of())) {
+                if (unlocked.contains(neighbor)) {
+                    connected = true;
+                    break;
+                }
+            }
+            if (!connected) return false;
+        }
 
         // NODE prerequisite
         if (a.requirements != null && a.requirements.NODE != null && !a.requirements.NODE.isEmpty()) {
@@ -447,11 +475,33 @@ public final class ApiAbilityPlanner {
         return true;
     }
 
-    /** Tie-breaker: click earlier pages / rows / columns first, purely cosmetic. */
-    private static boolean isVisuallyBefore(AbilityTreeData.Ability a, AbilityTreeData.Ability b) {
-        if (a.page != b.page) return a.page < b.page;
-        if (a.coordinates.y != b.coordinates.y) return a.coordinates.y < b.coordinates.y;
-        return a.coordinates.x < b.coordinates.x;
+    private static boolean isBetterCandidate(String id,
+                                             AbilityTreeData.Ability ability,
+                                             String bestId,
+                                             AbilityTreeData.Ability best,
+                                             int currentPage,
+                                             Map<String, Integer> dependentCounts,
+                                             Map<String, String> abilityIdToArchKey) {
+        int pageCost = pageNavigationCost(currentPage, ability.page);
+        int bestPageCost = pageNavigationCost(currentPage, best.page);
+        if (pageCost != bestPageCost) return pageCost < bestPageCost;
+
+        int dependents = dependentCounts.getOrDefault(id, 0);
+        int bestDependents = dependentCounts.getOrDefault(bestId, 0);
+        if (dependents != bestDependents) return dependents > bestDependents;
+
+        boolean givesArchetypePoint = abilityIdToArchKey.containsKey(id);
+        boolean bestGivesArchetypePoint = abilityIdToArchKey.containsKey(bestId);
+        if (givesArchetypePoint != bestGivesArchetypePoint) return givesArchetypePoint;
+
+        if (ability.coordinates.y != best.coordinates.y) return ability.coordinates.y < best.coordinates.y;
+        if (ability.coordinates.x != best.coordinates.x) return ability.coordinates.x < best.coordinates.x;
+        return id.compareTo(bestId) < 0;
+    }
+
+    private static int pageNavigationCost(int currentPage, int targetPage) {
+        if (targetPage >= currentPage) return targetPage - currentPage;
+        return 100 + currentPage - targetPage;
     }
 
     // -------------------------------------------------------------

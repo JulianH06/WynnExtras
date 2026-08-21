@@ -2,10 +2,12 @@ package julianh06.wynnextras.features.abilitytree;
 
 import com.google.gson.*;
 import julianh06.wynnextras.wynncraft.state.StatusEffectState;
+import julianh06.wynnextras.utils.ContainerUtils;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.features.loader.SkillPointLoader;
 import julianh06.wynnextras.utils.WynncraftAuthManager;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import julianh06.wynnextras.utils.UI.WEScreen;
@@ -16,9 +18,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Items;
 import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.item.ItemStack;
@@ -34,16 +34,18 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
 @WEModule
 public class TreeLoader {
+    private static final String ABILITY_TREE_TITLE = "\uDAFF\uDFEA\uE000";
+    private static final String ABILITY_TREE_ULTIMATE_TITLE = "\uDAFF\uDFEA\uE057";
+    private static final String ABILITY_TREE_RESET_TITLE = "\uDAFF\uDFEA\uE001";
     static final int GUI_SETTLE_TICKS = 4;
     static int ticksSinceLastAction = 0;
-    static int socketClicksPerformed = 0;
+    static long lastAbilityTreeMenuClick = 0;
 
     static boolean inCompassMenu = false;
     static boolean inTreeMenu = false;
@@ -52,7 +54,6 @@ public class TreeLoader {
     static boolean treeMenuWasOpened = false;
     static boolean resetMenuWasOpened = false;
     static boolean wasReset = false;
-    static int clickedSockets = 0;
     static HandledScreen<?> screen = null;
     static boolean resetTree = false;
     static List<AbilityMapData.Node> abilitiesToClick2 = null;
@@ -82,45 +83,49 @@ public class TreeLoader {
         treeMenuWasOpened = false;
         resetMenuWasOpened = false;
         wasReset = false;
-        clickedSockets = 0;
         resetTree = false;
         abilitiesToClick2 = null;
         ticksSinceLastAction = 0;
-        socketClicksPerformed = 0;
+        lastAbilityTreeMenuClick = 0;
+        pendingReset = null;
     }
 
     private static class PendingClick {
-        AbilityMapData.Node node;
         String abilityName;
+        int slot;
         int attempts;
+        int sentRevision;
+        int revisionRetries;
         int ticksWaiting;
-        int expectedPage;
-        PendingClick(AbilityMapData.Node node, String abilityName, int expectedPage) {
-            this.node = node;
+        PendingClick(String abilityName, int slot, int sentRevision) {
             this.abilityName = abilityName;
+            this.slot = slot;
             this.attempts = 0;
+            this.sentRevision = sentRevision;
+            this.revisionRetries = 0;
             this.ticksWaiting = 0;
-            this.expectedPage = expectedPage;
         }
     }
 
     public static boolean loadSkillpoints = false;
     public static int[] skillPointSet;
-    public static boolean loadingSkillpoints = false;
 
-    private static final int CLICK_CONFIRM_TIMEOUT_TICKS = 1;
+    private static final int ABILITY_CLICK_RETRY_TICKS = 10;
     private static final int MAX_ATTEMPTS_PER_ABILITY = 15;
-    private static final int GUI_SETTLE_TICKS_DEFAULT = GUI_SETTLE_TICKS;
+    private static final int ABILITY_MENU_SETTLE_TICKS = 2;
+    private static final int PAGE_SWITCH_RETRY_TICKS = 10;
+    private static final int MAX_PAGE_SWITCH_ATTEMPTS = 15;
+    private static final int ABILITY_TREE_CONTENT_SLOTS = 54;
     private static PendingClick pendingClick = null;
-    private static int lagTickCounter = 0;
-    private static boolean fastMode = true;
 
     private static class PendingResetClick {
         String stage;
+        int slot;
         int ticksWaiting;
         int attempts;
-        PendingResetClick(String stage) {
+        PendingResetClick(String stage, int slot) {
             this.stage = stage;
+            this.slot = slot;
             this.ticksWaiting = 0;
             this.attempts = 0;
         }
@@ -132,8 +137,6 @@ public class TreeLoader {
     private static boolean scrolledUp = false;
     private static ItemStack firstNode = null;
     private static long lastResetTryClick = 0;
-
-    private static long finishedTreeTime = 0;
 
     public static void init() {
         TreeData.loadAll();
@@ -153,12 +156,17 @@ public class TreeLoader {
 
             inCompassMenu = InventoryTitle.equals("\uDAFF\uDFDC\uE003");
             if(inCompassMenu && resetTree) {
-                TreeLoader.clickOnNameInInventory("Ability Tree", screen, MinecraftClient.getInstance());
+                long now = System.currentTimeMillis();
+                if (now - lastAbilityTreeMenuClick >= 500
+                        && TreeLoader.clickOnNameInInventory("Ability Tree", screen, MinecraftClient.getInstance())) {
+                    lastAbilityTreeMenuClick = now;
+                }
                 return;
             }
 
-            inTreeMenu = InventoryTitle.equals("\uDAFF\uDFEA\uE000");
-            inResetMenu = InventoryTitle.equals("\uDAFF\uDFEA\uE001");
+            inTreeMenu = InventoryTitle.equals(ABILITY_TREE_TITLE)
+                    || InventoryTitle.equals(ABILITY_TREE_ULTIMATE_TITLE);
+            inResetMenu = InventoryTitle.equals(ABILITY_TREE_RESET_TITLE);
             if (!inTreeMenu && !inResetMenu && !wasStarted && oneTrue) resetAll();
             if (wasStarted && inTreeMenu) wasStarted = false;
         });
@@ -176,36 +184,43 @@ public class TreeLoader {
 
             if (pendingReset != null && screen != null) {
                 pendingReset.ticksWaiting++;
-                if (pendingReset.ticksWaiting >= RESET_CLICK_TIMEOUT) {
-                    pendingReset.attempts++;
-                    if (pendingReset.attempts > MAX_RESET_ATTEMPTS) {
-                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Reset failed due to lag, please try again.")));
-                        resetAll();
-                        pendingReset = null;
-                        return;
-                    }
-                    if (pendingReset.stage.equals("socket")) {
-                        clickOnSockets(client, player, screen);
-                    } else if (pendingReset.stage.equals("confirm")) {
-                        confirmReset(client, player, screen);
-                    }
-                    pendingReset.ticksWaiting = 0;
-                    return;
-                }
 
                 if (pendingReset.stage.equals("socket")) {
-                    if (countOccurences("Ability Shard", screen) < 3) {
+                    if (isSlotNamed(screen, pendingReset.slot, "Ability Shard")) {
                         pendingReset = null;
                         ticksSinceLastAction = 0;
                         return;
-                    } else {
-                        pendingReset.stage = "confirm";
                     }
-                } else if (pendingReset.stage.equals("confirm")) {
+
+                    if (pendingReset.ticksWaiting >= RESET_CLICK_TIMEOUT) {
+                        pendingReset.attempts++;
+                        if (pendingReset.attempts > MAX_RESET_ATTEMPTS) {
+                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Couldn't insert an Ability Shard. Make sure you have 3 Ability Shards in your inventory.")));
+                            resetAll();
+                            return;
+                        }
+                        clickSlotHelper(pendingReset.slot, screen, client);
+                        pendingReset.ticksWaiting = 0;
+                    }
+                    return;
+                }
+
+                if (pendingReset.stage.equals("confirm")) {
                     if (inTreeMenu && !inResetMenu) {
                         pendingReset = null;
                         resetTree = false;
                         return;
+                    }
+
+                    if (pendingReset.ticksWaiting >= RESET_CLICK_TIMEOUT) {
+                        pendingReset.attempts++;
+                        if (pendingReset.attempts > MAX_RESET_ATTEMPTS) {
+                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Reset failed due to lag, please try again.")));
+                            resetAll();
+                            return;
+                        }
+                        confirmReset(client, player, screen);
+                        pendingReset.ticksWaiting = 0;
                     }
                 }
 
@@ -218,7 +233,7 @@ public class TreeLoader {
             }
 
             if (hasTreeManipulation && inTreeMenu && !resetMenuWasOpened) {
-                client.interactionManager.clickSlot(screen.getScreenHandler().syncId, 54 + 4, 1, SlotActionType.QUICK_MOVE, client.player);
+                shiftClickSlotHelper(54 + 4, 1, screen);
                 lastResetTryClick = System.currentTimeMillis();
                 resetMenuWasOpened = true;
                 wasReset = true;
@@ -231,23 +246,16 @@ public class TreeLoader {
             }
 
             if (inResetMenu && !wasReset) {
-                int shardCount = countOccurences("Ability Shard", screen);
-                if (shardCount < 3) {
-                    if (socketClicksPerformed < shardCount + 1) {
-                        clickOnSockets(client, player, screen);
-                        socketClicksPerformed++;
-                        pendingReset = new PendingResetClick("socket");
-                        pendingReset.ticksWaiting = 0;
-                        return;
-                    } else {
-                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Couldn't reset your tree. You either canceled exited the menu or you don't have 3 Ability Shards in your Inventory")));
-                        resetAll();
-                        return;
-                    }
-                } else {
+                int emptySocket = findNamedSlot(screen, "Empty Socket");
+                if (emptySocket >= 0) {
+                    clickSlotHelper(emptySocket, screen, client);
+                    pendingReset = new PendingResetClick("socket", emptySocket);
+                    return;
+                }
+
+                if (countFilledAbilityShardSockets(screen) >= 3) {
                     confirmReset(client, player, screen);
-                    pendingReset = new PendingResetClick("confirm");
-                    pendingReset.ticksWaiting = 0;
+                    pendingReset = new PendingResetClick("confirm", -1);
                     return;
                 }
             }
@@ -256,21 +264,21 @@ public class TreeLoader {
                 resetTree = false;
             }
 
-            if (clickedSockets >= 6) {
-                resetAll();
-            }
         });
 
         int[] abilityClickTicks = {0};
         int[] currentPage = {1};
         AtomicInteger failCycles = new AtomicInteger();
-        final int MAX_FAIL_CYCLES = 30;
+        final int MAX_FAIL_CYCLES = 80;
 
 
         AtomicBoolean pendingPageSwitch = new AtomicBoolean(false);
-        AtomicReference<List<ItemStack>> prevPageStacks = new AtomicReference<>(new ArrayList<>());
-        final int PAGE_SWITCH_TIMEOUT = 40; // ~2 Sekunden
         AtomicInteger pageSwitchTicks = new AtomicInteger();
+        int[] pendingPageDirection = {0};
+        int[] pendingPageTargetPage = {1};
+        int[] pendingPageTargetSlot = {-1};
+        int[] pageSwitchAttempts = {0};
+        String[] pendingPageTargetName = {null};
 
 
         ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
@@ -287,6 +295,11 @@ public class TreeLoader {
                 currentPage[0] = 1;
                 failCycles.set(0);
                 pendingClick = null;
+                pendingPageSwitch.set(false);
+                pageSwitchTicks.set(0);
+                pageSwitchAttempts[0] = 0;
+                pendingPageTargetName[0] = null;
+                pendingPageTargetSlot[0] = -1;
                 return;
             }
             if (!inTreeMenu) {
@@ -303,48 +316,39 @@ public class TreeLoader {
             HandledScreen<?> screen = (HandledScreen<?>) client.currentScreen;
 
             abilityClickTicks[0]++;
-            if (abilityClickTicks[0] < GUI_SETTLE_TICKS_DEFAULT) return;
+            if (abilityClickTicks[0] < ABILITY_MENU_SETTLE_TICKS) {
+                return;
+            }
 
             if (pendingPageSwitch.get()) {
                 pageSwitchTicks.incrementAndGet();
 
-                List<ItemStack> inv = new ArrayList<>(MinecraftUtils.containerMenu().getStacks());
-                boolean changed = false;
-                int i = 0;
-                for(ItemStack stack : prevPageStacks.get()) {
-                    if(stack == null) { i++; continue; }
-                    if(stack.getItem().equals(Items.AIR)) { i++; continue; }
-
-                    ItemStack invStack = inv.get(i);
-                    if(invStack == null) { i++; continue; }
-                    if(invStack.getItem().equals(Items.AIR)) { i++; continue; }
-                    i++;
-
-                    if(!ItemStack.areItemsEqual(invStack, stack)) {
-                        changed = true;
-                        break;
+                if (isAbilityShownAtSlot(screen, pendingPageTargetSlot[0], pendingPageTargetName[0])) {
+                    currentPage[0] = pendingPageTargetPage[0];
+                    pendingPageSwitch.set(false);
+                    pageSwitchTicks.set(0);
+                    pageSwitchAttempts[0] = 0;
+                    pendingPageTargetName[0] = null;
+                    pendingPageTargetSlot[0] = -1;
+                    failCycles.set(0);
+                } else {
+                    if (pageSwitchTicks.get() >= PAGE_SWITCH_RETRY_TICKS) {
+                        pageSwitchAttempts[0]++;
+                        if (pageSwitchAttempts[0] > MAX_PAGE_SWITCH_ATTEMPTS) {
+                            failCycles.set(MAX_FAIL_CYCLES);
+                            pendingPageSwitch.set(false);
+                            return;
+                        }
+                        String direction = pendingPageDirection[0] > 0 ? "Next Page" : "Previous Page";
+                        clickOnAbility(client, player, direction, screen);
+                        pageSwitchTicks.set(0);
                     }
-                }
-
-                if (changed) {
-                    pendingPageSwitch.set(false);
-                    abilityClickTicks[0] = 0;
-                    prevPageStacks.get().clear();
                     return;
                 }
-
-                if (pageSwitchTicks.get() > PAGE_SWITCH_TIMEOUT) {
-                    pendingPageSwitch.set(false);
-                    prevPageStacks.get().clear();
-                    return;
-                }
-
-                return;
             }
 
 
             if (failCycles.get() >= MAX_FAIL_CYCLES) {
-                WynnExtras.LOGGER.debug("[TreeLoader] MAX_FAIL_CYCLES hit | stuck on='{}'", abilitiesToClick2.isEmpty() ? "none" : abilitiesToClick2.getFirst().toString());
                 resetAll();
                 if(MinecraftUtils.mc().currentScreen != null) MinecraftUtils.mc().currentScreen.close();
                 MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Something went wrong! Try again")));
@@ -358,26 +362,33 @@ public class TreeLoader {
             if (pendingClick != null) {
                 pendingClick.ticksWaiting++;
 
-                boolean stillHasUnlock = hasUnlockPrefix(pendingClick.abilityName, screen);
-
-                if (!stillHasUnlock) {
-                    WynnExtras.LOGGER.debug("[TreeLoader] Confirmed | ability='{}' remaining={}", pendingClick.abilityName, abilitiesToClick2.size() - 1);
+                if (isAbilityClickConfirmed(pendingClick, screen)) {
                     abilitiesToClick2.removeFirst();
                     failCycles.set(0);
                     pendingClick = null;
-                    abilityClickTicks[0] = 0;
-                    fastMode = true;
                 } else {
-                    if (pendingClick.ticksWaiting >= 2) {
-                        fastMode = false;
-                        lagTickCounter++;
-                        if (lagTickCounter > CLICK_CONFIRM_TIMEOUT_TICKS) {
-                            clickOnAbility(client, player, pendingClick.abilityName, screen);
+                    int revision = screen.getScreenHandler().getRevision();
+                    if (pendingClick.revisionRetries < 3 && revision != pendingClick.sentRevision) {
+                        pendingClick.attempts++;
+                        pendingClick.revisionRetries++;
+                        if (clickOnAbility(client, player, pendingClick.abilityName, screen) >= 0) {
+                            pendingClick.sentRevision = revision;
                             pendingClick.ticksWaiting = 0;
-                            lagTickCounter = 0;
                         }
                         return;
                     }
+                    if (pendingClick.ticksWaiting >= ABILITY_CLICK_RETRY_TICKS) {
+                        pendingClick.attempts++;
+                        if (pendingClick.attempts > MAX_ATTEMPTS_PER_ABILITY) {
+                            failCycles.set(MAX_FAIL_CYCLES);
+                            return;
+                        }
+                        if (clickOnAbility(client, player, pendingClick.abilityName, screen) >= 0) {
+                            pendingClick.sentRevision = screen.getScreenHandler().getRevision();
+                            pendingClick.ticksWaiting = 0;
+                        }
+                    }
+                    return;
                 }
             }
             if(abilitiesToClick2 == null) return;
@@ -386,13 +397,10 @@ public class TreeLoader {
                 if(MinecraftUtils.mc().currentScreen != null) MinecraftUtils.mc().currentScreen.close();
                 MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Finished loading the ability tree." + (loadSkillpoints ? " Continuing with skill points. " : ""))));
                 if(skillPointSet != null) {
-                    int currentSlot = player.getInventory().getSelectedSlot();
-                    player.getInventory().setSelectedSlot(7);
-                    client.interactionManager.interactItem(player, Hand.MAIN_HAND);
-                    player.getInventory().setSelectedSlot(currentSlot);
-                    loadingSkillpoints = true;
-                    finishedTreeTime = System.currentTimeMillis();
-//                    loadSkillpoints(skillPointSet);
+                    int[] points = skillPointSet;
+                    skillPointSet = null;
+                    SkillPointLoader.getInstance().load(
+                            points[0], points[1], points[2], points[3], points[4]);
                 }
                 return;
             }
@@ -401,101 +409,49 @@ public class TreeLoader {
             AbilityTreeData.Ability abilityFromNode = getAbilityFromNode(abilityNode, classTree);
 
             if (abilityFromNode == null) {
-                WynnExtras.LOGGER.debug("[TreeLoader] getAbilityFromNode returned null | page={} x={} y={}", abilityNode.meta.page, abilityNode.coordinates.x, abilityNode.coordinates.y);
                 return;
             }
 
             String abilityName = extractAbilityNameFromHtml(abilityFromNode.name);
             if (abilityName == null) {
-                WynnExtras.LOGGER.debug("[TreeLoader] extractAbilityNameFromHtml returned null | raw name was: '{}'", abilityFromNode.name);
                 return;
             }
             int pageOffset = abilityNode.meta.page - currentPage[0];
             if (pageOffset != 0 && !pendingPageSwitch.get()) {
-                List<ItemStack> inv = new ArrayList<>(MinecraftUtils.containerMenu().getStacks());
-                prevPageStacks.set(inv);
-
                 String direction = pageOffset > 0 ? "Next Page" : "Previous Page";
-                WynnExtras.LOGGER.debug("[TreeLoader] Switching page | direction={} currentPage={} targetPage={} for ability='{}'", direction, currentPage[0], abilityNode.meta.page, abilityName);
-                clickOnAbility(client, player, direction, screen);
-                currentPage[0] += pageOffset > 0 ? 1 : -1;
-
-                pendingPageSwitch.set(true);
-                pageSwitchTicks.set(0);
+                if (clickOnNameInInventory(direction, screen, client)) {
+                    pendingPageDirection[0] = pageOffset > 0 ? 1 : -1;
+                    pendingPageTargetPage[0] = currentPage[0] + pendingPageDirection[0];
+                    pendingPageTargetSlot[0] = abilityFromNode.slot;
+                    pendingPageTargetName[0] = abilityName;
+                    pageSwitchAttempts[0] = 0;
+                    pendingPageSwitch.set(true);
+                    pageSwitchTicks.set(0);
+                }
                 return;
             }
 
             if (hasUnlockPrefix(abilityName, screen)) {
-                WynnExtras.LOGGER.debug("[TreeLoader] Clicking | ability='{}' page={} remaining={}", abilityName, currentPage[0], abilitiesToClick2.size());
-                clickOnAbility(client, player, abilityName, screen);
-                pendingClick = new PendingClick(abilityNode, abilityName, currentPage[0]);
-                pendingClick.ticksWaiting = 0;
-
-                if (fastMode) {
-                    abilityClickTicks[0] = 0; // no delay
-                } else {
-                    abilityClickTicks[0] = 1; // minimal delay
+                int clickedSlot = clickOnAbility(client, player, abilityName, screen);
+                if (clickedSlot >= 0) {
+                    pendingClick = new PendingClick(
+                            abilityName,
+                            clickedSlot,
+                            screen.getScreenHandler().getRevision());
                 }
                 return;
             } else {
-            WynnExtras.LOGGER.debug("[TreeLoader] Not unlockable yet | ability='{}' failCycles={}/{} queueSize={}", abilityName, failCycles.get(), MAX_FAIL_CYCLES, abilitiesToClick2.size());
-            if (abilitiesToClick2.size() > 1) {
-                AbilityMapData.Node removed = abilitiesToClick2.removeFirst();
-                abilitiesToClick2.add(Math.min(failCycles.get(), abilitiesToClick2.size() - 1), removed);
-                failCycles.set(failCycles.get() + 1);
-            } else {
-                WynnExtras.LOGGER.debug("[TreeLoader] FREEZE RISK: single node stuck and not unlockable | ability='{}' page={} x={} y={}", abilityName, abilityNode.meta.page, abilityNode.coordinates.x, abilityNode.coordinates.y);
-                failCycles.set(failCycles.get() + 1);
+                int replacementIndex = findVisibleQueueCandidate(screen, currentPage[0]);
+                if (replacementIndex > 0) {
+                    AbilityMapData.Node replacement = abilitiesToClick2.remove(replacementIndex);
+                    abilitiesToClick2.addFirst(replacement);
+                    return;
                 }
+
+                failCycles.incrementAndGet();
             }
         });
 
-        ClientTickEvents.END_CLIENT_TICK.register((tick) -> {
-            if(!loadingSkillpoints || skillPointSet == null) return;
-
-            if(System.currentTimeMillis() - finishedTreeTime < 600) {
-                MinecraftClient.getInstance().interactionManager.clickSlot(screen.getScreenHandler().syncId, 4, 0, SlotActionType.QUICK_MOVE,MinecraftUtils.player());
-
-                return;
-            }
-
-            int finishedSkillPoints = 0;
-            int[] pointArray = skillPointSet;
-            for (int i = 0; i < 5; i++) {
-                int remainingPoints = pointArray[i];
-                if(remainingPoints == 0) {
-                    finishedSkillPoints++;
-                    continue;
-                }
-
-                if(remainingPoints % 5 == 0) {
-                    //11
-                    //MinecraftClient.getInstance().player.networkHandler.sendPacket(new ClientCommandC2SPacket(MinecraftUtils.player(), ClientCommandC2SPacket.Mode.PRESS_SHIFT_KEY));
-                    MinecraftClient.getInstance().interactionManager.clickSlot(screen.getScreenHandler().syncId, 11 + i, 0, SlotActionType.QUICK_MOVE,MinecraftUtils.player());
-                    //clickSlotHelper(11 + i, screen, MinecraftClient.getInstance());
-
-                    //MinecraftUtils.containerMenu().onSlotClick(11 + i, 0, SlotActionType.QUICK_MOVE, MinecraftUtils.player());
-                    //MinecraftClient.getInstance().player.networkHandler.sendPacket(new ClientCommandC2SPacket(MinecraftUtils.player(), ClientCommandC2SPacket.Mode.RELEASE_SHIFT_KEY));
-
-                    pointArray[i] -= 5;
-                    break;
-                }
-
-                clickSlotHelper(11 + i, screen, MinecraftClient.getInstance());
-                //MinecraftUtils.containerMenu().onSlotClick(11 + i, 0, SlotActionType.PICKUP, MinecraftUtils.player());
-                pointArray[i]--;
-                break;
-            }
-
-            if(finishedSkillPoints == 5) {
-                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Finished assigning skill points.")));
-                skillPointSet = null;
-                loadingSkillpoints = false;
-                return;
-            }
-
-            skillPointSet = pointArray;
-        });
     }
 
     public static String extractAbilityNameFromHtml(String html) {
@@ -993,65 +949,99 @@ public class TreeLoader {
         resetMenuWasOpened = clickOnNameInInventory("Reset", screen, client);
     }
 
-    static public void clickOnSockets(MinecraftClient client, PlayerEntity player, HandledScreen<?> screen) {
-        if (!inResetMenu) return;
-        boolean wasClicked = clickOnNameInInventory("Empty Socket", screen, client);
-        if (wasClicked) clickedSockets++;
-    }
-
     static public void confirmReset(MinecraftClient client, PlayerEntity player, HandledScreen<?> screen) {
         if (!inResetMenu) return;
         wasReset = clickOnNameInInventory("Confirm", screen, client);
     }
 
-    static public void clickOnAbility(MinecraftClient client, PlayerEntity player, String nameToClick, HandledScreen<?> screen) {
-        if (!inTreeMenu) return;
+    static public int clickOnAbility(MinecraftClient client, PlayerEntity player, String nameToClick, HandledScreen<?> screen) {
+        if (!inTreeMenu) return -1;
         // "Next Page" / "Previous Page" are menu buttons, not abilities — use the fuzzy matcher
         if (nameToClick.equals("Next Page") || nameToClick.equals("Previous Page")) {
-            clickOnNameInInventory(nameToClick, screen, client);
-            return;
+            return clickOnNameInInventory(nameToClick, screen, client) ? 0 : -1;
         }
         // For ability clicks, use exact-name match to avoid hitting tiered names like
         // "Haste II" when the target is "Haste".
-        String target = "Unlock " + nameToClick;
         for (int i = 0; i < screen.getScreenHandler().slots.size(); i++) {
             Slot slot = screen.getScreenHandler().slots.get(i);
-            if (!slot.hasStack() || slot.getStack().getCustomName() == null) continue;
-            String raw = slot.getStack().getCustomName().getString();
-            String stripped = raw.replaceAll("§[0-9a-fk-or]", "").trim();
-            if (stripped.equals(target)) {
+            if (!slot.hasStack()) continue;
+            if (isUnlockableAbilityName(slot.getStack().getName().getString(), nameToClick)) {
                 clickSlotHelper(i, screen, client);
-                return;
+                return i;
             }
         }
+        return -1;
     }
 
     static public boolean hasUnlockPrefix(String ability, HandledScreen<?> screen) {
-        String target = "Unlock " + ability;
         for (int i = 0; i < screen.getScreenHandler().slots.size(); i++) {
             Slot slot = screen.getScreenHandler().slots.get(i);
-            if (!slot.hasStack() || slot.getStack().getCustomName() == null) continue;
-            String raw = slot.getStack().getCustomName().getString();
-            String stripped = raw.replaceAll("§[0-9a-fk-or]", "").trim();
-            if (stripped.equals(target)) {
+            if (!slot.hasStack()) continue;
+            if (isUnlockableAbilityName(slot.getStack().getName().getString(), ability)) {
                 return true;
             }
         }
         return false;
     }
 
+    private static boolean isAbilityShownAtSlot(HandledScreen<?> screen, int slot, String ability) {
+        if (ability == null || slot < 0 || slot >= screen.getScreenHandler().slots.size()) return false;
+        ItemStack stack = screen.getScreenHandler().slots.get(slot).getStack();
+        if (stack.isEmpty()) return false;
+        String displayedName = stripFormatting(stack.getName().getString());
+        return displayedName.equals(ability) || isUnlockableAbilityName(displayedName, ability);
+    }
 
-    static public int countOccurences(String count, HandledScreen<?> screen){
-        int socketsFilled = 0;
-        for (int i = 0; i < screen.getScreenHandler().slots.size(); i++){
-            Slot slot = screen.getScreenHandler().slots.get(i);
-            if (!slot.hasStack() || slot.getStack().getCustomName() == null) continue;
-            String name = slot.getStack().getCustomName().getString();
-            if(name.contains(count)){
-                socketsFilled++;
-            }
+    private static boolean isAbilityClickConfirmed(PendingClick click, HandledScreen<?> screen) {
+        if (click.slot < 0 || click.slot >= screen.getScreenHandler().slots.size()) return false;
+        ItemStack stack = screen.getScreenHandler().slots.get(click.slot).getStack();
+        return !stack.isEmpty() && !isUnlockableAbilityName(stack.getName().getString(), click.abilityName);
+    }
+
+    private static int findVisibleQueueCandidate(HandledScreen<?> screen, int currentPage) {
+        for (int i = 1; i < abilitiesToClick2.size(); i++) {
+            AbilityMapData.Node node = abilitiesToClick2.get(i);
+            if (node == null || node.meta == null || node.meta.page != currentPage) continue;
+            AbilityTreeData.Ability ability = getAbilityFromNode(node, classTree);
+            if (ability == null) continue;
+            String name = extractAbilityNameFromHtml(ability.name);
+            if (name != null && hasUnlockPrefix(name, screen)) return i;
         }
-        return socketsFilled;
+        return -1;
+    }
+
+    private static String stripFormatting(String value) {
+        if (value == null) return "";
+        return value.replaceAll("§#[0-9a-fA-F]{8}", "").replaceAll("§.", "").trim();
+    }
+
+    private static boolean isUnlockableAbilityName(String displayedName, String ability) {
+        if (displayedName == null || ability == null) return false;
+        String stripped = stripFormatting(displayedName);
+        String target = "Unlock " + ability;
+        return stripped.equals(target) || stripped.equals(target + " ability");
+    }
+
+    private static int findNamedSlot(HandledScreen<?> screen, String name) {
+        int limit = Math.min(ABILITY_TREE_CONTENT_SLOTS, screen.getScreenHandler().slots.size());
+        for (int i = 0; i < limit; i++) {
+            if (isSlotNamed(screen, i, name)) return i;
+        }
+        return -1;
+    }
+
+    private static boolean isSlotNamed(HandledScreen<?> screen, int slot, String name) {
+        if (screen == null || slot < 0 || slot >= screen.getScreenHandler().slots.size()) return false;
+        ItemStack stack = screen.getScreenHandler().getSlot(slot).getStack();
+        return !stack.isEmpty() && stripFormatting(stack.getName().getString()).contains(name);
+    }
+
+    private static int countFilledAbilityShardSockets(HandledScreen<?> screen) {
+        int filled = 0;
+        for (int slot : new int[]{11, 15, 40}) {
+            if (isSlotNamed(screen, slot, "Ability Shard")) filled++;
+        }
+        return filled;
     }
 
     static public boolean clickOnNameInInventory(String nameToClick, HandledScreen<?> screen, MinecraftClient client) {
@@ -1069,13 +1059,22 @@ public class TreeLoader {
     }
 
     static public void clickSlotHelper(int slotid, HandledScreen<?> screen, MinecraftClient client) {
-        client.interactionManager.clickSlot(
-                screen.getScreenHandler().syncId,
+        ContainerUtils.clickOnSlot(
                 slotid,
+                screen.getScreenHandler().syncId,
+                screen.getScreenHandler().getRevision(),
                 0,
-                SlotActionType.PICKUP,
-                client.player
-        );
+                screen.getScreenHandler().getStacks());
+        ticksSinceLastAction = 0;
+    }
+
+    private static void shiftClickSlotHelper(int slotId, int mouseButton, HandledScreen<?> screen) {
+        ContainerUtils.shiftClickOnSlot(
+                slotId,
+                screen.getScreenHandler().syncId,
+                screen.getScreenHandler().getRevision(),
+                mouseButton,
+                screen.getScreenHandler().getStacks());
         ticksSinceLastAction = 0;
     }
 }

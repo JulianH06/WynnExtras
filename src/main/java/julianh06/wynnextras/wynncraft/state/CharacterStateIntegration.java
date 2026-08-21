@@ -29,7 +29,11 @@ public final class CharacterStateIntegration {
         inClassSelection = classSelection;
 
         String characterId = CharacterState.id().orElse(null);
-        if (characterId == null || characterId.equals(lastCharacterId)) return;
+        if (characterId == null) {
+            lastCharacterId = null;
+            return;
+        }
+        if (characterId.equals(lastCharacterId)) return;
         lastCharacterId = characterId;
         onCharacterChanged(characterId);
     }
@@ -42,6 +46,9 @@ public final class CharacterStateIntegration {
         BankOverlay.expectedOverlayType = BankOverlayType.NONE;
         BankOverlay.currentCharacterID = characterId;
         CharacterBankData.INSTANCE.load();
+        CharacterState.updateCharacterInfo(
+                CharacterBankData.INSTANCE.getCharacterNickname(),
+                CharacterBankData.INSTANCE.getCharacterLevel());
         ProfessionOverlay.onCharacterSwap();
 
         String localName = CharacterState.className().orElse(null);
@@ -65,6 +72,7 @@ public final class CharacterStateIntegration {
                 String apiCharId = entry.getKey().replace("-", "");
                 if (!matchesCharacterId(apiCharId, characterId)) continue;
                 CharacterData data = entry.getValue();
+                CharacterState.updateCharacterInfo(data.getType(), data.getLevel());
                 String displayName = displayName(data);
                 if (displayName != null) {
                     CharacterBankData.INSTANCE.setCharacterInfo(displayName, data.getLevel(), data.getGamemode());

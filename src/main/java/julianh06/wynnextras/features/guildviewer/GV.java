@@ -84,8 +84,16 @@ public class GV {
 
     public static void open(String guild) {
         currentGuildData = null;
+        GVScreen.bannerBlockEntity = null;
+        GVScreen.bannerGuiState = null;
         WynncraftApiHandler.fetchGuildData(guild).thenAccept(guildData -> {
+            if (guildData == null) {
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Could not find guild data for " + guild + "."));
+                return;
+            }
             currentGuildData = guildData;
+
+            if (guildData.summaryOnly || guildData.banner == null) return;
 
             BlockState state = Blocks.WHITE_BANNER.getDefaultState();
 
@@ -99,11 +107,13 @@ public class GV {
 
             BannerPatternsComponent.Builder builder = new BannerPatternsComponent.Builder();
 
-            for (GuildData.BannerLayer layer : GV.currentGuildData.banner.layers) {
-                RegistryEntry<BannerPattern> entry =
-                        GVScreen.resolvePatternEntry(layer.pattern.toUpperCase());
-                if (entry != null) {
-                    builder.add(entry, GVScreen.dyeColorFromName(layer.colour));
+            if (GV.currentGuildData.banner.layers != null) {
+                for (GuildData.BannerLayer layer : GV.currentGuildData.banner.layers) {
+                    RegistryEntry<BannerPattern> entry =
+                            GVScreen.resolvePatternEntry(layer.pattern.toUpperCase());
+                    if (entry != null) {
+                        builder.add(entry, GVScreen.dyeColorFromName(layer.colour));
+                    }
                 }
             }
 
@@ -111,6 +121,7 @@ public class GV {
                     .setPatterns(builder.build());
         }).exceptionally(ex -> {
             WynnExtras.LOGGER.error("Error while getting the data: " + ex.getMessage());
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("Could not load guild data. Please try again later."));
             return null;
         });
 
