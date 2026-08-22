@@ -1,21 +1,23 @@
 package julianh06.wynnextras.wynncraft.state;
 
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.event.RaidEndedEvent;
 import julianh06.wynnextras.event.TickEvent;
+import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
 import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.raid.PartyIgnoreOnRaid;
 import julianh06.wynnextras.features.raid.RaidRoomData;
 import julianh06.wynnextras.features.raid.RaidSnapshot;
 import julianh06.wynnextras.features.raid.WERaidKind;
-import julianh06.wynnextras.utils.BossBarUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.wynncraft.menu.MenuType;
 import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.hud.ClientBossBar;
 import net.minecraft.scoreboard.Scoreboard;
+import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.scoreboard.ScoreboardEntry;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.text.Text;
@@ -41,6 +43,8 @@ public final class RaidState {
     private static long roomStartTime;
     private static EndStatus endStatus = EndStatus.NONE;
     private static long endedAt;
+    private static boolean awaitingRaidResume;
+    private static int raidResumeTicksRemaining;
     private static final Map<Integer, RaidRoomData> ROOMS = new LinkedHashMap<>();
 
     public static WERaidKind raidKind() { return raidKind; }
@@ -63,17 +67,19 @@ public final class RaidState {
         observeChat(event.message.getString());
     }
 
+    @SubscribeEvent
+    public void onWorldChange(WorldChangeEvent event) {
+        if (!isInRaid()) return;
+        awaitingRaidResume = true;
+        raidResumeTicksRemaining = 100;
+    }
+
     public static void observeChat(String rawMessage) {
         String message = clean(rawMessage);
         if (message.contains(": ")) return;
-        WERaidKind detected = detectKind(message);
-        if (detected != WERaidKind.UNKNOWN && !isInRaid()) start(detected);
-        else if (detected != WERaidKind.UNKNOWN) raidKind = detected;
 
         String lower = message.toLowerCase(Locale.ROOT);
-        if (lower.contains("raid started") || lower.contains("raid has begun") || lower.contains("the raid begins")) {
-            start(detected);
-        } else if (lower.contains("challenge completed") || lower.contains("room completed")) {
+        if (lower.contains("challenge completed") || lower.contains("room completed")) {
             completeRoom();
         } else if (lower.contains("raid completed") && !lower.contains(":")) {
             end(EndStatus.COMPLETED);
@@ -95,8 +101,8 @@ public final class RaidState {
             return;
         }
 
-        WERaidKind detected = detectKind(text);
-        if (detected != WERaidKind.UNKNOWN) start(detected);
+        WERaidKind detected = WERaidKind.fromEntryTitle(title);
+        if (detected != WERaidKind.UNKNOWN && !isInRaid()) start(detected);
     }
 
     public static void observeScoreboard() {
@@ -104,45 +110,37 @@ public final class RaidState {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.world == null) return;
             Scoreboard scoreboard = client.world.getScoreboard();
-            for (ScoreboardObjective objective : scoreboard.getObjectives()) {
-                for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
-                    String line = clean(entry.name().getString());
-                    if (line.equals("Challenge Completed!")) {
-                        completeRoom();
-                        continue;
-                    }
-                    if (line.startsWith("Too many players have") || line.equals("You ran out of time!")) {
-                        end(EndStatus.FAILED);
-                        continue;
-                    }
-                    startRoomFromSignal(line);
+            ScoreboardObjective objective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
+            if (objective == null) return;
+            confirmRaidResume(clean(objective.getDisplayName().getString()));
+            for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
+                String line = clean(entry.name().getString());
+                confirmRaidResume(line);
+                if (line.equals("Challenge Completed!")) {
+                    completeRoom();
+                    continue;
                 }
+                if (line.startsWith("Too many players have") || line.equals("You ran out of time!")) {
+                    end(EndStatus.FAILED);
+                    continue;
+                }
+                startRoomFromSignal(line);
             }
         } catch (Throwable ignored) {}
     }
 
     @SubscribeEvent
     public void onTick(TickEvent event) {
+        if (awaitingRaidResume && --raidResumeTicksRemaining <= 0) interruptRaid();
         if (event.ticks % 5 != 0) return;
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
-        for (ClientBossBar bar : BossBarUtils.getBossBars(client.inGameHud.getBossBarHud())) {
-            String text = clean(bar.getName().getString());
-            WERaidKind detected = detectKind(text);
-            if (detected != WERaidKind.UNKNOWN) {
-                if (!isInRaid()) start(detected);
-                else raidKind = detected;
-            }
-        }
         observeScoreboard();
         if (isInRaid() && WynncraftMenuService.isCurrent(MenuType.RAID_REWARD)) phase = Phase.REWARD;
     }
 
     private static void start(WERaidKind detected) {
-        if (isInRaid()) {
-            if (detected != null && detected != WERaidKind.UNKNOWN) raidKind = detected;
-            return;
-        }
+        if (isInRaid()) return;
         if (System.currentTimeMillis() - endedAt < 5_000) return;
         raidKind = detected == null ? WERaidKind.UNKNOWN : detected;
         phase = Phase.STARTING;
@@ -151,6 +149,8 @@ public final class RaidState {
         startTime = System.currentTimeMillis();
         roomStartTime = 0;
         endStatus = EndStatus.NONE;
+        awaitingRaidResume = false;
+        raidResumeTicksRemaining = 0;
         ROOMS.clear();
         RaidChatNotifier.resetCounters();
         PartyIgnoreOnRaid.onRaidStarted();
@@ -182,10 +182,36 @@ public final class RaidState {
         endStatus = status;
         endedAt = now;
         phase = status == EndStatus.COMPLETED ? Phase.COMPLETED : Phase.FAILED;
+        awaitingRaidResume = false;
+        raidResumeTicksRemaining = 0;
         PlayerHider.onRaidEnded();
         if (status == EndStatus.COMPLETED) new RaidEndedEvent.Completed(snapshot).post();
         else new RaidEndedEvent.Failed(snapshot).post();
         roomStartTime = 0;
+    }
+
+    private static void confirmRaidResume(String scoreboardLine) {
+        if (!awaitingRaidResume || !scoreboardLine.endsWith("Raid:")) return;
+        awaitingRaidResume = false;
+        raidResumeTicksRemaining = 0;
+    }
+
+    private static void interruptRaid() {
+        if (!awaitingRaidResume || !isInRaid()) return;
+        raidKind = WERaidKind.UNKNOWN;
+        phase = Phase.IDLE;
+        room = 0;
+        roomName = "Unknown Room";
+        startTime = 0;
+        roomStartTime = 0;
+        endStatus = EndStatus.NONE;
+        endedAt = 0;
+        awaitingRaidResume = false;
+        raidResumeTicksRemaining = 0;
+        ROOMS.clear();
+        PlayerHider.onRaidEnded();
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                Text.literal("§cRaid tracking has been interrupted; timestamps for the current raid are no longer available.")));
     }
 
     private static void startRoomFromSignal(String line) {
@@ -247,16 +273,6 @@ public final class RaidState {
             if (line.contains(signalsAndNames[i])) return signalsAndNames[i + 1];
         }
         return null;
-    }
-
-    private static WERaidKind detectKind(String text) {
-        String upper = text.toUpperCase(Locale.ROOT);
-        if (upper.contains("GROOTSLANG") || upper.matches(".*\\bNOG\\b.*")) return WERaidKind.NOTG;
-        if (upper.contains("NEXUS OF LIGHT") || upper.matches(".*\\bNOL\\b.*")) return WERaidKind.NOL;
-        if (upper.contains("CANYON COLOSSUS") || upper.matches(".*\\bTCC\\b.*")) return WERaidKind.TCC;
-        if (upper.contains("NAMELESS ANOMALY") || upper.matches(".*\\bTNA\\b.*")) return WERaidKind.TNA;
-        if (upper.contains("WARTORN PALACE") || upper.matches(".*\\bWTP\\b.*") || upper.matches(".*\\bTWP\\b.*")) return WERaidKind.TWP;
-        return WERaidKind.UNKNOWN;
     }
 
     private static int totalChallenges(WERaidKind kind) {
