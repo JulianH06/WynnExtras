@@ -105,6 +105,7 @@ public class AttackTimer {
     );
 
     public static void register() {
+        TerritoryState.initialize();
         HudRenderCallback.EVENT.register(AttackTimer::render);
         WEEventBus.registerEventListener(new AttackTimer());
         // Scan open "Attacking: X" menus for defense info and cache it
