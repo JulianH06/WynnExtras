@@ -26,6 +26,7 @@
     "MountColorBackgroundMixin",
     "OrderedRenderCommandQueueImplMixin",
     "PerspectiveMixin",
+    "PlayerListHudMixin",
     "PlayerEntityRendererMixin",
     "RaidLootOverlayClickMixin",
     "RaidLootOverlayScreenMixin",

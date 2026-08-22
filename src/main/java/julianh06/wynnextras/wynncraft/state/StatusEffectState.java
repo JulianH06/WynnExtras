@@ -1,11 +1,6 @@
 package julianh06.wynnextras.wynncraft.state;
 
-import julianh06.wynnextras.annotations.WEModule;
-import julianh06.wynnextras.event.TickEvent;
-import julianh06.wynnextras.utils.BossBarUtils;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.hud.ClientBossBar;
-import net.neoforged.bus.api.SubscribeEvent;
+import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,11 +8,12 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@WEModule
 public final class StatusEffectState {
     public record Effect(String name, String display, int duration) {}
-    private static final Pattern SECONDS = Pattern.compile("(?i)(\\d+)\\s*s(?:ec(?:onds?)?)?\\b");
-    private static final Pattern CLOCK = Pattern.compile("\\b(\\d+):(\\d{2})\\b");
+    private static final String TITLE = "Status Effects";
+    private static final Pattern EFFECT = Pattern.compile(
+            "(?<prefix>.+?)\\s?(?<modifier>(?:-|\\+)?[-.\\d]+)?(?<modifierSuffix>(?:/\\d+s|%)?)?\\s?"
+                    + "(?<name>\\+?['a-zA-Z/\\s]+?)\\s\\((?<minutes>\\d{2}|\\*{2}):(?<seconds>\\d{2}|\\*{2})\\)");
     private static final List<Effect> EFFECTS = new ArrayList<>();
 
     public static List<Effect> effects() { return List.copyOf(EFFECTS); }
@@ -26,39 +22,44 @@ public final class StatusEffectState {
                 || effect.display.toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT)));
     }
 
-    @SubscribeEvent
-    public void onTick(TickEvent event) {
-        if (event.ticks % 5 != 0) return;
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null) return;
-        List<Effect> parsed = new ArrayList<>();
-        for (ClientBossBar bar : BossBarUtils.getBossBars(client.inGameHud.getBossBarHud())) {
-            String display = clean(bar.getName().getString());
-            if (display.isEmpty() || display.contains("Tower") || display.toLowerCase(Locale.ROOT).contains("raid")) continue;
-            int duration = duration(display);
-            if (duration < 0 && !looksLikeEffect(display)) continue;
-            parsed.add(new Effect(effectName(display), display, duration));
-        }
+    public static void update(Text footer) {
+        List<Effect> parsed = parseFooter(footer == null ? null : footer.getString());
         EFFECTS.clear();
         EFFECTS.addAll(parsed);
     }
 
-    private static boolean looksLikeEffect(String text) {
-        String lower = text.toLowerCase(Locale.ROOT);
-        return lower.contains("radiant") || lower.contains("radiance") || lower.contains("provoke")
-                || lower.contains("tree manipulation");
+    public static void clear() {
+        EFFECTS.clear();
     }
 
-    private static int duration(String text) {
-        Matcher seconds = SECONDS.matcher(text);
-        if (seconds.find()) return Integer.parseInt(seconds.group(1));
-        Matcher clock = CLOCK.matcher(text);
-        if (clock.find()) return Integer.parseInt(clock.group(1)) * 60 + Integer.parseInt(clock.group(2));
-        return -1;
+    static List<Effect> parseFooter(String footer) {
+        if (footer == null) return List.of();
+        String plain = clean(footer);
+        if (!plain.startsWith(TITLE)) return List.of();
+
+        List<Effect> parsed = new ArrayList<>();
+        String body = plain.substring(TITLE.length()).strip();
+        for (String entry : body.split("\\s{2,}|\\R")) {
+            String display = entry.strip();
+            if (display.isEmpty()) continue;
+            Matcher matcher = EFFECT.matcher(display);
+            if (!matcher.find()) continue;
+
+            String name = matcher.group("name").trim();
+            int minutes = parseTimePart(matcher.group("minutes"));
+            int seconds = parseTimePart(matcher.group("seconds"));
+            int duration = minutes < 0 || seconds < 0 ? -1 : minutes * 60 + seconds;
+            parsed.add(new Effect(name, display, duration));
+        }
+        return List.copyOf(parsed);
     }
 
-    private static String effectName(String display) {
-        return display.replaceAll("(?i)\\s*[-|:]?\\s*(?:\\d+\\s*s(?:ec(?:onds?)?)?|\\d+:\\d{2}).*", "").trim();
+    private static int parseTimePart(String value) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
     }
 
     private static String clean(String value) { return value.replaceAll("§[0-9a-fk-or]", "").trim(); }
