@@ -298,6 +298,21 @@ public class WynncraftApiHandler {
                 });
     }
 
+    public static CompletableFuture<List<GuildData>> searchGuildsByPrefix(String prefix) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL_SEARCH + encodePathSegment(prefix)))
+                .timeout(Duration.ofSeconds(8))
+                .GET()
+                .build();
+
+        return sendAsync(request).thenApply(response -> {
+            if (response.statusCode() != 200) {
+                throw new IllegalStateException("Wynncraft guild search returned HTTP " + response.statusCode());
+            }
+            return parseGuildPrefixSummaries(response.body(), prefix);
+        });
+    }
+
     private static CompletableFuture<GuildData> fetchGuildSummary(String query) {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL_SEARCH + encodePathSegment(query)))
@@ -1101,6 +1116,47 @@ public class WynncraftApiHandler {
         GuildData summary = findGuildSummary(result.getAsJsonObject("guildsPrefix"), query);
         if (summary == null) summary = findGuildSummary(result.getAsJsonObject("guilds"), query);
         return summary;
+    }
+
+    private static List<GuildData> parseGuildPrefixSummaries(String json, String query) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) {
+            throw new IllegalStateException("Guild search response is not an object");
+        }
+
+        JsonObject result = root.getAsJsonObject();
+        Map<String, GuildData> matches = new LinkedHashMap<>();
+        addGuildPrefixSummaries(result.getAsJsonObject("guildsPrefix"), query, matches);
+        addGuildPrefixSummaries(result.getAsJsonObject("guilds"), query, matches);
+        return matches.values().stream()
+                .sorted(Comparator.comparing((GuildData guild) -> guild.prefix).thenComparing(guild -> guild.name))
+                .toList();
+    }
+
+    private static void addGuildPrefixSummaries(JsonObject guilds, String query, Map<String, GuildData> matches) {
+        if (guilds == null) return;
+
+        for (Map.Entry<String, JsonElement> entry : guilds.entrySet()) {
+            if (!entry.getValue().isJsonObject()) continue;
+            JsonObject guild = entry.getValue().getAsJsonObject();
+            String prefix = jsonString(guild, "prefix");
+            if (!query.equalsIgnoreCase(prefix)) continue;
+            if (!guild.has("level") || guild.get("level").isJsonNull()
+                    || !guild.has("members") || guild.get("members").isJsonNull()) {
+                throw new IllegalStateException("Guild search response is missing required fields");
+            }
+
+            GuildData summary = new GuildData();
+            summary.summaryOnly = true;
+            summary.uuid = entry.getKey();
+            summary.name = jsonString(guild, "name");
+            summary.prefix = prefix;
+            summary.level = guild.get("level").getAsInt();
+            summary.created = jsonString(guild, "created");
+            summary.members = new GuildData.Members();
+            summary.members.total = guild.get("members").getAsInt();
+            matches.putIfAbsent(summary.uuid, summary);
+        }
     }
 
     private static GuildData findGuildSummary(JsonObject guilds, String query) {

@@ -83,6 +83,33 @@ public class GV {
     }
 
     public static void open(String guild) {
+        WynncraftApiHandler.searchGuildsByPrefix(guild).thenAccept(matches -> {
+            GuildData exactMatch = matches.stream()
+                    .filter(match -> guild.equals(match.prefix))
+                    .findFirst()
+                    .orElse(null);
+            if (exactMatch != null) {
+                openResolved(exactMatch.prefix);
+            } else if (matches.size() == 1) {
+                openResolved(matches.getFirst().prefix);
+            } else if (matches.size() > 1) {
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                        "Multiple guilds use this prefix. Please use the exact capitalization:"));
+                for (GuildData match : matches) {
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                            "§f" + match.prefix + " §7(" + match.name + ")"));
+                }
+            } else {
+                openResolved(guild);
+            }
+        }).exceptionally(ex -> {
+            WynnExtras.LOGGER.warn("Could not resolve guild prefix capitalization for " + guild + ": " + ex.getMessage());
+            openResolved(guild);
+            return null;
+        });
+    }
+
+    private static void openResolved(String guild) {
         currentGuildData = null;
         GVScreen.bannerBlockEntity = null;
         GVScreen.bannerGuiState = null;
