@@ -35,6 +35,10 @@ public final class ContainerUtils {
         click(slot, syncId, 0, hotbarKey, SlotActionType.SWAP, stacks);
     }
 
+    public static void pressKeyOnSlot(int slot, int syncId, int revision, int hotbarKey, List<ItemStack> stacks) {
+        click(slot, syncId, revision, hotbarKey, SlotActionType.SWAP, stacks);
+    }
+
     private static void click(int slot, int syncId, int revision, int button, SlotActionType action, List<ItemStack> stacks) {
         if (MinecraftUtils.mc() == null || stacks == null) return;
         if (MinecraftUtils.mc().getNetworkHandler() == null || slot < 0 || slot >= stacks.size()) return;

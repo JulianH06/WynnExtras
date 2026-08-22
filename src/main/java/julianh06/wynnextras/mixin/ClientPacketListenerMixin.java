@@ -2,11 +2,14 @@ package julianh06.wynnextras.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import julianh06.wynnextras.event.SetEntityDataEvent;
+import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.wynncraft.state.RaidState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
+import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
+import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -32,6 +35,20 @@ public class ClientPacketListenerMixin {
     }, at = @At("TAIL"))
     private void wynnExtras$observeRaidScoreboard(CallbackInfo ci) {
         RaidState.observeScoreboard();
+    }
+
+    @Inject(method = "onInventory", at = @At("TAIL"))
+    private void wynnExtras$continueBankPageJump(InventoryS2CPacket packet, CallbackInfo ci) {
+        BankOverlay2.onBankContainerUpdate(packet.syncId(), -1);
+        BankOverlay2.onBankPageNavigationUpdate(packet.syncId(), packet.revision(), -1);
+    }
+
+    @Inject(method = "onScreenHandlerSlotUpdate", at = @At("TAIL"))
+    private void wynnExtras$continueBankPageJump(ScreenHandlerSlotUpdateS2CPacket packet, CallbackInfo ci) {
+        BankOverlay2.onBankContainerUpdate(packet.getSyncId(), packet.getSlot());
+        if (packet.getSlot() == 51 || packet.getSlot() == 52) {
+            BankOverlay2.onBankPageNavigationUpdate(packet.getSyncId(), packet.getRevision(), packet.getSlot());
+        }
     }
 
     @ModifyArg(

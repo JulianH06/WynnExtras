@@ -88,6 +88,10 @@ import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 
 public class BankOverlay2 extends WEHandledScreen {
     private static final boolean MOUSE_TWEAKS_LOADED = FabricLoader.getInstance().isModLoaded("mousetweaks");
+    private static final long BANK_PAGE_PROGRESS_INTERVAL_MS = 275L;
+    private static final long BANK_PAGE_RESPONSE_SETTLE_MS = 100L;
+    private static final long BANK_PAGE_REJECTED_RESPONSE_SETTLE_MS = 50L;
+    private static final long BANK_PAGE_RESPONSE_TIMEOUT_MS = 1_500L;
     private static final Pattern MINECRAFT_FORMATTING_CODE_PATTERN = Pattern.compile("\u00a7[0-9a-fk-or]");
     private static final Pattern PAGE_RANK_REQUIREMENT_PATTERN = Pattern.compile("(?i)(?:only available to|requires(?: a)? rank:?|rank required:?)\\s+([A-Za-z0-9+]+)");
     private static final Pattern PAGE_NUMBER_PATTERN = Pattern.compile("(?i)\\bPage\\s+(\\d+)\\b");
@@ -175,8 +179,10 @@ public class BankOverlay2 extends WEHandledScreen {
     private static BankOverlayType bankTypeSwitchTargetType = BankOverlayType.NONE;
     private static int bankTypeSwitchTargetPage = -1;
     private static int pageJumpTarget = -1;
-    private static int pageJumpObservedPage = -1;
     private static long pageJumpLastActionAt = 0L;
+    private static long pageJumpLastProgressActionAt = 0L;
+    private static long pageJumpLastResponseAt = 0L;
+    private static int pageJumpLastActionPage = -1;
     private static TextRenderer frameTextRenderer;
     private static int bankSyncid = 0;
     private static int xFitAmount = 0;
@@ -245,15 +251,13 @@ public class BankOverlay2 extends WEHandledScreen {
     private static int reloadTotalPages = 0;
     private static int reloadOriginalPage = -1;
     private static boolean reloadPageLoaded = false;
-    private static int reloadSettleTicks = 0;
     private static Float reloadNextPageCustomModelData = null;
-    private static int reloadReadyTicks = 0;
     private static int reloadStableTicks = 0;
     private static int reloadLastSlotFingerprint = 0;
     private static int reloadSavedPage = -1;
-    private static final int RELOAD_READY_DELAY = 8;
+    private static long reloadLastContainerUpdateAt = 0L;
+    private static final long RELOAD_PACKET_SETTLE_MS = 50L;
     private static final int RELOAD_STABLE_DELAY = 2;
-    private static final int RELOAD_SETTLE_DELAY = 3;
     private static ReloadBankWidget reloadBankWidget = null;
 
     static int shownPages;
@@ -376,6 +380,7 @@ public class BankOverlay2 extends WEHandledScreen {
         isReloading = false;
         resetReloadPageReadiness();
         reloadNextPageCustomModelData = null;
+        reloadLastContainerUpdateAt = 0L;
         reloadBankWidget = null;
         pendingMouseTweaksRightClick = null;
         resetDragSplitting();
@@ -601,21 +606,17 @@ public class BankOverlay2 extends WEHandledScreen {
         // Reload bank state machine
         if (isReloading) {
             if (!shouldWait && reloadPageLoaded) {
-                if (++reloadSettleTicks < RELOAD_SETTLE_DELAY) {
-                    // Wait a few ticks for server to fully process the page
+                if (!canReloadNextPage()) {
+                    stopReloadAndReturnToOriginalPage();
                 } else {
-                    reloadSettleTicks = 0;
-                    if (!canReloadNextPage()) {
-                        stopReloadAndReturnToOriginalPage("no next reload page");
-                    } else {
-                        reloadCurrentPage++;
-                        resetReloadPageReadiness();
-                        jumpToBankPage(reloadCurrentPage);
-                        retryLoad();
-                    }
+                    reloadCurrentPage++;
+                    resetReloadPageReadiness();
+                    jumpToBankPage(reloadCurrentPage);
+                    retryLoad();
                 }
             }
-            if (!shouldWait && !reloadPageLoaded && isReloadCurrentPageReady()) {
+            if (!shouldWait && !reloadPageLoaded && isReloadCurrentPageReady()
+                    && System.currentTimeMillis() - reloadLastContainerUpdateAt >= RELOAD_PACKET_SETTLE_MS) {
                 int slotFingerprint = getActiveBankSlotFingerprint();
                 if (slotFingerprint == reloadLastSlotFingerprint) {
                     reloadStableTicks++;
@@ -623,15 +624,12 @@ public class BankOverlay2 extends WEHandledScreen {
                     reloadLastSlotFingerprint = slotFingerprint;
                     reloadStableTicks = 1;
                 }
-                reloadReadyTicks++;
 
-                if (reloadReadyTicks >= RELOAD_READY_DELAY && reloadStableTicks >= RELOAD_STABLE_DELAY) {
+                if (reloadStableTicks >= RELOAD_STABLE_DELAY) {
                     saveReloadCurrentPage();
                     reloadPageLoaded = true;
-                    reloadSettleTicks = 0;
                 }
             } else if (!reloadPageLoaded && activeInv == reloadCurrentPage) {
-                reloadReadyTicks = 0;
                 reloadStableTicks = 0;
                 reloadLastSlotFingerprint = 0;
             }
@@ -1138,17 +1136,28 @@ public class BankOverlay2 extends WEHandledScreen {
         if (stack == null || stack.isEmpty()) return -1;
         Matcher nameMatcher = PAGE_NUMBER_PATTERN.matcher(
                 MINECRAFT_FORMATTING_CODE_PATTERN.matcher(stack.getName().getString()).replaceAll(""));
-        if (nameMatcher.find()) return Integer.parseInt(nameMatcher.group(1));
+        if (nameMatcher.find()) return parsePageNumber(nameMatcher);
+        return -1;
+    }
 
-        if (stack.getComponents() == null) return -1;
+    private static int parsePageNumber(Matcher matcher) {
+        try {
+            return Integer.parseInt(matcher.group(1));
+        } catch (IllegalArgumentException ignored) {
+            return -1;
+        }
+    }
+
+    private static boolean advertisesQuickJump(ItemStack stack, int pageNumber) {
+        if (stack == null || stack.isEmpty() || stack.getComponents() == null) return false;
         var lore = stack.getComponents().get(DataComponentTypes.LORE);
-        if (lore == null) return -1;
+        if (lore == null) return false;
         for (Text line : lore.lines()) {
             Matcher matcher = PAGE_NUMBER_PATTERN.matcher(
                     MINECRAFT_FORMATTING_CODE_PATTERN.matcher(line.getString()).replaceAll(""));
-            if (matcher.find()) return Integer.parseInt(matcher.group(1));
+            if (matcher.find() && parsePageNumber(matcher) == pageNumber) return true;
         }
-        return -1;
+        return false;
     }
 
     private static int detectLiveBankPageIndex() {
@@ -1170,8 +1179,10 @@ public class BankOverlay2 extends WEHandledScreen {
         retryLoad();
 
         pageJumpTarget = pageIndex;
-        pageJumpObservedPage = -1;
         pageJumpLastActionAt = 0L;
+        pageJumpLastProgressActionAt = 0L;
+        pageJumpLastResponseAt = 0L;
+        pageJumpLastActionPage = -1;
         continuePageJump();
         return true;
     }
@@ -1188,7 +1199,6 @@ public class BankOverlay2 extends WEHandledScreen {
             shouldWait = false;
             shouldWaitSince = 0L;
             pageJumpTarget = -1;
-            pageJumpObservedPage = -1;
             pageJumpLastActionAt = 0L;
             retryLoad();
             clearAnnotationCache(currentPage);
@@ -1196,16 +1206,35 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         long now = System.currentTimeMillis();
-        if (currentPage == pageJumpObservedPage && now - pageJumpLastActionAt < 1_500L) return;
-        pageJumpObservedPage = currentPage;
+        if (pageJumpLastActionAt > 0L) {
+            long sinceAction = now - pageJumpLastActionAt;
+            boolean receivedResponse = pageJumpLastResponseAt >= pageJumpLastActionAt;
+            long retryIn;
+            if (receivedResponse) {
+                boolean progressed = pageJumpLastActionPage >= 0 && currentPage != pageJumpLastActionPage;
+                if (progressed) pageJumpLastProgressActionAt = pageJumpLastActionAt;
+                long sinceProgress = pageJumpLastProgressActionAt == 0L
+                        ? Long.MAX_VALUE
+                        : now - pageJumpLastProgressActionAt;
+                retryIn = Math.max(
+                        BANK_PAGE_PROGRESS_INTERVAL_MS - sinceProgress,
+                        (progressed ? BANK_PAGE_RESPONSE_SETTLE_MS : BANK_PAGE_REJECTED_RESPONSE_SETTLE_MS)
+                                - (now - pageJumpLastResponseAt));
+            } else {
+                retryIn = BANK_PAGE_RESPONSE_TIMEOUT_MS - sinceAction;
+            }
+            if (retryIn > 0L) return;
+        }
         pageJumpLastActionAt = now;
+        pageJumpLastActionPage = currentPage;
+        shouldWaitSince = now;
 
         int currentPageNumber = currentPage + 1;
         int targetPageNumber = pageJumpTarget + 1;
         int difference = targetPageNumber - currentPageNumber;
         if (Math.abs(difference) == 1) {
             int navigationSlot = difference > 0 ? 52 : 51;
-            ContainerUtils.clickOnSlot(navigationSlot, menu.syncId, 0, menu.getStacks());
+            ContainerUtils.clickOnSlot(navigationSlot, menu.syncId, menu.getRevision(), 0, menu.getStacks());
             return;
         }
 
@@ -1220,12 +1249,34 @@ public class BankOverlay2 extends WEHandledScreen {
         boolean quickJumpForward = difference > 0 && nearestQuickJump > currentPageNumber;
         boolean quickJumpBackward = difference < 0 && nearestQuickJump < currentPageNumber;
         if (quickJumpForward || quickJumpBackward) {
-            int navigationSlot = quickJumpForward ? 52 : 51;
             int hotbarKey = (nearestQuickJump - 1) / 2;
-            ContainerUtils.pressKeyOnSlot(navigationSlot, menu.syncId, hotbarKey, menu.getStacks());
-        } else {
-            int navigationSlot = difference > 0 ? 52 : 51;
-            ContainerUtils.clickOnSlot(navigationSlot, menu.syncId, 0, menu.getStacks());
+            if (advertisesQuickJump(getRightPageButton(), nearestQuickJump)) {
+                ContainerUtils.pressKeyOnSlot(52, menu.syncId, menu.getRevision(), hotbarKey, menu.getStacks());
+                return;
+            }
+            if (advertisesQuickJump(getLeftPageButton(), nearestQuickJump)) {
+                ContainerUtils.pressKeyOnSlot(51, menu.syncId, menu.getRevision(), hotbarKey, menu.getStacks());
+                return;
+            }
+        }
+
+        int navigationSlot = difference > 0 ? 52 : 51;
+        ContainerUtils.clickOnSlot(navigationSlot, menu.syncId, menu.getRevision(), 0, menu.getStacks());
+    }
+
+    public static void onBankPageNavigationUpdate(int syncId, int revision, int slot) {
+        if (pageJumpTarget < 0 || currentOverlayType == BankOverlayType.NONE) return;
+        ScreenHandler menu = MinecraftUtils.containerMenu();
+        if (menu == null || menu.syncId != syncId) return;
+        pageJumpLastResponseAt = System.currentTimeMillis();
+        continuePageJump();
+    }
+
+    public static void onBankContainerUpdate(int syncId, int slot) {
+        if (!isReloading || currentOverlayType == BankOverlayType.NONE || slot > 52) return;
+        ScreenHandler menu = MinecraftUtils.containerMenu();
+        if (menu != null && menu.syncId == syncId) {
+            reloadLastContainerUpdateAt = System.currentTimeMillis();
         }
     }
 
@@ -1437,21 +1488,17 @@ public class BankOverlay2 extends WEHandledScreen {
 
     private static void resetReloadPageReadiness() {
         reloadPageLoaded = false;
-        reloadSettleTicks = 0;
-        reloadReadyTicks = 0;
         reloadStableTicks = 0;
         reloadLastSlotFingerprint = 0;
         reloadSavedPage = -1;
+        reloadLastContainerUpdateAt = System.currentTimeMillis();
     }
 
     private static void stopReloadAndReturnToOriginalPage() {
-        stopReloadAndReturnToOriginalPage("unknown");
-    }
-
-    private static void stopReloadAndReturnToOriginalPage(String reason) {
         isReloading = false;
         resetReloadPageReadiness();
         reloadNextPageCustomModelData = null;
+        reloadLastContainerUpdateAt = 0L;
         int maxReturnPage = currentData == null ? BankOverlay.getCurrentMaxPages() - 1 : currentData.getLastPage() - 1;
         int returnPage = MathHelper.clamp(Math.max(0, reloadOriginalPage), 0, Math.max(0, maxReturnPage));
         jumpToBankPage(returnPage);
@@ -1615,10 +1662,13 @@ public class BankOverlay2 extends WEHandledScreen {
         isReloading = false;
         resetReloadPageReadiness();
         reloadNextPageCustomModelData = null;
+        reloadLastContainerUpdateAt = 0L;
         pendingMouseTweaksRightClick = null;
         pageJumpTarget = -1;
-        pageJumpObservedPage = -1;
         pageJumpLastActionAt = 0L;
+        pageJumpLastProgressActionAt = 0L;
+        pageJumpLastResponseAt = 0L;
+        pageJumpLastActionPage = -1;
         BankOverlay.resetScrollRegistration();
         BankOverlaySlotBridge.restoreAll();
         clearHoverState(MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?> handledScreen ? handledScreen : null);
@@ -2646,7 +2696,6 @@ public class BankOverlay2 extends WEHandledScreen {
                     long waitDuration = System.currentTimeMillis() - shouldWaitSince;
 
                     if (waitDuration > 1500) {
-                        WynnExtras.LOGGER.info("retrying jump");
                         shouldWaitSince = System.currentTimeMillis();
                         retryLoad();
                         WynntilsBankAdapter.setLastPage(BankOverlay.getPersonalStorageUtils(), 99);
@@ -5052,7 +5101,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             if (isReloading) {
                 // Cancel reload
-                stopReloadAndReturnToOriginalPage("button clicked while reloading");
+                stopReloadAndReturnToOriginalPage();
             } else {
                 // Start reload
                 if (BankOverlay.isCharacterBankMissingCharacterId()) return true;
