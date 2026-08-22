@@ -20,6 +20,7 @@ import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.scoreboard.ScoreboardEntry;
 import net.minecraft.scoreboard.ScoreboardObjective;
+import net.minecraft.scoreboard.Team;
 import net.minecraft.text.Text;
 import net.neoforged.bus.api.SubscribeEvent;
 
@@ -114,7 +115,8 @@ public final class RaidState {
             if (objective == null) return;
             confirmRaidResume(clean(objective.getDisplayName().getString()));
             for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
-                String line = clean(entry.name().getString());
+                Text displayedName = Team.decorateName(scoreboard.getScoreHolderTeam(entry.owner()), entry.name());
+                String line = clean(displayedName.getString());
                 confirmRaidResume(line);
                 if (line.equals("Challenge Completed!")) {
                     completeRoom();
@@ -155,6 +157,7 @@ public final class RaidState {
         RaidChatNotifier.resetCounters();
         PartyIgnoreOnRaid.onRaidStarted();
         PlayerHider.onRaidStarted(raidKind);
+        WynnExtras.LOGGER.info("[WynnExtras] Raid started - type: {}", raidKind.displayName());
     }
 
     private static void completeRoom() {
@@ -191,7 +194,7 @@ public final class RaidState {
     }
 
     private static void confirmRaidResume(String scoreboardLine) {
-        if (!awaitingRaidResume || !scoreboardLine.endsWith("Raid:")) return;
+        if (!awaitingRaidResume || !scoreboardLine.equals("Raid:")) return;
         awaitingRaidResume = false;
         raidResumeTicksRemaining = 0;
     }
