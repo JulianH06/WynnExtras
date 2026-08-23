@@ -87,6 +87,8 @@ public final class WynntilsBankAdapter {
                         cacheFeatureMethod(feature.getClass(), "drawDurabilityPercentage", 4);
                     }
                     case "EmeraldPouchFillArcFeature" -> cacheFeatureMethod(feature.getClass(), "drawFilledArc", 4);
+                    case "InventoryEmeraldCountFeature" ->
+                            cacheFeatureMethod(feature.getClass(), "getRenderableEmeraldAmounts", 1);
                 }
             }
             return feature == null ? null : new FeatureHandle(feature);
@@ -178,7 +180,7 @@ public final class WynntilsBankAdapter {
     }
 
     public static String[] getRenderableEmeraldAmounts(FeatureHandle feature, int amount) {
-        Object result = invoke(feature == null ? null : feature.value, "getRenderableEmeraldAmounts", amount);
+        Object result = invokeFeature(feature, "getRenderableEmeraldAmounts", amount);
         return result instanceof String[] values ? values : new String[0];
     }
 
