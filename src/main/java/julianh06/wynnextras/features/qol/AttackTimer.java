@@ -438,7 +438,7 @@ public class AttackTimer {
         for (QueuedDefense attack : attacks) {
             String time = formatTimerTime(attack.startsAt - now);
             boolean isCurrentTerritory = currentTerritory != null && currentTerritory.equalsIgnoreCase(attack.territory);
-            lines.add(buildAttackLine(time, attack.territory, attack.defense, isCurrentTerritory));
+            lines.add(buildAttackLine(time, attack.territory, getDefenseLevel(attack.territory), isCurrentTerritory));
         }
 
         int maxW = 0;
