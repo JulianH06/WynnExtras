@@ -67,7 +67,7 @@ public class DungeonsTabWidget extends PVScreen.TabWidget {
             dungeons = selectedCharacter.getDungeons();
 
             if(selectedCharacter.getDungeons() == null) {
-                dungeons = new Dungeons();
+                dungeons = PV.currentPlayerData.getGlobalData().getDungeons();
             }
         }
 

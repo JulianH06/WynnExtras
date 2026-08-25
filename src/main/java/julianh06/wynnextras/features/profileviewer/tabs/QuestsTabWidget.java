@@ -44,6 +44,7 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
             questSearchBar.setSearchText("Search...");
             addChild(questSearchBar);
         }
+        questSearchBar.setVisible(false);
 
         if(selectedCharacter == null) {
             ui.drawCenteredText("Select a character to view quests.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
@@ -81,6 +82,7 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
         PVScreen.DarkModeToggleWidget.drawImageWithFade(questSearchbarTextureDark, questSearchbarTexture, x + 600F, y + height, 1050, 60, ui);
 
         questSearchBar.setBounds(x + 200 * 3, y + height + 7 * 3, 350 * 3, 14 * 3);
+        questSearchBar.setVisible(true);
 
         int i = 0;
         List<String> allQuestsCopy = new ArrayList<>(List.copyOf(allQuests));

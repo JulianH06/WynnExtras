@@ -66,6 +66,8 @@ public class TextInputWidget extends Widget {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        if (width == 0 || height == 0) return;
+
         MinecraftClient client = MinecraftClient.getInstance();
         TextRenderer font = client.textRenderer;
 

@@ -259,9 +259,9 @@ public class PVScreen extends WEScreen {
         darkModeToggleWidget.setBounds(xStart + 1800 - 120, yStart + 750, 120, 60);
         int totalWidth = 24;
         for(TabButtonWidget tabButtonWidget : tabButtonWidgets) {
-            int signWidth = drawDynamicNameSign(drawContext, tabButtonWidget.tab.toString(), xStart + totalWidth, yStart - 57);
+            int signWidth = drawDynamicNameSign(drawContext, tabButtonWidget.tab.toString(), xStart + totalWidth, yStart - 56);
             //24; //+ totalXOffset + (float) signWidth / 2
-            tabButtonWidget.setBounds(xStart + totalWidth, yStart - 55, signWidth, 55);
+            tabButtonWidget.setBounds(xStart + totalWidth, yStart - 54, signWidth, 55);
             tabButtonWidget.setTextOffset(signWidth / 2, 17);
             totalWidth += signWidth + 12;
         }

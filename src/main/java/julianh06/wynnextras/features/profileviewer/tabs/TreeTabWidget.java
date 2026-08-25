@@ -130,6 +130,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
             treeSearchBar.setSearchText("Search for ability...");
             addChild(treeSearchBar);
         }
+        treeSearchBar.setVisible(false);
         if(selectedCharacter == null) {
             ui.drawCenteredText("Select a character to view ability trees.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
             return;
@@ -211,6 +212,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         PVScreen.DarkModeToggleWidget.drawImageWithFade(questSearchbarTextureDark, questSearchbarTexture, x + 600F, y + height, 1050, 60, ui);
 
         treeSearchBar.setBounds(x + 200 * 3, y + height + 7 * 3, 350 * 3, 14 * 3);
+        treeSearchBar.setVisible(true);
 
         loaded = true;
 
