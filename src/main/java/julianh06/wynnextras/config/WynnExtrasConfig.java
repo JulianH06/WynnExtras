@@ -439,7 +439,7 @@ public class WynnExtrasConfig {
     public ChatMediaPreviewPosition chatMediaPreviewHoverPosition = ChatMediaPreviewPosition.CENTER;
     public int chatMediaPreviewMaxScreenPercent = 50;
     public int chatMediaPreviewMaxDownloadMb = 8;
-    public int chatMediaPreviewMaxPixels = 4194304;
+    public int chatMediaPreviewMaxPixels = 16777216;
     public int chatMediaPreviewMaxGifFrames = 120;
 
     // ==================== Crowd Sourcing ================
@@ -751,6 +751,7 @@ public class WynnExtrasConfig {
                 if (INSTANCE.professionXpMax == null) INSTANCE.professionXpMax = new HashMap<>();
                 if (INSTANCE.classCardAccentColors == null) INSTANCE.classCardAccentColors = new HashMap<>();
                 if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
+                if (INSTANCE.chatMediaPreviewMaxPixels == 4194304) INSTANCE.chatMediaPreviewMaxPixels = 16777216;
                 INSTANCE.syncClassSelectionLines();
                 if (INSTANCE.classSelectionContentProgressStyle == null) {
                     INSTANCE.classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
