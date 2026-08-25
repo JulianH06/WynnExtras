@@ -70,6 +70,14 @@ public class RaidLootTrackerOverlay {
     public static final String LINE_TOMES_MYTHIC = "tomes_mythic";
     public static final String LINE_TOMES_FABLED = "tomes_fabled";
     public static final String LINE_CHARMS = "charms";
+    public static final String LINE_POWDERS = "powders";
+    public static final String LINE_POWDERS_T1 = "powders_t1";
+    public static final String LINE_POWDERS_T2 = "powders_t2";
+    public static final String LINE_POWDERS_T3 = "powders_t3";
+    public static final String LINE_POWDERS_T4 = "powders_t4";
+    public static final String LINE_POWDERS_T5 = "powders_t5";
+    public static final String LINE_POWDERS_T6 = "powders_t6";
+    public static final String LINE_POWDERS_T7 = "powders_t7";
     public static final String LINE_WARDS = "wards";
     public static final String LINE_ASPECTS = "aspects";
     public static final String LINE_ASPECTS_MYTHIC = "aspects_mythic";
@@ -111,10 +119,18 @@ public class RaidLootTrackerOverlay {
     private static final CustomColor BAG_COLOR = CustomColor.fromHexString("55FFFF");
     private static final CustomColor TOME_COLOR = CustomColor.fromHexString("FF55FF");
     private static final CustomColor CHARM_COLOR = CustomColor.fromHexString("FF5555");
+    private static final CustomColor POWDER_COLOR = CustomColor.fromHexString("FFAA00");
     private static final CustomColor WARD_COLOR = CustomColor.fromHexString("f9508e");
     private static final CustomColor ASPECT_COLOR = CustomColor.fromHexString("AA55FF");
     private static final CustomColor HIDDEN_COLOR = CustomColor.fromHexString("555555");
     private static final CustomColor SESSION_COLOR = CustomColor.fromHexString("55FF55");
+    private static final String[] POWDER_TIER_NAMES = {"I", "II", "III", "IV", "V", "VI", "VII"};
+    private static final String[] POWDER_TIER_LINES = {
+            LINE_POWDERS_T1, LINE_POWDERS_T2, LINE_POWDERS_T3, LINE_POWDERS_T4,
+            LINE_POWDERS_T5, LINE_POWDERS_T6, LINE_POWDERS_T7
+    };
+    private static final String[] POWDER_ELEMENT_NAMES = {"Earth", "Thunder", "Water", "Fire", "Air"};
+    private static final String[] POWDER_ELEMENT_COLORS = {"§2", "§e", "§b", "§c", "§f"};
 
     public enum mode { ALL, SESSION, LATEST }
 
@@ -171,12 +187,12 @@ public class RaidLootTrackerOverlay {
         if (config.raidLootTrackerOnlyNearChest && !isNearLootChest()) return;
 
         loadConfig();
-        renderOverlay(context, config, false);
+        renderOverlay(context, config, false, -1, -1);
     }
 
     private static final String RAID_CHEST_TITLE = "\uDAFF\uDFEA\uE00E";
 
-    public static void renderOnScreen(DrawContext context) {
+    public static void renderOnScreen(DrawContext context, int mouseX, int mouseY) {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.world == null) return;
         if (mc.currentScreen == null) return;
@@ -194,10 +210,11 @@ public class RaidLootTrackerOverlay {
         if (config.raidLootTrackerOnlyNearChest && !isNearLootChest()) return;
 
         loadConfig();
-        renderOverlay(context, config, isInventory || isChat);
+        renderOverlay(context, config, isInventory || isChat, mouseX, mouseY);
     }
 
-    private static void renderOverlay(DrawContext context, WynnExtrasConfig config, boolean canEdit) {
+    private static void renderOverlay(DrawContext context, WynnExtrasConfig config, boolean canEdit,
+                                      int mouseX, int mouseY) {
         linePositions.clear();
         RaidLootData data = RaidLootConfig.INSTANCE.data;
         data.initSession();
@@ -328,8 +345,16 @@ public class RaidLootTrackerOverlay {
             y = drawCompactLine(context, LINE_BAGS, "Bags", String.valueOf(displayData.totalBags), BAG_COLOR, y, showHiddenLines);
             y = drawCompactLine(context, LINE_TOMES, "Tomes", String.valueOf(displayData.totalTomes), TOME_COLOR, y, showHiddenLines);
             y = drawCompactLine(context, LINE_CHARMS, "Charms", String.valueOf(displayData.totalCharms), CHARM_COLOR, y, showHiddenLines);
+            for (int tier = 0; tier < POWDER_TIER_NAMES.length; tier++) {
+                y = drawCompactLine(context, POWDER_TIER_LINES[tier], "Powder " + POWDER_TIER_NAMES[tier],
+                        String.valueOf(displayData.getPowderTierTotal(tier)), POWDER_COLOR, y, showHiddenLines);
+            }
             y = drawCompactLine(context, LINE_WARDS, "Wards", String.valueOf(displayData.totalWards), WARD_COLOR, y, showHiddenLines);
-            y = drawCompactLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), ASPECT_COLOR, y, showHiddenLines);
+            if (config.automaticAspectScanning) {
+                y = drawCompactLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), ASPECT_COLOR, y, showHiddenLines);
+            } else if (showHiddenLines) {
+                y = drawDisabledLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), y);
+            }
             if(config.raidLootTrackerMode != mode.LATEST) drawCompactLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, showHiddenLines);
         } else {
             // Full mode
@@ -353,15 +378,38 @@ public class RaidLootTrackerOverlay {
             y = drawLine(context, LINE_TOMES_FABLED, "  Fabled", String.valueOf(displayData.fabledTomes), TOME_COLOR, y, showHiddenLines);
 
             y = drawLine(context, LINE_CHARMS, "Charms", String.valueOf(displayData.totalCharms), CHARM_COLOR, y, showHiddenLines);
+            y = drawLine(context, LINE_POWDERS, "Powders", String.valueOf(displayData.getTotalPowders()), POWDER_COLOR, y, showHiddenLines);
+            for (int tier = 0; tier < POWDER_TIER_NAMES.length; tier++) {
+                y = drawLine(context, POWDER_TIER_LINES[tier], "  Tier " + POWDER_TIER_NAMES[tier],
+                        String.valueOf(displayData.getPowderTierTotal(tier)), POWDER_COLOR, y, showHiddenLines);
+            }
             y = drawLine(context, LINE_WARDS, "Wards", String.valueOf(displayData.totalWards), WARD_COLOR, y, showHiddenLines);
 
-            y = drawLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), ASPECT_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_ASPECTS_MYTHIC, "  Mythic", String.valueOf(displayData.mythicAspects), ASPECT_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_ASPECTS_FABLED, "  Fabled", String.valueOf(displayData.fabledAspects), ASPECT_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), ASPECT_COLOR, y, showHiddenLines);
+            if (config.automaticAspectScanning) {
+                y = drawLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), ASPECT_COLOR, y, showHiddenLines);
+                y = drawLine(context, LINE_ASPECTS_MYTHIC, "  Mythic", String.valueOf(displayData.mythicAspects), ASPECT_COLOR, y, showHiddenLines);
+                y = drawLine(context, LINE_ASPECTS_FABLED, "  Fabled", String.valueOf(displayData.fabledAspects), ASPECT_COLOR, y, showHiddenLines);
+                y = drawLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), ASPECT_COLOR, y, showHiddenLines);
+            } else if (showHiddenLines) {
+                y = drawDisabledLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), y);
+                y = drawDisabledLine(context, LINE_ASPECTS_MYTHIC, "  Mythic", String.valueOf(displayData.mythicAspects), y);
+                y = drawDisabledLine(context, LINE_ASPECTS_FABLED, "  Fabled", String.valueOf(displayData.fabledAspects), y);
+                y = drawDisabledLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), y);
+            }
 
             y += 2;
             if(config.raidLootTrackerMode != mode.LATEST) drawLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, showHiddenLines);
+        }
+
+        String hoveredLine = getHoveredLine(mouseX, mouseY);
+        int hoveredPowderTier = getPowderTier(hoveredLine);
+        if (hoveredPowderTier >= 0) {
+            drawPowderTooltip(context, displayData, hoveredPowderTier, mouseX, mouseY);
+        } else if (showHiddenLines && !config.automaticAspectScanning && isAspectLine(hoveredLine)) {
+            context.drawTooltip(MinecraftClient.getInstance().textRenderer, List.of(
+                    Text.literal("§cAutomatic aspect scanning is disabled."),
+                    Text.literal("§7Aspect lines only show and update when it's enabled.")
+            ), mouseX, mouseY);
         }
     }
 
@@ -398,6 +446,13 @@ public class RaidLootTrackerOverlay {
             drawTextRight(context, value, xPos + effectiveWidth, y, VALUE_COLOR);
         }
 
+        return y + LINE_HEIGHT;
+    }
+
+    private static int drawDisabledLine(DrawContext context, String lineId, String label, String value, int y) {
+        linePositions.put(lineId, new int[]{y, y + LINE_HEIGHT});
+        drawText(context, label + ":", xPos, y, HIDDEN_COLOR);
+        drawTextRight(context, value, xPos + effectiveWidth, y, HIDDEN_COLOR);
         return y + LINE_HEIGHT;
     }
 
@@ -441,7 +496,15 @@ public class RaidLootTrackerOverlay {
             pairs = new String[][]{
                 {"Ems", emVal}, {"Amps", String.valueOf(d.getTotalAmplifiers())},
                 {"Bags", String.valueOf(d.totalBags)}, {"Tomes", String.valueOf(d.totalTomes)},
-                {"Charms", String.valueOf(d.totalCharms)}, {"Wards", String.valueOf(d.totalWards)},
+                {"Charms", String.valueOf(d.totalCharms)},
+                {"Powder I", String.valueOf(d.getPowderTierTotal(0))},
+                {"Powder II", String.valueOf(d.getPowderTierTotal(1))},
+                {"Powder III", String.valueOf(d.getPowderTierTotal(2))},
+                {"Powder IV", String.valueOf(d.getPowderTierTotal(3))},
+                {"Powder V", String.valueOf(d.getPowderTierTotal(4))},
+                {"Powder VI", String.valueOf(d.getPowderTierTotal(5))},
+                {"Powder VII", String.valueOf(d.getPowderTierTotal(6))},
+                {"Wards", String.valueOf(d.totalWards)},
                 {"Aspects", String.valueOf(d.mythicAspects + d.fabledAspects + d.legendaryAspects)},
                 {"Runs", String.valueOf(completions)}
             };
@@ -452,6 +515,7 @@ public class RaidLootTrackerOverlay {
                 {"Crafter Bags", String.valueOf(d.totalBags)},
                 {"Tomes", String.valueOf(d.totalTomes)},
                 {"Charms", String.valueOf(d.totalCharms)},
+                {"Powders", String.valueOf(d.getTotalPowders())},
                 {"Wards", String.valueOf(d.totalWards)},
                 {"Aspects", String.valueOf(d.mythicAspects + d.fabledAspects + d.legendaryAspects)},
                 {"Runs", String.valueOf(completions)}
@@ -478,22 +542,30 @@ public class RaidLootTrackerOverlay {
         // Title row: LINE_HEIGHT + 2
         // Filter row: LINE_HEIGHT + 3
         int headerHeight = LINE_HEIGHT + 2 + LINE_HEIGHT + 3;
+        List<String> lines = compact ? List.of(
+                LINE_EMERALDS, LINE_AMPLIFIERS, LINE_BAGS, LINE_TOMES, LINE_CHARMS,
+                LINE_POWDERS_T1, LINE_POWDERS_T2, LINE_POWDERS_T3, LINE_POWDERS_T4,
+                LINE_POWDERS_T5, LINE_POWDERS_T6, LINE_POWDERS_T7,
+                LINE_WARDS, LINE_ASPECTS, LINE_COMPLETIONS
+        ) : List.of(
+                LINE_EMERALDS, LINE_AMPLIFIERS, LINE_AMP_T1, LINE_AMP_T2, LINE_AMP_T3, LINE_AMP_T4,
+                LINE_BAGS, LINE_BAGS_STUFFED, LINE_BAGS_PACKED, LINE_BAGS_VARIED,
+                LINE_TOMES, LINE_TOMES_MYTHIC, LINE_TOMES_FABLED, LINE_CHARMS,
+                LINE_POWDERS, LINE_POWDERS_T1, LINE_POWDERS_T2, LINE_POWDERS_T3, LINE_POWDERS_T4,
+                LINE_POWDERS_T5, LINE_POWDERS_T6, LINE_POWDERS_T7, LINE_WARDS,
+                LINE_ASPECTS, LINE_ASPECTS_MYTHIC, LINE_ASPECTS_FABLED, LINE_ASPECTS_LEGENDARY,
+                LINE_COMPLETIONS
+        );
 
-        int dataLines;
-        if (compact) {
-            dataLines = 8; // Ems, Amps, Bags, Tomes, Charms, Wards, Aspects, Runs
-        } else {
-            // Emeralds(1) + Amps header + 4 tiers (5) + Bags header + 3 sub (4)
-            // + Tomes header + 2 sub (3) + Charms(1) + Wards(1)
-            // + Aspects header + 3 sub (4) + Runs(1) = 20
-            dataLines = 20;
-        }
-
-        if(WynnExtrasConfig.INSTANCE.raidLootTrackerMode == mode.LATEST) dataLines--;
-
-            // Subtract hidden lines when not showing them (not in inventory)
-        if (!inInventory) {
-            dataLines -= (int) hiddenLines.size();
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        int dataLines = 0;
+        for (String line : lines) {
+            if (line.equals(LINE_COMPLETIONS) && config.raidLootTrackerMode == mode.LATEST) continue;
+            if (isAspectLine(line) && !config.automaticAspectScanning) {
+                if (inInventory) dataLines++;
+                continue;
+            }
+            if (inInventory || !hiddenLines.contains(line)) dataLines++;
         }
 
         // +2 for the gap before Runs in full mode
@@ -555,6 +627,34 @@ public class RaidLootTrackerOverlay {
 
     private static boolean isInBounds(double mouseX, double mouseY, int[] bounds) {
         return mouseX >= bounds[0] && mouseX <= bounds[2] && mouseY >= bounds[1] && mouseY <= bounds[3];
+    }
+
+    private static String getHoveredLine(double mouseX, double mouseY) {
+        if (mouseX < xPos || mouseX > xPos + effectiveWidth) return null;
+        return getLineClick(mouseY);
+    }
+
+    private static int getPowderTier(String lineId) {
+        for (int tier = 0; tier < POWDER_TIER_LINES.length; tier++) {
+            if (POWDER_TIER_LINES[tier].equals(lineId)) return tier;
+        }
+        return -1;
+    }
+
+    private static void drawPowderTooltip(DrawContext context, RaidLootData.RaidSpecificLoot data,
+                                          int tier, int mouseX, int mouseY) {
+        List<Text> tooltip = new ArrayList<>();
+        tooltip.add(Text.literal("§6§lPowder Tier " + POWDER_TIER_NAMES[tier]));
+        for (int element = 0; element < POWDER_ELEMENT_NAMES.length; element++) {
+            tooltip.add(Text.literal(POWDER_ELEMENT_COLORS[element] + POWDER_ELEMENT_NAMES[element]
+                    + ": §f" + data.getPowderCount(element, tier)));
+        }
+        context.drawTooltip(MinecraftClient.getInstance().textRenderer, tooltip, mouseX, mouseY);
+    }
+
+    private static boolean isAspectLine(String lineId) {
+        return LINE_ASPECTS.equals(lineId) || LINE_ASPECTS_MYTHIC.equals(lineId)
+                || LINE_ASPECTS_FABLED.equals(lineId) || LINE_ASPECTS_LEGENDARY.equals(lineId);
     }
 
     private static void drawBackground(DrawContext context, int x1, int y1, int x2, int y2, int color) {
@@ -660,6 +760,7 @@ public class RaidLootTrackerOverlay {
     }
 
     private static void toggleLine(String lineId) {
+        if (!WynnExtrasConfig.INSTANCE.automaticAspectScanning && isAspectLine(lineId)) return;
         if (hiddenLines.contains(lineId)) {
             hiddenLines.remove(lineId);
         } else {
