@@ -57,6 +57,8 @@ public class MountOverlayTest {
             System.out.println(item.getKey());
             System.out.println(item.getValue());
             num += item.getValue();
+
+            assert item.getValue() != 0;
         }
 
         assert num == 3;

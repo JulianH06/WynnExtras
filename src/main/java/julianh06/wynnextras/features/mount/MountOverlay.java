@@ -340,7 +340,8 @@ public class MountOverlay {
             return highestLevel;
 
         for (int m = 0; m < materialCount; m++) {
-            result.put(MaterialType.values()[m], solvedCounts[m]);
+            if (solvedCounts[m] != 0) // Don't display 0 count ingredients
+                result.put(MaterialType.values()[m], solvedCounts[m]);
         }
 
         return highestLevel;
