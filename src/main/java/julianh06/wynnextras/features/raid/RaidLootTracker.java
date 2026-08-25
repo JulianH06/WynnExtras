@@ -210,9 +210,10 @@ public class RaidLootTracker {
             // ===== Powders =====
             for (int element = 0; element < POWDER_ELEMENTS.length; element++) {
                 String prefix = POWDER_ELEMENTS[element] + " Powder ";
-                if (!name.startsWith(prefix)) continue;
+                int prefixStart = name.indexOf(prefix);
+                if (prefixStart < 0) continue;
 
-                int tier = getPowderTier(name.substring(prefix.length()));
+                int tier = getPowderTier(name.substring(prefixStart + prefix.length()));
                 if (tier >= 0) addPowder(data, raidData, sessionRaidData, latestRun, element, tier, count);
                 break;
             }
