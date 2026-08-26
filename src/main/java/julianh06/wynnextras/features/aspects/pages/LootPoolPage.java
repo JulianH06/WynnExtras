@@ -437,7 +437,7 @@ public class LootPoolPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 192, 21);
+            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 192, 20);
 
             Identifier raidIcon = getTextureForRaid(raid);
             if(raidIcon != null) ui.drawImage(raidIcon, x + (width - textureWidth) / 2f, y - textureWidth / 4f, textureWidth, textureWidth);

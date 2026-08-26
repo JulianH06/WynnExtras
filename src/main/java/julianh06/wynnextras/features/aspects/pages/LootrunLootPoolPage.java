@@ -392,7 +392,7 @@ public class LootrunLootPoolPage extends PageWidget {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             int topHeight = 94;
 
-            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 80, 21);
+            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 80, 20);
 
             float titleScale = getFittingTextScale(title, width - 45, 3f, 2.2f);
             ui.drawCenteredText(title, x + width / 2f, y + 45, CustomColor.fromHexString("FFFFFF"), titleScale);

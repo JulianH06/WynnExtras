@@ -324,7 +324,7 @@ public class RaidItemsPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 100, 21);
+            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 100, 18);
 
             Identifier texture = raidTextures.get(raid);
             if (texture != null) ui.drawImage(texture, x + width / 2f - 45, y - 20, 90, 90);

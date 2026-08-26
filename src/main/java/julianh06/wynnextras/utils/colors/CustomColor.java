@@ -12,8 +12,14 @@ public record CustomColor(int r, int g, int b, int a) {
     public static final CustomColor MAGENTA = fromInt(0xFF00FF);
     public static final CustomColor RAINBOW = fromInt(0x00F000);
     public static final CustomColor SHINE = fromInt(0x00F014);
-    public static final CustomColor GRADIENT = fromInt(0x00EFF4);
+    public static final CustomColor GRADIENT = fromInt(0x00F004);
     public static final CustomColor GRADIENT_2 = fromInt(0x00F010);
+    public static final CustomColor BLINK = fromInt(0x00F00C);
+    public static final CustomColor FADE = fromInt(0x00F008);
+    public static final CustomColor FADE_2 = fromInt(0x00F018);
+    public static final CustomColor ITALIC = fromInt(0x00F01C);
+    public static final CustomColor ITALIC_2 = fromInt(0x00F020);
+    public static final CustomColor WARP = fromInt(0x00F024);
 
     public CustomColor(int r, int g, int b) {
         this(r, g, b, 255);

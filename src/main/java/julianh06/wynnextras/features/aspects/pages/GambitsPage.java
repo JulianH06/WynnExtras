@@ -193,7 +193,7 @@ public class GambitsPage extends PageWidget{
     }
 
     private void drawGambitPanel(int x, int y, int panelWidth, int panelHeight, GambitData.GambitEntry gambit) {
-        ui.drawVanillaPanel(x, y, panelWidth, panelHeight, 12, 15, 15, 50, 20);
+        ui.drawVanillaPanel(x, y, panelWidth, panelHeight, 12, 14, 14, 50, 20);
 
         // Name
         String truncatedName = gambit.name;
