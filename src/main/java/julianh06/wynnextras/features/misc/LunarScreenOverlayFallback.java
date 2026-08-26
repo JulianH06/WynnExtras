@@ -7,6 +7,7 @@ import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.features.inventory.PowderCombineHelperOverlay;
 import julianh06.wynnextras.features.mount.MountOverlay;
 import julianh06.wynnextras.utils.LunarCompat;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
@@ -72,6 +73,13 @@ public final class LunarScreenOverlayFallback {
             state.craftingHelperOverlay = null;
         }
 
+        if (WynnExtrasConfig.INSTANCE.powderCombineHelper && PowderCombineHelperOverlay.isSupportedScreen()) {
+            if (state.powderCombineHelperOverlay == null) state.powderCombineHelperOverlay = new PowderCombineHelperOverlay();
+            state.powderCombineHelperOverlay.render(context, mouseX, mouseY, delta);
+        } else {
+            state.powderCombineHelperOverlay = null;
+        }
+
         if (WynnExtrasConfig.INSTANCE.skillpointHelper && WynncraftMenuService.isCurrent(MenuType.CHARACTER_INFO)) {
             if (state.compassMenuOverlay == null) state.compassMenuOverlay = new CompassMenuOverlay();
             state.compassMenuOverlay.render(context, mouseX, mouseY, delta);
@@ -108,6 +116,12 @@ public final class LunarScreenOverlayFallback {
         if (state.craftingHelperOverlay != null && WynnExtrasConfig.INSTANCE.craftingHelperOverlay
                 && WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)) {
             state.craftingHelperOverlay.mouseClicked(mouseX, mouseY, button);
+        }
+
+        if (state.powderCombineHelperOverlay != null && WynnExtrasConfig.INSTANCE.powderCombineHelper
+                && PowderCombineHelperOverlay.isSupportedScreen()
+                && state.powderCombineHelperOverlay.mouseClicked(mouseX, mouseY, button)) {
+            return true;
         }
 
         if (state.compassMenuOverlay != null && WynnExtrasConfig.INSTANCE.skillpointHelper
@@ -170,6 +184,7 @@ public final class LunarScreenOverlayFallback {
         private BankOverlay2 bankOverlay;
         private ClassSelectionOverlay classSelectionOverlay;
         private CraftingHelperOverlay craftingHelperOverlay;
+        private PowderCombineHelperOverlay powderCombineHelperOverlay;
         private CompassMenuOverlay compassMenuOverlay;
     }
 }

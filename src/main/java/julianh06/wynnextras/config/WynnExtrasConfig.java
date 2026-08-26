@@ -296,6 +296,7 @@ public class WynnExtrasConfig {
     public boolean hideTMInfoText = false;
     public boolean hideScaleBackgroundButton = false;
     public boolean craftingHelperOverlay = true;
+    public boolean powderCombineHelper = true;
     public boolean craftingAutoStart = false;
     public List<String> craftingLastMaterialNames = new ArrayList<>();
     public List<Integer> craftingLastMaterialCounts = new ArrayList<>();

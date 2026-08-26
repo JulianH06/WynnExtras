@@ -75,6 +75,8 @@ public abstract class HandledScreenMixin {
 
     @Unique private CraftingHelperOverlay craftingHelperOverlay;
 
+    @Unique private PowderCombineHelperOverlay powderCombineHelperOverlay;
+
     @Unique private ClassSelectionOverlay classSelectionOverlay;
 
     @Unique private CompassMenuOverlay compassMenuOverlay;
@@ -212,6 +214,13 @@ public abstract class HandledScreenMixin {
         // Quick Repair button in blacksmith
         if (quickRepairOverlay == null) quickRepairOverlay = new QuickRepair();
         quickRepairOverlay.render(context, mouseX, mouseY, delta);
+
+        if (WynnExtrasConfig.INSTANCE.powderCombineHelper && PowderCombineHelperOverlay.isSupportedScreen()) {
+            if (powderCombineHelperOverlay == null) powderCombineHelperOverlay = new PowderCombineHelperOverlay();
+            powderCombineHelperOverlay.render(context, mouseX, mouseY, delta);
+        } else {
+            powderCombineHelperOverlay = null;
+        }
 
         if (!(self instanceof InventoryScreen)) {
             boolean shoppingListBankOverlayPlacementMode = isShoppingListBankOverlayPlacementMode();
@@ -435,6 +444,13 @@ public abstract class HandledScreenMixin {
         HandledScreen<?> self = (HandledScreen<?>) (Object) this;
         ShoppingListTradeMarketPurchaseService.handleAmountSlotClick(self, focusedSlot, button);
         if (julianh06.wynnextras.features.qol.EncounterOverlay.handleClick(mouseX, mouseY, self)) {
+            cir.setReturnValue(true);
+            return;
+        }
+
+        if (powderCombineHelperOverlay != null && WynnExtrasConfig.INSTANCE.powderCombineHelper
+                && PowderCombineHelperOverlay.isSupportedScreen()
+                && powderCombineHelperOverlay.mouseClicked(mouseX, mouseY, button)) {
             cir.setReturnValue(true);
             return;
         }
@@ -711,6 +727,7 @@ public abstract class HandledScreenMixin {
     public void onInit(CallbackInfo ci) {
         heldItem = Items.AIR.getDefaultStack();
         craftingHelperOverlay = null;
+        powderCombineHelperOverlay = null;
         classSelectionOverlay = null;
         shoppingListMenuExtension = null;
         shoppingListMenuLauncherButton = null;
@@ -736,6 +753,8 @@ public abstract class HandledScreenMixin {
         BankOverlay2.resetInteractionBlockers();
         BankOverlaySlotBridge.restoreAll();
         craftingHelperOverlay = null;
+        powderCombineHelperOverlay = null;
+        PowderCombineHelperOverlay.onHandledScreenClosed();
         classSelectionOverlay = null;
         shoppingListMenuExtension = null;
         shoppingListMenuLauncherButton = null;

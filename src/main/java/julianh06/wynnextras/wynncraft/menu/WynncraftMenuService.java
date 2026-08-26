@@ -16,6 +16,10 @@ public final class WynncraftMenuService {
     private static final String TOME_TITLE = "\uDAFF\uDFDB\uE005";
     private static final String CHARACTER_SELECTION_TITLE = "\uDAFF\uDFD5\uE01F";
     private static final String ITEM_IDENTIFIER_TITLE = "\uDAFF\uDFF8\uE018";
+    private static final String POWDER_MASTER_REMOVE_TITLE = "\uDAFF\uDFF8\uE01B";
+    private static final String POWDER_MASTER_COMBINE_TITLE = "\uDAFF\uDFF8\uE01C";
+    private static final String ITEM_UPGRADER_TITLE = "\uDAFF\uDFF8\uE05B";
+    private static final String ITEM_UPGRADER_COMBINE_TITLE = "\uDAFF\uDFF8\uE05E";
     private static final String CRAFTING_STATION_TITLE_PREFIX = "\uDAFF\uDFF8\uE053\uDAFF\uDF80";
 
     private WynncraftMenuService() {}
@@ -60,6 +64,10 @@ public final class WynncraftMenuService {
         if (TOME_TITLE.equals(title)) return MenuType.TOME;
         if (CHARACTER_SELECTION_TITLE.equals(title)) return MenuType.CLASS_SELECTION;
         if (ITEM_IDENTIFIER_TITLE.equals(title)) return MenuType.ITEM_IDENTIFIER;
+        if (POWDER_MASTER_REMOVE_TITLE.equals(title)) return MenuType.POWDER_MASTER_REMOVE;
+        if (POWDER_MASTER_COMBINE_TITLE.equals(title)) return MenuType.POWDER_MASTER_COMBINE;
+        if (ITEM_UPGRADER_TITLE.equals(title)) return MenuType.ITEM_UPGRADER;
+        if (ITEM_UPGRADER_COMBINE_TITLE.equals(title)) return MenuType.ITEM_UPGRADER_COMBINE;
         if (craftingProfession(title) != null) return MenuType.CRAFTING_STATION;
 
         String normalized = title.replaceAll("§[0-9a-fk-or]", "").trim().toLowerCase(Locale.ROOT);

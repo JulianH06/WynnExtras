@@ -498,6 +498,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
                         () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
+                .add(toggle("Powder combine helper", "Show quick combine buttons in the powder master menu",
+                        () -> config.powderCombineHelper, v -> config.powderCombineHelper = v))
                 .add(toggle("Reverse crafting helper order", "Show recipes from lowest to highest level",
                         () -> config.craftingHelperReverseOrder, v -> config.craftingHelperReverseOrder = v))
                 .add(toggle("Auto Start", "Automatically start crafting when a recipe is loaded",
