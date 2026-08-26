@@ -139,7 +139,10 @@ public class AttackTimer {
     @SubscribeEvent
     public void onChat(ChatEvent event) {
         try {
-            String raw = event.message.getString().replaceAll("§[0-9a-fk-orx]", "").trim();
+            String raw = event.message.getString()
+                    .replaceAll("§[0-9a-fk-orx]", "")
+                    .replaceAll("[\\p{Co}\\s]+", " ")
+                    .trim();
             if (raw.isEmpty()) return;
 
             // Guildmate defense broadcast
