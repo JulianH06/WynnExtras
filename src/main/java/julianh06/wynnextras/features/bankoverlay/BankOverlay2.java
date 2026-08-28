@@ -662,6 +662,11 @@ public class BankOverlay2 extends WEHandledScreen {
                     page.setEnabled(true);
                     page.invalidateSearchCache();
                 }
+                if (allCharactersBrowseMode
+                        && currentOverlayType == BankOverlayType.CHARACTER
+                        && (value == null || value.isEmpty())) {
+                    initialBrowseScrollPending = true;
+                }
             });
             rootWidgets.add(searchbar2);
 

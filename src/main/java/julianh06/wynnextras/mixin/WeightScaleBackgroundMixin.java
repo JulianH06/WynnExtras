@@ -26,7 +26,7 @@ public abstract class WeightScaleBackgroundMixin {
 
         int index = 0;
         String cleanName = WeightDisplay.extractCleanName(stack);
-        WeightDisplay.ItemData profileData = WeightDisplay.itemCache.get(cleanName);
+        WeightDisplay.ItemData profileData = WeightDisplay.getSelectedItemData(cleanName);
         if (profileData != null) index = profileData.index();
         if (index >= itemData.data().size()) index = 0;
         int color = WeightDisplay.getScaleColor(itemData.data().get(index).score());

@@ -18,6 +18,7 @@
     "FunctionManagerMixin",
     "ItemStatInfoFeatureMixin",
     "PersonalStorageUtilitiesFeatureMixin",
-    "TooltipFittingFeatureMixin"
+    "TooltipFittingFeatureMixin",
+    "TooltipUtilsMixin"
   ]
 }

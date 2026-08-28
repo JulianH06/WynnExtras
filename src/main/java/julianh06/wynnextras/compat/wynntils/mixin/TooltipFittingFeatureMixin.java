@@ -37,14 +37,19 @@ public class TooltipFittingFeatureMixin {
 
         String cleanName = WeightDisplay.extractCleanName(currentHoveredStack);
         WeightDisplay.ItemData scaleData = WeightDisplay.weightCacheByHash.get(currentHoveredStack.getComponents().hashCode());
-        WeightDisplay.ItemData itemData = WeightDisplay.itemCache.get(cleanName);
+        WeightDisplay.ItemData itemData = WeightDisplay.getSelectedItemData(cleanName);
         if (scaleData == null || scaleData.data().isEmpty() || itemData == null) return TooltipUtils.getClientTooltipComponent(components);
 
         int idx = Math.min(itemData.index(), scaleData.data().size() - 1);
 
         List<Text> expanded = new ArrayList<>(components);
         for (int i = 0; i < scaleData.data().size(); i++) expanded.add(Text.empty());
+        for (int i = 0; i < WeightDisplay.getScaleSourceHeaderCount(cleanName); i++) expanded.add(Text.empty());
         if (scaleData.data().size() > 1) expanded.add(Text.empty());
+        if (WeightDisplay.shouldShowScaleSourceControls(cleanName)) {
+            expanded.add(Text.empty());
+            expanded.add(Text.empty());
+        }
         // per-stat weight lines
         if (WynnExtrasConfig.INSTANCE.showScales) {
             WeightDisplay.WeightData profile = itemData.data().get(idx);

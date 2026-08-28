@@ -3,6 +3,7 @@ package julianh06.wynnextras.core;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.compat.wynntils.WynntilsTooltipAdapter;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.*;
 import julianh06.wynnextras.core.loader.WELoader;
@@ -180,6 +181,7 @@ public class WynnExtras implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		Core.init(MOD_ID);
+		WynntilsTooltipAdapter.initialize();
 		ProfileTitleService.fetch();
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> WynnDataService.getInstance().initialize());
 		updateVersionData();
@@ -248,8 +250,9 @@ public class WynnExtras implements ClientModInitializer {
 			BankOverlay2.invalidateBagTotalCache();
 			WynncraftApiHandler.load();
 
-			CompletableFuture<Void> weightProfilesFuture = CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool);
-			CompletableFuture.allOf(WynnDataService.getInstance().initialize(), weightProfilesFuture)
+			CompletableFuture<Void> wynnpoolFuture = CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool);
+			CompletableFuture<Void> noriFuture = CompletableFuture.runAsync(WeightDisplay::getWeightsFromNori);
+			CompletableFuture.allOf(WynnDataService.getInstance().initialize(), wynnpoolFuture, noriFuture)
 					.thenRunAsync(WeightDisplay::populateStatRangesFromDatabase);
 		});
 

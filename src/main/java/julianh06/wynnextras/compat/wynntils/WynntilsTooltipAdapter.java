@@ -10,6 +10,8 @@ import java.util.List;
 public final class WynntilsTooltipAdapter {
     private record Binding(Class<?> eventClass, Method getTooltips, Method setTooltips) {}
     private record TooltipBinding(Method method, Class<?> itemType) {}
+    private record ChatItemBinding(Class<?> fakeStackType, Class<?> namedItemType, Class<?> tieredItemType,
+                                   Method getName, Method getTier) {}
 
     private static final WynntilsCapability<Binding> EVENT = new WynntilsCapability<>("item-tooltip-event", () -> {
         Class<?> eventClass = WynntilsCompat.requireClass("com.wynntils.mc.event.ItemTooltipRenderEvent$Pre");
@@ -20,8 +22,19 @@ public final class WynntilsTooltipAdapter {
         Class<?> itemType = WynntilsCompat.requireClass("com.wynntils.models.items.WynnItem");
         return new TooltipBinding(utility.getMethod("getWynnItemTooltip", ItemStack.class, itemType), itemType);
     });
+    private static final WynntilsCapability<ChatItemBinding> CHAT_ITEM = new WynntilsCapability<>("chat-item-tooltip", () -> {
+        Class<?> fakeStackType = WynntilsCompat.requireClass("com.wynntils.models.items.FakeItemStack");
+        Class<?> namedItemType = WynntilsCompat.requireClass("com.wynntils.models.items.properties.NamedItemProperty");
+        Class<?> tieredItemType = WynntilsCompat.requireClass("com.wynntils.models.items.properties.GearTierItemProperty");
+        return new ChatItemBinding(fakeStackType, namedItemType, tieredItemType,
+                namedItemType.getMethod("getName"), tieredItemType.getMethod("getGearTier"));
+    });
 
     private WynntilsTooltipAdapter() {}
+
+    public static void initialize() {
+        CHAT_ITEM.isAvailable();
+    }
 
     public static List<Text> getTooltips(Object event) {
         return EVENT.invoke(binding -> {
@@ -63,5 +76,18 @@ public final class WynntilsTooltipAdapter {
         } catch (Throwable ignored) {
             return false;
         }
+    }
+
+    public static String getSharedMythicName(ItemStack stack, Object item) {
+        if (stack == null || item == null) return null;
+        return CHAT_ITEM.invoke(binding -> {
+            if (!binding.fakeStackType.isInstance(stack)
+                    || !binding.namedItemType.isInstance(item)
+                    || !binding.tieredItemType.isInstance(item)) return null;
+            Object tier = binding.getTier.invoke(item);
+            if (!(tier instanceof Enum<?> enumTier) || !enumTier.name().equals("MYTHIC")) return null;
+            Object name = binding.getName.invoke(item);
+            return name instanceof String string ? string : null;
+        }).orElse(null);
     }
 }

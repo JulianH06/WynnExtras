@@ -6,6 +6,7 @@ import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.features.achievements.AchievementScreen;
 import julianh06.wynnextras.features.badges.BadgeService;
+import julianh06.wynnextras.features.inventory.WeightDisplay;
 import julianh06.wynnextras.features.spellhider.SpellProfiles;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
@@ -526,13 +527,24 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
                         () -> config.professionOverlayEnabled))
             .sub("Tooltips")
-                .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
+                .add(toggle("Item Weights", "Show weight scale for mythic items",
                         () -> config.showWeight, v -> {
                             config.showWeight = v;
                             if(!v) config.showScales = true;
                         }))
                 .add(visibleWhen(toggle("Stat Scales", "Show weights for each stat",
                         () -> config.showScales, v -> config.showScales = v),
+                        () -> config.showWeight))
+                .add(visibleWhen(dropdown("Scale source", "Select the preferred mythic scale provider",
+                                WynnExtrasConfig.MythicScaleSource.class,
+                                () -> config.mythicScaleSource,
+                                WeightDisplay::setConfiguredScaleSource),
+                        () -> config.showWeight))
+                .add(visibleWhen(toggle("Lock scale source", "Disable switching the scale provider and hide the lines in the tooltip.",
+                                () -> config.lockMythicScaleSource, v -> {
+                                    config.lockMythicScaleSource = v;
+                                    WeightDisplay.clearCycleInput();
+                                }),
                         () -> config.showWeight)).endSub()
             .sub("Trade Market")
                 .add(toggle("Scale background", "Use mythic scale as item background",

@@ -16,6 +16,23 @@ import java.util.*;
 
 public class WynnExtrasConfig {
     public enum Align { LEFT, CENTER, RIGHT }
+    public enum MythicScaleSource {
+        WYNNPOOL("Wynnpool"),
+        NORI("Nori"),
+        BOTH("Both");
+
+        private final String displayName;
+
+        MythicScaleSource(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
     public enum NotifierAnimation {
         APPEAR("Appear"),
         FADE("Fade"),
@@ -290,6 +307,8 @@ public class WynnExtrasConfig {
     public int maxAnnotationCalculationsPerFrame = 75;
     public boolean showWeight = false;
     public boolean showScales = false;
+    public MythicScaleSource mythicScaleSource = MythicScaleSource.WYNNPOOL;
+    public boolean lockMythicScaleSource = false;
     public boolean scaleBackgroundEnabled = false;
     public ScaleBackgroundShape scaleBackgroundShape = ScaleBackgroundShape.BOX;
     public int scaleBackgroundOpacity = 100;
@@ -790,6 +809,7 @@ public class WynnExtrasConfig {
         INSTANCE.syncTetrisSettings();
         INSTANCE.syncClassSelectionLines();
         INSTANCE.syncShoppingListPositions();
+        if (INSTANCE.mythicScaleSource == null) INSTANCE.mythicScaleSource = MythicScaleSource.WYNNPOOL;
         if (INSTANCE.classSelectionContentProgressStyle == null) {
             INSTANCE.classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
         }
