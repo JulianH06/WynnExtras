@@ -87,6 +87,7 @@ import static julianh06.wynnextras.utils.ContainerUtils.shiftClickOnSlot;
 import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 
 public class BankOverlay2 extends WEHandledScreen {
+    private static boolean readOnlyViewerActive = false;
     private static final boolean MOUSE_TWEAKS_LOADED = FabricLoader.getInstance().isModLoaded("mousetweaks");
     private static final long BANK_PAGE_PROGRESS_INTERVAL_MS = 275L;
     private static final long BANK_PAGE_RESPONSE_SETTLE_MS = 100L;
@@ -161,6 +162,7 @@ public class BankOverlay2 extends WEHandledScreen {
     private CallbackInfo ci;
     private HandledScreen<?> screen;
     private Function<Void, Void> close;
+    private final boolean readOnlyViewer;
     private final SimpleInventory tooltipInventory = new SimpleInventory(1);
     private final Slot tooltipSlot = new Slot(tooltipInventory, 0, 0, 0);
     private final List<ItemStack> liveBankPageItems = new ArrayList<>(45);
@@ -201,6 +203,7 @@ public class BankOverlay2 extends WEHandledScreen {
     private static QuickActionWidget quickActionWidget = null;
     private static TextInputWidget searchbar2 = null;
     private static ToggleOverlayWidget toggleOverlayWidget = null;
+    private static ReadOnlyNoticeWidget readOnlyNoticeWidget = null;
     static ScrollBarWidget scrollBarWidget = null;
 
     // Cross-class search
@@ -356,8 +359,13 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     public BankOverlay2(CallbackInfo ci, HandledScreen<?> screen) {
+        this(ci, screen, false);
+    }
+
+    private BankOverlay2(CallbackInfo ci, HandledScreen<?> screen, boolean readOnlyViewer) {
         this.ci = ci;
         this.screen = screen;
+        this.readOnlyViewer = readOnlyViewer;
         if (preserveScrollOnNextOverlay) {
             actualOffset = preservedActualOffset;
             targetOffset = preservedTargetOffset;
@@ -389,6 +397,7 @@ public class BankOverlay2 extends WEHandledScreen {
         switchButtonWidget = null;
         quickActionWidget = null;
         searchbar2 = null;
+        readOnlyNoticeWidget = null;
         priceText = null;
         activeInv = 0;
         shownPages = 0;
@@ -402,6 +411,81 @@ public class BankOverlay2 extends WEHandledScreen {
         refreshHighlightCfg();
         refreshItemTextOverlayCfg();
 
+    }
+
+    public static BankOverlay2 createReadOnlyViewer() {
+        readOnlyViewerActive = true;
+        BankOverlay2 viewer = new BankOverlay2(null, null, true);
+        setReadOnlyViewerType(BankOverlayType.ACCOUNT);
+        return viewer;
+    }
+
+    public static boolean isReadOnlyViewerActive() {
+        return readOnlyViewerActive;
+    }
+
+    public void closeReadOnlyViewer() {
+        if (!readOnlyViewer) return;
+        readOnlyViewerActive = false;
+        clearCrossClassSearchState();
+        pages.clear();
+        rootWidgets.clear();
+        inventoryWidget = null;
+        switchButtonWidget = null;
+        quickActionWidget = null;
+        searchbar2 = null;
+        readOnlyNoticeWidget = null;
+        allCharactersButtonWidget = null;
+        reloadBankWidget = null;
+        scrollBarWidget = null;
+        currentOverlayType = BankOverlayType.NONE;
+        currentData = null;
+        Pages = null;
+        activeInv = -1;
+        clearHoverState(null);
+    }
+
+    private static void setReadOnlyViewerType(BankOverlayType type) {
+        if (!readOnlyViewerActive || type == null || type == BankOverlayType.NONE) return;
+        currentOverlayType = type;
+        currentData = switch (type) {
+            case ACCOUNT -> AccountBankData.INSTANCE;
+            case CHARACTER -> CharacterBankData.INSTANCE;
+            case BOOKSHELF -> BookshelfData.INSTANCE;
+            case MISC -> MiscBucketData.INSTANCE;
+            case NONE -> null;
+        };
+        BankOverlay.setCurrentMaxPages(type == BankOverlayType.ACCOUNT ? 21 : 12);
+        Pages = currentData;
+        activeInv = 0;
+        pages.clear();
+        clearCrossClassSearchState();
+        annotationCache.clear();
+        annotationStackCache.clear();
+        annotationComponentCache.clear();
+        targetOffset = 0;
+        actualOffset = 0;
+        currentClassAccountBankUnavailable = false;
+        currentClassAccountBankAvailabilityDetected = true;
+    }
+
+    private static BankOverlayType getNextReadOnlyViewerType() {
+        return switch (currentOverlayType) {
+            case ACCOUNT -> BankOverlayType.CHARACTER;
+            case CHARACTER -> BankOverlayType.BOOKSHELF;
+            case BOOKSHELF -> BankOverlayType.MISC;
+            case MISC, NONE -> BankOverlayType.ACCOUNT;
+        };
+    }
+
+    private static String getReadOnlyViewerTypeName(BankOverlayType type) {
+        return switch (type) {
+            case ACCOUNT -> "Account Bank";
+            case CHARACTER -> "Character Bank";
+            case BOOKSHELF -> "Bookshelf";
+            case MISC -> "Misc Bucket";
+            case NONE -> "Bank";
+        };
     }
 
     public void updateRenderContext(CallbackInfo ci, HandledScreen<?> screen, Function<Void, Void> close) {
@@ -446,7 +530,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
     public static boolean handleMouseScrolled(double verticalAmount) {
         if (BankOverlay.currentOverlayType == BankOverlayType.NONE) return false;
-        if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return false;
+        if (!readOnlyViewerActive && !WynnExtrasConfig.INSTANCE.toggleBankOverlay) return false;
 
         long now = System.currentTimeMillis();
         if (now - lastScrollTime < SCROLL_COOLDOWN_MS) {
@@ -502,7 +586,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        if (currentOverlayType == BankOverlayType.CHARACTER) {
+        if (!readOnlyViewer && currentOverlayType == BankOverlayType.CHARACTER) {
             BankOverlay.syncCurrentCharacterId();
         }
         Pages = currentData;
@@ -510,7 +594,10 @@ public class BankOverlay2 extends WEHandledScreen {
         MinecraftClient mc = MinecraftClient.getInstance();
         if(mc.getWindow() == null || !mc.isRunning()) return;
         if(mc.player == null || mc.currentScreen == null) return;
-        saveCurrentPlayerInventorySnapshot();
+        if (!readOnlyViewer) {
+            cacheCurrentBankPageIfPossible();
+            saveCurrentPlayerInventorySnapshot();
+        }
         frameTextRenderer = mc.textRenderer;
         clearHoverState(screen);
         annotationCalculationsThisFrame = 0;
@@ -520,7 +607,7 @@ public class BankOverlay2 extends WEHandledScreen {
             ui = new UIUtils(context, 1, 0, 0);
         }
 
-        if(bankSyncid == 0) {
+        if(!readOnlyViewer && bankSyncid == 0) {
             bankSyncid = MinecraftUtils.containerMenu().syncId;
         }
 
@@ -531,6 +618,14 @@ public class BankOverlay2 extends WEHandledScreen {
         int xStart = xRemain / 2 - 2;
         int yStart = yRemain / 2 - 2;
         int buttonWidgetsX = getButtonWidgetsX(xStart);
+
+        if (readOnlyViewer) {
+            context.fillGradient(
+                    0, 0, mc.currentScreen.width, mc.currentScreen.height,
+                    0xC0101010,
+                    0xD0101010
+            );
+        }
 
         if (WynncraftMenuService.isCurrentAny(MenuType.ACCOUNT_BANK, MenuType.CHARACTER_BANK,
                 MenuType.BOOKSHELF, MenuType.MISC_BUCKET)
@@ -569,8 +664,10 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         initializeOverlayState();
-        syncActivePageFromWynntilsQuickJump();
-        continuePageJump();
+        if (!readOnlyViewer) {
+            syncActivePageFromWynntilsQuickJump();
+            continuePageJump();
+        }
 
         float snapValue = 0.5f;
 
@@ -590,7 +687,7 @@ public class BankOverlay2 extends WEHandledScreen {
         if(Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffset = targetOffset;
         else actualOffset += diff * speed * delta;
 
-        if(!WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
+        if(!readOnlyViewer && !WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
             BankOverlaySlotBridge.restoreAll();
             return;
         }
@@ -698,11 +795,17 @@ public class BankOverlay2 extends WEHandledScreen {
 
         if (ci != null) ci.cancel();
 
-        if (!WynnExtras.hasTestInventory()) {
+        if (!readOnlyViewer && !WynnExtras.hasTestInventory()) {
             WynnExtras.updateTestInventory(screen.getScreenHandler().slots);
         }
 
         drawBackgroundRect(context, xRemain, yRemain);
+        if (readOnlyViewer) {
+            if (readOnlyNoticeWidget == null) readOnlyNoticeWidget = new ReadOnlyNoticeWidget();
+            int noticeWidth = xFitAmount * (162 + 4) - 4;
+            readOnlyNoticeWidget.setBounds(xStart, Math.max(2, yStart - 30), noticeWidth, 12);
+            readOnlyNoticeWidget.draw(context, mouseX, mouseY, delta, ui);
+        }
 
         isMouseInOverlay = mouseY > yStart && mouseY < yStart + 100 * (yFitAmount - 1);
 
@@ -720,13 +823,15 @@ public class BankOverlay2 extends WEHandledScreen {
             context.enableScissor(scissorx1, scissory1, scissorx2, scissory2);
             ui.updateContext(context, ui.getScaleFactor(), 0, 0);
 
-            detectCurrentClassAccountBankAvailabilityIfNeeded();
+            if (!readOnlyViewer) detectCurrentClassAccountBankAvailabilityIfNeeded();
 
             // Check for cross-class search (@ or all characters browse mode)
             String rawSearchInput = searchbar2.getInput();
             boolean characterBankUnavailable = BankOverlay.isCharacterBankMissingCharacterId();
             boolean crossClassModeAllowed = shouldAllowCrossClassMode();
-            boolean effectiveAllCharactersBrowseMode = allCharactersBrowseMode && crossClassModeAllowed;
+            boolean effectiveAllCharactersBrowseMode = allCharactersBrowseMode
+                    && crossClassModeAllowed
+                    && (!readOnlyViewer || currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER);
             boolean isCrossClassSearch = crossClassModeAllowed && ((rawSearchInput != null && rawSearchInput.contains("@")) || effectiveAllCharactersBrowseMode);
             String searchInput = rawSearchInput;
 
@@ -913,7 +1018,10 @@ public class BankOverlay2 extends WEHandledScreen {
             searchbar2.draw(context, mouseX, mouseY, delta, ui);
 
             if(showSwitchButton) {
-                ui.drawCenteredText("Switch to " + (currentOverlayType == BankOverlayType.ACCOUNT ? "Character" : "Account") + " Bank", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, WHITE_TEXT_COLOR, 1.1f);
+                String targetName = readOnlyViewer
+                        ? getReadOnlyViewerTypeName(getNextReadOnlyViewerType())
+                        : (currentOverlayType == BankOverlayType.ACCOUNT ? "Character" : "Account") + " Bank";
+                ui.drawCenteredText("Switch to " + targetName, buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, WHITE_TEXT_COLOR, 1.1f);
             }
             if(showSwitchButton) {
                 ui.drawCenteredText("Quick Actions", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 44, WHITE_TEXT_COLOR, 1.1f);
@@ -921,7 +1029,9 @@ public class BankOverlay2 extends WEHandledScreen {
                 ui.drawCenteredText("Quick Actions", buttonWidgetsX + (77 * ui.getScaleFactorF()), yStart + (yFitAmount - 1) * (104) + 14, WHITE_TEXT_COLOR, 1.1f);
             }
 
-            boolean showAllCharactersButton = currentOverlayType != BankOverlayType.NONE && shouldAllowCrossClassMode();
+            boolean showAllCharactersButton = currentOverlayType != BankOverlayType.NONE
+                    && (!readOnlyViewer || currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER)
+                    && shouldAllowCrossClassMode();
             boolean showReloadButton = currentOverlayType != BankOverlayType.NONE;
             boolean showRightButtonPanel = currentOverlayType != BankOverlayType.NONE && (showAllCharactersButton || showReloadButton);
 
@@ -978,8 +1088,6 @@ public class BankOverlay2 extends WEHandledScreen {
         if (WynnExtrasConfig.INSTANCE.bankBagOverlay
                 && !BankOverlay.isCharacterBankMissingCharacterId()
                 && (currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER || currentOverlayType == BankOverlayType.MISC)) {
-            cacheCurrentBankPageIfPossible();
-
             // Top section: bank bags. Header is drawn top-right of the screen, grid sits in
             // the left margin alongside the bank pages.
             int bankGridX = xStart - 36 - 56;
@@ -995,7 +1103,8 @@ public class BankOverlay2 extends WEHandledScreen {
             // below the bank grid with a gap so the two read as separate sections. Reserve
             // BAG_RAID_ORDER.length rows worth of space so the inventory grid never collides
             // with the bank grid even when every raid is populated.
-            if (BankOverlay.playerInvSlots != null && !BankOverlay.playerInvSlots.isEmpty()) {
+            if (readOnlyViewer ? !livePlayerInventoryItems.isEmpty()
+                    : BankOverlay.playerInvSlots != null && !BankOverlay.playerInvSlots.isEmpty()) {
                 int invBagY = bankGridY + BAG_RAID_ORDER.length * 28 + 18;
                 drawBagGrid(context, bankGridX, invBagY, livePlayerInventoryItems);
             }
@@ -1009,7 +1118,7 @@ public class BankOverlay2 extends WEHandledScreen {
         quickActionWidget.draw(context, mouseX, mouseY, delta, ui);
 
         renderHoveredTooltip(context, screen, mouseX, mouseY);
-        renderHeldItemOverlay(context, mouseX, mouseY);
+        if (!readOnlyViewer) renderHeldItemOverlay(context, mouseX, mouseY);
 
         touchHoveredSlot = hoveredBackingSlot;
         BankOverlaySlotBridge.endFrame();
@@ -1595,6 +1704,13 @@ public class BankOverlay2 extends WEHandledScreen {
 
     private static int getRenderableRegularPageCount() {
         if (currentData == null) return pages.size();
+        if (readOnlyViewerActive) {
+            int highestStoredPage = currentData.getBankPages().keySet().stream()
+                    .mapToInt(Integer::intValue)
+                    .max()
+                    .orElse(-1) + 1;
+            return Math.min(pages.size(), Math.max(currentData.getLastPage(), highestStoredPage));
+        }
         int storedPageCount = currentData.getLastPage();
         int requested = Math.max(storedPageCount + 1, activeInv + 1);
         return Math.min(pages.size(), Math.max(0, requested));
@@ -1826,6 +1942,7 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static boolean shouldShowBankSwitchButton() {
+        if (readOnlyViewerActive) return currentOverlayType != BankOverlayType.NONE;
         if (currentOverlayType != BankOverlayType.ACCOUNT && currentOverlayType != BankOverlayType.CHARACTER) return false;
         BankOverlayType targetType = currentOverlayType == BankOverlayType.ACCOUNT
                 ? BankOverlayType.CHARACTER
@@ -2329,6 +2446,34 @@ public class BankOverlay2 extends WEHandledScreen {
         return mouseClicked(x, y, button, false);
     }
 
+    public boolean readOnlyMouseClicked(double x, double y, int button) {
+        if (!readOnlyViewer) return false;
+        if (searchbar2 != null && searchbar2.mouseClicked(x, y, button)) return true;
+        if (scrollBarWidget != null && scrollBarWidget.mouseClicked(x, y, button)) return true;
+        if (allCharactersButtonWidget != null && allCharactersButtonWidget.mouseClicked(x, y, button)) return true;
+        if (switchButtonWidget != null && switchButtonWidget.mouseClicked(x, y, button)) return true;
+        if (reloadBankWidget != null && reloadBankWidget.contains((int) x, (int) y)) return true;
+        if (quickActionWidget != null && quickActionWidget.contains((int) x, (int) y)) return true;
+        return isPointInsidePageClip(x, y)
+                || inventoryWidget != null && inventoryWidget.contains((int) x, (int) y);
+    }
+
+    public boolean readOnlyMouseReleased(double x, double y, int button) {
+        if (!readOnlyViewer) return false;
+        if (scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
+        if (searchbar2 != null) searchbar2.mouseReleased(x, y, button);
+        return true;
+    }
+
+    public boolean readOnlyMouseDragged(double x, double y, int button, double dx, double dy) {
+        return readOnlyViewer && searchbar2 != null && searchbar2.mouseDragged(x, y, button, dx, dy);
+    }
+
+    public void scrollReadOnlyViewer(float direction) {
+        if (!readOnlyViewer) return;
+        adjustTargetOffset(direction > 0 ? -104f : 104f);
+    }
+
     public boolean mouseClicked(double x, double y, int button, boolean doubleClick) {
         boolean inBank = WynncraftMenuService.isCurrentAny(MenuType.ACCOUNT_BANK, MenuType.CHARACTER_BANK,
                 MenuType.BOOKSHELF, MenuType.MISC_BUCKET);
@@ -2562,7 +2707,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         if (Pages == null) Pages = currentData;
 
-        WynntilsBankAdapter.setLastPage(BankOverlay.getPersonalStorageUtils(), 99);
+        if (!readOnlyViewer) WynntilsBankAdapter.setLastPage(BankOverlay.getPersonalStorageUtils(), 99);
 
         if (activeInv == -1) activeInv = 1;
     }
@@ -2644,6 +2789,18 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private List<ItemStack> buildInventoryForIndex(int index, boolean isPlayerInv) {
+        if (readOnlyViewer) {
+            if (isPlayerInv) {
+                livePlayerInventoryItems.clear();
+                for (ItemStack stack : CharacterBankData.INSTANCE.getPlayerInventory()) {
+                    livePlayerInventoryItems.add(stack == null ? ItemStack.EMPTY : stack.copy());
+                }
+                return livePlayerInventoryItems;
+            }
+            if (Pages == null) return EMPTY_BANK_PAGE;
+            List<ItemStack> cached = Pages.getBankPages().get(index);
+            return cached == null ? EMPTY_BANK_PAGE : cached;
+        }
         if(isPlayerInv) {
             List<Slot> slots = BankOverlay.playerInvSlots;
             if (slots != null && slots.size() >= 36) {
@@ -2791,7 +2948,8 @@ public class BankOverlay2 extends WEHandledScreen {
 
         WynntilsBankAdapter.AnnotationHandle annotation = annotations.get(index);
         Object components = stack.getComponents();
-        if(annotation == null || annotationStacks.get(index) != stack || annotationComponents.get(index) != components) {
+        if(annotation == null || annotationStacks.get(index) != stack
+                || !Objects.equals(annotationComponents.get(index), components)) {
             if (annotationCalculationsThisFrame >= WynnExtrasConfig.INSTANCE.maxAnnotationCalculationsPerFrame) {
                 annotations.set(index, null);
                 annotationStacks.set(index, null);
@@ -2808,7 +2966,7 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         if (annotation != null) {
-            if (WynntilsBankAdapter.getAnnotation(stack).orElse(null) != annotation) {
+            if (!Objects.equals(WynntilsBankAdapter.getAnnotation(stack).orElse(null), annotation)) {
                 WynntilsBankAdapter.setAnnotation(stack, annotation);
             }
         }
@@ -3052,6 +3210,11 @@ public class BankOverlay2 extends WEHandledScreen {
         TooltipRenderData tooltipData = getTooltipRenderData(hoveredSlot, item);
         hoveredTooltipData = tooltipData;
         TradeMarketComparisonPanel.cacheHoveredTooltip(hoveredSlot, tooltipData.tooltip());
+
+        if (readOnlyViewer) {
+            drawTooltip(MinecraftClient.getInstance().textRenderer, tooltipData.components(), mouseX + 14, mouseY, context);
+            return;
+        }
 
         Slot tooltipSource = getTooltipSourceSlot(screen);
         ensureWynntilsOriginalName(tooltipSource.getStack());
@@ -3766,8 +3929,6 @@ public class BankOverlay2 extends WEHandledScreen {
         boolean isBank = WynncraftMenuService.isCurrentAny(MenuType.ACCOUNT_BANK, MenuType.CHARACTER_BANK);
         boolean isInventory = screen instanceof net.minecraft.client.gui.screen.ingame.InventoryScreen;
 
-        if (isBank) cacheCurrentBankPageIfPossible();
-
         int x = HandledScreenAccess.x(screen) + HandledScreenAccess.backgroundWidth(screen) + 4;
         int y = HandledScreenAccess.y(screen) + 14;
 
@@ -3799,11 +3960,9 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 
-    // Debounce for the auto-save that runs while the bag overlay is caching pages.
-    private static long lastBagCacheSaveMs = 0;
-    private static final long BAG_CACHE_SAVE_DEBOUNCE_MS = 2000;
-
-    private static int bagCacheLastPage = -1;
+    private static BankData bankCacheLastData = null;
+    private static int bankCacheLastPage = -1;
+    private static int bankCacheLastFingerprint = 0;
     private static int bagCacheStableFrames = 0;
     private static final int BAG_CACHE_SETTLE_FRAMES = 10; // ~0.5s at 20 tps
 
@@ -3815,7 +3974,8 @@ public class BankOverlay2 extends WEHandledScreen {
     public static void cacheCurrentBankPageIfPossible() {
         if (bankTypeSwitchInProgress) return;
         if (BankOverlay.shouldWait) return;
-        if (BankOverlay.isCharacterBankMissingCharacterId()) return;
+        if (WynncraftMenuService.isCurrent(MenuType.CHARACTER_BANK)
+                && !BankOverlay.syncCurrentCharacterId()) return;
 
         BankData data = getBankDataForCurrentContainer();
         if (data == null) return;
@@ -3823,18 +3983,42 @@ public class BankOverlay2 extends WEHandledScreen {
         int pageNum = getCurrentBankPageNumber();
         if (pageNum < 0) return;
 
-        if (pageNum != bagCacheLastPage) {
-            bagCacheLastPage = pageNum;
+        List<ItemStack> live = getCurrentPageStacks();
+        if (live.size() < 45) return;
+
+        List<ItemStack> pageSnapshot = new ArrayList<>(45);
+        int fingerprint = 1;
+        for (int i = 0; i < 45; i++) {
+            ItemStack stack = live.get(i);
+            ItemStack copy = stack == null ? ItemStack.EMPTY : stack.copy();
+            pageSnapshot.add(copy);
+            fingerprint = 31 * fingerprint + copy.getCount();
+            fingerprint = 31 * fingerprint + copy.getComponents().hashCode();
+            fingerprint = 31 * fingerprint + copy.getItem().hashCode();
+        }
+
+        if (data != bankCacheLastData || pageNum != bankCacheLastPage || fingerprint != bankCacheLastFingerprint) {
+            bankCacheLastData = data;
+            bankCacheLastPage = pageNum;
+            bankCacheLastFingerprint = fingerprint;
             bagCacheStableFrames = 0;
             return;
         }
         if (++bagCacheStableFrames < BAG_CACHE_SETTLE_FRAMES) return;
 
-        List<ItemStack> live = getCurrentPageStacks();
-        if (live.isEmpty()) return;
+        boolean changed = !bankPageEquals(data.getBankPages().get(pageNum), pageSnapshot);
+        if (changed) {
+            data.getBankPages().put(pageNum, pageSnapshot);
+            invalidateLocalCrossClassPageCaches();
+            clearAnnotationCache(pageNum);
+        }
+        if (data.getLastPage() < pageNum + 1) {
+            data.setLastPage(pageNum + 1);
+            changed = true;
+        }
 
         BAG_PAGE_COUNT_SCRATCH.clear();
-        for (ItemStack stack : live) {
+        for (ItemStack stack : pageSnapshot) {
             if (stack == null || stack.isEmpty()) continue;
             WynntilsBankAdapter.CrafterBag bag = WynntilsBankAdapter.getCrafterBag(stack).orElse(null);
             if (bag == null) continue;
@@ -3842,18 +4026,28 @@ public class BankOverlay2 extends WEHandledScreen {
             BAG_PAGE_COUNT_SCRATCH.merge(key, stack.getCount(), Integer::sum);
         }
 
-        // Check if anything changed before saving
         HashMap<String, Integer> existing = data.getBagCounts().get(pageNum);
-        if (existing != null && existing.equals(BAG_PAGE_COUNT_SCRATCH)) return;
-
-        data.getBagCounts().put(pageNum, new HashMap<>(BAG_PAGE_COUNT_SCRATCH));
-        invalidateBagTotalCache();
-
-        long now = System.currentTimeMillis();
-        if (now - lastBagCacheSaveMs > BAG_CACHE_SAVE_DEBOUNCE_MS) {
-            data.saveAsyncDebounced();
-            lastBagCacheSaveMs = now;
+        if (existing == null || !existing.equals(BAG_PAGE_COUNT_SCRATCH)) {
+            data.getBagCounts().put(pageNum, new HashMap<>(BAG_PAGE_COUNT_SCRATCH));
+            invalidateBagTotalCache();
+            changed = true;
         }
+
+        if (!changed) return;
+
+        data.saveAsyncDebounced();
+    }
+
+    private static boolean bankPageEquals(List<ItemStack> first, List<ItemStack> second) {
+        if (first == null || first.size() < 45 || second == null || second.size() < 45) return false;
+        for (int i = 0; i < 45; i++) {
+            ItemStack a = first.get(i);
+            ItemStack b = second.get(i);
+            if (a == null) a = ItemStack.EMPTY;
+            if (b == null) b = ItemStack.EMPTY;
+            if (a.getCount() != b.getCount() || !ItemStack.areItemsAndComponentsEqual(a, b)) return false;
+        }
+        return true;
     }
 
     public static boolean isCurrentContainerBank() {
@@ -3954,6 +4148,12 @@ public class BankOverlay2 extends WEHandledScreen {
 
     private static List<ItemStack> getCurrentPageStacks() {
         CURRENT_PAGE_STACKS.clear();
+        if (readOnlyViewerActive) {
+            if (Pages == null) return CURRENT_PAGE_STACKS;
+            List<ItemStack> cached = Pages.getBankPages().get(activeInv);
+            if (cached != null) CURRENT_PAGE_STACKS.addAll(cached);
+            return CURRENT_PAGE_STACKS;
+        }
         // Only trust activeInvSlots while the custom overlay is actively managing it.
         // In vanilla mode it's often empty OR holds stale references from a previous
         // custom-mode session, which would silently corrupt the cache.
@@ -3978,7 +4178,8 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     private static int getCurrentBankPageNumber() {
-        if (LunarCompat.isLunarClient() && BankOverlay.activeInv != -1) return BankOverlay.activeInv;
+        if (LunarCompat.isLunarClient() && currentOverlayType != BankOverlayType.NONE
+                && BankOverlay.activeInv != -1) return BankOverlay.activeInv;
         try {
             int p = WynntilsBankAdapter.getCurrentPage();
             if (p > 0) return p - 1;
@@ -4184,7 +4385,9 @@ public class BankOverlay2 extends WEHandledScreen {
             }
             setSlotsVisible(true);
 
-            if(index >= currentData.getLastPage()) {
+            if(readOnlyViewerActive
+                    ? !currentData.getBankPages().containsKey(index)
+                    : index >= currentData.getLastPage()) {
                 setSlotsVisible(false);
                 if(sign == null) {
                     sign = new NameSignWidget(index);
@@ -4313,6 +4516,7 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             if(index >= currentData.getLastPage()) return;
+            if (readOnlyViewerActive) return;
 
             if(hovered && isMouseInOverlay) {
                 if(index != activeInv) {
@@ -4601,7 +4805,7 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             WynntilsBankAdapter.AnnotationHandle currentAnnotation = WynntilsBankAdapter.getAnnotation(stack).orElse(null);
-            if (!cachedAnnotationInitialized || cachedAnnotation != currentAnnotation) {
+            if (!cachedAnnotationInitialized || !Objects.equals(cachedAnnotation, currentAnnotation)) {
                 cachedAnnotation = currentAnnotation;
                 cachedAnnotationInitialized = true;
                 cachedWynnItem = null;
@@ -4923,7 +5127,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             drawDynamicNameSign(ctx, visiblePageName, x, y + 12);
 
-            if (!editingEmptyName && !Objects.equals(lastSavedPageName, pageName)) {
+            if (!readOnlyViewerActive && !editingEmptyName && !Objects.equals(lastSavedPageName, pageName)) {
                 Pages.getBankPageNames().put(index, pageName);
                 lastSavedPageName = pageName;
             }
@@ -4985,6 +5189,14 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 
+    private static class ReadOnlyNoticeWidget extends Widget {
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawCenteredText("§7View only, opened via /we bank", x + width / 2f, y + height / 2f,
+                    WHITE_TEXT_COLOR, 0.85f);
+        }
+    }
+
     private static class QuickActionWidget extends Widget {
         public QuickActionWidget() {
             super(0, 0, 0, 0);
@@ -5010,6 +5222,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            if (readOnlyViewerActive) return true;
             if (hasHeldItem() || isJumpInProgress()) return true;
             MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             if (BankOverlay.isCharacterBankMissingCharacterId()) return true;
@@ -5035,6 +5248,11 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            if (readOnlyViewerActive) {
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                setReadOnlyViewerType(getNextReadOnlyViewerType());
+                return true;
+            }
             if (isReloading) return false;
             if (hasHeldItem() || isJumpInProgress()) return true;
             MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
@@ -5064,7 +5282,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
             setAllCharactersBrowseMode(!allCharactersBrowseMode);
             if (allCharactersBrowseMode) {
-                saveActivePageSnapshot();
+                if (!readOnlyViewerActive) saveActivePageSnapshot();
                 // Force cross-class reload
                 lastCrossClassSearchQuery = "";
                 crossClassPages.clear();
@@ -5102,6 +5320,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
+            if (readOnlyViewerActive) return true;
             MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 
             if (isReloading) {

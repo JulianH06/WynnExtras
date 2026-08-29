@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.inventory;
 
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.WynnExtras;
+import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.event.CharInputEvent;
 import julianh06.wynnextras.event.KeyInputEvent;
@@ -9,10 +10,12 @@ import julianh06.wynnextras.event.TickEvent;
 import julianh06.wynnextras.event.WorldChangeEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.bankoverlay.BankOverlaySlotBridge;
+import julianh06.wynnextras.features.bankoverlay.BankViewerScreen;
 import julianh06.wynnextras.features.inventory.data.*;
 import julianh06.wynnextras.features.misc.ClassSelectionOverlay;
 import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;
+import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.wynncraft.menu.MenuType;
 import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 import julianh06.wynnextras.wynncraft.state.CharacterState;
@@ -43,6 +46,24 @@ import java.util.regex.Pattern;
 
 @WEModule
 public class BankOverlay {
+    private static final Command bankViewerCommand = new Command(
+            "bank",
+            "Opens the cached bank in read-only mode",
+            context -> {
+                MinecraftClient client = MinecraftClient.getInstance();
+                if (client.player == null) {
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo player is available."));
+                    return 0;
+                }
+
+                AccountBankData.INSTANCE.load();
+                BookshelfData.INSTANCE.load();
+                MiscBucketData.INSTANCE.load();
+                if (syncCurrentCharacterId()) CharacterBankData.INSTANCE.load();
+                WEScreen.open(BankViewerScreen::new);
+                return 1;
+            });
+
     private static final Pattern CHARACTER_ID_PATTERN = Pattern.compile("^[a-z0-9]{8}$");
     private static final Pattern MINECRAFT_FORMATTING_CODE_PATTERN = Pattern.compile("§[0-9a-fk-or]");
     public static final DefaultedList<Slot> playerInvSlots = DefaultedList.of();
@@ -96,6 +117,10 @@ public class BankOverlay {
 
     public static int getCurrentMaxPages() {
         return currentMaxPages;
+    }
+
+    public static void setCurrentMaxPages(int maxPages) {
+        currentMaxPages = maxPages;
     }
 
     public static boolean hasValidCurrentCharacterId() {
@@ -251,6 +276,7 @@ public class BankOverlay {
     }
 
     public static void updateOverlayType() {
+        if (BankOverlay2.isReadOnlyViewerActive()) return;
         if (WynncraftMenuService.isCurrent(MenuType.ACCOUNT_BANK)) {
             BankOverlay.currentOverlayType = BankOverlayType.ACCOUNT;
             BankOverlay.currentData = AccountBankData.INSTANCE;

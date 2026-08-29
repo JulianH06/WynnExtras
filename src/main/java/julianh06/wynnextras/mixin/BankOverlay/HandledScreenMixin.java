@@ -765,10 +765,6 @@ public abstract class HandledScreenMixin {
         // Clear Trade Market Comparison on close
         TradeMarketComparisonPanel.clearAllPanels();
 
-        // Vanilla-mode bank cache persistence: in vanilla mode the drawVanillaBankBagsOverlay
-        // hook has been live-updating cached bank pages for the current page while the bank
-        // was open. Flush those updates to disk now (the custom-mode branch below already
-        // does its own save).
         if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
             if (BankOverlay2.isCurrentContainerBank()) {
                 BankOverlay2.cacheCurrentBankPageIfPossible();
