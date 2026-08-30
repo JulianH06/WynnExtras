@@ -35,12 +35,20 @@ public class ItemModelManagerMixin {
         if (!(entity instanceof DisplayEntity.ItemDisplayEntity)) return;
         if (stack.getItem() != Items.OAK_BOAT) return;
 
+        // Invariant across the layer loop, and reading the component is expensive because it
+        // goes through Wynntils' component event, so only do it once per entity.
+        Float modelData = ItemUtils.getFirsCustomModelDataFloat(stack);
+
+        // Registration below is idempotent. When the logger is off there is nothing else to do,
+        // so a model we already handled can be skipped before scanning the render state quads.
+        boolean loggerIdle = ModelDataLogger.isIdle();
+        if (loggerIdle && modelData != null && SpellHider.isModelRegistered(modelData.intValue())) return;
+
         Set<Identifier> fileNames = getFileNames(renderState);
         if (fileNames == null) {
             return;
         }
         for (Identifier fileName : fileNames) {
-            Float modelData = ItemUtils.getFirsCustomModelDataFloat(stack);
             if (modelData != null) {
                 SpellHider.addModel(fileName.getPath(), modelData);
             }
@@ -57,6 +65,12 @@ public class ItemModelManagerMixin {
                 SpellHider.addName(fileName.getPath(), spellMapping.getFQName());
                 ModelDataLogger.addTextToRender(spellMapping.getFQName(), entity.getEntityPos());
             }
+        }
+
+        // Only skip future frames once the model actually resolved to a spell, so a model seen
+        // before its texture path was known still gets retried.
+        if (loggerIdle && modelData != null && SpellHider.getFromModel(modelData.intValue()) != null) {
+            SpellHider.markModelRegistered(modelData.intValue());
         }
     }
 

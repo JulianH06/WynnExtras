@@ -2,6 +2,8 @@ package julianh06.wynnextras.features.waypoints.data;
 
 import julianh06.wynnextras.utils.colors.CustomColor;
 
+import java.awt.Color;
+
 public class WaypointCategory {
     public String id;
     public String name;
@@ -11,6 +13,22 @@ public class WaypointCategory {
     public boolean showNameByDefault;
     public boolean showDistanceByDefault;
     public boolean showSeeThroughByDefault;
+
+    // Waypoint rendering needs an awt Color every frame for every waypoint. The HSB roundtrip is
+    // not free, so the result is kept until the category colour actually changes.
+    private transient Color cachedAwtColor;
+    private transient int cachedAwtColorSource = Integer.MIN_VALUE;
+
+    /** The category colour as an awt Color, via the same HSB roundtrip the renderer always used. */
+    public Color asAwtColor() {
+        int rgb = color.asInt();
+        if (cachedAwtColor == null || rgb != cachedAwtColorSource) {
+            float[] hsb = color.asHSB();
+            cachedAwtColor = Color.getHSBColor(hsb[0], hsb[1], hsb[2]);
+            cachedAwtColorSource = rgb;
+        }
+        return cachedAwtColor;
+    }
 
     public WaypointCategory() {
         this.id = java.util.UUID.randomUUID().toString();

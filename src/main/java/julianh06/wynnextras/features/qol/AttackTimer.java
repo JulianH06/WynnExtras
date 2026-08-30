@@ -20,6 +20,7 @@ import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.scoreboard.Scoreboard;
+import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.scoreboard.ScoreboardEntry;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.text.MutableText;
@@ -54,6 +55,17 @@ public class AttackTimer {
     private static final int DEFAULT_HIGH_DEFENSE_COLOR = 0xFF5555;
     private static final int DEFAULT_VERY_HIGH_DEFENSE_COLOR = 0xAA0000;
     private static final long WORLD_JOIN_BASELINE_DELAY_MS = 5_000L;
+    private static final Pattern FORMAT_CODE = Pattern.compile("§[0-9a-fk-or]");
+    // A single scoreboard read walks every score holder the server sent and costs several
+    // milliseconds on a full world, so it is rate limited. The attack list is MM:SS, so refreshing
+    // once a second loses no visible precision.
+    private static final long UPCOMING_ATTACKS_CACHE_MS = 1_000L;
+
+    private static List<String> cachedUpcomingAttacks = new ArrayList<>();
+    private static long upcomingAttacksCachedAt = 0L;
+
+    // The territory lookup streams over every territory profile, so it is only redone when the
+    // player actually moved to a different block.
 
     public static String soonestTerritory = null;
     // territory -> defense level ("Very Low" / "Low" / "Medium" / "High" / "Very High")
@@ -174,32 +186,48 @@ public class AttackTimer {
         } catch (Exception ignored) {}
     }
 
+    // Reading the scoreboard walks every score holder, so doing it per frame dominates the render
+    // thread. The sidebar only changes about once a second, so the result is cached briefly and
+    // shared between the HUD renderer and the tick handler.
     public static List<String> getUpcomingAttacks() {
+        long now = System.currentTimeMillis();
+        if (now - upcomingAttacksCachedAt < UPCOMING_ATTACKS_CACHE_MS) return cachedUpcomingAttacks;
+        upcomingAttacksCachedAt = now;
+        cachedUpcomingAttacks = scanUpcomingAttacks();
+        return cachedUpcomingAttacks;
+    }
+
+    private static List<String> scanUpcomingAttacks() {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.world == null) return new ArrayList<>();
 
         Scoreboard scoreboard = mc.world.getScoreboard();
         List<String> upcoming = new ArrayList<>();
-        List<String> seen = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
 
-        for (ScoreboardObjective obj : scoreboard.getObjectives()) {
-            for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(obj)) {
-                String name = entry.name().getString();
-                if (ATTACK_PATTERN.matcher(name).find()) {
-                    String stripped = strip(name).substring(2);
-                    if (!seen.contains(stripped)) {
-                        seen.add(stripped);
-                        upcoming.add(stripped);
-                    }
-                }
+        // The attack list lives on the sidebar. Fall back to the first objective for the case
+        // where no sidebar is displayed, which is what this used to do unconditionally.
+        ScoreboardObjective objective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
+        if (objective == null) {
+            for (ScoreboardObjective obj : scoreboard.getObjectives()) {
+                objective = obj;
+                break;
             }
-            break;
+        }
+        if (objective == null) return upcoming;
+
+        for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
+            String name = entry.name().getString();
+            if (ATTACK_PATTERN.matcher(name).find()) {
+                String stripped = strip(name).substring(2);
+                if (seen.add(stripped)) upcoming.add(stripped);
+            }
         }
         return upcoming;
     }
 
     private static String strip(String s) {
-        return s == null ? "" : s.replaceAll("§[0-9a-fk-or]", "");
+        return s == null ? "" : FORMAT_CODE.matcher(s).replaceAll("");
     }
 
     private static int rgb(Integer color, int fallback) {
@@ -348,7 +376,10 @@ public class AttackTimer {
 
     private static String formatTimerTime(long remainingMs) {
         long totalSeconds = Math.max(0, remainingMs / 1000L);
-        return String.format("%02d:%02d", totalSeconds / 60L, totalSeconds % 60L);
+        long minutes = totalSeconds / 60L;
+        long seconds = totalSeconds % 60L;
+        // Called every frame, so this avoids String.format's parser.
+        return (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
     }
 
     private static String formatDebugTime(long differenceMs) {

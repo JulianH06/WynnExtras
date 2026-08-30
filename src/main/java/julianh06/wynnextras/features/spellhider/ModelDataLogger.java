@@ -72,6 +72,11 @@ public class ModelDataLogger {
         return recentHashes;
     }
 
+    /** True when neither logging nor in-world display is active, so per-frame model scanning can be skipped. */
+    public static boolean isIdle() {
+        return currentState == State.OFF && displayState == DisplayState.OFF;
+    }
+
     public static void addTextToRender(String nameSpace, Vec3d loc) {
         if (displayState == DisplayState.ALL || displayState == DisplayState.ONLY_KNOWN) {
             toRender.add(new Pair<>(Text.literal(nameSpace), new WEVec(loc)));

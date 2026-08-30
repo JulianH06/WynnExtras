@@ -25,6 +25,7 @@ public class PartyIgnoreOnRaid {
             Pattern.compile("([A-Za-z0-9_]{3,16}) has been added to your ignore list");
     private static final Pattern IGNORE_REMOVED =
             Pattern.compile("([A-Za-z0-9_]{3,16}) has been removed from your ignore list");
+    private static final Pattern FORMAT_CODE = Pattern.compile("§[0-9a-fk-or]");
 
     public static void register() {
         WEEventBus.registerEventListener(new PartyIgnoreOnRaid());
@@ -74,7 +75,11 @@ public class PartyIgnoreOnRaid {
 
     @SubscribeEvent
     public void onChat(ChatEvent event) {
-        String raw = event.message.getString().replaceAll("§[0-9a-fk-or]", "");
+        String message = event.message.getString();
+        // Both messages contain "ignore list", so the regex work is skipped for everything else.
+        if (!message.contains("ignore list")) return;
+
+        String raw = FORMAT_CODE.matcher(message).replaceAll("");
         Matcher added = IGNORE_ADDED.matcher(raw);
         if (added.find()) trackedIgnored.add(added.group(1));
         Matcher removed = IGNORE_REMOVED.matcher(raw);

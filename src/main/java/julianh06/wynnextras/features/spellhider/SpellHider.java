@@ -98,6 +98,23 @@ public class SpellHider {
     private static final Map<String, Set<SpellData>> byName = new HashMap<>();
     public static final Map<SpellNamespace, SpellModifiers> modifiersMap = new HashMap<>();
 
+    // Custom model data values that have already been registered by ItemModelManagerMixin.
+    // The mixin runs once per item display entity per frame, but the registration it does is
+    // idempotent, so anything already seen can be skipped entirely.
+    private static final Set<Integer> registeredModels = new HashSet<>();
+
+    public static boolean isModelRegistered(int model) {
+        return registeredModels.contains(model);
+    }
+
+    public static void markModelRegistered(int model) {
+        registeredModels.add(model);
+    }
+
+    public static void clearRegisteredModels() {
+        registeredModels.clear();
+    }
+
     public static void putHash(String filePath, int hash) {
         SpellData data = new SpellData(filePath, hash);
         byHash.put(hash, data);
@@ -130,6 +147,7 @@ public class SpellHider {
     }
 
     public static void editNameOfPath(String path, SpellNamespace namespace) {
+        clearRegisteredModels();
         String newName = namespace.getFQName();
         SpellData existing = byPath.get(path);
         if (existing != null) {

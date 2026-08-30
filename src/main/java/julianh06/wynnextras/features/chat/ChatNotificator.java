@@ -58,33 +58,42 @@ public class ChatNotificator {
     };
 
     public static void notify(Text message) {
-        if(message.getString().contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = System.currentTimeMillis() + 90_000;
+        // Text.getString() walks the whole component tree, so it is resolved once instead of once
+        // per configured notifier and premade.
+        String text = message.getString();
+        String lowerText = text.toLowerCase();
+
+        if(text.contains("You feel like thousands of eyes")) RaidChatNotifier.disableChiropUntil = System.currentTimeMillis() + 90_000;
 
         handleBombshareSuggestion(message);
 
         for(String notificator : WynnExtrasConfig.INSTANCE.notifierWords) {
-            if(!notificator.contains("|")) continue;
-            String[] parts = notificator.split("\\|");
-            if(message.getString().toLowerCase().contains(parts[0].toLowerCase())) {
-                displayAndPlaySound(parts[1]);
+            int separator = notificator.indexOf('|');
+            if(separator < 0) continue;
+            String trigger = notificator.substring(0, separator);
+            String display = notificator.substring(separator + 1);
+            if(display.isEmpty()) continue;
+            if(lowerText.contains(trigger.toLowerCase())) {
+                displayAndPlaySound(display);
             }
         }
 
         WynnExtrasConfig.INSTANCE.syncPremades();
 
-        boolean isOurMessage = message.getString().contains("\uE016\uE018\uE00D");
+        boolean isOurMessage = text.contains("\uE016\uE018\uE00D");
+        if(!isOurMessage && text.contains(":")) return;
+
         for(Map.Entry<String, Boolean> entry : WynnExtrasConfig.INSTANCE.premades.entrySet()) {
-            if(!isOurMessage && message.getString().contains(":")) continue;
+            if(!entry.getValue()) continue;
 
-            String[] parts = entry.getKey().split("\\|");
-            if(parts.length != 2) continue;
-            String trigger = parts[0];
-            String display = parts[1];
-            boolean enabled = entry.getValue();
+            String key = entry.getKey();
+            int separator = key.indexOf('|');
+            if(separator < 0 || key.indexOf('|', separator + 1) >= 0) continue;
+            String trigger = key.substring(0, separator);
+            String display = key.substring(separator + 1);
+            if(display.isEmpty()) continue;
 
-            if(!enabled) continue;
-
-            if(message.getString().toLowerCase().contains(trigger.toLowerCase())) {
+            if(lowerText.contains(trigger.toLowerCase())) {
                 displayAndPlaySound(display);
             }
         }

@@ -18,7 +18,6 @@
     "EntityRenderManagerShaderMixin",
     "EntityRenderMixin",
     "EntityRenderStateMixin",
-    "GameRendererMixin",
     "InventoryScreenMixin",
     "ItemModelManagerMixin",
     "LivingEntityRendererMixin",

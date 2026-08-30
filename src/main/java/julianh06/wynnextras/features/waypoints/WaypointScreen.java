@@ -1260,7 +1260,10 @@ public class WaypointScreen extends WEScreen {
 
             private static class WaypointWidget extends Widget {
                 private static final int COLLAPSED_HEIGHT = 50;
-                private static final int EXPANDED_HEIGHT = 413;
+                private static final int EXPANDED_HEIGHT = 475;
+                private static final int SIZE_ROW_OFFSET = 124;
+                private static final int VISIBILITY_ROW_OFFSET = 186;
+                private static final int CATEGORY_ROW_OFFSET = 294;
 
                 final Waypoint waypoint;
                 private boolean expanded = false;
@@ -1269,25 +1272,33 @@ public class WaypointScreen extends WEScreen {
                 private WaypointTextInput xInput;
                 private WaypointTextInput yInput;
                 private WaypointTextInput zInput;
+                private WaypointTextInput sizeInput;
 
                 public WaypointWidget(Waypoint waypoint, boolean expand) {
                     this.waypoint = waypoint;
                     expanded = expand;
                     if (waypoint != null) {
                         nameInput = new WaypointTextInput(waypoint.name == null ? "" : waypoint.name, "Waypoint name", this::applyName);
-                        xInput = new WaypointTextInput(String.valueOf(waypoint.x), "X", ignored -> applyCoordinates());
-                        yInput = new WaypointTextInput(String.valueOf(waypoint.y), "Y", ignored -> applyCoordinates());
-                        zInput = new WaypointTextInput(String.valueOf(waypoint.z), "Z", ignored -> applyCoordinates());
-                        xInput.setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '-');
-                        yInput.setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '-');
-                        zInput.setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '-');
+                        xInput = new WaypointTextInput(Waypoint.formatCoord(waypoint.displayX()), "X", ignored -> applyCoordinates());
+                        yInput = new WaypointTextInput(Waypoint.formatCoord(waypoint.displayY()), "Y", ignored -> applyCoordinates());
+                        zInput = new WaypointTextInput(Waypoint.formatCoord(waypoint.displayZ()), "Z", ignored -> applyCoordinates());
+                        sizeInput = new WaypointTextInput(Waypoint.formatCoord(waypoint.getSize()), "Size", ignored -> applySize());
+                        xInput.setCharacterFilter(WaypointWidget::isDecimalCharacter);
+                        yInput.setCharacterFilter(WaypointWidget::isDecimalCharacter);
+                        zInput.setCharacterFilter(WaypointWidget::isDecimalCharacter);
+                        sizeInput.setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '.');
 
                         addChild(nameInput);
                         addChild(xInput);
                         addChild(yInput);
                         addChild(zInput);
+                        addChild(sizeInput);
                         setInputsVisible(false);
                     }
+                }
+
+                private static boolean isDecimalCharacter(char character) {
+                    return (character >= '0' && character <= '9') || character == '-' || character == '.';
                 }
 
                 @Override
@@ -1301,7 +1312,7 @@ public class WaypointScreen extends WEScreen {
                     if(waypoint != null) {
                         String categoryName = waypoint.getCategory() == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : waypoint.getCategory().name;
                         ui.drawText((expanded ? "▼ " : "▶ ") + waypoint.name, x + 20, y + 25, CustomColor.fromInt(TEXT_LIGHT), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
-                        ui.drawText("x: " + waypoint.x + " y: " + waypoint.y + " z: " + waypoint.z, x + width - 25, y + 25, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 2.5f);
+                        ui.drawText("x: " + Waypoint.formatCoord(waypoint.displayX()) + " y: " + Waypoint.formatCoord(waypoint.displayY()) + " z: " + Waypoint.formatCoord(waypoint.displayZ()), x + width - 25, y + 25, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 2.5f);
 
                         setInputsVisible(expanded);
                         if (!expanded) return;
@@ -1328,7 +1339,12 @@ public class WaypointScreen extends WEScreen {
                     setInputBounds(yInput, fieldX + coordFieldWidth + 35, coordsY, coordFieldWidth, inputHeight);
                     setInputBounds(zInput, fieldX + (coordFieldWidth + 35) * 2, coordsY, coordFieldWidth, inputHeight);
 
-                    int visibilityY = contentY + 124;
+                    int sizeY = contentY + SIZE_ROW_OFFSET;
+                    ui.drawText("Size", contentX, sizeY + 24, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
+                    setInputBounds(sizeInput, fieldX, sizeY, coordFieldWidth, inputHeight);
+                    ui.drawText("blocks", fieldX + coordFieldWidth + 20, sizeY + 24, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.2f);
+
+                    int visibilityY = contentY + VISIBILITY_ROW_OFFSET;
                     ui.drawText("Visibility", contentX, visibilityY + 24, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
                     int toggleGap = 12;
                     int toggleWidth = Math.max(190, (fieldWidth - toggleGap) / 2);
@@ -1337,7 +1353,7 @@ public class WaypointScreen extends WEScreen {
                     drawOverrideToggle(mouseX, mouseY, fieldX, visibilityY + 48, toggleWidth, 40, "Distance", waypoint.showDistanceOverride, waypoint.shouldShowDistance());
                     drawOverrideToggle(mouseX, mouseY, fieldX + toggleWidth + toggleGap, visibilityY + 48, toggleWidth, 40, "Text see through", waypoint.seeThroughOverride, waypoint.shouldSeeThrough());
 
-                    int categoryY = contentY + 232;
+                    int categoryY = contentY + CATEGORY_ROW_OFFSET;
                     ui.drawText("Category", contentX, categoryY + 24, CustomColor.fromInt(TEXT_DIM), HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.4f);
                     drawButton(ui, fieldX, categoryY, fieldWidth, 40, isIn(mouseX, mouseY, fieldX, categoryY, fieldWidth, 40), GOLD_DARK);
                     CustomColor categoryColor = waypoint.getCategory() == null ? CustomColor.fromHexString("FFFFFF") : waypoint.getCategory().color;
@@ -1376,6 +1392,7 @@ public class WaypointScreen extends WEScreen {
                     xInput.setVisible(visible);
                     yInput.setVisible(visible);
                     zInput.setVisible(visible);
+                    sizeInput.setVisible(visible);
                 }
 
                 private void setInputBounds(WaypointTextInput input, int x, int y, int width, int height) {
@@ -1411,7 +1428,7 @@ public class WaypointScreen extends WEScreen {
                             if (children.get(i).mouseClicked(mx, my, button)) return true;
                         }
 
-                        if (isIn(mx, my, x + 25 + 135, y + COLLAPSED_HEIGHT + 18 + 232, Math.max(240, width - 185), 40)) {
+                        if (isIn(mx, my, x + 25 + 135, y + COLLAPSED_HEIGHT + 18 + CATEGORY_ROW_OFFSET, Math.max(240, width - 185), 40)) {
                             categoryExpanded = !categoryExpanded;
                             MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                             return true;
@@ -1424,8 +1441,8 @@ public class WaypointScreen extends WEScreen {
                         int fieldWidth = Math.max(240, width - 185);
                         int toggleGap = 12;
                         int toggleWidth = Math.max(190, (fieldWidth - toggleGap) / 2);
-                        int visibilityY = y + COLLAPSED_HEIGHT + 18 + 124;
-                        int categoryY = y + COLLAPSED_HEIGHT + 18 + 232;
+                        int visibilityY = y + COLLAPSED_HEIGHT + 18 + VISIBILITY_ROW_OFFSET;
+                        int categoryY = y + COLLAPSED_HEIGHT + 18 + CATEGORY_ROW_OFFSET;
                         int categoryOptions = categoryExpanded && MainWidget.activePackage != null ? MainWidget.activePackage.categories.size() : 0;
                         int actionsY = categoryY + 62 + categoryOptions * 36;
                         int actionGap = 15;
@@ -1487,7 +1504,7 @@ public class WaypointScreen extends WEScreen {
                 private boolean clickCategoryOption(double mx, double my) {
                     int fieldX = x + 25 + 135;
                     int fieldWidth = Math.max(240, width - 185);
-                    int optionY = y + COLLAPSED_HEIGHT + 18 + 232 + 45;
+                    int optionY = y + COLLAPSED_HEIGHT + 18 + CATEGORY_ROW_OFFSET + 45;
 
                     if (MainWidget.activePackage == null) return false;
                     for (WaypointCategory category : MainWidget.activePackage.categories) {
@@ -1525,9 +1542,16 @@ public class WaypointScreen extends WEScreen {
                     if (waypoint == null) return;
                     try {
                         WaypointActions.updateWaypoint(waypoint, waypoint.name,
-                                Integer.parseInt(xInput.getInput().trim()),
-                                Integer.parseInt(yInput.getInput().trim()),
-                                Integer.parseInt(zInput.getInput().trim()));
+                                Double.parseDouble(xInput.getInput().trim()),
+                                Double.parseDouble(yInput.getInput().trim()),
+                                Double.parseDouble(zInput.getInput().trim()));
+                    } catch (NumberFormatException ignored) {}
+                }
+
+                private void applySize() {
+                    if (waypoint == null) return;
+                    try {
+                        WaypointActions.setWaypointSize(waypoint, Float.parseFloat(sizeInput.getInput().trim()));
                     } catch (NumberFormatException ignored) {}
                 }
 

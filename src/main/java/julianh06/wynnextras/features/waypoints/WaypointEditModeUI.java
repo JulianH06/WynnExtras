@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.waypoints;
 
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.features.waypoints.data.Waypoint;
 import julianh06.wynnextras.features.waypoints.data.WaypointCategory;
 import julianh06.wynnextras.features.waypoints.data.WaypointData;
 import julianh06.wynnextras.features.waypoints.data.WaypointPackage;
@@ -995,7 +996,8 @@ public class WaypointEditModeUI extends WEScreen {
 
         List<Text> lines = new ArrayList<>();
         lines.add(Text.literal("§e" + (hoveredWaypoint.name == null || hoveredWaypoint.name.isBlank() ? "Waypoint" : hoveredWaypoint.name)));
-        lines.add(Text.literal("§7x: §f" + hoveredWaypoint.x + " §7y: §f" + hoveredWaypoint.y + " §7z: §f" + hoveredWaypoint.z));
+        lines.add(Text.literal("§7x: §f" + Waypoint.formatCoord(hoveredWaypoint.displayX()) + " §7y: §f" + Waypoint.formatCoord(hoveredWaypoint.displayY()) + " §7z: §f" + Waypoint.formatCoord(hoveredWaypoint.displayZ())));
+        if (hoveredWaypoint.getSize() != 1f) lines.add(Text.literal("§7Size: §f" + Waypoint.formatCoord(hoveredWaypoint.getSize())));
         lines.add(Text.literal("§7Package: §f" + (pkg == null ? "Unknown" : pkg.name)));
         lines.add(Text.literal("§7Category: §f" + (category == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : category.name)));
         lines.add(Text.literal("§eClick to edit this waypoint"));

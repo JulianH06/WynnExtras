@@ -1,6 +1,12 @@
 package julianh06.wynnextras.features.badges;
 
+import java.util.regex.Pattern;
+
 public class BadgeProfile {
+    // Compiled once. normalizeUuid runs per nametag per frame, and String.matches would
+    // recompile the pattern on every call.
+    private static final Pattern UUID_PATTERN = Pattern.compile("[0-9a-f]{32}");
+
     public String uuid;
     public String username;
     public String selectedIconId = BadgeCatalog.DEFAULT_ICON_ID;
@@ -50,6 +56,6 @@ public class BadgeProfile {
     public static String normalizeUuid(String uuid) {
         if (uuid == null) return null;
         String normalized = uuid.replace("-", "").toLowerCase();
-        return normalized.matches("[0-9a-f]{32}") ? normalized : null;
+        return UUID_PATTERN.matcher(normalized).matches() ? normalized : null;
     }
 }
