@@ -8,7 +8,12 @@ import java.util.Map;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import oshi.driver.unix.freebsd.disk.Mount;
+
 public class MountOverlayTest {
+
+    static int statCount = MountStat.values().length;
+    static int materialCount = MaterialType.values().length;
     
     @Disabled
     @Test
@@ -26,8 +31,7 @@ public class MountOverlayTest {
         needed.put(MountStat.HANDLING, 7);
         needed.put(MountStat.TOUGHNESS, 3);
 
-        Map<MaterialType, Integer> result = new HashMap<>();
-        MountOverlay.optimizeNeeded(result, 47, needed);
+        Map<MaterialType, Integer> result = MountOverlay.optimizeNeeded(47, needed);
 
         int num = 0;
         for (Map.Entry<MaterialType, Integer> item : result.entrySet()) {
@@ -49,8 +53,7 @@ public class MountOverlayTest {
         needed.put(MountStat.HANDLING, 7);
         needed.put(MountStat.TOUGHNESS, 3);
 
-        Map<MaterialType, Integer> result = new HashMap<>();
-        MountOverlay.optimizeNeededv2(result, 47, needed);
+        Map<MaterialType, Integer> result = MountOverlay.optimizeNeededv2(47, needed);
 
         int num = 0;
         for (Map.Entry<MaterialType, Integer> item : result.entrySet()) {
@@ -63,5 +66,22 @@ public class MountOverlayTest {
 
         assert num == 3;
         
+    }
+
+    @Test
+    void testMixLevel() {
+        Map<MountStat, Integer> needed = new HashMap<>();
+        int[][] materialStatsTable = MountOverlay.makeMaterialStatsTable(10);
+
+        int[] materials = new int[materialCount];
+        int[] stats = new int[statCount];
+
+        for (MountStat s : MountStat.values())
+            needed.put(s, 20 - );
+        
+
+         new HashMap<>();
+        Map<MaterialType, Integer> result = MountOverlay.optimizeNeededv2(10, needed);
+
     }
 }

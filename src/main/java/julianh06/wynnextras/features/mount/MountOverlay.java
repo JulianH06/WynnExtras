@@ -156,20 +156,22 @@ public class MountOverlay {
                 needed.put(entry.getKey(), need);
         }
 
-        Map<MaterialType, Integer> result = new HashMap<>();
-        highestLevel = optimizeNeededv2(result, highestLevel, needed);
+        
+        Map<MaterialType, Integer> result = optimizeNeededv2(highestLevel, needed);
 
         List<RequiredMaterialInfo> finalR = new ArrayList<>();
-        int lvl = highestLevel;
+        
+        int matLvl = MaterialStats.get(MaterialType.GEM, highestLevel).getLevel();
         result.forEach((type, quantity) -> finalR
-                .add(new RequiredMaterialInfo(type.getTexture(lvl), type.getName(lvl), quantity, lvl)));
+                .add(new RequiredMaterialInfo(type.getTexture(matLvl), type.getName(matLvl), quantity, matLvl)));
 
         cache.put(slot.getStack(), finalR);
         return finalR;
     }
 
-    public static int optimizeNeeded(Map<MaterialType, Integer> result, int highestLevel,
+    public static Map<MaterialType, Integer> optimizeNeeded(int highestLevel,
             Map<MountStat, Integer> needed) {
+        Map<MaterialType, Integer> result = new HashMap<>();
         // Keep adding the most efficient material for remaining needs
         while (!needed.isEmpty()) {
             MaterialType bestType = null;
@@ -201,7 +203,7 @@ public class MountOverlay {
                     needed.put(stat, remaining);
             });
         }
-        return highestLevel;
+        return result;
     }
 
     static int statCount = MountStat.values().length;
@@ -209,10 +211,10 @@ public class MountOverlay {
 
     // Algorithm based on
     // https://github.com/Wynnbreeder/wynnbreeder/blob/main/app.js
-    public static int optimizeNeededv2(Map<MaterialType, Integer> result, int highestLevel,
+    public static Map<MaterialType, Integer> optimizeNeededv2(int highestLevel,
             Map<MountStat, Integer> needed) {
         // Keep adding the most efficient material for remaining needs
-
+        Map<MaterialType, Integer> result = new HashMap<>();
         boolean done = true;
         for (Integer num : needed.values()) {
             if (num.intValue() != 0) {
@@ -221,18 +223,11 @@ public class MountOverlay {
             }
         }
         if (done)
-            return highestLevel;
+            return result;
 
-        int[][] materialStatsTable = new int[materialCount][statCount];
+         
 
-        for (MaterialType type : MaterialType.values()) {
-            MaterialStats stats = MaterialStats.get(type, highestLevel);
-            highestLevel = stats.getLevel(); // rounds it to an actual level
-
-            for (Map.Entry<MountStat, Integer> s : stats.getStats().entrySet()) {
-                materialStatsTable[type.ordinal()][s.getKey().ordinal()] = s.getValue();
-            }
-        }
+        int[][] materialStatsTable = makeMaterialStatsTable(highestLevel);
 
         int[] need = new int[materialCount];
 
@@ -249,7 +244,7 @@ public class MountOverlay {
             need[s.getKey().ordinal()] = s.getValue();
             // no possible list
             if (maxPerStat[s.getKey().ordinal()] == 0 && s.getValue() > 0)
-                return highestLevel;
+                return result;
         }
 
         int[] greedyCounts = new int[materialCount];
@@ -287,7 +282,7 @@ public class MountOverlay {
 
             // no possible list
             if (bestIndex < 0 || bestScore < 0) {
-                return highestLevel;
+                return result;
             }
 
             greedyCounts[bestIndex]++;
@@ -299,7 +294,7 @@ public class MountOverlay {
 
         // no list found after max steps
         if (greedySteps >= maxGreedySteps)
-            return highestLevel;
+            return result;
 
         int lowerBound = 0;
         for (int i = 0; i < statCount; i++) {
@@ -337,14 +332,26 @@ public class MountOverlay {
 
         // unsolvable
         if (solvedCounts == null)
-            return highestLevel;
+            return result;
 
         for (int m = 0; m < materialCount; m++) {
             if (solvedCounts[m] != 0) // Don't display 0 count ingredients
                 result.put(MaterialType.values()[m], solvedCounts[m]);
         }
 
-        return highestLevel;
+        return result;
+    }
+
+    public static int[][] makeMaterialStatsTable(int highestLevel) {
+        int[][] materialStatsTable = new int[materialCount][statCount];
+        for (MaterialType type : MaterialType.values()) {
+            MaterialStats stats = MaterialStats.get(type, highestLevel);
+
+            for (Map.Entry<MountStat, Integer> s : stats.getStats().entrySet()) {
+                materialStatsTable[type.ordinal()][s.getKey().ordinal()] = s.getValue();
+            }
+        }
+        return materialStatsTable;
     }
 
     private static boolean search(
