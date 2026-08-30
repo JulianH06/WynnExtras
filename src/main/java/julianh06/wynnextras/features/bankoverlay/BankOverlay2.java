@@ -71,6 +71,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.MathHelper;
+import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
@@ -189,6 +190,8 @@ public class BankOverlay2 extends WEHandledScreen {
     private static int bankSyncid = 0;
     private static int xFitAmount = 0;
     private static int yFitAmount = 0;
+    private static final long PAGE_NAVIGATION_KEY_COOLDOWN_MS = 120L;
+    private static long lastPageNavigationKeyAt = 0L;
     private static float pageBuyCustomModelData = 0;
     private static BankOverlayType rankLockedOverlayType = BankOverlayType.NONE;
     private static int rankLockedPageCount = -1;
@@ -505,6 +508,43 @@ public class BankOverlay2 extends WEHandledScreen {
         for (PageWidget page : pages) {
             page.keyPressed(keyCode, scanCode, modifiers);
         }
+        handlePageNavigationKey(keyCode);
+    }
+
+    /** WASD page navigation: A/D move one page, W/S move one overlay row (= xFitAmount pages). */
+    private static void handlePageNavigationKey(int keyCode) {
+        int rowStep = Math.max(1, xFitAmount);
+        int step = switch (keyCode) {
+            case GLFW.GLFW_KEY_A -> -1;
+            case GLFW.GLFW_KEY_D -> 1;
+            case GLFW.GLFW_KEY_W -> -rowStep;
+            case GLFW.GLFW_KEY_S -> rowStep;
+            default -> 0;
+        };
+        if (step == 0) return;
+
+        if (currentOverlayType == BankOverlayType.NONE) return;
+        if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return;
+        // Guard against a stale overlay type firing jumps while the player is walking around.
+        if (!(MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?>)) return;
+        if (currentData == null || Pages == null) return;
+        if (isAnyTextInputFocused()) return;
+        if (isReloading || shouldWait || hasHeldItem()) return;
+        if (isJumpInProgress()) return;
+        if (BankOverlay.isCharacterBankMissingCharacterId()) return;
+
+        long now = System.currentTimeMillis();
+        if (now - lastPageNavigationKeyAt < PAGE_NAVIGATION_KEY_COOLDOWN_MS) return;
+
+        int maxIndex = Math.min(currentData.getLastPage(), BankOverlay.getCurrentMaxPages()) - 1;
+        if (maxIndex < 0) return;
+
+        int target = MathHelper.clamp(activeInv + step, 0, maxIndex);
+        if (target == activeInv) return;
+
+        lastPageNavigationKeyAt = now;
+        PageWidget.jumpToPage(target);
+        scrollToPage(target);
     }
 
     public static void handleCharTyped(char character) {
@@ -1494,6 +1534,38 @@ public class BankOverlay2 extends WEHandledScreen {
                 && currentData.getLastPage() >= rankLockedPageCount;
     }
 
+    private static ItemStack getLeftPageButton() {
+        try {
+            ScreenHandler menu = McUtils.containerMenu();
+            if (menu == null) return Items.AIR.getDefaultStack();
+            return menu.getSlot(51).getStack();
+        } catch (Exception ignored) {
+            return Items.AIR.getDefaultStack();
+        }
+    }
+
+    /** True if the button names exactly this page, so "Page 1" does not match "Page 10". */
+    private static boolean buttonNamesPage(ItemStack stack, int pageNumber) {
+        if (stack == null || stack.isEmpty()) return false;
+        String cleaned = MINECRAFT_FORMATTING_CODE_PATTERN.matcher(stack.getName().getString()).replaceAll("");
+        String needle = "Page " + pageNumber;
+        int idx = cleaned.indexOf(needle);
+        if (idx < 0) return false;
+        int after = idx + needle.length();
+        return after >= cleaned.length() || !Character.isDigit(cleaned.charAt(after));
+    }
+
+    /**
+     * The server updates the two page arrows as separate slot packets, so the right arrow can
+     * still be stale while the page content has already arrived. The left arrow is a second
+     * source of truth for the page we are on, which stops the overlay from showing "Loading..."
+     * over items it already has.
+     */
+    private static boolean leftButtonConfirmsPage(int pageIndex) {
+        if (pageIndex <= 0) return false;   // page 1 has no previous-page arrow
+        return buttonNamesPage(getLeftPageButton(), pageIndex);
+    }
+
     private static boolean rightButtonPointsToPage(ItemStack stack, int pageNumber) {
         if (stack == null || stack.isEmpty()) return false;
         String rawName = stack.getName().getString();
@@ -1823,6 +1895,8 @@ public class BankOverlay2 extends WEHandledScreen {
     private static boolean isActiveBankPageReady() {
         if (activeInv < 0) return false;
         if (BankOverlay.activeInvSlots.size() < 45) return false;
+
+        if (leftButtonConfirmsPage(activeInv)) return true;
 
         ItemStack rightButton = getRightPageButton();
         int nextPageNumber = activeInv + 2;
@@ -2837,7 +2911,11 @@ public class BankOverlay2 extends WEHandledScreen {
                     if(rightArrow.getItem() == Items.POTION) {
                         String rawText = rightArrow.getName().getString();
                         String cleanedText = MINECRAFT_FORMATTING_CODE_PATTERN.matcher(rawText).replaceAll("");
-                        if (!cleanedText.contains("Page " + (activeInv + 2))) {
+                        // Either arrow confirming the page is enough — they arrive as separate
+                        // slot packets, so requiring the right one stalls on already-loaded pages.
+                        boolean onTargetPage = cleanedText.contains("Page " + (activeInv + 2))
+                                || leftButtonConfirmsPage(activeInv);
+                        if (!onTargetPage) {
                             shouldWait = true;
                             if (!oldShouldWait) {
                                 shouldWaitSince = System.currentTimeMillis();
@@ -2846,7 +2924,7 @@ public class BankOverlay2 extends WEHandledScreen {
                             storeActivePageSnapshot();
                             clearAnnotationCache(activeInv);
                         }
-                    } else if(activeInv != currentData.getLastPage() - 1) {
+                    } else if(activeInv != currentData.getLastPage() - 1 && !leftButtonConfirmsPage(activeInv)) {
                         if (!shouldWait) {
                             shouldWait = true;
                             shouldWaitSince = System.currentTimeMillis();
