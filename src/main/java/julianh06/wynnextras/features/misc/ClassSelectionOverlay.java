@@ -429,10 +429,30 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     /** Match current characters to stored identities, returning UUID for each.
      *  Uses stable ids and exact snapshots first, then fuzzy matching. Any equally-sized
      *  ambiguous remainder is assigned bijectively so existing cards cannot fall to the end. */
+    /** Ids handed to empty and locked slots. Never written to the identity file. */
+    private static final String PLACEHOLDER_UUID_PREFIX = "placeholder-slot-";
+
+    /** An empty or locked slot rather than a real character — those always carry a class. */
+    private static boolean isPlaceholderSlot(CharIdentity character) {
+        return character == null || character.classType == null || character.classType.trim().isEmpty();
+    }
+
+    /**
+     * Drops placeholder entries an earlier build persisted. They can never be matched again, so
+     * they would only pile up as candidates and bloat the saved order.
+     */
+    private static boolean pruneStoredPlaceholders(Map<String, CharIdentity> stored) {
+        return stored.entrySet().removeIf(entry -> isPlaceholderSlot(entry.getValue()));
+    }
+
     private String[] matchCharacters(List<CharIdentity> currentChars) {
         Map<String, CharIdentity> stored = ClassSelectionData.getCharIdentities();
         if (stored == null) {
             stored = new HashMap<>();
+        }
+        // Clear out placeholder identities an earlier build may have accumulated.
+        if (pruneStoredPlaceholders(stored)) {
+            ClassSelectionData.saveCharIdentities();
         }
 
         String[] uuids = new String[currentChars.size()];
@@ -506,14 +526,25 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 storedUsed, assignedUuids);
 
         for (int i = 0; i < currentChars.size(); i++) {
-            if (!currentUsed[i]) {
-                String newUuid = createNewCharUuid(assignedUuids, stored);
-                uuids[i] = newUuid;
+            if (currentUsed[i]) continue;
+
+            // "Create a Character" and "Locked Character Slot" entries carry no distinguishing
+            // data at all — same blank class, level 0, no playtime — so neither exact nor fuzzy
+            // matching can ever pin them down. Minting a fresh identity for them would happen on
+            // every refresh and get persisted each time, growing the identity file and the card
+            // order without bound. A slot-derived id keeps them stable and unsaved instead.
+            if (isPlaceholderSlot(currentChars.get(i))) {
+                uuids[i] = PLACEHOLDER_UUID_PREFIX + i;
                 currentUsed[i] = true;
-                persistFreshIdentity[i] = true;
-                assignedUuids.add(newUuid);
-                WynnExtras.LOGGER.info("[WynnExtras] Created a new class identity: " + newUuid);
+                continue;
             }
+
+            String newUuid = createNewCharUuid(assignedUuids, stored);
+            uuids[i] = newUuid;
+            currentUsed[i] = true;
+            persistFreshIdentity[i] = true;
+            assignedUuids.add(newUuid);
+            WynnExtras.LOGGER.info("[WynnExtras] Created a new class identity: " + newUuid);
         }
 
         if (!isValidCompleteAssignment(uuids)) {
@@ -537,9 +568,12 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
         List<String> updatedOrder = new ArrayList<>(savedOrder);
         if (updatedOrder.isEmpty()) {
-            updatedOrder.addAll(Arrays.asList(uuids));
+            for (String uuid : uuids) {
+                if (!uuid.startsWith(PLACEHOLDER_UUID_PREFIX)) updatedOrder.add(uuid);
+            }
         } else {
             for (String uuid : uuids) {
+                if (uuid.startsWith(PLACEHOLDER_UUID_PREFIX)) continue;
                 if (!updatedOrder.contains(uuid)) updatedOrder.add(uuid);
             }
         }
