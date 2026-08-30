@@ -1,6 +1,7 @@
 package julianh06.wynnextras.core.loader;
 
 import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -21,6 +22,7 @@ import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootTrackerOverlay;
 import julianh06.wynnextras.features.crafting.calc.ProfessionCalculatorScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
+import julianh06.wynnextras.features.crafting.calc.CraftXpCalculator;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.misc.SlotNumberDebugger;
 import julianh06.wynnextras.features.tetris.TetrisScreen;
@@ -428,6 +430,7 @@ public class CommandLoader implements WELoader {
                                                                     return 0;
                                                                 }
                                                                 ProfessionOverlay.clearGoal(prof);
+                                                                ProfessionOverlay.clearLevelGoal(prof);
                                                                 MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aCleared " + prof.getDisplayName() + " goal."));
                                                                 return 1;
                                                             })
@@ -447,10 +450,35 @@ public class CommandLoader implements WELoader {
                                                                     MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cNo character detected."));
                                                                     return 0;
                                                                 }
+                                                                // A profession caps at 132, so any value that small is a target
+                                                                // level rather than an overflow XP amount. Both readings are
+                                                                // stated back so the guess is never silent.
+                                                                if (amount <= CraftXpCalculator.CURVE_MAX_LEVEL) {
+                                                                    int targetLevel = (int) amount;
+                                                                    ProfessionOverlay.setLevelGoal(prof, targetLevel);
+                                                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " goal to §flevel " + targetLevel + "§a §7(class: " + className + ") — for an overflow XP goal use a value above " + CraftXpCalculator.CURVE_MAX_LEVEL));
+                                                                    return 1;
+                                                                }
                                                                 ProfessionOverlay.setGoal(prof, amount);
                                                                 MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " goal to " + String.format("%.0f", amount) + " overflow XP §7(class: " + className + ")"));
                                                                 return 1;
                                                             })
+                                                    )
+                                                    .then(ClientCommandManager.literal("level")
+                                                            .then(ClientCommandManager.argument("goalLevel", IntegerArgumentType.integer(1, CraftXpCalculator.CURVE_MAX_LEVEL))
+                                                                    .executes(ctx -> {
+                                                                        String profName = StringArgumentType.getString(ctx, "goalProfession");
+                                                                        WEProfessionType prof = WEProfessionType.fromString(profName);
+                                                                        if (prof == null) {
+                                                                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUnknown profession: " + profName));
+                                                                            return 0;
+                                                                        }
+                                                                        int targetLevel = IntegerArgumentType.getInteger(ctx, "goalLevel");
+                                                                        ProfessionOverlay.setLevelGoal(prof, targetLevel);
+                                                                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aSet " + prof.getDisplayName() + " goal to §flevel " + targetLevel));
+                                                                        return 1;
+                                                                    })
+                                                            )
                                                     )
                                             )
                                     )

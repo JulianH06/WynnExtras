@@ -8,6 +8,7 @@ import julianh06.wynnextras.wynncraft.state.CharacterState;
 import julianh06.wynnextras.wynncraft.state.ProfessionState;
 import julianh06.wynnextras.utils.enums.WEProfessionType;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.features.crafting.calc.CraftXpCalculator;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.features.profileviewer.data.Profession;
@@ -108,6 +109,27 @@ public class ProfessionOverlay {
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
         if (c.professionGoals == null) return;
         c.professionGoals.remove(getOverflowKey(profession));
+        WynnExtrasConfig.save();
+    }
+
+    /** Target level for a profession, or 0 when none is set. */
+    public static int getLevelGoal(WEProfessionType profession) {
+        WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
+        if (c.professionLevelGoals == null) return 0;
+        return c.professionLevelGoals.getOrDefault(getOverflowKey(profession), 0);
+    }
+
+    public static void setLevelGoal(WEProfessionType profession, int level) {
+        WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
+        if (c.professionLevelGoals == null) c.professionLevelGoals = new HashMap<>();
+        c.professionLevelGoals.put(getOverflowKey(profession), level);
+        WynnExtrasConfig.save();
+    }
+
+    public static void clearLevelGoal(WEProfessionType profession) {
+        WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
+        if (c.professionLevelGoals == null) return;
+        c.professionLevelGoals.remove(getOverflowKey(profession));
         WynnExtrasConfig.save();
     }
 
@@ -516,6 +538,31 @@ public class ProfessionOverlay {
                     craftsStr = " (~" + craftsNeeded + " crafts)";
                 }
                 line5goal = "Goal: " + formatXp(goal) + " | Left: " + formatXp(remaining) + craftsStr;
+            }
+        }
+
+        // Level goal, for everyone who has not capped yet. The overflow goal above only applies
+        // at 132, so before that this is the line that shows progress towards a target.
+        if (line5goal == null && level < CraftXpCalculator.CURVE_MAX_LEVEL) {
+            int levelGoal = getLevelGoal(lastProfession);
+            if (levelGoal > level) {
+                long xpLeft = CraftXpCalculator.xpBetween(level, xp.current(), xp.max(), levelGoal);
+                if (xpLeft <= 0) {
+                    // Below the covered part of the XP curve there is no data to work from.
+                    line5goal = "Goal: Lvl " + levelGoal + " | no XP data below "
+                            + CraftXpCalculator.CURVE_MIN_LEVEL;
+                } else {
+                    line5goal = "To Lvl " + levelGoal + ": " + formatXp(xpLeft) + " left";
+                    Double xphGoal = cachedXpPerHour.get(key);
+                    if (xphGoal != null && xphGoal > 0) {
+                        line5goal += " | " + formatTime(xpLeft / xphGoal);
+                    }
+                    float bestAvg = avg100 > 0 ? avg100
+                            : (history != null && !history.isEmpty() ? getAverage(history, history.size()) : 0);
+                    if (bestAvg > 0) {
+                        line5goal += " (~" + (int) Math.ceil(xpLeft / bestAvg) + " actions)";
+                    }
+                }
             }
         }
 

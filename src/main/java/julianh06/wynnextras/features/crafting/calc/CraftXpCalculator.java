@@ -95,6 +95,36 @@ public final class CraftXpCalculator {
             53_318_945L, 59_450_625L, 66_287_449L,
     };
 
+    /** Lowest level the XP curve covers. Nothing below this can be estimated. */
+    public static final int CURVE_MIN_LEVEL = MIN_LEVEL;
+    /** Highest profession level. */
+    public static final int CURVE_MAX_LEVEL = MAX_LEVEL;
+
+    /**
+     * Raw XP needed to advance from {@code level - 1} to {@code level}, or 0 when the level sits
+     * outside the covered range.
+     */
+    public static long xpToReachLevel(int level) {
+        int index = level - MIN_LEVEL;
+        if (index < 0 || index >= XP_REQUIRED.length) return 0;
+        return XP_REQUIRED[index];
+    }
+
+    /**
+     * Total XP still needed to reach {@code targetLevel}, given the progress already made inside
+     * the current level. Returns 0 when the target is not ahead of the player or falls outside
+     * the covered range.
+     */
+    public static long xpBetween(int currentLevel, long xpIntoCurrentLevel, long xpForCurrentLevel, int targetLevel) {
+        if (targetLevel <= currentLevel || targetLevel > MAX_LEVEL) return 0;
+
+        long total = Math.max(0, xpForCurrentLevel - xpIntoCurrentLevel);
+        for (int level = currentLevel + 2; level <= targetLevel; level++) {
+            total += xpToReachLevel(level);
+        }
+        return total;
+    }
+
     /** Base XP for a full craft at the given material band and ingredient level. */
     public static double computeBaseXp(MaterialType matType, double ingredientLevel) {
         return matType.baseA * ingredientLevel + matType.baseB;
@@ -147,14 +177,30 @@ public final class CraftXpCalculator {
      * Matches the spreadsheet's "estimated crafts needed".
      */
     public static int estimateCraftsToLevel(int fromLevel, int toLevel, double noDecayXp, MaterialType matType) {
+        return estimateCraftsToLevel(fromLevel, toLevel, noDecayXp, matType, 0);
+    }
+
+    /**
+     * Same estimate, but crediting progress already made inside the starting level.
+     *
+     * @param progressIntoLevel fraction of the starting level already earned, 0 to 1
+     */
+    public static int estimateCraftsToLevel(int fromLevel, int toLevel, double noDecayXp, MaterialType matType,
+                                            double progressIntoLevel) {
         if (fromLevel >= toLevel) return 0;
         if (noDecayXp <= 0) return Integer.MAX_VALUE;
+
+        double progress = Math.max(0, Math.min(1, progressIntoLevel));
 
         if (matType.legacy) {
             // Old approach: effective XP from a hardcoded table divided by floor-decay XP per craft.
             int from = Math.max(SKY_MIN_LEVEL, Math.min(MAX_LEVEL, fromLevel));
             int to = Math.max(SKY_MIN_LEVEL, Math.min(MAX_LEVEL, toLevel));
             double effXpNeeded = CUMUL_EFFXP_SKY[to - SKY_MIN_LEVEL] - CUMUL_EFFXP_SKY[from - SKY_MIN_LEVEL];
+            if (from + 1 <= MAX_LEVEL) {
+                double firstLevelEffXp = CUMUL_EFFXP_SKY[from + 1 - SKY_MIN_LEVEL] - CUMUL_EFFXP_SKY[from - SKY_MIN_LEVEL];
+                effXpNeeded -= firstLevelEffXp * progress;
+            }
             if (effXpNeeded <= 0) return 0;
             return (int) Math.ceil(effXpNeeded / (noDecayXp * DECAY_FLOOR));
         }
@@ -165,7 +211,9 @@ public final class CraftXpCalculator {
         for (int level = start; level <= end; level++) {
             double xpPerCraft = noDecayXp * getDecay(level, matType);
             if (xpPerCraft <= 0) return Integer.MAX_VALUE;
-            crafts += XP_REQUIRED[level - MIN_LEVEL] / xpPerCraft;
+            double xpNeeded = XP_REQUIRED[level - MIN_LEVEL];
+            if (level == start) xpNeeded *= (1 - progress);   // already part-way through this one
+            crafts += xpNeeded / xpPerCraft;
         }
         return (int) Math.ceil(crafts);
     }
