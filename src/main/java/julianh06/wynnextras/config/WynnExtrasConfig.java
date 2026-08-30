@@ -226,6 +226,10 @@ public class WynnExtrasConfig {
     public NotificationSound notificationSound = NotificationSound.EXPERIENCE_ORB;
     public float soundVolume = 100f;
     public float soundPitch = 100f;
+    public boolean privateMessageSound = false;
+    public NotificationSound privateMessageSoundType = NotificationSound.NOTE_PLING;
+    public float privateMessageSoundVolume = 100f;
+    public float privateMessageSoundPitch = 100f;
     public int notifierX = -1;  // -1 = auto center
     public int notifierY = -1;  // -1 = auto (30% from top)
     public float notifierScale = 3.0f;

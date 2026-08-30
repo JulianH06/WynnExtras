@@ -608,6 +608,21 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         0, 200, () -> (int)(config.soundPitch), v -> config.soundPitch = v))
                 .add(button("Sound Test", "Click the button to test the sound",
                         v -> MinecraftUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test")).endSub()
+            .sub("Direct Messages")
+                .add(toggle("Play Sound On Message", "Play a sound when another player sends you a direct message",
+                        () -> config.privateMessageSound, v -> config.privateMessageSound = v))
+                .add(visibleWhen(dropdown("Sound", "Sound for incoming direct messages",
+                                WynnExtrasConfig.NotificationSound.class, () -> config.privateMessageSoundType, v -> config.privateMessageSoundType = v),
+                        () -> config.privateMessageSound))
+                .add(visibleWhen(slider("Volume", "Sound volume",
+                                0, 200, () -> (int)(config.privateMessageSoundVolume), v -> config.privateMessageSoundVolume = v),
+                        () -> config.privateMessageSound))
+                .add(visibleWhen(slider("Pitch", "Sound pitch",
+                                0, 200, () -> (int)(config.privateMessageSoundPitch), v -> config.privateMessageSoundPitch = v),
+                        () -> config.privateMessageSound))
+                .add(visibleWhen(button("Sound Test", "Click the button to test the sound",
+                                v -> MinecraftUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.privateMessageSoundType.getSoundId())), config.privateMessageSoundVolume / 100, config.privateMessageSoundPitch / 100), "Test"),
+                        () -> config.privateMessageSound)).endSub()
             .sub("Premade Notifications")
                 .add(toggle("Lost Eye", "Lost Eye in TNA light room",
                         () -> config.lostEye, v -> config.lostEye = v))
