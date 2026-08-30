@@ -1534,16 +1534,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 && currentData.getLastPage() >= rankLockedPageCount;
     }
 
-    private static ItemStack getLeftPageButton() {
-        try {
-            ScreenHandler menu = McUtils.containerMenu();
-            if (menu == null) return Items.AIR.getDefaultStack();
-            return menu.getSlot(51).getStack();
-        } catch (Exception ignored) {
-            return Items.AIR.getDefaultStack();
-        }
-    }
-
     /**
      * True when the page we are switching to already has cached items to draw. Clicks stay
      * blocked while {@code shouldWait}, so showing the previous contents is safe and beats
