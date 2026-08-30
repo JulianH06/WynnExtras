@@ -878,6 +878,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v))
             .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
                     () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
+            .add(toggle("Fun item identifier", "Make rolling items more fun",
+                    () -> config.identifierCaseOpening, v -> config.identifierCaseOpening = v))
             .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
                     () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
             .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",

@@ -14,6 +14,7 @@ import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.*;
 import julianh06.wynnextras.features.misc.ClassSelectionOverlay;
 import julianh06.wynnextras.features.misc.CompassMenuOverlay;
+import julianh06.wynnextras.features.misc.IdentifierCaseOpeningOverlay;
 import julianh06.wynnextras.features.misc.IdentifierOverlay;
 import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
@@ -70,6 +71,7 @@ public abstract class HandledScreenMixin {
     @Unique private Boolean isBankScreen = null;
 
     @Unique private IdentifierOverlay identifierOverlay;
+    @Unique private IdentifierCaseOpeningOverlay identifierCaseOpeningOverlay;
 
     @Unique private PartyFinderOpenLootpoolOverlay partyFinderOpenLootpoolOverlay;
 
@@ -95,6 +97,9 @@ public abstract class HandledScreenMixin {
         if (classSelectionOverlay != null) {
             ci.cancel();
         }
+        if (identifierCaseOpeningOverlay != null && identifierCaseOpeningOverlay.shouldHideVanilla()) {
+            ci.cancel();
+        }
     }
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
@@ -112,6 +117,11 @@ public abstract class HandledScreenMixin {
             }
             // Tick the settle state regardless (for non-ready cases).
             julianh06.wynnextras.features.qol.EncounterOverlay.tickSettle(encSelf);
+        }
+        if (identifierCaseOpeningOverlay != null && identifierCaseOpeningOverlay.shouldHideVanilla()) {
+            identifierCaseOpeningOverlay.render(context, mouseX, mouseY, delta);
+            ci.cancel();
+            return;
         }
         // Class Selection Overlay
         if (WynnExtrasConfig.INSTANCE.customClassSelectionEnabled) {
@@ -238,6 +248,18 @@ public abstract class HandledScreenMixin {
                 && WynncraftMenuService.isCurrent(MenuType.CHARACTER_INFO)) {
             compassMenuOverlay.renderHoveredTooltip(context, mouseX, mouseY);
         }
+        if (WynnExtrasConfig.INSTANCE.identifierCaseOpening
+                && WynncraftMenuService.isCurrentAny(MenuType.ITEM_IDENTIFIER, MenuType.AUGMENT_IDENTIFIER)) {
+            ensureIdentifierCaseOpeningOverlay().render(context, mouseX, mouseY, delta);
+        }
+    }
+
+    @Unique
+    private IdentifierCaseOpeningOverlay ensureIdentifierCaseOpeningOverlay() {
+        if (identifierCaseOpeningOverlay == null) {
+            identifierCaseOpeningOverlay = new IdentifierCaseOpeningOverlay();
+        }
+        return identifierCaseOpeningOverlay;
     }
 
     @Unique
@@ -276,6 +298,11 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "drawMouseoverTooltip", at = @At("HEAD"), cancellable = true)
     private void consumeTooltipBehindShoppingList(DrawContext context, int mouseX, int mouseY, CallbackInfo ci) {
+        if (identifierCaseOpeningOverlay != null && identifierCaseOpeningOverlay.isReplacingMenu()) {
+            focusedSlot = null;
+            ci.cancel();
+            return;
+        }
         HandledScreen<?> self = (HandledScreen<?>) (Object) this;
         if (self instanceof InventoryScreen) return;
 
@@ -435,6 +462,12 @@ public abstract class HandledScreenMixin {
         double mouseY = click.y();
         int button = click.button();
 
+        if (identifierCaseOpeningOverlay != null && identifierCaseOpeningOverlay.isReplacingMenu()) {
+            identifierCaseOpeningOverlay.mouseClicked(mouseX, mouseY, button);
+            cir.setReturnValue(true);
+            return;
+        }
+
         if (!((Object) this instanceof InventoryScreen) && ItemComponentsDebugOverlay.mouseClicked(mouseX, mouseY, button)) {
             cir.setReturnValue(true);
             return;
@@ -577,6 +610,11 @@ public abstract class HandledScreenMixin {
         double mouseY = click.y();
         int button = click.button();
 
+        if (identifierCaseOpeningOverlay != null && identifierCaseOpeningOverlay.isReplacingMenu()) {
+            cir.setReturnValue(true);
+            return;
+        }
+
         if (!((Object) this instanceof InventoryScreen) && ItemComponentsDebugOverlay.mouseReleased(mouseX, mouseY, button)) {
             cir.setReturnValue(true);
             return;
@@ -640,6 +678,11 @@ public abstract class HandledScreenMixin {
         double mouseX = click.x();
         double mouseY = click.y();
 
+        if (identifierCaseOpeningOverlay != null && identifierCaseOpeningOverlay.isReplacingMenu()) {
+            cir.setReturnValue(true);
+            return;
+        }
+
         if (!((Object) this instanceof InventoryScreen) && ItemComponentsDebugOverlay.mouseDragged(mouseX, mouseY)) {
             cir.setReturnValue(true);
             return;
@@ -690,6 +733,10 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "mouseScrolled", at = @At("HEAD"), cancellable = true)
     private void onMouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount, CallbackInfoReturnable<Boolean> cir) {
+        if (identifierCaseOpeningOverlay != null && identifierCaseOpeningOverlay.isReplacingMenu()) {
+            cir.setReturnValue(true);
+            return;
+        }
         if (!((Object) this instanceof InventoryScreen) && ItemComponentsDebugOverlay.mouseScrolled(mouseX, mouseY, verticalAmount)) {
             cir.setReturnValue(true);
             return;
@@ -825,6 +872,13 @@ public abstract class HandledScreenMixin {
         int keyCode = input.key();
         int scanCode = input.scancode();
         int modifiers = input.modifiers();
+
+        if (identifierCaseOpeningOverlay != null && identifierCaseOpeningOverlay.isReplacingMenu()) {
+            identifierCaseOpeningOverlay.keyPressed(keyCode, scanCode, modifiers);
+            cir.setReturnValue(true);
+            cir.cancel();
+            return;
+        }
 
         // Block all key presses when a class selection text input is active (handled via CharInputEvent/KeyInputEvent)
         if (ClassSelectionOverlay.isTextInputActive()) {

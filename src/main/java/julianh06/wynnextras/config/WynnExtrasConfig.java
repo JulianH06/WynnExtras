@@ -558,6 +558,7 @@ public class WynnExtrasConfig {
     public Align provokeTimerAlignment = Align.CENTER;
     public int customGUIScale = 3;
     public boolean removeFrontPersonView = false;
+    public boolean identifierCaseOpening = false;
     public boolean sourceOfTruthToggle = false;
     public boolean territoryEstimateToggle = false;
     public boolean removeChroma = false;

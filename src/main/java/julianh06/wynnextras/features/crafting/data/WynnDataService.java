@@ -58,6 +58,8 @@ public final class WynnDataService {
             String type,
             String subType,
             String tier,
+            String restriction,
+            String dropRestriction,
             String attackSpeed,
             Integer powderSlots,
             Map<String, String> requirements,
@@ -519,6 +521,7 @@ public final class WynnDataService {
         String displayName = requiredString(object, "displayName");
         return new ItemData(internalName, displayName, requiredString(object, "type"),
                 optionalString(object, "subType"), optionalString(object, "tier"),
+                optionalString(object, "restriction"), optionalString(object, "dropRestriction"),
                 optionalString(object, "attackSpeed"), optionalInt(object, "powderSlots"),
                 parseScalarMap(object.get("requirements")), parseStatMap(object.get("base")),
                 parseStatMap(object.get("identifications")));

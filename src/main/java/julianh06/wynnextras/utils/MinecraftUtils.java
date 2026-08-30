@@ -3,6 +3,7 @@ package julianh06.wynnextras.utils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
@@ -128,6 +129,10 @@ public class MinecraftUtils {
     public static void playSoundUI(SoundEvent sound, float volume) {
         ClientPlayerEntity player = localPlayerOrNull();
         if (player != null) player.playSound(sound, volume, 1f);
+    }
+
+    public static void playSoundUI(SoundEvent sound, float volume, float pitch) {
+        mc().getSoundManager().play(PositionedSoundInstance.ui(sound, pitch, volume));
     }
 
     public static void playSoundAmbient(SoundEvent sound) {
