@@ -5005,7 +5005,15 @@ public class BankOverlay2 extends WEHandledScreen {
             if(mouseButton == 1) return actionType;
 
             long now = System.currentTimeMillis();
-            if (heldItem != null && heldItem.getItem() != Items.AIR) {
+            // Same conditions as canPickupAll: collecting only makes sense onto a slot that
+            // actually holds a matching stack. Without this an ordinary placement onto an empty
+            // slot turned into PICKUP_ALL, which collects instead of placing — so the item could
+            // never be put back. Press and release of one gesture always fall inside the
+            // double-click window on the same slot, so this triggered on every single placement.
+            boolean canCollectHere = heldItem != null && heldItem.getItem() != Items.AIR
+                    && stack != null && !stack.isEmpty()
+                    && ItemStack.areItemsAndComponentsEqual(stack, heldItem);
+            if (canCollectHere) {
                 if (now - lastClickTime < DOUBLE_CLICK_INTERVAL_MS && lastClickedSlot != null &&
                         lastClickedSlot.first() == inventoryIndex && lastClickedSlot.second() == index) {
                     actionType = SlotActionType.PICKUP_ALL;
