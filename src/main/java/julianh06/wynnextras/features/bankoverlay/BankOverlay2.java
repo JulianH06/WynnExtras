@@ -1544,6 +1544,17 @@ public class BankOverlay2 extends WEHandledScreen {
         }
     }
 
+    /**
+     * True when the page we are switching to already has cached items to draw. Clicks stay
+     * blocked while {@code shouldWait}, so showing the previous contents is safe and beats
+     * covering a page the player has seen before with a loading veil.
+     */
+    private static boolean activePageHasCachedContent() {
+        if (Pages == null || activeInv < 0) return false;
+        List<ItemStack> cached = Pages.getBankPages().get(activeInv);
+        return cached != null && cached.size() >= 45;
+    }
+
     /** True if the button names exactly this page, so "Page 1" does not match "Page 10". */
     private static boolean buttonNamesPage(ItemStack stack, int pageNumber) {
         if (stack == null || stack.isEmpty()) return false;
@@ -4603,7 +4614,10 @@ public class BankOverlay2 extends WEHandledScreen {
             }
 
             if(activeInv == index) {
-                if(shouldWait) {
+                // Only veil the page when there is genuinely nothing to show. A page we have
+                // already cached keeps rendering its previous contents while the switch lands,
+                // which is what makes multi-page jumps read as a flip-through instead of a stall.
+                if(shouldWait && !activePageHasCachedContent()) {
                     ui.drawRect(x, y, width, height, WAIT_OVERLAY_COLOR);
                     int dots = (int) ((System.currentTimeMillis() / 750) % 3) + 1;
 
