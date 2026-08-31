@@ -3,6 +3,7 @@ package julianh06.wynnextras.features.profileviewer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.utils.BackendErrorLogger;
 
@@ -28,6 +29,7 @@ public final class ProfileTitleService {
     private ProfileTitleService() {}
 
     public static void fetch() {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasProfileTitles) return;
         if (!FETCH_STARTED.compareAndSet(false, true)) return;
 
         HttpRequest request = HttpRequest.newBuilder()

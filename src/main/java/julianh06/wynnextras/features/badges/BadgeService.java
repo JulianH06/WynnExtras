@@ -218,6 +218,10 @@ public class BadgeService {
     }
 
     private static void fetchAchievements(String playerUuid) {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasAchievements) {
+            achievementLoadStatusByUuid.put(playerUuid, AchievementLoadStatus.FAILED);
+            return;
+        }
         long now = System.currentTimeMillis();
         if (achievementsByUuid.containsKey(playerUuid) || now < achievementRetryAtByUuid.getOrDefault(playerUuid, 0L)) return;
 
@@ -330,11 +334,10 @@ public class BadgeService {
 
         getActiveUsers();
 
-        if (WynnExtrasConfig.INSTANCE.anonymizeTelemetry) {
-            sendAnonymousHeartbeat();
-        }
+        WynnExtrasConfig.TelemetryMode telemetryMode = WynnExtrasConfig.INSTANCE.telemetryMode;
+        if (telemetryMode == WynnExtrasConfig.TelemetryMode.ANONYMIZE) sendAnonymousHeartbeat();
 
-        boolean needsIdentifiedHeartbeat = !WynnExtrasConfig.INSTANCE.anonymizeTelemetry;
+        boolean needsIdentifiedHeartbeat = telemetryMode == WynnExtrasConfig.TelemetryMode.ON;
         boolean needsBadgeSync = needsBadgeSettingsSync();
         boolean needsAspectSync = WynncraftApiHandler.needsAspectPublicationSync();
         if (!needsIdentifiedHeartbeat && !needsBadgeSync && !needsAspectSync) return;
@@ -353,6 +356,7 @@ public class BadgeService {
     }
 
     private static void getActiveUsers() {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasBadges) return;
         CompletableFuture.runAsync(() -> {
             try {
                 HttpRequest request = HttpRequest.newBuilder()

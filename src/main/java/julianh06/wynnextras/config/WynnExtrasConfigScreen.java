@@ -54,7 +54,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     private final Screen parent;
     private final WynnExtrasConfig config;
-    private final boolean originalAnonymizeTelemetry;
+    private final WynnExtrasConfig.TelemetryMode originalTelemetryMode;
     private final boolean originalDoNotPublishOwnBadge;
     private final boolean originalDoNotPublishOwnAspects;
 
@@ -101,7 +101,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         super(Text.literal("WynnExtras Configuration"));
         this.parent = parent;
         this.config = WynnExtrasConfig.INSTANCE;
-        this.originalAnonymizeTelemetry = config.anonymizeTelemetry;
+        this.originalTelemetryMode = config.telemetryMode;
         this.originalDoNotPublishOwnBadge = config.doNotPublishOwnBadge;
         this.originalDoNotPublishOwnAspects = config.doNotPublishOwnAspects;
         initCategories();
@@ -192,6 +192,34 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         TetrisScreen.open();
                     }, "Play"))
                 .add(text("More to come!", "More minigames are planned to be released in the future!"))
+            .endSub()
+            .sub("Privacy")
+                .add(button("Privacy policy", "You can find more information here", (x) -> {
+                    LinkUtils.openLink("https://wynnextras.com/privacy");
+                }, "Open"))
+                .add(dropdown("Telemetry", "Choose whether usage statistics are sent with your Minecraft UUID, anonymously, or not at all",
+                        WynnExtrasConfig.TelemetryMode.class, () -> config.telemetryMode, v -> config.telemetryMode = v))
+                .add(toggle("Do Not Publish Own Badge", "Hide your WynnExtras badge from other players and stop uploading it",
+                        () -> config.doNotPublishOwnBadge, v -> config.doNotPublishOwnBadge = v))
+                .add(toggle("Do Not Publish Own Aspects", "Hide your personal aspects and stop uploading them",
+                        () -> config.doNotPublishOwnAspects, v -> config.doNotPublishOwnAspects = v))
+                .add(toggle("Do Not Publish Own Achievements", "Stop uploading your achievement progress to the WynnExtras server",
+                        () -> !config.uploadAchievements, v -> config.uploadAchievements = !v))
+                .add(toggle("Do Not Crowdsource Daily Gambits", "Stop sharing discovered gambits with the WynnExtras server",
+                        () -> !config.crowdSourceGambits, v -> config.crowdSourceGambits = !v))
+                .add(toggle("Do Not Fetch Badges", "Stop fetching other players' badges from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasBadges, v -> config.doNotFetchWynnExtrasBadges = v))
+                .add(toggle("Do Not Fetch Achievements", "Stop fetching other players' achievements from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasAchievements, v -> config.doNotFetchWynnExtrasAchievements = v))
+                .add(toggle("Do Not Fetch Aspects", "Stop fetching player aspects and the aspect leaderboard from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasAspects, v -> config.doNotFetchWynnExtrasAspects = v))
+                .add(toggle("Do Not Fetch Gambits", "Stop fetching crowdsourced gambits from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasGambits, v -> config.doNotFetchWynnExtrasGambits = v))
+                .add(toggle("Do Not Fetch Profile Titles", "Stop fetching custom profile titles from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasProfileTitles, v -> config.doNotFetchWynnExtrasProfileTitles = v))
+                .add(toggle("Do Not Fetch Reset Times", "Stop fetching loot pool, lootrun, and gambit reset times from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasResetTimes, v -> config.doNotFetchWynnExtrasResetTimes = v))
+                .add(text("Fetch settings", "Changes apply to future requests. Some data may require a game restart to be fetched again."))
             .endSub();
 
         // ===== RAIDS =====
@@ -722,9 +750,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Auto Skip Cutscenes", "Automatically skip cutscenes that show 'Swap Hands to skip'",
                         () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
             .sub("Achievements and badges")
-                .add(toggle("Upload Achievements", "Upload your achievements to WynnExtras",
-                        () -> config.uploadAchievements, v -> config.uploadAchievements = v))
-                .add(text("Achievement upload notice", "If the toggle above is enabled, your achievements will be uploaded, the server currently does not have a use case for them but we will add some in the future. One example being that we want to show a users achievements in the profile viewer"))
                 .add(toggle("Achievement unlock messages", "Show chat messages when you unlock WynnExtras achievements",
                         () -> config.showAchievementUnlockMessages, v -> config.showAchievementUnlockMessages = v))
                 .add(toggle("WynnExtras Player Badges", "Display a badge for other players who also use WynnExtras!",
@@ -848,21 +873,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(keybind("Quit", "End the current game",
                         () -> config.tetrisQuitKey, v -> config.tetrisQuitKey = v,
                         DEFAULT_CONFIG.tetrisQuitKey))
-            .sub("Crowd sourcing")
-                .add(toggle("Gambits", "Help gather the current gambits so others can see them with /we gambits",
-                        () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v))
-            .endSub()
-                .sub("Privacy")
-                .add(toggle("Anonymize Telemetry", "Use an anonymous identifier instead of associating usage statistics with your Minecraft UUID",
-                        () -> config.anonymizeTelemetry, v -> config.anonymizeTelemetry = v))
-                .add(toggle("Do Not Publish Own Badge", "Hide your WynnExtras badge from other players and stop uploading it",
-                        () -> config.doNotPublishOwnBadge, v -> config.doNotPublishOwnBadge = v))
-                .add(toggle("Do Not Publish Own Aspects", "Hide your personal aspects and stop uploading them",
-                        () -> config.doNotPublishOwnAspects, v -> config.doNotPublishOwnAspects = v))
-                .add(button("Privacy policy", "You can find more information here", (x) -> {
-                    LinkUtils.openLink("https://wynnextras.com/privacy");
-                }, "Open"))
-            .endSub()
             .add(toggle("Mount color backgrounds", "Use the mount's primary color as its item background",
                     () -> config.mountPrimaryColorBackground, v -> config.mountPrimaryColorBackground = v))
             .add(toggle("Show Own Nametag", "Render your nametag above your head",
@@ -1960,7 +1970,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     private void applyPrivacyChanges() {
         WynnExtrasConfig saved = WynnExtrasConfig.INSTANCE;
-        if (originalAnonymizeTelemetry != saved.anonymizeTelemetry
+        if (originalTelemetryMode != saved.telemetryMode
                 || originalDoNotPublishOwnBadge != saved.doNotPublishOwnBadge) {
             BadgeService.syncWithServerSoon();
         }

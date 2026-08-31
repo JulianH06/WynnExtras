@@ -184,6 +184,9 @@ public class AspectsPage extends PageWidget {
         refreshButton.draw(context, mouseX, mouseY, tickDelta, ui);
 
         switch (activeStatus) {
+            case DISABLED:
+                ui.drawCenteredText("§cFetching aspects is disabled in settings", centerX, logicalH / 2f);
+                return;
             case NOKEYSET:
                 ui.drawCenteredText("§cYou need to set your API key to use this feature", centerX, logicalH / 2f - 30);
                 ui.drawCenteredText("§7Run \"/we apikey\" for more information", centerX, logicalH / 2f + 30);

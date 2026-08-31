@@ -104,6 +104,10 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
         }
 
         switch (fetchStatus) {
+            case DISABLED -> {
+                ui.drawCenteredText("Fetching aspects is disabled in settings.", x + 900, y + 365, CustomColor.fromHexString("FF0000"), 4f);
+                return;
+            }
             case NOKEYSET -> {
                 ui.drawCenteredText("You need to set your api-key to use this feature.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
                 ui.drawCenteredText("Run \"/we apikey\" for more information.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);

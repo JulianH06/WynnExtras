@@ -16,6 +16,23 @@ import java.util.*;
 
 public class WynnExtrasConfig {
     public enum Align { LEFT, CENTER, RIGHT }
+    public enum TelemetryMode {
+        ON("On"),
+        ANONYMIZE("Anonymize"),
+        OFF("Off");
+
+        private final String displayName;
+
+        TelemetryMode(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
     public enum MythicScaleSource {
         WYNNPOOL("Wynnpool"),
         NORI("Nori"),
@@ -478,7 +495,13 @@ public class WynnExtrasConfig {
     public boolean showAchievementUnlockMessages = true;
 
     // ==================== PRIVACY ====================
-    public boolean anonymizeTelemetry = false;
+    public TelemetryMode telemetryMode = TelemetryMode.ON;
+    public boolean doNotFetchWynnExtrasBadges = false;
+    public boolean doNotFetchWynnExtrasAchievements = false;
+    public boolean doNotFetchWynnExtrasAspects = false;
+    public boolean doNotFetchWynnExtrasGambits = false;
+    public boolean doNotFetchWynnExtrasProfileTitles = false;
+    public boolean doNotFetchWynnExtrasResetTimes = false;
     public boolean doNotPublishOwnBadge = false;
     public boolean doNotPublishOwnAspects = false;
 
