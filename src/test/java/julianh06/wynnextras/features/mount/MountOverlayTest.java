@@ -2,12 +2,19 @@ package julianh06.wynnextras.features.mount;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
+import net.minecraft.util.CsvWriter;
 import oshi.driver.unix.freebsd.disk.Mount;
 
 public class MountOverlayTest {
@@ -66,22 +73,5 @@ public class MountOverlayTest {
 
         assert num == 3;
         
-    }
-
-    @Test
-    void testMixLevel() {
-        Map<MountStat, Integer> needed = new HashMap<>();
-        int[][] materialStatsTable = MountOverlay.makeMaterialStatsTable(10);
-
-        int[] materials = new int[materialCount];
-        int[] stats = new int[statCount];
-
-        for (MountStat s : MountStat.values())
-            needed.put(s, 20 - );
-        
-
-         new HashMap<>();
-        Map<MaterialType, Integer> result = MountOverlay.optimizeNeededv2(10, needed);
-
     }
 }

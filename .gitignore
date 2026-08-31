@@ -43,3 +43,5 @@ replay_*.log
 libs/
 
 *.md
+
+*TinkerTest*
