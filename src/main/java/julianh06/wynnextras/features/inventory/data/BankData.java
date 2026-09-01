@@ -105,25 +105,29 @@ public abstract class BankData {
                     this.playerInventory = loaded.playerInventory != null ? loaded.playerInventory : List.of();
                     this.playerArmor = loaded.playerArmor != null ? loaded.playerArmor : List.of();
                     this.bagCounts = loaded.bagCounts != null ? loaded.bagCounts : new HashMap<>();
+                } else {
+                    clearData();
                 }
-            } catch (IOException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Couldn't read bank data:");
-                e.printStackTrace();
+            } catch (Exception e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Couldn't load bank data from {}, using empty data.", path, e);
+                clearData();
             }
         } else {
-            // No file for this UUID/character yet — clear EVERYTHING so we don't leak the
-            // previous character's pages/bag counts into the new in-memory INSTANCE.
-            this.bankPages = new HashMap<>();
-            this.lastPage = 1;
-            this.bankPageNames = new HashMap<>();
-            this.characterNickname = null;
-            this.characterLevel = 0;
-            this.characterGamemode = List.of();
-            this.lastHeldWeapon = ItemStack.EMPTY;
-            this.playerInventory = List.of();
-            this.playerArmor = List.of();
-            this.bagCounts = new HashMap<>();
+            clearData();
         }
+    }
+
+    private void clearData() {
+        this.bankPages = new HashMap<>();
+        this.lastPage = 1;
+        this.bankPageNames = new HashMap<>();
+        this.characterNickname = null;
+        this.characterLevel = 0;
+        this.characterGamemode = List.of();
+        this.lastHeldWeapon = ItemStack.EMPTY;
+        this.playerInventory = List.of();
+        this.playerArmor = List.of();
+        this.bagCounts = new HashMap<>();
     }
 
     public int getLastPage() {

@@ -487,7 +487,7 @@ public class WynncraftApiHandler {
                 .GET())
                 .build();
 
-        return WynncraftAuthManager.httpClient().sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return WynncraftAuthManager.sendRequest(request)
                 .thenApply(response -> parsePlayerFetchResponse("API key", response, verbose))
                 .exceptionally(ex -> {
                     if (verbose) {

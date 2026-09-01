@@ -160,13 +160,16 @@ public class Recipe {
     }
 
     public Vector2i getDuration(int modifier) {
-        Vector2d base = new Vector2d(this.dura);
         if (!getType().isConsumable()) return null;
-        base = base.mul(materials.getMultiplier());
-        Vector2d finalDuration = base.add(modifier, modifier);
-        if(finalDuration.x < 10) finalDuration.x = 10;
-        if(finalDuration.y < 10) finalDuration.y = 10;
-        return new Vector2i((int) finalDuration.x, (int) finalDuration.y);
+        return getDuration(this.dura, modifier);
+    }
+
+    private Vector2i getDuration(Vector2i base, int modifier) {
+        if (base == null) return null;
+        double materialMultiplier = materials.getMultiplier();
+        int minimum = (int) Math.round(base.x * materialMultiplier) + modifier;
+        int maximum = (int) Math.round(base.y * materialMultiplier) + modifier;
+        return new Vector2i(Math.max(1, minimum), Math.max(1, maximum));
     }
 
     public Vector2i getHealth() {
@@ -305,33 +308,24 @@ public class Recipe {
         Vector2i health = this.getHealth();
 
         // consumables have low duration and heal you when crafted with no ings i dont have the heal numbers
-        if (getType().isConsumable()) {
-            boolean basic = true;
-            for (IngredientInfo ing : ingredients) {
-                if (ing != null && ing.variableStats() != null && !ing.variableStats().isEmpty()) {
-                    basic = false;
-                    break;
-                }
-            }
-            if (basic) {
-                WynnDataService.RecipeData data = WynnDataService.getInstance().getRecipe(getType(), getLevel());
-                if (data == null) return null;
-                return new CraftingResult(
-                        new Recipe(this),
-                        this.getType(),
-                        new ArrayList<>(),
-                        new GearRequirements(this.level.y, Optional.of(ClassType.NONE), new ArrayList<>(), Optional.empty()),
-                        health == null ? null : RangedValue.of(health.x, health.y),
-                        null,
-                        null,
-                        getBaseCharges(),
-                        RangedValue.of(data.basicDuration().x, data.basicDuration().y),
-                        getDamage()
-                );
-            }
+        if (getType().isConsumable() && Arrays.stream(ingredients).allMatch(Objects::isNull)) {
+            WynnDataService.RecipeData data = WynnDataService.getInstance().getRecipe(getType(), getLevel());
+            if (data == null) return null;
+            Vector2i basicDuration = getDuration(data.basicDuration(), 0);
+            return new CraftingResult(
+                    new Recipe(this),
+                    this.getType(),
+                    new ArrayList<>(),
+                    new GearRequirements(this.level.y, Optional.of(ClassType.NONE), new ArrayList<>(), Optional.empty()),
+                    health == null ? null : RangedValue.of(health.x, health.y),
+                    null,
+                    null,
+                    getBaseCharges(),
+                    basicDuration == null ? null : RangedValue.of(basicDuration.x, basicDuration.y),
+                    getDamage()
+            );
         }
         if (getType().isConsumable()) health = null;
-        if (Arrays.stream(ingredients).allMatch(Objects::isNull) && getType().isConsumable()) return null;
 
         int powderSlots = getBasePowderSlots();
         int charges = getBaseCharges();

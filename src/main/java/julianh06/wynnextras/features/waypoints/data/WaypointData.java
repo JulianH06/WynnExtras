@@ -259,7 +259,7 @@ public class WaypointData {
                 }
                 return pkg;
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.err.println("[WynnExtras] Couldn't load package: " + file.getFileName());
             e.printStackTrace();
             return null;

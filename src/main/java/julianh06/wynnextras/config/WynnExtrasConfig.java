@@ -197,6 +197,36 @@ public class WynnExtrasConfig {
         }
     }
 
+    public enum ChatMediaPreviewHoverPosition {
+        CURSOR("Cursor", null),
+        TOP_LEFT("Top left", ChatMediaPreviewPosition.TOP_LEFT),
+        TOP("Top", ChatMediaPreviewPosition.TOP),
+        TOP_RIGHT("Top right", ChatMediaPreviewPosition.TOP_RIGHT),
+        LEFT("Left", ChatMediaPreviewPosition.LEFT),
+        CENTER("Center", ChatMediaPreviewPosition.CENTER),
+        RIGHT("Right", ChatMediaPreviewPosition.RIGHT),
+        BOTTOM_LEFT("Bottom left", ChatMediaPreviewPosition.BOTTOM_LEFT),
+        BOTTOM("Bottom", ChatMediaPreviewPosition.BOTTOM),
+        BOTTOM_RIGHT("Bottom right", ChatMediaPreviewPosition.BOTTOM_RIGHT);
+
+        private final String displayName;
+        private final ChatMediaPreviewPosition fixedPosition;
+
+        ChatMediaPreviewHoverPosition(String displayName, ChatMediaPreviewPosition fixedPosition) {
+            this.displayName = displayName;
+            this.fixedPosition = fixedPosition;
+        }
+
+        public ChatMediaPreviewPosition getFixedPosition() {
+            return fixedPosition;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
     public static final String CLASS_SELECTION_LINE_LEVEL = "level";
     public static final String CLASS_SELECTION_LINE_LOCATION = "location";
     public static final String CLASS_SELECTION_LINE_PLAYTIME = "playtime";
@@ -473,7 +503,7 @@ public class WynnExtrasConfig {
     public ChatMediaPreviewLoadPolicy chatMediaPreviewLoadPolicy = ChatMediaPreviewLoadPolicy.CLICK_TO_LOAD;
     public boolean chatMediaPreviewAutoDisplay = false;
     public ChatMediaPreviewPosition chatMediaPreviewPosition = ChatMediaPreviewPosition.TOP_RIGHT;
-    public ChatMediaPreviewPosition chatMediaPreviewHoverPosition = ChatMediaPreviewPosition.CENTER;
+    public ChatMediaPreviewHoverPosition chatMediaPreviewHoverPosition = ChatMediaPreviewHoverPosition.CENTER;
     public int chatMediaPreviewMaxScreenPercent = 50;
     public int chatMediaPreviewMaxDownloadMb = 8;
     public int chatMediaPreviewMaxPixels = 16777216;
@@ -485,6 +515,7 @@ public class WynnExtrasConfig {
     // ==================== MISC ====================
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
+    public boolean updateReminderDisabled = false;
     public boolean showLootpoolButtonInPartyFinder = true;
     public boolean redirectWynntilsViewStatsToPV = false;
     public boolean arrowHiderToggle = false;
@@ -823,8 +854,8 @@ public class WynnExtrasConfig {
                 INSTANCE.syncAttackTimerColors();
                 INSTANCE.syncTetrisSettings();
             }
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Failed to load config: " + e.getMessage());
+        } catch (Exception e) {
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load config, using defaults.", e);
             INSTANCE = new WynnExtrasConfig();
         }
         INSTANCE.syncQuickRepairThreshold();

@@ -65,8 +65,8 @@ public class CharacterBankData extends BankData {
                 try (Writer writer = Files.newBufferedWriter(path)) {
                     BankData.getGson().toJson(data, writer);
                 }
-            } catch (IOException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Failed to save last held weapon: " + e.getMessage());
+            } catch (Exception e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Failed to update last held weapon in {}.", path, e);
             }
         });
     }

@@ -576,7 +576,7 @@ public final class WynnDataService {
             int tier = parseTier(requiredString(object, "tier"));
             IngredientInfo ingredient = new IngredientInfo(name, tier, level, Optional.of(internalName),
                     null, List.copyOf(professions), skillRequirements, Map.copyOf(positionModifiers), List.of(),
-                    requiredInt(consumable, "duration") / 1000, requiredInt(consumable, "charges"),
+                    requiredInt(consumable, "duration"), requiredInt(consumable, "charges"),
                     requiredInt(itemOnly, "durabilityModifier") / 1000, List.copyOf(identifications));
             if (byDisplayName.put(name, ingredient) != null) {
                 throw new IllegalStateException("Duplicate ingredient display name " + name);

@@ -10,6 +10,7 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.gui.tooltip.HoveredTooltipPositioner;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -19,6 +20,7 @@ import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import org.joml.Vector2ic;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -149,7 +151,8 @@ public final class ChatMediaPreview {
         if (hoveredPreviewStartedAtMs == 0) {
             hoveredPreviewStartedAtMs = System.currentTimeMillis();
         }
-        drawPreview(context, entry, WynnExtrasConfig.INSTANCE.chatMediaPreviewHoverPosition, hoveredPreviewStartedAtMs, null);
+        WynnExtrasConfig.ChatMediaPreviewHoverPosition hoverPosition = WynnExtrasConfig.INSTANCE.chatMediaPreviewHoverPosition;
+        drawPreview(context, entry, hoverPosition.getFixedPosition(), hoveredPreviewStartedAtMs, null, mouseX, mouseY);
     }
 
     private static void resetHoveredPreview() {
@@ -1027,6 +1030,10 @@ public final class ChatMediaPreview {
     }
 
     private static void drawPreview(DrawContext context, PreviewEntry entry, WynnExtrasConfig.ChatMediaPreviewPosition position, long animationStartedAtMs, String sender) {
+        drawPreview(context, entry, position, animationStartedAtMs, sender, -1, -1);
+    }
+
+    private static void drawPreview(DrawContext context, PreviewEntry entry, WynnExtrasConfig.ChatMediaPreviewPosition position, long animationStartedAtMs, String sender, int mouseX, int mouseY) {
         PreviewFrame frame = entry.currentFrame(animationStartedAtMs);
         if (frame == null) return;
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -1043,8 +1050,21 @@ public final class ChatMediaPreview {
         String senderText = sender == null ? null : "Sent by " + sender;
         int senderHeight = senderText == null ? 0 : 13;
         int contentWidth = senderText == null ? drawWidth : Math.max(drawWidth, mc.textRenderer.getWidth(senderText) + 4);
-        int x = getPreviewX(position, screenWidth, contentWidth);
-        int y = getPreviewY(position, screenHeight, drawHeight + senderHeight);
+        int x;
+        int y;
+        if (position == null) {
+            int previewWidth = contentWidth + 6;
+            int previewHeight = drawHeight + senderHeight + 6;
+            Vector2ic tooltipPosition = HoveredTooltipPositioner.INSTANCE.getPosition(
+                    screenWidth, screenHeight, mouseX, mouseY, previewWidth, previewHeight);
+            int maxX = Math.max(4, screenWidth - previewWidth - 4);
+            int maxY = Math.max(4, screenHeight - previewHeight - 4);
+            x = MathHelper.clamp(tooltipPosition.x(), 4, maxX) + 3;
+            y = MathHelper.clamp(tooltipPosition.y(), 4, maxY) + 3;
+        } else {
+            x = getPreviewX(position, screenWidth, contentWidth);
+            y = getPreviewY(position, screenHeight, drawHeight + senderHeight);
+        }
         int imageX = x + (contentWidth - drawWidth) / 2;
 
         if (senderText != null) {

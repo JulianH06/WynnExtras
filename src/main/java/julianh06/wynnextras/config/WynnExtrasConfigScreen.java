@@ -126,20 +126,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                             line("If you have any kind of suggestions or bug reports we would appreciate if you'd let us know on our §9Discord!").center(),
                             emptyLine(0.5f)
                     )))
-            .sub("Links")
-                .add(button("Discord", "Join the WynnExtras Discord server", (x) -> {
-                    LinkUtils.openLink("https://wynnextras.com/discord");
-                }, "Open"))
-                .add(button("Modrinth", "WynnExtras on Modrinth", (x) -> {
-                    LinkUtils.openLink("https://modrinth.com/mod/wynnextras");
-                }, "Open"))
-                .add(button("GitHub", "WynnExtras source code on GitHub", (x) -> {
-                    LinkUtils.openLink("https://github.com/JulianH06/WynnExtras");
-                }, "Open"))
-//                .add(button("YouTube", "Julian's personal YouTube channel", (x) -> {
-//                    LinkUtils.openLink("https://www.youtube.com/@H06Julian");
-//                }, "Open"))
-            .endSub()
             .sub("Quick Access")
                 .add(button("Loot Pools", "Open the Loot Pools screen", (x) -> {
                     WEScreen.open(AspectScreen::new);
@@ -164,6 +150,22 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     }
                 }, "Open"))
             .endSub()
+            .sub("Links")
+                .add(button("Discord", "Join the WynnExtras Discord server", (x) -> {
+                    LinkUtils.openLink("https://wynnextras.com/discord");
+                }, "Open"))
+                .add(button("Modrinth", "WynnExtras on Modrinth", (x) -> {
+                    LinkUtils.openLink("https://modrinth.com/mod/wynnextras");
+                }, "Open"))
+                .add(button("GitHub", "WynnExtras source code on GitHub", (x) -> {
+                    LinkUtils.openLink("https://github.com/JulianH06/WynnExtras");
+                }, "Open"))
+//                .add(button("YouTube", "Julian's personal YouTube channel", (x) -> {
+//                    LinkUtils.openLink("https://www.youtube.com/@H06Julian");
+//                }, "Open"))
+            .endSub()
+            .add(toggle("Disable Update Reminder", "Do not show a chat message when a new WynnExtras version is available",
+                () -> config.updateReminderDisabled, v -> config.updateReminderDisabled = v))
 //            .add(visibleWhen(button("Disable WynnExtras", "Turn off all features (your settings are preserved)",
 //                (x) -> {
 //                    config.disableWynnExtras();
@@ -673,7 +675,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 v -> config.chatMediaPreviewLoadPolicy = v),
                         () -> config.chatMediaPreviewEnabled))
                 .add(visibleWhen(dropdown("Hover-preview Position", "Where media previews appear while hovering links",
-                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
+                                WynnExtrasConfig.ChatMediaPreviewHoverPosition.class,
                                 () -> config.chatMediaPreviewHoverPosition,
                                 v -> config.chatMediaPreviewHoverPosition = v),
                         () -> config.chatMediaPreviewEnabled))

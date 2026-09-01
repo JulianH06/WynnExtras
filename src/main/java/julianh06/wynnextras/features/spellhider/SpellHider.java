@@ -242,10 +242,10 @@ public class SpellHider {
                 String json = Files.readString(MODIFIERS_PATH);
                 Type mapType = new TypeToken<@NotNull Map<SpellNamespace, SpellModifiers>>() {}.getType();
                 Map<SpellNamespace, SpellModifiers> modifiers = GSON.fromJson(json, mapType);
-                modifiersMap.putAll(modifiers);
+                if (modifiers != null) modifiersMap.putAll(modifiers);
             }
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Failed to load spell modifiers: " + e.getMessage());
+        } catch (Exception e) {
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load spell modifiers from {}.", MODIFIERS_PATH, e);
         }
     }
 

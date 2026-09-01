@@ -52,15 +52,16 @@ public class RaidListData {
             try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
                 RaidListData loaded = gson.fromJson(reader, RaidListData.class);
                 if (loaded != null) {
+                    if (loaded.raids == null) loaded.raids = new ArrayList<>();
                     loaded.raids.removeIf(raid -> raid == null || raid.raidInfo == null
                             || raid.raidInfo.raidKind() == WERaidKind.UNKNOWN);
                     INSTANCE = loaded;
                 } else {
                     WynnExtras.LOGGER.error("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");
                 }
-            } catch (IOException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Couldn't read the raidlist file:");
-                e.printStackTrace();
+            } catch (Exception e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Couldn't load raid list from {}, keeping default data.",
+                        CONFIG_PATH, e);
             }
         }
     }

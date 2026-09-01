@@ -44,9 +44,12 @@ public class FavoriteAspectsData {
                     if (loaded.recentSearches != null) {
                         this.recentSearches = loaded.recentSearches;
                     }
+                    this.favoriteAspects.removeIf(aspect -> aspect == null || aspect.isBlank());
+                    this.recentSearches.removeIf(search -> search == null || search.isBlank());
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (Exception e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Failed to load favorite aspects from {}, keeping default data.",
+                        CONFIG_PATH, e);
             }
         }
 

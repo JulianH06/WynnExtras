@@ -16,9 +16,12 @@ import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.wynncraft.menu.MenuType;
 import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.network.packet.s2c.play.ScoreboardScoreUpdateS2CPacket;
+import net.minecraft.network.packet.s2c.play.TeamS2CPacket;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.scoreboard.ScoreboardEntry;
+import net.minecraft.scoreboard.ScoreHolder;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.text.Text;
@@ -108,33 +111,70 @@ public final class RaidState {
 
     public static void observeScoreboard() {
         try {
+            if (!isInRaid() && !awaitingRaidResume) return;
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.world == null) return;
             Scoreboard scoreboard = client.world.getScoreboard();
             ScoreboardObjective objective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
             if (objective == null) return;
             confirmRaidResume(clean(objective.getDisplayName().getString()));
+            long observedAt = System.currentTimeMillis();
             for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
                 Text displayedName = Team.decorateName(scoreboard.getScoreHolderTeam(entry.owner()), entry.name());
-                String line = clean(displayedName.getString());
-                confirmRaidResume(line);
-                if (line.equals("Challenge Completed!")) {
-                    completeRoom();
-                    continue;
-                }
-                if (line.startsWith("Too many players have") || line.equals("You ran out of time!")) {
-                    end(EndStatus.FAILED);
-                    continue;
-                }
-                startRoomFromSignal(line);
+                observeScoreboardLine(clean(displayedName.getString()), observedAt);
             }
         } catch (Throwable ignored) {}
+    }
+
+    public static void observeScoreboardScore(ScoreboardScoreUpdateS2CPacket packet) {
+        try {
+            if (!isInRaid() && !awaitingRaidResume) return;
+            long observedAt = System.currentTimeMillis();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.world == null) return;
+            Scoreboard scoreboard = client.world.getScoreboard();
+            ScoreboardObjective objective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
+            if (objective == null || !objective.getName().equals(packet.objectiveName())) return;
+
+            Text name = packet.display().orElseGet(() -> Text.literal(packet.scoreHolderName()));
+            Text displayedName = Team.decorateName(scoreboard.getScoreHolderTeam(packet.scoreHolderName()), name);
+            observeScoreboardLine(clean(displayedName.getString()), observedAt);
+        } catch (Throwable ignored) {}
+    }
+
+    public static void observeTeam(TeamS2CPacket packet) {
+        try {
+            if (!isInRaid() && !awaitingRaidResume) return;
+            long observedAt = System.currentTimeMillis();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.world == null) return;
+            Scoreboard scoreboard = client.world.getScoreboard();
+            ScoreboardObjective objective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
+            Team team = scoreboard.getTeam(packet.getTeamName());
+            if (objective == null || team == null) return;
+
+            for (String owner : team.getPlayerList()) {
+                if (scoreboard.getScore(ScoreHolder.fromName(owner), objective) == null) continue;
+                observeScoreboardLine(clean(team.decorateName(Text.literal(owner)).getString()), observedAt);
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private static void observeScoreboardLine(String line, long observedAt) {
+        confirmRaidResume(line);
+        if (line.equals("Challenge Completed!")) {
+            completeRoom(observedAt);
+        } else if (line.startsWith("Too many players have") || line.equals("You ran out of time!")) {
+            end(EndStatus.FAILED, observedAt);
+        } else {
+            startRoomFromSignal(line, observedAt);
+        }
     }
 
     @SubscribeEvent
     public void onTick(TickEvent event) {
         if (awaitingRaidResume && --raidResumeTicksRemaining <= 0) interruptRaid();
-        if (event.ticks % 5 != 0) return;
+        if (event.ticks % 20 != 0) return;
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
         observeScoreboard();
@@ -161,8 +201,11 @@ public final class RaidState {
     }
 
     private static void completeRoom() {
+        completeRoom(System.currentTimeMillis());
+    }
+
+    private static void completeRoom(long now) {
         if (!isInRaid() || roomStartTime <= 0) return;
-        long now = System.currentTimeMillis();
         long elapsed = now - roomStartTime;
         ROOMS.put(room, new RaidRoomData(roomName, elapsed, now));
         RaidChatNotifier.onRoomCompleted(new CompletedRoom(stableRaidKey(raidKind), raidKind.abbreviation(), room,
@@ -172,14 +215,16 @@ public final class RaidState {
     }
 
     private static void end(EndStatus status) {
+        end(status, System.currentTimeMillis());
+    }
+
+    private static void end(EndStatus status, long now) {
         if (!isInRaid()) return;
         if (status == EndStatus.COMPLETED && roomStartTime > 0 && !ROOMS.containsKey(room)) {
-            completeRoom();
+            completeRoom(now);
         } else if (roomStartTime > 0 && !ROOMS.containsKey(room)) {
-            long now = System.currentTimeMillis();
             ROOMS.put(room, new RaidRoomData(roomName, now - roomStartTime, now));
         }
-        long now = System.currentTimeMillis();
         long roomTotal = ROOMS.values().stream().mapToLong(value -> Math.max(0, value.totalTime())).sum();
         RaidSnapshot snapshot = new RaidSnapshot(raidKind, ROOMS, startTime, Math.max(0, now - startTime), roomTotal);
         endStatus = status;
@@ -217,7 +262,7 @@ public final class RaidState {
                 Text.literal("§cRaid tracking has been interrupted; timestamps for the current raid are no longer available.")));
     }
 
-    private static void startRoomFromSignal(String line) {
+    private static void startRoomFromSignal(String line, long observedAt) {
         if (!isInRaid() || roomStartTime > 0 || line.isBlank()) return;
         int nextRoom = ROOMS.size() + 1;
         String detectedName = roomName(raidKind, nextRoom, line);
@@ -225,7 +270,7 @@ public final class RaidState {
 
         room = nextRoom;
         roomName = detectedName;
-        roomStartTime = System.currentTimeMillis();
+        roomStartTime = observedAt;
         phase = Phase.ROOM;
     }
 

@@ -20,6 +20,7 @@ import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.scoreboard.Scoreboard;
+import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.scoreboard.ScoreboardEntry;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.text.MutableText;
@@ -54,6 +55,7 @@ public class AttackTimer {
     private static final int DEFAULT_HIGH_DEFENSE_COLOR = 0xFF5555;
     private static final int DEFAULT_VERY_HIGH_DEFENSE_COLOR = 0xAA0000;
     private static final long WORLD_JOIN_BASELINE_DELAY_MS = 5_000L;
+    private static final long ATTACK_SCOREBOARD_CACHE_MS = 1_000L;
 
     public static String soonestTerritory = null;
     // territory -> defense level ("Very Low" / "Low" / "Medium" / "High" / "Very High")
@@ -69,6 +71,8 @@ public class AttackTimer {
     // Last territory the local player personally looked up (for auto-broadcast)
     private static String lastSelfLookupTerritory = null;
     private static long lastSelfLookupAt = 0;
+    private static List<String> cachedUpcomingAttacks = List.of();
+    private static long upcomingAttacksCacheExpiresAt;
 
     private static final SubCommand territoryDefencesDebugCommand = new SubCommand(
             "territorydefences",
@@ -175,27 +179,34 @@ public class AttackTimer {
     }
 
     public static List<String> getUpcomingAttacks() {
+        long now = System.currentTimeMillis();
+        if (now < upcomingAttacksCacheExpiresAt) return cachedUpcomingAttacks;
+
         MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.world == null) return new ArrayList<>();
+        if (mc.player == null || mc.world == null) {
+            cachedUpcomingAttacks = List.of();
+            upcomingAttacksCacheExpiresAt = now + ATTACK_SCOREBOARD_CACHE_MS;
+            return cachedUpcomingAttacks;
+        }
 
         Scoreboard scoreboard = mc.world.getScoreboard();
         List<String> upcoming = new ArrayList<>();
-        List<String> seen = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        ScoreboardObjective objective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
 
-        for (ScoreboardObjective obj : scoreboard.getObjectives()) {
-            for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(obj)) {
+        if (objective != null) {
+            for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
                 String name = entry.name().getString();
                 if (ATTACK_PATTERN.matcher(name).find()) {
                     String stripped = strip(name).substring(2);
-                    if (!seen.contains(stripped)) {
-                        seen.add(stripped);
-                        upcoming.add(stripped);
-                    }
+                    if (seen.add(stripped)) upcoming.add(stripped);
                 }
             }
-            break;
         }
-        return upcoming;
+
+        cachedUpcomingAttacks = List.copyOf(upcoming);
+        upcomingAttacksCacheExpiresAt = now + ATTACK_SCOREBOARD_CACHE_MS;
+        return cachedUpcomingAttacks;
     }
 
     private static String strip(String s) {

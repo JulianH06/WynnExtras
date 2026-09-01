@@ -336,6 +336,8 @@ public class ChatNotificator {
         if (!WynnExtrasConfig.INSTANCE.bombShareSuggestion) return;
 
         String msg = message.getString().toLowerCase();
+        if (msg.contains("wynncraft.com/store") || msg.contains("copied to clipboard")) return;
+
         int separatorIndex = msg.indexOf(':');
         if (separatorIndex == -1) return;
 

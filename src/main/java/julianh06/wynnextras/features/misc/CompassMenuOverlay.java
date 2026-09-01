@@ -46,7 +46,6 @@ public class CompassMenuOverlay extends WEMenuExtension {
     private static StatusType statusType = StatusType.IDLE;
     private static String statusPrimary = "";
     private static String statusSecondary = "";
-    private static String calculationError;
 
     public enum StatusType {
         IDLE,
@@ -230,12 +229,7 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     private static void startAssignment() {
         setStatus(StatusType.INFO, "Calculating required skill points...");
-        calculationError = null;
         int[] required = calculateRequiredSkillPoints(selectedWeapon);
-        if (calculationError != null) {
-            setStatus(StatusType.ERROR, "An equipped item was not recognized:", calculationError);
-            return;
-        }
         if (required == null) {
             setStatus(StatusType.ERROR, "No skill point requirements found.");
             return;
@@ -385,10 +379,7 @@ public class CompassMenuOverlay extends WEMenuExtension {
     private static SolvableItem toSolvableItem(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return null;
         Optional<WynnItemData> data = WynnItemParser.parse(stack);
-        if (data.isEmpty()) {
-            calculationError = stack.getName().getString();
-            return null;
-        }
+        if (data.isEmpty()) return null;
 
         SolvableItem si = new SolvableItem();
         si.reqs = data.get().requirementsArray();

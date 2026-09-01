@@ -930,8 +930,11 @@ public class BankOverlay2 extends WEHandledScreen {
                     page.setItems(buildInventoryForIndex(i, false));
 
                     if(searching) {
-                        boolean containsSearch = (i == activeInv && !WynnExtrasConfig.INSTANCE.bankOverlayExcludeActivePageFromSearches)
-                                || page.containsSearch(searchInput, activeSearchQuery);
+                        boolean containsSearch = page.containsSearch(
+                                searchInput,
+                                activeSearchQuery,
+                                i == activeInv && !WynnExtrasConfig.INSTANCE.bankOverlayExcludeActivePageFromSearches
+                        );
 
                         if(!containsSearch) {
                             page.setEnabled(false);
@@ -3739,14 +3742,17 @@ public class BankOverlay2 extends WEHandledScreen {
         if (searchbar2 == null) {
             return false;
         }
+        String previousInput = searchbar2.getInput();
         searchbar2.setInputAndMoveCursorToEnd(input);
         String normalizedInput = input == null ? "" : input.replace("@", "").trim();
         activeSearchInput = normalizedInput;
         activeSearchQuery = SearchQueryParser.parse(normalizedInput);
-        lastCrossClassSearchQuery = "";
-        invalidateLocalCrossClassPageCaches();
-        for (PageWidget page : pages) {
-            page.invalidateSearchCache();
+        if (!Objects.equals(previousInput, searchbar2.getInput())) {
+            lastCrossClassSearchQuery = "";
+            invalidateLocalCrossClassPageCaches();
+            for (PageWidget page : pages) {
+                page.invalidateSearchCache();
+            }
         }
         return true;
     }
@@ -4351,7 +4357,6 @@ public class BankOverlay2 extends WEHandledScreen {
         Identifier bankTextureDark = Identifier.of("wynnextras", "textures/gui/bankoverlay/bank_dark.png");
 
         private String cachedContainsSearchInput = null;
-        private List<ItemStack> cachedContainsSearchItems = null;
         private boolean cachedContainsSearchResult = false;
 
         List<ItemStack> items;
@@ -4672,39 +4677,35 @@ public class BankOverlay2 extends WEHandledScreen {
         }
 
         public void setItems(List<ItemStack> items) {
-            if (items != this.items) {
-                invalidateSearchCache();
-            }
             this.items = items;
         }
 
-        private boolean containsSearch(String searchInput, SearchQueryParser.ParsedQuery query) {
+        private boolean containsSearch(String searchInput, SearchQueryParser.ParsedQuery query, boolean includeActivePage) {
             if (Objects.equals(searchInput, cachedContainsSearchInput)) {
-                if (cachedContainsSearchResult) return true;
-                if (index != activeInv && items == cachedContainsSearchItems) return false;
+                return cachedContainsSearchResult;
             }
 
-            boolean containsSearch = false;
-            for(ItemStack stack : items) {
-                if(stack == null || stack.isEmpty()) continue;
+            boolean containsSearch = includeActivePage;
+            if (!containsSearch) {
+                for(ItemStack stack : items) {
+                    if(stack == null || stack.isEmpty()) continue;
 
-                WynnItemData wynnItem = WynnItemParser.parse(stack).orElse(null);
+                    WynnItemData wynnItem = WynnItemParser.parse(stack).orElse(null);
 
-                if (SearchQueryParser.matches(stack, wynnItem, query)) {
-                    containsSearch = true;
-                    break;
+                    if (SearchQueryParser.matches(stack, wynnItem, query)) {
+                        containsSearch = true;
+                        break;
+                    }
                 }
             }
 
             cachedContainsSearchInput = searchInput;
-            cachedContainsSearchItems = items;
             cachedContainsSearchResult = containsSearch;
             return containsSearch;
         }
 
         private void invalidateSearchCache() {
             cachedContainsSearchInput = null;
-            cachedContainsSearchItems = null;
             cachedContainsSearchResult = false;
         }
 
@@ -5045,8 +5046,11 @@ public class BankOverlay2 extends WEHandledScreen {
                 if (stack != null && !stack.isEmpty() && searchbar2 != null) {
                     String itemName = MINECRAFT_FORMATTING_CODE_PATTERN.matcher(stack.getName().getString()).replaceAll("").trim();
                     if (!itemName.isEmpty()) {
+                        String previousInput = searchbar2.getInput();
                         searchbar2.setInput(itemName);
-                        for (PageWidget page : pages) page.invalidateSearchCache();
+                        if (!Objects.equals(previousInput, searchbar2.getInput())) {
+                            for (PageWidget page : pages) page.invalidateSearchCache();
+                        }
                     }
                 }
                 return true;
@@ -5827,8 +5831,11 @@ public class BankOverlay2 extends WEHandledScreen {
                 if (stack != null && !stack.isEmpty() && searchbar2 != null) {
                     String itemName = MINECRAFT_FORMATTING_CODE_PATTERN.matcher(stack.getName().getString()).replaceAll("").trim();
                     if (!itemName.isEmpty()) {
+                        String previousInput = searchbar2.getInput();
                         searchbar2.setInput(itemName);
-                        for (PageWidget page : pages) page.invalidateSearchCache();
+                        if (!Objects.equals(previousInput, searchbar2.getInput())) {
+                            for (PageWidget page : pages) page.invalidateSearchCache();
+                        }
                     }
                 }
                 return true;

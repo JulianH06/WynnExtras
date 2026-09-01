@@ -11,7 +11,6 @@ import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.ArrayList;
@@ -20,25 +19,14 @@ import java.util.List;
 @Pseudo
 @Mixin(targets = "com.wynntils.features.tooltips.ItemStatInfoFeature", remap = false)
 public class ItemStatInfoFeatureMixin {
-    @Redirect(
-            method = "onTooltipPre",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lcom/wynntils/utils/mc/TooltipUtils;getWynnItemTooltip(Lnet/minecraft/item/ItemStack;Lcom/wynntils/models/items/WynnItem;)Ljava/util/List;"
-            ),
-            remap = false,
-            require = 0
-    )
-    private List<Text> redirectGetWynnItemTooltip(ItemStack itemStack, @Coerce Object wynnItem) {
-        WeightDisplay.setCurrentHoveredStack(itemStack);
-        return WynntilsTooltipAdapter.getWynnItemTooltip(itemStack, wynnItem);
-    }
-
     @Inject(method = "onTooltipPre", at = @At("RETURN"), remap = false, require = 0)
     private void captureProcessedTooltip(@Coerce Object event, CallbackInfo ci) {
-        ItemStack currentHoveredStack = WeightDisplay.getCurrentHoveredStack();
+        ItemStack currentHoveredStack = WynntilsTooltipAdapter.getItemStack(event);
+        if (currentHoveredStack == null) return;
+        WeightDisplay.setCurrentHoveredStack(currentHoveredStack);
+
         List<Text> eventTooltips = WynntilsTooltipAdapter.getTooltips(event);
-        if (currentHoveredStack != null && !eventTooltips.isEmpty()) {
+        if (!eventTooltips.isEmpty()) {
             List<Text> tooltips = new ArrayList<>(eventTooltips);
             TradeMarketComparisonPanel.cacheHoveredTooltip(currentHoveredStack, tooltips);
         }
@@ -47,7 +35,6 @@ public class ItemStatInfoFeatureMixin {
     @Inject(method = "onTooltipPreFinalize", at = @At("RETURN"), remap = false, require = 0)
     private void appendWeightAnnotations(@Coerce Object event, CallbackInfo ci) {
         //this will run if the user has the ItemStatInfoFeature enabled, if they dont then the annotation will be added in WeightDisplay instead
-
         ItemStack currentHoveredStack = WeightDisplay.getCurrentHoveredStack();
         List<Text> eventTooltips = WynntilsTooltipAdapter.getTooltips(event);
         if (currentHoveredStack == null || eventTooltips.isEmpty()) return;

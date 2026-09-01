@@ -33,7 +33,8 @@ public class OrderManager {
     public static List<String> loadOrder() {
         if (!Files.exists(ORDER_FILE)) return Collections.emptyList();
         try (Reader r = Files.newBufferedReader(ORDER_FILE, StandardCharsets.UTF_8)) {
-            return WaypointData.gson.fromJson(r, new TypeToken<List<String>>(){}.getType());
+            List<String> order = WaypointData.gson.fromJson(r, new TypeToken<List<String>>(){}.getType());
+            return order == null ? Collections.emptyList() : order;
         } catch (Exception e) {
             System.err.println("[WynnExtras] Couldn't load package order");
             e.printStackTrace();
