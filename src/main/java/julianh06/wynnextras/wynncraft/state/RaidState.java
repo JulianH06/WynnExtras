@@ -195,6 +195,7 @@ public final class RaidState {
         raidResumeTicksRemaining = 0;
         ROOMS.clear();
         RaidChatNotifier.resetCounters();
+        PartyState.requestRefresh();
         PartyIgnoreOnRaid.onRaidStarted();
         PlayerHider.onRaidStarted(raidKind);
         WynnExtras.LOGGER.info("[WynnExtras] Raid started - type: {}", raidKind.displayName());

@@ -953,6 +953,7 @@ public class BankOverlay2 extends WEHandledScreen {
                     if(pageVisible) {
                         page.draw(context, mouseX, mouseY, delta, ui);
                     } else {
+                        page.setEnabled(false);
                         page.setSlotsVisible(false);
                     }
                     visuali++;
@@ -2451,6 +2452,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
     public boolean readOnlyMouseClicked(double x, double y, int button) {
         if (!readOnlyViewer) return false;
+        clearTextInputFocus();
         if (searchbar2 != null && searchbar2.mouseClicked(x, y, button)) return true;
         if (scrollBarWidget != null && scrollBarWidget.mouseClicked(x, y, button)) return true;
         if (allCharactersButtonWidget != null && allCharactersButtonWidget.mouseClicked(x, y, button)) return true;
@@ -2481,7 +2483,13 @@ public class BankOverlay2 extends WEHandledScreen {
         boolean inBank = WynncraftMenuService.isCurrentAny(MenuType.ACCOUNT_BANK, MenuType.CHARACTER_BANK,
                 MenuType.BOOKSHELF, MenuType.MISC_BUCKET);
 
-        if(toggleOverlayWidget != null && WynnExtrasConfig.INSTANCE.bankQuickToggle && inBank) toggleOverlayWidget.mouseClicked(x, y, button);
+        clearTextInputFocus();
+
+        if(toggleOverlayWidget != null && WynnExtrasConfig.INSTANCE.bankQuickToggle && inBank
+                && toggleOverlayWidget.contains((int) x, (int) y)) {
+            toggleOverlayWidget.mouseClicked(x, y, button);
+            return true;
+        }
 
         if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return false;
         if (currentOverlayType == BankOverlayType.NONE) return false;
@@ -2512,9 +2520,57 @@ public class BankOverlay2 extends WEHandledScreen {
                 }
             }
         }
-        if (characterBankUnavailable) return true;
+        if (characterBankUnavailable) {
+            if (dropHeldItemOutsideBankArea(x, y, button)) return true;
+            return true;
+        }
         if(inventoryWidget != null && inventoryWidget.mouseClicked(x, y, button, doubleClick)) return true;
+        if (dropHeldItemOutsideBankArea(x, y, button)) return true;
         return false;
+    }
+
+    private static void clearTextInputFocus() {
+        if (searchbar2 != null) searchbar2.setFocused(false);
+        for (PageWidget page : pages) {
+            page.clearNameInputFocus();
+        }
+    }
+
+    private boolean dropHeldItemOutsideBankArea(double x, double y, int button) {
+        if (!hasHeldItem() || button != 0 && button != 1 || isPointInsideBankArea(x, y)) return false;
+
+        ScreenHandler liveHandler = getLiveScreenHandlerForClick();
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (liveHandler == null || mc.interactionManager == null || mc.player == null) return false;
+
+        mc.interactionManager.clickSlot(liveHandler.syncId, -999, button, SlotActionType.PICKUP, mc.player);
+        syncHeldItemFromLiveHandler(liveHandler);
+        bankSyncid = liveHandler.syncId;
+        return true;
+    }
+
+    private boolean isPointInsideBankArea(double x, double y) {
+        int xStart = layoutXRemain / 2 - 2;
+        int yStart = layoutYRemain / 2 - 2;
+        int pageAreaX = xStart - 7;
+        int pageAreaY = yStart - 13;
+        int pageAreaWidth = xFitAmount * (162 + 4) + 11;
+        int pageAreaHeight = (yFitAmount - 1) * (90 + 4 + 10) + 10;
+        if (x >= pageAreaX && x < pageAreaX + pageAreaWidth
+                && y >= pageAreaY && y < pageAreaY + pageAreaHeight) return true;
+
+        return contains(inventoryWidget, x, y)
+                || contains(searchbar2, x, y)
+                || contains(scrollBarWidget, x, y)
+                || contains(allCharactersButtonWidget, x, y)
+                || contains(reloadBankWidget, x, y)
+                || contains(switchButtonWidget, x, y)
+                || contains(quickActionWidget, x, y)
+                || contains(toggleOverlayWidget, x, y);
+    }
+
+    private static boolean contains(Widget widget, double x, double y) {
+        return widget != null && widget.contains((int) x, (int) y);
     }
 
     @Override
@@ -3138,21 +3194,21 @@ public class BankOverlay2 extends WEHandledScreen {
         WynntilsBankAdapter.drawFeature(emeraldPouchFillArcFeature, "drawFilledArc", context, stack, x, y);
     }
 
-    private static CustomColor getHighlightColor(ItemStack stack) {
+    private static Optional<CustomColor> getHighlightColor(ItemStack stack) {
          if (isEmptyStack(stack) || !itemHighlightEnabled || !highlightRenderInInv) {
-             return CustomColor.NONE;
+             return Optional.empty();
          }
-         return WynntilsBankAdapter.getHighlightColor(itemHighlightFeature, stack).orElse(CustomColor.NONE);
+         return WynntilsBankAdapter.getHighlightColor(itemHighlightFeature, stack);
     }
 
-    private static void renderHighlightOverlay(DrawContext context, CustomColor color, int x, int y) {
-         if (!Objects.equals(color, CustomColor.NONE)) {
+    private static void renderHighlightOverlay(DrawContext context, Optional<CustomColor> color, int x, int y) {
+         color.ifPresent(value -> {
              try {
                  ItemHighlightRenderer.drawWynntilsHighlightTexture(
                      context,
-                     color, (float)(x - 8), (float)(y - 8), 32.0F, 32.0F);
+                     value, (float)(x - 8), (float)(y - 8), 32.0F, 32.0F);
              } catch (Exception ignored) {}
-         }
+         });
     }
 
     private static void renderItemOverlays(DrawContext context, ItemStack stack, int x, int y) {
@@ -4680,6 +4736,12 @@ public class BankOverlay2 extends WEHandledScreen {
             this.items = items;
         }
 
+        @Override
+        public void setEnabled(boolean enabled) {
+            super.setEnabled(enabled);
+            if (!enabled) clearNameInputFocus();
+        }
+
         private boolean containsSearch(String searchInput, SearchQueryParser.ParsedQuery query, boolean includeActivePage) {
             if (Objects.equals(searchInput, cachedContainsSearchInput)) {
                 return cachedContainsSearchResult;
@@ -4721,6 +4783,10 @@ public class BankOverlay2 extends WEHandledScreen {
             return sign != null && sign.isInputFocused();
         }
 
+        private void clearNameInputFocus() {
+            if (sign != null) sign.clearInputFocus();
+        }
+
         private void positionNameSign() {
             int signY = y - 10;
             if (!WynnExtrasConfig.INSTANCE.disableStickyNameplates && y < topBorder) {
@@ -4741,7 +4807,7 @@ public class BankOverlay2 extends WEHandledScreen {
         private boolean cachedAnnotationInitialized = false;
         private String cachedSearchInput = null;
         private boolean cachedSearchMatch = false;
-        private CustomColor cachedHighlightColor = null;
+        private Optional<CustomColor> cachedHighlightColor = null;
         private ItemStack cachedDurabilityModelInput = null;
         private CustomModelDataComponent cachedDurabilityModelData = null;
         private int cachedDurabilityModelCount = -1;
@@ -5180,6 +5246,11 @@ public class BankOverlay2 extends WEHandledScreen {
 
         public boolean isInputFocused() {
             return textInputWidget != null && textInputWidget.isFocused();
+        }
+
+        private void clearInputFocus() {
+            setFocused(false);
+            if (textInputWidget != null) textInputWidget.setFocused(false);
         }
 
         @Override

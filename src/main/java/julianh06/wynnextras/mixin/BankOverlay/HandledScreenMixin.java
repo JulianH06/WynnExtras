@@ -404,6 +404,7 @@ public abstract class HandledScreenMixin {
         if (!WynncraftMenuService.isCurrent(MenuType.CLASS_SELECTION)) return;
 
         String targetName = julianh06.wynnextras.features.bankoverlay.BankOverlay2.getTargetCharacterNameForClassMenu();
+        int targetLevel = julianh06.wynnextras.features.bankoverlay.BankOverlay2.getTargetCharacterLevelForClassMenu();
         if (targetName == null || targetName.isEmpty()) return;
 
         ScreenHandler handler = screen.getScreenHandler();
@@ -414,8 +415,7 @@ public abstract class HandledScreenMixin {
         for (Slot slot : handler.slots) {
             ItemStack stack = slot.getStack();
             if (stack == null || stack.isEmpty()) continue;
-            String itemName = stack.getName().getString().replaceAll("\u00a7[0-9a-fk-or]", "");
-            if (targetName.equalsIgnoreCase(itemName)) {
+            if (ClassSelectionOverlay.matchesCrossClassTarget(stack, targetName, targetLevel)) {
                 matchCount++;
                 matchSlot = slot;
             }
@@ -425,8 +425,7 @@ public abstract class HandledScreenMixin {
         for (Slot slot : handler.slots) {
             ItemStack stack = slot.getStack();
             if (stack == null || stack.isEmpty()) continue;
-            String itemName = stack.getName().getString().replaceAll("\u00a7[0-9a-fk-or]", "");
-            if (!targetName.equalsIgnoreCase(itemName)) continue;
+            if (!ClassSelectionOverlay.matchesCrossClassTarget(stack, targetName, targetLevel)) continue;
             int slotX = slot.x + this.x;
             int slotY = slot.y + this.y;
             context.fill(slotX - 2, slotY - 2, slotX + 18, slotY, 0xFFFFAA00);
@@ -569,11 +568,9 @@ public abstract class HandledScreenMixin {
         if(bankOverlay != null) {
             boolean handledByBankOverlay = bankOverlay.mouseClicked(mouseX, mouseY, button, doubleClick);
 
-            if (handledByBankOverlay && WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
-                if (currentOverlayType != BankOverlayType.NONE) {
-                    cir.setReturnValue(true);
-                    return;
-                }
+            if (handledByBankOverlay) {
+                cir.setReturnValue(true);
+                return;
             }
         }
 

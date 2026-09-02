@@ -333,7 +333,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return 0;
     }
 
-    private int extractLevel(ItemStack stack) {
+    private static int extractLevel(ItemStack stack) {
         for (Text line : getTooltipLines(stack)) {
             String str = line.getString().replaceAll("\u00A7[0-9a-fk-or]", "").trim();
             if (str.contains("Level:")) {
@@ -869,7 +869,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     /** Extract just the class type name (without level) */
-    private String extractClassName(ItemStack stack) {
+    private static String extractClassName(ItemStack stack) {
         String[] classNames = {"Warrior", "Knight", "Mage", "Dark Wizard", "Assassin", "Ninja",
                 "Archer", "Hunter", "Shaman", "Skyseer"};
         for (Text line : getTooltipLines(stack)) {
@@ -890,6 +890,17 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     public static boolean isClassSelectionScreen(String title) { return CLASS_SELECTION_TITLE.equals(title); }
+
+    public static boolean matchesCrossClassTarget(ItemStack stack, String targetName, int targetLevel) {
+        if (stack == null || stack.isEmpty() || targetName == null || targetName.isEmpty()) return false;
+
+        boolean nameMatch = targetName.equalsIgnoreCase(cleanName(stack.getName().getString()))
+                || targetName.equalsIgnoreCase(extractClassName(stack));
+        if (!nameMatch) return false;
+
+        int level = extractLevel(stack);
+        return targetLevel <= 0 || level <= 0 || Math.abs(level - targetLevel) <= 5;
+    }
 
     /** Convert desired screen pixels to logical UIUtils coordinates */
     private float px(float screenPx) { return screenPx * (float) scaleFactor; }
@@ -1787,16 +1798,10 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             }
             if (origIdx < 0 || origIdx >= charDataList.size()) continue;
 
-            CharIdentity card = charDataList.get(origIdx);
-
             boolean match = false;
             if (targetName != null && !targetName.isEmpty()) {
                 // Name + level matching
-                boolean nameMatch = targetName.equalsIgnoreCase(card.name)
-                        || targetName.equalsIgnoreCase(card.classType);
-                boolean levelMatch = targetLevel <= 0 || card.level <= 0
-                        || Math.abs(card.level - targetLevel) <= 5;
-                match = nameMatch && levelMatch;
+                match = matchesCrossClassTarget(stacks.get(CHARACTER_SLOTS[arrayIdx]), targetName, targetLevel);
             }
 
             if (match) {
@@ -1826,12 +1831,12 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return mx >= sx && mx <= sx + sw && my >= sy && my <= sy + sh;
     }
 
-    private List<Text> getTooltipLines(ItemStack stack) {
+    private static List<Text> getTooltipLines(ItemStack stack) {
         return stack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
     }
 
     /** Strip formatting codes, brackets, and Wynncraft resource pack glyphs */
-    private String cleanName(String raw) {
+    private static String cleanName(String raw) {
         String stripped = raw.replaceAll("\u00A7[0-9a-fk-or]", "");
         stripped = stripped.replaceAll("^\\[|\\]$", "");
         // Strip surrogate pairs and Private Use Area characters (Wynncraft glyphs)

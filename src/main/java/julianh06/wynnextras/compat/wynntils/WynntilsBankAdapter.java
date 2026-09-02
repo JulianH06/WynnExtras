@@ -24,7 +24,7 @@ public final class WynntilsBankAdapter {
     private record ModelsBinding(Object bank, Method getCurrentPage, Object emerald, Method getAmount) {}
     private record FeaturesBinding(Object manager, Method getFeatureInstance) {}
     private record EmeraldBinding(Object[] units, Method symbol, Method stack) {}
-    private record ColorBinding(Method red, Method green, Method blue, Method alpha) {}
+    private record ColorBinding(Method red, Method green, Method blue, Method alpha, Object none) {}
     private record FeatureMethodKey(Class<?> type, String name, int parameters) {}
 
     private static final Map<FeatureMethodKey, Optional<Method>> FEATURE_METHODS = new ConcurrentHashMap<>();
@@ -48,7 +48,8 @@ public final class WynntilsBankAdapter {
     });
     private static final WynntilsCapability<ColorBinding> COLORS = new WynntilsCapability<>("bank-highlight-colors", () -> {
         Class<?> type = WynntilsCompat.requireClass("com.wynntils.utils.colors.CustomColor");
-        return new ColorBinding(type.getMethod("r"), type.getMethod("g"), type.getMethod("b"), type.getMethod("a"));
+        return new ColorBinding(type.getMethod("r"), type.getMethod("g"), type.getMethod("b"), type.getMethod("a"),
+                type.getField("NONE").get(null));
     });
 
     private WynntilsBankAdapter() {}
@@ -154,6 +155,7 @@ public final class WynntilsBankAdapter {
         Object color = invokeFeature(feature, "getHighlightColor", stack, false);
         if (color == null) return Optional.empty();
         return COLORS.invoke(binding -> {
+            if (color == binding.none) return Optional.<julianh06.wynnextras.utils.colors.CustomColor>empty();
             int red = ((Number) binding.red.invoke(color)).intValue();
             int green = ((Number) binding.green.invoke(color)).intValue();
             int blue = ((Number) binding.blue.invoke(color)).intValue();

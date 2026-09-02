@@ -4,6 +4,7 @@ import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.*;
+import julianh06.wynnextras.wynncraft.state.PartyState;
 import net.minecraft.client.MinecraftClient;
 import net.neoforged.bus.api.SubscribeEvent;
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ public class RaidList {
 
     @SubscribeEvent
     void onRaidEnded(RaidEndedEvent event) {
-        List<String> members = new ArrayList<>(RaidListScreen.currentPlayers);
+        List<String> members = new ArrayList<>(PartyState.members());
 
         // Calculate raid end time - use current time as the most accurate
         long raidEndTime = System.currentTimeMillis();
