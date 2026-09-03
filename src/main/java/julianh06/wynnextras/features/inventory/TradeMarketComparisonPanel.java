@@ -231,7 +231,8 @@ public class TradeMarketComparisonPanel {
 
         WeightDisplay.setCurrentHoveredStack(stack);
 
-        if (WeightDisplay.isTrackedMythic(stack) && !WeightDisplay.isUnidentified(stack)) {
+        if (WeightDisplay.isTrackedMythic(stack) && !WeightDisplay.isUnidentified(stack)
+                && !hasMythicScaleAnnotations(processedTooltip, stack)) {
             processedTooltip = WeightDisplay.modifyTooltip(processedTooltip, stack);
         }
 
@@ -240,6 +241,23 @@ public class TradeMarketComparisonPanel {
         tooltip.addAll(processedTooltip);
 
         return tooltip;
+    }
+
+    private static boolean hasMythicScaleAnnotations(List<Text> tooltip, ItemStack stack) {
+        WeightDisplay.ItemData itemData = WeightDisplay.getSelectedItemData(WeightDisplay.extractCleanName(stack));
+        if (itemData == null) return false;
+
+        for (Text line : tooltip) {
+            String text = line.getString().stripLeading();
+            if (text.startsWith("↳ Weight:")) return true;
+
+            for (WeightDisplay.WeightData weightData : itemData.data()) {
+                if (text.startsWith("↳ " + WeightDisplay.getScaleLabel(weightData.weightName()) + " ")) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static List<Text> getFallbackTooltip(ItemStack stack, MinecraftClient mc) {

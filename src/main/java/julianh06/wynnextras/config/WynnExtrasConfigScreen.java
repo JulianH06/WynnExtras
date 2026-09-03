@@ -278,9 +278,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.raidSessionEnabled))
                 .add(visibleWhen(text("Movable in inventory", "Open inventory to drag the tracker or click [ADD]/[X]/[||] buttons"),
                         () -> config.raidSessionEnabled))
-            .sub("Auto-ignore party in raid")
-                .add(toggle("Auto-ignore party in raid", "On raid start, /ignore add all party members to reduce lag from their effects; /ignore remove them on raid end",
-                        () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
             .sub("TNA Tree Room")
                 .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
                         () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))
@@ -309,21 +306,23 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(sliderF("Favorite Multiplier", "Multiplier applied to favorite aspects for scoring (applies on top of rarity multiplier)", 0.f, 10.f, 0.1f,
                         () -> config.favoriteMultiplier, v -> config.favoriteMultiplier = v))
             .endSub()
-                .add(toggle("Timestamps", "Show timestamps during raids",
-                        () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
-                .add(toggle("Fast Requeue", "Auto /pf on chest close",
-                        () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
-                .add(toggle("Block GRaid toggle (Shift to bypass)", "Blocks clicks on 'Guild Raid Available' in party finder unless SHIFT is held to prevent accidentally toggling graids",
-                        () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
-                .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
-                        () -> config.chiropTimer, v -> config.chiropTimer = v))
-                .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests by quickly clicking through the rewards",
-                        () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
-                .add(visibleWhen(toggle("Passive aspect scanning", "Scan your aspects passively without bothering you",
-                        () -> config.passiveAspectScanning, v -> config.passiveAspectScanning = v),
-                        () -> !config.automaticAspectScanning))
-                .add(toggle("Encounter Selection overlay (Very Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
-                        () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v));
+            .add(toggle("Timestamps", "Show timestamps during raids",
+                    () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
+            .add(toggle("Fast Requeue", "Auto /pf on chest close",
+                    () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
+            .add(toggle("Block GRaid toggle (Shift to bypass)", "Blocks clicks on 'Guild Raid Available' in party finder unless SHIFT is held to prevent accidentally toggling graids",
+                    () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
+            .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room. This is only an estimation since the spawn time is not 100% consistent",
+                    () -> config.chiropTimer, v -> config.chiropTimer = v))
+            .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests by quickly clicking through the rewards. This updates your aspect data in the raid lootpool screens and helps with certain features that change based on aspect progress (e.g. blood sorrow timer)",
+                    () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
+            .add(visibleWhen(toggle("Passive aspect scanning", "Scan your aspects passively without bothering you",
+                    () -> config.passiveAspectScanning, v -> config.passiveAspectScanning = v),
+                    () -> !config.automaticAspectScanning))
+            .add(toggle("Encounter Selection overlay (Very Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
+                    () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v))
+            .add(toggle("Auto-ignore party in raid", "On raid start, /ignore add all party members to reduce lag from their effects; /ignore remove them on raid end",
+                    () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v));
 
         // ===== COMBAT =====
         category("Combat", 0xFFfda216)

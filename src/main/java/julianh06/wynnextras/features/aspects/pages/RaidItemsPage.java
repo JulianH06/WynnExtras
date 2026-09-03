@@ -457,6 +457,8 @@ public class RaidItemsPage extends PageWidget {
                 if ("shiny".equals(item.type)) {
                     ui.drawText(drawName.replace("⬡ ", ""), textX + 20, textY,
                             WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : CustomColor.RAINBOW, textScale);
+                } else if ("WARD".equalsIgnoreCase(item.rewardType)) {
+                    ui.drawText(drawName, textX + 20, textY, CustomColor.fromHexString("f9508e"), textScale);
                 } else {
                     ui.drawText(rarityColor + drawName, textX + 20, textY, CustomColor.fromInt(0xFFFFFF), textScale);
                 }
