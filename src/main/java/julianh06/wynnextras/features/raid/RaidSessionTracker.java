@@ -1,8 +1,7 @@
 package julianh06.wynnextras.features.raid;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.raid.type.RaidRoomInfo;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.state.RaidState;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.event.RaidEndedEvent;
 import julianh06.wynnextras.event.api.WEEventBus;
@@ -146,29 +145,27 @@ public class RaidSessionTracker {
 
     public static void reset() {
         sessions.clear();
-        if (McUtils.player() != null) {
-            McUtils.sendMessageToClient(Text.literal("§e[Session] §fAll sessions cleared"));
+        if (MinecraftUtils.player() != null) {
+            MinecraftUtils.sendMessageToClient(Text.literal("§e[Session] §fAll sessions cleared"));
         }
     }
 
     public static void startNewSession() {
         Session s = new Session();
-        try {
-            if (Models.Raid.getCurrentRaid() != null) s.arm();
-        } catch (Exception ignored) {}
+        if (RaidState.isInRaid()) s.arm();
         sessions.add(s);
-        if (McUtils.player() != null) {
+        if (MinecraftUtils.player() != null) {
             String suffix = sessions.size() > 1 ? " (#" + sessions.size() + ")" : "";
             String state = s.armed ? "started" : "armed — starts on first raid entry";
-            McUtils.sendMessageToClient(Text.literal("§e[Session] §fNew session " + state + suffix));
+            MinecraftUtils.sendMessageToClient(Text.literal("§e[Session] §fNew session " + state + suffix));
         }
     }
 
     private static void removeSession(int index) {
         if (index >= 0 && index < sessions.size()) {
             sessions.remove(index);
-            if (McUtils.player() != null) {
-                McUtils.sendMessageToClient(Text.literal("§e[Session] §fRemoved session"));
+            if (MinecraftUtils.player() != null) {
+                MinecraftUtils.sendMessageToClient(Text.literal("§e[Session] §fRemoved session"));
             }
         }
     }
@@ -178,17 +175,17 @@ public class RaidSessionTracker {
         if (!WynnExtrasConfig.INSTANCE.raidSessionEnabled) return;
         if (!(event instanceof RaidEndedEvent.Completed)) return; // fails don't count toward avg
         if (event.getRaid() == null) return;
-        long runMs = event.getRaid().getTimeInRaid();
+        long runMs = event.getRaid().timeInRaid();
         if (runMs <= 0) return;
 
         // Split into pure challenge time vs intermissions between rooms.
         long challengeSum = 0;
         try {
-            var challenges = event.getRaid().getChallenges();
+            var challenges = event.getRaid().challenges();
             if (challenges != null) {
-                for (RaidRoomInfo room : challenges.values()) {
+                for (RaidRoomData room : challenges.values()) {
                     if (room == null) continue;
-                    long t = room.getRoomTotalTime();
+                    long t = room.totalTime();
                     if (t > 0) challengeSum += t;
                 }
             }
@@ -268,19 +265,17 @@ public class RaidSessionTracker {
                     sessions.get(i).cachedStatsLine = sessions.get(i).buildStatsLine(i);
                 }
             }
-            try {
-                boolean inRaid = Models.Raid.getCurrentRaid() != null;
-                if (inRaid && !wasInRaid) {
-                    if (sessions.isEmpty()) {
-                        startNewSession(); // arms itself because getCurrentRaid() != null
-                    }
-                    for (Session s : sessions) {
-                        if (!s.armed) s.arm();
-                        else if (!s.manuallyPaused) s.unpause();
-                    }
+            boolean inRaid = RaidState.isInRaid();
+            if (inRaid && !wasInRaid) {
+                if (sessions.isEmpty()) {
+                    startNewSession();
                 }
-                wasInRaid = inRaid;
-            } catch (Exception ignored) {}
+                for (Session s : sessions) {
+                    if (!s.armed) s.arm();
+                    else if (!s.manuallyPaused) s.unpause();
+                }
+            }
+            wasInRaid = inRaid;
         });
 
         // Detect clicks/drags on HUD while inventory is open
@@ -323,9 +318,8 @@ public class RaidSessionTracker {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (mc.player == null || mc.options.hudHidden) return;
             if (mc.currentScreen != null) return;
-            if (WynnExtrasConfig.INSTANCE.raidSessionOnlyInRaid && wasInRaid == false) {
-                try { if (Models.Raid.getCurrentRaid() == null) return; } catch (Exception ignored) { return; }
-            }
+            if (WynnExtrasConfig.INSTANCE.raidSessionOnlyInRaid && !wasInRaid
+                    && !RaidState.isInRaid()) return;
             renderHud(ctx, mc, false);
         });
 
@@ -335,9 +329,7 @@ public class RaidSessionTracker {
             ScreenEvents.afterRender(screen).register((s, ctx, mouseX, mouseY, tickDelta) -> {
                 if (!WynnExtrasConfig.INSTANCE.raidSessionEnabled) return;
                 if (client.player == null) return;
-                if (WynnExtrasConfig.INSTANCE.raidSessionOnlyInRaid) {
-                    try { if (Models.Raid.getCurrentRaid() == null) return; } catch (Exception ignored) { return; }
-                }
+                if (WynnExtrasConfig.INSTANCE.raidSessionOnlyInRaid && !RaidState.isInRaid()) return;
                 renderHud(ctx, client, true);
             });
         });
@@ -495,9 +487,9 @@ public class RaidSessionTracker {
             if (mouseX >= pauseX && mouseX <= pauseX + pauseW) {
                 s.togglePause();
                 String state = s.manuallyPaused ? "Paused" : "Resumed";
-                if (McUtils.player() != null) {
+                if (MinecraftUtils.player() != null) {
                     String label = sessions.size() > 1 ? " (#" + (i + 1) + ")" : "";
-                    McUtils.sendMessageToClient(Text.literal("§e[Session] §f" + state + label));
+                    MinecraftUtils.sendMessageToClient(Text.literal("§e[Session] §f" + state + label));
                 }
                 return;
             }

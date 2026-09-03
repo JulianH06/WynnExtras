@@ -1,7 +1,6 @@
 package julianh06.wynnextras.features.qol;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.state.TerritoryState;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -9,6 +8,7 @@ import julianh06.wynnextras.core.command.SubCommand;
 import julianh06.wynnextras.event.ChatEvent;
 import julianh06.wynnextras.event.api.WEEventBus;
 import julianh06.wynnextras.features.achievements.AchievementTracking;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -20,6 +20,7 @@ import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.scoreboard.Scoreboard;
+import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.scoreboard.ScoreboardEntry;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.text.MutableText;
@@ -54,6 +55,7 @@ public class AttackTimer {
     private static final int DEFAULT_HIGH_DEFENSE_COLOR = 0xFF5555;
     private static final int DEFAULT_VERY_HIGH_DEFENSE_COLOR = 0xAA0000;
     private static final long WORLD_JOIN_BASELINE_DELAY_MS = 5_000L;
+    private static final long ATTACK_SCOREBOARD_CACHE_MS = 1_000L;
 
     public static String soonestTerritory = null;
     // territory -> defense level ("Very Low" / "Low" / "Medium" / "High" / "Very High")
@@ -69,6 +71,8 @@ public class AttackTimer {
     // Last territory the local player personally looked up (for auto-broadcast)
     private static String lastSelfLookupTerritory = null;
     private static long lastSelfLookupAt = 0;
+    private static List<String> cachedUpcomingAttacks = List.of();
+    private static long upcomingAttacksCacheExpiresAt;
 
     private static final SubCommand territoryDefencesDebugCommand = new SubCommand(
             "territorydefences",
@@ -86,7 +90,7 @@ public class AttackTimer {
             "clears all locally stored WynnExtras achievements",
             context -> {
                 AchievementTracking.clearAchievements();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aCleared all stored achievements."));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aCleared all stored achievements."));
                 return 1;
             },
             null,
@@ -97,7 +101,7 @@ public class AttackTimer {
             "debug",
             "WynnExtras debug commands",
             context -> {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we debug <territorydefences|clearAchievements>"));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eUsage: /we debug <territorydefences|clearAchievements>"));
                 return 1;
             },
             List.of(territoryDefencesDebugCommand, clearAchievementsDebugCommand),
@@ -105,6 +109,7 @@ public class AttackTimer {
     );
 
     public static void register() {
+        TerritoryState.initialize();
         HudRenderCallback.EVENT.register(AttackTimer::render);
         WEEventBus.registerEventListener(new AttackTimer());
         // Scan open "Attacking: X" menus for defense info and cache it
@@ -138,13 +143,17 @@ public class AttackTimer {
     @SubscribeEvent
     public void onChat(ChatEvent event) {
         try {
-            String raw = event.message.getString().replaceAll("§[0-9a-fk-orx]", "").trim();
+            String raw = event.message.getString()
+                    .replaceAll("§[0-9a-fk-orx]", "")
+                    .replaceAll("[\\p{Co}\\s]+", " ")
+                    .trim();
             if (raw.isEmpty()) return;
 
             // Guildmate defense broadcast
             Matcher m = DEFENSE_BROADCAST.matcher(raw);
             if (m.find()) {
                 cachedDefenses.put(territoryKey(m.group("terr")), m.group("def").trim());
+                TerritoryState.cacheDefense(m.group("terr").trim(), m.group("def").trim());
                 return;
             }
 
@@ -170,27 +179,34 @@ public class AttackTimer {
     }
 
     public static List<String> getUpcomingAttacks() {
+        long now = System.currentTimeMillis();
+        if (now < upcomingAttacksCacheExpiresAt) return cachedUpcomingAttacks;
+
         MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.world == null) return new ArrayList<>();
+        if (mc.player == null || mc.world == null) {
+            cachedUpcomingAttacks = List.of();
+            upcomingAttacksCacheExpiresAt = now + ATTACK_SCOREBOARD_CACHE_MS;
+            return cachedUpcomingAttacks;
+        }
 
         Scoreboard scoreboard = mc.world.getScoreboard();
         List<String> upcoming = new ArrayList<>();
-        List<String> seen = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        ScoreboardObjective objective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
 
-        for (ScoreboardObjective obj : scoreboard.getObjectives()) {
-            for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(obj)) {
+        if (objective != null) {
+            for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
                 String name = entry.name().getString();
                 if (ATTACK_PATTERN.matcher(name).find()) {
                     String stripped = strip(name).substring(2);
-                    if (!seen.contains(stripped)) {
-                        seen.add(stripped);
-                        upcoming.add(stripped);
-                    }
+                    if (seen.add(stripped)) upcoming.add(stripped);
                 }
             }
-            break;
         }
-        return upcoming;
+
+        cachedUpcomingAttacks = List.copyOf(upcoming);
+        upcomingAttacksCacheExpiresAt = now + ATTACK_SCOREBOARD_CACHE_MS;
+        return cachedUpcomingAttacks;
     }
 
     private static String strip(String s) {
@@ -225,16 +241,10 @@ public class AttackTimer {
         String cached = cachedDefenses.get(territoryKey(territory));
         if (cached != null) return cached;
 
-        try {
-            var poi = Models.Territory.getTerritoryPoiFromAdvancement(territory);
-            if (poi == null || poi.getTerritoryInfo() == null || poi.getTerritoryInfo().getDefences() == null) return null;
-            String defense = strip(poi.getTerritoryInfo().getDefences().getAsString()).trim();
-            if (defense.isEmpty()) return null;
-            cachedDefenses.put(territoryKey(territory), defense);
-            return defense;
-        } catch (Exception ignored) {
-            return null;
-        }
+        String def = TerritoryState.defense(territory).map(AttackTimer::strip).orElse("").trim();
+        if (def.isEmpty()) return null;
+        cachedDefenses.put(territoryKey(territory), def);
+        return def;
     }
 
     private static void observeNewAttacks(MinecraftClient client) {
@@ -294,17 +304,11 @@ public class AttackTimer {
     }
 
     private static String readDefenseAtQueue(String territory) {
-        try {
-            var poi = Models.Territory.getTerritoryPoiFromAdvancement(territory);
-            if (poi != null && poi.getTerritoryInfo() != null && poi.getTerritoryInfo().getDefences() != null) {
-                String defense = strip(poi.getTerritoryInfo().getDefences().getAsString()).trim();
-                if (!defense.isEmpty()) {
-                    cachedDefenses.put(territoryKey(territory), defense);
-                    return defense;
-                }
-            }
-        } catch (Exception ignored) {}
-
+        String defense = TerritoryState.defense(territory).map(AttackTimer::strip).orElse("").trim();
+        if (!defense.isEmpty()) {
+            cachedDefenses.put(territoryKey(territory), defense);
+            return defense;
+        }
         return menuDefenses.get(territoryKey(territory));
     }
 
@@ -333,6 +337,7 @@ public class AttackTimer {
         String key = territoryKey(territory);
         cachedDefenses.put(key, defense);
         menuDefenses.put(key, defense);
+        TerritoryState.cacheDefense(territory, defense);
     }
 
     private static String territoryKey(String territory) {
@@ -366,15 +371,15 @@ public class AttackTimer {
 
     private static void printTerritoryDefenseDebug() {
         if (queuedAttackDefenses.isEmpty()) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No territory defence snapshots saved this session."));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7No territory defence snapshots saved this session."));
             return;
         }
 
         long now = System.currentTimeMillis();
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eSaved territory defence snapshots:"));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§eSaved territory defence snapshots:"));
         queuedAttackDefenses.values().stream()
                 .sorted(Comparator.comparingLong(QueuedDefense::startsAt))
-                .forEach(attack -> McUtils.sendMessageToClient(Text.of("§7- §f" + attack.territory
+                .forEach(attack -> MinecraftUtils.sendMessageToClient(Text.of("§7- §f" + attack.territory
                         + "§7: " + (attack.defense == null ? "§cUnknown" : "§f" + attack.defense)
                         + " §7(" + (attack.startsAt - now < 0 ? "§c" : "§a")
                         + formatDebugTime(attack.startsAt - now) + "§7)"
@@ -385,13 +390,7 @@ public class AttackTimer {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return null;
 
-        try {
-            Vec3d position = new Vec3d(mc.player.getX(), mc.player.getY(), mc.player.getZ());
-            var profile = Models.Territory.getTerritoryProfileForPosition(position);
-            return profile == null ? null : profile.getName();
-        } catch (Exception ignored) {
-            return null;
-        }
+        return TerritoryState.currentTerritory().orElse(null);
     }
 
     private static MutableText styledPart(String text, int color, boolean bold) {
@@ -453,7 +452,7 @@ public class AttackTimer {
         for (QueuedDefense attack : attacks) {
             String time = formatTimerTime(attack.startsAt - now);
             boolean isCurrentTerritory = currentTerritory != null && currentTerritory.equalsIgnoreCase(attack.territory);
-            lines.add(buildAttackLine(time, attack.territory, attack.defense, isCurrentTerritory));
+            lines.add(buildAttackLine(time, attack.territory, getDefenseLevel(attack.territory), isCurrentTerritory));
         }
 
         int maxW = 0;

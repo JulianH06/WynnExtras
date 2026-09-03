@@ -1,13 +1,13 @@
 package julianh06.wynnextras.features.crafting;
 
-import com.wynntils.models.ingredients.type.IngredientPosition;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 public class IngredientPositionModifiers {
+    private enum Position { LEFT, RIGHT, ABOVE, UNDER, TOUCHING, NOT_TOUCHING }
+
     public int left;
     public int right;
     public int above;
@@ -15,13 +15,18 @@ public class IngredientPositionModifiers {
     public int touching;
     public int not_touching;
 
-    public IngredientPositionModifiers(Map<IngredientPosition, Integer> modifierMap) {
-        this.left = modifierMap.getOrDefault(IngredientPosition.LEFT, 0);
-        this.right = modifierMap.getOrDefault(IngredientPosition.RIGHT, 0);
-        this.above = modifierMap.getOrDefault(IngredientPosition.ABOVE, 0);
-        this.under = modifierMap.getOrDefault(IngredientPosition.UNDER, 0);
-        this.touching = modifierMap.getOrDefault(IngredientPosition.TOUCHING, 0);
-        this.not_touching = modifierMap.getOrDefault(IngredientPosition.NOT_TOUCHING, 0);
+    public IngredientPositionModifiers(Map<?, Integer> modifierMap) {
+        for (Map.Entry<?, Integer> entry : modifierMap.entrySet()) {
+            if (!(entry.getKey() instanceof Enum<?> key) || entry.getValue() == null) continue;
+            switch (key.name()) {
+                case "LEFT" -> left = entry.getValue();
+                case "RIGHT" -> right = entry.getValue();
+                case "ABOVE" -> above = entry.getValue();
+                case "UNDER" -> under = entry.getValue();
+                case "TOUCHING" -> touching = entry.getValue();
+                case "NOT_TOUCHING" -> not_touching = entry.getValue();
+            }
+        }
     }
 
     public boolean hasAny() {
@@ -40,37 +45,37 @@ public class IngredientPositionModifiers {
 
         // Apply each modifier to the relevant indexes
         if (this.left != 0) {
-            for (int i : getAdjacentIndexes(index, width, length, IngredientPosition.LEFT)) {
+            for (int i : getAdjacentIndexes(index, width, length, Position.LEFT)) {
                 multipliers[i] += this.left / 100.0;
             }
         }
 
         if (this.right != 0) {
-            for (int i : getAdjacentIndexes(index, width, length, IngredientPosition.RIGHT)) {
+            for (int i : getAdjacentIndexes(index, width, length, Position.RIGHT)) {
                 multipliers[i] += this.right / 100.0;
             }
         }
 
         if (this.above != 0) {
-            for (int i : getAdjacentIndexes(index, width, length, IngredientPosition.ABOVE)) {
+            for (int i : getAdjacentIndexes(index, width, length, Position.ABOVE)) {
                 multipliers[i] += this.above / 100.0;
             }
         }
 
         if (this.under != 0) {
-            for (int i : getAdjacentIndexes(index, width, length, IngredientPosition.UNDER)) {
+            for (int i : getAdjacentIndexes(index, width, length, Position.UNDER)) {
                 multipliers[i] += this.under / 100.0;
             }
         }
 
         if (this.touching != 0) {
-            for (int i : getAdjacentIndexes(index, width, length, IngredientPosition.TOUCHING)) {
+            for (int i : getAdjacentIndexes(index, width, length, Position.TOUCHING)) {
                 multipliers[i] += this.touching / 100.0;
             }
         }
 
         if (this.not_touching != 0) {
-            for (int i : getAdjacentIndexes(index, width, length, IngredientPosition.NOT_TOUCHING)) {
+            for (int i : getAdjacentIndexes(index, width, length, Position.NOT_TOUCHING)) {
                 multipliers[i] += this.not_touching / 100.0;
             }
         }
@@ -78,11 +83,11 @@ public class IngredientPositionModifiers {
         return multipliers;
     }
 
-    public static List<Integer> getAdjacentIndexes(int index, IngredientPosition type) {
+    private static List<Integer> getAdjacentIndexes(int index, Position type) {
         return getAdjacentIndexes(index, 2, 6, type);
     }
 
-    private static List<Integer> getAdjacentIndexes(int index, int width, int length, IngredientPosition type) {
+    private static List<Integer> getAdjacentIndexes(int index, int width, int length, Position type) {
         List<Integer> result = new ArrayList<>();
 
         int height = (int) Math.ceil((double) length / width);
@@ -129,7 +134,7 @@ public class IngredientPositionModifiers {
             case NOT_TOUCHING:
                 for (int i = 0; i < length; i++) {
                     if (i == index) continue;
-                    if (!getAdjacentIndexes(index, width, length, IngredientPosition.TOUCHING).contains(i)) {
+                    if (!getAdjacentIndexes(index, width, length, Position.TOUCHING).contains(i)) {
                         result.add(i);
                     }
                 }

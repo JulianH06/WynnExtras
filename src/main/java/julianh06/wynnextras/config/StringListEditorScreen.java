@@ -1,6 +1,9 @@
 package julianh06.wynnextras.config;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.UI.TextInputWidget;
+import julianh06.wynnextras.utils.UI.UIUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -22,9 +25,9 @@ public class StringListEditorScreen extends Screen {
     final List<String> items;
     final Consumer<List<String>> setter;
     final boolean dualInput;
-    String input1 = "";
-    String input2 = "";
-    int activeField = 0;
+    final TextInputWidget input1 = createInput();
+    final TextInputWidget input2 = createInput();
+    UIUtils ui;
     int editingIndex = -1;
     double scroll = 0;
 
@@ -34,22 +37,22 @@ public class StringListEditorScreen extends Screen {
         this.items = new ArrayList<>(items);
         this.setter = setter;
         this.dualInput = dualInput;
+        input1.setFocused(true);
     }
 
-    private String getActiveInput() {
-        return activeField == 0 ? input1 : input2;
-    }
-
-    private void setActiveInput(String val) {
-        if (activeField == 0) input1 = val;
-        else input2 = val;
+    private static TextInputWidget createInput() {
+        TextInputWidget input = new TextInputWidget(0, 0, 0, 0, 5, 8, 1);
+        input.setPlaceholder("");
+        input.setTextColor(CustomColor.fromInt(TEXT_LIGHT));
+        input.setCursorColor(CustomColor.fromInt(TEXT_LIGHT));
+        return input;
     }
 
     private void clearInputs() {
-        input1 = "";
-        input2 = "";
+        input1.clearInput();
+        input2.clearInput();
         editingIndex = -1;
-        activeField = 0;
+        focusInput(input1);
     }
 
     private void loadItemForEditing(int index) {
@@ -58,18 +61,19 @@ public class StringListEditorScreen extends Screen {
         editingIndex = index;
         if (dualInput && item.contains("|")) {
             String[] parts = item.split("\\|", 2);
-            input1 = parts[0];
-            input2 = parts.length > 1 ? parts[1] : "";
+            input1.setInputAndMoveCursorToEnd(parts[0]);
+            input2.setInputAndMoveCursorToEnd(parts.length > 1 ? parts[1] : "");
         } else {
-            input1 = item;
-            input2 = "";
+            input1.setInputAndMoveCursorToEnd(item);
+            input2.clearInput();
         }
-        activeField = 0;
+        focusInput(input1);
     }
 
     private void saveCurrentInput() {
-        String value = dualInput ? input1 + "|" + input2 : input1;
-        if (value.isEmpty() || (dualInput && input1.isEmpty())) return;
+        String first = input1.getInput();
+        String value = dualInput ? first + "|" + input2.getInput() : first;
+        if (value.isEmpty() || (dualInput && first.isEmpty())) return;
 
         if (editingIndex >= 0 && editingIndex < items.size()) {
             items.set(editingIndex, value);
@@ -79,9 +83,26 @@ public class StringListEditorScreen extends Screen {
         clearInputs();
     }
 
+    private void focusInput(TextInputWidget input) {
+        input1.setFocused(input == input1);
+        input2.setFocused(input == input2);
+    }
+
+    private void updateInputBounds(int px, int pw, int inputY, boolean isEditing) {
+        if (dualInput) {
+            int fieldW = (pw - (isEditing ? 140 : 90)) / 2;
+            input1.setBounds(px + 15, inputY, fieldW, 24);
+            input2.setBounds(px + (isEditing ? 20 : 23) + fieldW, inputY, fieldW, 24);
+        } else {
+            input1.setBounds(px + 15, inputY, pw - (isEditing ? 135 : 80), 24);
+        }
+    }
+
     @Override
     public void render(DrawContext ctx, int mx, int my, float delta) {
         boolean isEditing = editingIndex >= 0;
+        if (ui == null) ui = new UIUtils(ctx, 1, 0, 0);
+        else ui.updateContext(ctx, 1, 0, 0);
 
         ctx.fill(0, 0, width, height, BG_DARK);
 
@@ -93,45 +114,24 @@ public class StringListEditorScreen extends Screen {
         ctx.fill(px + 20, 48, px + pw - 20, 49, GOLD_DARK);
 
         int inputY = 65;
+        updateInputBounds(px, pw, inputY, isEditing);
         if (dualInput) {
-            if (isEditing) {
-                int fieldW = (pw - 140) / 2;
+            ctx.drawTextWithShadow(textRenderer, "Trigger:", input1.getX(), inputY - 10, TEXT_DIM);
+            ctx.fill(input1.getX(), inputY, input1.getX() + input1.getWidth(), inputY + 24, BORDER_DARK);
+            ctx.fill(input1.getX() + 1, inputY + 1, input1.getX() + input1.getWidth() - 1, inputY + 23,
+                    input1.isFocused() ? PARCHMENT_LIGHT : PARCHMENT);
 
-                ctx.drawTextWithShadow(textRenderer, "Trigger:", px + 15, inputY - 10, TEXT_DIM);
-                ctx.fill(px + 15, inputY, px + 15 + fieldW, inputY + 24, BORDER_DARK);
-                ctx.fill(px + 16, inputY + 1, px + 14 + fieldW, inputY + 23, activeField == 0 ? PARCHMENT_LIGHT : PARCHMENT);
-                ctx.drawTextWithShadow(textRenderer, input1 + (activeField == 0 ? "_" : ""), px + 20, inputY + 8, TEXT_LIGHT);
-
-                ctx.drawTextWithShadow(textRenderer, "Display:", px + 20 + fieldW, inputY - 10, TEXT_DIM);
-                ctx.fill(px + 20 + fieldW, inputY, px + 20 + fieldW * 2, inputY + 24, BORDER_DARK);
-                ctx.fill(px + 21 + fieldW, inputY + 1, px + 19 + fieldW * 2, inputY + 23, activeField == 1 ? PARCHMENT_LIGHT : PARCHMENT);
-                ctx.drawTextWithShadow(textRenderer, input2 + (activeField == 1 ? "_" : ""), px + 25 + fieldW, inputY + 8, TEXT_LIGHT);
-            } else {
-                int fieldW = (pw - 90) / 2;
-
-                ctx.drawTextWithShadow(textRenderer, "Trigger:", px + 15, inputY - 10, TEXT_DIM);
-                ctx.fill(px + 15, inputY, px + 15 + fieldW, inputY + 24, BORDER_DARK);
-                ctx.fill(px + 16, inputY + 1, px + 14 + fieldW, inputY + 23, activeField == 0 ? PARCHMENT_LIGHT : PARCHMENT);
-                String t1 = input1.length() > 18 ? input1.substring(0, 16) + ".." : input1;
-                ctx.drawTextWithShadow(textRenderer, t1 + (activeField == 0 ? "_" : ""), px + 20, inputY + 8, TEXT_LIGHT);
-
-                ctx.drawTextWithShadow(textRenderer, "Display:", px + 23 + fieldW, inputY - 10, TEXT_DIM);
-                ctx.fill(px + 23 + fieldW, inputY, px + 23 + fieldW * 2, inputY + 24, BORDER_DARK);
-                ctx.fill(px + 24 + fieldW, inputY + 1, px + 22 + fieldW * 2, inputY + 23, activeField == 1 ? PARCHMENT_LIGHT : PARCHMENT);
-                String t2 = input2.length() > 18 ? input2.substring(0, 16) + ".." : input2;
-                ctx.drawTextWithShadow(textRenderer, t2 + (activeField == 1 ? "_" : ""), px + 28 + fieldW, inputY + 8, TEXT_LIGHT);
-            }
+            ctx.drawTextWithShadow(textRenderer, "Display:", input2.getX(), inputY - 10, TEXT_DIM);
+            ctx.fill(input2.getX(), inputY, input2.getX() + input2.getWidth(), inputY + 24, BORDER_DARK);
+            ctx.fill(input2.getX() + 1, inputY + 1, input2.getX() + input2.getWidth() - 1, inputY + 23,
+                    input2.isFocused() ? PARCHMENT_LIGHT : PARCHMENT);
         } else {
-            if (isEditing) {
-                ctx.fill(px + 15, inputY, px + pw - 120, inputY + 24, BORDER_DARK);
-                ctx.fill(px + 16, inputY + 1, px + pw - 121, inputY + 23, PARCHMENT);
-                ctx.drawTextWithShadow(textRenderer, input1 + "_", px + 20, inputY + 8, TEXT_LIGHT);
-            } else {
-                ctx.fill(px + 15, inputY, px + pw - 65, inputY + 24, BORDER_DARK);
-                ctx.fill(px + 16, inputY + 1, px + pw - 66, inputY + 23, PARCHMENT);
-                ctx.drawTextWithShadow(textRenderer, input1 + "_", px + 20, inputY + 8, TEXT_LIGHT);
-            }
+            ctx.fill(input1.getX(), inputY, input1.getX() + input1.getWidth(), inputY + 24, BORDER_DARK);
+            ctx.fill(input1.getX() + 1, inputY + 1, input1.getX() + input1.getWidth() - 1, inputY + 23,
+                    input1.isFocused() ? PARCHMENT_LIGHT : PARCHMENT);
         }
+        input1.draw(ctx, mx, my, delta, ui);
+        if (dualInput) input2.draw(ctx, mx, my, delta, ui);
 
         if (isEditing) {
             boolean saveH = mx >= px + pw - 115 && mx < px + pw - 68 && my >= inputY && my < inputY + 24;
@@ -174,16 +174,16 @@ public class StringListEditorScreen extends Screen {
         if (items.isEmpty()) ctx.drawCenteredTextWithShadow(textRenderer, "No items", width / 2, height / 2, TEXT_DIM);
 
         int by = height - 55;
-        boolean doneH = mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24;
-        boolean cancelH = mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24;
+        boolean cancelH = mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24;
+        boolean doneH = mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24;
 
         ctx.fill(width / 2 - 105, by, width / 2 - 5, by + 24, BORDER_DARK);
-        ctx.fill(width / 2 - 104, by + 1, width / 2 - 6, by + 23, doneH ? TOGGLE_ON : PARCHMENT);
-        ctx.drawCenteredTextWithShadow(textRenderer, "Done", width / 2 - 55, by + 8, TEXT_LIGHT);
+        ctx.fill(width / 2 - 104, by + 1, width / 2 - 6, by + 23, cancelH ? ACCENT_RED : PARCHMENT);
+        ctx.drawCenteredTextWithShadow(textRenderer, "Cancel", width / 2 - 55, by + 8, TEXT_LIGHT);
 
         ctx.fill(width / 2 + 5, by, width / 2 + 105, by + 24, BORDER_DARK);
-        ctx.fill(width / 2 + 6, by + 1, width / 2 + 104, by + 23, cancelH ? ACCENT_RED : PARCHMENT);
-        ctx.drawCenteredTextWithShadow(textRenderer, "Cancel", width / 2 + 55, by + 8, TEXT_LIGHT);
+        ctx.fill(width / 2 + 6, by + 1, width / 2 + 104, by + 23, doneH ? TOGGLE_ON : PARCHMENT);
+        ctx.drawCenteredTextWithShadow(textRenderer, "Done", width / 2 + 55, by + 8, TEXT_LIGHT);
     }
 
     @Override
@@ -194,49 +194,35 @@ public class StringListEditorScreen extends Screen {
         int px = width / 2 - 180, pw = 360;
         int inputY = 65;
         boolean isEditing = editingIndex >= 0;
+        updateInputBounds(px, pw, inputY, isEditing);
 
-        if (dualInput) {
-            if (isEditing) {
-                int fieldW = (pw - 140) / 2;
-                if (mx >= px + 15 && mx < px + 15 + fieldW && my >= inputY && my < inputY + 24) {
-                    activeField = 0;
-                    return true;
-                }
-                if (mx >= px + 20 + fieldW && mx < px + 20 + fieldW * 2 && my >= inputY && my < inputY + 24) {
-                    activeField = 1;
-                    return true;
-                }
-            } else {
-                int fieldW = (pw - 90) / 2;
-                if (mx >= px + 15 && mx < px + 15 + fieldW && my >= inputY && my < inputY + 24) {
-                    activeField = 0;
-                    return true;
-                }
-                if (mx >= px + 23 + fieldW && mx < px + 23 + fieldW * 2 && my >= inputY && my < inputY + 24) {
-                    activeField = 1;
-                    return true;
-                }
-            }
+        if (input1.mouseClicked(mx, my, click.button())) {
+            input2.setFocused(false);
+            return true;
+        }
+        if (dualInput && input2.mouseClicked(mx, my, click.button())) {
+            input1.setFocused(false);
+            return true;
         }
 
         if (isEditing) {
             if (mx >= px + pw - 115 && mx < px + pw - 68 && my >= inputY && my < inputY + 24) {
-                if (!input1.isEmpty()) {
+                if (!input1.getInput().isEmpty()) {
                     saveCurrentInput();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 }
                 return true;
             }
             if (mx >= px + pw - 63 && mx < px + pw - 16 && my >= inputY && my < inputY + 24) {
                 clearInputs();
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         } else {
             if (mx >= px + pw - 60 && mx < px + pw - 15 && my >= inputY && my < inputY + 24) {
-                if (!input1.isEmpty()) {
+                if (!input1.getInput().isEmpty()) {
                     saveCurrentInput();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 }
                 return true;
             }
@@ -244,14 +230,14 @@ public class StringListEditorScreen extends Screen {
 
         int by = height - 55;
         if (mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24) {
-            setter.accept(items);
             client.setScreen(parent);
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
         if (mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24) {
+            setter.accept(items);
             client.setScreen(parent);
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
 
@@ -263,12 +249,12 @@ public class StringListEditorScreen extends Screen {
                     items.remove(i);
                     if (editingIndex == i) clearInputs();
                     else if (editingIndex > i) editingIndex--;
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 if (mx >= px + 15 && mx < px + pw - 50) {
                     loadItemForEditing(i);
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
             }
@@ -280,37 +266,17 @@ public class StringListEditorScreen extends Screen {
     @Override
     public boolean keyPressed(KeyInput input) {
         int key = input.key();
-        boolean ctrl = (input.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0;
-
-        if (ctrl && key == GLFW.GLFW_KEY_V) {
-            String clipboard = client.keyboard.getClipboard();
-            if (clipboard != null && !clipboard.isEmpty()) {
-                setActiveInput(getActiveInput() + clipboard.replaceAll("[\\r\\n\\t]", ""));
-            }
-            return true;
-        } else if (ctrl && key == GLFW.GLFW_KEY_C) {
-            client.keyboard.setClipboard(getActiveInput());
-            return true;
-        } else if (ctrl && key == GLFW.GLFW_KEY_X) {
-            client.keyboard.setClipboard(getActiveInput());
-            setActiveInput("");
+        if (input1.keyPressed(key, input.scancode(), input.modifiers())
+                || dualInput && input2.keyPressed(key, input.scancode(), input.modifiers())) return true;
+        if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+            if (!input1.getInput().isEmpty()) saveCurrentInput();
             return true;
         }
-
-        String current = getActiveInput();
-        if (key == 259 && !current.isEmpty()) {
-            setActiveInput(current.substring(0, current.length() - 1));
+        if (key == GLFW.GLFW_KEY_TAB && dualInput) {
+            focusInput(input1.isFocused() ? input2 : input1);
             return true;
         }
-        if (key == 257) {
-            if (!input1.isEmpty()) saveCurrentInput();
-            return true;
-        }
-        if (key == 258 && dualInput) {
-            activeField = activeField == 0 ? 1 : 0;
-            return true;
-        }
-        if (key == 256) {
+        if (key == GLFW.GLFW_KEY_ESCAPE) {
             if (editingIndex >= 0) clearInputs();
             else client.setScreen(parent);
             return true;
@@ -320,16 +286,24 @@ public class StringListEditorScreen extends Screen {
 
     @Override
     public boolean charTyped(CharInput charInput) {
-        long window = client.getWindow().getHandle();
-        boolean ctrlHeld = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
-                || GLFW.glfwGetKey(window, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
-        if (ctrlHeld) return true;
-        int c = charInput.codepoint();
-        if (c >= 32) {
-            setActiveInput(getActiveInput() + (char) c);
-            return true;
-        }
+        char chr = (char) charInput.codepoint();
+        if (input1.charTyped(chr, charInput.modifiers())
+                || dualInput && input2.charTyped(chr, charInput.modifiers())) return true;
         return super.charTyped(charInput);
+    }
+
+    @Override
+    public boolean mouseDragged(Click click, double dx, double dy) {
+        if (input1.mouseDragged(click.x(), click.y(), click.button(), dx, dy)
+                || dualInput && input2.mouseDragged(click.x(), click.y(), click.button(), dx, dy)) return true;
+        return super.mouseDragged(click, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(Click click) {
+        if (input1.mouseReleased(click.x(), click.y(), click.button())
+                || dualInput && input2.mouseReleased(click.x(), click.y(), click.button())) return true;
+        return super.mouseReleased(click);
     }
 
     @Override

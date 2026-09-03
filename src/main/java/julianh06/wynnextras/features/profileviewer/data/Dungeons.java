@@ -15,7 +15,7 @@ public class Dungeons {
     }
 
     public Map<String, Integer> getList() {
-        return list;
+        return list == null ? Map.of() : list;
     }
 
     public void setList(Map<String, Integer> list) {

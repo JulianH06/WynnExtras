@@ -10,7 +10,6 @@ import julianh06.wynnextras.features.shoppinglist.cart.ShoppingEntry;
 import julianh06.wynnextras.features.shoppinglist.model.RequirementType;
 import julianh06.wynnextras.features.shoppinglist.util.IngredientNormalizer;
 import julianh06.wynnextras.features.shoppinglist.util.ShoppingListMaterialNameNormalizer;
-import com.wynntils.core.components.Models;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.entity.EquipmentSlot;
@@ -387,14 +386,6 @@ public class ShoppingListHaveCountService {
     }
 
     private static int currentBankPageKey() {
-        try {
-            int currentPage = Models.Bank.getCurrentPage();
-            if (currentPage > 0) {
-                return currentPage - 1;
-            }
-        } catch (RuntimeException ignored) {
-            // Fall back to the overlay page below.
-        }
         return BankOverlay.activeInv >= 0 ? BankOverlay.activeInv : VISIBLE_PAGE_KEY;
     }
 

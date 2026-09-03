@@ -16,6 +16,114 @@ import java.util.*;
 
 public class WynnExtrasConfig {
     public enum Align { LEFT, CENTER, RIGHT }
+    public enum TelemetryMode {
+        ON("On"),
+        ANONYMIZE("Anonymize"),
+        OFF("Off");
+
+        private final String displayName;
+
+        TelemetryMode(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
+    public enum MythicScaleSource {
+        WYNNPOOL("Wynnpool"),
+        NORI("Nori"),
+        BOTH("Both");
+
+        private final String displayName;
+
+        MythicScaleSource(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
+    public enum NotifierAnimation {
+        APPEAR("Appear"),
+        FADE("Fade"),
+        FLY_IN("Fly in"),
+        PEEK_IN("Peek in"),
+        WIPE("Wipe"),
+        ZOOM("Zoom"),
+        PINWHEEL("Pinwheel"),
+        BOUNCE("Bounce"),
+        EXPAND("Expand"),
+        FADED_SWIVEL("Faded swivel");
+
+        private final String displayName;
+
+        NotifierAnimation(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+
+        public boolean isDirectional() {
+            return this == FLY_IN || this == PEEK_IN || this == WIPE;
+        }
+    }
+
+    public enum NotifierExitAnimation {
+        DISAPPEAR("Disappear"),
+        FADE("Fade"),
+        FLY_OUT("Fly out"),
+        PEEK_OUT("Peek out"),
+        WIPE("Wipe"),
+        ZOOM("Zoom"),
+        PINWHEEL("Pinwheel"),
+        BOUNCE("Bounce"),
+        CONTRACT("Contract"),
+        FADED_SWIVEL("Faded swivel");
+
+        private final String displayName;
+
+        NotifierExitAnimation(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+
+        public boolean isDirectional() {
+            return this == FLY_OUT || this == PEEK_OUT || this == WIPE;
+        }
+    }
+
+    public enum NotifierAnimationDirection {
+        LEFT("Left"),
+        RIGHT("Right"),
+        TOP("Top"),
+        BOTTOM("Bottom");
+
+        private final String displayName;
+
+        NotifierAnimationDirection(String displayName) {
+            this.displayName = displayName;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
     public enum ClassSelectionContentProgressStyle {
         LINE("Line"),
         PROGRESS_BAR("Progress Bar"),
@@ -89,6 +197,36 @@ public class WynnExtrasConfig {
         }
     }
 
+    public enum ChatMediaPreviewHoverPosition {
+        CURSOR("Cursor", null),
+        TOP_LEFT("Top left", ChatMediaPreviewPosition.TOP_LEFT),
+        TOP("Top", ChatMediaPreviewPosition.TOP),
+        TOP_RIGHT("Top right", ChatMediaPreviewPosition.TOP_RIGHT),
+        LEFT("Left", ChatMediaPreviewPosition.LEFT),
+        CENTER("Center", ChatMediaPreviewPosition.CENTER),
+        RIGHT("Right", ChatMediaPreviewPosition.RIGHT),
+        BOTTOM_LEFT("Bottom left", ChatMediaPreviewPosition.BOTTOM_LEFT),
+        BOTTOM("Bottom", ChatMediaPreviewPosition.BOTTOM),
+        BOTTOM_RIGHT("Bottom right", ChatMediaPreviewPosition.BOTTOM_RIGHT);
+
+        private final String displayName;
+        private final ChatMediaPreviewPosition fixedPosition;
+
+        ChatMediaPreviewHoverPosition(String displayName, ChatMediaPreviewPosition fixedPosition) {
+            this.displayName = displayName;
+            this.fixedPosition = fixedPosition;
+        }
+
+        public ChatMediaPreviewPosition getFixedPosition() {
+            return fixedPosition;
+        }
+
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+
     public static final String CLASS_SELECTION_LINE_LEVEL = "level";
     public static final String CLASS_SELECTION_LINE_LOCATION = "location";
     public static final String CLASS_SELECTION_LINE_PLAYTIME = "playtime";
@@ -139,6 +277,10 @@ public class WynnExtrasConfig {
     public int notifierY = -1;  // -1 = auto (30% from top)
     public float notifierScale = 3.0f;
     public Align notifierAlignment = Align.CENTER;
+    public NotifierAnimation notifierAnimation = NotifierAnimation.FADE;
+    public NotifierAnimationDirection notifierEntranceDirection = NotifierAnimationDirection.TOP;
+    public NotifierExitAnimation notifierExitAnimation = NotifierExitAnimation.FADE;
+    public NotifierAnimationDirection notifierExitDirection = NotifierAnimationDirection.BOTTOM;
     public int notifierFadeInMs = 250;
     public int notifierFadeOutMs = 250;
 
@@ -212,13 +354,18 @@ public class WynnExtrasConfig {
     public int maxAnnotationCalculationsPerFrame = 75;
     public boolean showWeight = false;
     public boolean showScales = false;
+    public MythicScaleSource mythicScaleSource = MythicScaleSource.WYNNPOOL;
+    public boolean lockMythicScaleSource = false;
     public boolean scaleBackgroundEnabled = false;
     public ScaleBackgroundShape scaleBackgroundShape = ScaleBackgroundShape.BOX;
     public int scaleBackgroundOpacity = 100;
     public boolean hideTMInfoText = false;
     public boolean hideScaleBackgroundButton = false;
     public boolean craftingHelperOverlay = true;
+    public boolean powderCombineHelper = true;
     public boolean craftingAutoStart = false;
+    public int craftingLoadClipboardKey = GLFW.GLFW_KEY_T;
+    public int craftingReuseLastKey = GLFW.GLFW_KEY_SPACE;
     public List<String> craftingLastMaterialNames = new ArrayList<>();
     public List<Integer> craftingLastMaterialCounts = new ArrayList<>();
     public List<String> craftingLastIngredientNames = new ArrayList<>();
@@ -226,7 +373,6 @@ public class WynnExtrasConfig {
     public boolean craftingPreviewBackground = true;
     public int craftingPreviewOverlayX = 20;
     public int craftingPreviewOverlayY = 20;
-    public boolean craftingDynamicTextures = false;
     public boolean craftingHelperReverseOrder = false;
     public float craftingHelperHeightPercent = 0.6f;
     public int craftingHelperWidth = 165;
@@ -252,6 +398,7 @@ public class WynnExtrasConfig {
     public int tradeMarketOverlayY = 10;
     public boolean tradeMarketOverlayBackground = true;
     public boolean showMountHelper = false;
+    public boolean mountPrimaryColorBackground = false;
 
     // ==================== RAID ====================
     public boolean toggleRaidTimestamps = true;
@@ -317,6 +464,7 @@ public class WynnExtrasConfig {
     public int territoryMenuKey = org.lwjgl.glfw.GLFW.GLFW_KEY_I;
     public boolean guildBankKeyEnabled = false;
     public int guildBankKey = org.lwjgl.glfw.GLFW.GLFW_KEY_Y;
+    public int waypointMaxRange = 1000;
     public int waypointEditFreeMoveToggleKey = GLFW.GLFW_KEY_I;
     public int waypointEditAddKey = GLFW.GLFW_KEY_ENTER;
     public int waypointEditRemoveKey = GLFW.GLFW_KEY_BACKSPACE;
@@ -358,10 +506,10 @@ public class WynnExtrasConfig {
     public ChatMediaPreviewLoadPolicy chatMediaPreviewLoadPolicy = ChatMediaPreviewLoadPolicy.CLICK_TO_LOAD;
     public boolean chatMediaPreviewAutoDisplay = false;
     public ChatMediaPreviewPosition chatMediaPreviewPosition = ChatMediaPreviewPosition.TOP_RIGHT;
-    public ChatMediaPreviewPosition chatMediaPreviewHoverPosition = ChatMediaPreviewPosition.CENTER;
+    public ChatMediaPreviewHoverPosition chatMediaPreviewHoverPosition = ChatMediaPreviewHoverPosition.CENTER;
     public int chatMediaPreviewMaxScreenPercent = 50;
     public int chatMediaPreviewMaxDownloadMb = 8;
-    public int chatMediaPreviewMaxPixels = 4194304;
+    public int chatMediaPreviewMaxPixels = 16777216;
     public int chatMediaPreviewMaxGifFrames = 120;
 
     // ==================== Crowd Sourcing ================
@@ -370,6 +518,7 @@ public class WynnExtrasConfig {
     // ==================== MISC ====================
     public TextColor provokeTimerColor = TextColor.WHITE;
     public boolean differentGUIScale = false;
+    public boolean updateReminderDisabled = false;
     public boolean showLootpoolButtonInPartyFinder = true;
     public boolean redirectWynntilsViewStatsToPV = false;
     public boolean arrowHiderToggle = false;
@@ -378,6 +527,17 @@ public class WynnExtrasConfig {
     public boolean showWynnExtrasBadges = true;
     public boolean uploadAchievements = true;
     public boolean showAchievementUnlockMessages = true;
+
+    // ==================== PRIVACY ====================
+    public TelemetryMode telemetryMode = TelemetryMode.ON;
+    public boolean doNotFetchWynnExtrasBadges = false;
+    public boolean doNotFetchWynnExtrasAchievements = false;
+    public boolean doNotFetchWynnExtrasAspects = false;
+    public boolean doNotFetchWynnExtrasGambits = false;
+    public boolean doNotFetchWynnExtrasProfileTitles = false;
+    public boolean doNotFetchWynnExtrasResetTimes = false;
+    public boolean doNotPublishOwnBadge = false;
+    public boolean doNotPublishOwnAspects = false;
 
     // ==================== CHAT PEEK ====================
     public boolean chatPeekEnabled = false;
@@ -437,6 +597,9 @@ public class WynnExtrasConfig {
     public boolean professionOverlayExactXp = false;
     public Map<String, Float> professionOverflowXp = new HashMap<>();
     public Map<String, Float> professionGoals = new HashMap<>();
+    public Map<String, Integer> professionLevels = new HashMap<>();
+    public Map<String, Integer> professionXpCurrent = new HashMap<>();
+    public Map<String, Integer> professionXpMax = new HashMap<>();
 
     // ==================== RADIANT HUD ====================
     public boolean radiantHudEnabled = false;
@@ -452,6 +615,7 @@ public class WynnExtrasConfig {
     public Align provokeTimerAlignment = Align.CENTER;
     public int customGUIScale = 3;
     public boolean removeFrontPersonView = false;
+    public boolean identifierCaseOpening = false;
     public boolean sourceOfTruthToggle = false;
     public boolean territoryEstimateToggle = false;
     public boolean removeChroma = false;
@@ -660,14 +824,30 @@ public class WynnExtrasConfig {
                 if (INSTANCE.raidPBs == null) INSTANCE.raidPBs = new HashMap<>();
                 if (INSTANCE.professionOverflowXp == null) INSTANCE.professionOverflowXp = new HashMap<>();
                 if (INSTANCE.professionGoals == null) INSTANCE.professionGoals = new HashMap<>();
+                if (INSTANCE.professionLevels == null) INSTANCE.professionLevels = new HashMap<>();
+                if (INSTANCE.professionXpCurrent == null) INSTANCE.professionXpCurrent = new HashMap<>();
+                if (INSTANCE.professionXpMax == null) INSTANCE.professionXpMax = new HashMap<>();
                 if (INSTANCE.classCardAccentColors == null) INSTANCE.classCardAccentColors = new HashMap<>();
                 if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
+                if (INSTANCE.chatMediaPreviewMaxPixels == 4194304) INSTANCE.chatMediaPreviewMaxPixels = 16777216;
                 INSTANCE.syncClassSelectionLines();
                 if (INSTANCE.classSelectionContentProgressStyle == null) {
                     INSTANCE.classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
                 }
                 if (INSTANCE.classSelectionCompletionChromaMode == null) {
                     INSTANCE.classSelectionCompletionChromaMode = ClassSelectionCompletionChromaMode.NAME_AND_LINES;
+                }
+                if (INSTANCE.notifierAnimation == null) {
+                    INSTANCE.notifierAnimation = NotifierAnimation.FADE;
+                }
+                if (INSTANCE.notifierExitAnimation == null) {
+                    INSTANCE.notifierExitAnimation = NotifierExitAnimation.FADE;
+                }
+                if (INSTANCE.notifierEntranceDirection == null) {
+                    INSTANCE.notifierEntranceDirection = NotifierAnimationDirection.BOTTOM;
+                }
+                if (INSTANCE.notifierExitDirection == null) {
+                    INSTANCE.notifierExitDirection = NotifierAnimationDirection.BOTTOM;
                 }
                 //if (INSTANCE.configProfiles == null) INSTANCE.configProfiles = new LinkedHashMap<>();
                 if (INSTANCE.weeklyWars == null) INSTANCE.weeklyWars = new ArrayList<>();
@@ -677,8 +857,8 @@ public class WynnExtrasConfig {
                 INSTANCE.syncAttackTimerColors();
                 INSTANCE.syncTetrisSettings();
             }
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Failed to load config: " + e.getMessage());
+        } catch (Exception e) {
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load config, using defaults.", e);
             INSTANCE = new WynnExtrasConfig();
         }
         INSTANCE.syncQuickRepairThreshold();
@@ -687,11 +867,24 @@ public class WynnExtrasConfig {
         INSTANCE.syncTetrisSettings();
         INSTANCE.syncClassSelectionLines();
         INSTANCE.syncShoppingListPositions();
+        if (INSTANCE.mythicScaleSource == null) INSTANCE.mythicScaleSource = MythicScaleSource.WYNNPOOL;
         if (INSTANCE.classSelectionContentProgressStyle == null) {
             INSTANCE.classSelectionContentProgressStyle = ClassSelectionContentProgressStyle.LINE;
         }
         if (INSTANCE.classSelectionCompletionChromaMode == null) {
             INSTANCE.classSelectionCompletionChromaMode = ClassSelectionCompletionChromaMode.NAME_AND_LINES;
+        }
+        if (INSTANCE.notifierAnimation == null) {
+            INSTANCE.notifierAnimation = NotifierAnimation.FADE;
+        }
+        if (INSTANCE.notifierExitAnimation == null) {
+            INSTANCE.notifierExitAnimation = NotifierExitAnimation.FADE;
+        }
+        if (INSTANCE.notifierEntranceDirection == null) {
+            INSTANCE.notifierEntranceDirection = NotifierAnimationDirection.BOTTOM;
+        }
+        if (INSTANCE.notifierExitDirection == null) {
+            INSTANCE.notifierExitDirection = NotifierAnimationDirection.BOTTOM;
         }
     }
 

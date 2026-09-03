@@ -8,10 +8,10 @@ import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.data.*;
 import julianh06.wynnextras.features.profileviewer.tabs.*;
@@ -144,8 +144,8 @@ public class PVScreen extends WEScreen {
     public PVScreen(String name) {
         super(Text.of("Player Viewer"));
         String player;
-        if(name == null && McUtils.player() == null) player = "null";
-        else if(name == null) player = McUtils.playerName();
+        if(name == null && MinecraftUtils.player() == null) player = "null";
+        else if(name == null) player = MinecraftUtils.playerName();
         else player = name;
         currentTabWidget = null;
         tabButtons.clear();
@@ -259,9 +259,9 @@ public class PVScreen extends WEScreen {
         darkModeToggleWidget.setBounds(xStart + 1800 - 120, yStart + 750, 120, 60);
         int totalWidth = 24;
         for(TabButtonWidget tabButtonWidget : tabButtonWidgets) {
-            int signWidth = drawDynamicNameSign(drawContext, tabButtonWidget.tab.toString(), xStart + totalWidth, yStart - 57);
+            int signWidth = drawDynamicNameSign(drawContext, tabButtonWidget.tab.toString(), xStart + totalWidth, yStart - 56);
             //24; //+ totalXOffset + (float) signWidth / 2
-            tabButtonWidget.setBounds(xStart + totalWidth, yStart - 55, signWidth, 55);
+            tabButtonWidget.setBounds(xStart + totalWidth, yStart - 54, signWidth, 55);
             tabButtonWidget.setTextOffset(signWidth / 2, 17);
             totalWidth += signWidth + 12;
         }
@@ -696,7 +696,7 @@ public class PVScreen extends WEScreen {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             int thumbHeight = 30;
             int scrollAreaHeight = height - thumbHeight;
             if (scrollAreaHeight > 0) setOffset(currentMouseY, scrollAreaHeight);
@@ -725,7 +725,7 @@ public class PVScreen extends WEScreen {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 isHeld = true;
                 return true;
             }
@@ -741,7 +741,7 @@ public class PVScreen extends WEScreen {
     public static void onClick() {
         if(openInBrowserButton == null) return;
         if(openInBrowserButton.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             openInBrowserButton.click();
         }
     }
@@ -808,7 +808,7 @@ public class PVScreen extends WEScreen {
             this.tab = tab;
             this.action = () -> {
                 if(PV.currentPlayerData == null) return;
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 if(tab == currentTab) return;
                 currentTab = tab;
                 TabWidget tabWidget = getTabWidget(tab, parent);
@@ -905,7 +905,7 @@ public class PVScreen extends WEScreen {
                 targetX = 7.5f;
             }
             this.action = () -> {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 WynnExtrasConfig.INSTANCE.pvDarkmodeToggle = !WynnExtrasConfig.INSTANCE.pvDarkmodeToggle;
                 if(WynnExtrasConfig.INSTANCE.pvDarkmodeToggle) {
                     targetX = width - 37.5f;

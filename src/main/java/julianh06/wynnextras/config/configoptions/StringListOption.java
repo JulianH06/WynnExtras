@@ -1,6 +1,6 @@
 package julianh06.wynnextras.config.configoptions;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.StringListEditorScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -49,7 +49,7 @@ public class StringListOption extends ConfigOption {
         if (mx >= bx && mx < bx + 65 && my >= by && my < by + 20) {
             MinecraftClient.getInstance().setScreen(new StringListEditorScreen(
                     MinecraftClient.getInstance().currentScreen, name, getter.get(), setter, dualInput));
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
         return false;

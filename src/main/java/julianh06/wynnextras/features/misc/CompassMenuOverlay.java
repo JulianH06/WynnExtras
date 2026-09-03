@@ -1,26 +1,21 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.containers.CharacterInfoContainer;
-import com.wynntils.models.elements.type.Skill;
-import com.wynntils.models.gear.type.GearRequirements;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.items.game.CraftedGearItem;
-import com.wynntils.models.items.items.game.GearItem;
-import com.wynntils.models.items.items.game.UnknownGearItem;
-import com.wynntils.models.stats.type.SkillStatType;
-import com.wynntils.models.stats.type.StatPossibleValues;
-import com.wynntils.models.stats.type.StatType;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.TooltipUtils;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Pair;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.TooltipUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.loader.SkillPointLoader;
+import julianh06.wynnextras.features.tomes.TomeState;
 import julianh06.wynnextras.utils.HandledScreenAccess;
 import julianh06.wynnextras.utils.UI.WEMenuExtension;
 import julianh06.wynnextras.utils.UI.Widget;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
+import julianh06.wynnextras.wynncraft.state.SkillPoint;
+import julianh06.wynnextras.wynncraft.state.SkillPointState;
+import julianh06.wynnextras.wynncraft.item.ItemCategory;
+import julianh06.wynnextras.wynncraft.item.WynnItemData;
+import julianh06.wynnextras.wynncraft.item.WynnItemParser;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.tooltip.TooltipBackgroundRenderer;
@@ -48,6 +43,17 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     static boolean selectingWeapon = false;
     static ItemStack selectedWeapon = null;
+    private static StatusType statusType = StatusType.IDLE;
+    private static String statusPrimary = "";
+    private static String statusSecondary = "";
+
+    public enum StatusType {
+        IDLE,
+        INFO,
+        PROGRESS,
+        SUCCESS,
+        ERROR
+    }
 
     public CompassMenuOverlay() {
         for (int i = 0; i < 4; i++) {
@@ -71,17 +77,15 @@ public class CompassMenuOverlay extends WEMenuExtension {
         if (handled) return true;
 
         if (!selectingWeapon) return false;
-        if (!(McUtils.screen() instanceof HandledScreen<?> screen)) return false;
+        if (!(MinecraftUtils.screen() instanceof HandledScreen<?> screen)) return false;
 
         Slot focused = HandledScreenAccess.focusedSlot(screen);
         if (focused == null || !focused.hasStack()) return false;
 
         ItemStack clicked = focused.getStack();
-        Optional<WynnItem> wynnItemOpt = BankOverlay2.asWynnItem(clicked);
-
-        if (wynnItemOpt.isEmpty() || !(wynnItemOpt.get() instanceof GearItem)) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                    Text.of("That's not a valid weapon. Click a weapon item.")));
+        WynnItemData item = WynnItemParser.parse(clicked).orElse(null);
+        if (item == null || item.category() != ItemCategory.GEAR || !item.gearType().isWeapon()) {
+            setStatus(StatusType.ERROR, "That is not a valid weapon.", "Select a weapon item or skip selection.");
             return true;
         }
 
@@ -93,8 +97,8 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        if(!(Models.Container.getCurrentContainer() instanceof CharacterInfoContainer)) return;
-        if(!(McUtils.screen() instanceof HandledScreen<?> screen)) return;
+        if (!WynncraftMenuService.isCurrent(MenuType.CHARACTER_INFO)) return;
+        if(!(MinecraftUtils.screen() instanceof HandledScreen<?> screen)) return;
 
         float xStart = hsX(screen);
         float yStart = hsY(screen) + hsHeight(screen);
@@ -109,13 +113,17 @@ public class CompassMenuOverlay extends WEMenuExtension {
         autoAssignButton.setBounds((int) (xStart + (backgroundWidth - buttonWidth) / 2f), (int) (itemYStart + 22), buttonWidth, 17);
 
         ui.drawCenteredText(WynnExtras.addWynnExtrasPrefix("§6Skillpoint helper:"), xStart + backgroundWidth / 2f, yStart + 8, CustomColor.fromHexString("FFFFFF"), 1f);
-        ui.drawCenteredText(Text.of("§7This is an experimental feature, new items"), xStart + backgroundWidth / 2f, (float) (itemYStart + (selectingWeapon ? 57 : 43)), CustomColor.fromHexString("FFFFFF"), 0.67f);
-        ui.drawCenteredText(Text.of("§7and crafteds might not be recognized yet"), xStart + backgroundWidth / 2f, (float) (itemYStart + (selectingWeapon ? 63 : 50)), CustomColor.fromHexString("FFFFFF"), 0.67f);
-        if(selectingWeapon) ui.drawCenteredText(Text.of("§eClick on a weapon if you want to include it in the calculation."), xStart + backgroundWidth / 2f, (float) (itemYStart + 47), CustomColor.fromHexString("FFFFFF"), 0.8f);
+        CustomColor statusColor = statusColor();
+        if (!statusPrimary.isEmpty()) {
+            ui.drawCenteredText(statusPrimary, xStart + backgroundWidth / 2f, itemYStart + 47, statusColor, 0.72f);
+        }
+        if (!statusSecondary.isEmpty()) {
+            ui.drawCenteredText(statusSecondary, xStart + backgroundWidth / 2f, itemYStart + 54, statusColor, 0.67f);
+        }
 
         backgroundWidth -= 32;
         for(int i = 0; i < 4; i++) {
-            ItemStack item = McUtils.player().getEquippedStack(EquipmentSlot.FROM_INDEX.apply(4 - i));
+            ItemStack item = MinecraftUtils.player().getEquippedStack(EquipmentSlot.FROM_INDEX.apply(4 - i));
             itemWidgets.get(i).setBounds((int) (itemXStart + i * backgroundWidth / 3f), (int) itemYStart, itemWidth, itemHeight);
             itemWidgets.get(i).setItem(item);
         }
@@ -123,7 +131,6 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     @Override
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        renderHoveredTooltip(ctx, mouseX, mouseY);
     }
 
     public void renderHoveredTooltip(DrawContext ctx, int mouseX, int mouseY) {
@@ -169,8 +176,6 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     private static class ItemWidget extends Widget {
         ItemStack item;
-        WynnItem wynnItem = null;
-        GearRequirements requirements = null;
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
@@ -183,48 +188,17 @@ public class CompassMenuOverlay extends WEMenuExtension {
                 ui.drawRect(x - 0.5f, y - 0.25f, width, height, CustomColor.fromHexString("FFFFFF").withAlpha(0.25f));
             }
 
-            if(requirements == null) return;
-
-            if(true) return;
-
-            List<Pair<Skill, Integer>> skills = requirements.skills();
-
-            if(skills == null) return;
-
-            int textY = y + 64;
-
-            for(Pair<Skill, Integer> skill : skills) {
-                String skillName = skill.a().getColorCode().toString() + skill.a().getDisplayName().substring(0, 3) + ": §r";
-                int skillReq = skill.b();
-
-                int skillCurrent = Models.SkillPoint.getAssignedSkillPoints(skill.a());
-
-                ui.drawCenteredText(skillName + skillCurrent + "/" + skillReq, x + width / 2f, textY);
-                textY += 40;
-            }
         }
 
         public void setItem(ItemStack item) {
             this.item = item;
-
-            Optional<WynnItem> wynnItemOpt = BankOverlay2.asWynnItem(item);
-
-            if(wynnItemOpt.isEmpty()) return;
-
-            wynnItem = wynnItemOpt.get();
-
-            if(!(wynnItem instanceof GearItem gearItem)) return;
-
-            if(gearItem.getItemInfo() == null) return;
-
-            requirements = gearItem.getItemInfo().requirements();
         }
     }
 
     private static class AutoAssignButton extends Widget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            if(!(Models.Container.getCurrentContainer() instanceof CharacterInfoContainer)) return;
+            if (!WynncraftMenuService.isCurrent(MenuType.CHARACTER_INFO)) return;
             ui.drawButton(x, y, width, height, hovered);
             if (selectingWeapon) {
                 ui.drawCenteredText("Skip weapon selection", x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 1f);
@@ -235,6 +209,10 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
         @Override
         protected boolean onClick(int button) {
+            if (SkillPointLoader.getInstance().isLoading()) {
+                setStatus(StatusType.INFO, "Skill point assignment is already running.");
+                return true;
+            }
             if (selectingWeapon) {
                 selectedWeapon = null;
                 selectingWeapon = false;
@@ -244,34 +222,18 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
             selectedWeapon = null;
             selectingWeapon = true;
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                    Text.of("Click a weapon in your inventory, or skip weapon selection.")));
+            setStatus(StatusType.INFO, "Click on a weapon in your inventory", "or click Skip weapon selection.");
             return true;
         }
     }
 
     private static void startAssignment() {
+        setStatus(StatusType.INFO, "Calculating required skill points...");
         int[] required = calculateRequiredSkillPoints(selectedWeapon);
         if (required == null) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                    Text.of("No skill point requirements found.")));
+            setStatus(StatusType.ERROR, "No skill point requirements found.");
             return;
         }
-
-        boolean alreadySatisfied =
-                Models.SkillPoint.getAssignedSkillPoints(Skill.STRENGTH)     >= required[0] &&
-                        Models.SkillPoint.getAssignedSkillPoints(Skill.DEXTERITY)    >= required[1] &&
-                        Models.SkillPoint.getAssignedSkillPoints(Skill.INTELLIGENCE) >= required[2] &&
-                        Models.SkillPoint.getAssignedSkillPoints(Skill.DEFENCE)      >= required[3] &&
-                        Models.SkillPoint.getAssignedSkillPoints(Skill.AGILITY)      >= required[4];
-
-        if (alreadySatisfied) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
-                    Text.of("Requirements already satisfied.")));
-            return;
-        }
-
-        if(required.length < 5) return;
 
         SkillPointLoader.getInstance().load(required[0], required[1], required[2], required[3], required[4]);
     }
@@ -281,14 +243,14 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
         //Armor
         for (int i = 0; i < 4; i++) {
-            ItemStack stack = McUtils.player().getEquippedStack(EquipmentSlot.FROM_INDEX.apply(4 - i));
+            ItemStack stack = MinecraftUtils.player().getEquippedStack(EquipmentSlot.FROM_INDEX.apply(4 - i));
             SolvableItem si = toSolvableItem(stack);
             if (si != null) nonWeaponItems.add(si);
         }
 
         //Accessories
         for (int i = 9; i < 13; i++) {
-            ItemStack stack = McUtils.player().getInventory().getStack(i);
+            ItemStack stack = MinecraftUtils.player().getInventory().getStack(i);
             SolvableItem si = toSolvableItem(stack);
             if (si != null) nonWeaponItems.add(si);
         }
@@ -306,12 +268,13 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
         List<List<Integer>> permutations = new ArrayList<>();
         generatePermutations(indices, 0, permutations);
+        int[] tomeBonuses = TomeState.guildSkillBonuses();
 
         for (List<Integer> perm : permutations) {
             List<SolvableItem> order = new ArrayList<>();
             for (int idx : perm) order.add(nonWeaponItems.get(idx));
 
-            int[] candidate = evaluateOrder(order, weaponItem);
+            int[] candidate = evaluateOrder(order, weaponItem, tomeBonuses);
 
             if (best == null || isBetter(candidate, best)) {
                 best = candidate;
@@ -324,8 +287,8 @@ public class CompassMenuOverlay extends WEMenuExtension {
         return best;
     }
 
-    private static int[] evaluateOrder(List<SolvableItem> order, SolvableItem weapon) {
-        int[] current = new int[5];
+    private static int[] evaluateOrder(List<SolvableItem> order, SolvableItem weapon, int[] baseBonuses) {
+        int[] current = Arrays.copyOf(baseBonuses, 5);
         int[] assigned = new int[5];
 
         for (SolvableItem entry : order) {
@@ -415,85 +378,15 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     private static SolvableItem toSolvableItem(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return null;
-        Optional<WynnItem> wynnOpt = BankOverlay2.asWynnItem(stack);
-        if (wynnOpt.isEmpty()) {
-            try {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4Warning: The following item is not recognized and ignored in the calculation: " + stack.getCustomName().getString()));
-            } catch (Exception ignored) {}
-            return null;
-        }
-
-        WynnItem wynnItem = wynnOpt.get();
-
-        if(wynnItem instanceof UnknownGearItem) {
-            try {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4Warning: The following item is not recognized and ignored in the calculation: " + stack.getCustomName().getString()));
-            } catch (Exception ignored) {}
-            return null;
-        }
+        Optional<WynnItemData> data = WynnItemParser.parse(stack);
+        if (data.isEmpty()) return null;
 
         SolvableItem si = new SolvableItem();
-
-        if (wynnItem instanceof GearItem gearItem) {
-            if (gearItem.getItemInfo() == null) return null;
-
-            GearRequirements req = gearItem.getItemInfo().requirements();
-            if (req != null && req.skills() != null) {
-                for (Pair<Skill, Integer> pair : req.skills()) {
-                    int idx = skillToIndex(pair.a());
-                    if (idx >= 0) si.reqs[idx] = pair.b();
-                }
-            }
-
-            for (Pair<StatType, StatPossibleValues> statPair : gearItem.getItemInfo().variableStats()) {
-                if (!(statPair.a() instanceof SkillStatType skillStat)) continue;
-                int idx = skillToIndex(skillStat.getSkill());
-                if (idx >= 0) si.bonuses[idx] = statPair.b().baseValue();
-            }
-
-            si.name = gearItem.getName();
-        } else if (wynnItem instanceof CraftedGearItem craftedItem) {
-            if (craftedItem.getRequirements() == null) return null;
-
-            WynnExtras.LOGGER.info("[WE-CRAFT] class=" + craftedItem.getClass().getName());
-            for (var method : craftedItem.getClass().getMethods()) {
-                if (method.getName().toLowerCase().contains("req") ||
-                        method.getName().toLowerCase().contains("skill") ||
-                        method.getName().toLowerCase().contains("stat") ||
-                        method.getName().toLowerCase().contains("info")) {
-                    WynnExtras.LOGGER.info("[WE-CRAFT] method: " + method.getName()
-                            + " → " + method.getReturnType().getSimpleName());
-                }
-            }
-
-            GearRequirements req = craftedItem.getRequirements();
-            if (req != null && req.skills() != null) {
-                for (Pair<Skill, Integer> pair : req.skills()) {
-                    int idx = skillToIndex(pair.a());
-                    if (idx >= 0) si.reqs[idx] = pair.b();
-                }
-            }
-
-            si.name = craftedItem.getName();
-        } else {
-            try {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§4Warning: The following item is not recognized and ignored in the calculation: " + stack.getCustomName().getString()));
-            } catch (Exception ignored) { }
-            return null;
-        }
+        si.reqs = data.get().requirementsArray();
+        si.bonuses = data.get().bonusesArray();
+        si.name = data.get().name();
 
         return si;
-    }
-
-    private static int skillToIndex(Skill skill) {
-        return switch (skill) {
-            case STRENGTH     -> 0;
-            case DEXTERITY    -> 1;
-            case INTELLIGENCE -> 2;
-            case DEFENCE      -> 3;
-            case AGILITY      -> 4;
-            default           -> -1;
-        };
     }
 
     public static boolean isSelectingWeapon() {
@@ -502,5 +395,29 @@ public class CompassMenuOverlay extends WEMenuExtension {
 
     public static void setSelectingWeapon(boolean selectingWeapon) {
         CompassMenuOverlay.selectingWeapon = selectingWeapon;
+    }
+
+    public static void setStatus(StatusType type, String primary) {
+        setStatus(type, primary, "");
+    }
+
+    public static void setStatus(StatusType type, String primary, String secondary) {
+        statusType = type == null ? StatusType.IDLE : type;
+        statusPrimary = primary == null ? "" : primary;
+        statusSecondary = secondary == null ? "" : secondary;
+    }
+
+    public static void clearStatus() {
+        setStatus(StatusType.IDLE, "", "");
+    }
+
+    private static CustomColor statusColor() {
+        return switch (statusType) {
+            case IDLE -> CustomColor.fromHexString("B7B7B7");
+            case INFO -> CustomColor.fromHexString("FFE080");
+            case PROGRESS -> CustomColor.fromHexString("55FFFF");
+            case SUCCESS -> CustomColor.fromHexString("55FF55");
+            case ERROR -> CustomColor.fromHexString("FF5555");
+        };
     }
 }

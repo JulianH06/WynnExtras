@@ -1,6 +1,6 @@
 package julianh06.wynnextras.config.configoptions;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
@@ -54,7 +54,7 @@ public abstract class DropdownOption<T> extends ConfigOption {
     public boolean mouseClicked(double mx, double my, int x, int y, int w, int h, int btn) {
         if (mx >= btnX && mx < btnX + btnW && my >= btnY && my < btnY + btnH) {
             this.ctx.openDropdown(this, btnX, btnY + btnH, btnW, w);
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
         return false;

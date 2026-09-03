@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.UI.WEHandledScreen;
 import julianh06.wynnextras.utils.UI.WEScreen;
@@ -60,7 +60,7 @@ public class PartyFinderOpenLootpoolOverlay extends WEHandledScreen {
             if(MinecraftClient.getInstance().currentScreen != null) MinecraftClient.getInstance().currentScreen.close();
             WEScreen.open(AspectScreen::new);
             AspectScreen.currentPage = AspectScreen.Page.AspectLootpool;
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }

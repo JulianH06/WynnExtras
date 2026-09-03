@@ -1,13 +1,10 @@
 package julianh06.wynnextras.functions;
 
-import com.wynntils.core.consumers.functions.arguments.Argument;
-import com.wynntils.core.consumers.functions.arguments.FunctionArguments;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
 import net.minecraft.client.resource.language.I18n;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -71,13 +68,10 @@ public class RaidFunctions {
         }
     }
 
-    public static class RaidDropFunction extends WEFunctionBase<Long>{
-
-        @Override
-        public Long getValue(FunctionArguments functionArguments) {
-            RAID raid = RAID.fromString(functionArguments.getArgument("raid").getStringValue());
-            MODE mode = MODE.fromString(functionArguments.getArgument("mode").getStringValue());
-            TYPE type = TYPE.fromString(functionArguments.getArgument("type").getStringValue());
+    public static long getRaidDrop(String raidName, String modeName, String typeName) {
+            RAID raid = RAID.fromString(raidName);
+            MODE mode = MODE.fromString(modeName);
+            TYPE type = TYPE.fromString(typeName);
             RaidLootData data = RaidLootConfig.INSTANCE.data;
             data.initSession();
             RaidLootData.RaidSpecificLoot selectedData;
@@ -102,7 +96,7 @@ public class RaidFunctions {
                 }
             }
 
-            return switch (type){
+            return switch (type) {
                 case AMPLIFIER1 -> (long) selectedData.amplifierTier1;
                 case AMPLIFIER2 -> (long) selectedData.amplifierTier2;
                 case AMPLIFIER3 -> (long) selectedData.amplifierTier3;
@@ -124,24 +118,13 @@ public class RaidFunctions {
                 case WARDS -> (long) selectedData.totalWards;
                 case null, default -> -1L;
             };
-        }
+    }
 
-        @Override
-        public FunctionArguments.Builder getArgumentsBuilder() {
-            return new FunctionArguments.RequiredArgumentBuilder(List.of(
-                    new Argument("raid", String.class, null),
-                    new Argument("mode", String.class, null),
-                    new Argument("type", String.class, null)
-            ));
-        }
-
-        @Override
-        public String getTranslation(String keySuffix, Object... parameters) {
-            return I18n.translate(this.getTypeName().toLowerCase(Locale.ROOT) + ".wynnextras." + this.getTranslationKeyName() + "." + keySuffix, new Object[]{
+    public static String getTranslation(String keySuffix) {
+            return I18n.translate("wynnextrasfunction.wynnextras.raid_drop." + keySuffix, new Object[]{
                     String.join(", ", Arrays.stream(RAID.values()).map(Enum::name).sorted().toList()),
                     String.join(", ", Arrays.stream(MODE.values()).map(Enum::name).sorted().toList()),
                     String.join(", ", Arrays.stream(TYPE.values()).map(Enum::name).sorted().toList())
             });
-        }
     }
 }

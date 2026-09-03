@@ -4,7 +4,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
@@ -42,7 +42,7 @@ public class MojangAuth {
     public static CompletableFuture<String> authenticateForAPI() {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                var mc = McUtils.mc();
+                var mc = MinecraftUtils.mc();
                 if (mc == null || mc.player == null) {
                     return null;
                 }
@@ -77,7 +77,7 @@ public class MojangAuth {
                 } catch (Exception e) {
                     WynnExtras.LOGGER.error("Mojang authentication failed", e);
 
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal("§cAuthentication failed. Please restart Minecraft.")));
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal("§cAuthentication failed. Please restart Minecraft.")));
 
                     return null;
                 }
@@ -92,7 +92,7 @@ public class MojangAuth {
         return authenticateForAPI().thenCompose(serverId -> {
             if (serverId == null) return CompletableFuture.completedFuture(null);
 
-            String username = McUtils.playerName();
+            String username = MinecraftUtils.playerName();
             if (username == null) return CompletableFuture.completedFuture(null);
 
             return CompletableFuture.supplyAsync(() -> {

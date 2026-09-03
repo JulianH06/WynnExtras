@@ -1,21 +1,19 @@
 package julianh06.wynnextras.features.raid;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.models.raid.type.RaidInfo;
-import julianh06.wynnextras.mixin.Invoker.RaidInfoInvoker;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class RaidData {
-    public RaidInfo raidInfo;
+    public RaidSnapshot raidInfo;
     public List<String> players = new ArrayList<>();
     public long raidEndTime;
     public long raidStartTime;
     public long duration;
     public boolean completed;
 
-    public RaidData(RaidInfo raidInfo, List<String> players, long raidEndTime, boolean completed) {
+    public RaidData(RaidSnapshot raidInfo, List<String> players, long raidEndTime, boolean completed) {
         this.raidInfo = raidInfo;
         this.players = players;
         this.raidEndTime = raidEndTime;
@@ -23,15 +21,15 @@ public class RaidData {
 
         // Calculate start time from end time minus duration
         // Use the raidStartTime from raidInfo if available, otherwise calculate it
-        long startTimeFromEvent = raidInfo.getRaidStartTime();
+        long startTimeFromEvent = raidInfo.raidStartTime();
         if (startTimeFromEvent > 0) {
             this.raidStartTime = startTimeFromEvent;
         } else {
             // Fallback: calculate from end time
-            this.raidStartTime = raidEndTime - raidInfo.getTimeInRaid();
+            this.raidStartTime = raidEndTime - raidInfo.timeInRaid();
         }
 
-        this.duration = ((RaidInfoInvoker) raidInfo).invokeGetTimeInRooms();
+        this.duration = raidInfo.timeInRooms();
 
         // Debug logging
         WynnExtras.LOGGER.info("[WynnExtras] RaidData created:");

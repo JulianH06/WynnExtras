@@ -14,4 +14,20 @@ public record Pair<T1, T2>(T1 first, T2 second) {
     public T2 getSecond() {
         return second;
     }
+
+    public T1 a() {
+        return first;
+    }
+
+    public T2 b() {
+        return second;
+    }
+
+    public T1 key() {
+        return first;
+    }
+
+    public T2 value() {
+        return second;
+    }
 }

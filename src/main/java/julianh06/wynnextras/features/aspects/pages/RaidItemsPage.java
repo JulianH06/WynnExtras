@@ -1,13 +1,12 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import com.google.gson.JsonObject;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.LootrunLootPoolData;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.Widget;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
@@ -325,7 +324,7 @@ public class RaidItemsPage extends PageWidget {
 
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 100, 21);
+            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 100, 18);
 
             Identifier texture = raidTextures.get(raid);
             if (texture != null) ui.drawImage(texture, x + width / 2f - 45, y - 20, 90, 90);
@@ -457,18 +456,20 @@ public class RaidItemsPage extends PageWidget {
 
                 if ("shiny".equals(item.type)) {
                     ui.drawText(drawName.replace("⬡ ", ""), textX + 20, textY,
-                            WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : WynncraftShaderColor.RAINBOW.color, textScale);
+                            WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : CustomColor.RAINBOW, textScale);
+                } else if ("WARD".equalsIgnoreCase(item.rewardType)) {
+                    ui.drawText(drawName, textX + 20, textY, CustomColor.fromHexString("f9508e"), textScale);
                 } else {
                     ui.drawText(rarityColor + drawName, textX + 20, textY, CustomColor.fromInt(0xFFFFFF), textScale);
                 }
 
                 if (hovering && mouseY * ui.getScaleFactorF() > listTop) {
-                    JsonObject jsonItem = LootrunLootPoolPage.LootPoolWidget.findApiItem(item.name);
+                    WynnDataService.ItemData apiItem = LootrunLootPoolPage.LootPoolWidget.findApiItem(item);
                     hoveredTooltip = item.tooltip != null && !item.tooltip.isEmpty()
                             ? LootrunLootPoolPage.LootPoolWidget.buildFallbackTooltip(item, rarityColor, displayName)
-                            : jsonItem == null
+                            : apiItem == null
                                     ? LootrunLootPoolPage.LootPoolWidget.buildFallbackTooltip(item, rarityColor, displayName)
-                                    : LootrunLootPoolPage.LootPoolWidget.buildTooltipFromApi(item, jsonItem, rarityColor, displayName);
+                                    : LootrunLootPoolPage.LootPoolWidget.buildTooltipFromApi(item, apiItem, rarityColor, displayName);
                 }
             }
 
@@ -571,7 +572,7 @@ public class RaidItemsPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 int buttonHeight = 30;
                 int scrollAreaHeight = height - buttonHeight;
 
@@ -601,7 +602,7 @@ public class RaidItemsPage extends PageWidget {
 
                 @Override
                 protected boolean onClick(int button) {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     isHold = true;
                     return true;
                 }
@@ -693,7 +694,7 @@ public class RaidItemsPage extends PageWidget {
             loading = false;
             available = false;
             WynncraftApiHandler.clearOfficialLootPoolsCache();
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }
@@ -754,7 +755,7 @@ public class RaidItemsPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             float maxOffset = getMax.get();
             int buttonWidth = Math.max(40, (int) (width * (width / (width + maxOffset))));
             int scrollAreaWidth = width - buttonWidth;
@@ -785,7 +786,7 @@ public class RaidItemsPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 isHold = true;
                 return true;
             }

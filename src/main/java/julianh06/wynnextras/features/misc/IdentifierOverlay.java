@@ -1,10 +1,10 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.containers.ItemIdentifierContainer;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.RenderUtils;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
 import julianh06.wynnextras.utils.UI.WEMenuExtension;
 import julianh06.wynnextras.utils.UI.WEScreen;
@@ -24,7 +24,7 @@ public class IdentifierOverlay extends WEMenuExtension {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        if(!(Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer)) return;
+        if (!WynncraftMenuService.isCurrent(MenuType.ITEM_IDENTIFIER)) return;
         if(MinecraftClient.getInstance().currentScreen == null) return;
 
         if(sourceOfThruthOpenerWidget == null) {
@@ -32,7 +32,7 @@ public class IdentifierOverlay extends WEMenuExtension {
             rootWidgets.add(sourceOfThruthOpenerWidget);
         }
 
-        Screen screen = McUtils.screen();
+        Screen screen = MinecraftUtils.screen();
         if (!(screen instanceof HandledScreen<?> containerScreen)) return;
         int yPos = ((HandledScreenAccessor) containerScreen).getY() - 35;
 
@@ -58,7 +58,7 @@ public class IdentifierOverlay extends WEMenuExtension {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.mc().currentScreen = null;
+            MinecraftUtils.mc().currentScreen = null;
             WEScreen.open(SourceOfThruth::new);
             return true;
         }

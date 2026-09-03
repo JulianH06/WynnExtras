@@ -97,12 +97,14 @@ public class ClassSelectionData {
             try {
                 Data loaded = GSON.fromJson(Files.readString(path), Data.class);
                 if (loaded != null) data = loaded;
-            } catch (IOException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Failed to load class selection data: " + e.getMessage());
+            } catch (Exception e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Failed to load class selection data from {}, using defaults.",
+                        path, e);
             }
         }
 
         if (data.classCardOrder == null) data.classCardOrder = new ArrayList<>();
+        data.classCardOrder.removeIf(id -> id == null || id.isBlank());
     }
 
     private static void save() {
@@ -130,13 +132,16 @@ public class ClassSelectionData {
             try {
                 IdentityData loaded = GSON.fromJson(Files.readString(path), IdentityData.class);
                 if (loaded != null) identityData = loaded;
-            } catch (IOException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Failed to load class identity data: " + e.getMessage());
+            } catch (Exception e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Failed to load class identity data from {}, using defaults.",
+                        path, e);
             }
         }
 
         if (identityData.charIdentities == null) identityData.charIdentities = new HashMap<>();
         if (identityData.classDescriptions == null) identityData.classDescriptions = new HashMap<>();
+        identityData.charIdentities.entrySet().removeIf(entry -> entry.getKey() == null || entry.getValue() == null);
+        identityData.classDescriptions.entrySet().removeIf(entry -> entry.getKey() == null || entry.getValue() == null);
     }
 
     private static void saveIdentities() {

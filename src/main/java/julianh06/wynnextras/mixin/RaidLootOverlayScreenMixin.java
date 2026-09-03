@@ -20,7 +20,7 @@ public class RaidLootOverlayScreenMixin {
 
     @Inject(method = "render", at = @At("TAIL"))
     private void renderOverlayOnScreen(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        RaidLootTrackerOverlay.renderOnScreen(context);
+        RaidLootTrackerOverlay.renderOnScreen(context, mouseX, mouseY);
         TradeMarketOverlay.renderOnScreen(context);
         CraftingResultPreviewer.onRender(context);
         GuildRaidBlockOverlay.render(context);

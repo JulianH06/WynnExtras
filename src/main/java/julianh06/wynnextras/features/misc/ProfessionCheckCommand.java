@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.misc;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -34,7 +34,7 @@ public class ProfessionCheckCommand {
             "profcheck",
             "",
             context -> {
-                check(McUtils.player().getName().getString());
+                check(MinecraftUtils.player().getName().getString());
                 return 1;
             }
     );
@@ -77,7 +77,7 @@ public class ProfessionCheckCommand {
         }
 
         double averageProfessionLevel = classCount == 0 ? 0 : (double) totalProfessionLevel / classCount;
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                 "§6Profcheck " + name + "\n" +
                 "§7Total profession level: §b" + totalProfessionLevel + "\n"
                         + "§7Total profession xp: §b" + String.format(Locale.US, "%,d", totalProfessionXp) + "\n"

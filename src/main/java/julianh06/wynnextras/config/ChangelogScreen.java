@@ -1,6 +1,6 @@
 package julianh06.wynnextras.config;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -237,7 +237,7 @@ public class ChangelogScreen extends Screen {
                 if (mx >= tx && mx < tx + TOGGLE_W && my >= ty && my < ty + 16) {
                     e.boolSet.accept(!e.boolGet.get());
                     WynnExtrasConfig.save();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 controlRight = tx - 6;
@@ -249,7 +249,7 @@ public class ChangelogScreen extends Screen {
                 if (mx >= kx && mx < kx + KEY_W && my >= ky && my < ky + 16) {
                     for (Entry other : entries) if (other != e) other.listening = false;
                     e.listening = !e.listening;
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
             }
@@ -269,7 +269,7 @@ public class ChangelogScreen extends Screen {
             for (int i = 0; i < btnCount; i++) {
                 int x = bx + i * (btnW + gap);
                 if (mx >= x && mx < x + btnW) {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     switch (i) {
                         case 0 -> { for (Entry e : entries) if (e.boolSet != null) e.boolSet.accept(true); WynnExtrasConfig.save(); }
                         case 1 -> { for (Entry e : entries) if (e.boolSet != null) e.boolSet.accept(false); WynnExtrasConfig.save(); }
@@ -308,7 +308,7 @@ public class ChangelogScreen extends Screen {
                 if (key != GLFW.GLFW_KEY_ESCAPE) {
                     e.keySet.accept(key);
                     WynnExtrasConfig.save();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 }
                 e.listening = false;
                 return true;

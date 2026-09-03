@@ -5,57 +5,27 @@ import julianh06.wynnextras.features.crafting.data.MaterialTextureResolver;
 import net.minecraft.util.Identifier;
 
 public enum StringMaterial implements IMaterial {
-    WHEAT("Wheat",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_wheat.png"),
-            Identifier.of("wynnextras", "textures/materials/string/white.png")),
-    BARLEY("Barley",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_barley.png"),
-            Identifier.of("wynnextras", "textures/materials/string/white.png")),
-    OAT("Oat",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_oat.png"),
-            Identifier.of("wynnextras", "textures/materials/string/green.png")),
-    MALT("Malt",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_barley.png"),
-            Identifier.of("wynnextras", "textures/materials/string/white.png")),
-    HOPS("Hops",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_hops.png"),
-            Identifier.of("wynnextras", "textures/materials/string/green.png")),
-    RYE("Rye",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_rye.png"),
-            Identifier.of("wynnextras", "textures/materials/string/white.png")),
-    MILLET("Millet",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_millet.png"),
-            Identifier.of("wynnextras", "textures/materials/string/white.png")),
-    DECAY("Decay",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_decay.png"),
-            Identifier.of("wynnextras", "textures/materials/string/brown.png")),
-    RICE("Rice",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_rice.png"),
-            Identifier.of("wynnextras", "textures/materials/string/white.png")),
-    SORGHUM("Sorghum",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_sorghum.png"),
-            Identifier.of("wynnextras", "textures/materials/string/yellow.png")),
-    HEMP("Hemp",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_hemp.png"),
-            Identifier.of("wynnextras", "textures/materials/string/green.png")),
-    DERNIC("Dernic",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_dernic.png"),
-            Identifier.of("wynnextras", "textures/materials/string/brown.png")),
-    JUTE("Jute",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_jute.png"),
-            Identifier.of("wynnextras", "textures/materials/ingot/dernic.png")),
-    HEATHER("Heather",
-            Identifier.of("minecraft", "textures/wynn/economy/farming/string_heather.png"),
-            Identifier.of("wynnextras", "textures/materials/ingot/dernic.png"));
+    WHEAT("Wheat", Identifier.of("minecraft", "textures/wynn/economy/farming/string_wheat.png")),
+    BARLEY("Barley", Identifier.of("minecraft", "textures/wynn/economy/farming/string_barley.png")),
+    OAT("Oat", Identifier.of("minecraft", "textures/wynn/economy/farming/string_oat.png")),
+    MALT("Malt", Identifier.of("minecraft", "textures/wynn/economy/farming/string_barley.png")),
+    HOPS("Hops", Identifier.of("minecraft", "textures/wynn/economy/farming/string_hops.png")),
+    RYE("Rye", Identifier.of("minecraft", "textures/wynn/economy/farming/string_rye.png")),
+    MILLET("Millet", Identifier.of("minecraft", "textures/wynn/economy/farming/string_millet.png")),
+    DECAY("Decay", Identifier.of("minecraft", "textures/wynn/economy/farming/string_decay.png")),
+    RICE("Rice", Identifier.of("minecraft", "textures/wynn/economy/farming/string_rice.png")),
+    SORGHUM("Sorghum", Identifier.of("minecraft", "textures/wynn/economy/farming/string_sorghum.png")),
+    HEMP("Hemp", Identifier.of("minecraft", "textures/wynn/economy/farming/string_hemp.png")),
+    DERNIC("Dernic", Identifier.of("minecraft", "textures/wynn/economy/farming/string_dernic.png")),
+    JUTE("Jute", Identifier.of("minecraft", "textures/wynn/economy/farming/string_jute.png")),
+    HEATHER("Heather", Identifier.of("minecraft", "textures/wynn/economy/farming/string_heather.png"));
 
     private final String name;
     private final Identifier serverTexture;
-    private final Identifier fallbackTexture;
 
-    StringMaterial(String name, Identifier serverTexture, Identifier fallbackTexture) {
+    StringMaterial(String name, Identifier serverTexture) {
         this.name = name;
         this.serverTexture = serverTexture;
-        this.fallbackTexture = fallbackTexture;
     }
 
     @Override
@@ -65,6 +35,6 @@ public enum StringMaterial implements IMaterial {
 
     @Override
     public Identifier getTexture() {
-        return MaterialTextureResolver.resolve(serverTexture, fallbackTexture);
+        return MaterialTextureResolver.resolve(serverTexture);
     }
 }

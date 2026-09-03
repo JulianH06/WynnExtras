@@ -1,11 +1,10 @@
 package julianh06.wynnextras.features.aspects.pages;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.AspectUtils;
@@ -122,6 +121,7 @@ public class AspectsPage extends PageWidget {
         // First, check if aspect database is loaded - this must happen first
         List<ApiAspect> allAspects = new ArrayList<>(WynncraftApiHandler.fetchAllAspects());
         if (allAspects.isEmpty()) {
+            setSearchInputVisible(false);
             ui.drawCenteredText("§eLoading aspect database...", centerX, logicalH / 2f);
             return;
         }
@@ -169,6 +169,7 @@ public class AspectsPage extends PageWidget {
 
         // Show loading or error states
         if (activeStatus == null) {
+            setSearchInputVisible(false);
             String loadingText = searchedPlayer.isEmpty() ? "§eLoading your aspects..." : "§eLoading " + searchedPlayer + "'s aspects...";
             ui.drawCenteredText(loadingText, centerX, logicalH / 2f);
             return;
@@ -185,6 +186,9 @@ public class AspectsPage extends PageWidget {
         refreshButton.draw(context, mouseX, mouseY, tickDelta, ui);
 
         switch (activeStatus) {
+            case DISABLED:
+                ui.drawCenteredText("§cFetching aspects is disabled in settings", centerX, logicalH / 2f);
+                return;
             case NOKEYSET:
                 ui.drawCenteredText("§cYou need to set your API key to use this feature", centerX, logicalH / 2f - 30);
                 ui.drawCenteredText("§7Run \"/we apikey\" for more information", centerX, logicalH / 2f + 30);
@@ -593,7 +597,7 @@ public class AspectsPage extends PageWidget {
                         searchInputWidget.setInputAndMoveCursorToEnd(selectedSearch);
                         performPlayerSearch(selectedSearch);
                         searchInputWidget.setFocused(false);
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }
                     yOffset += lineHeight;
@@ -621,7 +625,7 @@ public class AspectsPage extends PageWidget {
         searchedPlayerData = null;
         searchedPlayerStatus = null; // null = loading
 
-        String requestingUUID = McUtils.player() != null ? McUtils.player().getUuidAsString() : null;
+        String requestingUUID = MinecraftUtils.player() != null ? MinecraftUtils.player().getUuidAsString() : null;
         final String expectedPlayer = playerName; // Capture to detect race condition
 
         // First convert username to UUID
@@ -787,7 +791,7 @@ public class AspectsPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             currentTab = tab;
             if(tab != Tab.Overview) classFilter = tab.name();
             return true;
@@ -805,7 +809,7 @@ public class AspectsPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             progressBarShowMax = !progressBarShowMax;
             return true;
         }
@@ -826,7 +830,7 @@ public class AspectsPage extends PageWidget {
             searchedPlayerStatus = null;
             searchInput = "";
             if (searchInputWidget != null) searchInputWidget.clearInput();
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }
@@ -1052,7 +1056,7 @@ public class AspectsPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 int buttonHeight = 30;
                 int scrollAreaHeight = height - buttonHeight;
 
@@ -1083,7 +1087,7 @@ public class AspectsPage extends PageWidget {
 
                 @Override
                 protected boolean onClick(int button) {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     isHold = true;
                     return true;
                 }
@@ -1124,7 +1128,7 @@ public class AspectsPage extends PageWidget {
                 CustomColor textColor = isNotUnlocked ? CustomColor.fromHexString("808080") : CustomColor.fromHexString("FFFFFF");
                 String rarityColorCode = "";
                 if(isMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
-                    textColor = WynncraftShaderColor.RAINBOW.color;
+                    textColor = CustomColor.RAINBOW;
                 } else if(!isNotUnlocked) {
                     if(aspect.getRarity().equalsIgnoreCase("mythic")) rarityColorCode = "§5";
                     else if(aspect.getRarity().equalsIgnoreCase("fabled")) rarityColorCode = "§c";
@@ -1182,7 +1186,7 @@ public class AspectsPage extends PageWidget {
             @Override
             protected boolean onClick(int button) {
                 if(!parent.isHovered()) return false;
-                McUtils.playSoundUI(SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK);
+                MinecraftUtils.playSoundUI(SoundEvents.BLOCK_AMETHYST_BLOCK_BREAK);
                 FavoriteAspectsData.INSTANCE.toggleFavorite(aspect.getName());
                 return true;
             }
@@ -1225,7 +1229,7 @@ public class AspectsPage extends PageWidget {
 
             if(!searchedPlayer.isEmpty()) performPlayerSearch(searchedPlayer);
 
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }

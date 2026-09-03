@@ -6,7 +6,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.wynntils.mc.extension.EntityRenderStateExtension;
+import julianh06.wynnextras.duck.EntityRenderStateAccess;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
@@ -18,9 +19,11 @@ import julianh06.wynnextras.features.achievements.AchievementTracking;
 import julianh06.wynnextras.features.achievements.Achievements;
 import julianh06.wynnextras.features.achievements.ProgressAchievement;
 import julianh06.wynnextras.features.achievements.TieredAchievement;
+import julianh06.wynnextras.features.privacy.AnonymousTelemetryIdentity;
 import julianh06.wynnextras.utils.ApiRequestHelper;
 import julianh06.wynnextras.utils.BackendErrorLogger;
 import julianh06.wynnextras.utils.MojangAuth;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.render.entity.state.EntityRenderState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
@@ -54,8 +57,9 @@ import java.util.regex.Pattern;
 @WEModule
 public class BadgeService {
     private static final String HEARTBEAT_URL = "http://wynnextras.com/wynnextras-users/heartbeat";
+    private static final String ANONYMOUS_HEARTBEAT_URL = "https://wynnextras.com/wynnextras-users/anonymous-heartbeat";
+    private static final String BADGE_URL = "https://wynnextras.com/wynnextras-users/badge";
     private static final String ACTIVE_URL = "http://wynnextras.com/wynnextras-users/active";
-    private static final String ACTIVE_DETAILS_URL = "http://wynnextras.com/wynnextras-users/active/details";
     private static final String ACHIEVEMENTS_URL = "https://wynnextras.com/achievements?playerUuid=";
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final Gson GSON = new GsonBuilder().create();
@@ -70,6 +74,7 @@ public class BadgeService {
     private static final Achievements achievementDefinitions = Achievements.createDefaultAchievementSet();
     private static long lastSyncTime = 0;
     private static final long SYNC_INTERVAL_MS = 1_200_000; // 20 minutes
+    private static volatile Boolean lastSyncedBadgePublished;
 
     private static int tickCounter = 0;
 
@@ -83,7 +88,8 @@ public class BadgeService {
     }
 
     public static Text appendBadge(EntityRenderState state, Text label) {
-        if (!WynnExtrasConfig.INSTANCE.showWynnExtrasBadges || label == null) return label;
+        if (!WynnExtrasConfig.INSTANCE.showWynnExtrasBadges || label == null || state == null) return label;
+        if (hasKnownBadgeSuffix(label.getString())) return label;
 
         BadgeProfile profile = profileFor(state, label);
         if (profile == null) return label;
@@ -212,6 +218,10 @@ public class BadgeService {
     }
 
     private static void fetchAchievements(String playerUuid) {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasAchievements) {
+            achievementLoadStatusByUuid.put(playerUuid, AchievementLoadStatus.FAILED);
+            return;
+        }
         long now = System.currentTimeMillis();
         if (achievementsByUuid.containsKey(playerUuid) || now < achievementRetryAtByUuid.getOrDefault(playerUuid, 0L)) return;
 
@@ -297,11 +307,11 @@ public class BadgeService {
 
     public static void reloadBadgeInfoFromServer() {
         getActiveUsers();
-        getActiveUserDetails();
     }
 
     @SubscribeEvent
     public void onTick(TickEvent event) {
+        if (!MinecraftUtils.isOnWynncraft()) return;
         handleTick();
     }
 
@@ -323,37 +333,30 @@ public class BadgeService {
         BadgeProfileData.load();
 
         getActiveUsers();
-        getActiveUserDetails();
+
+        WynnExtrasConfig.TelemetryMode telemetryMode = WynnExtrasConfig.INSTANCE.telemetryMode;
+        if (telemetryMode == WynnExtrasConfig.TelemetryMode.ANONYMIZE) sendAnonymousHeartbeat();
+
+        boolean needsIdentifiedHeartbeat = telemetryMode == WynnExtrasConfig.TelemetryMode.ON;
+        boolean needsBadgeSync = needsBadgeSettingsSync();
+        boolean needsAspectSync = WynncraftApiHandler.needsAspectPublicationSync();
+        if (!needsIdentifiedHeartbeat && !needsBadgeSync && !needsAspectSync) return;
 
         MojangAuth.getWEToken().thenAccept(wynnextrasToken -> {
-            if (wynnextrasToken != null) sendHeartbeat(wynnextrasToken);
+            if (wynnextrasToken == null) return;
+            if (needsIdentifiedHeartbeat) {
+                sendHeartbeat(wynnextrasToken);
+            }
+            if (needsBadgeSync) sendBadgeSettings(wynnextrasToken);
+            if (needsAspectSync) WynncraftApiHandler.syncAspectPublication(wynnextrasToken, false);
         }).exceptionally(e -> {
             BackendErrorLogger.error("badge-auth", "Error getting auth data for badge sync: " + e.getMessage());
             return null;
         });
     }
 
-    private static void getActiveUserDetails() {
-        CompletableFuture.runAsync(() -> {
-            try {
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(ACTIVE_DETAILS_URL))
-                        .build();
-
-                HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() == 200) {
-                    parseDetailsResponse(response.body());
-                } else {
-                    BackendErrorLogger.error("badge-details", "Badge details fetching failed: " + response.statusCode());
-                }
-            } catch (Exception e) {
-                BackendErrorLogger.error("badge-details", "Badge details fetching error: " + e.getMessage());
-            }
-        });
-    }
-
     private static void getActiveUsers() {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasBadges) return;
         CompletableFuture.runAsync(() -> {
             try {
                 HttpRequest request = HttpRequest.newBuilder()
@@ -379,8 +382,10 @@ public class BadgeService {
                 BadgeProfile profile = BadgeProfileData.getLocalProfile();
                 JsonObject body = new JsonObject();
                 body.addProperty("modVersion", CurrentVersionData.INSTANCE.version);
-                body.addProperty("badgeIconId", profile.selectedIconId);
-                body.addProperty("badgeColorId", profile.selectedColorId);
+                if (!WynnExtrasConfig.INSTANCE.doNotPublishOwnBadge) {
+                    body.addProperty("badgeIconId", profile.selectedIconId);
+                    body.addProperty("badgeColorId", profile.selectedColorId);
+                }
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(HEARTBEAT_URL))
@@ -398,6 +403,75 @@ public class BadgeService {
                 BackendErrorLogger.error("badge-heartbeat", "Badge heartbeat error: " + e.getMessage());
             }
         });
+    }
+
+    private static void sendAnonymousHeartbeat() {
+        try {
+            AnonymousTelemetryIdentity.AnonymousIdentity identity = AnonymousTelemetryIdentity.current();
+            JsonObject body = new JsonObject();
+            body.addProperty("anonymousId", identity.id());
+            body.addProperty("period", identity.period());
+            body.addProperty("modVersion", CurrentVersionData.INSTANCE.version);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(ANONYMOUS_HEARTBEAT_URL))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(GSON.toJson(body)))
+                    .build();
+
+            HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(response -> {
+                        if (response.statusCode() != 200) {
+                            BackendErrorLogger.error("anonymous-heartbeat", "Anonymous heartbeat failed: " + response.statusCode());
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        BackendErrorLogger.error("anonymous-heartbeat", "Anonymous heartbeat error: " + ex.getMessage());
+                        return null;
+                    });
+        } catch (Exception e) {
+            BackendErrorLogger.error("anonymous-heartbeat", "Anonymous heartbeat error: " + e.getMessage());
+        }
+    }
+
+    private static void sendBadgeSettings(String wynnextrasToken) {
+        try {
+            BadgeProfile profile = BadgeProfileData.getLocalProfile();
+            boolean published = !WynnExtrasConfig.INSTANCE.doNotPublishOwnBadge;
+            JsonObject body = new JsonObject();
+            body.addProperty("published", published);
+            if (published) {
+                body.addProperty("badgeIconId", profile.selectedIconId);
+                body.addProperty("badgeColorId", profile.selectedColorId);
+            }
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(BADGE_URL))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", wynnextrasToken)
+                    .POST(HttpRequest.BodyPublishers.ofString(GSON.toJson(body)))
+                    .build();
+
+            ApiRequestHelper.sendWithAuthRetry(request, body).thenAccept(response -> {
+                if (response != null && response.statusCode() == 200) {
+                    lastSyncedBadgePublished = published;
+                } else if (response != null) {
+                    BackendErrorLogger.error("badge-settings", "Badge settings update failed: " + response.statusCode());
+                }
+            }).exceptionally(ex -> {
+                BackendErrorLogger.error("badge-settings", "Badge settings update error: " + ex.getMessage());
+                return null;
+            });
+        } catch (Exception e) {
+            BackendErrorLogger.error("badge-settings", "Badge settings update error: " + e.getMessage());
+        }
+    }
+
+    private static boolean needsBadgeSettingsSync() {
+        boolean published = !WynnExtrasConfig.INSTANCE.doNotPublishOwnBadge;
+        // Published badges need a regular badge-only heartbeat. Hidden badges only
+        // retry until the server has acknowledged the hidden state.
+        return published || lastSyncedBadgePublished == null || lastSyncedBadgePublished != published;
     }
 
     private static void parseResponse(String responseBody) {
@@ -466,39 +540,13 @@ public class BadgeService {
         return profile.uuid == null ? null : profile;
     }
 
-    private static void parseDetailsResponse(String responseBody) {
-        try {
-            JsonObject json = GSON.fromJson(responseBody, JsonObject.class);
-            if (!json.has("users") || !json.get("users").isJsonArray()) return;
-
-            for (JsonElement element : json.getAsJsonArray("users")) {
-                if (!element.isJsonObject()) continue;
-                JsonObject obj = element.getAsJsonObject();
-                String uuid = BadgeProfile.normalizeUuid(jsonString(obj, "uuid"));
-                String username = jsonString(obj, "username");
-                if (uuid == null || username == null || username.isBlank()) continue;
-
-                BadgeProfile profile = profilesByUuid.get(uuid);
-                if (profile == null) {
-                    profile = new BadgeProfile(uuid, username, BadgeCatalog.DEFAULT_ICON_ID, BadgeCatalog.DEFAULT_COLOR_ID);
-                    profilesByUuid.put(uuid, profile);
-                } else {
-                    profile.username = username;
-                }
-                profilesByUsername.put(username.toLowerCase(), profile);
-            }
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Error parsing badge details response: " + e.getMessage());
-        }
-    }
-
     private static String jsonString(JsonObject obj, String key) {
         if (!obj.has(key) || obj.get(key).isJsonNull()) return null;
         return obj.get(key).getAsString();
     }
 
     private static BadgeProfile profileFor(EntityRenderState state, Text label) {
-        Entity entity = state instanceof EntityRenderStateExtension extension ? extension.getEntity() : null;
+        Entity entity = ((EntityRenderStateAccess) state).wynnExtras$getEntity();
         if (entity instanceof PlayerEntity player) {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (mc.player != null && player.getUuid().equals(mc.player.getUuid())) {

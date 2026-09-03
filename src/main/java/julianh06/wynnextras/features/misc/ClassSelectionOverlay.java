@@ -1,16 +1,13 @@
 package julianh06.wynnextras.features.misc;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.utils.colors.CommonColors;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
-import com.wynntils.utils.wynn.ContainerUtils;
-import com.wynntils.core.events.MixinHelper;
-import com.wynntils.mc.event.ContainerClickEvent;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.RenderUtils;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
+import julianh06.wynnextras.utils.ContainerUtils;
+import julianh06.wynnextras.compat.wynntils.WynntilsEventAdapter;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.UIUtils;
@@ -111,7 +108,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private int[] visOrder = new int[15];
     // visCharId[i] = the UUID for the i-th visible card
     private String[] visCharId = new String[15];
-    private final Map<String, String> lastHeldWeaponDetailCache = new HashMap<>();
     // Only run identity matching once per screen open
     private boolean identityMatched = false;
     private String pendingIdentitySnapshot = "";
@@ -336,7 +332,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return 0;
     }
 
-    private int extractLevel(ItemStack stack) {
+    private static int extractLevel(ItemStack stack) {
         for (Text line : getTooltipLines(stack)) {
             String str = line.getString().replaceAll("\u00A7[0-9a-fk-or]", "").trim();
             if (str.contains("Level:")) {
@@ -872,7 +868,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     /** Extract just the class type name (without level) */
-    private String extractClassName(ItemStack stack) {
+    private static String extractClassName(ItemStack stack) {
         String[] classNames = {"Warrior", "Knight", "Mage", "Dark Wizard", "Assassin", "Ninja",
                 "Archer", "Hunter", "Shaman", "Skyseer"};
         for (Text line : getTooltipLines(stack)) {
@@ -894,6 +890,17 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     public static boolean isClassSelectionScreen(String title) { return CLASS_SELECTION_TITLE.equals(title); }
 
+    public static boolean matchesCrossClassTarget(ItemStack stack, String targetName, int targetLevel) {
+        if (stack == null || stack.isEmpty() || targetName == null || targetName.isEmpty()) return false;
+
+        boolean nameMatch = targetName.equalsIgnoreCase(cleanName(stack.getName().getString()))
+                || targetName.equalsIgnoreCase(extractClassName(stack));
+        if (!nameMatch) return false;
+
+        int level = extractLevel(stack);
+        return targetLevel <= 0 || level <= 0 || Math.abs(level - targetLevel) <= 5;
+    }
+
     /** Convert desired screen pixels to logical UIUtils coordinates */
     private float px(float screenPx) { return screenPx * (float) scaleFactor; }
 
@@ -912,7 +919,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             scanCustomBackgrounds();
         }
         if (bgTexture != null) {
-            RenderUtils.drawTexturedRect(ctx, bgTexture, CommonColors.WHITE,
+            RenderUtils.drawTexturedRect(ctx, bgTexture, CustomColor.WHITE,
                     0, 0, screenWidth, screenHeight,
                     0, 0, bgImgW, bgImgH, bgImgW, bgImgH);
         }
@@ -1228,7 +1235,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         }
         boolean completionChroma = hasCompletionChroma(progress);
         CustomColor charNameColor = completionChroma && usesCompletionChromaForName()
-                ? WynncraftShaderColor.RAINBOW.color
+                ? CustomColor.RAINBOW
                 : CustomColor.fromHexString("FFFFFF");
         float textX = cx + px(iconXPx + iconAreaPx + 16);
         float textMaxWPx = cardLW / (float) scaleFactor - (textX - cx) / (float) scaleFactor - 8;
@@ -1241,7 +1248,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             String detail = truncateToWidth(details.get(i), textMaxWPx, textLayout.detailTextScale);
             drawOverlayText(detail, textX, cy + px(textLayout.textStartYPx + (i + 1) * textLayout.textSpacingPx),
                     completionChroma && usesCompletionChromaForLines()
-                            ? WynncraftShaderColor.RAINBOW.color
+                            ? CustomColor.RAINBOW
                             : accent, textLayout.detailTextScale);
         }
 
@@ -1580,7 +1587,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             WynnExtrasConfig.INSTANCE.customClassSelectionEnabled = !WynnExtrasConfig.INSTANCE.customClassSelectionEnabled;
             vanillaMode = !WynnExtrasConfig.INSTANCE.customClassSelectionEnabled;
             WynnExtrasConfig.save();
@@ -1753,12 +1760,11 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
     private void clickSlot(int slotIndex, int mouseButton) {
         try {
-            ContainerClickEvent event = new ContainerClickEvent(McUtils.containerMenu(), slotIndex, SlotActionType.PICKUP, mouseButton);
-            MixinHelper.post(event);
-            if (event.isCanceled()) return;
+            if (WynntilsEventAdapter.postContainerClick(
+                    MinecraftUtils.containerMenu(), slotIndex, SlotActionType.PICKUP, mouseButton)) return;
 
-            ContainerUtils.clickOnSlot(slotIndex, McUtils.containerMenu().syncId,
-                    mouseButton, McUtils.containerMenu().getStacks());
+            ContainerUtils.clickOnSlot(slotIndex, MinecraftUtils.containerMenu().syncId,
+                    mouseButton, MinecraftUtils.containerMenu().getStacks());
         } catch (Exception e) {}
     }
 
@@ -1791,16 +1797,10 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             }
             if (origIdx < 0 || origIdx >= charDataList.size()) continue;
 
-            CharIdentity card = charDataList.get(origIdx);
-
             boolean match = false;
             if (targetName != null && !targetName.isEmpty()) {
                 // Name + level matching
-                boolean nameMatch = targetName.equalsIgnoreCase(card.name)
-                        || targetName.equalsIgnoreCase(card.classType);
-                boolean levelMatch = targetLevel <= 0 || card.level <= 0
-                        || Math.abs(card.level - targetLevel) <= 5;
-                match = nameMatch && levelMatch;
+                match = matchesCrossClassTarget(stacks.get(CHARACTER_SLOTS[arrayIdx]), targetName, targetLevel);
             }
 
             if (match) {
@@ -1820,7 +1820,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     private List<ItemStack> getStacks() {
-        try { return McUtils.containerMenu().getStacks(); }
+        try { return MinecraftUtils.containerMenu().getStacks(); }
         catch (Exception e) { return null; }
     }
 
@@ -1830,12 +1830,12 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return mx >= sx && mx <= sx + sw && my >= sy && my <= sy + sh;
     }
 
-    private List<Text> getTooltipLines(ItemStack stack) {
+    private static List<Text> getTooltipLines(ItemStack stack) {
         return stack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
     }
 
     /** Strip formatting codes, brackets, and Wynncraft resource pack glyphs */
-    private String cleanName(String raw) {
+    private static String cleanName(String raw) {
         String stripped = raw.replaceAll("\u00A7[0-9a-fk-or]", "");
         stripped = stripped.replaceAll("^\\[|\\]$", "");
         // Strip surrogate pairs and Private Use Area characters (Wynncraft glyphs)
@@ -1977,11 +1977,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     private String getLastHeldWeaponDetail(String charId) {
-        if (lastHeldWeaponDetailCache.containsKey(charId)) {
-            String cached = lastHeldWeaponDetailCache.get(charId);
-            return cached == null || cached.isEmpty() ? "- Weapon: unknown" : cached;
-        }
-
         CharIdentity identity = ClassSelectionData.getCharIdentities().get(charId);
         if (identity != null) {
             ItemStack weapon = CrossClassBankSearch.findLastHeldWeaponForClassSelection(
@@ -1993,12 +1988,10 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             );
             if (weapon != null && !weapon.isEmpty()) {
                 String detail = truncate("- Weapon: " + cleanName(weapon.getName().getString()), 30);
-                lastHeldWeaponDetailCache.put(charId, detail);
                 return detail;
             }
         }
 
-        lastHeldWeaponDetailCache.put(charId, "");
         return "- Weapon: unknown";
     }
 

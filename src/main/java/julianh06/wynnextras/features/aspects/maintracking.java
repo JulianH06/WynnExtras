@@ -2,9 +2,8 @@ package julianh06.wynnextras.features.aspects;
 
 import julianh06.wynnextras.core.WynnExtras;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Time;
-import com.wynntils.utils.wynn.ContainerUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.ContainerUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.command.Command;
@@ -259,7 +258,7 @@ public class maintracking {
 
             // Character menu: wait 5 ticks then click slot 9 (Ability Tree) to open the tree menu
             if(inCharacterMenu && needToClickAbilityTree){
-                ScreenHandler menu = McUtils.containerMenu();
+                ScreenHandler menu = MinecraftUtils.containerMenu();
                 if(menu == null) return;
 
                 characterMenuWaitTicks++;
@@ -342,7 +341,7 @@ public class maintracking {
             }
 
             // Reward chest: scan aspects from slots 11-15 and upload
-            if(inRaidChest && RaidLootTracker.loggedThisChest && !(scanDone && returnedToFirstPage) && WynnExtrasConfig.INSTANCE.automaticAspectScanning && Time.now().timestamp() > lastAspectRewardScan + 60_000) {
+            if(inRaidChest && RaidLootTracker.loggedThisChest && !(scanDone && returnedToFirstPage) && WynnExtrasConfig.INSTANCE.automaticAspectScanning && System.currentTimeMillis() > lastAspectRewardScan + 60_000) {
                 try {
                     AspectScanning.AspectsInRaidChest();
                 } catch (Exception e) {

@@ -1,8 +1,6 @@
 package julianh06.wynnextras.features.inventory;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.utils.mc.TooltipUtils;
+import julianh06.wynnextras.utils.TooltipUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import net.minecraft.client.MinecraftClient;
@@ -16,7 +14,6 @@ import net.minecraft.text.Text;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Trade Market Item Comparison Panel
@@ -234,7 +231,8 @@ public class TradeMarketComparisonPanel {
 
         WeightDisplay.setCurrentHoveredStack(stack);
 
-        if (WeightDisplay.isTrackedMythic(stack) && !WeightDisplay.isUnidentified(stack)) {
+        if (WeightDisplay.isTrackedMythic(stack) && !WeightDisplay.isUnidentified(stack)
+                && !hasMythicScaleAnnotations(processedTooltip, stack)) {
             processedTooltip = WeightDisplay.modifyTooltip(processedTooltip, stack);
         }
 
@@ -245,17 +243,29 @@ public class TradeMarketComparisonPanel {
         return tooltip;
     }
 
-    private static List<Text> getFallbackTooltip(ItemStack stack, MinecraftClient mc) {
-        Optional<WynnItem> wynnItemOpt = Models.Item.getWynnItem(stack);
-        if (wynnItemOpt.isPresent()) {
-            return new ArrayList<>(TooltipUtils.getWynnItemTooltip(stack, wynnItemOpt.get()));
-        } else {
-            return new ArrayList<>(stack.getTooltip(
-                    net.minecraft.item.Item.TooltipContext.DEFAULT,
-                    mc.player,
-                    net.minecraft.item.tooltip.TooltipType.BASIC
-            ));
+    private static boolean hasMythicScaleAnnotations(List<Text> tooltip, ItemStack stack) {
+        WeightDisplay.ItemData itemData = WeightDisplay.getSelectedItemData(WeightDisplay.extractCleanName(stack));
+        if (itemData == null) return false;
+
+        for (Text line : tooltip) {
+            String text = line.getString().stripLeading();
+            if (text.startsWith("↳ Weight:")) return true;
+
+            for (WeightDisplay.WeightData weightData : itemData.data()) {
+                if (text.startsWith("↳ " + WeightDisplay.getScaleLabel(weightData.weightName()) + " ")) {
+                    return true;
+                }
+            }
         }
+        return false;
+    }
+
+    private static List<Text> getFallbackTooltip(ItemStack stack, MinecraftClient mc) {
+        return new ArrayList<>(stack.getTooltip(
+                net.minecraft.item.Item.TooltipContext.DEFAULT,
+                mc.player,
+                net.minecraft.item.tooltip.TooltipType.BASIC
+        ));
     }
 
     public static void clearAllPanels() {

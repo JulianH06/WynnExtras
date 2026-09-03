@@ -1,9 +1,8 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
@@ -97,6 +96,12 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
         long TNARank;
         long TWPRank;
 
+        long NOTGGRaidRank;
+        long NOLGRaidRank;
+        long TCCGRaidRank;
+        long TNAGRaidRank;
+        long TWPGRaidRank;
+
         long NOTGSRRank;
         long NOLSRRank;
         long TCCSRRank;
@@ -109,6 +114,12 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
         CustomColor tnaColor = CustomColor.fromHexString("FFFFFF");
         CustomColor twpColor = CustomColor.fromHexString("FFFFFF");
 
+        CustomColor notgGRaidColor = CustomColor.fromHexString("FFFFFF");
+        CustomColor nolGRaidColor = CustomColor.fromHexString("FFFFFF");
+        CustomColor tccGRaidColor = CustomColor.fromHexString("FFFFFF");
+        CustomColor tnaGRaidColor = CustomColor.fromHexString("FFFFFF");
+        CustomColor twpGRaidColor = CustomColor.fromHexString("FFFFFF");
+
         CustomColor notgSRColor = CustomColor.fromHexString("FFFFFF");
         CustomColor nolSRColor = CustomColor.fromHexString("FFFFFF");
         CustomColor tccSRColor = CustomColor.fromHexString("FFFFFF");
@@ -117,68 +128,97 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
 
         if(ranking != null && currentStatus == Status.ALL) {
             NOTGRank = ranking.getOrDefault("grootslangCompletion", -1L);
-            if(NOTGRank <= 100 && NOTGRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgColor = WynncraftShaderColor.RAINBOW.color;
+            if(NOTGRank <= 100 && NOTGRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgColor = CustomColor.RAINBOW;
 
             NOLRank = ranking.getOrDefault("orphionCompletion", -1L);
-            if(NOLRank <= 100 && NOLRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolColor = WynncraftShaderColor.RAINBOW.color;
+            if(NOLRank <= 100 && NOLRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolColor = CustomColor.RAINBOW;
 
             TCCRank = ranking.getOrDefault("colossusCompletion", -1L);
-            if(TCCRank <= 100 && TCCRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccColor = WynncraftShaderColor.RAINBOW.color;
+            if(TCCRank <= 100 && TCCRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccColor = CustomColor.RAINBOW;
 
             TNARank = ranking.getOrDefault("namelessCompletion", -1L);
-            if(TNARank <= 100 && TNARank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaColor = WynncraftShaderColor.RAINBOW.color;
+            if(TNARank <= 100 && TNARank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaColor = CustomColor.RAINBOW;
 
             TWPRank = ranking.getOrDefault("frumaCompletion", -1L);
-            if(TWPRank <= 100 && TWPRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpColor = WynncraftShaderColor.RAINBOW.color;
+            if(TWPRank <= 100 && TWPRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpColor = CustomColor.RAINBOW;
+
+            NOTGGRaidRank = ranking.getOrDefault("grootslangSrGPlayers", -1L);
+            if(NOTGGRaidRank <= 100 && NOTGGRaidRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgGRaidColor = CustomColor.RAINBOW;
+
+            NOLGRaidRank = ranking.getOrDefault("orphionSrGPlayers", -1L);
+            if(NOLGRaidRank <= 100 && NOLGRaidRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolGRaidColor = CustomColor.RAINBOW;
+
+            TCCGRaidRank = ranking.getOrDefault("colossusSrGPlayers", -1L);
+            if(TCCGRaidRank <= 100 && TCCGRaidRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccGRaidColor = CustomColor.RAINBOW;
+
+            TNAGRaidRank = ranking.getOrDefault("namelessSrGPlayers", -1L);
+            if(TNAGRaidRank <= 100 && TNAGRaidRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaGRaidColor = CustomColor.RAINBOW;
+
+            TWPGRaidRank = ranking.getOrDefault("frumaSrGPlayers", -1L);
+            if(TWPGRaidRank <= 100 && TWPGRaidRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpGRaidColor = CustomColor.RAINBOW;
 
             NOTGSRRank = ranking.getOrDefault("grootslangSrPlayers", -1L);
-            if(NOTGSRRank <= 100 && NOTGSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgSRColor = WynncraftShaderColor.RAINBOW.color;
+            if(NOTGSRRank <= 100 && NOTGSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) notgSRColor = CustomColor.RAINBOW;
 
             NOLSRRank = ranking.getOrDefault("orphionSrPlayers", -1L);
-            if(NOLSRRank <= 100 && NOLSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolSRColor = WynncraftShaderColor.RAINBOW.color;
+            if(NOLSRRank <= 100 && NOLSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) nolSRColor = CustomColor.RAINBOW;
 
             TCCSRRank = ranking.getOrDefault("colossusSrPlayers", -1L);
-            if(TCCSRRank <= 100 && TCCSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccSRColor = WynncraftShaderColor.RAINBOW.color;
+            if(TCCSRRank <= 100 && TCCSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tccSRColor = CustomColor.RAINBOW;
 
             TNASRRank = ranking.getOrDefault("namelessSrPlayers", -1L);
-            if(TNASRRank <= 100 && TNASRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaSRColor = WynncraftShaderColor.RAINBOW.color;
+            if(TNASRRank <= 100 && TNASRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) tnaSRColor = CustomColor.RAINBOW;
 
             TWPSRRank = ranking.getOrDefault("frumaSrPlayers", -1L);
-            if(TWPSRRank <= 100 && TWPSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpSRColor = WynncraftShaderColor.RAINBOW.color;
+            if(TWPSRRank <= 100 && TWPSRRank > 0 && !WynnExtrasConfig.INSTANCE.removeChroma) twpSRColor = CustomColor.RAINBOW;
 
             if(NOTGRank != -1) {
-                ui.drawText("Completion Rank #" + formatter.format(NOTGRank), x + 240f, y + 195f, notgColor, 3f);
+                ui.drawText("Completion Rank #" + formatter.format(NOTGRank), x + 240f, y + 177f, notgColor, 2.7f);
             }
             if(NOLRank != -1) {
-                ui.drawText("Completion Rank #" + formatter.format(NOLRank), x + 240f, y + 415f, nolColor, 3f);
+                ui.drawText("Completion Rank #" + formatter.format(NOLRank), x + 240f, y + 397f, nolColor, 2.7f);
             }
             if(TCCRank != -1) {
-                ui.drawText("Completion Rank #" + formatter.format(TCCRank), x + 1565f, y + 195f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
+                ui.drawText("Completion Rank #" + formatter.format(TCCRank), x + 1565f, y + 177f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
             }
             if(TNARank != -1) {
-                ui.drawText("Completion Rank #" + formatter.format(TNARank), x + 1565f, y + 415f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
+                ui.drawText("Completion Rank #" + formatter.format(TNARank), x + 1565f, y + 397f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
             }
             if(TWPRank != -1) {
-                ui.drawText("Completion Rank #" + formatter.format(TWPRank), x + 1010f, y + 575f, twpColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
+                ui.drawText("Completion Rank #" + formatter.format(TWPRank), x + 1010f, y + 590f, twpColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.7f);
+            }
+
+            if(NOTGGRaidRank != -1) {
+                ui.drawText("GRaid Rank #" + formatter.format(NOTGGRaidRank), x + 240f, y + 207f, notgGRaidColor, 2.7f);
+            }
+            if(NOLGRaidRank != -1) {
+                ui.drawText("GRaid Rank #" + formatter.format(NOLGRaidRank), x + 240f, y + 427f, nolGRaidColor, 2.7f);
+            }
+            if(TCCGRaidRank != -1) {
+                ui.drawText("GRaid Rank #" + formatter.format(TCCGRaidRank), x + 1565f, y + 207f, tccGRaidColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
+            }
+            if(TNAGRaidRank != -1) {
+                ui.drawText("GRaid Rank #" + formatter.format(TNAGRaidRank), x + 1565f, y + 427f, tnaGRaidColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
+            }
+            if(TWPGRaidRank != -1) {
+                ui.drawText("GRaid Rank #" + formatter.format(TWPGRaidRank), x + 1010f, y + 620f, twpGRaidColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.7f);
             }
 
             if(NOTGSRRank != -1) {
-                ui.drawText("SR Rank #" + formatter.format(NOTGSRRank), x + 240f, y + 235f, notgSRColor, 3f);
+                ui.drawText("SR Rank #" + formatter.format(NOTGSRRank), x + 240f, y + 237f, notgSRColor, 2.7f);
             }
             if(NOLSRRank != -1) {
-                ui.drawText("SR Rank #" + formatter.format(NOLSRRank), x + 240f, y + 455f, nolSRColor, 3f);
+                ui.drawText("SR Rank #" + formatter.format(NOLSRRank), x + 240f, y + 457f, nolSRColor, 2.7f);
             }
             if(TCCSRRank != -1) {
-                ui.drawText("SR Rank #" + formatter.format(TCCSRRank), x + 1565f, y + 235f, tccSRColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
+                ui.drawText("SR Rank #" + formatter.format(TCCSRRank), x + 1565f, y + 237f, tccSRColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
             }
             if(TNASRRank != -1) {
-                ui.drawText("SR Rank #" + formatter.format(TNASRRank), x + 1565f, y + 455f, tnaSRColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
+                ui.drawText("SR Rank #" + formatter.format(TNASRRank), x + 1565f, y + 457f, tnaSRColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
             }
             if(TWPSRRank != -1) {
-                ui.drawText("SR Rank #" + formatter.format(TWPSRRank), x + 1010f, y + 620f, twpSRColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 3f);
+                ui.drawText("SR Rank #" + formatter.format(TWPSRRank), x + 1010f, y + 650f, twpSRColor, HorizontalAlignment.LEFT, VerticalAlignment.MIDDLE, 2.7f);
             }
-
-            //TODO: aspect and lootrun pages updaten
         }
 
         Raids raids;
@@ -193,11 +233,11 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
             guildRaids = PV.currentPlayerData.getGlobalData().getGuildRaids();
         }
 
-        ui.drawText("Nest of the Grootslangs", x + 240f, y + 125f, notgColor, 3f);
-        ui.drawText("Orphion's Nexus of Light", x + 240f, y + 345f, nolColor, 3f);
-        ui.drawText("The Canyon Colossus", x + 1565f, y + 125f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-        ui.drawText("The Nameless Anomaly", x + 1565f, y + 345f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-        ui.drawText("The Wartorn Palace", x + 800, y + 575f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 3f);
+        ui.drawText("Nest of the Grootslangs", x + 240f, y + 117f, notgColor, 2.7f);
+        ui.drawText("Orphion's Nexus of Light", x + 240f, y + 337f, nolColor, 2.7f);
+        ui.drawText("The Canyon Colossus", x + 1565f, y + 117f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
+        ui.drawText("The Nameless Anomaly", x + 1565f, y + 337f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
+        ui.drawText("The Wartorn Palace", x + 800, y + 590f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 2.7f);
 
         if(selectedCharacter != null) {
             currentStatus = Status.ALL;
@@ -215,11 +255,11 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 long TWPComps = twpComps(raids.getList());
                 long TotalComps = raids.getTotal();
 
-                ui.drawText(formatter.format(NOTGComps) + " Completions", x + 240f, y + 160f, notgColor, 3f);
-                ui.drawText(formatter.format(NOLComps) + " Completions", x + 240f, y + 380f, nolColor, 3f);
-                ui.drawText(formatter.format(TCCComps) + " Completions", x + 1565f, y + 160f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-                ui.drawText(formatter.format(TNAComps) + " Completions", x + 1565f, y + 380f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-                ui.drawText(formatter.format(TWPComps) + " Completions", x + 800f, y + 620f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 3f);
+                ui.drawText(formatter.format(NOTGComps) + " Completions", x + 240f, y + 147f, notgColor, 2.7f);
+                ui.drawText(formatter.format(NOLComps) + " Completions", x + 240f, y + 367f, nolColor, 2.7f);
+                ui.drawText(formatter.format(TCCComps) + " Completions", x + 1565f, y + 147f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
+                ui.drawText(formatter.format(TNAComps) + " Completions", x + 1565f, y + 367f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
+                ui.drawText(formatter.format(TWPComps) + " Completions", x + 800f, y + 620f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 2.7f);
 
                 ui.drawCenteredText("Total Completions" + characterNameString + formatter.format(TotalComps), x + 900f, y + 48f, CustomColor.fromHexString("FFFFFF"), 3.9f);
             }}
@@ -231,11 +271,11 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 long TWPComps = guildRaids.getList().getOrDefault("The Wartorn Palace", 0);
                 long TotalComps = guildRaids.getTotal();
 
-                ui.drawText(formatter.format(NOTGComps) + " Completions", x + 240f, y + 160f, notgColor, 3f);
-                ui.drawText(formatter.format(NOLComps) + " Completions", x + 240f, y + 380f, nolColor, 3f);
-                ui.drawText(formatter.format(TCCComps) + " Completions", x + 1565f, y + 160f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-                ui.drawText(formatter.format(TNAComps) + " Completions", x + 1565f, y + 380f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-                ui.drawText(formatter.format(TWPComps) + " Completions", x + 800f, y + 620f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 3f);
+                ui.drawText(formatter.format(NOTGComps) + " Completions", x + 240f, y + 147f, notgColor, 2.7f);
+                ui.drawText(formatter.format(NOLComps) + " Completions", x + 240f, y + 367f, nolColor, 2.7f);
+                ui.drawText(formatter.format(TCCComps) + " Completions", x + 1565f, y + 147f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
+                ui.drawText(formatter.format(TNAComps) + " Completions", x + 1565f, y + 367f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
+                ui.drawText(formatter.format(TWPComps) + " Completions", x + 800f, y + 620f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 2.7f);
 
                 ui.drawCenteredText("Total Guild Raid Completions" + characterNameString + formatter.format(TotalComps), x + 900f, y + 48f, CustomColor.fromHexString("FFFFFF"), 3.9f);
             }}
@@ -254,11 +294,11 @@ public class RaidsTabWidget extends PVScreen.TabWidget {
                 long TWPGraidComps = twpComps(guildRaids.getList());
                 long TotalGraidComps = guildRaids.getTotal();
 
-                ui.drawText(formatter.format(NOTGComps - NOTGGraidComps) + " Completions", x + 240f, y + 160f, notgColor, 3f);
-                ui.drawText(formatter.format(NOLComps - NOLGraidComps) + " Completions", x + 240f, y + 380f, nolColor, 3f);
-                ui.drawText(formatter.format(TCCComps - TCCGraidComps) + " Completions", x + 1565f, y + 160f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-                ui.drawText(formatter.format(TNAComps - TNAGraidComps) + " Completions", x + 1565f, y + 380f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 3f);
-                ui.drawText(formatter.format(TWPComps - TWPGraidComps) + " Completions", x + 800f, y + 620f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 3f);
+                ui.drawText(formatter.format(NOTGComps - NOTGGraidComps) + " Completions", x + 240f, y + 147f, notgColor, 2.7f);
+                ui.drawText(formatter.format(NOLComps - NOLGraidComps) + " Completions", x + 240f, y + 367f, nolColor, 2.7f);
+                ui.drawText(formatter.format(TCCComps - TCCGraidComps) + " Completions", x + 1565f, y + 147f, tccColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
+                ui.drawText(formatter.format(TNAComps - TNAGraidComps) + " Completions", x + 1565f, y + 367f, tnaColor, HorizontalAlignment.RIGHT, VerticalAlignment.TOP, 2.7f);
+                ui.drawText(formatter.format(TWPComps - TWPGraidComps) + " Completions", x + 800f, y + 620f, twpColor, HorizontalAlignment.RIGHT, VerticalAlignment.MIDDLE, 2.7f);
 
                 ui.drawCenteredText("Total Non Guild Raid Completions" + characterNameString + formatter.format(TotalComps - TotalGraidComps), x + 900f, y + 48f, CustomColor.fromHexString("FFFFFF"), 3.9f);
             }}

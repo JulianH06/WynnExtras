@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.waypoints;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
@@ -128,15 +128,15 @@ public class WaypointEditMode {
 
     public static void toggleFreeMoveFromCommand() {
         if (!enabled) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Free move mode is already disabled.")));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Free move mode is already disabled.")));
             return;
         }
         if (mode == Mode.FREE_MOVE) {
             enterEditMode();
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Free move mode disabled.")));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Free move mode disabled.")));
             return;
         }
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Free move mode is already disabled.")));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Free move mode is already disabled.")));
     }
 
     public static void enterEditMode() {

@@ -1,7 +1,6 @@
 package julianh06.wynnextras.features.crafting.data;
 
 import julianh06.wynnextras.core.WynnExtras;
-import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
@@ -33,8 +32,8 @@ public final class MaterialTextureResolver implements SimpleSynchronousResourceR
         ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(INSTANCE);
     }
 
-    public static Identifier resolve(Identifier serverTexture, Identifier fallbackTexture) {
-        return INSTANCE.resolveInternal(serverTexture, fallbackTexture);
+    public static Identifier resolve(Identifier serverTexture) {
+        return INSTANCE.resolveInternal(serverTexture);
     }
 
     @Override
@@ -49,12 +48,9 @@ public final class MaterialTextureResolver implements SimpleSynchronousResourceR
         UIUtils.clearSeparatorCache();
     }
 
-    private Identifier resolveInternal(Identifier serverTexture, Identifier fallbackTexture) {
-        if (!isDynamicEnabled()) {
-            return fallbackTexture != null ? fallbackTexture : serverTexture;
-        }
+    private Identifier resolveInternal(Identifier serverTexture) {
         if (serverTexture == null) {
-            return fallbackTexture;
+            return null;
         }
         Identifier cached = resolved.get(serverTexture);
         if (cached != null) {
@@ -62,11 +58,11 @@ public final class MaterialTextureResolver implements SimpleSynchronousResourceR
         }
         ResourceManager activeManager = getActiveManager();
         if (activeManager == null) {
-            return fallbackTexture != null ? fallbackTexture : serverTexture;
+            return serverTexture;
         }
         Optional<Resource> resource = activeManager.getResource(serverTexture);
         if (resource.isEmpty()) {
-            return fallbackTexture != null ? fallbackTexture : serverTexture;
+            return serverTexture;
         }
         Identifier resolvedTexture = normalizeIfNeeded(serverTexture, resource.get());
         resolved.put(serverTexture, resolvedTexture);
@@ -131,9 +127,5 @@ public final class MaterialTextureResolver implements SimpleSynchronousResourceR
             return client.getResourceManager();
         }
         return null;
-    }
-
-    private boolean isDynamicEnabled() {
-        return WynnExtrasConfig.INSTANCE.craftingDynamicTextures;
     }
 }

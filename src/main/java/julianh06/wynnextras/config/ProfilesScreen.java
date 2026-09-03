@@ -1,6 +1,6 @@
 //package julianh06.wynnextras.config;
 //
-//import com.wynntils.utils.mc.McUtils;
+//import julianh06.wynnextras.utils.MinecraftUtils;
 //import net.minecraft.client.gui.Click;
 //import net.minecraft.client.gui.DrawContext;
 //import net.minecraft.client.gui.screen.Screen;
@@ -104,7 +104,7 @@
 //            if (!nameInput.isBlank()) {
 //                config.saveCurrentAsProfile(nameInput.trim());
 //                nameInput = "";
-//                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+//                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 //            }
 //            return true;
 //        }
@@ -112,7 +112,7 @@
 //        int by = height - 55;
 //        if (mx >= width / 2 - 50 && mx < width / 2 + 50 && my >= by && my < by + 24) {
 //            client.setScreen(parent);
-//            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+//            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 //            return true;
 //        }
 //
@@ -123,17 +123,17 @@
 //            if (my >= y && my < y + 24) {
 //                if (mx >= px + pw - 125 && mx < px + pw - 75) {
 //                    config.applyProfile(name);
-//                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+//                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 //                    return true;
 //                }
 //                if (mx >= px + pw - 70 && mx < px + pw - 45) {
 //                    config.saveCurrentAsProfile(name);
-//                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+//                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 //                    return true;
 //                }
 //                if (mx >= px + pw - 40 && mx < px + pw - 15) {
 //                    config.deleteProfile(name);
-//                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+//                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 //                    return true;
 //                }
 //            }

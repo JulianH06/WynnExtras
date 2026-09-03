@@ -1,49 +1,48 @@
 package julianh06.wynnextras.features.crafting.data;
 
 
-import com.wynntils.models.character.type.ClassType;
-import com.wynntils.models.gear.type.GearType;
-import com.wynntils.models.profession.type.ProfessionType;
+import julianh06.wynnextras.features.crafting.model.ClassType;
+import julianh06.wynnextras.utils.enums.WEProfessionType;
 
 public enum CraftableType {
-    HELMET(ProfessionType.ARMOURING),
-    CHESTPLATE(ProfessionType.ARMOURING),
-    LEGGINGS(ProfessionType.TAILORING, "Pants"),
-    BOOTS(ProfessionType.TAILORING),
+    HELMET(WEProfessionType.ARMOURING),
+    CHESTPLATE(WEProfessionType.ARMOURING),
+    LEGGINGS(WEProfessionType.TAILORING, "Pants"),
+    BOOTS(WEProfessionType.TAILORING),
 
-    SPEAR(ProfessionType.WEAPONSMITHING, ClassType.WARRIOR),
-    DAGGER(ProfessionType.WEAPONSMITHING, ClassType.ASSASSIN),
-    BOW(ProfessionType.WOODWORKING, ClassType.ARCHER),
-    WAND(ProfessionType.WOODWORKING, ClassType.MAGE),
-    RELIK(ProfessionType.WOODWORKING, ClassType.SHAMAN),
+    SPEAR(WEProfessionType.WEAPONSMITHING, ClassType.WARRIOR),
+    DAGGER(WEProfessionType.WEAPONSMITHING, ClassType.ASSASSIN),
+    BOW(WEProfessionType.WOODWORKING, ClassType.ARCHER),
+    WAND(WEProfessionType.WOODWORKING, ClassType.MAGE),
+    RELIK(WEProfessionType.WOODWORKING, ClassType.SHAMAN),
 
-    RING(ProfessionType.JEWELING),
-    BRACELET(ProfessionType.JEWELING),
-    NECKLACE(ProfessionType.JEWELING),
+    RING(WEProfessionType.JEWELING),
+    BRACELET(WEProfessionType.JEWELING),
+    NECKLACE(WEProfessionType.JEWELING),
 
-    POTION(ProfessionType.ALCHEMISM),
-    SCROLL(ProfessionType.SCRIBING),
-    FOOD(ProfessionType.COOKING);
+    POTION(WEProfessionType.ALCHEMISM),
+    SCROLL(WEProfessionType.SCRIBING),
+    FOOD(WEProfessionType.COOKING);
 
-    private final ProfessionType station;
+    private final WEProfessionType station;
     private String craftingName = this.name();
     private ClassType classType = ClassType.NONE;
 
-    CraftableType(ProfessionType station) {
+    CraftableType(WEProfessionType station) {
         this.station = station;
     }
 
-    CraftableType(ProfessionType station, String craftingName) {
+    CraftableType(WEProfessionType station, String craftingName) {
         this.station = station;
         this.craftingName = craftingName;
     }
 
-    CraftableType(ProfessionType station, ClassType classType) {
+    CraftableType(WEProfessionType station, ClassType classType) {
         this.station = station;
         this.classType = classType;
     }
 
-    public static CraftableType fromGearType(GearType type) {
+    public static CraftableType fromGearType(Enum<?> type) {
         try {
             return valueOf(type.name());
         } catch (IllegalArgumentException e) {
@@ -96,7 +95,7 @@ public enum CraftableType {
         return this.name().charAt(0) + this.name().substring(1).toLowerCase();
     }
 
-    public ProfessionType getStation() {
+    public WEProfessionType getStation() {
         return this.station;
     }
 

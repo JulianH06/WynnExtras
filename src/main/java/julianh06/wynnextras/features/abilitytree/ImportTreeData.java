@@ -25,7 +25,7 @@ public class ImportTreeData {
             }
             reader.reset();
             return gson.fromJson(reader, ImportTreeData.class);
-        } catch (IOException | JsonParseException e) {
+        } catch (Exception e) {
             WynnExtras.LOGGER.error("[ImportTreeData] Failed to load " + pathToFile + ":");
             e.printStackTrace();
             return null;

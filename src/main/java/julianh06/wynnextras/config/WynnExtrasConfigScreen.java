@@ -2,15 +2,18 @@ package julianh06.wynnextras.config;
 
 import julianh06.wynnextras.config.configoptions.*;
 import static julianh06.wynnextras.config.ConfigTheme.*;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.features.achievements.AchievementScreen;
+import julianh06.wynnextras.features.badges.BadgeService;
+import julianh06.wynnextras.features.inventory.WeightDisplay;
 import julianh06.wynnextras.features.spellhider.SpellProfiles;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.misc.HudEditScreen;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.tetris.TetrisScreen;
 import julianh06.wynnextras.utils.LinkUtils;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -51,6 +54,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
 
     private final Screen parent;
     private final WynnExtrasConfig config;
+    private final WynnExtrasConfig.TelemetryMode originalTelemetryMode;
+    private final boolean originalDoNotPublishOwnBadge;
+    private final boolean originalDoNotPublishOwnAspects;
 
     // ==================== STATE ====================
     private static int lastSelectedCategory = 0;
@@ -95,6 +101,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         super(Text.literal("WynnExtras Configuration"));
         this.parent = parent;
         this.config = WynnExtrasConfig.INSTANCE;
+        this.originalTelemetryMode = config.telemetryMode;
+        this.originalDoNotPublishOwnBadge = config.doNotPublishOwnBadge;
+        this.originalDoNotPublishOwnAspects = config.doNotPublishOwnAspects;
         initCategories();
     }
 
@@ -117,27 +126,13 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                             line("If you have any kind of suggestions or bug reports we would appreciate if you'd let us know on our §9Discord!").center(),
                             emptyLine(0.5f)
                     )))
-            .sub("Links")
-                .add(button("Discord", "Join the WynnExtras Discord server", (x) -> {
-                    LinkUtils.openLink("https://discord.gg/UbC6vZDaD5");
-                }, "Open"))
-                .add(button("Modrinth", "WynnExtras on Modrinth", (x) -> {
-                    LinkUtils.openLink("https://modrinth.com/mod/wynnextras");
-                }, "Open"))
-                .add(button("GitHub", "WynnExtras source code on GitHub", (x) -> {
-                    LinkUtils.openLink("https://github.com/JulianH06/WynnExtras");
-                }, "Open"))
-//                .add(button("YouTube", "Julian's personal YouTube channel", (x) -> {
-//                    LinkUtils.openLink("https://www.youtube.com/@H06Julian");
-//                }, "Open"))
-            .endSub()
             .sub("Quick Access")
                 .add(button("Loot Pools", "Open the Loot Pools screen", (x) -> {
                     WEScreen.open(AspectScreen::new);
                     AspectScreen.currentPage = AspectScreen.Page.AspectLootpool;
                 }, "Open"))
                 .add(button("Profile Viewer", "View your stats", (x) -> {
-                    PV.open(McUtils.playerName());
+                    PV.open(MinecraftUtils.playerName());
                 }, "Open"))
                 .add(button("Waypoints", "Open the Waypoints screen", (x) -> {
                     MinecraftClient.getInstance().setScreen(null);
@@ -155,6 +150,22 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     }
                 }, "Open"))
             .endSub()
+            .sub("Links")
+                .add(button("Discord", "Join the WynnExtras Discord server", (x) -> {
+                    LinkUtils.openLink("https://wynnextras.com/discord");
+                }, "Open"))
+                .add(button("Modrinth", "WynnExtras on Modrinth", (x) -> {
+                    LinkUtils.openLink("https://modrinth.com/mod/wynnextras");
+                }, "Open"))
+                .add(button("GitHub", "WynnExtras source code on GitHub", (x) -> {
+                    LinkUtils.openLink("https://github.com/JulianH06/WynnExtras");
+                }, "Open"))
+//                .add(button("YouTube", "Julian's personal YouTube channel", (x) -> {
+//                    LinkUtils.openLink("https://www.youtube.com/@H06Julian");
+//                }, "Open"))
+            .endSub()
+            .add(toggle("Disable Update Reminder", "Do not show a chat message when a new WynnExtras version is available",
+                () -> config.updateReminderDisabled, v -> config.updateReminderDisabled = v))
 //            .add(visibleWhen(button("Disable WynnExtras", "Turn off all features (your settings are preserved)",
 //                (x) -> {
 //                    config.disableWynnExtras();
@@ -183,6 +194,34 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         TetrisScreen.open();
                     }, "Play"))
                 .add(text("More to come!", "More minigames are planned to be released in the future!"))
+            .endSub()
+            .sub("Privacy")
+                .add(button("Privacy policy", "You can find more information here", (x) -> {
+                    LinkUtils.openLink("https://wynnextras.com/privacy");
+                }, "Open"))
+                .add(dropdown("Telemetry", "Choose whether usage statistics are sent with your Minecraft UUID, anonymously, or not at all",
+                        WynnExtrasConfig.TelemetryMode.class, () -> config.telemetryMode, v -> config.telemetryMode = v))
+                .add(toggle("Do Not Publish Own Badge", "Hide your WynnExtras badge from other players and stop uploading it",
+                        () -> config.doNotPublishOwnBadge, v -> config.doNotPublishOwnBadge = v))
+                .add(toggle("Do Not Publish Own Aspects", "Hide your personal aspects and stop uploading them",
+                        () -> config.doNotPublishOwnAspects, v -> config.doNotPublishOwnAspects = v))
+                .add(toggle("Do Not Publish Own Achievements", "Stop uploading your achievement progress to the WynnExtras server",
+                        () -> !config.uploadAchievements, v -> config.uploadAchievements = !v))
+                .add(toggle("Do Not Crowdsource Daily Gambits", "Stop sharing discovered gambits with the WynnExtras server",
+                        () -> !config.crowdSourceGambits, v -> config.crowdSourceGambits = !v))
+                .add(toggle("Do Not Fetch Badges", "Stop fetching other players' badges from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasBadges, v -> config.doNotFetchWynnExtrasBadges = v))
+                .add(toggle("Do Not Fetch Achievements", "Stop fetching other players' achievements from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasAchievements, v -> config.doNotFetchWynnExtrasAchievements = v))
+                .add(toggle("Do Not Fetch Aspects", "Stop fetching player aspects and the aspect leaderboard from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasAspects, v -> config.doNotFetchWynnExtrasAspects = v))
+                .add(toggle("Do Not Fetch Gambits", "Stop fetching crowdsourced gambits from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasGambits, v -> config.doNotFetchWynnExtrasGambits = v))
+                .add(toggle("Do Not Fetch Profile Titles", "Stop fetching custom profile titles from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasProfileTitles, v -> config.doNotFetchWynnExtrasProfileTitles = v))
+                .add(toggle("Do Not Fetch Reset Times", "Stop fetching loot pool, lootrun, and gambit reset times from the WynnExtras server",
+                        () -> config.doNotFetchWynnExtrasResetTimes, v -> config.doNotFetchWynnExtrasResetTimes = v))
+                .add(text("Fetch settings", "Changes apply to future requests. Some data may require a game restart to be fetched again."))
             .endSub();
 
         // ===== RAIDS =====
@@ -239,9 +278,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.raidSessionEnabled))
                 .add(visibleWhen(text("Movable in inventory", "Open inventory to drag the tracker or click [ADD]/[X]/[||] buttons"),
                         () -> config.raidSessionEnabled))
-            .sub("Auto-ignore party in raid")
-                .add(toggle("Auto-ignore party in raid", "On raid start, /ignore add all party members to reduce lag from their effects; /ignore remove them on raid end",
-                        () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v))
             .sub("TNA Tree Room")
                 .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
                         () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))
@@ -270,21 +306,23 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(sliderF("Favorite Multiplier", "Multiplier applied to favorite aspects for scoring (applies on top of rarity multiplier)", 0.f, 10.f, 0.1f,
                         () -> config.favoriteMultiplier, v -> config.favoriteMultiplier = v))
             .endSub()
-                .add(toggle("Timestamps", "Show timestamps during raids",
-                        () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
-                .add(toggle("Fast Requeue", "Auto /pf on chest close",
-                        () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
-                .add(toggle("Block GRaid toggle (Shift to bypass)", "Blocks clicks on 'Guild Raid Available' in party finder unless SHIFT is held to prevent accidentally toggling graids",
-                        () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
-                .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room",
-                        () -> config.chiropTimer, v -> config.chiropTimer = v))
-                .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests by quickly clicking through the rewards",
-                        () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
-                .add(visibleWhen(toggle("Passive aspect scanning", "Scan your aspects passively without bothering you",
-                        () -> config.passiveAspectScanning, v -> config.passiveAspectScanning = v),
-                        () -> !config.automaticAspectScanning))
-                .add(toggle("Encounter Selection overlay (Very Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
-                        () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v));
+            .add(toggle("Timestamps", "Show timestamps during raids",
+                    () -> config.toggleRaidTimestamps, v -> config.toggleRaidTimestamps = v))
+            .add(toggle("Fast Requeue", "Auto /pf on chest close",
+                    () -> config.toggleFastRequeue, v -> config.toggleFastRequeue = v))
+            .add(toggle("Block GRaid toggle (Shift to bypass)", "Blocks clicks on 'Guild Raid Available' in party finder unless SHIFT is held to prevent accidentally toggling graids",
+                    () -> config.shiftDisableGuildRaid, v -> config.shiftDisableGuildRaid = v))
+            .add(toggle("Chiropterror Timer", "Spawn timer for the Chiropterror boss in TNA light room. This is only an estimation since the spawn time is not 100% consistent",
+                    () -> config.chiropTimer, v -> config.chiropTimer = v))
+            .add(toggle("Automatic aspect scanning", "Automatically scan aspects in raid reward chests by quickly clicking through the rewards. This updates your aspect data in the raid lootpool screens and helps with certain features that change based on aspect progress (e.g. blood sorrow timer)",
+                    () -> config.automaticAspectScanning, v -> config.automaticAspectScanning = v))
+            .add(visibleWhen(toggle("Passive aspect scanning", "Scan your aspects passively without bothering you",
+                    () -> config.passiveAspectScanning, v -> config.passiveAspectScanning = v),
+                    () -> !config.automaticAspectScanning))
+            .add(toggle("Encounter Selection overlay (Very Experimental)", "Replace the Encounter Selection chest with a big element-colored panel per option (click to select)",
+                    () -> config.encounterOverlayEnabled, v -> config.encounterOverlayEnabled = v))
+            .add(toggle("Auto-ignore party in raid", "On raid start, /ignore add all party members to reduce lag from their effects; /ignore remove them on raid end",
+                    () -> config.autoIgnorePartyInRaid, v -> config.autoIgnorePartyInRaid = v));
 
         // ===== COMBAT =====
         category("Combat", 0xFFfda216)
@@ -403,13 +441,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
                         () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
                 .add(toggle("War Beacon (EXPERIMENTAL)", "Green beacon beam at the soonest war territory (Experimental, might not render correctly)",
-                        () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v))
-                .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
-                        () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
-                .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
-                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v,
-                                DEFAULT_CONFIG.territoryMenuKey),
-                        () -> config.territoryMenuKeyEnabled));
+                        () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v));
 
         // ===== OVERLAYS =====
         Category invCategory = category("Overlays", 0xFFea1219);
@@ -490,12 +522,16 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
                         () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
-                .add(toggle("Dynamic textures in crafting helper", "Use dynamic material textures, supports Variants-CIT texture packs",
-                        () -> config.craftingDynamicTextures, v -> config.craftingDynamicTextures = v))
                 .add(toggle("Reverse crafting helper order", "Show recipes from lowest to highest level",
                         () -> config.craftingHelperReverseOrder, v -> config.craftingHelperReverseOrder = v))
                 .add(toggle("Auto Start", "Automatically start crafting when a recipe is loaded",
                         () -> config.craftingAutoStart, v -> config.craftingAutoStart = v))
+                .add(keybind("Load from Clipboard Key", "Load a WynnBuilder craft from the clipboard while the crafting helper is open",
+                        () -> config.craftingLoadClipboardKey, v -> config.craftingLoadClipboardKey = v,
+                        DEFAULT_CONFIG.craftingLoadClipboardKey))
+                .add(keybind("Reuse Last Key", "Reuse the previous craft while the crafting helper is open",
+                        () -> config.craftingReuseLastKey, v -> config.craftingReuseLastKey = v,
+                        DEFAULT_CONFIG.craftingReuseLastKey))
                 .add(toggle("Crafting preview", "Crafting preview toggle",
                         () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
@@ -506,11 +542,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.shoppingListMenuEnabled, v -> config.shoppingListMenuEnabled = v))
                 .add(toggle("Show quick toggle button", "Show the quick toggle button in menus",
                         () -> config.shoppingListShowQuickToggleButton, v -> config.shoppingListShowQuickToggleButton = v))
-                .add(toggle("WynnMarketSearch compatibility", "Temporarily suppresses WynnMarketSearch while the shopping list performs Trade Market row searches",
-                        () -> config.shoppingListWynnMarketSearchCompatibility, v -> config.shoppingListWynnMarketSearchCompatibility = v))
                 .add(keybind("Toggle Shopping List", "Toggle the shopping list",
                         () -> config.shoppingListToggleKey, v -> config.shoppingListToggleKey = v,
                         DEFAULT_CONFIG.shoppingListToggleKey))
+                .add(toggle("WynnMarketSearch compatibility", "Temporarily suppresses WynnMarketSearch while the shopping list performs Trade Market row searches",
+                        () -> config.shoppingListWynnMarketSearchCompatibility, v -> config.shoppingListWynnMarketSearchCompatibility = v))
             .sub("Profession Overlay")
                 .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
                         () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))
@@ -518,13 +554,24 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 () -> config.professionOverlayExactXp, v -> config.professionOverlayExactXp = v),
                         () -> config.professionOverlayEnabled))
             .sub("Tooltips")
-                .add(toggle("Item Weights", "Show Wynnpool weights for mythic items",
+                .add(toggle("Item Weights", "Show weight scale for mythic items",
                         () -> config.showWeight, v -> {
                             config.showWeight = v;
                             if(!v) config.showScales = true;
                         }))
                 .add(visibleWhen(toggle("Stat Scales", "Show weights for each stat",
                         () -> config.showScales, v -> config.showScales = v),
+                        () -> config.showWeight))
+                .add(visibleWhen(dropdown("Scale source", "Select the preferred mythic scale provider",
+                                WynnExtrasConfig.MythicScaleSource.class,
+                                () -> config.mythicScaleSource,
+                                WeightDisplay::setConfiguredScaleSource),
+                        () -> config.showWeight))
+                .add(visibleWhen(toggle("Lock scale source", "Disable switching the scale provider and hide the lines in the tooltip.",
+                                () -> config.lockMythicScaleSource, v -> {
+                                    config.lockMythicScaleSource = v;
+                                    WeightDisplay.clearCycleInput();
+                                }),
                         () -> config.showWeight)).endSub()
             .sub("Trade Market")
                 .add(toggle("Scale background", "Use mythic scale as item background",
@@ -550,8 +597,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
                 .add(text("The price summary is movable", "To change its position just drag it where you want"))
             .endSub()
-            .add(toggle("Skill point helper (experimental)", "Show you your armor in the compass menu and a button to automatically assign skill points",
+            .add(toggle("Skill point helper", "Show you your armor in the compass menu and a button to automatically assign skill points",
                     () -> config.skillpointHelper, v -> config.skillpointHelper = v))
+            .add(toggle("Powder combine helper", "Show quick combine buttons in the powder master menu",
+                    () -> config.powderCombineHelper, v -> config.powderCombineHelper = v))
             .add(toggle("Show Mount Helper", "Renders the needed materials to max out a mounts stats in the feeder",
                     () -> config.showMountHelper, v -> config.showMountHelper = v));
 
@@ -562,9 +611,21 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
                 .add(sliderF("Duration (ms)", "How long notification shows",
                         500, 10000, 100, () -> (float) config.textDurationInMs, v -> config.textDurationInMs = v.intValue()))
-                .add(sliderF("Fade in duration (ms)", "How long should the text fade in",
+                .add(dropdown("Entrance effect", "How the notification enters",
+                        WynnExtrasConfig.NotifierAnimation.class, () -> config.notifierAnimation, v -> config.notifierAnimation = v))
+                .add(visibleWhen(dropdown("Entrance direction", "Direction of the entrance animation",
+                                WynnExtrasConfig.NotifierAnimationDirection.class,
+                                () -> config.notifierEntranceDirection, v -> config.notifierEntranceDirection = v),
+                        () -> config.notifierAnimation != null && config.notifierAnimation.isDirectional()))
+                .add(sliderF("Entrance duration (ms)", "How long the entrance animation takes",
                         0, 5000, 50, () -> (float) config.notifierFadeInMs, v -> config.notifierFadeInMs = v.intValue()))
-                .add(sliderF("Fade out duration (ms)", "How long should the text fade out",
+                .add(dropdown("Exit effect", "How the notification exits",
+                        WynnExtrasConfig.NotifierExitAnimation.class, () -> config.notifierExitAnimation, v -> config.notifierExitAnimation = v))
+                .add(visibleWhen(dropdown("Exit direction", "Direction of the exit animation",
+                                WynnExtrasConfig.NotifierAnimationDirection.class,
+                                () -> config.notifierExitDirection, v -> config.notifierExitDirection = v),
+                        () -> config.notifierExitAnimation != null && config.notifierExitAnimation.isDirectional()))
+                .add(sliderF("Exit duration (ms)", "How long the exit animation takes",
                         0, 5000, 50, () -> (float) config.notifierFadeOutMs, v -> config.notifierFadeOutMs = v.intValue()))
                 .add(dropdown("Text Color", "Notification color",
                         WynnExtrasConfig.TextColor.class, () -> config.textColor, v -> config.textColor = v))
@@ -575,7 +636,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(slider("Pitch", "Sound pitch",
                         0, 200, () -> (int)(config.soundPitch), v -> config.soundPitch = v))
                 .add(button("Sound Test", "Click the button to test the sound",
-                        v -> McUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test")).endSub()
+                        v -> MinecraftUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test")).endSub()
             .sub("Premade Notifications")
                 .add(toggle("Lost Eye", "Lost Eye in TNA light room",
                         () -> config.lostEye, v -> config.lostEye = v))
@@ -604,8 +665,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Colossal Core spawned", "Show 'CORE SPAWNED' when a Colossal Core spawns in TCC",
                         () -> config.colossalCoreSpawned, v -> config.colossalCoreSpawned = v)).endSub()
             .sub("Media Preview (Experimental)")
-                .add(text("Warning", "We have restricted media downloads to only download from trusted sites (Discord, Imgur and Tenor). We have implemented these and other measures to minimize potential vulnerabilities, but they can never be completely ruled out. Use at your own risk."))
-                .add(toggle("Chat Media Preview", "Preview trusted Discord CDN, Imgur, and Tenor PNG, JPEG, and GIF links",
+                .add(text("Warning", "Media previews can download images from any public HTTPS site. Download size, image dimensions, redirects and file contents are validated, but vulnerabilities can never be completely ruled out. Use at your own risk."))
+                .add(toggle("Chat Media Preview", "Preview PNG, JPEG and GIF links, including supported WebP and AVIF services",
                         () -> config.chatMediaPreviewEnabled, v -> config.chatMediaPreviewEnabled = v))
                 .add(visibleWhen(dropdown("Media Preview Loading", "When media previews are downloaded",
                                 WynnExtrasConfig.ChatMediaPreviewLoadPolicy.class,
@@ -613,11 +674,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 v -> config.chatMediaPreviewLoadPolicy = v),
                         () -> config.chatMediaPreviewEnabled))
                 .add(visibleWhen(dropdown("Hover-preview Position", "Where media previews appear while hovering links",
-                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
+                                WynnExtrasConfig.ChatMediaPreviewHoverPosition.class,
                                 () -> config.chatMediaPreviewHoverPosition,
                                 v -> config.chatMediaPreviewHoverPosition = v),
                         () -> config.chatMediaPreviewEnabled))
-                .add(visibleWhen(toggle("Auto-show Media Preview", "Automatically download trusted media when its link appears in chat. Use at your own risk.",
+                .add(visibleWhen(toggle("Auto-show Media Preview", "Automatically download supported media when its link appears in chat. Use at your own risk.",
                                 () -> config.chatMediaPreviewAutoDisplay, v -> config.chatMediaPreviewAutoDisplay = v),
                         () -> config.chatMediaPreviewEnabled))
                 .add(visibleWhen(dropdown("Auto-preview Position", "Where automatic media previews appear",
@@ -681,7 +742,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     SpellProfiles.getProfileNames(), () -> config.spellProfile, v -> config.spellProfile = v));
 
         // ===== MISC =====
-        category("Misc", 0xFF0872bc)
+        category("Misc", 0xFF3664AD)
             .sub("Auto Actions")
                 .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
@@ -690,9 +751,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("Auto Skip Cutscenes", "Automatically skip cutscenes that show 'Swap Hands to skip'",
                         () -> config.autoSkipCutscenesEnabled, v -> config.autoSkipCutscenesEnabled = v))
             .sub("Achievements and badges")
-                .add(toggle("Upload Achievements", "Upload your achievements to WynnExtras",
-                        () -> config.uploadAchievements, v -> config.uploadAchievements = v))
-                .add(text("Achievement upload notice", "If the toggle above is enabled, your achievements will be uploaded, the server currently does not have a use case for them but we will add some in the future. One example being that we want to show a users achievements in the profile viewer"))
                 .add(toggle("Achievement unlock messages", "Show chat messages when you unlock WynnExtras achievements",
                         () -> config.showAchievementUnlockMessages, v -> config.showAchievementUnlockMessages = v))
                 .add(toggle("WynnExtras Player Badges", "Display a badge for other players who also use WynnExtras!",
@@ -703,13 +761,13 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Quick Repair")
                 .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
                         () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
-                .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
-                                () -> config.quickRepairKey, v -> config.quickRepairKey = v,
-                                DEFAULT_CONFIG.quickRepairKey),
-                        () -> config.quickRepairEnabled))
                 .add(visibleWhen(slider("Durability Threshold", "Only repair items at or below this durability percentage",
                                 0, 100, () -> config.quickRepairDurabilityThreshold,
                                 v -> config.quickRepairDurabilityThreshold = v),
+                        () -> config.quickRepairEnabled))
+                .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
+                                () -> config.quickRepairKey, v -> config.quickRepairKey = v,
+                                DEFAULT_CONFIG.quickRepairKey),
                         () -> config.quickRepairEnabled))
             .endSub()
             .sub("Dark Mode Toggles")
@@ -717,38 +775,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
                 .add(toggle("Profile Viewer", "Dark mode for the Profile viewer",
                         () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
-            .sub("Waypoint edit mode keybinds")
-                .add(keybind("Free move toggle", "Toggle the free move mode in the waypoint edit mode",
-                        () -> config.waypointEditFreeMoveToggleKey, v -> config.waypointEditFreeMoveToggleKey = v,
-                        DEFAULT_CONFIG.waypointEditFreeMoveToggleKey))
-                .add(keybind("Add waypoint", "Add a waypoint at the preview position in waypoint edit mode",
-                        () -> config.waypointEditAddKey, v -> config.waypointEditAddKey = v,
-                        DEFAULT_CONFIG.waypointEditAddKey))
-                .add(keybind("Remove waypoint", "Remove waypoints at the preview position in the active package",
-                        () -> config.waypointEditRemoveKey, v -> config.waypointEditRemoveKey = v,
-                        DEFAULT_CONFIG.waypointEditRemoveKey))
-                .add(keybind("Edit waypoint", "Edit waypoints at the preview position in waypoint edit mode",
-                        () -> config.waypointEditExistingKey, v -> config.waypointEditExistingKey = v,
-                        DEFAULT_CONFIG.waypointEditExistingKey))
-                .add(keybind("Move forward", "Move the waypoint preview forward",
-                        () -> config.waypointEditForwardKey, v -> config.waypointEditForwardKey = v,
-                        DEFAULT_CONFIG.waypointEditForwardKey))
-                .add(keybind("Move left", "Move the waypoint preview left",
-                        () -> config.waypointEditLeftKey, v -> config.waypointEditLeftKey = v,
-                        DEFAULT_CONFIG.waypointEditLeftKey))
-                .add(keybind("Move backwards", "Move the waypoint preview backward",
-                        () -> config.waypointEditBackwardKey, v -> config.waypointEditBackwardKey = v,
-                        DEFAULT_CONFIG.waypointEditBackwardKey))
-                .add(keybind("Move right", "Move the waypoint preview right",
-                        () -> config.waypointEditRightKey, v -> config.waypointEditRightKey = v,
-                        DEFAULT_CONFIG.waypointEditRightKey))
-                .add(keybind("Move up", "Move the waypoint preview up",
-                        () -> config.waypointEditUpKey, v -> config.waypointEditUpKey = v,
-                        DEFAULT_CONFIG.waypointEditUpKey))
-                .add(keybind("Move down", "Move the waypoint preview down",
-                        () -> config.waypointEditDownKey, v -> config.waypointEditDownKey = v,
-                        DEFAULT_CONFIG.waypointEditDownKey))
-            .endSub()
+            .sub("Waypoints")
+                .add(slider("Max range", "Waypoints and their text are hidden beyond this distance",
+                        1, 1000, () -> config.waypointMaxRange, v -> config.waypointMaxRange = v))
             .sub("Tetris")
                 .add(slider("DAS", "Delayed Auto Shift (ms) — delay before repeated movement begins",
                         0, 300, () -> config.tetrisDAS, v -> config.tetrisDAS = v))
@@ -765,60 +794,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(slider("20G Level", "Level where instant gravity starts",
                                 1, 100, () -> config.tetris20GLevel, v -> config.tetris20GLevel = v),
                         () -> config.tetris20GEnabled))
-                .add(keybind("Move right", "Move the active piece right",
-                        () -> config.tetrisMoveRightKey, v -> config.tetrisMoveRightKey = v,
-                        DEFAULT_CONFIG.tetrisMoveRightKey))
-                .add(keybind("Move right alt", "Alternative key to move the active piece right",
-                        () -> config.tetrisMoveRightAltKey, v -> config.tetrisMoveRightAltKey = v,
-                        DEFAULT_CONFIG.tetrisMoveRightAltKey))
-                .add(keybind("Move left", "Move the active piece left",
-                        () -> config.tetrisMoveLeftKey, v -> config.tetrisMoveLeftKey = v,
-                        DEFAULT_CONFIG.tetrisMoveLeftKey))
-                .add(keybind("Move left alt", "Alternative key to move the active piece left",
-                        () -> config.tetrisMoveLeftAltKey, v -> config.tetrisMoveLeftAltKey = v,
-                        DEFAULT_CONFIG.tetrisMoveLeftAltKey))
-                .add(keybind("Soft drop", "Move the active piece down faster",
-                        () -> config.tetrisSoftDropKey, v -> config.tetrisSoftDropKey = v,
-                        DEFAULT_CONFIG.tetrisSoftDropKey))
-                .add(keybind("Soft drop alt", "Alternative key to move the active piece down faster",
-                        () -> config.tetrisSoftDropAltKey, v -> config.tetrisSoftDropAltKey = v,
-                        DEFAULT_CONFIG.tetrisSoftDropAltKey))
-                .add(keybind("Rotate clockwise", "Rotate the active piece clockwise",
-                        () -> config.tetrisRotateClockwiseKey, v -> config.tetrisRotateClockwiseKey = v,
-                        DEFAULT_CONFIG.tetrisRotateClockwiseKey))
-                .add(keybind("Rotate clockwise alt", "Alternative key to rotate the active piece clockwise",
-                        () -> config.tetrisRotateClockwiseAltKey, v -> config.tetrisRotateClockwiseAltKey = v,
-                        DEFAULT_CONFIG.tetrisRotateClockwiseAltKey))
-                .add(keybind("Rotate counterclockwise", "Rotate the active piece counterclockwise",
-                        () -> config.tetrisRotateCounterClockwiseKey, v -> config.tetrisRotateCounterClockwiseKey = v,
-                        DEFAULT_CONFIG.tetrisRotateCounterClockwiseKey))
-                .add(keybind("Rotate counterclockwise alt", "Alternative key to rotate the active piece counterclockwise",
-                        () -> config.tetrisRotateCounterClockwiseAltKey, v -> config.tetrisRotateCounterClockwiseAltKey = v,
-                        DEFAULT_CONFIG.tetrisRotateCounterClockwiseAltKey))
-                .add(keybind("Hard drop", "Instantly drop and lock the active piece",
-                        () -> config.tetrisHardDropKey, v -> config.tetrisHardDropKey = v,
-                        DEFAULT_CONFIG.tetrisHardDropKey))
-                .add(keybind("Hold", "Hold or swap the active piece",
-                        () -> config.tetrisHoldKey, v -> config.tetrisHoldKey = v,
-                        DEFAULT_CONFIG.tetrisHoldKey))
-                .add(keybind("Hold alt", "Alternative key to hold or swap the active piece",
-                        () -> config.tetrisHoldAltKey, v -> config.tetrisHoldAltKey = v,
-                        DEFAULT_CONFIG.tetrisHoldAltKey))
-                .add(keybind("Start", "Start a game from the game-over screen",
-                        () -> config.tetrisStartKey, v -> config.tetrisStartKey = v,
-                        DEFAULT_CONFIG.tetrisStartKey))
-                .add(keybind("Restart", "Restart the current game",
-                        () -> config.tetrisRestartKey, v -> config.tetrisRestartKey = v,
-                        DEFAULT_CONFIG.tetrisRestartKey))
-                .add(keybind("Toggle mode", "Switch between classic and 40 lines on the game-over screen",
-                        () -> config.tetrisToggleModeKey, v -> config.tetrisToggleModeKey = v,
-                        DEFAULT_CONFIG.tetrisToggleModeKey))
-                .add(keybind("Quit", "End the current game",
-                        () -> config.tetrisQuitKey, v -> config.tetrisQuitKey = v,
-                        DEFAULT_CONFIG.tetrisQuitKey))
-            .sub("Crowd sourcing")
-                .add(toggle("Gambits", "Help gather the current gambits so others can see them with /we gambits",
-                        () -> config.crowdSourceGambits, v -> config.crowdSourceGambits = v))
+            .add(toggle("Mount color backgrounds", "Use the mount's primary color as its item background",
+                    () -> config.mountPrimaryColorBackground, v -> config.mountPrimaryColorBackground = v))
             .add(toggle("Show Own Nametag", "Render your nametag above your head",
                     () -> config.showOwnNametag, v -> config.showOwnNametag = v))
             .add(toggle("Custom GUI Scale", "Use different scale inside of inventories",
@@ -832,164 +809,41 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v))
             .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
                     () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
+            .add(toggle("Fun item identifier", "Make rolling items more fun",
+                    () -> config.identifierCaseOpening, v -> config.identifierCaseOpening = v))
             .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
                     () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
             .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
                     () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
             .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
-                    () -> config.removeChroma, v -> config.removeChroma = v))
-            .sub("Debug")
-                .add(keybind("Item Components Key", "Show the hovered container item's components in a debug window",
-                        () -> config.debugItemComponentsKey, v -> config.debugItemComponentsKey = v,
-                        DEFAULT_CONFIG.debugItemComponentsKey));
+                    () -> config.removeChroma, v -> config.removeChroma = v));
 
-        // ===== NEW =====
-        category("New", 0xFF00bad5)
-        .excludeFromSearch()
-        .add(text("", "All features added in this update. Toggle any of them on or off."))
-            .sub("TNA Tree Room")
-                .add(toggle("Enable Tree Map", "Enable a minimap that helps with TNA's tree room",
-                        () -> config.tnaTreeMap, v -> config.tnaTreeMap = v))
-                .add(visibleWhen(toggle("Show Tree Map only inside of tree", "Only show the Tree Map while you are the person inside of the tree",
-                                () -> config.showTreeMapOnlyWhileInsideOfTree, v -> config.showTreeMapOnlyWhileInsideOfTree = v),
-                        () -> config.tnaTreeMap))
-                .add(visibleWhen(toggle("Show paths on Tree Map", "Show the optimal path to the soul while inside the tree",
-                                () -> config.showPathsOnTreeMap, v -> config.showPathsOnTreeMap = v),
-                        () -> config.tnaTreeMap))
-                .add(visibleWhen(toggle("Show Map everywhere", "Enable this if you want to edit the position without going into TNA",
-                                () -> config.showTreeMapEverywhere, v -> config.showTreeMapEverywhere = v),
-                        () -> config.tnaTreeMap))
-                .add(visibleWhen(text("The Map is movable", "To change its position open your inventory and drag it where you want"), () -> config.tnaTreeMap))
-                .add(toggle("Draw Path", "Draw a path in the 3d world to the next door",
-                        () -> config.drawPathInTree, v -> config.drawPathInTree = v))
-                .add(text("Path notice", "The 3d path feature is experimental, the path might be different then the path shown on the minimap in some cases. This will be improved in the future."))
-            .endSub()
-            .sub("Shaman Totem Timer")
-                .add(toggle("Totem Timer", "Show totem countdown timer on HUD",
-                        () -> config.totemTimerEnabled, v -> config.totemTimerEnabled = v))
-                .add(visibleWhen(toggle("Own Totems Only", "Only show timers for your own totems",
-                                () -> config.totemTimerOwnOnly, v -> config.totemTimerOwnOnly = v),
-                        () -> config.totemTimerEnabled))
-                .add(visibleWhen(toggle("Minimalistic Timer", "Show only the time, without the totem label",
-                                () -> config.totemTimerTimeOnly, v -> config.totemTimerTimeOnly = v),
-                        () -> config.totemTimerEnabled && config.totemTimerOwnOnly))
-                .add(visibleWhen(toggle("Toxoplasmosis", "Show the toxoplasmosis value in the totem timer",
-                                () -> config.totemTimerShowToxoplasmosis, v -> config.totemTimerShowToxoplasmosis = v),
-                        () -> config.totemTimerEnabled))
-                .add(visibleWhen(toggle("Warning Text", "Show RECAST TOTEM! on screen when low (movable in Edit Gui)",
-                                () -> config.totemTimerWarningText, v -> config.totemTimerWarningText = v),
-                        () -> config.totemTimerEnabled))
-                .add(visibleWhen(dropdown("Warning Text Color", "Color of the totem timer warning text",
-                                WynnExtrasConfig.TextColor.class, () -> config.totemTimerWarningTextColor, v -> config.totemTimerWarningTextColor = v),
-                        () -> config.totemTimerEnabled && config.totemTimerWarningText))
-                .add(visibleWhen(toggle("Warning Sound", "Play pling sound when totem is low",
-                                () -> config.totemTimerWarningSound, v -> config.totemTimerWarningSound = v),
-                        () -> config.totemTimerEnabled))
-                .add(visibleWhen(slider("Warning Volume", "The volume of the totem warning",
-                                0, 200, () -> (int)(config.totemTimerWarningSoundVolume), v -> config.totemTimerWarningSoundVolume = v),
-                        () -> config.totemTimerEnabled && config.totemTimerWarningSound))
-                .add(visibleWhen(slider("Warning Threshold", "Seconds remaining to trigger warning",
-                                1, 6, () -> config.totemTimerWarningThreshold, v -> config.totemTimerWarningThreshold = v),
-                        () -> config.totemTimerEnabled && (config.totemTimerWarningSound || config.totemTimerWarningText)))
-                .add(visibleWhen(toggle("Estimate Out-of-Range", "Continue countdown when totem leaves render distance",
-                                () -> config.totemTimerEstimate, v -> config.totemTimerEstimate = v),
-                        () -> config.totemTimerEnabled))
-                .add(visibleWhen(toggle("Solid Color", "Use the color set in /we gui instead of the time-based green→red gradient",
-                                () -> config.totemTimerSolidColor, v -> config.totemTimerSolidColor = v),
-                        () -> config.totemTimerEnabled))
-            .endSub()
-            .sub("Attack Timer")
-                .add(toggle("Attack Timer", "Show upcoming attack times from scoreboard",
-                        () -> config.attackTimerMenuEnabled, v -> config.attackTimerMenuEnabled = v))
-                .add(visibleWhen(toggle("Auto-broadcast Defense", "After opening Attacking menu and war starts, auto-send '/g X defense is Y'",
-                                () -> config.attackTimerAutoBroadcast, v -> config.attackTimerAutoBroadcast = v),
-                        () -> config.attackTimerMenuEnabled))
-                .add(visibleWhen(color("Normal Color", "Default attack timer text color",
-                                () -> config.attackTimerNormalColor, v -> config.attackTimerNormalColor = v,
-                                DEFAULT_CONFIG.attackTimerNormalColor, DEFAULT_CONFIG.attackTimerNormalColor),
-                        () -> config.attackTimerMenuEnabled))
-                .add(visibleWhen(color("Current Territory Color", "Attack timer text color while standing in that territory",
-                                () -> config.attackTimerCurrentTerritoryColor, v -> config.attackTimerCurrentTerritoryColor = v,
-                                DEFAULT_CONFIG.attackTimerCurrentTerritoryColor, DEFAULT_CONFIG.attackTimerCurrentTerritoryColor),
-                        () -> config.attackTimerMenuEnabled))
-                .add(visibleWhen(color("Very Low Defense Color", "Defense color for Very Low territories",
-                                () -> config.attackTimerVeryLowDefenseColor, v -> config.attackTimerVeryLowDefenseColor = v,
-                                DEFAULT_CONFIG.attackTimerVeryLowDefenseColor, DEFAULT_CONFIG.attackTimerVeryLowDefenseColor),
-                        () -> config.attackTimerMenuEnabled))
-                .add(visibleWhen(color("Low Defense Color", "Defense color for Low territories",
-                                () -> config.attackTimerLowDefenseColor, v -> config.attackTimerLowDefenseColor = v,
-                                DEFAULT_CONFIG.attackTimerLowDefenseColor, DEFAULT_CONFIG.attackTimerLowDefenseColor),
-                        () -> config.attackTimerMenuEnabled))
-                .add(visibleWhen(color("Medium Defense Color", "Defense color for Medium territories",
-                                () -> config.attackTimerMediumDefenseColor, v -> config.attackTimerMediumDefenseColor = v,
-                                DEFAULT_CONFIG.attackTimerMediumDefenseColor, DEFAULT_CONFIG.attackTimerMediumDefenseColor),
-                        () -> config.attackTimerMenuEnabled))
-                .add(visibleWhen(color("High Defense Color", "Defense color for High territories",
-                                () -> config.attackTimerHighDefenseColor, v -> config.attackTimerHighDefenseColor = v,
-                                DEFAULT_CONFIG.attackTimerHighDefenseColor, DEFAULT_CONFIG.attackTimerHighDefenseColor),
-                        () -> config.attackTimerMenuEnabled))
-                .add(visibleWhen(color("Very High Defense Color", "Defense color for Very High territories",
-                                () -> config.attackTimerVeryHighDefenseColor, v -> config.attackTimerVeryHighDefenseColor = v,
-                                DEFAULT_CONFIG.attackTimerVeryHighDefenseColor, DEFAULT_CONFIG.attackTimerVeryHighDefenseColor),
-                        () -> config.attackTimerMenuEnabled))
-            .endSub()
-            .sub("Trade Market")
-                .add(toggle("Scale background", "Use mythic scale as item background",
-                        () -> config.scaleBackgroundEnabled, v -> config.scaleBackgroundEnabled = v))
-                .add(visibleWhen(dropdown("Scale background shape", "Shape used for the scale background",
-                                ScaleBackgroundShape.class,
-                                () -> config.scaleBackgroundShape,
-                                v -> config.scaleBackgroundShape = v),
-                        () -> config.scaleBackgroundEnabled))
-                .add(visibleWhen(slider("Scale background opacity", "Opacity of the scale background in percent",
-                                0, 100,
-                                () -> config.scaleBackgroundOpacity,
-                                v -> config.scaleBackgroundOpacity = v),
-                        () -> config.scaleBackgroundEnabled))
-                .add(toggle("Hide scale background button", "Hides the quick toggle for the scale background setting",
-                        () -> config.hideScaleBackgroundButton, v -> config.hideScaleBackgroundButton = v))
-                .add(toggle("Hide comparing info text", "Shows a text that informs you that you can compare items with F1",
-                        () -> config.hideTMInfoText, v -> config.hideTMInfoText = v))
-                .add(text("The Comparison panels are movable", "To change their position just drag it where you want"))
-                .add(toggle("Trade market price summary", "Trade market overlay that shows you how much money you can claim",
-                        () -> config.tradeMarketOverlay, v -> config.tradeMarketOverlay = v))
-                .add(toggle("Price overlay background", "Show a dark background for the price overlay",
-                        () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
-                .add(text("The price summary is movable", "To change its position just drag it where you want"))
-            .endSub()
-            .sub("Media Preview (Experimental)")
-                .add(text("Warning", "We have restricted media downloads to only download from trusted sites (Discord, Imgur and Tenor). We have implemented these and other measures to minimize potential vulnerabilities, but they can never be completely ruled out. Use at your own risk."))
-                .add(toggle("Chat Media Preview", "Preview trusted Discord CDN, Imgur, and Tenor PNG, JPEG, and GIF links",
-                        () -> config.chatMediaPreviewEnabled, v -> config.chatMediaPreviewEnabled = v))
-                .add(visibleWhen(dropdown("Media Preview Loading", "When media previews are downloaded",
-                                WynnExtrasConfig.ChatMediaPreviewLoadPolicy.class,
-                                () -> config.chatMediaPreviewLoadPolicy,
-                                v -> config.chatMediaPreviewLoadPolicy = v),
-                        () -> config.chatMediaPreviewEnabled))
-                .add(visibleWhen(dropdown("Hover-preview Position", "Where media previews appear while hovering links",
-                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
-                                () -> config.chatMediaPreviewHoverPosition,
-                                v -> config.chatMediaPreviewHoverPosition = v),
-                        () -> config.chatMediaPreviewEnabled))
-                .add(visibleWhen(toggle("Auto-show Media Preview", "Automatically download trusted media when its link appears in chat. Use at your own risk.",
-                                () -> config.chatMediaPreviewAutoDisplay, v -> config.chatMediaPreviewAutoDisplay = v),
-                        () -> config.chatMediaPreviewEnabled))
-                .add(visibleWhen(dropdown("Auto-preview Position", "Where automatic media previews appear",
-                                WynnExtrasConfig.ChatMediaPreviewPosition.class,
-                                () -> config.chatMediaPreviewPosition,
-                                v -> config.chatMediaPreviewPosition = v),
-                        () -> config.chatMediaPreviewEnabled && config.chatMediaPreviewAutoDisplay))
-                .add(visibleWhen(slider("Preview Max Screen %", "Maximum percentage of screen width and height used by previews",
-                                10, 50, () -> config.chatMediaPreviewMaxScreenPercent, v -> config.chatMediaPreviewMaxScreenPercent = v),
-                        () -> config.chatMediaPreviewEnabled))
-                .add(visibleWhen(slider("Preview Max MB", "Maximum media download size",
-                                1, 25, () -> config.chatMediaPreviewMaxDownloadMb, v -> config.chatMediaPreviewMaxDownloadMb = v),
-                        () -> config.chatMediaPreviewEnabled))
-                .add(visibleWhen(slider("Preview Max GIF Frames", "Maximum decoded GIF frames",
-                                1, 240, () -> config.chatMediaPreviewMaxGifFrames, v -> config.chatMediaPreviewMaxGifFrames = v),
-                        () -> config.chatMediaPreviewEnabled))
-            .endSub()
-            .sub("Waypoint edit mode keybinds")
+        // ===== KEYBINDS =====
+        category("Keybinds", 0xFF0496C9)
+            .sub("Wars / Territory")
+                .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
+                        () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
+                .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
+                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v,
+                                DEFAULT_CONFIG.territoryMenuKey),
+                        () -> config.territoryMenuKeyEnabled))
+            .sub("Shopping List")
+                .add(keybind("Toggle Shopping List", "Toggle the shopping list",
+                        () -> config.shoppingListToggleKey, v -> config.shoppingListToggleKey = v,
+                        DEFAULT_CONFIG.shoppingListToggleKey))
+            .sub("Crafting Helper")
+                .add(keybind("Load from Clipboard", "Load a WynnBuilder craft from the clipboard while the crafting helper is open",
+                        () -> config.craftingLoadClipboardKey, v -> config.craftingLoadClipboardKey = v,
+                        DEFAULT_CONFIG.craftingLoadClipboardKey))
+                .add(keybind("Reuse Last", "Reuse the previous craft while the crafting helper is open",
+                        () -> config.craftingReuseLastKey, v -> config.craftingReuseLastKey = v,
+                        DEFAULT_CONFIG.craftingReuseLastKey))
+            .sub("Quick Repair")
+                .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
+                                () -> config.quickRepairKey, v -> config.quickRepairKey = v,
+                                DEFAULT_CONFIG.quickRepairKey),
+                        () -> config.quickRepairEnabled))
+            .sub("Waypoint edit mode")
                 .add(keybind("Free move toggle", "Toggle the free move mode in the waypoint edit mode",
                         () -> config.waypointEditFreeMoveToggleKey, v -> config.waypointEditFreeMoveToggleKey = v,
                         DEFAULT_CONFIG.waypointEditFreeMoveToggleKey))
@@ -1020,23 +874,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(keybind("Move down", "Move the waypoint preview down",
                         () -> config.waypointEditDownKey, v -> config.waypointEditDownKey = v,
                         DEFAULT_CONFIG.waypointEditDownKey))
-            .endSub()
             .sub("Tetris")
-                .add(slider("DAS", "Delayed Auto Shift (ms) — delay before repeated movement begins",
-                        0, 300, () -> config.tetrisDAS, v -> config.tetrisDAS = v))
-                .add(slider("ARR", "Auto Repeat Rate (ms) — speed of repeated moves, 0 = instant",
-                        0, 100, () -> config.tetrisARR, v -> config.tetrisARR = v))
-                .add(slider("SDF Delay", "Soft Drop delay (ms) before fast-fall kicks in",
-                        0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
-                .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
-                        0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
-                .add(toggle("Remove background blur", "Hide the background blur in the Tetris menu",
-                        () -> config.hideTetrisBackgroundBlur, v -> config.hideTetrisBackgroundBlur = v))
-                .add(toggle("20G after level", "Instant gravity after the selected level.",
-                        () -> config.tetris20GEnabled, v -> config.tetris20GEnabled = v))
-                .add(visibleWhen(slider("20G Level", "Level where instant gravity starts",
-                                1, 100, () -> config.tetris20GLevel, v -> config.tetris20GLevel = v),
-                        () -> config.tetris20GEnabled))
                 .add(keybind("Move right", "Move the active piece right",
                         () -> config.tetrisMoveRightKey, v -> config.tetrisMoveRightKey = v,
                         DEFAULT_CONFIG.tetrisMoveRightKey))
@@ -1088,33 +926,15 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(keybind("Quit", "End the current game",
                         () -> config.tetrisQuitKey, v -> config.tetrisQuitKey = v,
                         DEFAULT_CONFIG.tetrisQuitKey))
-            .endSub()
-            .sub("Achievements and badges")
-                .add(toggle("Upload Achievements", "Upload your achievements to WynnExtras",
-                        () -> config.uploadAchievements, v -> config.uploadAchievements = v))
-                .add(text("Achievement upload notice", "If the toggle above is enabled, your achievements will be uploaded, the server currently does not have a use case for them but we will add some in the future. One example being that we want to show a users achievements in the profile viewer"))
-                .add(toggle("Achievement unlock messages", "Show chat messages when you unlock WynnExtras achievements",
-                        () -> config.showAchievementUnlockMessages, v -> config.showAchievementUnlockMessages = v))
-                .add(toggle("WynnExtras Player Badges", "Display a badge for other players who also use WynnExtras!",
-                        () -> config.showWynnExtrasBadges, v -> config.showWynnExtrasBadges = v))
-                .add(button("Achievements & Badges", "Open achievements and select your badge icon and color", (x) -> {
-                    WEScreen.open(AchievementScreen::new);
-                }, "Open"))
-            .endSub()
-            .sub("Quick Repair")
-                .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
-                        () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
-                .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
-                                () -> config.quickRepairKey, v -> config.quickRepairKey = v,
-                                DEFAULT_CONFIG.quickRepairKey),
-                        () -> config.quickRepairEnabled))
-                .add(visibleWhen(slider("Durability Threshold", "Only repair items at or below this durability percentage",
-                                0, 100, () -> config.quickRepairDurabilityThreshold,
-                                v -> config.quickRepairDurabilityThreshold = v),
-                        () -> config.quickRepairEnabled))
-            .endSub()
-            .add(toggle("Bomb Rethrow Suggestion", "Show a clickable suggestion to rethrow a bomb when it expires",
-                    () -> config.bombRethrowSuggestion, v -> config.bombRethrowSuggestion = v));
+            .sub("Debug")
+                .add(keybind("Item Components Key", "Show the hovered container item's components in a debug window",
+                        () -> config.debugItemComponentsKey, v -> config.debugItemComponentsKey = v,
+                        DEFAULT_CONFIG.debugItemComponentsKey));
+
+        // ===== NEW =====
+        category("New", 0xFF00bad5)
+        .excludeFromSearch()
+        .add(text("", "All features added in this update. Toggle any of them on or off."));
     }
 
     // ==================== BUILDER HELPERS ====================
@@ -1708,7 +1528,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         activeDropdown = null;
                         dropdownScroll = 0;
                         updateMaxScroll();
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }
                 }
@@ -1727,8 +1547,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 saveCurrentScreenState();
                 WynnExtrasConfig.save();
                 WynnExtrasConfig.load();
+                applyPrivacyChanges();
                 client.setScreen(parent);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
             //======== Cancel =========
@@ -1736,7 +1557,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 saveCurrentScreenState();
                 WynnExtrasConfig.load();
                 client.setScreen(parent);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
             //======== Edit HUD Position =========
@@ -1744,7 +1565,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 WynnExtrasConfig.save();
                 WynnExtrasConfig.load();
                 client.setScreen(new HudEditScreen(this));
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
@@ -1757,7 +1578,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 if (mx >= clearX && mx < clearX + 20) {
                     searchQuery = "";
                     onSearchQueryChanged();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
             }
@@ -1780,7 +1601,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     selectedCategory = i;
                     scrollOffset = 0; scrollTarget = 0;
                     updateMaxScroll();
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     return true;
                 }
                 y += 28;
@@ -1793,12 +1614,12 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             if (my >= sidebarScrollbarThumbY && my < sidebarScrollbarThumbY + sidebarScrollbarThumbH) {
                 sidebarScrollbarDragging = true;
                 sidebarScrollbarDragOffset = my - sidebarScrollbarThumbY;
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             } else if (my >= sidebarScrollbarY && my < sidebarScrollbarY + sidebarScrollbarHeight) {
                 double clickPercent = (my - sidebarScrollbarY - sidebarScrollbarThumbH / 2.0) / (sidebarScrollbarHeight - sidebarScrollbarThumbH);
                 sidebarScrollTarget = MathHelper.clamp(clickPercent * sidebarMaxScroll, 0, sidebarMaxScroll);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
@@ -1808,12 +1629,12 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             if (my >= scrollbarThumbY && my < scrollbarThumbY + scrollbarThumbH) {
                 scrollbarDragging = true;
                 scrollbarDragOffset = my - scrollbarThumbY;
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             } else if (my >= scrollbarY && my < scrollbarY + scrollbarHeight) {
                 double clickPercent = (my - scrollbarY - scrollbarThumbH / 2.0) / (scrollbarHeight - scrollbarThumbH);
                 scrollTarget = MathHelper.clamp(clickPercent * maxScroll, 0, maxScroll);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
@@ -1847,7 +1668,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     scrollTarget = MathHelper.clamp(contentY + 5, 0, maxScroll);
                     scrollOffset = scrollTarget;
                 }
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
@@ -1868,7 +1689,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     if (my >= Math.max(listTop, y) && my < Math.min(listBot, y + SUBCATEGORY_HEADER_HEIGHT) && mx >= contentX && mx < contentX + contentW) {
                         sub.toggleExpanded();
                         updateMaxScroll();
-                        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         return true;
                     }
                     y += SUBCATEGORY_HEADER_HEIGHT + 5;
@@ -2175,6 +1996,17 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
     private void saveCurrentScreenState() {
         restoreExpandedSubsBeforeSearch();
         saveLastScreenState(selectedCategory, scrollTarget, categories);
+    }
+
+    private void applyPrivacyChanges() {
+        WynnExtrasConfig saved = WynnExtrasConfig.INSTANCE;
+        if (originalTelemetryMode != saved.telemetryMode
+                || originalDoNotPublishOwnBadge != saved.doNotPublishOwnBadge) {
+            BadgeService.syncWithServerSoon();
+        }
+        if (originalDoNotPublishOwnAspects != saved.doNotPublishOwnAspects) {
+            WynncraftApiHandler.syncAspectPublication(!saved.doNotPublishOwnAspects, !saved.doNotPublishOwnAspects);
+        }
     }
 
     private static void saveLastScreenState(int selectedCategory, double scrollTarget, List<Category> categories) {

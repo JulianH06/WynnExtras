@@ -5,6 +5,7 @@ import julianh06.wynnextras.utils.ShaderVertexConsumer;
 import net.minecraft.client.render.command.BatchingRenderCommandQueue;
 import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.model.BakedQuad;
+import net.minecraft.util.math.ColorHelper;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -42,7 +43,7 @@ public class BatchingRenderCommandQueueMixin {
     )
     private int we$tintModel(int color) {
         Integer s = EntityShader.activeShader;
-        return s != null ? s : color;
+        return s != null ? ColorHelper.mix(color, s) : color;
     }
 
     @ModifyArg(
@@ -55,7 +56,7 @@ public class BatchingRenderCommandQueueMixin {
     )
     private int we$tintModelPart(int color) {
         Integer s = EntityShader.activeShader;
-        return s != null ? s : color;
+        return s != null ? ColorHelper.mix(color, s) : color;
     }
 
     @ModifyArg(

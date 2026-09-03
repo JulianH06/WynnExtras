@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.badges;
 
-import com.wynntils.utils.colors.WynncraftShaderColor;
+import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.features.achievements.AchievementId;
 import julianh06.wynnextras.features.achievements.AchievementTracking;
 import julianh06.wynnextras.features.achievements.Achievements;
@@ -109,12 +109,12 @@ public final class BadgeCatalog {
             new BadgeColor("gray", 0xAAAAAA, "Gray", null, null),
             new BadgeColor("white", 0xFFFFFF, "White", null, null),
             new BadgeColor(ORIGINAL_COLOR_ID, 0xFFFFFF, null, "Original", null, null, true),
-            new BadgeColor("rainbow", WynncraftShaderColor.RAINBOW.color.asInt(), "Rainbow", AchievementId.CONTENT_COMPLETION, null),
+            new BadgeColor("rainbow", CustomColor.RAINBOW.asInt(), "Rainbow", AchievementId.CONTENT_COMPLETION, null),
             new BadgeColor("sunset", ShaderColorCatalog.SUNSET, "Sunset", AchievementId.ULTIMATE_COMPLETIONIST, null),
             new BadgeColor("ocean", ShaderColorCatalog.OCEAN_FADE, "Ocean", AchievementId.MAX_LEVEL, null),
-            new BadgeColor("shine", WynncraftShaderColor.SHINE.color.asInt(), "Shine", AchievementId.ASPECT_MAX_ALL, 6),
-            new BadgeColor("gradient", WynncraftShaderColor.GRADIENT.color.asInt(), "Gradient", AchievementId.PROF_CRAFT_132, 1),
-            new BadgeColor("crimson", WynncraftShaderColor.GRADIENT_2.color.asInt(), "Crimson", AchievementId.RAID_TWP, 4),
+            new BadgeColor("shine", CustomColor.SHINE.asInt(), "Shine", AchievementId.ASPECT_MAX_ALL, 6),
+            new BadgeColor("gradient", CustomColor.GRADIENT.asInt(), "Gradient", AchievementId.PROF_CRAFT_132, 1),
+            new BadgeColor("crimson", CustomColor.GRADIENT_2.asInt(), "Crimson", AchievementId.RAID_TWP, 4),
             new BadgeColor("forest", ShaderColorCatalog.FOREST, "Forest", AchievementId.RICH, null),
             new BadgeColor("cotton_candy", ShaderColorCatalog.COTTON_CANDY, "Cotton Candy", AchievementId.WAR_DEFENCE_LOW, null),
             new BadgeColor("ember", ShaderColorCatalog.EMBER, "Ember", AchievementId.WAR_DEFENCE_MEDIUM, null),

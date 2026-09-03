@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.waypoints;
 
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.features.waypoints.data.Waypoint;
 import julianh06.wynnextras.features.waypoints.data.WaypointData;
@@ -24,6 +25,9 @@ public class WaypointRenderer {
     public void onRenderWorld(RenderWorldEvent event) {
         WorldRenderUtils.INSTANCE_WAYPOINTS.buffer = new BufferBuilder(WorldRenderUtils.allocator, WorldRenderUtils.FILLED_BOX.getVertexFormatMode(), WorldRenderUtils.FILLED_BOX.getVertexFormat());
         boolean renderedAny = false;
+        WEVec playerPos = MinecraftClient.getInstance().player == null
+                ? null
+                : new WEVec(MinecraftClient.getInstance().player.getBlockPos().toBottomCenterPos());
 
         //Extraction phase
         for(WaypointPackage pkg : WaypointData.INSTANCE.packages) {
@@ -33,9 +37,10 @@ public class WaypointRenderer {
                 if(isOnBarrier(waypoint)) continue;
 
                 WEVec pos = new WEVec(waypoint.x + 0.5f, waypoint.y + 1.5f, waypoint.z + 0.5f);
-                if(MinecraftClient.getInstance().player != null && waypoint.shouldShowDistance()) {
-                    WEVec playerPos = new WEVec(MinecraftClient.getInstance().player.getBlockPos().toBottomCenterPos());
-                    WorldRenderUtils.drawText(event, pos, Text.of((int) pos.distanceTo(playerPos) + "m"), 0.75f, !waypoint.shouldSeeThrough());
+                double distance = playerPos == null ? 0 : pos.distanceTo(playerPos);
+                if(playerPos != null && distance > WynnExtrasConfig.INSTANCE.waypointMaxRange) continue;
+                if(playerPos != null && waypoint.shouldShowDistance()) {
+                    WorldRenderUtils.drawText(event, pos, Text.of((int) distance + "m"), 0.75f, !waypoint.shouldSeeThrough());
                 }
                 WEVec namePos = new WEVec(waypoint.x + 0.5f, waypoint.y + 2f, waypoint.z + 0.5f);
                 Color color = Color.cyan;

@@ -5,7 +5,7 @@ import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.features.badges.BadgeService;
 import julianh06.wynnextras.utils.UI.WEScreen;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.text.Text;
 
 @WEModule
@@ -35,7 +35,7 @@ public class AchievementManager {
             "reloads WynnExtras badge data from the server",
             context -> {
                 BadgeService.reloadBadgeInfoFromServer();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Reloading badge data from the server.")));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Reloading badge data from the server.")));
                 return 1;
             }
     );
@@ -45,7 +45,7 @@ public class AchievementManager {
             "checks whether new WynnExtras achievements are completed",
             context -> {
                 AchievementTracking.reloadAchievementsFromApi();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Checking achievements from the API.")));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Checking achievements from the API.")));
                 return 1;
             }
     );

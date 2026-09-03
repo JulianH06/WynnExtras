@@ -15,33 +15,21 @@ public class RaidMemberDetector {
     @SubscribeEvent
     public void onChat(ChatEvent event) {
         Text message = event.message;
-
         if (message == null || message.getString().isEmpty()) return;
 
         if (message.getString().contains("Party members")) {
             List<String> names = new ArrayList<>();
-
             message.visit((style, string) -> {
                 String cleaned = string.replaceAll("§[0-9a-fk-or]", "").trim();
-
                 if (cleaned.matches(".*[\\uE000-\\uF8FF].*") || cleaned.isEmpty()) return Optional.empty();
 
-                cleaned = cleaned.replace("Party members:", "").trim();
-
-                cleaned = cleaned.replace("and", "").trim();
-
-                String[] parts = cleaned.split(",");
-
-                for (String part : parts) {
+                cleaned = cleaned.replace("Party members:", "").replace("and", "").trim();
+                for (String part : cleaned.split(",")) {
                     part = part.trim();
-                    if (!part.isEmpty()) {
-                        names.add(part);
-                    }
+                    if (!part.isEmpty()) names.add(part);
                 }
-
                 return Optional.empty();
             }, Style.EMPTY);
-
             RaidListScreen.currentPlayers = names;
         }
     }

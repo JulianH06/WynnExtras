@@ -1,12 +1,7 @@
 package julianh06.wynnextras.features.achievements;
 
-import com.wynntils.models.emeralds.type.EmeraldUnits;
-import com.wynntils.models.raid.raids.RaidKind;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.Container;
-import com.wynntils.models.containers.containers.personal.AccountBankContainer;
-import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.features.raid.WERaidKind;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
@@ -22,6 +17,8 @@ import julianh06.wynnextras.features.profileviewer.data.Raids;
 import julianh06.wynnextras.features.qol.AttackTimer;
 import julianh06.wynnextras.utils.BossBarUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.hud.ClientBossBar;
 import net.minecraft.inventory.Inventory;
@@ -131,7 +128,7 @@ public class AchievementTracking {
         trackWarAchievements();
 
         // Once per launch, reconcile raid, war, class, content and profession achievements against the API.
-        if (!raidCountsSynced && McUtils.player() != null) {
+        if (!raidCountsSynced && MinecraftUtils.player() != null) {
             raidCountsSynced = true;
             nextWarApiSyncAt = System.currentTimeMillis() + WAR_API_REFRESH_INTERVAL_MS;
             syncRaidCountsFromApi();
@@ -140,7 +137,7 @@ public class AchievementTracking {
         }
 
         // Once the aspect catalogue has finished loading, evaluate the aspect achievements.
-        if (!aspectsSynced && McUtils.player() != null) {
+        if (!aspectsSynced && MinecraftUtils.player() != null) {
             trySyncAspectAchievements();
         }
     }
@@ -154,7 +151,7 @@ public class AchievementTracking {
         if (!(event instanceof RaidEndedEvent.Completed)) return;
         if (achievements == null || event.getRaid() == null) return;
 
-        RaidType type = RaidType.fromKind(event.getRaid().getRaidKind());
+        RaidType type = RaidType.fromKind(event.getRaid().raidKind());
         if (type == null) return;
 
         Integer current = achievements.getCount(type.achievementId);
@@ -172,10 +169,9 @@ public class AchievementTracking {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
 
-        Container container = Models.Container.getCurrentContainer();
-        if (!(container instanceof AccountBankContainer) && !(container instanceof CharacterBankContainer)) return;
+        if (!WynncraftMenuService.isCurrentAny(MenuType.ACCOUNT_BANK, MenuType.CHARACTER_BANK)) return;
 
-        ScreenHandler handler = McUtils.containerMenu();
+        ScreenHandler handler = MinecraftUtils.containerMenu();
         if (handler == null) return;
 
         Inventory playerInventory = client.player.getInventory();
@@ -183,7 +179,8 @@ public class AchievementTracking {
         for (Slot slot : handler.slots) {
             if (slot.inventory == playerInventory) continue;
             if (bankSlotCount == 45) break;
-            if (slot.getStack().getItem() != EmeraldUnits.LIQUID_EMERALD.getItemType() || slot.getStack().getCount() != 64) {
+            String name = slot.getStack().getName().getString().replaceAll("§[0-9a-fk-or]", "").trim();
+            if (!name.equalsIgnoreCase("Liquid Emerald") || slot.getStack().getCount() != 64) {
                 return;
             }
             bankSlotCount++;
@@ -258,7 +255,7 @@ public class AchievementTracking {
     }
 
     private void syncWarCountFromApiIfDue() {
-        if (McUtils.player() == null) return;
+        if (MinecraftUtils.player() == null) return;
         long now = System.currentTimeMillis();
         if (now < nextWarApiSyncAt) return;
 
@@ -282,7 +279,7 @@ public class AchievementTracking {
     }
 
     private void announce(String message) {
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(message)));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of(message)));
     }
 
     private void tickUnlockAnnouncements() {
@@ -334,7 +331,7 @@ public class AchievementTracking {
                 .append(Text.literal("[Hover here to view them]").setStyle(Style.EMPTY
                         .withColor(Formatting.YELLOW)
                         .withHoverEvent(new HoverEvent.ShowText(tooltip))));
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
     }
 
     /**
@@ -343,9 +340,9 @@ public class AchievementTracking {
      * response arrives on a background thread.
      */
     private void syncRaidCountsFromApi() {
-        if (achievements == null || McUtils.player() == null) return;
+        if (achievements == null || MinecraftUtils.player() == null) return;
 
-        String username = McUtils.player().getGameProfile().name();
+        String username = MinecraftUtils.player().getGameProfile().name();
         if (username == null || username.isEmpty()) return;
 
         WynncraftApiHandler.fetchPlayerData(username)
@@ -517,7 +514,7 @@ public class AchievementTracking {
      * Failed player-aspect requests are retried later instead of marking the launch as synced.
      */
     private boolean trySyncAspectAchievements() {
-        if (achievements == null || McUtils.player() == null) return false;
+        if (achievements == null || MinecraftUtils.player() == null) return false;
         if (syncingAspects) return false;
         if (System.currentTimeMillis() < nextAspectSyncAt) return false;
 
@@ -535,7 +532,7 @@ public class AchievementTracking {
                 .count();
         if (classCount < 5) return false;
 
-        String uuid = McUtils.player().getUuidAsString();
+        String uuid = MinecraftUtils.player().getUuidAsString();
         syncingAspects = true;
         WynncraftApiHandler.fetchPlayerAspectData(uuid)
                 .thenAccept(result -> MinecraftClient.getInstance().execute(() -> {
@@ -680,8 +677,7 @@ public class AchievementTracking {
 
     /**
      * The five raids tracked by completion achievements. Matched against the in-game raid via
-     * {@link RaidKind#getRaidName()}, which is identical to the key Wynncraft's API uses in the
-     * raid completion map.
+     * The display names are identical to the keys returned by Wynncraft's API.
      */
     private enum RaidType {
         TNA("raid.tna", "The Nameless Anomaly"),
@@ -709,9 +705,9 @@ public class AchievementTracking {
             return 0;
         }
 
-        static RaidType fromKind(RaidKind kind) {
+        static RaidType fromKind(WERaidKind kind) {
             if (kind == null) return null;
-            String raidName = kind.getRaidName();
+            String raidName = kind.displayName();
             for (RaidType type : values()) {
                 if (type.displayName.equals(raidName)) return type;
             }

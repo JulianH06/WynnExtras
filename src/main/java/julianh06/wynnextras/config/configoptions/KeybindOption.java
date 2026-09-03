@@ -1,6 +1,6 @@
 package julianh06.wynnextras.config.configoptions;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -79,12 +79,12 @@ public class KeybindOption extends ConfigOption {
             setter.accept(defaultKey);
             listening = false;
             WynnExtrasConfig.save();
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
         if (mx >= bx && mx < bx + 80 && my >= by && my < by + 24) {
             listening = !listening;
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
         if (listening) { listening = false; return true; }
@@ -97,13 +97,13 @@ public class KeybindOption extends ConfigOption {
             setter.accept(GLFW.GLFW_KEY_UNKNOWN);
             listening = false;
             WynnExtrasConfig.save();
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
         setter.accept(key);
         listening = false;
         WynnExtrasConfig.save();
-        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         return true;
     }
 }

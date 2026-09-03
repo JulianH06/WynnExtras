@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
@@ -11,7 +11,7 @@ public class GuildRaidBlockOverlay {
 
     public static void trigger() {
         shownUntil = System.currentTimeMillis() + DURATION_MS;
-        McUtils.playSoundUI(SoundEvents.ENTITY_VILLAGER_NO);
+        MinecraftUtils.playSoundUI(SoundEvents.ENTITY_VILLAGER_NO);
     }
 
     public static void render(DrawContext ctx) {
