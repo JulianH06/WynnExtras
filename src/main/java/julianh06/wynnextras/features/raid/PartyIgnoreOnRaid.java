@@ -18,6 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class PartyIgnoreOnRaid {
+    private static final int MAX_PARTY_REFRESH_ATTEMPTS = 3;
     private static final Set<String> autoIgnoredThisRaid = new LinkedHashSet<>();
     private static final Set<String> trackedIgnored = new LinkedHashSet<>();
 
@@ -33,14 +34,15 @@ public class PartyIgnoreOnRaid {
     public static void onRaidStarted() {
         if (!WynnExtrasConfig.INSTANCE.autoIgnorePartyInRaid) return;
         PartyState.requestRefresh();
-        TickScheduler.runAfterTicks(40, PartyIgnoreOnRaid::ignoreCurrentParty);
+        TickScheduler.runAfterTicks(40, () -> ignoreCurrentParty(MAX_PARTY_REFRESH_ATTEMPTS));
     }
 
-    private static void ignoreCurrentParty() {
+    private static void ignoreCurrentParty(int attemptsRemaining) {
         if (!WynnExtrasConfig.INSTANCE.autoIgnorePartyInRaid) return;
         if (PartyState.isStale()) {
+            if (attemptsRemaining <= 1) return;
             PartyState.requestRefresh();
-            TickScheduler.runAfterTicks(20, PartyIgnoreOnRaid::ignoreCurrentParty);
+            TickScheduler.runAfterTicks(20, () -> ignoreCurrentParty(attemptsRemaining - 1));
             return;
         }
         List<String> members = PartyState.members();

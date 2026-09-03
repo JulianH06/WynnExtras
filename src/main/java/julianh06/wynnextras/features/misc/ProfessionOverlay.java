@@ -453,22 +453,7 @@ public class ProfessionOverlay {
             }
         } else {
             double pct = xp.max() > 0 ? (double) xp.current() / xp.max() * 100.0 : 0;
-            line3xp = formatXp(xp.current()) + "/" + formatXp(xp.max()) + " (" + String.format("%.1f", pct) + "%)";
-            // Add actions to next level + time to level
-            float remaining = xp.max() - xp.current();
-            List<Float> historyForLevel = xpHistory.get(key);
-            if (historyForLevel != null && !historyForLevel.isEmpty()) {
-                float bestAvg = getAverage(historyForLevel, Math.min(100, historyForLevel.size()));
-                if (bestAvg > 0) {
-                    int actionsNeeded = (int) Math.ceil(remaining / bestAvg);
-                    line3xp += " | ~" + actionsNeeded + " to lvl";
-                }
-            }
-            Double xph = cachedXpPerHour.get(key);
-            if (xph != null && xph > 0) {
-                double hoursLeft = remaining / xph;
-                line3xp += " | " + formatTime(hoursLeft);
-            }
+            line3xp = "Progress: " + String.format("%.1f", pct) + "%";
         }
 
         // Line 4: Averages
