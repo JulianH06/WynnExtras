@@ -2628,6 +2628,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         Slot liveSlot = liveHandler.slots.get(slotIndex);
         if (!canDragSplitIntoSlot(liveSlot)) return;
+        if (!dragSplittingSlots.contains(slotIndex) && heldItem.getCount() <= dragSplittingSlots.size()) return;
         dragSplittingSlots.add(slotIndex);
     }
 
@@ -3039,7 +3040,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
         Text stackName = stack.getName();
         if (stack.getCustomName() != null && stack.getCustomName().toString().contains("Key")) {
-            String clean = WynnStringUtils.normalizeBadString(stackName.getString());
+            String clean = WynnStringUtils.normalizeBadString(stackName.getString().replace("ÀÀÀ", " "));
             stackName = Text.of(clean);
         }
 

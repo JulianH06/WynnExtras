@@ -364,6 +364,8 @@ public class WynnExtrasConfig {
     public boolean craftingHelperOverlay = true;
     public boolean powderCombineHelper = true;
     public boolean craftingAutoStart = false;
+    public int craftingLoadClipboardKey = GLFW.GLFW_KEY_T;
+    public int craftingReuseLastKey = GLFW.GLFW_KEY_SPACE;
     public List<String> craftingLastMaterialNames = new ArrayList<>();
     public List<Integer> craftingLastMaterialCounts = new ArrayList<>();
     public List<String> craftingLastIngredientNames = new ArrayList<>();

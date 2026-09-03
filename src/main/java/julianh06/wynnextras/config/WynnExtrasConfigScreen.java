@@ -523,12 +523,16 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Crafting")
                 .add(toggle("Crafting helper", "Crafting Helper toggle",
                         () -> config.craftingHelperOverlay, v -> config.craftingHelperOverlay = v))
-                .add(toggle("Powder combine helper", "Show quick combine buttons in the powder master menu",
-                        () -> config.powderCombineHelper, v -> config.powderCombineHelper = v))
                 .add(toggle("Reverse crafting helper order", "Show recipes from lowest to highest level",
                         () -> config.craftingHelperReverseOrder, v -> config.craftingHelperReverseOrder = v))
                 .add(toggle("Auto Start", "Automatically start crafting when a recipe is loaded",
                         () -> config.craftingAutoStart, v -> config.craftingAutoStart = v))
+                .add(keybind("Load from Clipboard Key", "Load a WynnBuilder craft from the clipboard while the crafting helper is open",
+                        () -> config.craftingLoadClipboardKey, v -> config.craftingLoadClipboardKey = v,
+                        DEFAULT_CONFIG.craftingLoadClipboardKey))
+                .add(keybind("Reuse Last Key", "Reuse the previous craft while the crafting helper is open",
+                        () -> config.craftingReuseLastKey, v -> config.craftingReuseLastKey = v,
+                        DEFAULT_CONFIG.craftingReuseLastKey))
                 .add(toggle("Crafting preview", "Crafting preview toggle",
                         () -> config.craftingPreviewOverlay, v -> config.craftingPreviewOverlay = v))
                 .add(toggle("Crafting preview background", "Show a dark background for the crafting preview overlay",
@@ -594,8 +598,10 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
                 .add(text("The price summary is movable", "To change its position just drag it where you want"))
             .endSub()
-            .add(toggle("Skill point helper (experimental)", "Show you your armor in the compass menu and a button to automatically assign skill points",
+            .add(toggle("Skill point helper", "Show you your armor in the compass menu and a button to automatically assign skill points",
                     () -> config.skillpointHelper, v -> config.skillpointHelper = v))
+            .add(toggle("Powder combine helper", "Show quick combine buttons in the powder master menu",
+                    () -> config.powderCombineHelper, v -> config.powderCombineHelper = v))
             .add(toggle("Show Mount Helper", "Renders the needed materials to max out a mounts stats in the feeder",
                     () -> config.showMountHelper, v -> config.showMountHelper = v));
 
@@ -826,6 +832,13 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(keybind("Toggle Shopping List", "Toggle the shopping list",
                         () -> config.shoppingListToggleKey, v -> config.shoppingListToggleKey = v,
                         DEFAULT_CONFIG.shoppingListToggleKey))
+            .sub("Crafting Helper")
+                .add(keybind("Load from Clipboard", "Load a WynnBuilder craft from the clipboard while the crafting helper is open",
+                        () -> config.craftingLoadClipboardKey, v -> config.craftingLoadClipboardKey = v,
+                        DEFAULT_CONFIG.craftingLoadClipboardKey))
+                .add(keybind("Reuse Last", "Reuse the previous craft while the crafting helper is open",
+                        () -> config.craftingReuseLastKey, v -> config.craftingReuseLastKey = v,
+                        DEFAULT_CONFIG.craftingReuseLastKey))
             .sub("Quick Repair")
                 .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
                                 () -> config.quickRepairKey, v -> config.quickRepairKey = v,

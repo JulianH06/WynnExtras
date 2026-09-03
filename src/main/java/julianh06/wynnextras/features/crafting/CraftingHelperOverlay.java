@@ -46,6 +46,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import org.lwjgl.glfw.GLFW;
 
 import java.net.URI;
 import java.util.*;
@@ -575,6 +576,59 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         }
         if (scrollBarWidget != null) scrollBarWidget.mouseReleased(x, y, button);
         return super.mouseReleased(x, y, button);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        int selectionIndex = switch (keyCode) {
+            case GLFW.GLFW_KEY_1, GLFW.GLFW_KEY_KP_1 -> 0;
+            case GLFW.GLFW_KEY_2, GLFW.GLFW_KEY_KP_2 -> 1;
+            case GLFW.GLFW_KEY_3, GLFW.GLFW_KEY_KP_3 -> 2;
+            default -> -1;
+        };
+        if (selectionIndex >= 0 && selectRecipeType(selectionIndex)) return true;
+
+        if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.craftingLoadClipboardKey)) {
+            return loadClipboardBtn.activate();
+        }
+        if (matchesKey(keyCode, WynnExtrasConfig.INSTANCE.craftingReuseLastKey)) {
+            return reuseLastBtn.activate();
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private static boolean matchesKey(int keyCode, int configuredKey) {
+        return configuredKey != GLFW.GLFW_KEY_UNKNOWN && keyCode == configuredKey;
+    }
+
+    private static boolean selectRecipeType(int index) {
+        WEProfessionType type = WynncraftMenuService.currentCraftingProfession().orElse(null);
+        int selectionCount = switch (type) {
+            case JEWELING, WOODWORKING -> 3;
+            case WEAPONSMITHING, ARMOURING, TAILORING -> 2;
+            case null, default -> 0;
+        };
+        if (index < 0 || index >= selectionCount) return false;
+
+        RecipeState selectedState = switch (index) {
+            case 0 -> RecipeState.FIRST;
+            case 1 -> RecipeState.SECOND;
+            case 2 -> RecipeState.THIRD;
+            default -> RecipeState.NONE;
+        };
+        if (state == selectedState) return true;
+
+        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        state = selectedState;
+        if (helperWidget != null) helperWidget.recipeData = null;
+        targetOffset = 0;
+
+        Map<RecipeState, Float> offsets = lastOffset.get(type);
+        if (offsets == null) return true;
+
+        Float offset = offsets.get(state);
+        if (offset != null) targetOffset = offset;
+        return true;
     }
 
 
@@ -1456,37 +1510,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
         @Override
         protected boolean onClick(int button) {
-            RecipeState clickedState = switch (index) {
-                case 0 -> RecipeState.FIRST;
-                case 1 -> RecipeState.SECOND;
-                case 2 -> RecipeState.THIRD;
-                default -> RecipeState.NONE;
-            };
-
-            if (state == clickedState) return true;
-
-            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
-
-            state = clickedState;
-
-            helperWidget.recipeData = null;
-
-            WEProfessionType type = WynncraftMenuService.currentCraftingProfession().orElse(null);
-            if (type == null) return true;
-
-            targetOffset = 0;
-
-            if (type == null) return true;
-
-            Map<RecipeState, Float> offsets = lastOffset.get(type);
-            if (offsets == null) return true;
-
-            Float offset = offsets.get(state);
-            if (offset == null) return true;
-
-            targetOffset = offset;
-
-            return true;
+            return selectRecipeType(index);
         }
 
         public void setText(String text) {
@@ -1614,6 +1638,11 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         public boolean mouseClicked(double mx, double my, int button) {
             if (!visible || !enabled || !contains((int) mx, (int) my)) return false;
             if (isDisabled || isFilling) return true;
+            return activate();
+        }
+
+        boolean activate() {
+            if (!visible || !enabled || isDisabled || isFilling) return false;
             setFocused(true);
             MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             if (onClickCallback != null) onClickCallback.accept(this);

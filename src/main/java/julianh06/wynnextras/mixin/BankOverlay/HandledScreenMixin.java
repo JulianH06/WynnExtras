@@ -885,6 +885,14 @@ public abstract class HandledScreenMixin {
             return;
         }
 
+        if (craftingHelperOverlay != null && WynnExtrasConfig.INSTANCE.craftingHelperOverlay
+                && WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)
+                && craftingHelperOverlay.keyPressed(keyCode, scanCode, modifiers)) {
+            cir.setReturnValue(true);
+            cir.cancel();
+            return;
+        }
+
         if (ItemComponentsDebugOverlay.handleKeyPressed(keyCode, modifiers)) {
             cir.setReturnValue(true);
             cir.cancel();

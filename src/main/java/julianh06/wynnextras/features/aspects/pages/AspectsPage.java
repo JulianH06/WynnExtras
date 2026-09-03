@@ -121,6 +121,7 @@ public class AspectsPage extends PageWidget {
         // First, check if aspect database is loaded - this must happen first
         List<ApiAspect> allAspects = new ArrayList<>(WynncraftApiHandler.fetchAllAspects());
         if (allAspects.isEmpty()) {
+            setSearchInputVisible(false);
             ui.drawCenteredText("§eLoading aspect database...", centerX, logicalH / 2f);
             return;
         }
@@ -168,6 +169,7 @@ public class AspectsPage extends PageWidget {
 
         // Show loading or error states
         if (activeStatus == null) {
+            setSearchInputVisible(false);
             String loadingText = searchedPlayer.isEmpty() ? "§eLoading your aspects..." : "§eLoading " + searchedPlayer + "'s aspects...";
             ui.drawCenteredText(loadingText, centerX, logicalH / 2f);
             return;

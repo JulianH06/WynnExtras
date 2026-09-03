@@ -11,6 +11,7 @@ import julianh06.wynnextras.features.inventory.PowderCombineHelperOverlay;
 import julianh06.wynnextras.features.mount.MountOverlay;
 import julianh06.wynnextras.utils.LunarCompat;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -29,6 +30,8 @@ public final class LunarScreenOverlayFallback {
 
             ScreenEvents.afterRender(screen).register((s, context, mouseX, mouseY, tickDelta) ->
                     render(screen, handledScreen, context, mouseX, mouseY, tickDelta));
+            ScreenKeyboardEvents.allowKeyPress(screen).register((s, input) ->
+                    !keyPressed(screen, input.key(), input.scancode(), input.modifiers()));
             ScreenMouseEvents.allowMouseClick(screen).register((s, click) ->
                     !mouseClicked(screen, click.x(), click.y(), click.button()));
             ScreenMouseEvents.allowMouseRelease(screen).register((s, click) ->
@@ -131,6 +134,14 @@ public final class LunarScreenOverlayFallback {
         }
 
         return false;
+    }
+
+    private static boolean keyPressed(Screen screen, int keyCode, int scanCode, int modifiers) {
+        if (!shouldRender(screen)) return false;
+        State state = state(screen);
+        return state.craftingHelperOverlay != null && WynnExtrasConfig.INSTANCE.craftingHelperOverlay
+                && WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)
+                && state.craftingHelperOverlay.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private static boolean mouseReleased(Screen screen, double mouseX, double mouseY, int button) {
