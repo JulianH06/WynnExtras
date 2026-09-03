@@ -25,6 +25,10 @@ public enum ShoppingListScreenContext {
     BLOCKED_MODAL,
     UNSUPPORTED;
 
+    private static HandledScreen<?> cachedScreen;
+    private static int cachedRevision = -1;
+    private static final ShoppingListScreenContext[] CACHED_CONTEXTS = new ShoppingListScreenContext[2];
+
     public boolean supportsShoppingListMenu() {
         return this == TRADE_MARKET
                 || this == TRADE_MARKET_FILTER
@@ -53,6 +57,24 @@ public enum ShoppingListScreenContext {
         if (screen instanceof InventoryScreen) {
             return INVENTORY;
         }
+
+        int revision = screen.getScreenHandler().getRevision();
+        if (screen != cachedScreen || revision != cachedRevision) {
+            cachedScreen = screen;
+            cachedRevision = revision;
+            CACHED_CONTEXTS[0] = null;
+            CACHED_CONTEXTS[1] = null;
+        }
+        int cacheIndex = customBankOverlayActive ? 1 : 0;
+        ShoppingListScreenContext cached = CACHED_CONTEXTS[cacheIndex];
+        if (cached != null) return cached;
+
+        ShoppingListScreenContext detected = detectUncached(screen, customBankOverlayActive);
+        CACHED_CONTEXTS[cacheIndex] = detected;
+        return detected;
+    }
+
+    private static ShoppingListScreenContext detectUncached(HandledScreen<?> screen, boolean customBankOverlayActive) {
         MenuType menuType = WynncraftMenuService.currentType();
         boolean tradeMarketMainScreen = hasTradeMarketSearchAndFilterSlot(screen);
         boolean tradeMarketPurchaseConfirmation = !tradeMarketMainScreen

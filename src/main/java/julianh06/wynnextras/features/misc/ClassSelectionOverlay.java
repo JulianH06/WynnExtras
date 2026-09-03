@@ -108,7 +108,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private int[] visOrder = new int[15];
     // visCharId[i] = the UUID for the i-th visible card
     private String[] visCharId = new String[15];
-    private final Map<String, String> lastHeldWeaponDetailCache = new HashMap<>();
     // Only run identity matching once per screen open
     private boolean identityMatched = false;
     private String pendingIdentitySnapshot = "";
@@ -1978,11 +1977,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     private String getLastHeldWeaponDetail(String charId) {
-        if (lastHeldWeaponDetailCache.containsKey(charId)) {
-            String cached = lastHeldWeaponDetailCache.get(charId);
-            return cached == null || cached.isEmpty() ? "- Weapon: unknown" : cached;
-        }
-
         CharIdentity identity = ClassSelectionData.getCharIdentities().get(charId);
         if (identity != null) {
             ItemStack weapon = CrossClassBankSearch.findLastHeldWeaponForClassSelection(
@@ -1994,12 +1988,10 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             );
             if (weapon != null && !weapon.isEmpty()) {
                 String detail = truncate("- Weapon: " + cleanName(weapon.getName().getString()), 30);
-                lastHeldWeaponDetailCache.put(charId, detail);
                 return detail;
             }
         }
 
-        lastHeldWeaponDetailCache.put(charId, "");
         return "- Weapon: unknown";
     }
 

@@ -17,8 +17,10 @@ import java.io.Reader;
 import java.io.Writer;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -70,15 +72,28 @@ public abstract class BankData {
     }
 
     private static void writeToPath(Path path, Object data) {
+        Path tempPath = null;
         try {
             Files.createDirectories(path.getParent());
+            tempPath = Files.createTempFile(path.getParent(), path.getFileName().toString(), ".tmp");
 
-            try (Writer writer = Files.newBufferedWriter(path)) {
+            try (Writer writer = Files.newBufferedWriter(tempPath)) {
                 getGson().toJson(data, writer);
             }
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Couldn't write bank data:");
-            e.printStackTrace();
+            try {
+                Files.move(tempPath, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(tempPath, path, StandardCopyOption.REPLACE_EXISTING);
+            }
+            tempPath = null;
+        } catch (Exception e) {
+            WynnExtras.LOGGER.error("[WynnExtras] Couldn't write bank data to {}.", path, e);
+        } finally {
+            if (tempPath != null) {
+                try {
+                    Files.deleteIfExists(tempPath);
+                } catch (IOException ignored) {}
+            }
         }
     }
 

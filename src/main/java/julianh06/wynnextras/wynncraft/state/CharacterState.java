@@ -65,15 +65,19 @@ public final class CharacterState {
 
     @SubscribeEvent
     public void onTick(TickEvent event) {
-        if (event.ticks % 5 != 0) return;
         update();
+        if (event.ticks % 5 != 0) return;
         SkillPointState.updateFromCurrentMenu();
         TomeState.updateFromCurrentMenu();
     }
 
     @SubscribeEvent
     public void onWorldChange(WorldChangeEvent event) {
+        id = null;
+        characterClass = CharacterClass.UNKNOWN;
+        level = 0;
         world = null;
+        updatedAt = 0;
     }
 
     @SubscribeEvent

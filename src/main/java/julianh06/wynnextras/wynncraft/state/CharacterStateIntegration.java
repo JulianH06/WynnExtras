@@ -52,13 +52,6 @@ public final class CharacterStateIntegration {
                 CharacterBankData.INSTANCE.getCharacterNickname(),
                 CharacterBankData.INSTANCE.getCharacterLevel());
         ProfessionOverlay.onCharacterSwap();
-
-        String localName = CharacterState.className().orElse(null);
-        int localLevel = CharacterState.level();
-        if (localName != null && localLevel > 0) {
-            CharacterBankData.INSTANCE.setCharacterInfo(localName, localLevel);
-            CharacterBankData.INSTANCE.save();
-        }
         TickScheduler.runAfterTicks(40, () -> fetchCharacterFromApi(characterId));
     }
 

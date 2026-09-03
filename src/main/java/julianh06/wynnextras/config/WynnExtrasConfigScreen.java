@@ -442,13 +442,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",
                         () -> config.warDpsEnabled, v -> config.warDpsEnabled = v))
                 .add(toggle("War Beacon (EXPERIMENTAL)", "Green beacon beam at the soonest war territory (Experimental, might not render correctly)",
-                        () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v))
-                .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
-                        () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
-                .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
-                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v,
-                                DEFAULT_CONFIG.territoryMenuKey),
-                        () -> config.territoryMenuKeyEnabled));
+                        () -> config.warBeaconEnabled, v -> config.warBeaconEnabled = v));
 
         // ===== OVERLAYS =====
         Category invCategory = category("Overlays", 0xFFea1219);
@@ -545,11 +539,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.shoppingListMenuEnabled, v -> config.shoppingListMenuEnabled = v))
                 .add(toggle("Show quick toggle button", "Show the quick toggle button in menus",
                         () -> config.shoppingListShowQuickToggleButton, v -> config.shoppingListShowQuickToggleButton = v))
-                .add(toggle("WynnMarketSearch compatibility", "Temporarily suppresses WynnMarketSearch while the shopping list performs Trade Market row searches",
-                        () -> config.shoppingListWynnMarketSearchCompatibility, v -> config.shoppingListWynnMarketSearchCompatibility = v))
                 .add(keybind("Toggle Shopping List", "Toggle the shopping list",
                         () -> config.shoppingListToggleKey, v -> config.shoppingListToggleKey = v,
                         DEFAULT_CONFIG.shoppingListToggleKey))
+                .add(toggle("WynnMarketSearch compatibility", "Temporarily suppresses WynnMarketSearch while the shopping list performs Trade Market row searches",
+                        () -> config.shoppingListWynnMarketSearchCompatibility, v -> config.shoppingListWynnMarketSearchCompatibility = v))
             .sub("Profession Overlay")
                 .add(toggle("Enable Profession Overlay", "Show XP gain overlay when gathering/crafting",
                         () -> config.professionOverlayEnabled, v -> config.professionOverlayEnabled = v))
@@ -743,7 +737,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     SpellProfiles.getProfileNames(), () -> config.spellProfile, v -> config.spellProfile = v));
 
         // ===== MISC =====
-        category("Misc", 0xFF0872bc)
+        category("Misc", 0xFF3664AD)
             .sub("Auto Actions")
                 .add(toggle("Auto /stream", "Automatically send /stream when swapping worlds, changing classes, etc.",
                         () -> config.autoStreamEnabled, v -> config.autoStreamEnabled = v))
@@ -762,13 +756,13 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .sub("Quick Repair")
                 .add(toggle("Quick Repair", "Press keybind at blacksmith to auto-repair all items",
                         () -> config.quickRepairEnabled, v -> config.quickRepairEnabled = v))
-                .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
-                                () -> config.quickRepairKey, v -> config.quickRepairKey = v,
-                                DEFAULT_CONFIG.quickRepairKey),
-                        () -> config.quickRepairEnabled))
                 .add(visibleWhen(slider("Durability Threshold", "Only repair items at or below this durability percentage",
                                 0, 100, () -> config.quickRepairDurabilityThreshold,
                                 v -> config.quickRepairDurabilityThreshold = v),
+                        () -> config.quickRepairEnabled))
+                .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
+                                () -> config.quickRepairKey, v -> config.quickRepairKey = v,
+                                DEFAULT_CONFIG.quickRepairKey),
                         () -> config.quickRepairEnabled))
             .endSub()
             .sub("Dark Mode Toggles")
@@ -776,7 +770,68 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.darkmodeToggle, v -> config.darkmodeToggle = v))
                 .add(toggle("Profile Viewer", "Dark mode for the Profile viewer",
                         () -> config.pvDarkmodeToggle, v -> config.pvDarkmodeToggle = v))
-            .sub("Waypoint edit mode keybinds")
+            .sub("Waypoints")
+                .add(slider("Max range", "Waypoints and their text are hidden beyond this distance",
+                        1, 1000, () -> config.waypointMaxRange, v -> config.waypointMaxRange = v))
+            .sub("Tetris")
+                .add(slider("DAS", "Delayed Auto Shift (ms) — delay before repeated movement begins",
+                        0, 300, () -> config.tetrisDAS, v -> config.tetrisDAS = v))
+                .add(slider("ARR", "Auto Repeat Rate (ms) — speed of repeated moves, 0 = instant",
+                        0, 100, () -> config.tetrisARR, v -> config.tetrisARR = v))
+                .add(slider("SDF Delay", "Soft Drop delay (ms) before fast-fall kicks in",
+                        0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
+                .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
+                        0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
+                .add(toggle("Remove background blur", "Hide the background blur in the Tetris menu",
+                        () -> config.hideTetrisBackgroundBlur, v -> config.hideTetrisBackgroundBlur = v))
+                .add(toggle("20G after level", "Instant gravity after the selected level.",
+                        () -> config.tetris20GEnabled, v -> config.tetris20GEnabled = v))
+                .add(visibleWhen(slider("20G Level", "Level where instant gravity starts",
+                                1, 100, () -> config.tetris20GLevel, v -> config.tetris20GLevel = v),
+                        () -> config.tetris20GEnabled))
+            .add(toggle("Mount color backgrounds", "Use the mount's primary color as its item background",
+                    () -> config.mountPrimaryColorBackground, v -> config.mountPrimaryColorBackground = v))
+            .add(toggle("Show Own Nametag", "Render your nametag above your head",
+                    () -> config.showOwnNametag, v -> config.showOwnNametag = v))
+            .add(toggle("Custom GUI Scale", "Use different scale inside of inventories",
+                    () -> config.differentGUIScale, v -> config.differentGUIScale = v))
+            .add(visibleWhen(slider("GUI Scale", "Custom GUI scale value",
+                    1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v),
+                    () -> config.differentGUIScale))
+            .add(toggle("Lootpool button in pf menu", "Show a button to quickly access /we lootpool through the pf menu",
+                    () -> config.showLootpoolButtonInPartyFinder, v -> config.showLootpoolButtonInPartyFinder = v))
+            .add(toggle("Redirect Wynntils View Stats", "Changes the Wynntils 'View Player Stats' button to open the pv instead of the wynn website",
+                    () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v))
+            .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
+                    () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
+            .add(toggle("Fun item identifier", "Make rolling items more fun",
+                    () -> config.identifierCaseOpening, v -> config.identifierCaseOpening = v))
+            .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
+                    () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
+            .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
+                    () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
+            .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
+                    () -> config.removeChroma, v -> config.removeChroma = v));
+
+        // ===== KEYBINDS =====
+        category("Keybinds", 0xFF0496C9)
+            .sub("Wars / Territory")
+                .add(toggle("Territory/Eco Menu Keybind", "Press a key to open /gu manage > Territories directly",
+                        () -> config.territoryMenuKeyEnabled, v -> config.territoryMenuKeyEnabled = v))
+                .add(visibleWhen(keybind("Territory Key", "Key to open the territory/eco menu",
+                                () -> config.territoryMenuKey, v -> config.territoryMenuKey = v,
+                                DEFAULT_CONFIG.territoryMenuKey),
+                        () -> config.territoryMenuKeyEnabled))
+            .sub("Shopping List")
+                .add(keybind("Toggle Shopping List", "Toggle the shopping list",
+                        () -> config.shoppingListToggleKey, v -> config.shoppingListToggleKey = v,
+                        DEFAULT_CONFIG.shoppingListToggleKey))
+            .sub("Quick Repair")
+                .add(visibleWhen(keybind("Repair Key", "Key to start repair at blacksmith",
+                                () -> config.quickRepairKey, v -> config.quickRepairKey = v,
+                                DEFAULT_CONFIG.quickRepairKey),
+                        () -> config.quickRepairEnabled))
+            .sub("Waypoint edit mode")
                 .add(keybind("Free move toggle", "Toggle the free move mode in the waypoint edit mode",
                         () -> config.waypointEditFreeMoveToggleKey, v -> config.waypointEditFreeMoveToggleKey = v,
                         DEFAULT_CONFIG.waypointEditFreeMoveToggleKey))
@@ -807,23 +862,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(keybind("Move down", "Move the waypoint preview down",
                         () -> config.waypointEditDownKey, v -> config.waypointEditDownKey = v,
                         DEFAULT_CONFIG.waypointEditDownKey))
-            .endSub()
             .sub("Tetris")
-                .add(slider("DAS", "Delayed Auto Shift (ms) — delay before repeated movement begins",
-                        0, 300, () -> config.tetrisDAS, v -> config.tetrisDAS = v))
-                .add(slider("ARR", "Auto Repeat Rate (ms) — speed of repeated moves, 0 = instant",
-                        0, 100, () -> config.tetrisARR, v -> config.tetrisARR = v))
-                .add(slider("SDF Delay", "Soft Drop delay (ms) before fast-fall kicks in",
-                        0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
-                .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
-                        0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
-                .add(toggle("Remove background blur", "Hide the background blur in the Tetris menu",
-                        () -> config.hideTetrisBackgroundBlur, v -> config.hideTetrisBackgroundBlur = v))
-                .add(toggle("20G after level", "Instant gravity after the selected level.",
-                        () -> config.tetris20GEnabled, v -> config.tetris20GEnabled = v))
-                .add(visibleWhen(slider("20G Level", "Level where instant gravity starts",
-                                1, 100, () -> config.tetris20GLevel, v -> config.tetris20GLevel = v),
-                        () -> config.tetris20GEnabled))
                 .add(keybind("Move right", "Move the active piece right",
                         () -> config.tetrisMoveRightKey, v -> config.tetrisMoveRightKey = v,
                         DEFAULT_CONFIG.tetrisMoveRightKey))
@@ -875,29 +914,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(keybind("Quit", "End the current game",
                         () -> config.tetrisQuitKey, v -> config.tetrisQuitKey = v,
                         DEFAULT_CONFIG.tetrisQuitKey))
-            .add(toggle("Mount color backgrounds", "Use the mount's primary color as its item background",
-                    () -> config.mountPrimaryColorBackground, v -> config.mountPrimaryColorBackground = v))
-            .add(toggle("Show Own Nametag", "Render your nametag above your head",
-                    () -> config.showOwnNametag, v -> config.showOwnNametag = v))
-            .add(toggle("Custom GUI Scale", "Use different scale inside of inventories",
-                    () -> config.differentGUIScale, v -> config.differentGUIScale = v))
-            .add(visibleWhen(slider("GUI Scale", "Custom GUI scale value",
-                    1, 5, () -> config.customGUIScale, v -> config.customGUIScale = v),
-                    () -> config.differentGUIScale))
-            .add(toggle("Lootpool button in pf menu", "Show a button to quickly access /we lootpool through the pf menu",
-                    () -> config.showLootpoolButtonInPartyFinder, v -> config.showLootpoolButtonInPartyFinder = v))
-            .add(toggle("Redirect Wynntils View Stats", "Changes the Wynntils 'View Player Stats' button to open the pv instead of the wynn website",
-                    () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v))
-            .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
-                    () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
-            .add(toggle("Fun item identifier", "Make rolling items more fun",
-                    () -> config.identifierCaseOpening, v -> config.identifierCaseOpening = v))
-            .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
-                    () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
-            .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
-                    () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
-            .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
-                    () -> config.removeChroma, v -> config.removeChroma = v))
             .sub("Debug")
                 .add(keybind("Item Components Key", "Show the hovered container item's components in a debug window",
                         () -> config.debugItemComponentsKey, v -> config.debugItemComponentsKey = v,

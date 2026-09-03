@@ -462,6 +462,7 @@ public class WynnExtrasConfig {
     public int territoryMenuKey = org.lwjgl.glfw.GLFW.GLFW_KEY_I;
     public boolean guildBankKeyEnabled = false;
     public int guildBankKey = org.lwjgl.glfw.GLFW.GLFW_KEY_Y;
+    public int waypointMaxRange = 1000;
     public int waypointEditFreeMoveToggleKey = GLFW.GLFW_KEY_I;
     public int waypointEditAddKey = GLFW.GLFW_KEY_ENTER;
     public int waypointEditRemoveKey = GLFW.GLFW_KEY_BACKSPACE;

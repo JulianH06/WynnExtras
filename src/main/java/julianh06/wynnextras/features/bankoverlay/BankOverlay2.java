@@ -1746,7 +1746,7 @@ public class BankOverlay2 extends WEHandledScreen {
 
     public static void saveActivePageSnapshot() {
         if (storeActivePageSnapshot()) {
-            Pages.save();
+            Pages.saveAsyncDebounced();
         }
     }
 

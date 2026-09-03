@@ -1,17 +1,11 @@
 package julianh06.wynnextras.features.inventory.data;
 
-import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.ItemStack;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.CompletableFuture;
 
 public class CharacterBankData extends BankData {
     public static final CharacterBankData INSTANCE = new CharacterBankData();
@@ -39,36 +33,14 @@ public class CharacterBankData extends BankData {
         return getConfigPath(BankOverlay.currentCharacterID);
     }
 
-    public static CompletableFuture<Void> saveLastHeldWeaponAsync(String characterId, ItemStack weapon) {
+    public static void saveLastHeldWeaponAsync(String characterId, ItemStack weapon) {
         if (!isValidCharacterId(characterId) || MinecraftClient.getInstance().player == null) {
-            return CompletableFuture.completedFuture(null);
+            return;
         }
+        if (!characterId.equals(BankOverlay.currentCharacterID)) return;
 
-        if (characterId.equals(BankOverlay.currentCharacterID)) {
-            INSTANCE.setLastHeldWeapon(weapon);
-        }
-
-        Path path = getConfigPath(characterId);
-        return CompletableFuture.runAsync(() -> {
-            try {
-                Files.createDirectories(path.getParent());
-
-                CharacterBankData data = null;
-                if (Files.exists(path)) {
-                    try (Reader reader = Files.newBufferedReader(path)) {
-                        data = BankData.getGson().fromJson(reader, CharacterBankData.class);
-                    }
-                }
-                if (data == null) data = new CharacterBankData();
-                data.setLastHeldWeapon(weapon);
-
-                try (Writer writer = Files.newBufferedWriter(path)) {
-                    BankData.getGson().toJson(data, writer);
-                }
-            } catch (Exception e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Failed to update last held weapon in {}.", path, e);
-            }
-        });
+        INSTANCE.setLastHeldWeapon(weapon);
+        INSTANCE.saveAsyncDebounced();
     }
 
     private static Path getConfigPath(String characterId) {

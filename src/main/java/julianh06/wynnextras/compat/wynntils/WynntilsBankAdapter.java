@@ -28,6 +28,7 @@ public final class WynntilsBankAdapter {
     private record FeatureMethodKey(Class<?> type, String name, int parameters) {}
 
     private static final Map<FeatureMethodKey, Optional<Method>> FEATURE_METHODS = new ConcurrentHashMap<>();
+    private static final Map<FeatureMethodKey, Optional<Method>> INVOKE_METHODS = new ConcurrentHashMap<>();
 
     private static final WynntilsCapability<ModelsBinding> MODELS = new WynntilsCapability<>("bank-models", () -> {
         Class<?> models = WynntilsCompat.requireClass("com.wynntils.core.components.Models");
@@ -268,12 +269,17 @@ public final class WynntilsBankAdapter {
     private static Object invoke(Object target, String name, Object... args) {
         if (target == null) return null;
         try {
-            for (Method method : target.getClass().getMethods()) {
-                if (method.getName().equals(name) && method.getParameterCount() == args.length) {
-                    if (!method.canAccess(target) && !method.trySetAccessible()) continue;
-                    return method.invoke(target, args);
+            FeatureMethodKey key = new FeatureMethodKey(target.getClass(), name, args.length);
+            Method method = INVOKE_METHODS.computeIfAbsent(key, ignored -> {
+                for (Method candidate : key.type.getMethods()) {
+                    if (candidate.getName().equals(key.name) && candidate.getParameterCount() == key.parameters) {
+                        return Optional.of(candidate);
+                    }
                 }
-            }
+                return Optional.empty();
+            }).orElse(null);
+            if (method == null || (!method.canAccess(target) && !method.trySetAccessible())) return null;
+            return method.invoke(target, args);
         } catch (Throwable ignored) {}
         return null;
     }
