@@ -1,11 +1,9 @@
 package julianh06.wynnextras.features.shoppinglist.ui;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
-import julianh06.wynnextras.features.crafting.data.CraftingDataService;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.features.shoppinglist.ShoppingListFeature;
 import julianh06.wynnextras.features.shoppinglist.cart.ShoppingEntry;
 import julianh06.wynnextras.features.shoppinglist.model.RequirementType;
@@ -17,10 +15,12 @@ import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTradeMarke
 import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTradeMarketSearchService;
 import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTextCleaner;
 import julianh06.wynnextras.utils.HandledScreenAccess;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.WEMenuExtension;
 import julianh06.wynnextras.utils.UI.Widget;
+import julianh06.wynnextras.utils.colors.CustomColor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
@@ -1392,8 +1392,8 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
             if (row.type() == RequirementType.MATERIAL && row.materialTier() > 0) {
                 searchInput += " materialtier:" + row.materialTier();
             } else if (row.type() == RequirementType.INGREDIENT
-                    && CraftingDataService.getInstance().getPowder(row.displayName()) == null) {
-                var ingredient = CraftingDataService.getInstance().getIngredient(row.displayName());
+                    && WynnDataService.getInstance().getPowder(row.displayName()) == null) {
+                var ingredient = WynnDataService.getInstance().getIngredient(row.displayName());
                 if (ingredient != null) {
                     searchInput += " ingredienttier:" + ingredient.tier();
                 }
@@ -2049,7 +2049,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     }
 
     private static void playButtonClickSound() {
-        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
     }
 
     private static final class MenuButton extends Widget implements TooltipWidget {

@@ -33,9 +33,9 @@ public class CurrentVersionData {
                 } else {
                     WynnExtras.LOGGER.error("[WynnExtras] Deserialized data was null, keeping default INSTANCE.");
                 }
-            } catch (IOException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Couldn't read the version file:");
-                e.printStackTrace();
+            } catch (Exception e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Couldn't load version data from {}, keeping default data.",
+                        CONFIG_PATH, e);
             }
         }
     }

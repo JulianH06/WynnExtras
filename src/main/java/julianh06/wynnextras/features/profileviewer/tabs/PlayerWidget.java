@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.RenderUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.RenderUtils;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -26,7 +26,7 @@ public class PlayerWidget extends Widget {
         super(0, 0, 100, 100);
         index = i;
         this.action = () -> {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             PV.open(lastViewedPlayers.get(index));
         };
     }
@@ -70,7 +70,7 @@ public class PlayerWidget extends Widget {
         if(hovered) {
             int tx = (int)(mouseX * PVScreen.currentMatrixScale);
             int ty = (int)(mouseY * PVScreen.currentMatrixScale);
-            ctx.drawTooltip(McUtils.mc().textRenderer, Text.of(lastViewedPlayers.get(index)), tx, ty);
+            ctx.drawTooltip(MinecraftUtils.mc().textRenderer, Text.of(lastViewedPlayers.get(index)), tx, ty);
         }
         //uses custom draw method which gets called in updatevalues to render over the background
     }

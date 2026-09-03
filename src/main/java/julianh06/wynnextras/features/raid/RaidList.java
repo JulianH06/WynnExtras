@@ -4,6 +4,7 @@ import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.*;
+import julianh06.wynnextras.wynncraft.state.PartyState;
 import net.minecraft.client.MinecraftClient;
 import net.neoforged.bus.api.SubscribeEvent;
 import java.util.ArrayList;
@@ -30,16 +31,17 @@ public class RaidList {
 
     @SubscribeEvent
     void onRaidEnded(RaidEndedEvent event) {
-        List<String> members = new ArrayList<>(RaidListScreen.currentPlayers);
+        List<String> members = new ArrayList<>(PartyState.members());
 
         // Calculate raid end time - use current time as the most accurate
         long raidEndTime = System.currentTimeMillis();
 
         // Debug logging
-        WynnExtras.LOGGER.info("[WynnExtras] Raid ended - type: " + event.getRaid().getRaidKind().getRaidName());
+        if (event.getRaid() == null) return;
+        WynnExtras.LOGGER.info("[WynnExtras] Raid ended - type: " + event.getRaid().raidKind().displayName());
         WynnExtras.LOGGER.info("[WynnExtras] Raid end time: " + raidEndTime);
-        WynnExtras.LOGGER.info("[WynnExtras] Raid start time from event: " + event.getRaid().getRaidStartTime());
-        WynnExtras.LOGGER.info("[WynnExtras] Time in raid (ms): " + event.getRaid().getTimeInRaid());
+        WynnExtras.LOGGER.info("[WynnExtras] Raid start time from event: " + event.getRaid().raidStartTime());
+        WynnExtras.LOGGER.info("[WynnExtras] Time in raid (ms): " + event.getRaid().timeInRaid());
 
         if(event instanceof RaidEndedEvent.Completed) {
             INSTANCE.raids.add(new RaidData(event.getRaid(), members, raidEndTime, true));

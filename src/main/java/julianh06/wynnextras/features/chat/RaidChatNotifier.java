@@ -2,17 +2,12 @@ package julianh06.wynnextras.features.chat;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.wynntils.models.raid.raids.*;
-import com.wynntils.models.raid.type.RaidInfo;
-import com.wynntils.models.raid.type.RaidRoomInfo;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.core.components.Models;
-import com.wynntils.utils.type.Time;
-import com.wynntils.core.text.StyledText;
+import julianh06.wynnextras.wynncraft.state.RaidState;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.text.StyledText;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.raid.tna.TnaApi;
-import julianh06.wynnextras.mixin.RaidKindAccessor;
 import julianh06.wynnextras.utils.ChatUtils;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.loader.api.FabricLoader;
@@ -31,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,6 +56,7 @@ public class RaidChatNotifier {
     private static boolean allowReceivedMessage(Text message) {
         String raw = stripColorCodes(message.getString());
         TnaApi.handleMessage(raw);
+        RaidState.observeChat(raw);
 
         if (!shouldBlockRaidTimestampMessage(raw)) return true;
 
@@ -297,15 +294,12 @@ public class RaidChatNotifier {
         lastHandledMsg = msg;
         lastHandledMs = now;
 
-        long currentTime = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
-                ? Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime()
-                : 0;
+        OptionalLong roomTime = RaidState.currentRoomTimeOptional();
+        long currentTime = roomTime.orElse(0);
 
         for (RaidMessageDetector detector : detectors) {
             if (detector.matches(msg)) {
-                String timestamp = (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null)
-                        ? formatTime(currentTime)
-                        : "??:??.???";
+                String timestamp = roomTime.isPresent() ? formatTime(currentTime) : "??:??.???";
 
                 String progress = detector.extractProgress(msg);
                 List<String> finalMessages = detector.getFormattedMessages(progress, timestamp);
@@ -313,7 +307,7 @@ public class RaidChatNotifier {
                 MinecraftClient.getInstance().execute(() -> {
                     for (String finalMsg : finalMessages) {
                         if (finalMsg.isEmpty()) continue;
-                        McUtils.sendMessageToClient(
+                        MinecraftUtils.sendMessageToClient(
                                 WynnExtras.addWynnExtrasPrefix(Text.of(finalMsg))
                         );
                     }
@@ -327,9 +321,8 @@ public class RaidChatNotifier {
 
 
     private static String getCurrentRoomTimestamp() {
-        if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null)
-            return "??:??.???";
-        return formatTime(Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime());
+        OptionalLong roomTime = RaidState.currentRoomTimeOptional();
+        return roomTime.isPresent() ? formatTime(roomTime.getAsLong()) : "??:??.???";
     }
 
     public static String formatTime(long millis) {
@@ -418,11 +411,11 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
-            if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
+            OptionalLong roomTime = RaidState.currentRoomTimeOptional();
+            if (roomTime.isEmpty()) {
                 return "§aAdded Slime " + progress + " §c@ " + timestamp;
             }
-
-            long elapsed = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
+            long elapsed = roomTime.getAsLong();
 
             String key = PB_PREFIX + "_" + progress;
             Long pb = getPB(key);
@@ -464,11 +457,11 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
-            var raid = Models.Raid.getCurrentRaid();
-            if (raid == null || raid.getCurrentRoom() == null) {
+            OptionalLong roomTime = RaidState.currentRoomTimeOptional();
+            if (roomTime.isEmpty()) {
                 return "§bCompleted Seal " + progress + " §c@ " + timestamp;
             }
-            long currentMillis = raid.getCurrentRoom().getRoomTotalTime();
+            long currentMillis = roomTime.getAsLong();
 
             String key = PB_PREFIX + "_" + progress;
             Long pb = getPB(key);
@@ -508,11 +501,11 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
-            var raid = Models.Raid.getCurrentRaid();
-            if (raid == null || raid.getCurrentRoom() == null) {
+            OptionalLong roomTime = RaidState.currentRoomTimeOptional();
+            if (roomTime.isEmpty()) {
                 return "§bAdded light " + progress + " §c@ " + timestamp;
             }
-            long currentMillis = raid.getCurrentRoom().getRoomTotalTime();
+            long currentMillis = roomTime.getAsLong();
             String key = PB_PREFIX + "_" + progress;
 
             Long pb = getPB(key);
@@ -553,15 +546,15 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
-            if ("3/3".equals(progress) && Time.now().timestamp() >= disableChiropUntil && WynnExtrasConfig.INSTANCE.chiropTimer) {
+            if ("3/3".equals(progress) && System.currentTimeMillis() >= disableChiropUntil && WynnExtrasConfig.INSTANCE.chiropTimer) {
                 startSpawnCountdown();
             }
 
-            var raid = Models.Raid.getCurrentRaid();
-            if (raid == null || raid.getCurrentRoom() == null) {
+            OptionalLong roomTime = RaidState.currentRoomTimeOptional();
+            if (roomTime.isEmpty()) {
                 return "§bKilled Shadowling " + progress + " §c@ " + timestamp;
             }
-            long currentMillis = raid.getCurrentRoom().getRoomTotalTime();
+            long currentMillis = roomTime.getAsLong();
 
             String key = PB_PREFIX + "_" + progress;
             Long pb = getPB(key);
@@ -630,11 +623,11 @@ public class RaidChatNotifier {
 
         @Override
         public String getFormattedMessage(String progress, String timestamp) {
-            if (Models.Raid.getCurrentRaid() == null || Models.Raid.getCurrentRaid().getCurrentRoom() == null) {
+            OptionalLong roomTime = RaidState.currentRoomTimeOptional();
+            if (roomTime.isEmpty()) {
                 return "§bStarted Watchphase (no raid data)";
             }
-
-            long currentTime = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
+            long currentTime = roomTime.getAsLong();
             String message;
 
             if (lastWatchPhaseTime == -1) {
@@ -674,8 +667,9 @@ public class RaidChatNotifier {
     private static String buildSingleOccurrenceMessage(String formattedMessage, String pbKey, String timestamp) {
         String message = formattedMessage + timestamp;
 
-        if (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null) {
-            long currentTime = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
+        OptionalLong roomTime = RaidState.currentRoomTimeOptional();
+        if (roomTime.isPresent()) {
+            long currentTime = roomTime.getAsLong();
             Long pb = getPB(pbKey);
 
             if (pb == null || currentTime < pb) {
@@ -781,8 +775,9 @@ public class RaidChatNotifier {
         public String getFormattedMessage(String progress, String timestamp) {
             fired = true;
             String message = formattedMessage + timestamp;
-            if (Models.Raid.getCurrentRaid() != null && Models.Raid.getCurrentRaid().getCurrentRoom() != null) {
-                long currentTime = Models.Raid.getCurrentRaid().getCurrentRoom().getRoomTotalTime();
+            OptionalLong roomTime = RaidState.currentRoomTimeOptional();
+            if (roomTime.isPresent()) {
+                long currentTime = roomTime.getAsLong();
                 Long pb = getPB(pbKey);
                 if (pb == null || currentTime < pb) {
                     savePB(pbKey, currentTime);
@@ -839,11 +834,9 @@ public class RaidChatNotifier {
             String key = pbKeyPrefix + "_" + occurrenceCount;
             String msg;
 
-            if (Models.Raid.getCurrentRaid() != null
-                    && Models.Raid.getCurrentRaid().getCurrentRoom() != null) {
-
-                long currentTime = Models.Raid.getCurrentRaid()
-                        .getCurrentRoom().getRoomTotalTime();
+            OptionalLong roomTime = RaidState.currentRoomTimeOptional();
+            if (roomTime.isPresent()) {
+                long currentTime = roomTime.getAsLong();
 
                 Long pb = getPB(key);
 
@@ -885,32 +878,22 @@ public class RaidChatNotifier {
         julianh06.wynnextras.features.chat.ChainsAttachedTracker.resetForNewRaid();
     }
 
-    public static void onRoomCompleted(RaidInfo raidInfo) {
+    public static void onRoomCompleted(RaidState.CompletedRoom room) {
         if (!WynnExtrasConfig.INSTANCE.toggleRaidTimestamps) return;
-
-        int challengeIndex = raidInfo.completedChallengeCount();
-        RaidRoomInfo room = raidInfo.getRoomByNumber(challengeIndex);
         if (room == null) return;
+        String timestamp = formatTime(room.time());
 
-        long time = room.getRoomTotalTime();
-        String timestamp = formatTime(time);
-
-        if (isBossChallenge(raidInfo, challengeIndex)) {
-            handleBossCompleted(raidInfo, room, challengeIndex, time, timestamp);
+        if (isBossChallenge(room)) {
+            handleBossCompleted(room, timestamp);
         } else {
-            handleRoomCompleted(raidInfo, room, timestamp);
+            handleRoomCompleted(room, timestamp);
         }
     }
 
-    private static void handleRoomCompleted(
-            RaidInfo raidInfo,
-            RaidRoomInfo room,
-            String timestamp
-    ) {
-        String roomName = room.getRoomName();
-        long time = room.getRoomTotalTime();
-
-        String pbKey = stableRaidKey(raidInfo.getRaidKind()) + "_" + roomName.replaceAll("\\s", "");
+    private static void handleRoomCompleted(RaidState.CompletedRoom room, String timestamp) {
+        String roomName = room.name();
+        long time = room.time();
+        String pbKey = room.raidKey() + "_" + roomName.replaceAll("\\s", "");
 
         Long pb = getPB(pbKey);
 
@@ -925,28 +908,20 @@ public class RaidChatNotifier {
             msg += " §7[PB: " + formatTime(pb) + "]";
         }
 
-        McUtils.sendMessageToClient(
+        MinecraftUtils.sendMessageToClient(
                 WynnExtras.addWynnExtrasPrefix(StyledText.fromString(msg).getComponent())
         );
     }
 
-    private static void handleBossCompleted(
-            RaidInfo raidInfo,
-            RaidRoomInfo room,
-            int index,
-            long time,
-            String timestamp
-    ) {
-        String bossName = room.getRoomName();
-        String raidKey = stableRaidKey(raidInfo.getRaidKind());
-
-        String pbKey = "boss_" + raidKey + "_" + index;
+    private static void handleBossCompleted(RaidState.CompletedRoom room, String timestamp) {
+        String bossName = room.name();
+        String pbKey = "boss_" + room.raidKey() + "_" + room.index();
         Long pb = getPB(pbKey);
 
         String msg = "§a§l" + bossName + " §r§bdefeated after §c" + timestamp;
 
-        if (pb == null || time < pb) {
-            savePB(pbKey, time);
+        if (pb == null || room.time() < pb) {
+            savePB(pbKey, room.time());
             msg += (pb == null)
                     ? " §e[First PB]"
                     : " §e[New PB! Old: " + formatTime(pb) + "]";
@@ -954,21 +929,16 @@ public class RaidChatNotifier {
             msg += " §7[PB: " + formatTime(pb) + "]";
         }
 
-        McUtils.sendMessageToClient(
+        MinecraftUtils.sendMessageToClient(
                 WynnExtras.addWynnExtrasPrefix(Text.of(msg))
         );
     }
 
-    private static boolean isBossChallenge(RaidInfo raidInfo, int challengeIndex) {
-        RaidKind kind = raidInfo.getRaidKind();
-
-        int totalChallenges = ((RaidKindAccessor) kind).getChallengeNames().size();
-
-        if ("NOL".equals(kind.getAbbreviation())) {
-            return challengeIndex >= totalChallenges - 1;
+    private static boolean isBossChallenge(RaidState.CompletedRoom room) {
+        if ("NOL".equals(room.abbreviation())) {
+            return room.index() >= room.totalChallenges() - 1;
         }
-
-        return challengeIndex == totalChallenges;
+        return room.index() == room.totalChallenges();
     }
 
     public void save() {
@@ -1002,11 +972,12 @@ public class RaidChatNotifier {
             try (Reader reader = Files.newBufferedReader(path)) {
                 RaidChatNotifier loaded = gson.fromJson(reader, RaidChatNotifier.class);
                 if (loaded != null) {
+                    if (loaded.raidPBs == null) loaded.raidPBs = new HashMap<>();
+                    loaded.raidPBs.entrySet().removeIf(entry -> entry.getKey() == null || entry.getValue() == null);
                     INSTANCE = loaded;
                 }
-            } catch (IOException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Couldn't read PB data:");
-                e.printStackTrace();
+            } catch (IOException | RuntimeException e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Couldn't load PB data from {}, keeping default data.", path, e);
             }
         }
 
@@ -1018,7 +989,7 @@ public class RaidChatNotifier {
      * (e.g. TWP -> WTP between 4.1.8 and 4.1.9). Derived from the RaidKind's class
      * simple name with the "Raid" suffix stripped.
      */
-    static String stableRaidKey(RaidKind kind) {
+    static String stableRaidKey(Object kind) {
         if (kind == null) return "?";
         String simple = kind.getClass().getSimpleName();
         if (simple.endsWith("Raid")) simple = simple.substring(0, simple.length() - 4);

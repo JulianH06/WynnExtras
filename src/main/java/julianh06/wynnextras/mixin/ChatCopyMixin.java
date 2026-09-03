@@ -1,6 +1,6 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.mixin.Accessor.ChatHudAccessor;
@@ -66,7 +66,7 @@ public class ChatCopyMixin {
         if (clean.isEmpty()) return;
 
         mc.keyboard.setClipboard(clean);
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§aCopied to clipboard: §f" + clean)));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§aCopied to clipboard: §f" + clean)));
 
         cir.setReturnValue(true);
     }

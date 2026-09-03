@@ -1,19 +1,19 @@
 package julianh06.wynnextras.core;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.compat.wynntils.WynntilsTooltipAdapter;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.event.*;
 import julianh06.wynnextras.core.loader.WELoader;
 import julianh06.wynnextras.features.abilitytree.TreeLoader;
-import julianh06.wynnextras.features.achievements.AchievementTracking;
 import julianh06.wynnextras.features.achievements.Achievements;
 import julianh06.wynnextras.features.aspects.maintracking;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.chat.RaidChatNotifier;
 import julianh06.wynnextras.features.crafting.data.MaterialTextureResolver;
-import julianh06.wynnextras.features.crafting.data.CraftingDataService;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.features.guildviewer.BannerGuiRenderer;
 import julianh06.wynnextras.features.guildviewer.GV;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
@@ -48,9 +48,7 @@ import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTradeMarke
 import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListHudOverlay;
 import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListMenuExtension;
 import julianh06.wynnextras.features.waypoints.data.WaypointData;
-import julianh06.wynnextras.mixin.Accessor.KeybindingAccessor;
 import julianh06.wynnextras.sound.ModSounds;
-import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.LunarCompat;
 import julianh06.wynnextras.utils.TickScheduler;
 import net.fabricmc.api.ClientModInitializer;
@@ -60,6 +58,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.*;
 import net.minecraft.text.ClickEvent;
@@ -92,7 +91,7 @@ public class WynnExtras implements ClientModInitializer {
 			"",
 			context -> {
                 try {
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal("")).append(Text.literal("https://discord.gg/UbC6vZDaD5").setStyle(Style.EMPTY
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.literal("")).append(Text.literal("https://discord.gg/UbC6vZDaD5").setStyle(Style.EMPTY
                             .withColor(Formatting.AQUA)
                             .withUnderline(true)
                             .withClickEvent(new ClickEvent.OpenUrl(new URI("https://discord.gg/UbC6vZDaD5"))))
@@ -122,7 +121,7 @@ public class WynnExtras implements ClientModInitializer {
 			"version",
 			"",
 			context -> {
-				McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You are using version " + CurrentVersionData.INSTANCE.version));
+				MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("You are using version " + CurrentVersionData.INSTANCE.version));
 				return 1;
 			},
 			null,
@@ -171,19 +170,20 @@ public class WynnExtras implements ClientModInitializer {
 	}
 
 	public static void sendMessageToClient(Text text) {
-		McUtils.sendMessageToClient(addWynnExtrasPrefix(text));
+		MinecraftUtils.sendMessageToClient(addWynnExtrasPrefix(text));
 	}
 
 	public static void sendMessageToClient(String text) {
-		McUtils.sendMessageToClient(addWynnExtrasPrefix(text));
+		MinecraftUtils.sendMessageToClient(addWynnExtrasPrefix(text));
 	}
 
 
 	@Override
 	public void onInitializeClient() {
 		Core.init(MOD_ID);
+		WynntilsTooltipAdapter.initialize();
 		ProfileTitleService.fetch();
-		ClientLifecycleEvents.CLIENT_STARTED.register(client -> CraftingDataService.getInstance().initialize());
+		ClientLifecycleEvents.CLIENT_STARTED.register(client -> WynnDataService.getInstance().initialize());
 		updateVersionData();
 
 		SpecialGuiElementRegistry.register(context -> new BannerGuiRenderer(context.vertexConsumers(), MinecraftClient.getInstance().getAtlasManager()));
@@ -250,7 +250,10 @@ public class WynnExtras implements ClientModInitializer {
 			BankOverlay2.invalidateBagTotalCache();
 			WynncraftApiHandler.load();
 
-			CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool).thenRunAsync(WeightDisplay::populateStatRangesFromDatabase);
+			CompletableFuture<Void> wynnpoolFuture = CompletableFuture.runAsync(WeightDisplay::getWeightsFromWynnpool);
+			CompletableFuture<Void> noriFuture = CompletableFuture.runAsync(WeightDisplay::getWeightsFromNori);
+			CompletableFuture.allOf(WynnDataService.getInstance().initialize(), wynnpoolFuture, noriFuture)
+					.thenRunAsync(WeightDisplay::populateStatRangesFromDatabase);
 		});
 
 		// Flush any pending (debounced) achievement upload when leaving a server, so a change made
@@ -307,7 +310,7 @@ public class WynnExtras implements ClientModInitializer {
 
 				if (BankOverlay.currentOverlayType != BankOverlayType.NONE
 						&& BankOverlay2.isAnyTextInputFocused()
-						&& key == ((KeybindingAccessor) MinecraftClient.getInstance().options.inventoryKey).getBoundKey().getCode()) return;
+						&& MinecraftClient.getInstance().options.inventoryKey.matchesKey(new KeyInput(key, scancode, mods))) return;
 
 				if(BankOverlay.currentOverlayType != BankOverlayType.NONE && (GLFW.GLFW_KEY_1 <= key && key <= GLFW.GLFW_KEY_9)) return;
 
@@ -343,10 +346,8 @@ public class WynnExtras implements ClientModInitializer {
 	public void onClientTick(TickEvent event) {
 		WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
 		EncounterOverlay.clearLatchIfNoContainerOpen();
-		if(config.differentGUIScale) {
-			if (MinecraftClient.getInstance().currentScreen == null) {
-				restoreNormalGuiScale();
-			}
+		if(config.differentGUIScale && MinecraftClient.getInstance().currentScreen == null) {
+			restoreNormalGuiScale();
 		}
 
 		tickVersionNotificationCountdown();
@@ -383,17 +384,17 @@ public class WynnExtras implements ClientModInitializer {
 	private static final Duration COOLDOWN = Duration.ofMinutes(60);
 
 	public static void tryNotifyVersionUpdate(String currentVersion, String latestVersion) {
-		if (latestVersion == null || currentVersion.equals(latestVersion)) return;
+		if (WynnExtrasConfig.INSTANCE.updateReminderDisabled || latestVersion == null || currentVersion.equals(latestVersion)) return;
 
 		Instant now = Instant.now();
 		if (lastNotificationTime == null || Duration.between(lastNotificationTime, now).compareTo(COOLDOWN) >= 0) {
 			lastNotificationTime = now;
-			McUtils.sendMessageToClient(
+			MinecraftUtils.sendMessageToClient(
 				addWynnExtrasPrefix(Text.of("§aA new version of WynnExtras is available: §b" + latestVersion + "§a! You're currently using version §b" + currentVersion + "§a. You can download it now on Modrinth!"))
 			);
 
 			if(isLunarClient()) {
-				McUtils.sendMessageToClient(
+				MinecraftUtils.sendMessageToClient(
 					addWynnExtrasPrefix(Text.of("§aSeems like you are using Lunar Client. Some features might not work correctly with Lunar. We recommend using a different launcher like prism or Modrinth."))
 				);
 			}

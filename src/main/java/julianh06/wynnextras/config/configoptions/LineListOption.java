@@ -1,6 +1,6 @@
 package julianh06.wynnextras.config.configoptions;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
@@ -202,7 +202,7 @@ public class LineListOption extends ConfigOption {
     private void save(List<String> active, List<String> available) {
         activeSetter.accept(active);
         availableSetter.accept(available);
-        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
     }
 
     private String displayName(String id) {

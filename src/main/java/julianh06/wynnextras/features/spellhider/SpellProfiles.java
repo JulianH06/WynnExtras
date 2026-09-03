@@ -82,23 +82,29 @@ public class SpellProfiles {
     public static boolean loadProfile(String fileName) throws IOException {
         Type mapType = new TypeToken<@NotNull Map<SpellNamespace, SpellModifiers>>() {}.getType();
         Map<SpellNamespace, SpellModifiers> fromJson;
-        if (fileName.startsWith("default_")) {
-            InputStream input = SpellProfiles.class.getClassLoader().getResourceAsStream(SpellHider.RESOURCES_PATH + fileName + ".json");
-            if (input == null) {
-                WynnExtras.LOGGER.warn("failed to load default profile file {}", fileName);
-                return false;
-            }
-            Reader reader = new InputStreamReader(input);
-            fromJson = GSON.fromJson(reader, mapType);
-        } else {
-            Path file = PROFILES_PATH.resolve(fileName + ".json");
-            if (Files.exists(file)) {
-                String jsonString = Files.readString(file);
-                fromJson = GSON.fromJson(jsonString, mapType);
+        try {
+            if (fileName.startsWith("default_")) {
+                InputStream input = SpellProfiles.class.getClassLoader().getResourceAsStream(SpellHider.RESOURCES_PATH + fileName + ".json");
+                if (input == null) {
+                    WynnExtras.LOGGER.warn("failed to load default profile file {}", fileName);
+                    return false;
+                }
+                try (Reader reader = new InputStreamReader(input)) {
+                    fromJson = GSON.fromJson(reader, mapType);
+                }
             } else {
-                WynnExtras.LOGGER.warn("profile doesn't exist: {}", fileName);
-                return false;
+                Path file = PROFILES_PATH.resolve(fileName + ".json");
+                if (Files.exists(file)) {
+                    String jsonString = Files.readString(file);
+                    fromJson = GSON.fromJson(jsonString, mapType);
+                } else {
+                    WynnExtras.LOGGER.warn("profile doesn't exist: {}", fileName);
+                    return false;
+                }
             }
+        } catch (RuntimeException e) {
+            WynnExtras.LOGGER.error("Failed to parse spell profile {}.", fileName, e);
+            return false;
         }
 
         if (fromJson == null) {
@@ -120,10 +126,12 @@ public class SpellProfiles {
                 String json = Files.readString(names);
                 Type listType = new TypeToken<@NotNull List<String>>() {}.getType();
                 List<String> loadedNames = GSON.fromJson(json, listType);
-                profileNames.clear();
-                profileNames.addAll(loadedNames);
-            } catch (IOException e) {
-                WynnExtras.LOGGER.warn("failed to load nameList");
+                if (loadedNames != null) {
+                    profileNames.clear();
+                    profileNames.addAll(loadedNames);
+                }
+            } catch (Exception e) {
+                WynnExtras.LOGGER.warn("failed to load spell profile name list", e);
             }
         } else saveProfilesNames();
 

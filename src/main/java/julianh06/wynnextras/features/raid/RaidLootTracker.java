@@ -24,6 +24,8 @@ public class RaidLootTracker {
     private static final String REWARD_CHEST_TITLE = "\uDAFF\uDFEA\uE00E";
     private static final int CHEST_START = 27;
     private static final int CHEST_END = 53;
+    private static final String[] POWDER_ELEMENTS = {"Earth", "Thunder", "Water", "Fire", "Air"};
+    private static final String[] POWDER_TIERS = {"I", "II", "III", "IV", "V", "VI", "VII"};
 
     // Reward chest coordinates for each raid
     private static final Map<String, double[]> REWARD_CHEST_COORDS = Map.of(
@@ -205,6 +207,17 @@ public class RaidLootTracker {
                 latestRun.totalCharms += count;
             }
 
+            // ===== Powders =====
+            for (int element = 0; element < POWDER_ELEMENTS.length; element++) {
+                String prefix = POWDER_ELEMENTS[element] + " Powder ";
+                int prefixStart = name.indexOf(prefix);
+                if (prefixStart < 0) continue;
+
+                int tier = getPowderTier(name.substring(prefixStart + prefix.length()));
+                if (tier >= 0) addPowder(data, raidData, sessionRaidData, latestRun, element, tier, count);
+                break;
+            }
+
             // ===== Wards =====
             if (name.contains("Ward")) {
                 data.totalWards += count;
@@ -218,6 +231,24 @@ public class RaidLootTracker {
         data.latestData = latestRun;
         RaidLootConfig.INSTANCE.save();
         lastParse = System.currentTimeMillis();
+    }
+
+    private static void addPowder(RaidLootData data, RaidLootData.RaidSpecificLoot raidData,
+                                  RaidLootData.RaidSpecificLoot sessionRaidData,
+                                  RaidLootData.RaidSpecificLoot latestRun,
+                                  int element, int tier, int count) {
+        data.addPowder(element, tier, count);
+        raidData.addPowder(element, tier, count);
+        data.sessionData.addPowder(element, tier, count);
+        sessionRaidData.addPowder(element, tier, count);
+        latestRun.addPowder(element, tier, count);
+    }
+
+    private static int getPowderTier(String tierName) {
+        for (int tier = 0; tier < POWDER_TIERS.length; tier++) {
+            if (POWDER_TIERS[tier].equals(tierName)) return tier;
+        }
+        return -1;
     }
 
     private static String detectRaid() {

@@ -1,11 +1,10 @@
 package julianh06.wynnextras.features.shoppinglist.ui;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.Container;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
 import julianh06.wynnextras.features.inventory.TradeMarketComparisonPanel;
 import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTextCleaner;
 import julianh06.wynnextras.features.shoppinglist.service.ShoppingListTradeMarketSlotMatcher;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.item.ItemStack;
@@ -25,6 +24,10 @@ public enum ShoppingListScreenContext {
     HUD,
     BLOCKED_MODAL,
     UNSUPPORTED;
+
+    private static HandledScreen<?> cachedScreen;
+    private static int cachedRevision = -1;
+    private static final ShoppingListScreenContext[] CACHED_CONTEXTS = new ShoppingListScreenContext[2];
 
     public boolean supportsShoppingListMenu() {
         return this == TRADE_MARKET
@@ -54,7 +57,25 @@ public enum ShoppingListScreenContext {
         if (screen instanceof InventoryScreen) {
             return INVENTORY;
         }
-        Container container = Models.Container.getCurrentContainer();
+
+        int revision = screen.getScreenHandler().getRevision();
+        if (screen != cachedScreen || revision != cachedRevision) {
+            cachedScreen = screen;
+            cachedRevision = revision;
+            CACHED_CONTEXTS[0] = null;
+            CACHED_CONTEXTS[1] = null;
+        }
+        int cacheIndex = customBankOverlayActive ? 1 : 0;
+        ShoppingListScreenContext cached = CACHED_CONTEXTS[cacheIndex];
+        if (cached != null) return cached;
+
+        ShoppingListScreenContext detected = detectUncached(screen, customBankOverlayActive);
+        CACHED_CONTEXTS[cacheIndex] = detected;
+        return detected;
+    }
+
+    private static ShoppingListScreenContext detectUncached(HandledScreen<?> screen, boolean customBankOverlayActive) {
+        MenuType menuType = WynncraftMenuService.currentType();
         boolean tradeMarketMainScreen = hasTradeMarketSearchAndFilterSlot(screen);
         boolean tradeMarketPurchaseConfirmation = !tradeMarketMainScreen
                 && hasTradeMarketPurchaseConfirmationSignal(screen);
@@ -65,9 +86,9 @@ public enum ShoppingListScreenContext {
                 !tradeMarketMainScreen && hasTradeMarketFilterSignal(screen),
                 !tradeMarketMainScreen && hasTradeMarketDetailSignal(screen),
                 tradeMarketPurchaseConfirmation,
-                ShoppingListMenuLauncherButton.isBankLikeContainer(container),
+                ShoppingListMenuLauncherButton.isBankLikeMenu(menuType),
                 customBankOverlayActive,
-                container instanceof CraftingStationContainer);
+                menuType == MenuType.CRAFTING_STATION);
     }
 
     public static ShoppingListScreenContext fromSignals(String title, boolean tradeMarketScreen, boolean bankLikeScreen,

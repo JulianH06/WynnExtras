@@ -14,6 +14,7 @@ import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.concurrent.CompletableFuture;
 
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.utils.BackendErrorLogger;
 
 public class ResetTimeConfig {
@@ -42,6 +43,7 @@ public class ResetTimeConfig {
     }
 
     public void fetchIfNeeded() {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasResetTimes) return;
         if (fetched || fetching) return;
         fetching = true;
 

@@ -1,10 +1,10 @@
 package julianh06.wynnextras.features.crafting.calc;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.TextShadow;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.TextShadow;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
@@ -45,7 +45,7 @@ public class CycleButtonWidget extends Widget {
 
     @Override
     protected boolean onClick(int button) {
-        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         if (button == 0) {
             selectedIndex = (selectedIndex + 1) % options.length;
         } else if (button == 1) {

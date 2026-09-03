@@ -10,6 +10,7 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.gui.tooltip.HoveredTooltipPositioner;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -19,6 +20,7 @@ import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import org.joml.Vector2ic;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -58,26 +60,17 @@ public final class ChatMediaPreview {
     private static final Pattern URL_PATTERN = Pattern.compile("https://[^\\s<>{}\"']+(?:(?:\\R[^\\p{ASCII}\\r\\n]+[ \\t]*|\\R[ \\t]*(?=-))[^\\s<>{}\"']+)*");
     private static final Pattern URL_WRAP_PATTERN = Pattern.compile("\\R(?:[^\\p{ASCII}\\r\\n]+[ \\t]*|[ \\t]*(?=-))");
     private static final Pattern CHAT_SENDER_PATTERN = Pattern.compile("(?<![A-Za-z0-9_])([A-Za-z0-9_]{3,16}):\\s");
-    private static final Pattern TENOR_IMAGE_META_PATTERN = Pattern.compile("<meta\\b[^>]*(?:property|name)=\"(?:og:image|twitter:image)\"[^>]*>", Pattern.CASE_INSENSITIVE);
+    private static final Pattern IMAGE_META_PATTERN = Pattern.compile("<meta\\b[^>]*(?:property|name)=\"(?:og:image|twitter:image)\"[^>]*>", Pattern.CASE_INSENSITIVE);
     private static final Pattern CONTENT_ATTRIBUTE_PATTERN = Pattern.compile("\\bcontent=\"([^\"]+)\"", Pattern.CASE_INSENSITIVE);
     private static final int MAX_CACHE_ENTRIES = 20;
     private static final int MAX_PENDING_LOADS = 8;
     private static final int MAX_URL_LENGTH = 2048;
     private static final int REQUEST_TIMEOUT_SECONDS = 8;
+    private static final int MAX_GIF_SOURCE_FRAMES = 1000;
     private static final long MAX_HTML_DOWNLOAD_BYTES = 512 * 1024L;
     private static final long MAX_GIF_DECODED_BYTES = 64 * 1024 * 1024L;
     private static final long MAX_CACHED_DECODED_BYTES = 128 * 1024 * 1024L;
     private static final long AUTO_PREVIEW_IMAGE_DURATION_MS = 5000;
-    private static final Set<String> TRUSTED_HOSTS = Set.of(
-            "cdn.discordapp.com",
-            "media.discordapp.net",
-            "i.imgur.com",
-            "imgur.com",
-            "tenor.com",
-            "www.tenor.com",
-            "c.tenor.com",
-            "media.tenor.com"
-    );
     private static final RenderPipeline PREVIEW_PIPELINE = RenderPipelines.GUI_TEXTURED;
     private static final ThreadPoolExecutor EXECUTOR = new ThreadPoolExecutor(
             2,
@@ -158,7 +151,8 @@ public final class ChatMediaPreview {
         if (hoveredPreviewStartedAtMs == 0) {
             hoveredPreviewStartedAtMs = System.currentTimeMillis();
         }
-        drawPreview(context, entry, WynnExtrasConfig.INSTANCE.chatMediaPreviewHoverPosition, hoveredPreviewStartedAtMs, null);
+        WynnExtrasConfig.ChatMediaPreviewHoverPosition hoverPosition = WynnExtrasConfig.INSTANCE.chatMediaPreviewHoverPosition;
+        drawPreview(context, entry, hoverPosition.getFixedPosition(), hoveredPreviewStartedAtMs, null, mouseX, mouseY);
     }
 
     private static void resetHoveredPreview() {
@@ -329,7 +323,7 @@ public final class ChatMediaPreview {
             if (value.length() > MAX_URL_LENGTH) return null;
             URI uri = withoutFragment(URI.create(value).normalize());
             if (!isSafeNetworkUri(uri)) return null;
-            if (!hasSupportedMediaExtension(uri) && !isTenorViewUri(uri)) return null;
+            if (!hasSupportedMediaExtension(uri) && !isTenorViewUri(uri) && !isKlipyPageUri(uri)) return null;
             return uri;
         } catch (IllegalArgumentException ignored) {
             return null;
@@ -342,11 +336,14 @@ public final class ChatMediaPreview {
     }
 
     private static boolean isAllowedHost(String host) {
-        return TRUSTED_HOSTS.contains(host) || isTenorHost(host);
+        return !host.isEmpty();
     }
 
     private static boolean isTenorHost(String host) {
-        if (TRUSTED_HOSTS.contains(host) && host.endsWith("tenor.com")) return true;
+        if (host.equals("tenor.com")
+                || host.equals("www.tenor.com")
+                || host.equals("c.tenor.com")
+                || host.equals("media.tenor.com")) return true;
         if (!host.startsWith("media") || !host.endsWith(".tenor.com")) return false;
         String number = host.substring("media".length(), host.length() - ".tenor.com".length());
         if (number.isEmpty()) return false;
@@ -371,11 +368,8 @@ public final class ChatMediaPreview {
 
     private static URI withoutFragment(URI uri) {
         if (uri.getRawFragment() == null) return uri;
-        try {
-            return new URI(uri.getScheme(), uri.getRawAuthority(), uri.getRawPath(), uri.getRawQuery(), null);
-        } catch (Exception ignored) {
-            return uri;
-        }
+        String value = uri.toString();
+        return URI.create(value.substring(0, value.length() - uri.getRawFragment().length() - 1));
     }
 
     private static boolean isTenorViewUri(URI uri) {
@@ -391,14 +385,34 @@ public final class ChatMediaPreview {
         return host.equals("tenor.com") || host.equals("www.tenor.com");
     }
 
+    private static boolean isKlipyPageUri(URI uri) {
+        String host = normalizedHost(uri);
+        String path = uri.getPath();
+        return (host.equals("klipy.com") || host.equals("www.klipy.com"))
+                && path != null
+                && path.startsWith("/gifs/");
+    }
+
+    private static boolean isKlipyMediaHost(String host) {
+        if (!host.startsWith("static") || !host.endsWith(".klipy.com")) return false;
+        String number = host.substring("static".length(), host.length() - ".klipy.com".length());
+        for (int i = 0; i < number.length(); i++) {
+            if (!Character.isDigit(number.charAt(i))) return false;
+        }
+        return true;
+    }
+
     private static boolean hasSupportedMediaExtension(URI uri) {
         String path = uri.getPath();
         if (path == null) return false;
         String lower = path.toLowerCase(Locale.ROOT);
-        return lower.endsWith(".png")
+        if (lower.endsWith(".png")
                 || lower.endsWith(".jpg")
                 || lower.endsWith(".jpeg")
-                || lower.endsWith(".gif");
+                || lower.endsWith(".gif")) return true;
+        String host = normalizedHost(uri);
+        return (host.equals("cdn.7tv.app") || host.equals("gif.fxtwitter.com"))
+                && (lower.endsWith(".webp") || lower.endsWith(".avif"));
     }
 
     private static String normalizeKey(URI uri) {
@@ -438,8 +452,12 @@ public final class ChatMediaPreview {
 
     private static URI toDownloadUri(URI uri) {
         String host = normalizedHost(uri);
-        if (!host.equals("media.discordapp.net")) return uri;
         String path = uri.getPath() == null ? "" : uri.getPath().toLowerCase(Locale.ROOT);
+        if ((host.equals("cdn.7tv.app") || host.equals("gif.fxtwitter.com"))
+                && (path.endsWith(".webp") || path.endsWith(".avif"))) {
+            return replacePathExtension(uri, ".gif");
+        }
+        if (!host.equals("media.discordapp.net")) return uri;
         String format = null;
         if (path.endsWith(".jpg") || path.endsWith(".jpeg")) {
             format = "jpeg";
@@ -461,10 +479,32 @@ public final class ChatMediaPreview {
             }
         }
         try {
-            return new URI(uri.getScheme(), uri.getRawAuthority(), uri.getRawPath(), query.toString(), uri.getRawFragment());
+            return createRawUri(uri, uri.getRawPath(), query.toString());
         } catch (Exception ignored) {
             return uri;
         }
+    }
+
+    private static URI replacePathExtension(URI uri, String extension) {
+        String path = uri.getRawPath();
+        if (path == null) return uri;
+        int dot = path.lastIndexOf('.');
+        if (dot < 0) return uri;
+        try {
+            return createRawUri(uri, path.substring(0, dot) + extension, uri.getRawQuery());
+        } catch (Exception ignored) {
+            return uri;
+        }
+    }
+
+    private static URI createRawUri(URI uri, String rawPath, String rawQuery) {
+        StringBuilder value = new StringBuilder(uri.getScheme())
+                .append("://")
+                .append(uri.getRawAuthority())
+                .append(rawPath);
+        if (rawQuery != null) value.append('?').append(rawQuery);
+        if (uri.getRawFragment() != null) value.append('#').append(uri.getRawFragment());
+        return URI.create(value.toString());
     }
 
     private static void load(PreviewEntry entry) {
@@ -510,25 +550,27 @@ public final class ChatMediaPreview {
     }
 
     private static URI resolveDownloadUri(URI uri) throws Exception {
-        if (!isTenorPageUri(uri)) return uri;
+        boolean tenorPage = isTenorPageUri(uri);
+        boolean klipyPage = isKlipyPageUri(uri);
+        if (!tenorPage && !klipyPage) return uri;
         String html = new String(download(uri, DownloadType.HTML).bytes, StandardCharsets.UTF_8);
-        Matcher metaMatcher = TENOR_IMAGE_META_PATTERN.matcher(html);
+        Matcher metaMatcher = IMAGE_META_PATTERN.matcher(html);
         while (metaMatcher.find()) {
             Matcher contentMatcher = CONTENT_ATTRIBUTE_PATTERN.matcher(metaMatcher.group());
             if (!contentMatcher.find()) continue;
             URI mediaUri = URI.create(contentMatcher.group(1).replace("&amp;", "&")).normalize();
             if (isSafeNetworkUri(mediaUri)
-                    && isTenorMediaHost(normalizedHost(mediaUri))
+                    && (tenorPage && isTenorMediaHost(normalizedHost(mediaUri))
+                    || klipyPage && isKlipyMediaHost(normalizedHost(mediaUri)))
                     && hasSupportedMediaExtension(mediaUri)) {
                 return mediaUri;
             }
         }
-        throw new IOException("Tenor preview unavailable");
+        throw new IOException((klipyPage ? "Klipy" : "Tenor") + " preview unavailable");
     }
 
     private static DownloadedContent download(URI uri, DownloadType downloadType) throws Exception {
         URI current = uri;
-        String originalHost = normalizedHost(uri);
         for (int redirect = 0; redirect < 3; redirect++) {
             if (!isSafeNetworkUri(current)) throw new IOException("Blocked URL");
             validateResolvedAddress(current);
@@ -538,7 +580,7 @@ public final class ChatMediaPreview {
                 connection.setInstanceFollowRedirects(false);
                 connection.setConnectTimeout(REQUEST_TIMEOUT_SECONDS * 1000);
                 connection.setReadTimeout(REQUEST_TIMEOUT_SECONDS * 1000);
-                connection.setRequestProperty("User-Agent", "WynnExtras media preview");
+                connection.setRequestProperty("User-Agent", isKlipyPageUri(current) ? "Discordbot/2.0" : "WynnExtras media preview");
                 int status = connection.getResponseCode();
                 if (status >= 300 && status < 400) {
                     closeResponseBody(connection);
@@ -546,7 +588,6 @@ public final class ChatMediaPreview {
                     if (location == null) throw new IOException("Bad redirect");
                     URI next = withoutFragment(current.resolve(location).normalize());
                     if (!isSafeNetworkUri(next)) throw new IOException("Blocked redirect");
-                    if (!isSameAllowedHostFamily(originalHost, normalizedHost(next))) throw new IOException("Blocked redirect");
                     current = next;
                     continue;
                 }
@@ -595,17 +636,6 @@ public final class ChatMediaPreview {
         } catch (IOException ignored) { }
         try (InputStream stream = connection.getInputStream()) {
         } catch (IOException ignored) { }
-    }
-
-    private static boolean isSameAllowedHostFamily(String originalHost, String nextHost) {
-        if (!isAllowedHost(nextHost)) return false;
-        boolean originalDiscord = isDiscordHost(originalHost);
-        boolean nextDiscord = isDiscordHost(nextHost);
-        boolean originalImgur = originalHost.endsWith("imgur.com");
-        boolean nextImgur = nextHost.endsWith("imgur.com");
-        boolean originalTenor = isTenorHost(originalHost);
-        boolean nextTenor = isTenorHost(nextHost);
-        return originalHost.equals(nextHost) || originalDiscord && nextDiscord || originalImgur && nextImgur || originalTenor && nextTenor;
     }
 
     private static boolean isDiscordHost(String host) {
@@ -729,23 +759,30 @@ public final class ChatMediaPreview {
                 int frameCount = reader.getNumImages(true);
                 int maxFrames = Math.max(1, WynnExtrasConfig.INSTANCE.chatMediaPreviewMaxGifFrames);
                 if (frameCount <= 0) throw new IOException("Empty GIF");
-                if (frameCount > maxFrames) throw new IOException("GIF has too many frames");
+                if (frameCount > MAX_GIF_SOURCE_FRAMES) throw new IOException("GIF has too many frames");
 
                 GifScreen screen = readGifScreen(reader);
                 validateDimensions(screen.width, screen.height);
-                long decodedBytes = decodedBytes(screen.width, screen.height, frameCount);
-                if (decodedBytes > MAX_GIF_DECODED_BYTES) {
-                    throw new IOException("GIF too large");
+                long frameBytes = decodedBytes(screen.width, screen.height, 1);
+                int storedFrameCount = (int) Math.min(frameCount, Math.min(maxFrames, Math.max(1, MAX_GIF_DECODED_BYTES / frameBytes)));
+                long decodedBytes = decodedBytes(screen.width, screen.height, storedFrameCount);
+                List<GifFrameMeta> frameMetadata = new ArrayList<>(frameCount);
+                for (int i = 0; i < frameCount; i++) {
+                    ensureNotInterrupted();
+                    GifFrameMeta meta = readGifFrameMeta(reader.getImageMetadata(i));
+                    validateGifFrame(meta, screen);
+                    frameMetadata.add(meta);
                 }
+                int[] selectedFrames = selectGifFrames(frameCount, storedFrameCount);
+                int[] selectedFrameDelays = selectedGifFrameDelays(frameMetadata, selectedFrames);
 
                 BufferedImage canvas = new BufferedImage(screen.width, screen.height, BufferedImage.TYPE_INT_ARGB);
                 Graphics2D graphics = canvas.createGraphics();
                 try {
+                    int selectedFrame = 0;
                     for (int i = 0; i < frameCount; i++) {
                         ensureNotInterrupted();
-                        IIOMetadata metadata = reader.getImageMetadata(i);
-                        GifFrameMeta meta = readGifFrameMeta(metadata);
-                        validateGifFrame(meta, screen);
+                        GifFrameMeta meta = frameMetadata.get(i);
                         BufferedImage previous = null;
                         if ("restoreToPrevious".equals(meta.disposalMethod)) {
                             previous = copyImage(canvas);
@@ -756,7 +793,10 @@ public final class ChatMediaPreview {
                             throw new IOException("GIF frame too large");
                         }
                         graphics.drawImage(frame, meta.left, meta.top, null);
-                        frames.add(new DecodedFrame(toNativeImage(canvas), meta.delayMs));
+                        if (selectedFrame < selectedFrames.length && selectedFrames[selectedFrame] == i) {
+                            frames.add(new DecodedFrame(toNativeImage(canvas), selectedFrameDelays[selectedFrame]));
+                            selectedFrame++;
+                        }
                         if ("restoreToBackgroundColor".equals(meta.disposalMethod)) {
                             clearTransparent(graphics, meta.left, meta.top, meta.width, meta.height);
                         } else if (previous != null) {
@@ -777,6 +817,25 @@ public final class ChatMediaPreview {
                 reader.dispose();
             }
         }
+    }
+
+    private static int[] selectGifFrames(int frameCount, int selectedCount) {
+        int[] selectedFrames = new int[selectedCount];
+        for (int i = 0; i < selectedCount; i++) {
+            selectedFrames[i] = (int) ((long) i * frameCount / selectedCount);
+        }
+        return selectedFrames;
+    }
+
+    private static int[] selectedGifFrameDelays(List<GifFrameMeta> frames, int[] selectedFrames) {
+        int[] delays = new int[selectedFrames.length];
+        for (int i = 0; i < selectedFrames.length; i++) {
+            int end = i + 1 < selectedFrames.length ? selectedFrames[i + 1] : frames.size();
+            for (int frame = selectedFrames[i]; frame < end; frame++) {
+                delays[i] += frames.get(frame).delayMs;
+            }
+        }
+        return delays;
     }
 
     private static void validateGifFrame(GifFrameMeta frame, GifScreen screen) throws IOException {
@@ -971,6 +1030,10 @@ public final class ChatMediaPreview {
     }
 
     private static void drawPreview(DrawContext context, PreviewEntry entry, WynnExtrasConfig.ChatMediaPreviewPosition position, long animationStartedAtMs, String sender) {
+        drawPreview(context, entry, position, animationStartedAtMs, sender, -1, -1);
+    }
+
+    private static void drawPreview(DrawContext context, PreviewEntry entry, WynnExtrasConfig.ChatMediaPreviewPosition position, long animationStartedAtMs, String sender, int mouseX, int mouseY) {
         PreviewFrame frame = entry.currentFrame(animationStartedAtMs);
         if (frame == null) return;
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -987,8 +1050,21 @@ public final class ChatMediaPreview {
         String senderText = sender == null ? null : "Sent by " + sender;
         int senderHeight = senderText == null ? 0 : 13;
         int contentWidth = senderText == null ? drawWidth : Math.max(drawWidth, mc.textRenderer.getWidth(senderText) + 4);
-        int x = getPreviewX(position, screenWidth, contentWidth);
-        int y = getPreviewY(position, screenHeight, drawHeight + senderHeight);
+        int x;
+        int y;
+        if (position == null) {
+            int previewWidth = contentWidth + 6;
+            int previewHeight = drawHeight + senderHeight + 6;
+            Vector2ic tooltipPosition = HoveredTooltipPositioner.INSTANCE.getPosition(
+                    screenWidth, screenHeight, mouseX, mouseY, previewWidth, previewHeight);
+            int maxX = Math.max(4, screenWidth - previewWidth - 4);
+            int maxY = Math.max(4, screenHeight - previewHeight - 4);
+            x = MathHelper.clamp(tooltipPosition.x(), 4, maxX) + 3;
+            y = MathHelper.clamp(tooltipPosition.y(), 4, maxY) + 3;
+        } else {
+            x = getPreviewX(position, screenWidth, contentWidth);
+            y = getPreviewY(position, screenHeight, drawHeight + senderHeight);
+        }
         int imageX = x + (contentWidth - drawWidth) / 2;
 
         if (senderText != null) {
@@ -998,10 +1074,6 @@ public final class ChatMediaPreview {
         }
         context.fill(imageX - 3, y - 3, imageX + drawWidth + 3, y + drawHeight + 3, 0xE0101010);
         context.drawTexture(PREVIEW_PIPELINE, frame.texture, imageX, y, 0, 0, drawWidth, drawHeight, frame.width, frame.height, frame.width, frame.height);
-        if (entry.animated) {
-            context.fill(imageX - 3, y + drawHeight - 11, imageX + 30, y + drawHeight + 3, 0xA0000000);
-            context.drawTextWithShadow(mc.textRenderer, "GIF", imageX + 2, y + drawHeight - 9, 0xFFFFFFFF);
-        }
     }
 
     private static int getPreviewX(WynnExtrasConfig.ChatMediaPreviewPosition position, int screenWidth, int drawWidth) {

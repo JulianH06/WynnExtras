@@ -1,12 +1,11 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.models.character.type.ClassType;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.gear.type.GearType;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.items.game.GearItem;
-import com.wynntils.models.abilities.AbilityModel;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.state.AbilityState;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.wynncraft.state.CharacterClass;
+import julianh06.wynnextras.wynncraft.state.CharacterState;
+import julianh06.wynnextras.wynncraft.item.GearType;
+import julianh06.wynnextras.wynncraft.item.WynnItemParser;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.LocalAspectStorage;
 import julianh06.wynnextras.features.inventory.BankOverlay;
@@ -23,7 +22,6 @@ import net.minecraft.item.ItemStack;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class BloodSorrowTimer {
     private static long lastStartMs = Long.MIN_VALUE / 2;
@@ -93,7 +91,7 @@ public class BloodSorrowTimer {
 
     private static void onSound(String path) {
         if (!WynnExtrasConfig.INSTANCE.bloodSorrowTimerEnabled) return;
-        if (Models.Character.getClassType() != ClassType.SHAMAN) return;
+        if (!CharacterState.isClass(CharacterClass.SHAMAN)) return;
         if (!path.contains("wither_skeleton.hurt")) return;
         soundFiredAt = System.currentTimeMillis();
     }
@@ -127,14 +125,9 @@ public class BloodSorrowTimer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (!WynnExtrasConfig.INSTANCE.bloodSorrowTimerEnabled) return;
             if (client.player == null) return;
-            if (Models.Character.getClassType() != ClassType.SHAMAN) return;
+            if (!CharacterState.isClass(CharacterClass.SHAMAN)) return;
 
-            int currentValue = -1;
-            try {
-                if (AbilityModel.bloodPoolBar.isActive()) {
-                    currentValue = AbilityModel.bloodPoolBar.getBarProgress().value().current();
-                }
-            } catch (Exception ignored) {}
+            int currentValue = AbilityState.bloodPoolValue().orElse(-1);
 
             if (lastBloodPoolValue >= 0 && currentValue >= 0) {
                 int change = Math.abs(currentValue - lastBloodPoolValue);
@@ -174,12 +167,8 @@ public class BloodSorrowTimer {
         if (mc.player == null) return;
         if (mc.options.hudHidden) return;
         ItemStack held = mc.player.getMainHandStack();
-        GearItem gearItem = null;
-        Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(held);
-        if (optWynnItem.isPresent() && optWynnItem.get() instanceof GearItem) {
-            gearItem = (GearItem) optWynnItem.get();
-        }
-        if (held == null || held.isEmpty() || !(gearItem != null && gearItem.getGearType() == GearType.RELIK)) {
+        if (held == null || held.isEmpty()
+                || WynnItemParser.parse(held).map(item -> item.gearType() != GearType.RELIK).orElse(true)) {
             lastStartMs = 0;
             timerEndMs = 0;
             return;

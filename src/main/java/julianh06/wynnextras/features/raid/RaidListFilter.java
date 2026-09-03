@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.raid;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.render.RenderUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.render.RenderUtils;
 import julianh06.wynnextras.event.KeyInputEvent;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.utils.overlays.EasyTextInput;

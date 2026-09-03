@@ -1,6 +1,5 @@
 package julianh06.wynnextras.features.shoppinglist;
 
-import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -12,6 +11,7 @@ import julianh06.wynnextras.features.shoppinglist.service.WynnBuilderDecoder;
 import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListScreenContext;
 import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListMenuExtension;
 import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListMenuLauncherButton;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -126,6 +126,6 @@ public final class ShoppingListFeature {
     }
 
     private static void send(String message) {
-        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
+        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(message));
     }
 }

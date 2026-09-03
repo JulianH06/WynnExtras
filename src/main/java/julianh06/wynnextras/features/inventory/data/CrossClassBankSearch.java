@@ -1,9 +1,8 @@
 package julianh06.wynnextras.features.inventory.data;
 
-import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.item.WynnItemData;
+import julianh06.wynnextras.wynncraft.item.WynnItemParser;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.utils.SearchQueryParser;
 import net.fabricmc.loader.api.FabricLoader;
@@ -21,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -38,6 +38,8 @@ public class CrossClassBankSearch {
     private static final ExecutorService SEARCH_COORDINATOR = Executors.newSingleThreadExecutor(daemonThreadFactory("WynnExtras Bank Search Coordinator"));
     private static final ExecutorService SEARCH_EXECUTOR = Executors.newFixedThreadPool(SEARCH_THREADS, daemonThreadFactory("WynnExtras Bank Search"));
     private static final Map<Path, CachedWeaponData> CLASS_SELECTION_WEAPON_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Path, CompletableFuture<CachedWeaponData>> CLASS_SELECTION_WEAPON_LOADS = new ConcurrentHashMap<>();
+    private static final AtomicLong CLASS_SELECTION_WEAPON_CACHE_GENERATION = new AtomicLong();
 
     public record SearchRequest(
             Path configDir,
@@ -56,7 +58,7 @@ public class CrossClassBankSearch {
 
     private record CachedWeaponData(List<CharacterWeaponData> characters, long loadedAtMs) {}
     private record CharacterWeaponData(String characterId, String nickname, int level, ItemStack weapon,
-                                       boolean weaponInInventory, long modifiedAtMs) {}
+                                       long modifiedAtMs) {}
 
     /**
      * Result of a cross-class search
@@ -104,10 +106,10 @@ public class CrossClassBankSearch {
     }
 
     public static SearchRequest createRequest(String query, boolean includeCurrentCharacter, boolean includeAccountBank, boolean allPages) {
-        if (McUtils.player() == null) return null;
+        if (MinecraftUtils.player() == null) return null;
 
         Path configDir = FabricLoader.getInstance().getConfigDir()
-                .resolve("wynnextras/" + McUtils.player().getUuid().toString());
+                .resolve("wynnextras/" + MinecraftUtils.player().getUuid().toString());
 
         Map<Integer, List<ItemStack>> accountBankPages = includeAccountBank
                 ? snapshotAccountBankPages()
@@ -209,14 +211,8 @@ public class CrossClassBankSearch {
                 for (ItemStack stack : pageItems) {
                     if (stack == null || stack.isEmpty()) continue;
 
-                    // Get WynnItem if available
-                    WynnItem wynnItem = null;
-                    Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(stack);
-                    if (optWynnItem.isPresent()) {
-                        wynnItem = optWynnItem.get();
-                    }
-
-                    if (SearchQueryParser.matches(stack, wynnItem, query)) {
+                    WynnItemData itemModel = WynnItemParser.parse(stack).orElse(null);
+                    if (SearchQueryParser.matches(stack, itemModel, query)) {
                         matchingItems.add(stack);
                     }
                 }
@@ -237,10 +233,10 @@ public class CrossClassBankSearch {
 
     public static ItemStack findLastHeldWeaponForClassSelection(String stableId, String name, String classType, int level,
                                                                 boolean requireUniqueBankMatch) {
-        if (McUtils.player() == null) return ItemStack.EMPTY;
+        if (MinecraftUtils.player() == null) return ItemStack.EMPTY;
 
         Path configDir = FabricLoader.getInstance().getConfigDir()
-                .resolve("wynnextras/" + McUtils.player().getUuid().toString());
+                .resolve("wynnextras/" + MinecraftUtils.player().getUuid().toString());
         if (!Files.exists(configDir)) return ItemStack.EMPTY;
 
         return findLastHeldWeapon(configDir, stableId, name, classType, level, requireUniqueBankMatch);
@@ -248,6 +244,8 @@ public class CrossClassBankSearch {
 
     public static void invalidateClassSelectionWeaponCache() {
         CLASS_SELECTION_WEAPON_CACHE.clear();
+        CLASS_SELECTION_WEAPON_CACHE_GENERATION.incrementAndGet();
+        CLASS_SELECTION_WEAPON_LOADS.clear();
     }
 
     /**
@@ -324,7 +322,7 @@ public class CrossClassBankSearch {
             if (score > bestScore) {
                 bestScore = score;
                 bestCount = 1;
-                bestWeapon = character.weaponInInventory() ? character.weapon().copy() : ItemStack.EMPTY;
+                bestWeapon = character.weapon().copy();
                 bestModifiedAtMs = character.modifiedAtMs();
             } else if (score == bestScore) {
                 bestCount++;
@@ -341,7 +339,7 @@ public class CrossClassBankSearch {
     }
 
     private static boolean shouldPreferHeldWeaponCandidate(CharacterWeaponData candidate, ItemStack bestWeapon, long bestModifiedAtMs) {
-        if (!candidate.weaponInInventory()) return false;
+        if (candidate.weapon().isEmpty()) return false;
         if (bestWeapon == null || bestWeapon.isEmpty()) return true;
         return candidate.modifiedAtMs() > bestModifiedAtMs;
     }
@@ -353,6 +351,24 @@ public class CrossClassBankSearch {
             return cached.characters();
         }
 
+        CLASS_SELECTION_WEAPON_CACHE.remove(configDir, cached);
+        long generation = CLASS_SELECTION_WEAPON_CACHE_GENERATION.get();
+        CLASS_SELECTION_WEAPON_LOADS.computeIfAbsent(configDir, path -> {
+            CompletableFuture<CachedWeaponData> load = CompletableFuture.supplyAsync(
+                    () -> loadClassSelectionWeaponData(path), SEARCH_COORDINATOR);
+            load.whenComplete((result, error) -> {
+                CLASS_SELECTION_WEAPON_LOADS.remove(path, load);
+                if (error == null && result != null && generation == CLASS_SELECTION_WEAPON_CACHE_GENERATION.get()) {
+                    CLASS_SELECTION_WEAPON_CACHE.put(path, result);
+                }
+            });
+            return load;
+        });
+        return Collections.emptyList();
+    }
+
+    private static CachedWeaponData loadClassSelectionWeaponData(Path configDir) {
+        long loadedAtMs = System.currentTimeMillis();
         List<CharacterWeaponData> characters = new ArrayList<>();
         for (Path file : listCharacterBankFiles(configDir)) {
             String characterId = getCharacterId(file);
@@ -363,23 +379,18 @@ public class CrossClassBankSearch {
                 if (data == null || isInvalidCharacterBank(characterId, data)) continue;
 
                 ItemStack weapon = data.getLastHeldWeapon();
-                boolean weaponInInventory = weapon != null && !weapon.isEmpty()
-                        && hasSavedPlayerInventory(data)
-                        && containsStack(data.getPlayerInventory(), weapon);
                 long modifiedAtMs = Files.getLastModifiedTime(file).toMillis();
                 characters.add(new CharacterWeaponData(
                         characterId,
                         data.getCharacterNickname(),
                         data.getCharacterLevel(),
                         weapon == null ? ItemStack.EMPTY : weapon.copy(),
-                        weaponInInventory,
                         modifiedAtMs
                 ));
             } catch (Exception ignored) { }
         }
 
-        CLASS_SELECTION_WEAPON_CACHE.put(configDir, new CachedWeaponData(characters, now));
-        return characters;
+        return new CachedWeaponData(characters, loadedAtMs);
     }
 
     private static int scoreClassSelectionBankMatch(String characterId, String nickname, int bankLevel, String stableId,
@@ -431,10 +442,8 @@ public class CrossClassBankSearch {
                 List<ItemStack> matchingItems = new ArrayList<>();
                 for (ItemStack stack : pageItems) {
                     if (stack == null || stack.isEmpty()) continue;
-                    WynnItem wynnItem = null;
-                    Optional<WynnItem> opt = Models.Item.getWynnItem(stack);
-                    if (opt.isPresent()) wynnItem = opt.get();
-                    if (SearchQueryParser.matches(stack, wynnItem, query)) {
+                    WynnItemData itemModel = WynnItemParser.parse(stack).orElse(null);
+                    if (SearchQueryParser.matches(stack, itemModel, query)) {
                         matchingItems.add(stack);
                     }
                 }
@@ -619,12 +628,8 @@ public class CrossClassBankSearch {
 
     private static boolean matchesStack(ItemStack stack, SearchQueryParser.ParsedQuery query) {
         if (stack == null || stack.isEmpty()) return false;
-        WynnItem wynnItem = null;
-        Optional<WynnItem> optWynnItem = Models.Item.getWynnItem(stack);
-        if (optWynnItem.isPresent()) {
-            wynnItem = optWynnItem.get();
-        }
-        return SearchQueryParser.matches(stack, wynnItem, query);
+        WynnItemData itemModel = WynnItemParser.parse(stack).orElse(null);
+        return SearchQueryParser.matches(stack, itemModel, query);
     }
 
     private static boolean hasSavedPlayerInventory(BankData data) {
@@ -635,15 +640,6 @@ public class CrossClassBankSearch {
         if (items == null) return false;
         for (ItemStack stack : items) {
             if (stack != null && !stack.isEmpty()) return true;
-        }
-        return false;
-    }
-
-    private static boolean containsStack(List<ItemStack> items, ItemStack target) {
-        if (items == null || target == null || target.isEmpty()) return false;
-        for (ItemStack stack : items) {
-            if (stack == null || stack.isEmpty()) continue;
-            if (stack.getCount() == target.getCount() && ItemStack.areItemsAndComponentsEqual(stack, target)) return true;
         }
         return false;
     }

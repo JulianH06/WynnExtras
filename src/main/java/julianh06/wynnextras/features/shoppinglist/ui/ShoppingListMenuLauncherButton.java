@@ -1,14 +1,10 @@
 package julianh06.wynnextras.features.shoppinglist.ui;
 
-import com.wynntils.models.containers.Container;
-import com.wynntils.models.containers.containers.personal.AccountBankContainer;
-import com.wynntils.models.containers.containers.personal.BookshelfContainer;
-import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
-import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.UIUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -86,7 +82,7 @@ public final class ShoppingListMenuLauncherButton {
             return false;
         }
 
-        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         if (ShoppingListMenuExtension.isVisible()) {
             ShoppingListMenuExtension.close();
         } else {
@@ -134,11 +130,11 @@ public final class ShoppingListMenuLauncherButton {
                 && ShoppingListMenuRenderPolicy.shouldRenderLauncher(screenContext);
     }
 
-    public static boolean isBankLikeContainer(Container container) {
-        return container instanceof AccountBankContainer
-                || container instanceof CharacterBankContainer
-                || container instanceof BookshelfContainer
-                || container instanceof MiscBucketContainer;
+    public static boolean isBankLikeMenu(MenuType menuType) {
+        return menuType == MenuType.ACCOUNT_BANK
+                || menuType == MenuType.CHARACTER_BANK
+                || menuType == MenuType.BOOKSHELF
+                || menuType == MenuType.MISC_BUCKET;
     }
 
     public static String label(boolean active) {

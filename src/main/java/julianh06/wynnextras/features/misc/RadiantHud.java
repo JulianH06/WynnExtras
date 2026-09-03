@@ -1,7 +1,6 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.statuseffects.type.StatusEffect;
+import julianh06.wynnextras.wynncraft.state.StatusEffectState;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -27,15 +26,12 @@ public class RadiantHud {
             if (++tickCount % 10 != 0) return;
 
             cachedEntries.clear();
-            List<StatusEffect> effects;
-            try { effects = Models.StatusEffect.getStatusEffects(); } catch (Exception e) { return; }
-
-            for (StatusEffect effect : effects) {
-                String name = effect.getName().getStringWithoutFormatting();
+            for (StatusEffectState.Effect effect : StatusEffectState.effects()) {
+                String name = effect.name();
                 if (!name.contains("Radiance") && !name.contains("Radiant")) continue;
 
-                String display = effect.asString().getStringWithoutFormatting();
-                int duration = effect.getDuration();
+                String display = effect.display();
+                int duration = effect.duration();
 
                 int color;
                 if (duration < 0) color = 0xFFFFFF00;

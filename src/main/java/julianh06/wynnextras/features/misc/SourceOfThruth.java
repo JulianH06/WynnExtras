@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.command.Command;
 import julianh06.wynnextras.sound.ModSounds;
 import julianh06.wynnextras.utils.UI.WEScreen;

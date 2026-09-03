@@ -1,11 +1,8 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.models.gear.type.GearType;
-import com.wynntils.models.items.WynnItem;
-import com.wynntils.models.items.items.game.CraftedGearItem;
-import com.wynntils.models.items.items.game.GearItem;
-import com.wynntils.core.components.Models;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.item.GearType;
+import julianh06.wynnextras.wynncraft.item.WynnItemParser;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import net.minecraft.item.ItemStack;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -36,17 +33,9 @@ public class TotemTimer {
     public record TotemInfo(String owner, String timeText, String toxoplasmosisText, boolean estimated) {}
     private record TotemLineInfo(String timeText, String toxoplasmosisText) {}
 
-    /** True if the stack is a relik — including crafted reliks, which are CraftedGearItem
-     *  not GearItem and were previously ignored, leaving the timer stuck on stale data
-     *  when switching to/from a crafted relik. */
     private static boolean isRelik(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        Optional<WynnItem> opt = Models.Item.getWynnItem(stack);
-        if (opt.isEmpty()) return false;
-        WynnItem item = opt.get();
-        if (item instanceof GearItem gear) return gear.getGearType() == GearType.RELIK;
-        if (item instanceof CraftedGearItem crafted) return crafted.getGearType() == GearType.RELIK;
-        return false;
+        return WynnItemParser.parse(stack).map(item -> item.gearType() == GearType.RELIK).orElse(false);
     }
 
     private static float parseSeconds(String timeText) {
@@ -100,6 +89,8 @@ public class TotemTimer {
     private static final Map<String, float[]> estimatedTotems = new HashMap<>();
     private static final Map<String, String> estimatedTotemToxoplasmosis = new HashMap<>();
     private static final List<String> lastFoundKeys = new ArrayList<>();
+    private static final Set<UUID> lastVisibleTotems = new HashSet<>();
+    private static final Set<UUID> invalidatedTotems = new HashSet<>();
     private static long tickCounter = 0;
 
     public static List<TotemInfo> getTotems() {
@@ -131,6 +122,7 @@ public class TotemTimer {
                     if (isRelik(prevStack) && isRelik(newStack)) {
                         estimatedTotems.clear();
                         estimatedTotemToxoplasmosis.clear();
+                        invalidatedTotems.addAll(lastVisibleTotems);
                     }
                 }
                 lastSelectedSlot = currentSlot;
@@ -142,7 +134,7 @@ public class TotemTimer {
 
             tickCounter++;
             WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
-            String playerName = McUtils.playerName();
+            String playerName = MinecraftUtils.playerName();
 
             // Warning check + sound runs every tick
             if (c.totemTimerWarningText || c.totemTimerWarningSound) {
@@ -156,7 +148,7 @@ public class TotemTimer {
                 }
             }
             if (warningActive && c.totemTimerWarningSound) {
-                McUtils.playSoundAmbient(
+                MinecraftUtils.playSoundAmbient(
                     SoundEvent.of(Identifier.of("block.note_block.pling")),
                     c.totemTimerWarningSoundVolume / 100, 2.0f
                 );
@@ -174,6 +166,7 @@ public class TotemTimer {
             }
 
             Map<String, Integer> ownerCounts = new HashMap<>();
+            Set<UUID> visibleTotems = new HashSet<>();
             lastFoundKeys.clear();
 
             for (DisplayEntity.TextDisplayEntity tde : allTdes) {
@@ -188,6 +181,9 @@ public class TotemTimer {
                 int lineStart = text.lastIndexOf('\n', idx > 0 ? idx - 1 : 0);
                 String owner = text.substring(lineStart + 1, idx).trim();
                 if (owner.isEmpty()) owner = "?";
+
+                UUID entityId = tde.getUuid();
+                visibleTotems.add(entityId);
 
                 if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
 
@@ -233,13 +229,18 @@ public class TotemTimer {
                 lastFoundKeys.add(key);
 
                 float secs = parseSeconds(timeText);
-                if (secs > 0) {
+                boolean invalidated = invalidatedTotems.contains(entityId);
+                if (secs > 0 && !invalidated) {
                     estimatedTotems.put(key, new float[]{ secs, tickCounter });
                     estimatedTotemToxoplasmosis.put(key, toxoplasmosisText);
                 }
 
                 totems.add(new TotemInfo(owner, timeText, toxoplasmosisText, false));
             }
+
+            invalidatedTotems.retainAll(visibleTotems);
+            lastVisibleTotems.clear();
+            lastVisibleTotems.addAll(visibleTotems);
 
             if (c.totemTimerEstimate) {
                 List<String> toRemove = new ArrayList<>();

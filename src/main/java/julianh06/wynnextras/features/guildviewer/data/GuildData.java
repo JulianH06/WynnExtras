@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 public class GuildData {
+    public transient boolean summaryOnly;
     public String uuid;
     public String name;
     public String prefix;

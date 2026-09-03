@@ -1,21 +1,17 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.Container;
-import com.wynntils.models.containers.containers.CharacterInfoContainer;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
-import com.wynntils.models.containers.containers.personal.AccountBankContainer;
-import com.wynntils.models.containers.containers.personal.BookshelfContainer;
-import com.wynntils.models.containers.containers.personal.CharacterBankContainer;
-import com.wynntils.models.containers.containers.personal.MiscBucketContainer;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
 import julianh06.wynnextras.features.crafting.CraftingHelperOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
+import julianh06.wynnextras.features.inventory.PowderCombineHelperOverlay;
 import julianh06.wynnextras.features.mount.MountOverlay;
 import julianh06.wynnextras.utils.LunarCompat;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -34,6 +30,8 @@ public final class LunarScreenOverlayFallback {
 
             ScreenEvents.afterRender(screen).register((s, context, mouseX, mouseY, tickDelta) ->
                     render(screen, handledScreen, context, mouseX, mouseY, tickDelta));
+            ScreenKeyboardEvents.allowKeyPress(screen).register((s, input) ->
+                    !keyPressed(screen, input.key(), input.scancode(), input.modifiers()));
             ScreenMouseEvents.allowMouseClick(screen).register((s, click) ->
                     !mouseClicked(screen, click.x(), click.y(), click.button()));
             ScreenMouseEvents.allowMouseRelease(screen).register((s, click) ->
@@ -47,7 +45,6 @@ public final class LunarScreenOverlayFallback {
     private static void render(Screen screen, HandledScreen<?> handledScreen, DrawContext context, int mouseX, int mouseY, float delta) {
         if (!shouldRender(screen)) return;
         State state = state(screen);
-        Container container = Models.Container.getCurrentContainer();
 
         if (WynnExtrasConfig.INSTANCE.customClassSelectionEnabled && ClassSelectionOverlay.isClassSelectionScreen(screen.getTitle().getString())) {
             if (state.classSelectionOverlay == null) {
@@ -63,7 +60,7 @@ public final class LunarScreenOverlayFallback {
         MountOverlay.render(context, mouseX, mouseY);
         BankOverlay.updateOverlayType();
 
-        if (isBankContainer(container) || BankOverlay.currentOverlayType != BankOverlayType.NONE) {
+        if (isBankContainer() || BankOverlay.currentOverlayType != BankOverlayType.NONE) {
             if (state.bankOverlay == null) state.bankOverlay = new BankOverlay2(null, handledScreen);
             state.bankOverlay.updateRenderContext(null, handledScreen, close -> {
                 handledScreen.close();
@@ -72,14 +69,21 @@ public final class LunarScreenOverlayFallback {
             state.bankOverlay.render(context, mouseX, mouseY, delta);
         }
 
-        if (WynnExtrasConfig.INSTANCE.craftingHelperOverlay && container instanceof CraftingStationContainer) {
+        if (WynnExtrasConfig.INSTANCE.craftingHelperOverlay && WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)) {
             if (state.craftingHelperOverlay == null) state.craftingHelperOverlay = new CraftingHelperOverlay();
             state.craftingHelperOverlay.render(context, mouseX, mouseY, delta);
         } else {
             state.craftingHelperOverlay = null;
         }
 
-        if (WynnExtrasConfig.INSTANCE.skillpointHelper && container instanceof CharacterInfoContainer) {
+        if (WynnExtrasConfig.INSTANCE.powderCombineHelper && PowderCombineHelperOverlay.isSupportedScreen()) {
+            if (state.powderCombineHelperOverlay == null) state.powderCombineHelperOverlay = new PowderCombineHelperOverlay();
+            state.powderCombineHelperOverlay.render(context, mouseX, mouseY, delta);
+        } else {
+            state.powderCombineHelperOverlay = null;
+        }
+
+        if (WynnExtrasConfig.INSTANCE.skillpointHelper && WynncraftMenuService.isCurrent(MenuType.CHARACTER_INFO)) {
             if (state.compassMenuOverlay == null) state.compassMenuOverlay = new CompassMenuOverlay();
             state.compassMenuOverlay.render(context, mouseX, mouseY, delta);
         } else {
@@ -99,7 +103,6 @@ public final class LunarScreenOverlayFallback {
     private static boolean mouseClicked(Screen screen, double mouseX, double mouseY, int button) {
         if (!shouldRender(screen)) return false;
         State state = state(screen);
-        Container container = Models.Container.getCurrentContainer();
 
         if (state.classSelectionOverlay != null) {
             state.classSelectionOverlay.mouseClicked(mouseX, mouseY, button);
@@ -113,16 +116,32 @@ public final class LunarScreenOverlayFallback {
             }
         }
 
-        if (state.craftingHelperOverlay != null && WynnExtrasConfig.INSTANCE.craftingHelperOverlay && container instanceof CraftingStationContainer) {
+        if (state.craftingHelperOverlay != null && WynnExtrasConfig.INSTANCE.craftingHelperOverlay
+                && WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)) {
             state.craftingHelperOverlay.mouseClicked(mouseX, mouseY, button);
         }
 
-        if (state.compassMenuOverlay != null && WynnExtrasConfig.INSTANCE.skillpointHelper && container instanceof CharacterInfoContainer) {
+        if (state.powderCombineHelperOverlay != null && WynnExtrasConfig.INSTANCE.powderCombineHelper
+                && PowderCombineHelperOverlay.isSupportedScreen()
+                && state.powderCombineHelperOverlay.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+
+        if (state.compassMenuOverlay != null && WynnExtrasConfig.INSTANCE.skillpointHelper
+                && WynncraftMenuService.isCurrent(MenuType.CHARACTER_INFO)) {
             state.compassMenuOverlay.mouseClicked(mouseX, mouseY, button);
             return CompassMenuOverlay.isSelectingWeapon();
         }
 
         return false;
+    }
+
+    private static boolean keyPressed(Screen screen, int keyCode, int scanCode, int modifiers) {
+        if (!shouldRender(screen)) return false;
+        State state = state(screen);
+        return state.craftingHelperOverlay != null && WynnExtrasConfig.INSTANCE.craftingHelperOverlay
+                && WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION)
+                && state.craftingHelperOverlay.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private static boolean mouseReleased(Screen screen, double mouseX, double mouseY, int button) {
@@ -167,17 +186,16 @@ public final class LunarScreenOverlayFallback {
         return STATES.computeIfAbsent(screen, s -> new State());
     }
 
-    private static boolean isBankContainer(Container container) {
-        return container instanceof AccountBankContainer
-                || container instanceof CharacterBankContainer
-                || container instanceof BookshelfContainer
-                || container instanceof MiscBucketContainer;
+    private static boolean isBankContainer() {
+        return WynncraftMenuService.isCurrentAny(
+                MenuType.ACCOUNT_BANK, MenuType.CHARACTER_BANK, MenuType.BOOKSHELF, MenuType.MISC_BUCKET);
     }
 
     private static final class State {
         private BankOverlay2 bankOverlay;
         private ClassSelectionOverlay classSelectionOverlay;
         private CraftingHelperOverlay craftingHelperOverlay;
+        private PowderCombineHelperOverlay powderCombineHelperOverlay;
         private CompassMenuOverlay compassMenuOverlay;
     }
 }

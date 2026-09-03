@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.achievements;
 
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.badges.BadgeCatalog;
 import julianh06.wynnextras.features.badges.BadgeProfile;
@@ -1012,7 +1012,7 @@ public class AchievementScreen extends WEScreen {
     }
 
     private void playClick() {
-        McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
     }
 
     private void captureInitialBadgeProfile() {

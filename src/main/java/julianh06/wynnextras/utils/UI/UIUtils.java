@@ -1,12 +1,12 @@
 package julianh06.wynnextras.utils.UI;
 
-import com.wynntils.core.text.StyledText;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.render.FontRenderer;
-import com.wynntils.utils.render.RenderUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.TextShadow;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.utils.text.StyledText;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.render.FontRenderer;
+import julianh06.wynnextras.utils.render.RenderUtils;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.TextShadow;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.mixin.Invoker.NativeImageInvoker;
 import net.minecraft.client.MinecraftClient;
@@ -376,10 +376,22 @@ public final class UIUtils {
             float uWidth, float vHeight,
             int textureWidth, int textureHeight
     ) {
+        drawImageExact(texture, x, y, width, height, u, v, uWidth, vHeight, textureWidth, textureHeight, 1f);
+    }
+
+    private void drawImageExact(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            float u, float v,
+            float uWidth, float vHeight,
+            int textureWidth, int textureHeight,
+            float alpha
+    ) {
         RenderUtils.drawTexturedRect(
                 drawContext,
                 texture,
-                CustomColor.NONE,
+                CustomColor.NONE.withAlpha(alpha),
                 sx(x), sy(y),
                 sx(x + width) - sx(x),
                 sy(y + height) - sy(y),
@@ -398,8 +410,16 @@ public final class UIUtils {
 
     public void drawVanillaPanelButton(float x, float y, float width, float height, int scale, int cornerPixels,
                                        boolean hovered) {
+        drawVanillaPanelButton(x, y, width, height, scale, cornerPixels, hovered, 1f);
+    }
+
+    public void drawVanillaPanelButton(float x, float y, float width, float height, int scale, int cornerPixels,
+                                       boolean hovered, float alpha) {
         ContainerButtonColors colors = getContainerButtonColors();
-        CustomColor border = hovered ? colors.hoverBorder() : colors.topBorder();
+        CustomColor border = (hovered ? colors.hoverBorder() : colors.topBorder()).withAlpha(alpha);
+        CustomColor fill = colors.fill().withAlpha(alpha);
+        CustomColor highlight = colors.highlight().withAlpha(alpha);
+        CustomColor bottom = colors.bottom().withAlpha(alpha);
         float pixel = scale / 5f;
         int corner = Math.max(1, cornerPixels);
         float cornerSize = corner * pixel;
@@ -411,23 +431,23 @@ public final class UIUtils {
             drawRect(x + inset, rowY, cornerSize, pixel, border);
             drawRect(x + width - inset - cornerSize, rowY, cornerSize, pixel, border);
             drawRect(x + inset + cornerSize, rowY,
-                    width - (inset + cornerSize) * 2, pixel, colors.fill());
+                    width - (inset + cornerSize) * 2, pixel, fill);
         }
 
         float middleY = y + (corner + 1) * pixel;
         float lowerCornerY = y + height - (corner + 1) * pixel;
-        drawRect(x + pixel, middleY, width - pixel * 2, lowerCornerY - middleY, colors.fill());
+        drawRect(x + pixel, middleY, width - pixel * 2, lowerCornerY - middleY, fill);
         drawRect(x, middleY, pixel, lowerCornerY - middleY, border);
         drawRect(x + width - pixel, middleY, pixel, lowerCornerY - middleY, border);
 
         float highlightY = lowerCornerY - pixel;
         drawRect(x + (corner + 1) * pixel, highlightY,
-                width - (corner + 1) * pixel * 2, pixel, colors.highlight());
+                width - (corner + 1) * pixel * 2, pixel, highlight);
         for (int i = 1; i <= corner; i++) {
             float inset = (corner + 1 - i) * pixel;
             float rowY = highlightY - i * pixel;
-            drawRect(x + inset, rowY, pixel, pixel, colors.highlight());
-            drawRect(x + width - inset - pixel, rowY, pixel, pixel, colors.highlight());
+            drawRect(x + inset, rowY, pixel, pixel, highlight);
+            drawRect(x + width - inset - pixel, rowY, pixel, pixel, highlight);
         }
 
         for (int i = corner; i >= 1; i--) {
@@ -436,7 +456,7 @@ public final class UIUtils {
             drawRect(x + inset, rowY, cornerSize, pixel, border);
             drawRect(x + width - inset - cornerSize, rowY, cornerSize, pixel, border);
             drawRect(x + inset + cornerSize, rowY,
-                    width - (inset + cornerSize) * 2, pixel, colors.bottom());
+                    width - (inset + cornerSize) * 2, pixel, bottom);
         }
         drawRect(x + cornerSize, y + height - pixel, width - cornerSize * 2, pixel, border);
     }
@@ -582,6 +602,10 @@ public final class UIUtils {
     private static final int GENERIC_H  = 256;
 
     public void drawVanillaPanel(float x, float y, float width, float height, int scale) {
+        drawVanillaPanel(x, y, width, height, scale, 1f);
+    }
+
+    public void drawVanillaPanel(float x, float y, float width, float height, int scale, float alpha) {
         int tw = GENERIC_W, th = GENERIC_H;
 
         int uvWH = 4;
@@ -590,21 +614,21 @@ public final class UIUtils {
          * OUTER
          * */
         // corners
-        drawImageExact(GENERIC_CONTAINER_TEX, x, y, scale, scale, 0, 0, uvWH, uvWH, tw, th); // TL
-        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y, scale, scale, 172, 0, uvWH, uvWH, tw, th); // TR
-        drawImageExact(GENERIC_CONTAINER_TEX, x, y + height - scale, scale, scale, 0, 218, uvWH, uvWH, tw, th); // BL
-        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y + height - scale, scale, scale, 172, 218, uvWH, uvWH, tw, th); // BR
+        drawImageExact(GENERIC_CONTAINER_TEX, x, y, scale, scale, 0, 0, uvWH, uvWH, tw, th, alpha); // TL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y, scale, scale, 172, 0, uvWH, uvWH, tw, th, alpha); // TR
+        drawImageExact(GENERIC_CONTAINER_TEX, x, y + height - scale, scale, scale, 0, 218, uvWH, uvWH, tw, th, alpha); // BL
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y + height - scale, scale, scale, 172, 218, uvWH, uvWH, tw, th, alpha); // BR
 
         // fill
-        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 1, y + scale - 1, width - 2 * scale + 2, height - 2 * scale + 2, 4, 4, 1, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 1, y + scale - 1, width - 2 * scale + 2, height - 2 * scale + 2, 4, 4, 1, 1, tw, th, alpha);
 
         // top/bot edges
-        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 2, y, width- 2 * scale + 4, scale, 4, 0, 1, uvWH, tw, th);
-        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 2, y + height - scale, width - 2 * scale + 4, scale, 4, 218,  1, uvWH, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 2, y, width- 2 * scale + 4, scale, 4, 0, 1, uvWH, tw, th, alpha);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + scale - 2, y + height - scale, width - 2 * scale + 4, scale, 4, 218,  1, uvWH, tw, th, alpha);
 
         // left/right edges
-        drawImageExact(GENERIC_CONTAINER_TEX, x, y + scale - 2, scale, height - 2 * scale + 4, 0, 4, uvWH, 1, tw, th);
-        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y + scale - 2, scale, height - 2 * scale + 4, 172, 4, uvWH, 1, tw, th);
+        drawImageExact(GENERIC_CONTAINER_TEX, x, y + scale - 2, scale, height - 2 * scale + 4, 0, 4, uvWH, 1, tw, th, alpha);
+        drawImageExact(GENERIC_CONTAINER_TEX, x + width - scale, y + scale - 2, scale, height - 2 * scale + 4, 172, 4, uvWH, 1, tw, th, alpha);
     }
 
     public void drawVanillaPanel(float x, float y, float width, float height, int scale, int leftOffset, int rightOffset, int topOffset, int botOffset) {

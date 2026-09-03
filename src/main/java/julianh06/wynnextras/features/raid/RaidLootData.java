@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class RaidLootData {
+    public static final int POWDER_ELEMENT_COUNT = 5;
+    public static final int POWDER_TIER_COUNT = 7;
 
     // ===== Emeralds (roh) =====
     public long emeraldBlocks = 0;
@@ -28,6 +30,9 @@ public class RaidLootData {
 
     // ===== Charms =====
     public int totalCharms = 0;
+
+    // ===== Powders =====
+    public int[][] powders = new int[POWDER_ELEMENT_COUNT][POWDER_TIER_COUNT];
 
     // ===== Aspects =====
     public int totalAspects = 0;
@@ -113,6 +118,7 @@ public class RaidLootData {
         mythicTomes = 0;
         fabledTomes = 0;
         totalCharms = 0;
+        powders = new int[POWDER_ELEMENT_COUNT][POWDER_TIER_COUNT];
         totalAspects = 0;
         mythicAspects = 0;
         fabledAspects = 0;
@@ -143,6 +149,9 @@ public class RaidLootData {
         agg.mythicTomes = data.mythicTomes;
         agg.fabledTomes = data.fabledTomes;
         agg.totalCharms = data.totalCharms;
+        for (int element = 0; element < POWDER_ELEMENT_COUNT; element++) {
+            System.arraycopy(data.powders[element], 0, agg.powders[element], 0, POWDER_TIER_COUNT);
+        }
         agg.totalWards = data.totalWards;
         agg.mythicAspects = data.mythicAspects;
         agg.fabledAspects = data.fabledAspects;
@@ -165,6 +174,7 @@ public class RaidLootData {
         public int mythicTomes = 0;
         public int fabledTomes = 0;
         public int totalCharms = 0;
+        public int[][] powders = new int[POWDER_ELEMENT_COUNT][POWDER_TIER_COUNT];
         public int totalAspects = 0;
         public int mythicAspects = 0;
         public int fabledAspects = 0;
@@ -197,6 +207,11 @@ public class RaidLootData {
             this.mythicTomes        += other.mythicTomes;
             this.fabledTomes        += other.fabledTomes;
             this.totalCharms        += other.totalCharms;
+            for (int element = 0; element < POWDER_ELEMENT_COUNT; element++) {
+                for (int tier = 0; tier < POWDER_TIER_COUNT; tier++) {
+                    this.powders[element][tier] += other.powders[element][tier];
+                }
+            }
             this.totalAspects       += other.totalAspects;
             this.mythicAspects      += other.mythicAspects;
             this.fabledAspects      += other.fabledAspects;
@@ -204,5 +219,31 @@ public class RaidLootData {
             this.totalWards         += other.totalWards;
             this.completionCount    += other.completionCount;
         }
+
+        public int getTotalPowders() {
+            int total = 0;
+            for (int tier = 0; tier < POWDER_TIER_COUNT; tier++) total += getPowderTierTotal(tier);
+            return total;
+        }
+
+        public int getPowderTierTotal(int tier) {
+            int total = 0;
+            for (int element = 0; element < POWDER_ELEMENT_COUNT; element++) {
+                total += powders[element][tier];
+            }
+            return total;
+        }
+
+        public int getPowderCount(int element, int tier) {
+            return powders[element][tier];
+        }
+
+        public void addPowder(int element, int tier, int count) {
+            powders[element][tier] += count;
+        }
+    }
+
+    public void addPowder(int element, int tier, int count) {
+        powders[element][tier] += count;
     }
 }

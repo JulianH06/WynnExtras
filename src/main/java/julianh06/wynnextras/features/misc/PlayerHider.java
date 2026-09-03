@@ -1,10 +1,9 @@
 package julianh06.wynnextras.features.misc;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.wynntils.core.components.Models;
-import com.wynntils.models.raid.raids.RaidKind;
-import com.wynntils.models.raid.type.RaidInfo;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.state.WarState;
+import julianh06.wynnextras.features.raid.WERaidKind;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -63,9 +62,9 @@ public class PlayerHider {
                         context -> {
                             WynnExtrasConfig.INSTANCE.playerHiderToggle = !WynnExtrasConfig.INSTANCE.playerHiderToggle;
                             if(WynnExtrasConfig.INSTANCE.playerHiderToggle) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Playerhider")));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Playerhider")));
                             } else {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Playerhider")));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Playerhider")));
                             }
                             WynnExtrasConfig.save();
                             return 1;
@@ -80,9 +79,9 @@ public class PlayerHider {
                         context -> {
                             WynnExtrasConfig.INSTANCE.hideAllPlayersInWar = !WynnExtrasConfig.INSTANCE.hideAllPlayersInWar;
                             if(WynnExtrasConfig.INSTANCE.hideAllPlayersInWar) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("All players will now be hidden in a war.")));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("All players will now be hidden in a war.")));
                             } else {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Other players will now be visible again in wars.")));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Other players will now be visible again in wars.")));
                             }
                             WynnExtrasConfig.save();
                             return 1;
@@ -97,11 +96,11 @@ public class PlayerHider {
                         context -> {
                             String arg = StringArgumentType.getString(context, "player");
                             if(arg.isEmpty()) {
-                                McUtils.sendMessageToClient(Text.of("Name argument is empty! Usage: /WynnExtras playerhider add <player>"));
+                                MinecraftUtils.sendMessageToClient(Text.of("Name argument is empty! Usage: /WynnExtras playerhider add <player>"));
                                 return 1;
                             }
                             WynnExtrasConfig.INSTANCE.hiddenPlayers.add(arg);
-                            McUtils.sendMessageToClient(Text.of("Added " + arg + " to the player hider list."));
+                            MinecraftUtils.sendMessageToClient(Text.of("Added " + arg + " to the player hider list."));
                             WynnExtrasConfig.save();
                             return 1;
                         },
@@ -115,15 +114,15 @@ public class PlayerHider {
                         context -> {
                             String arg = StringArgumentType.getString(context, "player");
                             if(arg.isEmpty()) {
-                                McUtils.sendMessageToClient(Text.of("Name argument is empty! Usage: /WynnExtras playerhider remove <player>"));
+                                MinecraftUtils.sendMessageToClient(Text.of("Name argument is empty! Usage: /WynnExtras playerhider remove <player>"));
                                 return 1;
                             }
                             boolean removed = WynnExtrasConfig.INSTANCE.hiddenPlayers.remove(arg);
                             if(removed) {
-                                McUtils.sendMessageToClient(Text.of("Removed " + arg + " from the player hider list."));
+                                MinecraftUtils.sendMessageToClient(Text.of("Removed " + arg + " from the player hider list."));
                                 WynnExtrasConfig.save();
                             } else {
-                                McUtils.sendMessageToClient(Text.of("Player is not in the player hider list!"));
+                                MinecraftUtils.sendMessageToClient(Text.of("Player is not in the player hider list!"));
                             }
                             return 1;
                         },
@@ -137,9 +136,9 @@ public class PlayerHider {
                         context -> {
                             WynnExtrasConfig.INSTANCE.hideAllPlayers = !WynnExtrasConfig.INSTANCE.hideAllPlayers;
                             if(WynnExtrasConfig.INSTANCE.hideAllPlayers) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players (range: " + WynnExtrasConfig.INSTANCE.maxHideDistance + ")")));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players (range: " + WynnExtrasConfig.INSTANCE.maxHideDistance + ")")));
                             } else {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Hide All Players")));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Hide All Players")));
                             }
                             WynnExtrasConfig.save();
                             return 1;
@@ -154,9 +153,9 @@ public class PlayerHider {
                         context -> {
                             WynnExtrasConfig.INSTANCE.hideAllPlayersInWar = !WynnExtrasConfig.INSTANCE.hideAllPlayersInWar;
                             if(WynnExtrasConfig.INSTANCE.hideAllPlayersInWar) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players in Wars (range: " + WynnExtrasConfig.INSTANCE.maxHideDistance + ")")));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Enabled Hide All Players in Wars (range: " + WynnExtrasConfig.INSTANCE.maxHideDistance + ")")));
                             } else {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Hide All Players in Wars")));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("Disabled Hide All Players in Wars")));
                             }
                             WynnExtrasConfig.save();
                             return 1;
@@ -208,7 +207,7 @@ public class PlayerHider {
                     continue;
                 }
 
-                boolean inWarAndHiding = WynnExtrasConfig.INSTANCE.hideAllPlayersInWar && Models.War.isWarActive();
+                boolean inWarAndHiding = WynnExtrasConfig.INSTANCE.hideAllPlayersInWar && WarState.isActive();
 
                 rebuildHiddenSet();
                 String playerName = player.getName().getString().toLowerCase();
@@ -222,15 +221,11 @@ public class PlayerHider {
         });
     }
 
-    public static void onRaidStarted(RaidKind raid) {
-        if(raid.getAbbreviation().equals("NOG")){
-            inNotg = true;
-        }
+    public static void onRaidStarted(WERaidKind raid) {
+        inNotg = raid == WERaidKind.NOTG;
     }
 
-    public static void onRaidEnded(RaidInfo info) {
-        if(info.getRaidKind().getAbbreviation().equals("NOG")){
-            inNotg = false;
-        }
+    public static void onRaidEnded() {
+        inNotg = false;
     }
 }

@@ -1,11 +1,8 @@
 package julianh06.wynnextras.mixin;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.containers.Container;
-import com.wynntils.models.containers.containers.CraftingStationContainer;
-import com.wynntils.models.containers.containers.ItemIdentifierContainer;
-import com.wynntils.models.containers.containers.personal.*;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.menu.MenuType;
+import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.inventory.BankOverlay;
@@ -33,16 +30,16 @@ public class InventoryScreenMixin {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.world == null) return;
 
-        ScreenHandler currScreenHandler = McUtils.containerMenu();
+        ScreenHandler currScreenHandler = MinecraftUtils.containerMenu();
         if (currScreenHandler == null) return;
 
         if(WynnExtrasConfig.INSTANCE.sourceOfTruthToggle) {
-            if (Models.Container.getCurrentContainer() instanceof ItemIdentifierContainer) {
+            if (WynncraftMenuService.isCurrent(MenuType.ITEM_IDENTIFIER)) {
                 //ci.cancel();
             }
         }
 
-        if (Models.Container.getCurrentContainer() instanceof CraftingStationContainer && WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
+        if (WynncraftMenuService.isCurrent(MenuType.CRAFTING_STATION) && WynnExtrasConfig.INSTANCE.craftingHelperOverlay && MinecraftClient.getInstance().options.getGuiScale().getValue() != 1) {
             //ci.cancel();
         }
 
@@ -54,12 +51,8 @@ public class InventoryScreenMixin {
         }
 
         if(!WynnExtrasConfig.INSTANCE.toggleBankOverlay) {
-            Container container = Models.Container.getCurrentContainer();
-            if (container instanceof AccountBankContainer ||
-                container instanceof CharacterBankContainer ||
-                container instanceof BookshelfContainer ||
-                container instanceof MiscBucketContainer
-            ) {
+            if (WynncraftMenuService.isCurrentAny(
+                    MenuType.ACCOUNT_BANK, MenuType.CHARACTER_BANK, MenuType.BOOKSHELF, MenuType.MISC_BUCKET)) {
                 BankOverlay.currentOverlayType = BankOverlayType.NONE;
                 BankOverlay.currentData = null;
                 //ci.cancel();

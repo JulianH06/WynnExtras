@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.misc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.state.StatusEffectState;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -36,8 +36,7 @@ public class ProvokeTimer {
         if (client.world == null || client.player == null || !WynnExtrasConfig.INSTANCE.provokeTimerToggle) return;
         clientTicks++;
 
-        boolean provokeActive = Models.StatusEffect.getStatusEffects().stream()
-                .anyMatch(effect -> effect.getName().getStringWithoutFormatting().equals("Provoke"));
+        boolean provokeActive = StatusEffectState.hasEffect("Provoke");
 
         if (provokeActive && storedTicks == -1) {
             storedTicks = clientTicks;
@@ -61,7 +60,7 @@ public class ProvokeTimer {
                 if (calculatedSeconds > 0 && calculatedSeconds != lastSeconds) {
                     lastSeconds = calculatedSeconds;
                 } else if (calculatedSeconds == 0 && !zeroMessageSent) {
-                    McUtils.sendMessageToClient(
+                    MinecraftUtils.sendMessageToClient(
                         WynnExtras.addWynnExtrasPrefix("§6Provoke effect ended.")
                     );
                     zeroMessageSent = true;

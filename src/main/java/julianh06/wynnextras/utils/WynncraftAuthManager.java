@@ -7,7 +7,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.core.command.Command;
@@ -45,9 +45,10 @@ import java.util.concurrent.TimeUnit;
 @WEModule
 public class WynncraftAuthManager {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    private static final CompletableFuture<HttpClient> HTTP_CLIENT = CompletableFuture.supplyAsync(() ->
+            HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5))
+                    .build());
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private static final String DEFAULT_OAUTH_CLIENT_ID = "w5NyhNaX9-ZTgCM_uaJgdSGITT_VfGbI";
@@ -124,7 +125,7 @@ public class WynncraftAuthManager {
     );
 
     public static void load() {
-        if (McUtils.player() == null) {
+        if (MinecraftUtils.player() == null) {
             WynnExtras.LOGGER.error("[WynnExtras] Cannot load Wynncraft auth - player not loaded");
             return;
         }
@@ -149,7 +150,7 @@ public class WynncraftAuthManager {
     }
 
     public static void save() {
-        if (McUtils.player() == null) {
+        if (MinecraftUtils.player() == null) {
             WynnExtras.LOGGER.error("[WynnExtras] Cannot save Wynncraft auth - player not loaded");
             return;
         }
@@ -226,15 +227,15 @@ public class WynncraftAuthManager {
     }
 
     public static CompletableFuture<HttpResponse<String>> sendWynncraftRequest(HttpRequest request) {
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendRequest(request)
                 .thenApply(response -> {
                     handleWynncraftUnauthorized(response.statusCode());
                     return response;
                 });
     }
 
-    public static HttpClient httpClient() {
-        return HTTP_CLIENT;
+    public static CompletableFuture<HttpResponse<String>> sendRequest(HttpRequest request) {
+        return HTTP_CLIENT.thenCompose(client -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString()));
     }
 
     private static String getBearerToken() {
@@ -362,7 +363,7 @@ public class WynncraftAuthManager {
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendRequest(request)
                 .thenApply(response -> {
                     if (response.statusCode() != 200) {
                         WynnExtras.LOGGER.error("[WynnExtras] OAuth2 token exchange failed: " + response.statusCode() + " " + response.body());
@@ -395,7 +396,7 @@ public class WynncraftAuthManager {
                 .GET()
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendRequest(request)
                 .thenApply(response -> {
                     if (response.statusCode() != 200) {
                         WynnExtras.LOGGER.error("[WynnExtras] OAuth2 identity fetch failed: " + response.statusCode() + " " + response.body());
@@ -497,7 +498,7 @@ public class WynncraftAuthManager {
     private static Path authPath() {
         return FabricLoader.getInstance()
                 .getConfigDir()
-                .resolve("wynnextras/" + McUtils.player().getUuid() + "/apikeyDoNotShare.json");
+                .resolve("wynnextras/" + MinecraftUtils.player().getUuid() + "/apikeyDoNotShare.json");
     }
 
     private static String getOAuthClientId() {

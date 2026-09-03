@@ -1,9 +1,9 @@
 package julianh06.wynnextras.utils.UI;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.type.HorizontalAlignment;
-import com.wynntils.utils.render.type.VerticalAlignment;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.render.HorizontalAlignment;
+import julianh06.wynnextras.utils.render.VerticalAlignment;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
@@ -132,7 +132,7 @@ public class ColorPickerWidget extends Widget {
             setPickerColor(currentRgb());
             dragMode = 0;
             hexFocused = false;
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
         if (!open) return false;
@@ -174,7 +174,7 @@ public class ColorPickerWidget extends Widget {
             if (isIn(mx, my, pb[0], pb[1], pb[2], pb[3])) {
                 setPickerColor(PRESET_COLORS[i]);
                 setColor(PRESET_COLORS[i]);
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }
@@ -187,7 +187,7 @@ public class ColorPickerWidget extends Widget {
                     setColor(resetValue);
                 }
                 close();
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
         }

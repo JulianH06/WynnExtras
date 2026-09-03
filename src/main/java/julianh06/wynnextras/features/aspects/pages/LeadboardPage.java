@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
@@ -215,7 +215,7 @@ public class LeadboardPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             AspectsPage.performPlayerSearch(entry.getPlayerName());
             AspectScreen.currentPage = AspectScreen.Page.Aspects;
             return true;
@@ -263,7 +263,7 @@ public class LeadboardPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 
             int buttonHeight = scrollBarButtonWidget.getHeight();
             int scrollAreaHeight = height - buttonHeight;
@@ -317,7 +317,7 @@ public class LeadboardPage extends PageWidget {
             actualOffset = 0;
             maxOffset = 0;
 
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }

@@ -8,7 +8,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.CurrentVersionData;
@@ -24,9 +24,11 @@ import net.minecraft.util.Pair;
 
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -40,15 +42,23 @@ import java.util.stream.Collectors;
 @WEModule
 public class WynncraftApiHandler {
     public static WynncraftApiHandler INSTANCE = new WynncraftApiHandler();
+    private static volatile Boolean lastSyncedAspectPublished;
 
     public transient final AtomicInteger aspectFetchGeneration = new AtomicInteger(0);
     public transient final AtomicBoolean isFetchingAspects = new AtomicBoolean(false);
     private static final long ASPECT_FETCH_RETRY_DELAY_MS = 60_000;
 
-    // Reuse HttpClient instance instead of creating new ones
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    // Creating the HttpClient can block for several seconds, dont initialize it on the render thread.
+    // All requests share the same client.
+    private static final CompletableFuture<HttpClient> HTTP_CLIENT_FUTURE = CompletableFuture.supplyAsync(() ->
+            HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5))
+                    .build());
+
+    private static CompletableFuture<HttpResponse<String>> sendAsync(HttpRequest request) {
+        return HTTP_CLIENT_FUTURE.thenCompose(client ->
+                client.sendAsync(request, HttpResponse.BodyHandlers.ofString()));
+    }
 
     // Use synchronized list to prevent concurrent modification
     public transient List<ApiAspect> aspectList = java.util.Collections.synchronizedList(new ArrayList<>());
@@ -57,17 +67,8 @@ public class WynncraftApiHandler {
     // Lock object for synchronizing array access
     public transient final Object aspectLock = new Object();
 
-    private static Map<String, JsonObject> cachedItemDatabase;
     private static CompletableFuture<List<ApiLootPool>> officialLootPoolsFuture;
     private static List<ApiLootPool> officialLootPoolsCache;
-
-    public static Map<String, JsonObject> getCachedItemDatabase() {
-        return cachedItemDatabase;
-    }
-
-    public static void setCachedItemDatabase(Map<String, JsonObject> itemDatabase) {
-        cachedItemDatabase = itemDatabase;
-    }
 
     public static class ApiLootPool {
         public String name;
@@ -101,7 +102,7 @@ public class WynncraftApiHandler {
                 .GET()
                 .build();
 
-        officialLootPoolsFuture = HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        officialLootPoolsFuture = sendAsync(request)
                 .thenApply(response -> {
                     if (response.statusCode() != 200) {
                         WynnExtras.LOGGER.error("Failed to fetch official loot pools: " + response.statusCode());
@@ -191,12 +192,12 @@ public class WynncraftApiHandler {
                 String key = StringArgumentType.getString(context, "key");
                 if(key.equals("clear")) {
                     WynncraftAuthManager.clearApiKey();
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully cleared your api key.")));
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully cleared your api key.")));
                     return 1;
                 }
 
                 WynncraftAuthManager.setApiKey(key);
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully set your api key." +
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("You have successfully set your api key." +
                         " It has been saved in your config. Don't share it publicly.")));
                 return 1;
             },
@@ -208,7 +209,7 @@ public class WynncraftApiHandler {
             "apikey",
             "",
             context -> {
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("""
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("""
                         You can use either OAuth or an api key to authorize. OAuth is easier to setup but an api key
                         might give you more access (like for the semi-private stats of friends or guild members)
                         You can add an API key like this: "/WynnExtras apikey <your key>".
@@ -225,13 +226,14 @@ public class WynncraftApiHandler {
 
     private static final String BASE_URL = "https://api.wynncraft.com/v3/player/";
     private static final String BASE_URL_GUILD = "https://api.wynncraft.com/v3/guild/";
+    private static final String BASE_URL_SEARCH = "https://api.wynncraft.com/v3/search/";
 
     public String API_KEY;
 
     public static CompletableFuture<String> fetchUUID(String playerName) {
-        if (McUtils.player() != null
-                && playerName.equalsIgnoreCase(McUtils.player().getGameProfile().name())) {
-            return CompletableFuture.completedFuture(McUtils.player().getUuidAsString().replace("-", ""));
+        if (MinecraftUtils.player() != null
+                && playerName.equalsIgnoreCase(MinecraftUtils.player().getGameProfile().name())) {
+            return CompletableFuture.completedFuture(MinecraftUtils.player().getUuidAsString().replace("-", ""));
         }
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -240,20 +242,20 @@ public class WynncraftApiHandler {
                 .GET()
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendAsync(request)
                 .thenApply(response -> {
                     int status = response.statusCode();
                     if (status == 404) return null;
                     if (status == 429) {
                         if (BackendErrorLogger.error("mojang-profile-api", "Mojang API rate limit reached")) {
-                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                                     Text.of("§cMojang API rate limit reached. Please wait a moment.")));
                         }
                         return null;
                     }
                     if (status != 200) {
                         if (BackendErrorLogger.error("mojang-profile-api", "Mojang API error: " + status)) {
-                            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                                     Text.of("§cMojang API error (" + status + "). Please try again.")));
                         }
                         return null;
@@ -276,13 +278,58 @@ public class WynncraftApiHandler {
 
     public static CompletableFuture<GuildData> fetchGuildData(String prefix) {
         HttpRequest request = WynncraftAuthManager.applyWynncraftAuth(HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL_GUILD + "prefix/" + prefix + "?identifier=uuid"))
+                .uri(URI.create(BASE_URL_GUILD + "prefix/" + encodePathSegment(prefix) + "?identifier=uuid"))
                 .GET())
                 .build();
 
         return WynncraftAuthManager.sendWynncraftRequest(request)
-                .thenApply(HttpResponse::body)
-                .thenApply(WynncraftApiHandler::parseGuildData);
+                .thenCompose(response -> {
+                    if (response.statusCode() == 200) {
+                        try {
+                            return CompletableFuture.completedFuture(parseGuildData(response.body()));
+                        } catch (Exception e) {
+                            WynnExtras.LOGGER.warn("Invalid guild detail response for " + prefix + ": " + e.getMessage());
+                        }
+                    } else {
+                        WynnExtras.LOGGER.warn("Guild detail API returned HTTP " + response.statusCode() + " for " + prefix);
+                    }
+
+                    return fetchGuildSummary(prefix);
+                });
+    }
+
+    public static CompletableFuture<List<GuildData>> searchGuildsByPrefix(String prefix) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL_SEARCH + encodePathSegment(prefix)))
+                .timeout(Duration.ofSeconds(8))
+                .GET()
+                .build();
+
+        return sendAsync(request).thenApply(response -> {
+            if (response.statusCode() != 200) {
+                throw new IllegalStateException("Wynncraft guild search returned HTTP " + response.statusCode());
+            }
+            return parseGuildPrefixSummaries(response.body(), prefix);
+        });
+    }
+
+    private static CompletableFuture<GuildData> fetchGuildSummary(String query) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL_SEARCH + encodePathSegment(query)))
+                .timeout(Duration.ofSeconds(8))
+                .GET()
+                .build();
+
+        return sendAsync(request).thenApply(response -> {
+            if (response.statusCode() != 200) {
+                throw new IllegalStateException("Wynncraft guild search returned HTTP " + response.statusCode());
+            }
+            return parseGuildSummary(response.body(), query);
+        });
+    }
+
+    private static String encodePathSegment(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     public static CompletableFuture<List<ApiAspect>> fetchAspectList(String className) {
@@ -292,7 +339,7 @@ public class WynncraftApiHandler {
                 .GET()
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendAsync(request)
             .thenApply(response -> {
                 if (response.statusCode() != 200) {
                     WynnExtras.LOGGER.error("Aspect API returned status " + response.statusCode() + " for " + className);
@@ -394,7 +441,7 @@ public class WynncraftApiHandler {
         return fetchUUID(playerName).thenCompose(rawUUID -> {
             if (rawUUID == null) {
                 if (verbose) {
-                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§cPlayername is incorrect or unknown.")));
+                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("§cPlayername is incorrect or unknown.")));
                 }
                 return CompletableFuture.completedFuture(null);
             }
@@ -440,7 +487,7 @@ public class WynncraftApiHandler {
                 .GET())
                 .build();
 
-        return WynncraftAuthManager.httpClient().sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return WynncraftAuthManager.sendRequest(request)
                 .thenApply(response -> parsePlayerFetchResponse("API key", response, verbose))
                 .exceptionally(ex -> {
                     if (verbose) {
@@ -566,8 +613,11 @@ public class WynncraftApiHandler {
     private record PlayerDataFetchResult(int statusCode, PlayerData playerData) {}
 
     public static CompletableFuture<FetchResult> fetchPlayerAspectData(String playerUUID) {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasAspects) {
+            return CompletableFuture.completedFuture(new FetchResult(FetchStatus.DISABLED, null));
+        }
         if (playerUUID == null) {
-            McUtils.sendMessageToClient(Text.of("§cUUID is null!"));
+            MinecraftUtils.sendMessageToClient(Text.of("§cUUID is null!"));
             return CompletableFuture.completedFuture(null);
         }
 
@@ -578,7 +628,7 @@ public class WynncraftApiHandler {
                     .GET()
                     .build();
 
-            return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            return sendAsync(request)
                     .handle((response, ex) -> {
 
                         if (ex != null) {
@@ -621,13 +671,16 @@ public class WynncraftApiHandler {
     }
 
     public static void processAspects(Map<String, Pair<String, String>> map) {
-        if (McUtils.player() == null) {
+        if (MinecraftUtils.player() == null) {
             WynnExtras.LOGGER.error("Cannot upload aspects - player not loaded");
             return;
         }
 
         LocalAspectStorage.save(map);
 
+        if (WynnExtrasConfig.INSTANCE.doNotPublishOwnAspects) {
+            return;
+        }
 
         if(WynnExtras.isOnBeta()) {
             return;
@@ -692,21 +745,21 @@ public class WynncraftApiHandler {
                             int code = response.statusCode();
                             if (code == 401) {
                                 if (BackendErrorLogger.error("aspect-upload", "Personal aspects upload auth error: " + response.body())) {
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
                                 }
                             } else if (code >= 500) {
                                 if (BackendErrorLogger.error("aspect-upload", "Personal aspects upload error: " + code + " → " + response.body())) {
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cServer error - try again later"));
+                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cServer error - try again later"));
                                 }
                             } else if(code != 200) {
                                 if (BackendErrorLogger.error("aspect-upload", "Personal aspects upload error: " + code + " → " + response.body())) {
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed (error " + code + ")"));
+                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed (error " + code + ")"));
                                 }
                             }
                         })
                         .exceptionally(ex -> {
                             if (BackendErrorLogger.error("aspect-upload", "Failed to upload personal aspects: " + ex.getMessage())) {
-                                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed - check your connection"));
+                                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cUpload failed - check your connection"));
                             }
                             return null;
                         });
@@ -714,6 +767,83 @@ public class WynncraftApiHandler {
                 e.printStackTrace();
             }
         });
+    }
+
+    /** Updates whether stored personal aspects are publicly visible. */
+    public static void syncAspectPublication(boolean published, boolean uploadWhenPublished) {
+        MojangAuth.getWEToken().thenAccept(token -> {
+            if (token != null) syncAspectPublication(token, published, uploadWhenPublished);
+        }).exceptionally(ex -> {
+            BackendErrorLogger.error("aspect-publication", "Could not update aspect publication: " + ex.getMessage());
+            return null;
+        });
+    }
+
+    /** Uses an already acquired token so periodic privacy sync does not trigger a second login. */
+    public static void syncAspectPublication(String token, boolean uploadWhenPublished) {
+        syncAspectPublication(token, !WynnExtrasConfig.INSTANCE.doNotPublishOwnAspects, uploadWhenPublished);
+    }
+
+    private static void syncAspectPublication(String token, boolean published, boolean uploadWhenPublished) {
+        if (token == null) return;
+        JsonObject body = new JsonObject();
+        body.addProperty("published", published);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://wynnextras.com/aspects/publication"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", token)
+                .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                .timeout(Duration.ofSeconds(8))
+                .build();
+
+        ApiRequestHelper.sendWithAuthRetry(request, body)
+                .thenAccept(response -> {
+                    if (response == null) return;
+                    if (response.statusCode() == 200) {
+                        lastSyncedAspectPublished = published;
+                        if (published && uploadWhenPublished) uploadStoredAspects(token);
+                    } else {
+                        BackendErrorLogger.error("aspect-publication", "Aspect publication update failed: " + response.statusCode());
+                    }
+                })
+                .exceptionally(ex -> {
+                    BackendErrorLogger.error("aspect-publication", "Aspect publication update failed: " + ex.getMessage());
+                    return null;
+                });
+    }
+
+    public static boolean needsAspectPublicationSync() {
+        boolean published = !WynnExtrasConfig.INSTANCE.doNotPublishOwnAspects;
+        return lastSyncedAspectPublished == null || lastSyncedAspectPublished != published;
+    }
+
+    private static void uploadStoredAspects(String token) {
+        JsonArray aspects = LocalAspectStorage.load();
+        if (aspects == null || aspects.isEmpty()) return;
+
+        JsonObject payload = new JsonObject();
+        payload.addProperty("modVersion", CurrentVersionData.INSTANCE.version);
+        payload.add("aspects", aspects.deepCopy());
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://wynnextras.com/aspects"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", token)
+                .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+                .timeout(Duration.ofSeconds(8))
+                .build();
+
+        ApiRequestHelper.sendWithAuthRetry(request, payload)
+                .thenAccept(response -> {
+                    if (response != null && response.statusCode() != 200) {
+                        BackendErrorLogger.error("aspect-upload", "Stored aspect sync failed: " + response.statusCode());
+                    }
+                })
+                .exceptionally(ex -> {
+                    BackendErrorLogger.error("aspect-upload", "Stored aspect sync failed: " + ex.getMessage());
+                    return null;
+                });
     }
 
     public static int parseAspectAmount(Pair<String, String> aspect) {
@@ -766,7 +896,7 @@ public class WynncraftApiHandler {
      * @param gambits List of gambits with name and description
      */
     public static void uploadGambits(List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry> gambits) {
-        if (McUtils.player() == null) {
+        if (MinecraftUtils.player() == null) {
             WynnExtras.LOGGER.error("Cannot upload gambits - player not loaded");
             return;
         }
@@ -810,11 +940,11 @@ public class WynncraftApiHandler {
                             int code = response.statusCode();
                             if(code == 401) {
                                 if (BackendErrorLogger.error("gambit-upload", "Gambit upload authentication failed")) {
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
+                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cAuthentication failed"));
                                 }
                             } else if(code != 200) {
                                 if (BackendErrorLogger.error("gambit-upload", "Gambit upload failed: " + code)) {
-                                    McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading gambits: " + code));
+                                    MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError uploading gambits: " + code));
                                 }
                             }
                         })
@@ -825,7 +955,7 @@ public class WynncraftApiHandler {
 
             } catch (Exception e) {
                 e.printStackTrace();
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError preparing gambits upload"));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cError preparing gambits upload"));
             }
         });
     }
@@ -836,18 +966,17 @@ public class WynncraftApiHandler {
      * @return CompletableFuture with list of leaderboard entries
      */
     public static CompletableFuture<List<LeaderboardEntry>> fetchLeaderboard(int limit) {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasAspects) {
+            return CompletableFuture.completedFuture(new ArrayList<>());
+        }
         try {
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(3))
-                    .build();
-
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://wynnextras.com/aspects/leaderboard?limit=" + limit))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
 
-            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            return sendAsync(request)
                     .thenApply(response -> {
                         if (response.statusCode() != 200) {
                             BackendErrorLogger.error("aspect-leaderboard", "Failed to fetch leaderboard: " + response.statusCode());
@@ -885,18 +1014,17 @@ public class WynncraftApiHandler {
      * @return CompletableFuture with list of gambits or null if not available
      */
     public static CompletableFuture<List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry>> fetchCrowdsourcedGambits() {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasGambits) {
+            return CompletableFuture.completedFuture(null);
+        }
         try {
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(3))
-                    .build();
-
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://wynnextras.com/gambit"))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
 
-            return client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            return sendAsync(request)
                     .thenApply(response -> {
                         if (response.statusCode() != 200) {
                             BackendErrorLogger.error("gambit-fetch", "Failed to fetch crowdsourced gambits: " + response.statusCode());
@@ -933,35 +1061,6 @@ public class WynncraftApiHandler {
         }
     }
 
-    public static CompletableFuture<Map<String, JsonObject>> fetchItemDatabase() {
-        HttpRequest request = WynncraftAuthManager.applyWynncraftAuth(HttpRequest.newBuilder()
-                .uri(URI.create("https://api.wynncraft.com/v3/item/database?fullResult"))
-                .GET())
-                .build();
-
-        return WynncraftAuthManager.sendWynncraftRequest(request)
-                .thenApply(HttpResponse::body)
-                .thenApply(WynncraftApiHandler::parseItemDatabase);
-    }
-
-    private static Map<String, JsonObject> parseItemDatabase(String json) {
-        JsonElement root = JsonParser.parseString(json);
-        if (root.isJsonArray()) {
-            Map<String, JsonObject> result = new HashMap<>();
-            for (JsonElement el : root.getAsJsonArray()) {
-                JsonObject obj = el.getAsJsonObject();
-                String name = obj.has("internalName") ? obj.get("internalName").getAsString()
-                            : obj.has("displayName")  ? obj.get("displayName").getAsString()
-                            : null;
-                if (name != null) result.put(name, obj);
-            }
-            return result;
-        }
-        Gson gson = new Gson();
-        Type mapType = new TypeToken<Map<String, JsonObject>>() {}.getType();
-        return gson.fromJson(root, mapType);
-    }
-
     public static CompletableFuture<AbilityMapData> fetchPlayerAbilityMap(String playerUUID, String characterUUUID) {
         HttpRequest request = WynncraftAuthManager.applyWynncraftAuth(HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL + playerUUID + "/characters/" + characterUUUID + "/abilities"))
@@ -979,7 +1078,7 @@ public class WynncraftApiHandler {
                 .GET()
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendAsync(request)
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAbilityMapData);
     }
@@ -990,7 +1089,7 @@ public class WynncraftApiHandler {
                 .GET()
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendAsync(request)
                 .thenApply(HttpResponse::body)
                 .thenApply(WynncraftApiHandler::parseAbilityTreeData);
     }
@@ -1004,9 +1103,98 @@ public class WynncraftApiHandler {
     }
 
     private static GuildData parseGuildData(String json) {
-        Gson gson = new Gson();
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) {
+            throw new IllegalStateException("Guild detail response is not an object");
+        }
 
-        return gson.fromJson(json, GuildData.class);
+        GuildData guildData = new Gson().fromJson(root, GuildData.class);
+        if (guildData == null || guildData.name == null || guildData.prefix == null || guildData.members == null) {
+            throw new IllegalStateException("Guild detail response is missing required fields");
+        }
+        return guildData;
+    }
+
+    private static GuildData parseGuildSummary(String json, String query) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) {
+            throw new IllegalStateException("Guild search response is not an object");
+        }
+
+        JsonObject result = root.getAsJsonObject();
+        GuildData summary = findGuildSummary(result.getAsJsonObject("guildsPrefix"), query);
+        if (summary == null) summary = findGuildSummary(result.getAsJsonObject("guilds"), query);
+        return summary;
+    }
+
+    private static List<GuildData> parseGuildPrefixSummaries(String json, String query) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonObject()) {
+            throw new IllegalStateException("Guild search response is not an object");
+        }
+
+        JsonObject result = root.getAsJsonObject();
+        Map<String, GuildData> matches = new LinkedHashMap<>();
+        addGuildPrefixSummaries(result.getAsJsonObject("guildsPrefix"), query, matches);
+        addGuildPrefixSummaries(result.getAsJsonObject("guilds"), query, matches);
+        return matches.values().stream()
+                .sorted(Comparator.comparing((GuildData guild) -> guild.prefix).thenComparing(guild -> guild.name))
+                .toList();
+    }
+
+    private static void addGuildPrefixSummaries(JsonObject guilds, String query, Map<String, GuildData> matches) {
+        if (guilds == null) return;
+
+        for (Map.Entry<String, JsonElement> entry : guilds.entrySet()) {
+            if (!entry.getValue().isJsonObject()) continue;
+            JsonObject guild = entry.getValue().getAsJsonObject();
+            String prefix = jsonString(guild, "prefix");
+            if (!query.equalsIgnoreCase(prefix)) continue;
+            if (!guild.has("level") || guild.get("level").isJsonNull()
+                    || !guild.has("members") || guild.get("members").isJsonNull()) {
+                throw new IllegalStateException("Guild search response is missing required fields");
+            }
+
+            GuildData summary = new GuildData();
+            summary.summaryOnly = true;
+            summary.uuid = entry.getKey();
+            summary.name = jsonString(guild, "name");
+            summary.prefix = prefix;
+            summary.level = guild.get("level").getAsInt();
+            summary.created = jsonString(guild, "created");
+            summary.members = new GuildData.Members();
+            summary.members.total = guild.get("members").getAsInt();
+            matches.putIfAbsent(summary.uuid, summary);
+        }
+    }
+
+    private static GuildData findGuildSummary(JsonObject guilds, String query) {
+        if (guilds == null) return null;
+
+        for (Map.Entry<String, JsonElement> entry : guilds.entrySet()) {
+            if (!entry.getValue().isJsonObject()) continue;
+            JsonObject guild = entry.getValue().getAsJsonObject();
+            String name = jsonString(guild, "name");
+            String prefix = jsonString(guild, "prefix");
+            if (!query.equalsIgnoreCase(name) && !query.equalsIgnoreCase(prefix)) continue;
+            if (!guild.has("level") || guild.get("level").isJsonNull()
+                    || !guild.has("members") || guild.get("members").isJsonNull()) {
+                throw new IllegalStateException("Guild search response is missing required fields");
+            }
+
+            GuildData result = new GuildData();
+            result.summaryOnly = true;
+            result.uuid = entry.getKey();
+            result.name = name;
+            result.prefix = prefix;
+            result.level = guild.get("level").getAsInt();
+            result.created = jsonString(guild, "created");
+            result.members = new GuildData.Members();
+            result.members.total = guild.get("members").getAsInt();
+            return result;
+        }
+
+        return null;
     }
 
     private static User parsePlayerAspectData(String json) {
@@ -1170,6 +1358,7 @@ public class WynncraftApiHandler {
 
     public enum FetchStatus {
         OK,
+        DISABLED,
         NOT_FOUND,
         FORBIDDEN,
         SERVER_UNREACHABLE,

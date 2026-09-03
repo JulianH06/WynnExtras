@@ -1,15 +1,14 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.handlers.item.ItemAnnotation;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.render.Texture;
+import julianh06.wynnextras.compat.wynntils.WynntilsCompat;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
-import julianh06.wynnextras.utils.WynntilsHighlightUtils;
+import julianh06.wynnextras.utils.ItemHighlightRenderer;
 import julianh06.wynnextras.features.profileviewer.data.ApiAspect;
 import julianh06.wynnextras.features.profileviewer.data.Aspect;
 import julianh06.wynnextras.features.profileviewer.data.User;
@@ -48,7 +47,9 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
     static Identifier dungeonBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/aspecttabbackground_dark.png");
 
     private static ItemStack currentHovered;
-    private static Texture highlightTexture = Texture.HIGHLIGHT_WYNN;
+    private static final float WYNNTILS_ITEM_BACKGROUND_SIZE = 180f;
+    private static final float STANDALONE_ITEM_BACKGROUND_SIZE = 110f;
+    private static final CustomColor LOCKED_ASPECT_TINT = new CustomColor(0, 0, 0, 96);
 
     public static User currentPlayerAspectData;
     public static WynncraftApiHandler.FetchStatus fetchStatus;
@@ -60,7 +61,6 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
     private InfoWidget infoWidget = null;
 
-    private static Map<Integer, List<ItemAnnotation>> annotationCache = new HashMap<>();
 
     public enum Page {Overview, Warrior, Shaman, Mage, Archer, Assassin}
 
@@ -75,7 +75,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         if (!openedAspectPage) {
             openedAspectPage = true;
-            highlightTexture = WynntilsHighlightUtils.getConfiguredHighlightTexture();
+            ItemHighlightRenderer.refreshWynntilsHighlightTexture();
             currentPlayerAspectData = null;
             fetchStatus = null;
             currentPage = Page.Overview;
@@ -104,6 +104,10 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
         }
 
         switch (fetchStatus) {
+            case DISABLED -> {
+                ui.drawCenteredText("Fetching aspects is disabled in settings.", x + 900, y + 365, CustomColor.fromHexString("FF0000"), 4f);
+                return;
+            }
             case NOKEYSET -> {
                 ui.drawCenteredText("You need to set your api-key to use this feature.", x + 900, y + 350, CustomColor.fromHexString("FF0000"), 4f);
                 ui.drawCenteredText("Run \"/we apikey\" for more information.", x + 900, y + 390, CustomColor.fromHexString("FF0000"), 4f);
@@ -367,7 +371,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
         ctx.getMatrices().pushMatrix();
         ctx.getMatrices().scale((float)(1.0 / PVScreen.currentMatrixScale), (float)(1.0 / PVScreen.currentMatrixScale));
-        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, currentHovered.getTooltip(Item.TooltipContext.DEFAULT, McUtils.player(), TooltipType.BASIC),
+        ctx.drawTooltip(MinecraftClient.getInstance().textRenderer, currentHovered.getTooltip(Item.TooltipContext.DEFAULT, MinecraftUtils.player(), TooltipType.BASIC),
                 (int)(mouseX * PVScreen.currentMatrixScale), (int)(mouseY * PVScreen.currentMatrixScale));
         ctx.getMatrices().popMatrix();
     }
@@ -424,7 +428,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             super(0, 0, 0, 0);
             this.page = page;
             this.action = () -> {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 currentPage = page;
             };
         }
@@ -560,10 +564,7 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             }
 
             if (!Objects.equals(color, CustomColor.NONE)) {
-                WynntilsHighlightUtils.drawHighlightTexture(
-                    ctx,
-                    highlightTexture,
-                    color, x / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF());
+                drawItemBackground(ctx, color);
             }
             ItemStack stack;
 
@@ -577,14 +578,11 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
 
             ctx.getMatrices().pushMatrix();
             ctx.getMatrices().scale(5 / ui.getScaleFactorF(), 5 / ui.getScaleFactorF());
-            ctx.drawItem(stack, x / 5 + 2, y / 5 + 2);
+            ctx.drawItem(stack, x / 5 + 3, y / 5 + 2);
             ctx.getMatrices().popMatrix();
 
             if(playerAspect == null || playerAspect.getAmount() <= 1) {
-                WynntilsHighlightUtils.drawHighlightTexture(
-                    ctx,
-                    highlightTexture,
-                    CustomColor.fromHexString("000000"), x / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), y / ui.getScaleFactorF() - 30 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF(), 32 * 5 / ui.getScaleFactorF());
+                drawItemBackground(ctx, LOCKED_ASPECT_TINT);
                 ui.drawCenteredText("Not", x + 50, y, CustomColor.fromHexString("808080"));
                 ui.drawCenteredText("Unlocked", x + 50, y + 100, CustomColor.fromHexString("808080"), 2.5f);
             } else {
@@ -595,6 +593,27 @@ public class AspectsTabWidget extends PVScreen.TabWidget{
             if(hovered) {
                 currentHovered = stack;
             }
+        }
+
+        private void drawItemBackground(DrawContext ctx, CustomColor color) {
+            float scale = ui.getScaleFactorF();
+
+            if (WynntilsCompat.isLoaded()) {
+                float backgroundX = (x + (width - WYNNTILS_ITEM_BACKGROUND_SIZE) / 2f) / scale;
+                float backgroundY = (y + (height - WYNNTILS_ITEM_BACKGROUND_SIZE) / 2f) / scale;
+                float backgroundSize = WYNNTILS_ITEM_BACKGROUND_SIZE / scale;
+                ItemHighlightRenderer.drawWynntilsHighlightTexture(
+                        ctx, color,
+                        backgroundX, backgroundY, backgroundSize, backgroundSize);
+                return;
+            }
+
+            float backgroundX = (x + (width - STANDALONE_ITEM_BACKGROUND_SIZE) / 2f) / scale;
+            float backgroundY = (y + (height - STANDALONE_ITEM_BACKGROUND_SIZE) / 2f) / scale;
+            float backgroundSize = STANDALONE_ITEM_BACKGROUND_SIZE / scale;
+            ItemHighlightRenderer.drawStandaloneHighlight(
+                    ctx, color,
+                    backgroundX, backgroundY, backgroundSize, backgroundSize);
         }
     }
 

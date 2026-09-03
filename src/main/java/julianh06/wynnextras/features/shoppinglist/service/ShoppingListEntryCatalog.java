@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.shoppinglist.service;
 
-import julianh06.wynnextras.features.crafting.data.CraftingDataService;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.features.crafting.data.IMaterial;
 import julianh06.wynnextras.features.crafting.data.materials.Gem;
 import julianh06.wynnextras.features.crafting.data.materials.Grains;
@@ -27,7 +27,7 @@ public final class ShoppingListEntryCatalog {
         String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
         List<String> names = type == RequirementType.MATERIAL
                 ? MATERIAL_NAMES
-                : CraftingDataService.getInstance().getIngredientNames();
+                : WynnDataService.getInstance().getIngredientNames();
         if (normalizedQuery.isEmpty()) {
             return names.stream().limit(Math.max(0, limit)).toList();
         }

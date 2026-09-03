@@ -1,10 +1,8 @@
 package julianh06.wynnextras.features.abilitytree;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.character.type.ClassType;
-import com.wynntils.models.character.type.SavableSkillPointSet;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.wynncraft.state.CharacterState;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
@@ -55,25 +53,25 @@ public class TreeScreen extends WEScreen {
         leftScrollOffset = 0;
         rightScrollOffset = 0;
 
-        ClassType type = Models.Character.getClassType();
+        String className = CharacterState.className().orElse(null);
 
-        if(type != ClassType.NONE) {
+        if(className != null) {
             List<TreeListElement> classTrees = new ArrayList<>();
             int i = 0;
             for(TreeData treeData : trees.values()) {
                 if(treeData == null) continue;
-                if(treeData.className.equals(type.getName())) {
+                if(treeData.className.equals(className)) {
                     classTrees.add(new TreeListElement(i, ui, treeData, true, this));
                     i++;
                 }
             }
-            ClassListWidget element = new ClassListWidget(classTrees, type.getName(), true);
+            ClassListWidget element = new ClassListWidget(classTrees, className, true);
             classListWidgets.add(element);
             addRootWidget(element);
         }
 
         for(Classes classes : Classes.values()) {
-            if(classes.toString().equals(type.getName())) {
+            if(classes.toString().equals(className)) {
                 continue;
             }
             List<TreeListElement> classTrees = new ArrayList<>();
@@ -100,25 +98,25 @@ public class TreeScreen extends WEScreen {
         leftScrollOffset = 0;
         rightScrollOffset = 0;
 
-        ClassType type = Models.Character.getClassType();
+        String className = CharacterState.className().orElse(null);
 
-        if(type != ClassType.NONE) {
+        if(className != null) {
             List<TreeListElement> classTrees = new ArrayList<>();
             int i = 0;
             for(TreeData treeData : trees.values()) {
                 if(treeData == null) continue;
-                if(treeData.className.equals(type.getName())) {
+                if(treeData.className.equals(className)) {
                     classTrees.add(new TreeListElement(i, ui, treeData, true, this));
                     i++;
                 }
             }
-            ClassListWidget element = new ClassListWidget(classTrees, type.getName(), true);
+            ClassListWidget element = new ClassListWidget(classTrees, className, true);
             classListWidgets.add(element);
             addRootWidget(element);
         }
 
         for(Classes classes : Classes.values()) {
-            if(classes.toString().equals(type.getName())) {
+            if(classes.toString().equals(className)) {
                 continue;
             }
             List<TreeListElement> classTrees = new ArrayList<>();
@@ -236,7 +234,7 @@ public class TreeScreen extends WEScreen {
                             }
                             int yStart = y - 25 + ability.coordinates.y * 75 - rightScrollOffset + (450 * (ability.page - 1));
                             if (yStart + 75 > y) {
-                                ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, x + ability.coordinates.x * 75 + 943 + 90, yStart - 7 + 90, CustomColor.fromHexString("FFFF00"));
+                                ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, 90, 90, CustomColor.fromHexString("FFFF00"));
                             }
                         }
                     }
@@ -279,7 +277,7 @@ public class TreeScreen extends WEScreen {
 //        if(treeSearchBar == null) return;
 //
 //        if (treeSearchBar.isClickInBounds(PVScreen.mouseX, PVScreen.mouseY)) {
-//            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+//            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
 //            treeSearchBar.click();
 //        } else {
 //            treeSearchBar.setActive(false);
@@ -306,7 +304,7 @@ public class TreeScreen extends WEScreen {
             this.expanded = active;
             this.elements = elements;
             this.action = () -> {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 expanded = !expanded;
             };
             for(TreeListElement element : elements) {
@@ -323,8 +321,8 @@ public class TreeScreen extends WEScreen {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             //ui.drawRect(x, y, width, height, CustomColor.fromHexString("909090"));
             ui.drawCenteredText(playerClass, x + width / 2f, y + 25, active ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("909090"));
-            ui.drawRect(x, y + 22.5f, width / 2f - McUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")), 5, active ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("909090"));
-            ui.drawRect(x + width / 2f + McUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")), y + 22.5f, width / 2f - McUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")) - 50, 5, active ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("909090"));
+            ui.drawRect(x, y + 22.5f, width / 2f - MinecraftUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")), 5, active ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("909090"));
+            ui.drawRect(x + width / 2f + MinecraftUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")), y + 22.5f, width / 2f - MinecraftUtils.mc().textRenderer.getWidth(Text.of("     " + playerClass + "     ")) - 50, 5, active ? CustomColor.fromHexString("FFFFFF") : CustomColor.fromHexString("909090"));
             ui.drawImage(expanded ? (active ? arrowOpenedWhite : arrowOpenedGray)
                     : (active ? arrowClosedWhite : arrowClosedGray),x + width - 45, y + 5, 40, 40);
             if(!expanded) {
@@ -504,10 +502,10 @@ public class TreeScreen extends WEScreen {
                 super(0, 0, 0, 0);
                 this.withSkillpoints = withSkillpoints;
                 this.action = () -> {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     TreeData tree1 = TreeData.getTree(treeName);
                     if (tree1 == null) {
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("This tree doesn't exist.")));
+                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(Text.of("This tree doesn't exist.")));
                         return;
                     }
 
@@ -516,7 +514,7 @@ public class TreeScreen extends WEScreen {
                     // If the live API data isn't cached yet, trigger the load and tell the user to retry.
                     if (AbilityTreeCache.getClassTree(classKey) == null || AbilityTreeCache.getClassMap(classKey) == null) {
                         AbilityTreeCache.loadClassTree(classKey);
-                        McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
+                        MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix(
                                 Text.of("Loading ability data for " + tree1.className + " from the Wynn API, please click Load again in a moment.")
                         ));
                         return;  // <-- do NOT proceed, data isn't ready
@@ -528,7 +526,7 @@ public class TreeScreen extends WEScreen {
                         return; // planner already printed the reason
                     }
 
-                    McUtils.mc().setScreen(null);
+                    MinecraftUtils.mc().setScreen(null);
                     TreeLoader.resetAll();
                     TreeLoader.wasStarted = true;
                     TreeLoader.resetTree = true;
@@ -541,7 +539,7 @@ public class TreeScreen extends WEScreen {
                     points[2] = tree1.intelligence;
                     points[3] = tree1.defence;
                     points[4] = tree1.agility;
-                    TreeLoader.skillPointSet = withSkillpoints ? new SavableSkillPointSet(points) : null;
+                    TreeLoader.skillPointSet = withSkillpoints ? points : null;
 
                     AbilityTreeData liveClassTree = AbilityTreeCache.getClassTree(classKey);
                     TreeLoader.classTree = liveClassTree != null ? liveClassTree : tree1.playerTree;
@@ -569,7 +567,7 @@ public class TreeScreen extends WEScreen {
             public ViewButton(TreeData data, TreeScreen screen) {
                 super(0, 0, 0, 0);
                 this.action = () -> {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     currentViewedTreeData = data;
                     screen.removeRootWidget(screen.abilityWidget);
                     screen.abilityWidget = null;
@@ -599,7 +597,7 @@ public class TreeScreen extends WEScreen {
             public DeleteButton(TreeListElement parent) {
                 super(0, 0, 0, 0);
                 this.action = () -> {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     parent.pendingDeletion = true;
                 };
             }
@@ -626,7 +624,7 @@ public class TreeScreen extends WEScreen {
             public ConfirmationButton(TreeListElement parent, boolean yesno) {
                 super(0, 0, 0, 0);
                 this.action = () -> {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     if(yesno) {
                         TreeLoader.deletePlayerAbilityTree(parent.data.name + ".json");
                         List<Boolean> expanded = new ArrayList<>();

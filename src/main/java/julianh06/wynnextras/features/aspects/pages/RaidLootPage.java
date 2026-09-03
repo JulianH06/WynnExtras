@@ -1,9 +1,9 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.raid.RaidLootConfig;
 import julianh06.wynnextras.features.raid.RaidLootData;
+import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -13,13 +13,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RaidLootPage extends PageWidget {
-    private enum Raid { NOTG, NOL, TCC, TNA }
+    private enum Raid { NOTG, NOL, TCC, TNA, TWP }
 
-    private List<RaidToggleWidget> raidToggleWidgets = new ArrayList<>();
-    private ShowTotalWidget showTotalWidget;
+    private final List<RaidToggleWidget> raidToggleWidgets = new ArrayList<>();
+    private final ShowTotalWidget showTotalWidget;
 
-    private AmplifiersPerRunWidget amplifiersPerRunWidget;
-    private BagsPerRunWidget bagsPerRunWidget;
+    private final AmplifiersPerRunWidget amplifiersPerRunWidget;
+    private final BagsPerRunWidget bagsPerRunWidget;
+    private final PowderStatsWidget powderStatsWidget;
 
     private static List<Text> amplifiersPerRunTooltip;
     private static List<Text> bagsPerRunTooltip;
@@ -32,9 +33,10 @@ public class RaidLootPage extends PageWidget {
     private static final int TOGGLE_SPACING = 20;
     private static final int TOGGLE_Y = 120;
 
-    private static final String[] RAID_NAMES = {"NOTG", "NOL", "TCC", "TNA"};
-    private static final String[] RAID_COLORS = {"§2", "§e", "§3", "§5"};
-    private static final String[] RAID_CODES = {"NOTG", "NOL", "TCC", "TNA"};
+    private static final String[] RAID_NAMES = {"NOTG", "NOL", "TCC", "TNA", "TWP"};
+    private static final String[] RAID_COLORS = {"§2", "§e", "§3", "§5", "§4"};
+    private static final String[] RAID_CODES = {"NOTG", "NOL", "TCC", "TNA", "TWP"};
+    private static final String[] POWDER_TIER_NAMES = {"I", "II", "III", "IV", "V", "VI", "VII"};
 
     // For hover tooltips
     private int amplifiersLineY = 0;
@@ -54,6 +56,7 @@ public class RaidLootPage extends PageWidget {
         showTotalWidget = new ShowTotalWidget();
         amplifiersPerRunWidget = new AmplifiersPerRunWidget();
         bagsPerRunWidget = new BagsPerRunWidget();
+        powderStatsWidget = new PowderStatsWidget();
     }
 
     @Override
@@ -65,7 +68,7 @@ public class RaidLootPage extends PageWidget {
 
         ui.drawCenteredText("§6§lRAID LOOT TRACKER", centerX, 60);
 
-        int totalToggleWidth = (TOGGLE_WIDTH * 4) + (TOGGLE_SPACING * 3);
+        int totalToggleWidth = (TOGGLE_WIDTH * Raid.values().length) + (TOGGLE_SPACING * (Raid.values().length - 1));
         int toggleStartX = (logicalW - totalToggleWidth) / 2;
 
         for(RaidToggleWidget raidToggleWidget : raidToggleWidgets) {
@@ -83,16 +86,17 @@ public class RaidLootPage extends PageWidget {
         showTotalWidget.draw(context, mouseX, mouseY, tickDelta, ui);
 
         if(showRates) {
-            int amplifierWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(amplifiersText) * ui.getScaleFactorF());
-            amplifiersPerRunWidget.setBounds((int) (centerX - amplifierWidth / 2f), amplifiersLineY - 20, amplifierWidth, 40);
+            int amplifierWidth = MinecraftClient.getInstance().textRenderer.getWidth(amplifiersText) * 3;
+            amplifiersPerRunWidget.setBounds(Math.round(centerX - amplifierWidth / 2f), amplifiersLineY - 20, amplifierWidth, 40);
             amplifiersPerRunWidget.draw(context, mouseX, mouseY, tickDelta, ui);
 
-            int bagWidth = (int) (MinecraftClient.getInstance().textRenderer.getWidth(bagsText) * ui.getScaleFactorF());
-            bagsPerRunWidget.setBounds((int) (centerX - bagWidth / 2f), bagsLineY - 20, bagWidth, 40);
+            int bagWidth = MinecraftClient.getInstance().textRenderer.getWidth(bagsText) * 3;
+            bagsPerRunWidget.setBounds(Math.round(centerX - bagWidth / 2f), bagsLineY - 20, bagWidth, 40);
             bagsPerRunWidget.draw(context, mouseX, mouseY, tickDelta, ui);
         }
 
         renderLootStats(context, centerX, logicalW);
+        powderStatsWidget.draw(context, mouseX, mouseY, tickDelta, ui);
 
         amplifiersPerRunTooltip = List.of(
                 Text.of("§e§lAmplifiers/Run Breakdown:"),
@@ -112,7 +116,8 @@ public class RaidLootPage extends PageWidget {
 
     @Override
     public void drawForeground(DrawContext context, int mouseX, int mouseY, float tickDelta) {
-        context.drawTooltip(MinecraftClient.getInstance().textRenderer, hoveredTooltip, mouseX, mouseY);
+        if(hoveredTooltip.isEmpty()) return;
+        TextInputWidget.drawFittingTooltip(context, hoveredTooltip, mouseX, mouseY);
     }
 
     private void renderLootStats(DrawContext context, int centerX, int logicalW) {
@@ -121,7 +126,7 @@ public class RaidLootPage extends PageWidget {
         // Calculate combined stats
         RaidLootData.RaidSpecificLoot combinedStats = new RaidLootData.RaidSpecificLoot();
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < RAID_CODES.length; i++) {
             if (raidToggleWidgets.get(i).toggled) {
                 RaidLootData.RaidSpecificLoot raidStats = lootData.perRaidData.get(RAID_CODES[i]);
                 if (raidStats != null) {
@@ -144,6 +149,12 @@ public class RaidLootPage extends PageWidget {
                     combinedStats.mythicAspects += raidStats.mythicAspects;
                     combinedStats.fabledAspects += raidStats.fabledAspects;
                     combinedStats.legendaryAspects += raidStats.legendaryAspects;
+                    for (int element = 0; element < RaidLootData.POWDER_ELEMENT_COUNT; element++) {
+                        for (int tier = 0; tier < RaidLootData.POWDER_TIER_COUNT; tier++) {
+                            combinedStats.addPowder(element, tier, raidStats.getPowderCount(element, tier));
+                        }
+                    }
+                    combinedStats.totalWards += raidStats.totalWards;
                 }
             }
         }
@@ -174,12 +185,12 @@ public class RaidLootPage extends PageWidget {
         }
 
         // Per-raid breakdown
-        startY = showRates ? 580 : 560;
-        if (raidToggleWidgets.get(0).toggled || raidToggleWidgets.get(1).toggled || raidToggleWidgets.get(2).toggled || raidToggleWidgets.get(3).toggled) {
+        startY = 620;
+        if (raidToggleWidgets.stream().anyMatch(widget -> widget.toggled)) {
             ui.drawCenteredText("§e§lPER-RAID BREAKDOWN", centerX, startY);
             startY += 40;
 
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < RAID_CODES.length; i++) {
                 if (!raidToggleWidgets.get(i).toggled) continue;
 
                 RaidLootData.RaidSpecificLoot raidStats = lootData.perRaidData.get(RAID_CODES[i]);
@@ -246,6 +257,14 @@ public class RaidLootPage extends PageWidget {
         ui.drawCenteredText("§d§lTomes/Run: §f" + String.format("%.2f", (double)stats.totalTomes / totalRuns) + " §7(§5" + String.format("%.2f", (double)stats.mythicTomes / totalRuns) + " §7mythic§7)", centerX, startY);
         startY += lineHeight + 8;
 
+        String powdersText = "§6§lPowders/Run: §f" + String.format("%.2f", (double) stats.getTotalPowders() / totalRuns)
+                + " §7(hover for breakdown)";
+        powderStatsWidget.setContent(powdersText, centerX, startY, createPowderTooltip(stats, totalRuns, true));
+        startY += lineHeight;
+
+        ui.drawCenteredText("§c§lWards/Run: §f" + String.format("%.2f", (double) stats.totalWards / totalRuns), centerX, startY);
+        startY += lineHeight;
+
         ui.drawCenteredText("§5§lAspects/Run: §f" + String.format("%.2f", (double)stats.totalAspects / totalRuns) + " §7(§5" + String.format("%.2f", (double)stats.mythicAspects / totalRuns) + " §7mythic§7)", centerX, startY);
     }
 
@@ -274,6 +293,13 @@ public class RaidLootPage extends PageWidget {
 
         ui.drawCenteredText("§d§lTomes: §f" + stats.totalTomes + " §7(§5" + stats.mythicTomes + " §7mythic, §c" + stats.fabledTomes + " §7fabled§7)", centerX, startY);
         startY += lineHeight + 8;
+
+        String powdersText = "§6§lPowders: §f" + stats.getTotalPowders() + " §7(hover for breakdown)";
+        powderStatsWidget.setContent(powdersText, centerX, startY, createPowderTooltip(stats, totalRuns, false));
+        startY += lineHeight;
+
+        ui.drawCenteredText("§c§lWards: §f" + stats.totalWards, centerX, startY);
+        startY += lineHeight;
 
         ui.drawCenteredText("§5§lAspects: §f" + stats.totalAspects + " §7(§5" + stats.mythicAspects + " §7mythic, §c" + stats.fabledAspects + " §7fabled, §b" + stats.legendaryAspects + " §7legendary§7)", centerX, startY);
     }
@@ -341,6 +367,40 @@ public class RaidLootPage extends PageWidget {
         @Override
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             if(hovered) hoveredTooltip = new ArrayList<>(bagsPerRunTooltip);
+        }
+    }
+
+    private static List<Text> createPowderTooltip(RaidLootData.RaidSpecificLoot stats, int totalRuns, boolean showRates) {
+        List<Text> tooltip = new ArrayList<>();
+        tooltip.add(Text.of("§6§lPowder Breakdown:"));
+        for (int tier = 0; tier < POWDER_TIER_NAMES.length; tier++) {
+            String amount = showRates
+                    ? String.format("%.3f/run", (double) stats.getPowderTierTotal(tier) / totalRuns)
+                    : String.valueOf(stats.getPowderTierTotal(tier));
+            tooltip.add(Text.of("§6Tier " + POWDER_TIER_NAMES[tier] + ": §f" + amount));
+        }
+        return tooltip;
+    }
+
+    private static class PowderStatsWidget extends Widget {
+        private String text = "";
+        private int logicalCenterX;
+        private int logicalY;
+        private List<Text> tooltip = List.of();
+
+        private void setContent(String text, int centerX, int y, List<Text> tooltip) {
+            this.text = text;
+            this.logicalCenterX = centerX;
+            this.logicalY = y;
+            this.tooltip = tooltip;
+            int logicalWidth = MinecraftClient.getInstance().textRenderer.getWidth(text) * 3;
+            setBounds(Math.round(centerX - logicalWidth / 2f), y - 14, logicalWidth, 28);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            ui.drawCenteredText(text, logicalCenterX, logicalY);
+            if(hovered) hoveredTooltip = new ArrayList<>(tooltip);
         }
     }
 }

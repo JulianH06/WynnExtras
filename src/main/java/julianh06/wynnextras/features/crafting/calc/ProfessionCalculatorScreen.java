@@ -1,8 +1,8 @@
 package julianh06.wynnextras.features.crafting.calc;
 
-import com.wynntils.core.components.Models;
-import com.wynntils.models.profession.type.ProfessionType;
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.wynncraft.state.ProfessionState;
+import julianh06.wynnextras.utils.enums.WEProfessionType;
+import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.crafting.calc.CraftXpCalculator.MaterialType;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
@@ -195,7 +195,7 @@ public class ProfessionCalculatorScreen extends WEScreen {
     }
 
     private void autoDetect() {
-        ProfessionType lastProf = ProfessionOverlay.getLastProfession();
+        WEProfessionType lastProf = ProfessionOverlay.getLastProfession();
         if (lastProf != null) {
             String name = lastProf.getDisplayName();
             for (int i = 0; i < CRAFTING_PROFESSIONS.length; i++) {
@@ -210,10 +210,10 @@ public class ProfessionCalculatorScreen extends WEScreen {
     }
 
     private void detectLevelForSelected() {
-        ProfessionType selectedProf = getSelectedProfession();
+        WEProfessionType selectedProf = getSelectedProfession();
         if (selectedProf == null) return;
 
-        int level = Models.Profession.getLevel(selectedProf);
+        int level = ProfessionState.level(selectedProf);
         if (level >= 99 && level <= 132) {
             fromLevelInput.setInput(String.valueOf(level));
         }
@@ -229,9 +229,9 @@ public class ProfessionCalculatorScreen extends WEScreen {
         }
     }
 
-    private ProfessionType getSelectedProfession() {
+    private WEProfessionType getSelectedProfession() {
         if (professionButton == null) return null;
-        return ProfessionType.fromString(CRAFTING_PROFESSIONS[professionButton.getSelectedIndex()].toLowerCase());
+        return WEProfessionType.fromString(CRAFTING_PROFESSIONS[professionButton.getSelectedIndex()].toLowerCase());
     }
 
     private String[] getCurrentMatNames() {
@@ -341,7 +341,7 @@ public class ProfessionCalculatorScreen extends WEScreen {
         double overflowNeeded = Math.max(0, overflowGoal - currentOverflow);
 
         // Persist goal to ProfessionOverlay so it shows on the HUD
-        ProfessionType selectedProf = getSelectedProfession();
+        WEProfessionType selectedProf = getSelectedProfession();
         if (selectedProf != null && fromLevel >= 132) {
             if (overflowGoal > 0) {
                 ProfessionOverlay.setGoal(selectedProf, (float) overflowGoal);

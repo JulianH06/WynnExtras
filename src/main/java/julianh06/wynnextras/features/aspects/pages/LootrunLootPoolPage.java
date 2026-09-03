@@ -1,14 +1,12 @@
 package julianh06.wynnextras.features.aspects.pages;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.wynntils.utils.colors.CustomColor;
-import com.wynntils.utils.colors.WynncraftShaderColor;
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.ResetTimeConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.features.aspects.LootrunLootPoolData;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -394,7 +392,7 @@ public class LootrunLootPoolPage extends PageWidget {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             int topHeight = 94;
 
-            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 80, 21);
+            ui.drawVanillaPanel(x, y, width, height, 12, 17, 17, 80, 20);
 
             float titleScale = getFittingTextScale(title, width - 45, 3f, 2.2f);
             ui.drawCenteredText(title, x + width / 2f, y + 45, CustomColor.fromHexString("FFFFFF"), titleScale);
@@ -582,12 +580,15 @@ public class LootrunLootPoolPage extends PageWidget {
                 boolean hovering = mouseX * ui.getScaleFactorF() >= x + 12 && mouseX * ui.getScaleFactorF() <= x + width - 12 &&
                         mouseY * ui.getScaleFactorF() >= textY && mouseY * ui.getScaleFactorF() <= textY + itemSpacing - 5;
 
+                boolean isWard = item.name.contains("Ward");
                 String rarityColor = item.type.equals("tome") ? "§d" : getRarityColor(item.rarity);
-                if(item.name.contains("Ward")) rarityColor = "§#f9508eff";
+                if(isWard) rarityColor = "§#f9508eff";
                 String displayName = truncate(formatDisplayName(item), width / 2 - 30).replace("Unidentified ", "");
 
                 if (item.type.equals("shiny")) {
-                    ui.drawText(displayName.replace("⬡ ", ""), x + 20, textY, WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : WynncraftShaderColor.RAINBOW.color, 4f);
+                    ui.drawText(displayName.replace("⬡ ", ""), x + 20, textY, WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : CustomColor.RAINBOW, 4f);
+                } else if (isWard) {
+                    ui.drawText(displayName, x + 20, textY, CustomColor.fromHexString("f9508e"), 2.8f);
                 } else {
                     ui.drawText(rarityColor + displayName, x + 20, textY, CustomColor.fromInt(0xFFFFFF), 2.8f);
                 }
@@ -597,12 +598,12 @@ public class LootrunLootPoolPage extends PageWidget {
                 }
 
                 if (hovering && mouseY * ui.getScaleFactorF() > y + 80) {
-                    JsonObject jsonItem = findApiItem(item.name);
+                    WynnDataService.ItemData apiItem = findApiItem(item);
                     hoveredTooltip = item.tooltip != null && !item.tooltip.isEmpty()
                             ? buildFallbackTooltip(item, rarityColor, displayName)
-                            : jsonItem == null
+                            : apiItem == null
                                     ? buildFallbackTooltip(item, rarityColor, displayName)
-                                    : buildTooltipFromApi(item, jsonItem, rarityColor, displayName);
+                                    : buildTooltipFromApi(item, apiItem, rarityColor, displayName);
                 }
             }
             int extraSpacing = (item.type.equals("shiny") && item.shinyStat != null && !item.shinyStat.isEmpty()) ? 40 : 0;
@@ -621,21 +622,15 @@ public class LootrunLootPoolPage extends PageWidget {
             return name;
         }
 
-        static JsonObject findApiItem(String itemName) {
-            Map<String, JsonObject> database = WynncraftApiHandler.getCachedItemDatabase();
-            if (database == null) return null;
-
-            String cleanName = cleanItemName(itemName);
-            JsonObject direct = database.get(cleanName);
-            if (direct != null) return direct;
-
-            for (JsonObject candidate : database.values()) {
-                if (jsonString(candidate, "displayName").equalsIgnoreCase(cleanName)
-                        || jsonString(candidate, "internalName").equalsIgnoreCase(cleanName)) {
-                    return candidate;
-                }
-            }
-            return null;
+        static WynnDataService.ItemData findApiItem(LootrunLootPoolData.LootrunItem item) {
+            String type = switch (item.type == null ? "" : item.type.toLowerCase(Locale.ROOT)) {
+                case "tome" -> "tome";
+                case "ingredient" -> "ingredient";
+                default -> null;
+            };
+            String tier = item.rarity == null || item.rarity.isBlank() ? null : item.rarity;
+            return WynnDataService.getInstance().resolveItem(new WynnDataService.ItemSelector(
+                    cleanItemName(item.name), type, null, tier)).orElse(null);
         }
 
         private static String cleanItemName(String itemName) {
@@ -646,18 +641,19 @@ public class LootrunLootPoolPage extends PageWidget {
                     .trim();
         }
 
-        static List<Text> buildTooltipFromApi(LootrunLootPoolData.LootrunItem lootrunItem, JsonObject apiItem,
+        static List<Text> buildTooltipFromApi(LootrunLootPoolData.LootrunItem lootrunItem,
+                                                      WynnDataService.ItemData apiItem,
                                                       String rarityColor, String displayName) {
             List<Text> tooltip = new ArrayList<>();
             tooltip.add(coloredName(displayName.replace("⬡ ", ""), rarityColor));
 
-            String tier = capitalize(jsonString(apiItem, "tier"));
-            String subType = formatCamelName(jsonString(apiItem, "subType"));
+            String tier = capitalize(apiItem.tier());
+            String subType = formatCamelName(apiItem.subType());
             if (!tier.isEmpty() || !subType.isEmpty()) {
                 tooltip.add(Text.of("§7" + (tier + " " + subType).trim()));
             }
 
-            String attackSpeed = formatCamelName(jsonString(apiItem, "attackSpeed"));
+            String attackSpeed = formatCamelName(apiItem.attackSpeed());
             if (!attackSpeed.isEmpty()) {
                 tooltip.add(Text.of("§7" + attackSpeed + " Attack Speed"));
             }
@@ -666,8 +662,8 @@ public class LootrunLootPoolPage extends PageWidget {
             addRequirements(tooltip, apiItem);
             addIdentifications(tooltip, apiItem);
 
-            if (apiItem.has("powderSlots")) {
-                tooltip.add(Text.of("§7Powder Slots: §f" + apiItem.get("powderSlots").getAsInt()));
+            if (apiItem.powderSlots() != null) {
+                tooltip.add(Text.of("§7Powder Slots: §f" + apiItem.powderSlots()));
             }
 
             if (lootrunItem.shinyStat != null && !lootrunItem.shinyStat.isEmpty()) {
@@ -707,9 +703,9 @@ public class LootrunLootPoolPage extends PageWidget {
             return Text.of(rarityColor + name);
         }
 
-        private static void addBaseStats(List<Text> tooltip, JsonObject item) {
-            JsonObject base = item.getAsJsonObject("base");
-            if (base == null || base.isEmpty()) return;
+        private static void addBaseStats(List<Text> tooltip, WynnDataService.ItemData item) {
+            Map<String, WynnDataService.StatValue> base = item.baseStats();
+            if (base.isEmpty()) return;
 
             tooltip.add(Text.empty());
 
@@ -727,14 +723,16 @@ public class LootrunLootPoolPage extends PageWidget {
             addBaseLine(tooltip, base, "baseAirDefence", "§f❋ Air Defence");
         }
 
-        private static void addBaseLine(List<Text> tooltip, JsonObject base, String key, String label) {
-            if (!base.has(key) || base.get(key).isJsonNull()) return;
-            tooltip.add(Text.of(label + ": §f" + formatJsonValue(base.get(key), false)));
+        private static void addBaseLine(List<Text> tooltip, Map<String, WynnDataService.StatValue> base,
+                                        String key, String label) {
+            WynnDataService.StatValue value = base.get(key);
+            if (value == null) return;
+            tooltip.add(Text.of(label + ": §f" + formatStatValue(value, false)));
         }
 
-        private static void addRequirements(List<Text> tooltip, JsonObject item) {
-            JsonObject requirements = item.getAsJsonObject("requirements");
-            if (requirements == null || requirements.isEmpty()) return;
+        private static void addRequirements(List<Text> tooltip, WynnDataService.ItemData item) {
+            Map<String, String> requirements = item.requirements();
+            if (requirements.isEmpty()) return;
 
             tooltip.add(Text.empty());
 
@@ -747,49 +745,40 @@ public class LootrunLootPoolPage extends PageWidget {
             addRequirementLine(tooltip, requirements, "agility", "Agility Min");
         }
 
-        private static void addRequirementLine(List<Text> tooltip, JsonObject requirements, String key, String label) {
-            if (!requirements.has(key) || requirements.get(key).isJsonNull()) return;
-            String value = requirements.get(key).getAsString();
+        private static void addRequirementLine(List<Text> tooltip, Map<String, String> requirements,
+                                               String key, String label) {
+            String value = requirements.get(key);
+            if (value == null) return;
             if (key.equals("classRequirement")) value = capitalize(value);
             tooltip.add(Text.of("§7" + label + ": §f" + value));
         }
 
-        private static void addIdentifications(List<Text> tooltip, JsonObject item) {
-            JsonObject ids = item.getAsJsonObject("identifications");
-            if (ids == null || ids.isEmpty()) return;
+        private static void addIdentifications(List<Text> tooltip, WynnDataService.ItemData item) {
+            Map<String, WynnDataService.StatValue> ids = item.identifications();
+            if (ids.isEmpty()) return;
 
             tooltip.add(Text.empty());
 
-            for (Map.Entry<String, JsonElement> entry : ids.entrySet()) {
-                String value = formatJsonValue(entry.getValue(), isPercentIdentification(entry.getKey()));
+            for (Map.Entry<String, WynnDataService.StatValue> entry : ids.entrySet()) {
+                String value = formatStatValue(entry.getValue(), isPercentIdentification(entry.getKey()));
                 String color = value.startsWith("-") ? "§c" : "§a";
                 tooltip.add(Text.of(color + value + " §7" + formatLine(entry.getKey())));
             }
         }
 
-        private static String formatJsonValue(JsonElement value, boolean percent) {
+        private static String formatStatValue(WynnDataService.StatValue value, boolean percent) {
             String suffix = percent ? "%" : "";
-            if (value == null || value.isJsonNull()) return "";
-
-            if (value.isJsonPrimitive()) {
-                return formatNumber(value.getAsInt()) + suffix;
-            }
-
-            JsonObject range = value.getAsJsonObject();
-            if (range.has("min") && range.has("max")) {
-                return formatNumber(range.get("min").getAsInt()) + suffix + " to "
-                        + formatNumber(range.get("max").getAsInt()) + suffix;
-            }
-
-            if (range.has("raw")) {
-                return formatNumber(range.get("raw").getAsInt()) + suffix;
-            }
-
+            if (value == null) return "";
+            if (value.isRange()) return formatNumber(value.minimum()) + suffix + " to "
+                    + formatNumber(value.maximum()) + suffix;
+            if (value.raw() != null) return formatNumber(value.raw()) + suffix;
+            if (value.value() != null) return formatNumber(value.value()) + suffix;
             return "";
         }
 
-        private static String formatNumber(int value) {
-            return value > 0 ? "+" + value : String.valueOf(value);
+        private static String formatNumber(double value) {
+            String formatted = value == Math.rint(value) ? Long.toString((long) value) : Double.toString(value);
+            return value > 0 ? "+" + formatted : formatted;
         }
 
         private static boolean isPercentIdentification(String key) {
@@ -798,11 +787,6 @@ public class LootrunLootPoolPage extends PageWidget {
                     && !key.equals("lifeSteal")
                     && !key.equals("healthRegenRaw")
                     && !key.equals("poison");
-        }
-
-        private static String jsonString(JsonObject object, String key) {
-            if (object == null || !object.has(key) || object.get(key).isJsonNull()) return "";
-            return object.get(key).getAsString();
         }
 
         private static String formatCamelName(String value) {
@@ -965,7 +949,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 int buttonHeight = 30;
                 int scrollAreaHeight = height - buttonHeight;
 
@@ -996,7 +980,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
                 @Override
                 protected boolean onClick(int button) {
-                    McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     isHold = true;
                     return true;
                 }
@@ -1032,7 +1016,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
             ResetTimeConfig.INSTANCE.refetch();
 
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
     }
@@ -1097,7 +1081,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
         @Override
         protected boolean onClick(int button) {
-            McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             float maxOffset = getMax.get();
             int buttonWidth = Math.max(40, (int) (width * (width / (width + maxOffset))));
             int scrollAreaWidth = width - buttonWidth;
@@ -1128,7 +1112,7 @@ public class LootrunLootPoolPage extends PageWidget {
 
             @Override
             protected boolean onClick(int button) {
-                McUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 isHold = true;
                 return true;
             }

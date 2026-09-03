@@ -1,6 +1,6 @@
 package julianh06.wynnextras.features.aspects;
 
-import com.wynntils.utils.mc.McUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.WynnExtras;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -58,8 +58,8 @@ public class ScreenTitleDebugger {
                 LOGGER.info("=====================");
 
                 // Log to chat
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§e[DEBUG] Screen: §f" + title));
-                McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§e[DEBUG] Hex: §7" + titleHex));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§e[DEBUG] Screen: §f" + title));
+                MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§e[DEBUG] Hex: §7" + titleHex));
             }
         });
     }
@@ -70,10 +70,10 @@ public class ScreenTitleDebugger {
     public static void toggleDebug() {
         debugEnabled = !debugEnabled;
         if (debugEnabled) {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aScreen title debugging ENABLED"));
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Open any menu to see its title logged"));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§aScreen title debugging ENABLED"));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§7Open any menu to see its title logged"));
         } else {
-            McUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cScreen title debugging DISABLED"));
+            MinecraftUtils.sendMessageToClient(WynnExtras.addWynnExtrasPrefix("§cScreen title debugging DISABLED"));
         }
     }
 

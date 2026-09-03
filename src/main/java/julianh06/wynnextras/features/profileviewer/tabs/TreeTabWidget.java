@@ -1,7 +1,7 @@
 package julianh06.wynnextras.features.profileviewer.tabs;
 
 import julianh06.wynnextras.core.WynnExtras;
-import com.wynntils.utils.colors.CustomColor;
+import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.SaveButtonWidget;
@@ -130,6 +130,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
             treeSearchBar.setSearchText("Search for ability...");
             addChild(treeSearchBar);
         }
+        treeSearchBar.setVisible(false);
         if(selectedCharacter == null) {
             ui.drawCenteredText("Select a character to view ability trees.", x + 900, y + 345, CustomColor.fromHexString("FF0000"), 5f);
             return;
@@ -166,7 +167,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         }
 
 
-        //ctx.drawTooltip(McUtils.mc().textRenderer, Text.of(AbilityTreeCache.getClassTree(className).pages.get("1").get("bash").name), mouseX, mouseX);
+        //ctx.drawTooltip(MinecraftUtils.mc().textRenderer, Text.of(AbilityTreeCache.getClassTree(className).pages.get("1").get("bash").name), mouseX, mouseX);
 
 
         AbilityMapData playerTree = AbilityTreeCache.getPlayerTree(characterUUID);
@@ -211,6 +212,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
         PVScreen.DarkModeToggleWidget.drawImageWithFade(questSearchbarTextureDark, questSearchbarTexture, x + 600F, y + height, 1050, 60, ui);
 
         treeSearchBar.setBounds(x + 200 * 3, y + height + 7 * 3, 350 * 3, 14 * 3);
+        treeSearchBar.setVisible(true);
 
         loaded = true;
 
@@ -372,7 +374,7 @@ public class TreeTabWidget extends PVScreen.TabWidget {
                         }
                         int yStart = y + 75 + ability.coordinates.y * 75 - PVScreen.scrollOffset + (450 * (ability.page - 1));
                         if(yStart - 25 > y && yStart - 25 < y + 630) {
-                            ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, x + ability.coordinates.x * 75 + 943 + 90, yStart - 7 + 90, CustomColor.fromHexString("FFFF00"));
+                            ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7, 90, 90, CustomColor.fromHexString("FFFF00"));
                         }
                     }
                 }
