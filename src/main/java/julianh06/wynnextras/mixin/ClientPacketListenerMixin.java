@@ -9,9 +9,7 @@ import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
-import net.minecraft.network.packet.s2c.play.ScoreboardScoreUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.TeamS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -27,16 +25,6 @@ public class ClientPacketListenerMixin {
     @Inject(method = "onTitle", at = @At("TAIL"))
     private void wynnExtras$observeRaidTitle(TitleS2CPacket packet, CallbackInfo ci) {
         RaidState.observeTitle(packet.text());
-    }
-
-    @Inject(method = "onScoreboardScoreUpdate", at = @At("TAIL"))
-    private void wynnExtras$observeRaidScore(ScoreboardScoreUpdateS2CPacket packet, CallbackInfo ci) {
-        RaidState.observeScoreboardScore(packet);
-    }
-
-    @Inject(method = "onTeam", at = @At("TAIL"))
-    private void wynnExtras$observeRaidTeam(TeamS2CPacket packet, CallbackInfo ci) {
-        RaidState.observeTeam(packet);
     }
 
     @Inject(method = "onInventory", at = @At("TAIL"))

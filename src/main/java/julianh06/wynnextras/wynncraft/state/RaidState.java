@@ -16,12 +16,9 @@ import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.wynncraft.menu.MenuType;
 import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.network.packet.s2c.play.ScoreboardScoreUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.TeamS2CPacket;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.scoreboard.ScoreboardEntry;
-import net.minecraft.scoreboard.ScoreHolder;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.text.Text;
@@ -126,40 +123,6 @@ public final class RaidState {
         } catch (Throwable ignored) {}
     }
 
-    public static void observeScoreboardScore(ScoreboardScoreUpdateS2CPacket packet) {
-        try {
-            if (!isInRaid() && !awaitingRaidResume) return;
-            long observedAt = System.currentTimeMillis();
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.world == null) return;
-            Scoreboard scoreboard = client.world.getScoreboard();
-            ScoreboardObjective objective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
-            if (objective == null || !objective.getName().equals(packet.objectiveName())) return;
-
-            Text name = packet.display().orElseGet(() -> Text.literal(packet.scoreHolderName()));
-            Text displayedName = Team.decorateName(scoreboard.getScoreHolderTeam(packet.scoreHolderName()), name);
-            observeScoreboardLine(clean(displayedName.getString()), observedAt);
-        } catch (Throwable ignored) {}
-    }
-
-    public static void observeTeam(TeamS2CPacket packet) {
-        try {
-            if (!isInRaid() && !awaitingRaidResume) return;
-            long observedAt = System.currentTimeMillis();
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.world == null) return;
-            Scoreboard scoreboard = client.world.getScoreboard();
-            ScoreboardObjective objective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
-            Team team = scoreboard.getTeam(packet.getTeamName());
-            if (objective == null || team == null) return;
-
-            for (String owner : team.getPlayerList()) {
-                if (scoreboard.getScore(ScoreHolder.fromName(owner), objective) == null) continue;
-                observeScoreboardLine(clean(team.decorateName(Text.literal(owner)).getString()), observedAt);
-            }
-        } catch (Throwable ignored) {}
-    }
-
     private static void observeScoreboardLine(String line, long observedAt) {
         confirmRaidResume(line);
         if (line.equals("Challenge Completed!")) {
@@ -174,7 +137,6 @@ public final class RaidState {
     @SubscribeEvent
     public void onTick(TickEvent event) {
         if (awaitingRaidResume && --raidResumeTicksRemaining <= 0) interruptRaid();
-        if (event.ticks % 20 != 0) return;
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
         observeScoreboard();
