@@ -50,6 +50,38 @@ public class WynnExtrasConfig {
         }
     }
 
+    public enum MountMaterialLevel {
+        LEVEL_0(0),
+        LEVEL_10(10),
+        LEVEL_20(20),
+        LEVEL_30(30),
+        LEVEL_40(40),
+        LEVEL_50(50),
+        LEVEL_60(60),
+        LEVEL_70(70),
+        LEVEL_80(80),
+        LEVEL_90(90),
+        LEVEL_100(100),
+        LEVEL_105(105),
+        LEVEL_110(110),
+        LEVEL_115(115);
+
+        private final int level;
+
+        MountMaterialLevel(int level) {
+            this.level = level;
+        }
+
+        public int getLevel() {
+            return level;
+        }
+
+        @Override
+        public String toString() {
+            return "Level " + level;
+        }
+    }
+
     public enum NotifierAnimation {
         APPEAR("Appear"),
         FADE("Fade"),
@@ -398,6 +430,7 @@ public class WynnExtrasConfig {
     public int tradeMarketOverlayY = 10;
     public boolean tradeMarketOverlayBackground = true;
     public boolean showMountHelper = false;
+    public MountMaterialLevel mountHelperDefaultMaterialLevel = MountMaterialLevel.LEVEL_0;
     public boolean mountPrimaryColorBackground = false;
 
     // ==================== RAID ====================
