@@ -225,7 +225,7 @@ public class RaidLootTrackerOverlay {
         String selectedFilter = RAID_FILTERS.get(selectedFilterIndex);
 
         // Compute effective width (background + layout) so long labels/values don't overflow
-        effectiveWidth = Math.max(WIDTH, calculateMaxContentWidth(config, compact, selectedFilter));
+        effectiveWidth = Math.max(WIDTH, cachedMaxContentWidth(config, compact, selectedFilter));
 
         // Get appropriate data
         RaidLootData.RaidSpecificLoot displayData;
@@ -466,6 +466,29 @@ public class RaidLootTrackerOverlay {
             drawTextRight(context, value, xPos + effectiveWidth, y, HIDDEN_COLOR);
         }
         return y + LINE_HEIGHT;
+    }
+
+    private static int cachedContentWidth = -1;
+    private static long cachedContentWidthAt = 0L;
+    private static boolean cachedContentWidthCompact;
+    private static String cachedContentWidthFilter;
+    private static mode cachedContentWidthMode;
+    private static final long CONTENT_WIDTH_CACHE_MS = 250L;
+
+    private static int cachedMaxContentWidth(WynnExtrasConfig config, boolean compact, String selectedFilter) {
+        long now = System.currentTimeMillis();
+        boolean sameInputs = cachedContentWidth >= 0
+                && cachedContentWidthCompact == compact
+                && cachedContentWidthMode == config.raidLootTrackerMode
+                && selectedFilter.equals(cachedContentWidthFilter);
+        if (sameInputs && now - cachedContentWidthAt < CONTENT_WIDTH_CACHE_MS) return cachedContentWidth;
+
+        cachedContentWidth = calculateMaxContentWidth(config, compact, selectedFilter);
+        cachedContentWidthCompact = compact;
+        cachedContentWidthMode = config.raidLootTrackerMode;
+        cachedContentWidthFilter = selectedFilter;
+        cachedContentWidthAt = now;
+        return cachedContentWidth;
     }
 
     /** Compute the widest label+value pair needed so the background hugs the content. */

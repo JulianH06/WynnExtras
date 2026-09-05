@@ -2,6 +2,8 @@ package julianh06.wynnextras.features.waypoints.data;
 
 import julianh06.wynnextras.utils.colors.CustomColor;
 
+import java.awt.Color;
+
 public class WaypointCategory {
     public String id;
     public String name;
@@ -11,6 +13,19 @@ public class WaypointCategory {
     public boolean showNameByDefault;
     public boolean showDistanceByDefault;
     public boolean showSeeThroughByDefault;
+
+    private transient Color cachedAwtColor;
+    private transient int cachedAwtColorSource = Integer.MIN_VALUE;
+
+    public Color asAwtColor() {
+        int rgb = color.asInt();
+        if (cachedAwtColor == null || rgb != cachedAwtColorSource) {
+            float[] hsb = color.asHSB();
+            cachedAwtColor = Color.getHSBColor(hsb[0], hsb[1], hsb[2]);
+            cachedAwtColorSource = rgb;
+        }
+        return cachedAwtColor;
+    }
 
     public WaypointCategory() {
         this.id = java.util.UUID.randomUUID().toString();

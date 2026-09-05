@@ -380,6 +380,10 @@ public class WaypointData {
         for (Waypoint waypoint : original.waypoints) {
             Waypoint newWaypoint = new Waypoint(waypoint.x, waypoint.y, waypoint.z);
             newWaypoint.name = waypoint.name;
+            newWaypoint.offsetX = waypoint.offsetX;
+            newWaypoint.offsetY = waypoint.offsetY;
+            newWaypoint.offsetZ = waypoint.offsetZ;
+            newWaypoint.size = waypoint.size;
             newWaypoint.show = waypoint.show;
             newWaypoint.showName = waypoint.showName;
             newWaypoint.showDistance = waypoint.showDistance;

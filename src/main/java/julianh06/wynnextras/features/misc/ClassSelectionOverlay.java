@@ -425,13 +425,24 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return score >= MIN_FUZZY_MATCH_SCORE ? score : 0;
     }
 
-    /** Match current characters to stored identities, returning UUID for each.
-     *  Uses stable ids and exact snapshots first, then fuzzy matching. Any equally-sized
-     *  ambiguous remainder is assigned bijectively so existing cards cannot fall to the end. */
+    private static final String PLACEHOLDER_UUID_PREFIX = "placeholder-slot-";
+
+    private static boolean isPlaceholderSlot(CharIdentity character) {
+        return character == null || character.classType == null || character.classType.trim().isEmpty();
+    }
+
+    private static boolean pruneStoredPlaceholders(Map<String, CharIdentity> stored) {
+        return stored.entrySet().removeIf(entry -> isPlaceholderSlot(entry.getValue()));
+    }
+
     private String[] matchCharacters(List<CharIdentity> currentChars) {
         Map<String, CharIdentity> stored = ClassSelectionData.getCharIdentities();
         if (stored == null) {
             stored = new HashMap<>();
+        }
+
+        if (pruneStoredPlaceholders(stored)) {
+            ClassSelectionData.saveCharIdentities();
         }
 
         String[] uuids = new String[currentChars.size()];
@@ -440,6 +451,13 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         Set<String> storedUsed = new HashSet<>();
         Set<String> assignedUuids = new HashSet<>();
         List<String> savedOrder = sanitizeSavedOrder(ClassSelectionData.getClassCardOrder());
+
+        for (int i = 0; i < currentChars.size(); i++) {
+            if (!isPlaceholderSlot(currentChars.get(i))) continue;
+            uuids[i] = PLACEHOLDER_UUID_PREFIX + i;
+            currentUsed[i] = true;
+        }
+
         LinkedHashSet<String> candidateStoredUuids = new LinkedHashSet<>();
         for (String uuid : savedOrder) {
             if (stored.containsKey(uuid)) candidateStoredUuids.add(uuid);
@@ -505,14 +523,14 @@ public class ClassSelectionOverlay extends WEHandledScreen {
                 storedUsed, assignedUuids);
 
         for (int i = 0; i < currentChars.size(); i++) {
-            if (!currentUsed[i]) {
-                String newUuid = createNewCharUuid(assignedUuids, stored);
-                uuids[i] = newUuid;
-                currentUsed[i] = true;
-                persistFreshIdentity[i] = true;
-                assignedUuids.add(newUuid);
-                WynnExtras.LOGGER.info("[WynnExtras] Created a new class identity: " + newUuid);
-            }
+            if (currentUsed[i]) continue;
+
+            String newUuid = createNewCharUuid(assignedUuids, stored);
+            uuids[i] = newUuid;
+            currentUsed[i] = true;
+            persistFreshIdentity[i] = true;
+            assignedUuids.add(newUuid);
+            WynnExtras.LOGGER.info("[WynnExtras] Created a new class identity: " + newUuid);
         }
 
         if (!isValidCompleteAssignment(uuids)) {
@@ -536,9 +554,12 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
         List<String> updatedOrder = new ArrayList<>(savedOrder);
         if (updatedOrder.isEmpty()) {
-            updatedOrder.addAll(Arrays.asList(uuids));
+            for (String uuid : uuids) {
+                if (!uuid.startsWith(PLACEHOLDER_UUID_PREFIX)) updatedOrder.add(uuid);
+            }
         } else {
             for (String uuid : uuids) {
+                if (uuid.startsWith(PLACEHOLDER_UUID_PREFIX)) continue;
                 if (!updatedOrder.contains(uuid)) updatedOrder.add(uuid);
             }
         }
@@ -693,7 +714,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         if (savedOrder == null || savedOrder.isEmpty()) return new ArrayList<>();
         LinkedHashSet<String> unique = new LinkedHashSet<>();
         for (String uuid : savedOrder) {
-            if (uuid != null && !uuid.isBlank()) unique.add(uuid);
+            if (uuid != null && !uuid.isBlank() && !uuid.startsWith(PLACEHOLDER_UUID_PREFIX)) unique.add(uuid);
         }
         return new ArrayList<>(unique);
     }
@@ -883,7 +904,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private void saveCardOrder() {
         List<String> order = new ArrayList<>();
         for (int i = 0; i < visibleCardCount; i++) {
-            order.add(visCharId[i]);
+            if (!visCharId[i].startsWith(PLACEHOLDER_UUID_PREFIX)) order.add(visCharId[i]);
         }
         ClassSelectionData.setClassCardOrder(order);
     }

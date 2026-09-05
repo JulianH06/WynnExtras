@@ -386,7 +386,7 @@ public abstract class HandledScreenMixin {
             if (!isPersonalStorageUtilitiesWidget(child)) continue;
 
             if (child.isMouseOver(mouseX, translatedMouseY)) {
-                BankOverlay2.saveActivePageSnapshot();
+                if (!BankOverlay2.beginExternalPageJump()) return true;
                 return child.mouseClicked(new Click(mouseX, translatedMouseY, click.buttonInfo()), doubleClick);
             }
 

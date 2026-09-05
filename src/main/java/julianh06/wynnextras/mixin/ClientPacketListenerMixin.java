@@ -29,13 +29,13 @@ public class ClientPacketListenerMixin {
 
     @Inject(method = "onInventory", at = @At("TAIL"))
     private void wynnExtras$continueBankPageJump(InventoryS2CPacket packet, CallbackInfo ci) {
-        BankOverlay2.onBankContainerUpdate(packet.syncId(), -1);
+        BankOverlay2.onBankContainerUpdate(packet.syncId(), packet.revision(), -1);
         BankOverlay2.onBankPageNavigationUpdate(packet.syncId(), packet.revision(), -1);
     }
 
     @Inject(method = "onScreenHandlerSlotUpdate", at = @At("TAIL"))
     private void wynnExtras$continueBankPageJump(ScreenHandlerSlotUpdateS2CPacket packet, CallbackInfo ci) {
-        BankOverlay2.onBankContainerUpdate(packet.getSyncId(), packet.getSlot());
+        BankOverlay2.onBankContainerUpdate(packet.getSyncId(), packet.getRevision(), packet.getSlot());
         if (packet.getSlot() == 51 || packet.getSlot() == 52) {
             BankOverlay2.onBankPageNavigationUpdate(packet.getSyncId(), packet.getRevision(), packet.getSlot());
         }

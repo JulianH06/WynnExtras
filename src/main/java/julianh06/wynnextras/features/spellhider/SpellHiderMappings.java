@@ -56,6 +56,7 @@ public class SpellHiderMappings {
     }
 
     public void changeNamespace(String oldName, String newName) {
+        SpellHider.clearRegisteredModels();
         SpellNamespace oldNamespace = SpellNamespace.from(oldName);
         SpellNamespace newNamespace = SpellNamespace.from(newName);
 
@@ -155,6 +156,7 @@ public class SpellHiderMappings {
     }
 
     public static void reloadFromFile() {
+        SpellHider.clearRegisteredModels();
         try {
             if (Files.exists(MAPPINGS_PATH)) {
                 String json = Files.readString(MAPPINGS_PATH);

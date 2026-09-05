@@ -55,6 +55,7 @@ public class AttackTimer {
     private static final int DEFAULT_HIGH_DEFENSE_COLOR = 0xFF5555;
     private static final int DEFAULT_VERY_HIGH_DEFENSE_COLOR = 0xAA0000;
     private static final long WORLD_JOIN_BASELINE_DELAY_MS = 5_000L;
+    private static final Pattern FORMAT_CODE = Pattern.compile("§[0-9a-fk-or]");
     private static final long ATTACK_SCOREBOARD_CACHE_MS = 1_000L;
 
     public static String soonestTerritory = null;
@@ -181,7 +182,6 @@ public class AttackTimer {
     public static List<String> getUpcomingAttacks() {
         long now = System.currentTimeMillis();
         if (now < upcomingAttacksCacheExpiresAt) return cachedUpcomingAttacks;
-
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.world == null) {
             cachedUpcomingAttacks = List.of();
@@ -210,7 +210,7 @@ public class AttackTimer {
     }
 
     private static String strip(String s) {
-        return s == null ? "" : s.replaceAll("§[0-9a-fk-or]", "");
+        return s == null ? "" : FORMAT_CODE.matcher(s).replaceAll("");
     }
 
     private static int rgb(Integer color, int fallback) {
@@ -359,7 +359,9 @@ public class AttackTimer {
 
     private static String formatTimerTime(long remainingMs) {
         long totalSeconds = Math.max(0, remainingMs / 1000L);
-        return String.format("%02d:%02d", totalSeconds / 60L, totalSeconds % 60L);
+        long minutes = totalSeconds / 60L;
+        long seconds = totalSeconds % 60L;
+        return (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
     }
 
     private static String formatDebugTime(long differenceMs) {

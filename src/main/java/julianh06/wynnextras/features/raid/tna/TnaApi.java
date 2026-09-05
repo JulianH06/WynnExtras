@@ -137,11 +137,14 @@ public class TnaApi {
     private static final Pattern ISOPTERA_PATTERN =
             Pattern.compile(".*?The Interdimensional Isoptera is in the (Gray|Black|White|Orange|Blue) Grotto$");
 
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
+    private static final String ICON_PREFIX = "\uDAFF\uDFFC\uE001\uDB00\uDC06 ";
+
     public static void handleMessage(String message) {
-        message = message.replace('\n', ' ')
-                .replace('\r', ' ')
-                .replaceAll("\\s+", " ")
-                .replaceAll("\uDAFF\uDFFC\uE001\uDB00\uDC06 ", "")
+        // Runs for every chat message, so the patterns are compiled once instead of per call.
+        message = WHITESPACE_PATTERN.matcher(message.replace('\n', ' ').replace('\r', ' '))
+                .replaceAll(" ")
+                .replace(ICON_PREFIX, "")
                 .trim();
 
         Matcher treeMatcher = ENTER_TREE_PATTERN.matcher(message);

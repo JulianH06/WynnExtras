@@ -71,6 +71,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.MathHelper;
+import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
@@ -93,6 +94,7 @@ public class BankOverlay2 extends WEHandledScreen {
     private static final long BANK_PAGE_RESPONSE_SETTLE_MS = 100L;
     private static final long BANK_PAGE_REJECTED_RESPONSE_SETTLE_MS = 50L;
     private static final long BANK_PAGE_RESPONSE_TIMEOUT_MS = 1_500L;
+    private static final long BANK_PAGE_SLOT_UPDATE_SETTLE_MS = 100L;
     private static final Pattern MINECRAFT_FORMATTING_CODE_PATTERN = Pattern.compile("\u00a7[0-9a-fk-or]");
     private static final Pattern PAGE_RANK_REQUIREMENT_PATTERN = Pattern.compile("(?i)(?:only available to|requires(?: a)? rank:?|rank required:?)\\s+([A-Za-z0-9+]+)");
     private static final Pattern PAGE_NUMBER_PATTERN = Pattern.compile("(?i)\\bPage\\s+(\\d+)\\b");
@@ -185,10 +187,26 @@ public class BankOverlay2 extends WEHandledScreen {
     private static long pageJumpLastProgressActionAt = 0L;
     private static long pageJumpLastResponseAt = 0L;
     private static int pageJumpLastActionPage = -1;
+    private static int pageJumpLastActionRevision = -1;
+    private static int pageJumpConfirmedPage = -1;
+    private static boolean pageJumpContentUpdated = false;
+    private static boolean pageJumpFullContentUpdated = false;
+    private static long pageJumpLastContentUpdateAt = 0L;
+    private static boolean externalPageJumpPending = false;
+    private static int externalPageJumpActionRevision = -1;
+    private static int externalPageJumpConfirmedPage = -1;
+    private static boolean externalPageJumpContentUpdated = false;
+    private static boolean externalPageJumpFullContentUpdated = false;
+    private static long externalPageJumpLastContentUpdateAt = 0L;
+    private static long externalPageJumpStartedAt = 0L;
+    private static long externalPageJumpLastResponseAt = 0L;
     private static TextRenderer frameTextRenderer;
     private static int bankSyncid = 0;
     private static int xFitAmount = 0;
     private static int yFitAmount = 0;
+    private static final long PAGE_NAVIGATION_KEY_COOLDOWN_MS = 120L;
+    private static long lastPageNavigationKeyAt = 0L;
+    private static Integer queuedPageNavigationStep = null;
     private static float pageBuyCustomModelData = 0;
     private static BankOverlayType rankLockedOverlayType = BankOverlayType.NONE;
     private static int rankLockedPageCount = -1;
@@ -290,6 +308,7 @@ public class BankOverlay2 extends WEHandledScreen {
     private static final List<ItemStack> EMPTY_PLAYER_INVENTORY = Collections.nCopies(36, Items.AIR.getDefaultStack());
     private static final List<ItemStack> EMPTY_PLAYER_ARMOR = Collections.nCopies(4, Items.AIR.getDefaultStack());
     private static final int ACCOUNT_BANK_MAX_PAGES = 21;
+    private static final int CHARACTER_BANK_MAX_PAGES = 12;
     private static final int CROSS_CLASS_GROUP_GAP = 18;
     private static int layoutExtraScrollHeight = 0;
     private static final EquipmentSlot[] ARMOR_DISPLAY_ORDER = {
@@ -391,6 +410,7 @@ public class BankOverlay2 extends WEHandledScreen {
         reloadLastContainerUpdateAt = 0L;
         reloadBankWidget = null;
         pendingMouseTweaksRightClick = null;
+        resetExternalPageJump();
         resetDragSplitting();
         signMids.clear();
         inventoryWidget = null;
@@ -505,6 +525,120 @@ public class BankOverlay2 extends WEHandledScreen {
         for (PageWidget page : pages) {
             page.keyPressed(keyCode, scanCode, modifiers);
         }
+        handlePageNavigationKey(keyCode);
+    }
+
+    /** WASD page navigation: A/D move one page, W/S move one overlay row (= xFitAmount pages). */
+    private static void handlePageNavigationKey(int keyCode) {
+        int rowStep = Math.max(1, xFitAmount);
+        int step = switch (keyCode) {
+            case GLFW.GLFW_KEY_A -> -1;
+            case GLFW.GLFW_KEY_D -> 1;
+            case GLFW.GLFW_KEY_W -> -rowStep;
+            case GLFW.GLFW_KEY_S -> rowStep;
+            default -> 0;
+        };
+        if (step == 0) return;
+
+        if (currentOverlayType == BankOverlayType.NONE && !bankTypeSwitchInProgress) return;
+        if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return;
+        if (!(MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?>)) return;
+        if (isAnyTextInputFocused()) return;
+        if (isReloading || hasHeldItem()) return;
+
+        long now = System.currentTimeMillis();
+        if (isPageNavigationBusy() || queuedPageNavigationStep != null) {
+            if (queuedPageNavigationStep == null) queuedPageNavigationStep = step;
+            lastPageNavigationKeyAt = now;
+            return;
+        }
+        if (now - lastPageNavigationKeyAt < PAGE_NAVIGATION_KEY_COOLDOWN_MS) return;
+
+        if (currentData == null || Pages == null) return;
+        if (BankOverlay.isCharacterBankMissingCharacterId()) return;
+        if (navigateByPageStep(step)) lastPageNavigationKeyAt = now;
+    }
+
+    private static boolean navigateByPageStep(int step) {
+        if (step == 0 || currentData == null || Pages == null) return false;
+
+        int maxIndex = Math.min(currentData.getLastPage(), BankOverlay.getCurrentMaxPages()) - 1;
+        if (maxIndex < 0) return false;
+
+        BankOverlayType targetType = currentOverlayType;
+        int target = MathHelper.clamp(activeInv + step, 0, maxIndex);
+        int targetVisualIndex = target;
+
+        boolean seamlessAllCharactersNavigation = allCharactersBrowseMode
+                && shouldAllowCrossClassMode()
+                && (currentOverlayType == BankOverlayType.ACCOUNT || currentOverlayType == BankOverlayType.CHARACTER);
+        if (seamlessAllCharactersNavigation) {
+            int accountPages = getNavigablePageCount(AccountBankData.INSTANCE, ACCOUNT_BANK_MAX_PAGES);
+            int characterPages = getNavigablePageCount(CharacterBankData.INSTANCE, CHARACTER_BANK_MAX_PAGES);
+            int totalPages = accountPages + characterPages;
+            if (totalPages <= 0) return false;
+
+            int currentCombinedIndex = currentOverlayType == BankOverlayType.ACCOUNT
+                    ? activeInv
+                    : accountPages + activeInv;
+            int targetCombinedIndex = MathHelper.clamp(currentCombinedIndex + step, 0, totalPages - 1);
+            if (targetCombinedIndex < accountPages) {
+                targetType = BankOverlayType.ACCOUNT;
+                target = targetCombinedIndex;
+                targetVisualIndex = target;
+            } else {
+                targetType = BankOverlayType.CHARACTER;
+                target = targetCombinedIndex - accountPages;
+                targetVisualIndex = getAccountVisualPageCount() + target;
+            }
+        }
+        if (targetType == currentOverlayType && target == activeInv) return false;
+        if (targetType != currentOverlayType && !hasBankSwitchSlotForTarget(targetType)) return false;
+
+        scrollToVisualPageIfOutside(targetVisualIndex);
+        if (targetType == currentOverlayType) {
+            PageWidget.jumpToPage(target);
+        } else {
+            switchBankAndJumpToPage(targetType, target);
+        }
+        return true;
+    }
+
+    private static boolean isPageNavigationBusy() {
+        return shouldWait || pageJumpTarget >= 0 || externalPageJumpPending || bankTypeSwitchInProgress;
+    }
+
+    private static void continueQueuedPageNavigation() {
+        if (queuedPageNavigationStep == null || isReloading || hasHeldItem() || isPageNavigationBusy()) return;
+        if (currentData == null || Pages == null || BankOverlay.isCharacterBankMissingCharacterId()) return;
+
+        int step = queuedPageNavigationStep;
+        queuedPageNavigationStep = null;
+        navigateByPageStep(step);
+    }
+
+    private static int getNavigablePageCount(BankData data, int maxPages) {
+        if (data == null) return 0;
+        return Math.min(Math.max(0, data.getLastPage()), maxPages);
+    }
+
+    private static int getAccountVisualPageCount() {
+        BankData data = AccountBankData.INSTANCE;
+        if (data == null) return 0;
+        return Math.min(
+                Math.max(data.getLastPage() + 1, data.getBankPages().size()),
+                ACCOUNT_BANK_MAX_PAGES);
+    }
+
+    private static void scrollToVisualPageIfOutside(int visualIndex) {
+        if (visualIndex < 0 || xFitAmount <= 0) return;
+
+        int row = Math.floorDiv(visualIndex, xFitAmount);
+        float pageY = scissory1 + row * 104f - actualOffset;
+        if (pageIntersectsClip(pageY, 104, true)) return;
+
+        int maxOffset = getMaxScrollOffset(Math.max(shownPages, visualIndex + 1));
+        targetOffset = MathHelper.clamp(row * 104f, 0, maxOffset);
     }
 
     public static void handleCharTyped(char character) {
@@ -582,6 +716,25 @@ public class BankOverlay2 extends WEHandledScreen {
                 && WynnExtrasConfig.INSTANCE.bankOverlayMaxRows == 1
                 && WynnExtrasConfig.INSTANCE.bankOverlayMaxColumns == 1
                 && currentOverlayType != BankOverlayType.NONE;
+    }
+
+    public static boolean beginExternalPageJump() {
+        if (!shouldShowWynntilsPageJumpButtons() || shouldWait || isReloading || bankTypeSwitchInProgress) return false;
+        ScreenHandler menu = MinecraftUtils.containerMenu();
+        if (menu == null) return false;
+
+        saveActivePageSnapshot();
+        externalPageJumpPending = true;
+        externalPageJumpActionRevision = menu.getRevision();
+        externalPageJumpConfirmedPage = -1;
+        externalPageJumpContentUpdated = false;
+        externalPageJumpFullContentUpdated = false;
+        externalPageJumpLastContentUpdateAt = 0L;
+        externalPageJumpStartedAt = System.currentTimeMillis();
+        externalPageJumpLastResponseAt = 0L;
+        shouldWait = true;
+        shouldWaitSince = externalPageJumpStartedAt;
+        return true;
     }
 
     @Override
@@ -667,6 +820,7 @@ public class BankOverlay2 extends WEHandledScreen {
         if (!readOnlyViewer) {
             syncActivePageFromWynntilsQuickJump();
             continuePageJump();
+            continueQueuedPageNavigation();
         }
 
         float snapValue = 0.5f;
@@ -1289,6 +1443,7 @@ public class BankOverlay2 extends WEHandledScreen {
     private static boolean jumpToBankPage(int pageIndex) {
         int maxPage = Math.max(0, BankOverlay.getCurrentMaxPages() - 1);
         if (pageIndex < 0 || pageIndex > maxPage) return false;
+        boolean alreadyOnTarget = activeInv == pageIndex && detectLiveBankPageIndex() == pageIndex;
 
         activeInv = pageIndex;
         shouldWait = true;
@@ -1301,6 +1456,11 @@ public class BankOverlay2 extends WEHandledScreen {
         pageJumpLastProgressActionAt = 0L;
         pageJumpLastResponseAt = 0L;
         pageJumpLastActionPage = -1;
+        pageJumpLastActionRevision = -1;
+        pageJumpConfirmedPage = alreadyOnTarget ? pageIndex : -1;
+        pageJumpContentUpdated = alreadyOnTarget;
+        pageJumpFullContentUpdated = alreadyOnTarget;
+        pageJumpLastContentUpdateAt = 0L;
         continuePageJump();
         return true;
     }
@@ -1312,16 +1472,22 @@ public class BankOverlay2 extends WEHandledScreen {
 
         int currentPage = detectLiveBankPageIndex();
         if (currentPage < 0) return;
-        if (currentPage == pageJumpTarget) {
+        if (currentPage == pageJumpTarget && isPageJumpTargetConfirmed()) {
             activeInv = currentPage;
             shouldWait = false;
             shouldWaitSince = 0L;
             pageJumpTarget = -1;
             pageJumpLastActionAt = 0L;
+            pageJumpLastActionRevision = -1;
+            pageJumpConfirmedPage = -1;
+            pageJumpContentUpdated = false;
+            pageJumpFullContentUpdated = false;
+            pageJumpLastContentUpdateAt = 0L;
             retryLoad();
             clearAnnotationCache(currentPage);
             return;
         }
+        if (currentPage == pageJumpTarget) return;
 
         long now = System.currentTimeMillis();
         if (pageJumpLastActionAt > 0L) {
@@ -1330,6 +1496,7 @@ public class BankOverlay2 extends WEHandledScreen {
             long retryIn;
             if (receivedResponse) {
                 boolean progressed = pageJumpLastActionPage >= 0 && currentPage != pageJumpLastActionPage;
+                if (progressed && !isPageJumpPageReady(currentPage)) return;
                 if (progressed) pageJumpLastProgressActionAt = pageJumpLastActionAt;
                 long sinceProgress = pageJumpLastProgressActionAt == 0L
                         ? Long.MAX_VALUE
@@ -1345,6 +1512,11 @@ public class BankOverlay2 extends WEHandledScreen {
         }
         pageJumpLastActionAt = now;
         pageJumpLastActionPage = currentPage;
+        pageJumpLastActionRevision = menu.getRevision();
+        pageJumpConfirmedPage = -1;
+        pageJumpContentUpdated = false;
+        pageJumpFullContentUpdated = false;
+        pageJumpLastContentUpdateAt = 0L;
         shouldWaitSince = now;
 
         int currentPageNumber = currentPage + 1;
@@ -1383,19 +1555,70 @@ public class BankOverlay2 extends WEHandledScreen {
     }
 
     public static void onBankPageNavigationUpdate(int syncId, int revision, int slot) {
-        if (pageJumpTarget < 0 || currentOverlayType == BankOverlayType.NONE) return;
+        if (currentOverlayType == BankOverlayType.NONE) return;
         ScreenHandler menu = MinecraftUtils.containerMenu();
         if (menu == null || menu.syncId != syncId) return;
-        pageJumpLastResponseAt = System.currentTimeMillis();
-        continuePageJump();
+        int confirmedPage = switch (slot) {
+            case 51 -> parsePageNumber(getLeftPageButton());
+            case 52 -> {
+                int nextPage = parsePageNumber(getRightPageButton());
+                yield nextPage >= 2 ? nextPage - 2 : -1;
+            }
+            default -> detectLiveBankPageIndex();
+        };
+        long now = System.currentTimeMillis();
+
+        if (pageJumpTarget >= 0 && isRevisionAfter(revision, pageJumpLastActionRevision)) {
+            pageJumpLastResponseAt = now;
+            if (confirmedPage >= 0) pageJumpConfirmedPage = confirmedPage;
+            continuePageJump();
+        }
+        if (externalPageJumpPending && isRevisionAfter(revision, externalPageJumpActionRevision)) {
+            externalPageJumpLastResponseAt = now;
+            if (confirmedPage >= 0) externalPageJumpConfirmedPage = confirmedPage;
+        }
     }
 
-    public static void onBankContainerUpdate(int syncId, int slot) {
-        if (!isReloading || currentOverlayType == BankOverlayType.NONE || slot > 52) return;
+    public static void onBankContainerUpdate(int syncId, int revision, int slot) {
+        if (currentOverlayType == BankOverlayType.NONE || slot > 52) return;
         ScreenHandler menu = MinecraftUtils.containerMenu();
-        if (menu != null && menu.syncId == syncId) {
-            reloadLastContainerUpdateAt = System.currentTimeMillis();
+        if (menu == null || menu.syncId != syncId) return;
+
+        if (isReloading) reloadLastContainerUpdateAt = System.currentTimeMillis();
+        if (slot > 44) return;
+        long now = System.currentTimeMillis();
+        if (pageJumpTarget >= 0 && isRevisionAfter(revision, pageJumpLastActionRevision)) {
+            pageJumpContentUpdated = true;
+            pageJumpFullContentUpdated |= slot < 0;
+            pageJumpLastContentUpdateAt = now;
+            continuePageJump();
         }
+        if (externalPageJumpPending && isRevisionAfter(revision, externalPageJumpActionRevision)) {
+            externalPageJumpContentUpdated = true;
+            externalPageJumpFullContentUpdated |= slot < 0;
+            externalPageJumpLastContentUpdateAt = now;
+        }
+    }
+
+    private static boolean isRevisionAfter(int revision, int previousRevision) {
+        if (previousRevision < 0) return false;
+        int difference = (revision - previousRevision) & 0x7fff;
+        return difference > 0 && difference < 0x4000;
+    }
+
+    private static boolean isPageJumpTargetConfirmed() {
+        return isPageJumpPageReady(pageJumpTarget);
+    }
+
+    private static boolean isPageJumpPageReady(int pageIndex) {
+        if (pageJumpConfirmedPage != pageIndex) return false;
+        long now = System.currentTimeMillis();
+        if (pageJumpFullContentUpdated) return true;
+        if (pageJumpContentUpdated) {
+            return now - pageJumpLastContentUpdateAt >= BANK_PAGE_SLOT_UPDATE_SETTLE_MS;
+        }
+        return pageJumpLastResponseAt >= pageJumpLastActionAt
+                && now - pageJumpLastResponseAt >= BANK_PAGE_RESPONSE_SETTLE_MS;
     }
 
     private static boolean isPagePurchaseButton(ItemStack stack) {
@@ -1496,6 +1719,21 @@ public class BankOverlay2 extends WEHandledScreen {
                 && rankLockedPageCount > 0
                 && currentData != null
                 && currentData.getLastPage() >= rankLockedPageCount;
+    }
+
+    private static boolean buttonNamesPage(ItemStack stack, int pageNumber) {
+        if (stack == null || stack.isEmpty()) return false;
+        String cleaned = MINECRAFT_FORMATTING_CODE_PATTERN.matcher(stack.getName().getString()).replaceAll("");
+        String needle = "Page " + pageNumber;
+        int idx = cleaned.indexOf(needle);
+        if (idx < 0) return false;
+        int after = idx + needle.length();
+        return after >= cleaned.length() || !Character.isDigit(cleaned.charAt(after));
+    }
+
+    private static boolean leftButtonConfirmsPage(int pageIndex) {
+        if (pageIndex <= 0) return false;
+        return buttonNamesPage(getLeftPageButton(), pageIndex);
     }
 
     private static boolean rightButtonPointsToPage(ItemStack stack, int pageNumber) {
@@ -1794,12 +2032,21 @@ public class BankOverlay2 extends WEHandledScreen {
         pageJumpLastProgressActionAt = 0L;
         pageJumpLastResponseAt = 0L;
         pageJumpLastActionPage = -1;
+        pageJumpLastActionRevision = -1;
+        pageJumpConfirmedPage = -1;
+        pageJumpContentUpdated = false;
+        pageJumpFullContentUpdated = false;
+        pageJumpLastContentUpdateAt = 0L;
+        queuedPageNavigationStep = null;
+        lastPageNavigationKeyAt = 0L;
+        resetExternalPageJump();
         BankOverlay.resetScrollRegistration();
         BankOverlaySlotBridge.restoreAll();
         clearHoverState(MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?> handledScreen ? handledScreen : null);
     }
 
     private static boolean isJumpInProgress() {
+        if (externalPageJumpPending) return true;
         if (bankTypeSwitchInProgress) {
             if (currentOverlayType == bankTypeSwitchTargetType && activeInv == bankTypeSwitchTargetPage && isActiveBankPageReady()) {
                 shouldWait = false;
@@ -1827,6 +2074,10 @@ public class BankOverlay2 extends WEHandledScreen {
     private static boolean isActiveBankPageReady() {
         if (activeInv < 0) return false;
         if (BankOverlay.activeInvSlots.size() < 45) return false;
+        if (externalPageJumpPending) return false;
+        if (pageJumpTarget == activeInv && !isPageJumpTargetConfirmed()) return false;
+
+        if (leftButtonConfirmsPage(activeInv)) return true;
 
         ItemStack rightButton = getRightPageButton();
         int nextPageNumber = activeInv + 2;
@@ -2775,16 +3026,58 @@ public class BankOverlay2 extends WEHandledScreen {
     private static void syncActivePageFromWynntilsQuickJump() {
         if (LunarCompat.isLunarClient()) return;
         if (!shouldShowWynntilsPageJumpButtons()) return;
+        if (externalPageJumpPending) {
+            long now = System.currentTimeMillis();
+            boolean targetConfirmed = externalPageJumpConfirmedPage >= 0;
+            boolean contentReady = externalPageJumpFullContentUpdated
+                    || (externalPageJumpContentUpdated
+                    && now - externalPageJumpLastContentUpdateAt >= BANK_PAGE_SLOT_UPDATE_SETTLE_MS)
+                    || (!externalPageJumpContentUpdated
+                    && externalPageJumpLastResponseAt >= externalPageJumpStartedAt
+                    && now - externalPageJumpLastResponseAt >= BANK_PAGE_RESPONSE_SETTLE_MS);
+            if (targetConfirmed && contentReady) {
+                activeInv = externalPageJumpConfirmedPage;
+                shouldWait = false;
+                shouldWaitSince = 0L;
+                resetExternalPageJump();
+                retryLoad();
+                storeActivePageSnapshot();
+                scrollToPage(activeInv);
+                clearAnnotationCache(activeInv);
+            } else if (now - externalPageJumpStartedAt >= BANK_PAGE_RESPONSE_TIMEOUT_MS) {
+                shouldWait = false;
+                shouldWaitSince = 0L;
+                resetExternalPageJump();
+            }
+            return;
+        }
         if (shouldWait || isReloading || bankTypeSwitchInProgress) return;
 
         int livePage = getCurrentBankPageNumber();
         if (livePage < 0 || livePage == activeInv) return;
 
-        activeInv = livePage;
-        retryLoad();
-        storeActivePageSnapshot();
-        scrollToPage(activeInv);
-        clearAnnotationCache(activeInv);
+        ScreenHandler menu = MinecraftUtils.containerMenu();
+        externalPageJumpPending = true;
+        externalPageJumpActionRevision = menu == null ? -1 : menu.getRevision();
+        externalPageJumpConfirmedPage = livePage;
+        externalPageJumpContentUpdated = false;
+        externalPageJumpFullContentUpdated = false;
+        externalPageJumpLastContentUpdateAt = 0L;
+        externalPageJumpStartedAt = System.currentTimeMillis();
+        externalPageJumpLastResponseAt = externalPageJumpStartedAt;
+        shouldWait = true;
+        shouldWaitSince = externalPageJumpStartedAt;
+    }
+
+    private static void resetExternalPageJump() {
+        externalPageJumpPending = false;
+        externalPageJumpActionRevision = -1;
+        externalPageJumpConfirmedPage = -1;
+        externalPageJumpContentUpdated = false;
+        externalPageJumpFullContentUpdated = false;
+        externalPageJumpLastContentUpdateAt = 0L;
+        externalPageJumpStartedAt = 0L;
+        externalPageJumpLastResponseAt = 0L;
     }
 
     private static void clearHoverState(HandledScreen<?> screen) {
@@ -2880,7 +3173,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 return liveBankPageItems;
             }
             boolean oldShouldWait = shouldWait;
-            shouldWait = false;
 
             for (int j = 0; j < 45; j++) {
                 if (j == 0) {
@@ -2894,23 +3186,15 @@ public class BankOverlay2 extends WEHandledScreen {
                         return EMPTY_BANK_PAGE;
                     }
                     if(rightArrow == null) return EMPTY_BANK_PAGE;
-                    if(rightArrow.getItem() == Items.POTION) {
-                        String rawText = rightArrow.getName().getString();
-                        String cleanedText = MINECRAFT_FORMATTING_CODE_PATTERN.matcher(rawText).replaceAll("");
-                        if (!cleanedText.contains("Page " + (activeInv + 2))) {
-                            shouldWait = true;
-                            if (!oldShouldWait) {
-                                shouldWaitSince = System.currentTimeMillis();
-                            }
-                        } else if (oldShouldWait && !isReloading) {
-                            storeActivePageSnapshot();
-                            clearAnnotationCache(activeInv);
-                        }
-                    } else if(activeInv != currentData.getLastPage() - 1) {
-                        if (!shouldWait) {
-                            shouldWait = true;
+                    boolean pageReady = isActiveBankPageReady();
+                    shouldWait = !pageReady;
+                    if (!pageReady) {
+                        if (!oldShouldWait) {
                             shouldWaitSince = System.currentTimeMillis();
                         }
+                    } else if (oldShouldWait && !isReloading) {
+                        storeActivePageSnapshot();
+                        clearAnnotationCache(activeInv);
                     }
                 }
 
@@ -4045,6 +4329,9 @@ public class BankOverlay2 extends WEHandledScreen {
 
         int pageNum = getCurrentBankPageNumber();
         if (pageNum < 0) return;
+        if (WynnExtrasConfig.INSTANCE.toggleBankOverlay
+                && currentOverlayType != BankOverlayType.NONE
+                && pageNum != activeInv) return;
 
         List<ItemStack> live = getCurrentPageStacks();
         if (live.size() < 45) return;
@@ -4981,7 +5268,10 @@ public class BankOverlay2 extends WEHandledScreen {
             if(mouseButton == 1) return actionType;
 
             long now = System.currentTimeMillis();
-            if (heldItem != null && heldItem.getItem() != Items.AIR) {
+            boolean canCollectHere = heldItem != null && heldItem.getItem() != Items.AIR
+                    && stack != null && !stack.isEmpty()
+                    && ItemStack.areItemsAndComponentsEqual(stack, heldItem);
+            if (canCollectHere) {
                 if (now - lastClickTime < DOUBLE_CLICK_INTERVAL_MS && lastClickedSlot != null &&
                         lastClickedSlot.first() == inventoryIndex && lastClickedSlot.second() == index) {
                     actionType = SlotActionType.PICKUP_ALL;

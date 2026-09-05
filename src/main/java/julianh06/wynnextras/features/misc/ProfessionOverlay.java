@@ -8,6 +8,7 @@ import julianh06.wynnextras.wynncraft.state.CharacterState;
 import julianh06.wynnextras.wynncraft.state.ProfessionState;
 import julianh06.wynnextras.utils.enums.WEProfessionType;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.features.crafting.calc.CraftXpCalculator;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.features.profileviewer.data.Profession;
@@ -33,9 +34,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public class ProfessionOverlay {
-
-    private static final long DISPLAY_DURATION_MS = 60 * 1000; // 1 minute
-    private static final long INACTIVITY_PAUSE_MS = 30 * 1000; // pause rate tracking after 30s without a gain
+    private static final long DISPLAY_DURATION_MS = 60 * 1000;
+    private static final long INACTIVITY_PAUSE_MS = 30 * 1000;
     private static final int MAX_HISTORY = 500;
     private static final long XP_PER_100_PERCENT_AT_132 = 66_287_449L;
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
@@ -49,25 +49,18 @@ public class ProfessionOverlay {
     private static long lastXpGainTime = 0;
     private static int saveCounter = 0;
 
-    // Session XP history per charId:profession
     private static final Map<String, List<Float>> xpHistory = new HashMap<>();
 
-    // Session XP gain per charId:profession
     private static final Map<String, Float> sessionXpGain = new HashMap<>();
 
-    // Session action count, active duration, and cached actions/hr per charId:profession.
-    // Active duration only accumulates the gap between gains when it's below INACTIVITY_PAUSE_MS,
-    // so AFK periods don't tank the XP/hr rate and ETA.
     private static final Map<String, Integer> sessionActionCount = new HashMap<>();
     private static final Map<String, Long> sessionActiveMs = new HashMap<>();
     private static final Map<String, Long> lastGainTimePerKey = new HashMap<>();
     private static final Map<String, Double> cachedActionsPerHour = new HashMap<>();
     private static final Map<String, Double> cachedXpPerHour = new HashMap<>();
 
-    // Leaderboard data per charId:profession
     private static final Map<String, LeaderboardEntry> leaderboardData = new HashMap<>();
 
-    // Full leaderboard XP values sorted by rank (index 0 = rank 1) for estimated rank
     private static final Map<String, List<Long>> leaderboardXpList = new HashMap<>();
 
     public record LeaderboardEntry(int rank, long playerXp, long nextPlayerXp) {}
@@ -111,9 +104,26 @@ public class ProfessionOverlay {
         WynnExtrasConfig.save();
     }
 
-    /**
-     * Called on character swap to reset overlay state so stale data doesn't show.
-     */
+    public static int getLevelGoal(WEProfessionType profession) {
+        WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
+        if (c.professionLevelGoals == null) return 0;
+        return c.professionLevelGoals.getOrDefault(getOverflowKey(profession), 0);
+    }
+
+    public static void setLevelGoal(WEProfessionType profession, int level) {
+        WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
+        if (c.professionLevelGoals == null) c.professionLevelGoals = new HashMap<>();
+        c.professionLevelGoals.put(getOverflowKey(profession), level);
+        WynnExtrasConfig.save();
+    }
+
+    public static void clearLevelGoal(WEProfessionType profession) {
+        WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
+        if (c.professionLevelGoals == null) return;
+        c.professionLevelGoals.remove(getOverflowKey(profession));
+        WynnExtrasConfig.save();
+    }
+
     public static void onCharacterSwap() {
         lastProfession = null;
         lastProfessionLevel = 0;
@@ -209,9 +219,6 @@ public class ProfessionOverlay {
         }
     }
 
-    /**
-     * Reload: resets session XP gain, clears xpHistory, re-fetches overflow from API, re-fetches leaderboard.
-     */
     public static void reload() {
         sessionXpGain.clear();
         xpHistory.clear();
@@ -248,9 +255,6 @@ public class ProfessionOverlay {
         }
     }
 
-    /**
-     * Fetch leaderboard data for all max-level professions on the current character.
-     */
     public static void fetchLeaderboardForAllProfessions() {
         if (MinecraftUtils.player() == null) return;
         String playerUuid = MinecraftUtils.player().getUuidAsString();
@@ -264,7 +268,6 @@ public class ProfessionOverlay {
     }
 
     private static void fetchLeaderboardForProfession(WEProfessionType profession, String playerUuid) {
-        // API uses lowercase profession name + "Level"
         String profName = profession.name().toLowerCase();
         String url = "https://api.wynncraft.com/v3/leaderboards/" + profName + "Level?resultLimit=999";
 
@@ -340,9 +343,6 @@ public class ProfessionOverlay {
         });
     }
 
-    /**
-     * Static version of getOverflowKey that uses current character ID.
-     */
     private static String getOverflowKeyStatic(WEProfessionType profession) {
         String charId = CharacterState.id().orElse(null);
         if (charId == null || charId.isEmpty()) charId = "unknown";
@@ -363,9 +363,6 @@ public class ProfessionOverlay {
         HudRenderCallback.EVENT.register(ProfessionOverlay::renderHud);
     }
 
-    /**
-     * Called from screen mixins to render on top of gameplay screens.
-     */
     public static void renderOnScreen(DrawContext ctx) {
         if (MinecraftClient.getInstance().options.hudHidden) return;
         Screen screen = MinecraftClient.getInstance().currentScreen;
@@ -501,6 +498,31 @@ public class ProfessionOverlay {
                     craftsStr = " (~" + craftsNeeded + " crafts)";
                 }
                 line5goal = "Goal: " + formatXp(goal) + " | Left: " + formatXp(remaining) + craftsStr;
+            }
+        }
+
+        // Level goal, for everyone who has not capped yet. The overflow goal above only applies
+        // at 132, so before that this is the line that shows progress towards a target.
+        if (line5goal == null && level < CraftXpCalculator.CURVE_MAX_LEVEL) {
+            int levelGoal = getLevelGoal(lastProfession);
+            if (levelGoal > level) {
+                long xpLeft = CraftXpCalculator.xpBetween(level, xp.current(), xp.max(), levelGoal);
+                if (xpLeft <= 0) {
+                    // Below the covered part of the XP curve there is no data to work from.
+                    line5goal = "Goal: Lvl " + levelGoal + " | no XP data below "
+                            + CraftXpCalculator.CURVE_MIN_LEVEL;
+                } else {
+                    line5goal = "To Lvl " + levelGoal + ": " + formatXp(xpLeft) + " left";
+                    Double xphGoal = cachedXpPerHour.get(key);
+                    if (xphGoal != null && xphGoal > 0) {
+                        line5goal += " | " + formatTime(xpLeft / xphGoal);
+                    }
+                    float bestAvg = avg100 > 0 ? avg100
+                            : (history != null && !history.isEmpty() ? getAverage(history, history.size()) : 0);
+                    if (bestAvg > 0) {
+                        line5goal += " (~" + (int) Math.ceil(xpLeft / bestAvg) + " actions)";
+                    }
+                }
             }
         }
 

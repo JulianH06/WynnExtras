@@ -20,7 +20,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.world.ClientWorld;
@@ -89,6 +88,8 @@ public class WaypointEditMode {
     static String xInput = "0";
     static String yInput = "0";
     static String zInput = "0";
+    static String sizeInput = "1";
+    private static Waypoint newWaypointGeometry = new Waypoint();
     static float packageScroll = 0;
     static float categoryScroll = 0;
     static float waypointScroll = 0;
@@ -147,6 +148,7 @@ public class WaypointEditMode {
         ensureSelectionDefaults();
         if (!enabled) {
             previewPos = initialPreviewPos(mc.player);
+            newWaypointGeometry = new Waypoint();
             selectedWaypoint = null;
             selectedWaypointPackage = null;
             selectedSnapshot = null;
@@ -294,15 +296,9 @@ public class WaypointEditMode {
         if (!isPreviewOnBarrier()) {
             Color color = categoryColor(activeCategory);
             float blink = 0.75f + 0.25f * (float) Math.sin(System.currentTimeMillis() / 600.0);
-            Box previewBox = new Box(previewPos);
+            Box previewBox = previewBox();
             if (previewShouldShowBlock()) {
-                WorldRenderUtils.INSTANCE_WAYPOINTS.buffer = new BufferBuilder(
-                        WorldRenderUtils.allocator,
-                        WorldRenderUtils.FILLED_BOX.getVertexFormatMode(),
-                        WorldRenderUtils.FILLED_BOX.getVertexFormat()
-                );
-                WorldRenderUtils.INSTANCE_WAYPOINTS.drawFilledBoundingBox(event, previewBox, color, previewAlpha() * blink);
-                WorldRenderUtils.INSTANCE_WAYPOINTS.drawFilledBoxes(MinecraftClient.getInstance(), WorldRenderUtils.FILLED_BOX);
+                WorldRenderUtils.drawFilledBoundingBox(event, previewBox, color, previewAlpha() * blink);
             }
             WorldRenderUtils.drawEdges(event, previewBox, solidColor(color), 3, true);
             renderPreviewText(event);
@@ -312,7 +308,7 @@ public class WaypointEditMode {
             ClientWorld world = MinecraftClient.getInstance().world;
             BlockPos pos = new BlockPos(hoveredWaypoint.x, hoveredWaypoint.y, hoveredWaypoint.z);
             if (world == null || !world.getBlockState(pos).isOf(Blocks.BARRIER)) {
-                WorldRenderUtils.drawEdges(event, new Box(pos), solidColor(categoryColor(hoveredWaypoint.getCategory())), 3, true);
+                WorldRenderUtils.drawEdges(event, hoveredWaypoint.getRenderBox(), solidColor(categoryColor(hoveredWaypoint.getCategory())), 3, true);
             }
         }
     }
@@ -428,19 +424,35 @@ public class WaypointEditMode {
     }
 
     static void syncCoordinateInputs() {
-        if (focusedCoordinate != 0) xInput = String.valueOf(previewPos.getX());
-        if (focusedCoordinate != 1) yInput = String.valueOf(previewPos.getY());
-        if (focusedCoordinate != 2) zInput = String.valueOf(previewPos.getZ());
+        Waypoint geometry = previewGeometry();
+        if (focusedCoordinate != 0) xInput = Waypoint.formatCoord(previewPos.getX() + geometry.offsetX);
+        if (focusedCoordinate != 1) yInput = Waypoint.formatCoord(previewPos.getY() + geometry.offsetY);
+        if (focusedCoordinate != 2) zInput = Waypoint.formatCoord(previewPos.getZ() + geometry.offsetZ);
+        if (focusedCoordinate != 3) sizeInput = Waypoint.formatCoord(geometry.getSize());
     }
 
     static void applyCoordinateInputs() {
         try {
-            int x = Integer.parseInt(xInput.trim());
-            int y = Integer.parseInt(yInput.trim());
-            int z = Integer.parseInt(zInput.trim());
-            previewPos = new BlockPos(x, y, z);
+            double x = Double.parseDouble(xInput.trim());
+            double y = Double.parseDouble(yInput.trim());
+            double z = Double.parseDouble(zInput.trim());
+            if (Double.isFinite(x) && Double.isFinite(y) && Double.isFinite(z)) {
+                Waypoint geometry = previewGeometry();
+                geometry.setDisplayX(x);
+                geometry.setDisplayY(y);
+                geometry.setDisplayZ(z);
+                previewPos = new BlockPos(geometry.x, geometry.y, geometry.z);
+            }
         } catch (NumberFormatException ignored) {
         }
+        try {
+            float size = Float.parseFloat(sizeInput.trim());
+            if (Float.isFinite(size)) previewGeometry().setSize(size);
+        } catch (NumberFormatException ignored) {}
+    }
+
+    private static Waypoint previewGeometry() {
+        return selectedWaypoint == null ? newWaypointGeometry : selectedWaypoint;
     }
 
     static void movePreviewHorizontal(int key) {
@@ -460,6 +472,10 @@ public class WaypointEditMode {
     static void addWaypoint() {
         ensureSelectionDefaults();
         Waypoint waypoint = new Waypoint(previewPos.getX(), previewPos.getY(), previewPos.getZ());
+        waypoint.offsetX = newWaypointGeometry.offsetX;
+        waypoint.offsetY = newWaypointGeometry.offsetY;
+        waypoint.offsetZ = newWaypointGeometry.offsetZ;
+        waypoint.size = newWaypointGeometry.getSize();
         waypoint.id = UUID.randomUUID().toString();
         waypoint.name = previewName == null || previewName.isBlank() ? "Waypoint" : previewName.trim();
         waypoint.setCategory(activeCategory);
@@ -648,7 +664,7 @@ public class WaypointEditMode {
                 if (waypoint == selectedWaypoint) continue;
                 if (mc.world.getBlockState(new BlockPos(waypoint.x, waypoint.y, waypoint.z)).isOf(Blocks.BARRIER)) continue;
 
-                Box box = new Box(waypoint.x, waypoint.y, waypoint.z, waypoint.x + 1, waypoint.y + 1, waypoint.z + 1);
+                Box box = waypoint.getRenderBox();
                 double distance = rayIntersectionDistance(origin, direction, box);
                 if (Double.isNaN(distance)) continue;
                 if (closest == null || distance < closest.distance) closest = new WaypointHit(pkg, waypoint, distance);
@@ -714,15 +730,24 @@ public class WaypointEditMode {
         return previewVisibility(selectedWaypoint == null ? null : selectedWaypoint.seeThroughOverride, selectedWaypoint != null && selectedWaypoint.seeThrough, activeCategory != null && activeCategory.showSeeThroughByDefault);
     }
 
+    static Box previewBox() {
+        Waypoint waypoint = previewGeometry();
+        return Waypoint.boxAt(previewPos.getX(), previewPos.getY(), previewPos.getZ(),
+                waypoint.offsetX, waypoint.offsetY, waypoint.offsetZ, waypoint.getSize());
+    }
+
     static void renderPreviewText(RenderWorldEvent event) {
         MinecraftClient mc = MinecraftClient.getInstance();
+        Box box = previewBox();
+        double centerX = (box.minX + box.maxX) / 2;
+        double centerZ = (box.minZ + box.maxZ) / 2;
         if (mc.player != null && previewShouldShowDistance()) {
-            WEVec pos = new WEVec(previewPos.getX() + 0.5f, previewPos.getY() + 1.5f, previewPos.getZ() + 0.5f);
+            WEVec pos = new WEVec(centerX, box.maxY + 0.5, centerZ);
             WEVec playerPos = new WEVec(mc.player.getBlockPos().toBottomCenterPos());
             WorldRenderUtils.drawText(event, pos, Text.of((int) pos.distanceTo(playerPos) + "m"), 0.75f, !previewSeeThrough());
         }
         if (previewShouldShowName()) {
-            WEVec namePos = new WEVec(previewPos.getX() + 0.5f, previewPos.getY() + 2f, previewPos.getZ() + 0.5f);
+            WEVec namePos = new WEVec(centerX, box.maxY + 1.0, centerZ);
             WorldRenderUtils.drawText(event, namePos, Text.of(previewName), 0.75f, !previewSeeThrough());
         }
     }
@@ -791,6 +816,10 @@ public class WaypointEditMode {
         private final int x;
         private final int y;
         private final int z;
+        private final float offsetX;
+        private final float offsetY;
+        private final float offsetZ;
+        private final float size;
         private final boolean show;
         private final boolean showName;
         private final boolean showDistance;
@@ -806,6 +835,10 @@ public class WaypointEditMode {
             this.x = waypoint.x;
             this.y = waypoint.y;
             this.z = waypoint.z;
+            this.offsetX = waypoint.offsetX;
+            this.offsetY = waypoint.offsetY;
+            this.offsetZ = waypoint.offsetZ;
+            this.size = waypoint.size;
             this.show = waypoint.show;
             this.showName = waypoint.showName;
             this.showDistance = waypoint.showDistance;
@@ -822,6 +855,10 @@ public class WaypointEditMode {
             waypoint.x = x;
             waypoint.y = y;
             waypoint.z = z;
+            waypoint.offsetX = offsetX;
+            waypoint.offsetY = offsetY;
+            waypoint.offsetZ = offsetZ;
+            waypoint.size = size;
             waypoint.show = show;
             waypoint.showName = showName;
             waypoint.showDistance = showDistance;

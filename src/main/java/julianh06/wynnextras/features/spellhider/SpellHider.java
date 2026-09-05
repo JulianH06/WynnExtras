@@ -88,15 +88,25 @@ public class SpellHider {
             .resolve("spell_modifiers.json");
 
 
-    // first path and hash are added when the game launches as textures are loaded
-    // then when the entity is first seen in-game its model is added based on the path
-    //      and its namespace is added from the hash
-    // that mean we have model -> namespace ability
     private static final Map<Integer, SpellData> byHash = new HashMap<>();
     private static final Map<String, SpellData> byPath = new HashMap<>();
     private static final Map<Integer, SpellData> byModel = new HashMap<>();
     private static final Map<String, Set<SpellData>> byName = new HashMap<>();
     public static final Map<SpellNamespace, SpellModifiers> modifiersMap = new HashMap<>();
+
+    private static final Set<Integer> registeredModels = new HashSet<>();
+
+    public static boolean isModelRegistered(int model) {
+        return registeredModels.contains(model);
+    }
+
+    public static void markModelRegistered(int model) {
+        registeredModels.add(model);
+    }
+
+    public static void clearRegisteredModels() {
+        registeredModels.clear();
+    }
 
     public static void putHash(String filePath, int hash) {
         SpellData data = new SpellData(filePath, hash);
@@ -130,6 +140,7 @@ public class SpellHider {
     }
 
     public static void editNameOfPath(String path, SpellNamespace namespace) {
+        clearRegisteredModels();
         String newName = namespace.getFQName();
         SpellData existing = byPath.get(path);
         if (existing != null) {

@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.waypoints;
 
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.features.waypoints.data.Waypoint;
 import julianh06.wynnextras.features.waypoints.data.WaypointCategory;
 import julianh06.wynnextras.features.waypoints.data.WaypointData;
 import julianh06.wynnextras.features.waypoints.data.WaypointPackage;
@@ -43,6 +44,7 @@ public class WaypointEditModeUI extends WEScreen {
     private final CoordinateInputWidget xCoordinateField = new CoordinateInputWidget(this, 0, "X");
     private final CoordinateInputWidget yCoordinateField = new CoordinateInputWidget(this, 1, "Y");
     private final CoordinateInputWidget zCoordinateField = new CoordinateInputWidget(this, 2, "Z");
+    private final CoordinateInputWidget sizeField = new CoordinateInputWidget(this, 3, "Size (blocks)");
     private final NameInputWidget nameField = new NameInputWidget(this);
     private final ActionButtonWidget packageEnabledButton = new ActionButtonWidget(this, () -> activePackage == null || activePackage.enabled ? "Enabled" : "Disabled", this::togglePackageEnabled, () -> activePackage == null ? GREEN : activePackage.enabled ? GREEN : RED, 2.55f);
     private final ActionButtonWidget freeMoveButton = new ActionButtonWidget(this, () -> "Free Move Mode", WaypointEditMode::enterFreeMoveMode);
@@ -98,6 +100,7 @@ public class WaypointEditModeUI extends WEScreen {
         addRootWidget(xCoordinateField);
         addRootWidget(yCoordinateField);
         addRootWidget(zCoordinateField);
+        addRootWidget(sizeField);
         addRootWidget(nameField);
         addRootWidget(packageEnabledButton);
         addRootWidget(freeMoveButton);
@@ -132,7 +135,7 @@ public class WaypointEditModeUI extends WEScreen {
 
     @Override
     protected int getMinLogicalHeight() {
-        return 1060;
+        return 1120;
     }
 
     @Override
@@ -155,6 +158,7 @@ public class WaypointEditModeUI extends WEScreen {
         ensureSelectionDefaults();
         syncNameInput();
         syncCategoryNameInput();
+        syncCoordinateInputs();
         syncCoordinateWidgets();
         lastPreviewStats = statsAt(previewPos);
         updateDropdownScroll(delta);
@@ -429,13 +433,14 @@ public class WaypointEditModeUI extends WEScreen {
             xCoordinateField.setLogicalBounds(coordX, coordY, fieldW, p(32));
             yCoordinateField.setLogicalBounds(coordX + fieldW + coordGap, coordY, fieldW, p(32));
             zCoordinateField.setLogicalBounds(coordX + (fieldW + coordGap) * 2, coordY, fieldW, p(32));
-            int toggleY = panelY + p(400);
+            sizeField.setLogicalBounds(coordX, coordY + p(42), coordW, p(32));
+            int toggleY = panelY + p(460);
             int toggleW = (panelW - p(28) - p(8)) / 2;
             showNameButton.setLogicalBounds(panelX + p(14), toggleY, toggleW, p(54));
             showBlockButton.setLogicalBounds(panelX + p(14) + toggleW + p(8), toggleY, toggleW, p(54));
             showDistanceButton.setLogicalBounds(panelX + p(14), toggleY + p(62), toggleW, p(54));
             textSeeThroughButton.setLogicalBounds(panelX + p(14) + toggleW + p(8), toggleY + p(62), toggleW, p(54));
-            int buttonY = panelY + p(520);
+            int buttonY = panelY + p(580);
             int buttonW = (panelW - p(28) - p(20)) / 3;
             removeButton.setLogicalBounds(panelX + p(14), buttonY, buttonW, p(ACTION_H));
             primaryButton.setLogicalBounds(panelX + p(14) + buttonW + p(10), buttonY, buttonW, p(ACTION_H));
@@ -447,6 +452,7 @@ public class WaypointEditModeUI extends WEScreen {
             packageEnabledButton.setLogicalBounds(panelX + p(14) + packageFieldW + packageGap, panelY + p(80), packageToggleW, p(FIELD_H));
             categoryField.setLogicalBounds(panelX + p(14), panelY + p(160), panelW - p(28), p(FIELD_H));
             int coordY = panelY + p(252);
+            sizeField.setLogicalBounds(coordX, coordY + p(42), coordW, p(32));
             xCoordinateField.setLogicalBounds(coordX, coordY, fieldW, p(32));
             yCoordinateField.setLogicalBounds(coordX + fieldW + coordGap, coordY, fieldW, p(32));
             zCoordinateField.setLogicalBounds(coordX + (fieldW + coordGap) * 2, coordY, fieldW, p(32));
@@ -785,6 +791,7 @@ public class WaypointEditModeUI extends WEScreen {
             case 0 -> xCoordinateField;
             case 1 -> yCoordinateField;
             case 2 -> zCoordinateField;
+            case 3 -> sizeField;
             default -> null;
         };
     }
@@ -871,7 +878,7 @@ public class WaypointEditModeUI extends WEScreen {
         if (selectedWaypoint != null) {
             ui.drawText("Text", x + p(14), y + p(222), color(TEXT_DIM), ts(2.7f));
             ui.drawText("Coordinates", x + p(14), y + p(302), color(TEXT_DIM), ts(2.7f));
-            ui.drawText("Visibility", x + p(14), y + p(372), color(TEXT_DIM), ts(2.7f));
+            ui.drawText("Visibility", x + p(14), y + p(432), color(TEXT_DIM), ts(2.7f));
         } else {
             ui.drawText("Coordinates", x + p(14), y + p(222), color(TEXT_DIM), ts(2.7f));
         }
@@ -891,7 +898,7 @@ public class WaypointEditModeUI extends WEScreen {
     }
 
     private int editorPanelHeight() {
-        return selectedWaypoint == null ? p(PANEL_H) : p(590);
+        return selectedWaypoint == null ? p(PANEL_H + 60) : p(650);
     }
 
     private int waypointDropdownDefaultWidth() {
@@ -995,7 +1002,8 @@ public class WaypointEditModeUI extends WEScreen {
 
         List<Text> lines = new ArrayList<>();
         lines.add(Text.literal("§e" + (hoveredWaypoint.name == null || hoveredWaypoint.name.isBlank() ? "Waypoint" : hoveredWaypoint.name)));
-        lines.add(Text.literal("§7x: §f" + hoveredWaypoint.x + " §7y: §f" + hoveredWaypoint.y + " §7z: §f" + hoveredWaypoint.z));
+        lines.add(Text.literal("§7x: §f" + Waypoint.formatCoord(hoveredWaypoint.displayX()) + " §7y: §f" + Waypoint.formatCoord(hoveredWaypoint.displayY()) + " §7z: §f" + Waypoint.formatCoord(hoveredWaypoint.displayZ())));
+        if (hoveredWaypoint.getSize() != 1f) lines.add(Text.literal("§7Size: §f" + Waypoint.formatCoord(hoveredWaypoint.getSize())));
         lines.add(Text.literal("§7Package: §f" + (pkg == null ? "Unknown" : pkg.name)));
         lines.add(Text.literal("§7Category: §f" + (category == null ? WaypointData.UNCATEGORIZED_CATEGORY_NAME : category.name)));
         lines.add(Text.literal("§eClick to edit this waypoint"));
@@ -1087,6 +1095,7 @@ public class WaypointEditModeUI extends WEScreen {
             case 0 -> xInput = value;
             case 1 -> yInput = value;
             case 2 -> zInput = value;
+            case 3 -> sizeInput = value;
         }
     }
 
@@ -1094,6 +1103,7 @@ public class WaypointEditModeUI extends WEScreen {
         if (focusedCoordinate != 0) xCoordinateField.setInput(xInput);
         if (focusedCoordinate != 1) yCoordinateField.setInput(yInput);
         if (focusedCoordinate != 2) zCoordinateField.setInput(zInput);
+        if (focusedCoordinate != 3) sizeField.setInput(sizeInput);
     }
 
     private String trimToWidth(TextRenderer tr, String text, int maxWidth) {
@@ -1363,7 +1373,7 @@ public class WaypointEditModeUI extends WEScreen {
         private int logicalH;
 
         private CoordinateInputWidget(WaypointEditModeUI screen, int coordinate, String label) {
-            super(0, 0, 0, 0, 27, 9, 2.3f);
+            super(0, 0, 0, 0, coordinate == 3 ? 180 : 27, 9, 2.3f);
             this.screen = screen;
             this.coordinate = coordinate;
             this.label = label;
@@ -1371,7 +1381,7 @@ public class WaypointEditModeUI extends WEScreen {
             setPlaceholderColor(screen.color(TEXT_DIM));
             setCursorColor(screen.color(TEXT));
             setSelectionColor(screen.color(0xAA3366CC));
-            setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '-');
+            setCharacterFilter(character -> (character >= '0' && character <= '9') || character == '.' || (coordinate != 3 && character == '-'));
             setOnChange(value -> {
                 screen.setCoordinateInput(coordinate, value);
                 applyCoordinateInputs();

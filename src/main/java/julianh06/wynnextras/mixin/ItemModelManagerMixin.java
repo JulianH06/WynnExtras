@@ -35,12 +35,16 @@ public class ItemModelManagerMixin {
         if (!(entity instanceof DisplayEntity.ItemDisplayEntity)) return;
         if (stack.getItem() != Items.OAK_BOAT) return;
 
+        Float modelData = ItemUtils.getFirsCustomModelDataFloat(stack);
+
+        boolean loggerIdle = ModelDataLogger.isIdle();
+        if (loggerIdle && modelData != null && SpellHider.isModelRegistered(modelData.intValue())) return;
+
         Set<Identifier> fileNames = getFileNames(renderState);
         if (fileNames == null) {
             return;
         }
         for (Identifier fileName : fileNames) {
-            Float modelData = ItemUtils.getFirsCustomModelDataFloat(stack);
             if (modelData != null) {
                 SpellHider.addModel(fileName.getPath(), modelData);
             }
@@ -58,6 +62,10 @@ public class ItemModelManagerMixin {
                 ModelDataLogger.addTextToRender(spellMapping.getFQName(), entity.getEntityPos());
             }
         }
+
+        if (loggerIdle && modelData != null && SpellHider.getFromModel(modelData.intValue()) != null) {
+            SpellHider.markModelRegistered(modelData.intValue());
+        }
     }
 
     @Unique
@@ -74,5 +82,4 @@ public class ItemModelManagerMixin {
             layers[i].getQuads().forEach(q -> names.add(q.sprite().getContents().getId()));
         return names;
     }
-
 }

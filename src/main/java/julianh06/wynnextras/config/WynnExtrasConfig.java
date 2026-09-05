@@ -273,6 +273,10 @@ public class WynnExtrasConfig {
     public NotificationSound notificationSound = NotificationSound.EXPERIENCE_ORB;
     public float soundVolume = 100f;
     public float soundPitch = 100f;
+    public boolean privateMessageSound = false;
+    public NotificationSound privateMessageSoundType = NotificationSound.NOTE_PLING;
+    public float privateMessageSoundVolume = 100f;
+    public float privateMessageSoundPitch = 100f;
     public int notifierX = -1;  // -1 = auto center
     public int notifierY = -1;  // -1 = auto (30% from top)
     public float notifierScale = 3.0f;
@@ -600,6 +604,7 @@ public class WynnExtrasConfig {
     public Map<String, Integer> professionLevels = new HashMap<>();
     public Map<String, Integer> professionXpCurrent = new HashMap<>();
     public Map<String, Integer> professionXpMax = new HashMap<>();
+    public Map<String, Integer> professionLevelGoals = new HashMap<>();
 
     // ==================== RADIANT HUD ====================
     public boolean radiantHudEnabled = false;
@@ -827,6 +832,7 @@ public class WynnExtrasConfig {
                 if (INSTANCE.professionLevels == null) INSTANCE.professionLevels = new HashMap<>();
                 if (INSTANCE.professionXpCurrent == null) INSTANCE.professionXpCurrent = new HashMap<>();
                 if (INSTANCE.professionXpMax == null) INSTANCE.professionXpMax = new HashMap<>();
+                if (INSTANCE.professionLevelGoals == null) INSTANCE.professionLevelGoals = new HashMap<>();
                 if (INSTANCE.classCardAccentColors == null) INSTANCE.classCardAccentColors = new HashMap<>();
                 if (INSTANCE.clientNicknames == null) INSTANCE.clientNicknames = new HashMap<>();
                 if (INSTANCE.chatMediaPreviewMaxPixels == 4194304) INSTANCE.chatMediaPreviewMaxPixels = 16777216;

@@ -84,6 +84,8 @@ public class ProfessionCalculatorScreen extends WEScreen {
     private CycleButtonWidget profSpeedButton;
     private CycleButtonWidget ingTierFilterButton;
     private TextInputWidget ingredientLevelInput;
+    /** Fraction of the current level already earned, filled in from the live profession data. */
+    private double detectedLevelProgress = 0;
     private TextInputWidget fromLevelInput;
     private TextInputWidget toLevelInput;
     private TextInputWidget currentOverflowInput;
@@ -218,6 +220,14 @@ public class ProfessionCalculatorScreen extends WEScreen {
             fromLevelInput.setInput(String.valueOf(level));
         }
 
+        // Progress already made inside the current level, so the estimate does not restart the
+        // level from zero every time.
+        detectedLevelProgress = 0;
+        ProfessionState.Xp levelXp = ProfessionState.xp(selectedProf);
+        if (levelXp != null && levelXp.max() > 0 && level < 132) {
+            detectedLevelProgress = (double) levelXp.current() / levelXp.max();
+        }
+
         if (level >= 132) {
             float overflow = ProfessionOverlay.getOverflow(selectedProf);
             currentOverflowInput.setInput(overflow > 0 ? formatXp(overflow) : "");
@@ -342,6 +352,14 @@ public class ProfessionCalculatorScreen extends WEScreen {
 
         // Persist goal to ProfessionOverlay so it shows on the HUD
         WEProfessionType selectedProf = getSelectedProfession();
+
+        // Only credit the in-level progress while the level box still shows the live level —
+        // once it is typed over by hand the estimate should start from a whole level again.
+        double levelProgress = 0;
+        if (selectedProf != null && fromLevel == ProfessionState.level(selectedProf)) {
+            levelProgress = detectedLevelProgress;
+        }
+
         if (selectedProf != null && fromLevel >= 132) {
             if (overflowGoal > 0) {
                 ProfessionOverlay.setGoal(selectedProf, (float) overflowGoal);
@@ -387,9 +405,9 @@ public class ProfessionCalculatorScreen extends WEScreen {
                 if (fromLevel >= 132) {
                     crafts = CraftXpCalculator.estimateCraftsForOverflow(overflowNeeded, noDecayXp, matType);
                 } else if (toLevel <= 132 && overflowGoal <= 0) {
-                    crafts = CraftXpCalculator.estimateCraftsToLevel(fromLevel, Math.max(fromLevel, toLevel), noDecayXp, matType);
+                    crafts = CraftXpCalculator.estimateCraftsToLevel(fromLevel, Math.max(fromLevel, toLevel), noDecayXp, matType, levelProgress);
                 } else {
-                    int craftsTo132 = CraftXpCalculator.estimateCraftsToLevel(fromLevel, 132, noDecayXp, matType);
+                    int craftsTo132 = CraftXpCalculator.estimateCraftsToLevel(fromLevel, 132, noDecayXp, matType, levelProgress);
                     int overflowCrafts = CraftXpCalculator.estimateCraftsForOverflow(overflowNeeded, noDecayXp, matType);
                     crafts = craftsTo132 + overflowCrafts;
                 }

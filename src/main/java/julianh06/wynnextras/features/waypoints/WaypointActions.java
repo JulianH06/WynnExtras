@@ -150,12 +150,18 @@ public final class WaypointActions {
         WaypointData.save();
     }
 
-    public static void updateWaypoint(Waypoint waypoint, String name, Integer x, Integer y, Integer z) {
+    public static void updateWaypoint(Waypoint waypoint, String name, Double x, Double y, Double z) {
         if (waypoint == null) return;
         waypoint.name = cleanName(name, "Waypoint");
-        if (x != null) waypoint.x = x;
-        if (y != null) waypoint.y = y;
-        if (z != null) waypoint.z = z;
+        if (x != null) waypoint.setDisplayX(x);
+        if (y != null) waypoint.setDisplayY(y);
+        if (z != null) waypoint.setDisplayZ(z);
+        WaypointData.save();
+    }
+
+    public static void setWaypointSize(Waypoint waypoint, float size) {
+        if (waypoint == null) return;
+        waypoint.setSize(size);
         WaypointData.save();
     }
 
@@ -335,6 +341,10 @@ public final class WaypointActions {
         Waypoint copy = new Waypoint(waypoint.x, waypoint.y, waypoint.z);
         copy.id = UUID.randomUUID().toString();
         copy.name = waypoint.name;
+        copy.offsetX = waypoint.offsetX;
+        copy.offsetY = waypoint.offsetY;
+        copy.offsetZ = waypoint.offsetZ;
+        copy.size = waypoint.size;
         copy.show = waypoint.show;
         copy.showName = waypoint.showName;
         copy.showDistance = waypoint.showDistance;

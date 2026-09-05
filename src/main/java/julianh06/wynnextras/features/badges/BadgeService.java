@@ -64,7 +64,13 @@ public class BadgeService {
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
     private static final Gson GSON = new GsonBuilder().create();
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[A-Za-z0-9_]{3,16}$");
+    private static final Pattern USERNAME_TRIM_PATTERN = Pattern.compile("^[^A-Za-z0-9_]+|[^A-Za-z0-9_]+$");
     private static final long ACHIEVEMENT_RETRY_DELAY_MS = 60_000;
+
+    // Nametag labels are resolved once per label string per tick instead of once per label per
+    // frame. Absent entries are stored as ABSENT so misses are cached too.
+    private static final BadgeProfile ABSENT = BadgeProfile.defaultProfile();
+    private static final Map<String, BadgeProfile> labelProfileCache = new java.util.HashMap<>();
 
     private static final Map<String, BadgeProfile> profilesByUuid = new ConcurrentHashMap<>();
     private static final Map<String, BadgeProfile> profilesByUsername = new ConcurrentHashMap<>();
@@ -321,6 +327,8 @@ public class BadgeService {
     }
 
     private static void handleTick() {
+        // Nametags can change between ticks, so the per-frame lookup cache only lives for one tick.
+        labelProfileCache.clear();
         tickCounter++;
         if (tickCounter % 200 != 0) return;
         if (lastSyncTime != 0 && System.currentTimeMillis() - lastSyncTime < SYNC_INTERVAL_MS) return;
@@ -562,7 +570,17 @@ public class BadgeService {
     }
 
     private static BadgeProfile profileFromLabel(Text label) {
-        String value = stripKnownBadge(label.getString()).trim();
+        String labelKey = label.getString();
+        BadgeProfile cached = labelProfileCache.get(labelKey);
+        if (cached != null) return cached == ABSENT ? null : cached;
+
+        BadgeProfile resolved = resolveProfileFromLabel(labelKey);
+        labelProfileCache.put(labelKey, resolved == null ? ABSENT : resolved);
+        return resolved;
+    }
+
+    private static BadgeProfile resolveProfileFromLabel(String rawLabel) {
+        String value = stripKnownBadge(rawLabel).trim();
         if (value.isEmpty()) return null;
         String[] parts = value.split("\\s+");
         if (parts.length == 0) return null;
@@ -588,7 +606,7 @@ public class BadgeService {
     }
 
     private static String cleanUsernameCandidate(String value) {
-        String candidate = value.replaceAll("^[^A-Za-z0-9_]+|[^A-Za-z0-9_]+$", "");
+        String candidate = USERNAME_TRIM_PATTERN.matcher(value).replaceAll("");
         Matcher matcher = USERNAME_PATTERN.matcher(candidate);
         return matcher.matches() ? candidate : null;
     }

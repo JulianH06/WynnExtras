@@ -135,20 +135,22 @@ public class BombRethrow {
     }
 
     private static BombMapping getExpiredBombMapping(String message) {
-        String clean = Formatting.strip(message);
-        if (clean == null) return null;
-
-        clean = clean.trim();
+        String clean = normalizeChatMessage(message);
         for (BombMapping mapping : BOMB_MAPPINGS) {
             for (String expiredName : mapping.expiredNames()) {
                 String suffix = " " + expiredName + " has expired!";
-                for (String line : clean.split("\\R")) {
-                    line = line.trim();
-                    if (line.contains(suffix) && line.indexOf(suffix) > 0) return mapping;
-                }
+                if (clean.contains(suffix) && clean.indexOf(suffix) > 0) return mapping;
             }
         }
         return null;
+    }
+
+    private static String normalizeChatMessage(String message) {
+        if (message == null) return "";
+        return message.replaceAll("§(?:#[0-9a-fA-F]{8}|[0-9a-fk-orA-FK-OR])", "")
+                .replaceAll("\\p{Co}", " ")
+                .replaceAll("(?U)\\s+", " ")
+                .trim();
     }
 
     private static BombMapping getMapping(String bombType) {
