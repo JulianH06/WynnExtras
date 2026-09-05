@@ -39,7 +39,7 @@ public final class WynnItemParser {
     private static final Pattern POUCH = Pattern.compile("(?i)(?:emeralds?|value|capacity)\\D*(\\d[\\d,]*)\\s*/\\s*(\\d[\\d,]*)");
     private static final Pattern POUCH_TIER = Pattern.compile("(?i)emerald pouch\\s*\\[tier\\s+(\\d+)]");
     private static final Pattern POUCH_VALUE = Pattern.compile("^([\\d\\s,]+)²");
-    private static final Pattern CLASS = Pattern.compile("(?i)class\\s+(?:req(?:uirement)?|required)\\D*([a-z ]+)");
+    private static final Pattern CLASS = Pattern.compile("(?i)class\\s+(?:req(?:uirement)?|required|type)[^a-z\\n]*([a-z]+(?:[ /]+[a-z]+)*)");
     private static final Pattern IDENTIFICATION = Pattern.compile("^([+-]\\d+)\\s+(.+)$");
 
     private WynnItemParser() {}
@@ -79,7 +79,9 @@ public final class WynnItemParser {
         ItemTier tier = tier(stack, lower);
         boolean crafted = tier == ItemTier.CRAFTED || lower.contains("crafted item") || lower.contains("crafted by");
         boolean unidentified = lower.contains("unidentified");
-        GearType gearType = gearType(stack, lower);
+        Matcher classMatcher = CLASS.matcher(all);
+        CharacterClass requiredClass = classMatcher.find() ? CharacterClass.parse(classMatcher.group(1)) : CharacterClass.UNKNOWN;
+        GearType gearType = gearType(stack, lower, requiredClass);
         ItemCategory category = category(lower, tier, gearType, crafted, unidentified);
         if (category == ItemCategory.UNKNOWN && tier == ItemTier.UNKNOWN) return Optional.empty();
 
@@ -94,8 +96,6 @@ public final class WynnItemParser {
         requirements.putAll(styledStats.requirements());
         bonuses.putAll(styledStats.bonuses());
 
-        Matcher classMatcher = CLASS.matcher(all);
-        CharacterClass requiredClass = classMatcher.find() ? CharacterClass.parse(classMatcher.group(1)) : CharacterClass.UNKNOWN;
         Integer level = firstNumber(LEVEL, all);
         WynnItemData.Amount durability = amount(DURABILITY, all);
         Integer uses = firstNumber(USES, all);
@@ -200,7 +200,7 @@ public final class WynnItemParser {
         return ItemCategory.UNKNOWN;
     }
 
-    private static GearType gearType(ItemStack stack, String text) {
+    private static GearType gearType(ItemStack stack, String text, CharacterClass requiredClass) {
         String itemId = Registries.ITEM.getId(stack.getItem()).getPath();
         if (itemId.endsWith("helmet") || text.contains(" helmet")) return GearType.HELMET;
         if (itemId.endsWith("chestplate") || text.contains(" chestplate")) return GearType.CHESTPLATE;
@@ -209,16 +209,13 @@ public final class WynnItemParser {
         if (text.contains(" bracelet")) return GearType.BRACELET;
         if (text.contains(" necklace")) return GearType.NECKLACE;
         if (text.contains(" ring")) return GearType.RING;
-        if (text.contains(" spear")) return GearType.SPEAR;
-        if (text.contains(" dagger")) return GearType.DAGGER;
-        if (itemId.equals("bow") || text.contains(" bow")) return GearType.BOW;
-        if (text.contains(" wand")) return GearType.WAND;
-        if (text.contains(" relik")) return GearType.RELIK;
 
         boolean weaponStats = WynnTooltipParser.hasWeaponStats(text);
         if (weaponStats) {
-            CharacterClass required = CharacterClass.parse(text);
-            return switch (required) {
+            CharacterClass weaponClass = requiredClass == CharacterClass.UNKNOWN
+                    ? CharacterClass.parse(text)
+                    : requiredClass;
+            GearType classGearType = switch (weaponClass) {
                 case WARRIOR -> GearType.SPEAR;
                 case MAGE -> GearType.WAND;
                 case ASSASSIN -> GearType.DAGGER;
@@ -226,7 +223,14 @@ public final class WynnItemParser {
                 case SHAMAN -> GearType.RELIK;
                 default -> GearType.UNKNOWN;
             };
+            if (classGearType != GearType.UNKNOWN) return classGearType;
         }
+
+        if (text.contains(" spear")) return GearType.SPEAR;
+        if (text.contains(" dagger")) return GearType.DAGGER;
+        if (itemId.equals("bow") || text.contains(" bow")) return GearType.BOW;
+        if (text.contains(" wand")) return GearType.WAND;
+        if (text.contains(" relik")) return GearType.RELIK;
         return GearType.UNKNOWN;
     }
 

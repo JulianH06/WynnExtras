@@ -29,6 +29,10 @@ public final class TerritoryState {
     private static volatile Map<String, TerritoryBounds> territories = Map.of();
     private static volatile long lastFetchAttempt;
     private static boolean loggedFailure;
+    private static Map<String, TerritoryBounds> cachedTerritories = Map.of();
+    private static double cachedX = Double.NaN;
+    private static double cachedZ = Double.NaN;
+    private static String cachedCurrentTerritory;
 
     private TerritoryState() {}
 
@@ -43,11 +47,19 @@ public final class TerritoryState {
 
         double x = client.player.getX();
         double z = client.player.getZ();
-        Optional<String> current = territories.entrySet().stream()
-                .filter(entry -> entry.getValue().contains(x, z))
-                .map(Map.Entry::getKey)
-                .findFirst();
-        return current.or(WarState::territory);
+        Map<String, TerritoryBounds> currentTerritories = territories;
+        if (currentTerritories != cachedTerritories || x != cachedX || z != cachedZ) {
+            cachedTerritories = currentTerritories;
+            cachedX = x;
+            cachedZ = z;
+            cachedCurrentTerritory = null;
+            for (Map.Entry<String, TerritoryBounds> entry : currentTerritories.entrySet()) {
+                if (!entry.getValue().contains(x, z)) continue;
+                cachedCurrentTerritory = entry.getKey();
+                break;
+            }
+        }
+        return Optional.ofNullable(cachedCurrentTerritory).or(WarState::territory);
     }
 
     public static Optional<TerritoryCenter> center(String territory) {

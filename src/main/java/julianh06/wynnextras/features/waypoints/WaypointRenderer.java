@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.waypoints;
 
 import julianh06.wynnextras.annotations.WEModule;
+import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.event.RenderWorldEvent;
 import julianh06.wynnextras.features.waypoints.data.Waypoint;
 import julianh06.wynnextras.features.waypoints.data.WaypointCategory;
@@ -40,8 +41,10 @@ public class WaypointRenderer {
                 double centerZ = (box.minZ + box.maxZ) / 2;
 
                 WEVec pos = new WEVec(centerX, box.maxY + 0.5, centerZ);
+                double distance = playerPos == null ? 0 : pos.distanceTo(playerPos);
+                if (playerPos != null && distance > WynnExtrasConfig.INSTANCE.waypointMaxRange) continue;
                 if(playerPos != null && waypoint.shouldShowDistance()) {
-                    WorldRenderUtils.drawText(event, pos, Text.of((int) pos.distanceTo(playerPos) + "m"), 0.75f, seeThrough);
+                    WorldRenderUtils.drawText(event, pos, Text.of((int) distance + "m"), 0.75f, seeThrough);
                 }
                 Color color = category != null ? category.asAwtColor() : Color.cyan;
 

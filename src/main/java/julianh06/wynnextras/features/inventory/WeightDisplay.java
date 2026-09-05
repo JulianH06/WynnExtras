@@ -55,7 +55,15 @@ public class WeightDisplay {
     private static ItemStack currentHoveredStack = null;
 
     public static boolean hasCycleInput() {
+        if (!isContainerOpen()) {
+            clearCycleInput();
+            return false;
+        }
         return upPressed || downPressed || leftPressed || rightPressed;
+    }
+
+    private static boolean isContainerOpen() {
+        return MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?>;
     }
 
     public static void clearCycleInput() {
@@ -747,6 +755,10 @@ public class WeightDisplay {
 
     @SubscribeEvent
     public void onKey(KeyInputEvent event) {
+        if (!isContainerOpen()) {
+            clearCycleInput();
+            return;
+        }
         if((event.getKey() == GLFW.GLFW_KEY_UP || event.getKey() == GLFW.GLFW_KEY_W) && event.getAction() == GLFW.GLFW_PRESS) {
             upPressed = true;
         }

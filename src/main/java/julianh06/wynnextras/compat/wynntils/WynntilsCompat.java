@@ -9,7 +9,6 @@ import java.util.Arrays;
 
 public final class WynntilsCompat {
     public static final String MOD_ID = "wynntils";
-    public static final String SUPPORTED_VERSION = "4.2.1";
 
     private WynntilsCompat() {}
 

@@ -481,9 +481,9 @@ public class AbilityTreeWidget extends Widget {
             }
             int i = 0;
             for (List<AbilityMapData.Node> nodes : this.classTree.pages.values()) {
-                int yStart = 0;
+                int yStart = Integer.MIN_VALUE;
                 for (AbilityMapData.Node node : nodes) {
-                    yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
+                    yStart = Math.max(yStart, y + 75 + node.coordinates.y * 75 - scrollOffset);
                     if (node.meta != null) {
                         if ("ability".equals(node.type) && node.meta.id != null) {
                             node.unlocked = unlockedIds.contains(node.meta.id);
@@ -497,7 +497,7 @@ public class AbilityTreeWidget extends Widget {
                 }
                 i++;
                 if(ui == null) return;
-                if(yStart + 75 > y && yStart + 75 < y + botLimit) {
+                if(i < this.classTree.pages.size() && yStart + 75 > y && yStart + 75 < y + botLimit) {
                     ui.drawImage(pageLineTexture, x + 1000, yStart + 75, 730, 32);
                     if(i == 1 && yStart - 400 > y && yStart - 400 < y + botLimit) {
                         ui.drawText(String.valueOf(i), x + 1000, yStart - 400, CustomColor.fromHexString("434654"));

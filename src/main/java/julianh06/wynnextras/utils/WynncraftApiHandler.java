@@ -487,7 +487,7 @@ public class WynncraftApiHandler {
                 .GET())
                 .build();
 
-        return WynncraftAuthManager.httpClient().sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return WynncraftAuthManager.sendRequest(request)
                 .thenApply(response -> parsePlayerFetchResponse("API key", response, verbose))
                 .exceptionally(ex -> {
                     if (verbose) {
@@ -613,6 +613,9 @@ public class WynncraftApiHandler {
     private record PlayerDataFetchResult(int statusCode, PlayerData playerData) {}
 
     public static CompletableFuture<FetchResult> fetchPlayerAspectData(String playerUUID) {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasAspects) {
+            return CompletableFuture.completedFuture(new FetchResult(FetchStatus.DISABLED, null));
+        }
         if (playerUUID == null) {
             MinecraftUtils.sendMessageToClient(Text.of("§cUUID is null!"));
             return CompletableFuture.completedFuture(null);
@@ -963,6 +966,9 @@ public class WynncraftApiHandler {
      * @return CompletableFuture with list of leaderboard entries
      */
     public static CompletableFuture<List<LeaderboardEntry>> fetchLeaderboard(int limit) {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasAspects) {
+            return CompletableFuture.completedFuture(new ArrayList<>());
+        }
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://wynnextras.com/aspects/leaderboard?limit=" + limit))
@@ -1008,6 +1014,9 @@ public class WynncraftApiHandler {
      * @return CompletableFuture with list of gambits or null if not available
      */
     public static CompletableFuture<List<julianh06.wynnextras.features.aspects.GambitData.GambitEntry>> fetchCrowdsourcedGambits() {
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasGambits) {
+            return CompletableFuture.completedFuture(null);
+        }
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://wynnextras.com/gambit"))
@@ -1349,6 +1358,7 @@ public class WynncraftApiHandler {
 
     public enum FetchStatus {
         OK,
+        DISABLED,
         NOT_FOUND,
         FORBIDDEN,
         SERVER_UNREACHABLE,

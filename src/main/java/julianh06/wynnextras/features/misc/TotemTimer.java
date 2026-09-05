@@ -89,6 +89,8 @@ public class TotemTimer {
     private static final Map<String, float[]> estimatedTotems = new HashMap<>();
     private static final Map<String, String> estimatedTotemToxoplasmosis = new HashMap<>();
     private static final List<String> lastFoundKeys = new ArrayList<>();
+    private static final Set<UUID> lastVisibleTotems = new HashSet<>();
+    private static final Set<UUID> invalidatedTotems = new HashSet<>();
     private static long tickCounter = 0;
 
     public static List<TotemInfo> getTotems() {
@@ -120,6 +122,7 @@ public class TotemTimer {
                     if (isRelik(prevStack) && isRelik(newStack)) {
                         estimatedTotems.clear();
                         estimatedTotemToxoplasmosis.clear();
+                        invalidatedTotems.addAll(lastVisibleTotems);
                     }
                 }
                 lastSelectedSlot = currentSlot;
@@ -163,6 +166,7 @@ public class TotemTimer {
             }
 
             Map<String, Integer> ownerCounts = new HashMap<>();
+            Set<UUID> visibleTotems = new HashSet<>();
             lastFoundKeys.clear();
 
             for (DisplayEntity.TextDisplayEntity tde : allTdes) {
@@ -177,6 +181,9 @@ public class TotemTimer {
                 int lineStart = text.lastIndexOf('\n', idx > 0 ? idx - 1 : 0);
                 String owner = text.substring(lineStart + 1, idx).trim();
                 if (owner.isEmpty()) owner = "?";
+
+                UUID entityId = tde.getUuid();
+                visibleTotems.add(entityId);
 
                 if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
 
@@ -222,13 +229,18 @@ public class TotemTimer {
                 lastFoundKeys.add(key);
 
                 float secs = parseSeconds(timeText);
-                if (secs > 0) {
+                boolean invalidated = invalidatedTotems.contains(entityId);
+                if (secs > 0 && !invalidated) {
                     estimatedTotems.put(key, new float[]{ secs, tickCounter });
                     estimatedTotemToxoplasmosis.put(key, toxoplasmosisText);
                 }
 
                 totems.add(new TotemInfo(owner, timeText, toxoplasmosisText, false));
             }
+
+            invalidatedTotems.retainAll(visibleTotems);
+            lastVisibleTotems.clear();
+            lastVisibleTotems.addAll(visibleTotems);
 
             if (c.totemTimerEstimate) {
                 List<String> toRemove = new ArrayList<>();

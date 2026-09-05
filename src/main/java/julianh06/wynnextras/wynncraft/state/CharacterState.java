@@ -13,9 +13,6 @@ import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.item.ItemStack;
-import net.minecraft.scoreboard.Scoreboard;
-import net.minecraft.scoreboard.ScoreboardEntry;
-import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.text.Text;
 import net.neoforged.bus.api.SubscribeEvent;
 
@@ -68,15 +65,19 @@ public final class CharacterState {
 
     @SubscribeEvent
     public void onTick(TickEvent event) {
-        if (event.ticks % 5 != 0) return;
         update();
+        if (event.ticks % 5 != 0) return;
         SkillPointState.updateFromCurrentMenu();
         TomeState.updateFromCurrentMenu();
     }
 
     @SubscribeEvent
     public void onWorldChange(WorldChangeEvent event) {
+        id = null;
+        characterClass = CharacterClass.UNKNOWN;
+        level = 0;
         world = null;
+        updatedAt = 0;
     }
 
     @SubscribeEvent
@@ -104,14 +105,6 @@ public final class CharacterState {
 
             String playerListWorld = worldFromPlayerList(client);
             if (playerListWorld != null) world = playerListWorld;
-
-            Scoreboard scoreboard = client.world.getScoreboard();
-            for (ScoreboardObjective objective : scoreboard.getObjectives()) {
-                parseLine(objective.getDisplayName().getString(), playerListWorld == null);
-                for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
-                    parseLine(entry.name().getString(), playerListWorld == null);
-                }
-            }
             updatedAt = System.currentTimeMillis();
         } catch (Throwable ignored) {}
     }
@@ -153,21 +146,34 @@ public final class CharacterState {
 
         ItemStack characterInfo = screen.getScreenHandler().slots.get(7).getStack();
         if (characterInfo == null || characterInfo.isEmpty()) return;
-        parseLine(characterInfo.getName().getString(), false);
+        CharacterClass parsedClass = CharacterClass.UNKNOWN;
+        int parsedLevel = 0;
+
+        CharacterInfo lineInfo = parseCharacterInfo(characterInfo.getName().getString());
+        if (lineInfo.characterClass() != CharacterClass.UNKNOWN) parsedClass = lineInfo.characterClass();
+        if (lineInfo.level() > 0) parsedLevel = lineInfo.level();
         LoreComponent lore = characterInfo.get(DataComponentTypes.LORE);
-        if (lore != null) for (Text line : lore.lines()) parseLine(line.getString(), false);
+        if (lore != null) {
+            for (Text line : lore.lines()) {
+                lineInfo = parseCharacterInfo(line.getString());
+                if (lineInfo.characterClass() != CharacterClass.UNKNOWN) parsedClass = lineInfo.characterClass();
+                if (lineInfo.level() > 0) parsedLevel = lineInfo.level();
+            }
+        }
+
+        if (parsedClass != CharacterClass.UNKNOWN) characterClass = parsedClass;
+        if (parsedLevel > 0) level = parsedLevel;
+        if (parsedClass != CharacterClass.UNKNOWN && parsedLevel > 0 && id != null) {
+            CharacterStateIntegration.savePassiveCharacterInfo(id, parsedClass.displayName(), parsedLevel);
+        }
     }
 
-    private static void parseLine(String value, boolean parseWorld) {
+    private static CharacterInfo parseCharacterInfo(String value) {
         String clean = clean(value);
         CharacterClass parsedClass = CharacterClass.parse(clean);
-        if (parsedClass != CharacterClass.UNKNOWN) characterClass = parsedClass;
         Matcher levelMatcher = LEVEL.matcher(clean);
-        if (levelMatcher.find()) level = safeInt(levelMatcher.group(1), level);
-        if (parseWorld) {
-            String parsedWorld = worldFromText(clean);
-            if (parsedWorld != null) world = parsedWorld;
-        }
+        int parsedLevel = levelMatcher.find() ? safeInt(levelMatcher.group(1), 0) : 0;
+        return new CharacterInfo(parsedClass, parsedLevel);
     }
 
     private static String clean(String value) {
@@ -181,4 +187,6 @@ public final class CharacterState {
             return fallback;
         }
     }
+
+    private record CharacterInfo(CharacterClass characterClass, int level) {}
 }

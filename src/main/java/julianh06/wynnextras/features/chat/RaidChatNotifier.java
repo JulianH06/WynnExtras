@@ -972,11 +972,12 @@ public class RaidChatNotifier {
             try (Reader reader = Files.newBufferedReader(path)) {
                 RaidChatNotifier loaded = gson.fromJson(reader, RaidChatNotifier.class);
                 if (loaded != null) {
+                    if (loaded.raidPBs == null) loaded.raidPBs = new HashMap<>();
+                    loaded.raidPBs.entrySet().removeIf(entry -> entry.getKey() == null || entry.getValue() == null);
                     INSTANCE = loaded;
                 }
-            } catch (IOException e) {
-                WynnExtras.LOGGER.error("[WynnExtras] Couldn't read PB data:");
-                e.printStackTrace();
+            } catch (IOException | RuntimeException e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Couldn't load PB data from {}, keeping default data.", path, e);
             }
         }
 

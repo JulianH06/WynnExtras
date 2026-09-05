@@ -580,12 +580,15 @@ public class LootrunLootPoolPage extends PageWidget {
                 boolean hovering = mouseX * ui.getScaleFactorF() >= x + 12 && mouseX * ui.getScaleFactorF() <= x + width - 12 &&
                         mouseY * ui.getScaleFactorF() >= textY && mouseY * ui.getScaleFactorF() <= textY + itemSpacing - 5;
 
+                boolean isWard = item.name.contains("Ward");
                 String rarityColor = item.type.equals("tome") ? "§d" : getRarityColor(item.rarity);
-                if(item.name.contains("Ward")) rarityColor = "§#f9508eff";
+                if(isWard) rarityColor = "§#f9508eff";
                 String displayName = truncate(formatDisplayName(item), width / 2 - 30).replace("Unidentified ", "");
 
                 if (item.type.equals("shiny")) {
                     ui.drawText(displayName.replace("⬡ ", ""), x + 20, textY, WynnExtrasConfig.INSTANCE.removeChroma ? CustomColor.fromHexString("FFFFFF") : CustomColor.RAINBOW, 4f);
+                } else if (isWard) {
+                    ui.drawText(displayName, x + 20, textY, CustomColor.fromHexString("f9508e"), 2.8f);
                 } else {
                     ui.drawText(rarityColor + displayName, x + 20, textY, CustomColor.fromInt(0xFFFFFF), 2.8f);
                 }

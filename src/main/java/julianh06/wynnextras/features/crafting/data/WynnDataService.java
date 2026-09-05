@@ -58,6 +58,8 @@ public final class WynnDataService {
             String type,
             String subType,
             String tier,
+            String restriction,
+            String dropRestriction,
             String attackSpeed,
             Integer powderSlots,
             Map<String, String> requirements,
@@ -519,6 +521,7 @@ public final class WynnDataService {
         String displayName = requiredString(object, "displayName");
         return new ItemData(internalName, displayName, requiredString(object, "type"),
                 optionalString(object, "subType"), optionalString(object, "tier"),
+                optionalString(object, "restriction"), optionalString(object, "dropRestriction"),
                 optionalString(object, "attackSpeed"), optionalInt(object, "powderSlots"),
                 parseScalarMap(object.get("requirements")), parseStatMap(object.get("base")),
                 parseStatMap(object.get("identifications")));
@@ -573,7 +576,7 @@ public final class WynnDataService {
             int tier = parseTier(requiredString(object, "tier"));
             IngredientInfo ingredient = new IngredientInfo(name, tier, level, Optional.of(internalName),
                     null, List.copyOf(professions), skillRequirements, Map.copyOf(positionModifiers), List.of(),
-                    requiredInt(consumable, "duration") / 1000, requiredInt(consumable, "charges"),
+                    requiredInt(consumable, "duration"), requiredInt(consumable, "charges"),
                     requiredInt(itemOnly, "durabilityModifier") / 1000, List.copyOf(identifications));
             if (byDisplayName.put(name, ingredient) != null) {
                 throw new IllegalStateException("Duplicate ingredient display name " + name);

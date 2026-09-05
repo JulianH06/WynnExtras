@@ -174,16 +174,16 @@ public class StringListEditorScreen extends Screen {
         if (items.isEmpty()) ctx.drawCenteredTextWithShadow(textRenderer, "No items", width / 2, height / 2, TEXT_DIM);
 
         int by = height - 55;
-        boolean doneH = mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24;
-        boolean cancelH = mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24;
+        boolean cancelH = mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24;
+        boolean doneH = mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24;
 
         ctx.fill(width / 2 - 105, by, width / 2 - 5, by + 24, BORDER_DARK);
-        ctx.fill(width / 2 - 104, by + 1, width / 2 - 6, by + 23, doneH ? TOGGLE_ON : PARCHMENT);
-        ctx.drawCenteredTextWithShadow(textRenderer, "Done", width / 2 - 55, by + 8, TEXT_LIGHT);
+        ctx.fill(width / 2 - 104, by + 1, width / 2 - 6, by + 23, cancelH ? ACCENT_RED : PARCHMENT);
+        ctx.drawCenteredTextWithShadow(textRenderer, "Cancel", width / 2 - 55, by + 8, TEXT_LIGHT);
 
         ctx.fill(width / 2 + 5, by, width / 2 + 105, by + 24, BORDER_DARK);
-        ctx.fill(width / 2 + 6, by + 1, width / 2 + 104, by + 23, cancelH ? ACCENT_RED : PARCHMENT);
-        ctx.drawCenteredTextWithShadow(textRenderer, "Cancel", width / 2 + 55, by + 8, TEXT_LIGHT);
+        ctx.fill(width / 2 + 6, by + 1, width / 2 + 104, by + 23, doneH ? TOGGLE_ON : PARCHMENT);
+        ctx.drawCenteredTextWithShadow(textRenderer, "Done", width / 2 + 55, by + 8, TEXT_LIGHT);
     }
 
     @Override
@@ -230,12 +230,12 @@ public class StringListEditorScreen extends Screen {
 
         int by = height - 55;
         if (mx >= width / 2 - 105 && mx < width / 2 - 5 && my >= by && my < by + 24) {
-            setter.accept(items);
             client.setScreen(parent);
             MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;
         }
         if (mx >= width / 2 + 5 && mx < width / 2 + 105 && my >= by && my < by + 24) {
+            setter.accept(items);
             client.setScreen(parent);
             MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             return true;

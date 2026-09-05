@@ -8,19 +8,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class WynntilsTooltipAdapter {
-    private record Binding(Class<?> eventClass, Method getTooltips, Method setTooltips) {}
-    private record TooltipBinding(Method method, Class<?> itemType) {}
+    private record Binding(Class<?> eventClass, Method getItemStack, Method getTooltips, Method setTooltips) {}
     private record ChatItemBinding(Class<?> fakeStackType, Class<?> namedItemType, Class<?> tieredItemType,
                                    Method getName, Method getTier) {}
 
     private static final WynntilsCapability<Binding> EVENT = new WynntilsCapability<>("item-tooltip-event", () -> {
         Class<?> eventClass = WynntilsCompat.requireClass("com.wynntils.mc.event.ItemTooltipRenderEvent$Pre");
-        return new Binding(eventClass, eventClass.getMethod("getTooltips"), eventClass.getMethod("setTooltips", List.class));
-    });
-    private static final WynntilsCapability<TooltipBinding> TOOLTIP = new WynntilsCapability<>("item-tooltip", () -> {
-        Class<?> utility = WynntilsCompat.requireClass("com.wynntils.utils.mc.TooltipUtils");
-        Class<?> itemType = WynntilsCompat.requireClass("com.wynntils.models.items.WynnItem");
-        return new TooltipBinding(utility.getMethod("getWynnItemTooltip", ItemStack.class, itemType), itemType);
+        return new Binding(eventClass, eventClass.getMethod("getItemStack"), eventClass.getMethod("getTooltips"),
+                eventClass.getMethod("setTooltips", List.class));
     });
     private static final WynntilsCapability<ChatItemBinding> CHAT_ITEM = new WynntilsCapability<>("chat-item-tooltip", () -> {
         Class<?> fakeStackType = WynntilsCompat.requireClass("com.wynntils.models.items.FakeItemStack");
@@ -47,23 +42,19 @@ public final class WynntilsTooltipAdapter {
         }).orElseGet(List::of);
     }
 
+    public static ItemStack getItemStack(Object event) {
+        return EVENT.invoke(binding -> {
+            if (!binding.eventClass.isInstance(event)) return null;
+            Object result = binding.getItemStack.invoke(event);
+            return result instanceof ItemStack stack ? stack : null;
+        }).orElse(null);
+    }
+
     public static void setTooltips(Object event, List<Text> tooltips) {
         EVENT.run(binding -> {
             if (binding.eventClass.isInstance(event)) binding.setTooltips.invoke(event, tooltips);
             return null;
         });
-    }
-
-    public static List<Text> getWynnItemTooltip(ItemStack stack, Object item) {
-        if (stack == null || item == null) return List.of();
-        return TOOLTIP.invoke(binding -> {
-            if (!binding.itemType.isInstance(item)) return List.<Text>of();
-            Object result = binding.method.invoke(null, stack, item);
-            if (!(result instanceof List<?> values)) return List.<Text>of();
-            List<Text> texts = new ArrayList<>(values.size());
-            for (Object value : values) if (value instanceof Text text) texts.add(text);
-            return texts;
-        }).orElseGet(List::of);
     }
 
     public static boolean isItemStatInfoEnabled() {

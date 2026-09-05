@@ -18,8 +18,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.regex.Pattern;
+
 @Mixin(EntityRenderManager.class)
 public class EntityRenderManagerShaderMixin {
+    private static final Pattern PLAYER_NAME_PATTERN = Pattern.compile("[a-zA-Z0-9_]{3,16}");
+
     @Inject(
         method = "render(Lnet/minecraft/client/render/entity/state/EntityRenderState;Lnet/minecraft/client/render/state/CameraRenderState;DDDLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;)V",
         at = @At("HEAD")
@@ -31,7 +35,7 @@ public class EntityRenderManagerShaderMixin {
         Entity entity = access.wynnExtras$getEntity();
         if (entity == null) return;
         if (entity == MinecraftClient.getInstance().player) return;
-        if (entity instanceof PlayerEntity) return;
+        if (entity instanceof PlayerEntity && PLAYER_NAME_PATTERN.matcher(entity.getName().getString()).matches()) return;
         if (!(entity instanceof LivingEntity)) return;
         if (CurseTracker.cursedEntityIds.contains(entity.getId())) {
             EntityShader.activeShader = 0xFF000000 | c.curseTrackerMobColor.getRGB();

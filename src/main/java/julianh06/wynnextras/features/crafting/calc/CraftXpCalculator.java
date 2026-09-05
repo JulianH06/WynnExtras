@@ -112,11 +112,11 @@ public final class CraftXpCalculator {
 
     /**
      * Total XP still needed to reach {@code targetLevel}, given the progress already made inside
-     * the current level. Returns 0 when the target is not ahead of the player or falls outside
-     * the covered range.
+     * the current level. Returns -1 when an intermediate level falls outside the covered range.
      */
     public static long xpBetween(int currentLevel, long xpIntoCurrentLevel, long xpForCurrentLevel, int targetLevel) {
         if (targetLevel <= currentLevel || targetLevel > MAX_LEVEL) return 0;
+        if (currentLevel < MIN_LEVEL - 1) return -1;
 
         long total = Math.max(0, xpForCurrentLevel - xpIntoCurrentLevel);
         for (int level = currentLevel + 2; level <= targetLevel; level++) {

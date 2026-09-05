@@ -108,7 +108,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private int[] visOrder = new int[15];
     // visCharId[i] = the UUID for the i-th visible card
     private String[] visCharId = new String[15];
-    private final Map<String, String> lastHeldWeaponDetailCache = new HashMap<>();
     // Only run identity matching once per screen open
     private boolean identityMatched = false;
     private String pendingIdentitySnapshot = "";
@@ -333,7 +332,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return 0;
     }
 
-    private int extractLevel(ItemStack stack) {
+    private static int extractLevel(ItemStack stack) {
         for (Text line : getTooltipLines(stack)) {
             String str = line.getString().replaceAll("\u00A7[0-9a-fk-or]", "").trim();
             if (str.contains("Level:")) {
@@ -461,6 +460,13 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         Set<String> storedUsed = new HashSet<>();
         Set<String> assignedUuids = new HashSet<>();
         List<String> savedOrder = sanitizeSavedOrder(ClassSelectionData.getClassCardOrder());
+
+        for (int i = 0; i < currentChars.size(); i++) {
+            if (!isPlaceholderSlot(currentChars.get(i))) continue;
+            uuids[i] = PLACEHOLDER_UUID_PREFIX + i;
+            currentUsed[i] = true;
+        }
+
         LinkedHashSet<String> candidateStoredUuids = new LinkedHashSet<>();
         for (String uuid : savedOrder) {
             if (stored.containsKey(uuid)) candidateStoredUuids.add(uuid);
@@ -527,17 +533,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
 
         for (int i = 0; i < currentChars.size(); i++) {
             if (currentUsed[i]) continue;
-
-            // "Create a Character" and "Locked Character Slot" entries carry no distinguishing
-            // data at all — same blank class, level 0, no playtime — so neither exact nor fuzzy
-            // matching can ever pin them down. Minting a fresh identity for them would happen on
-            // every refresh and get persisted each time, growing the identity file and the card
-            // order without bound. A slot-derived id keeps them stable and unsaved instead.
-            if (isPlaceholderSlot(currentChars.get(i))) {
-                uuids[i] = PLACEHOLDER_UUID_PREFIX + i;
-                currentUsed[i] = true;
-                continue;
-            }
 
             String newUuid = createNewCharUuid(assignedUuids, stored);
             uuids[i] = newUuid;
@@ -728,7 +723,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         if (savedOrder == null || savedOrder.isEmpty()) return new ArrayList<>();
         LinkedHashSet<String> unique = new LinkedHashSet<>();
         for (String uuid : savedOrder) {
-            if (uuid != null && !uuid.isBlank()) unique.add(uuid);
+            if (uuid != null && !uuid.isBlank() && !uuid.startsWith(PLACEHOLDER_UUID_PREFIX)) unique.add(uuid);
         }
         return new ArrayList<>(unique);
     }
@@ -903,7 +898,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     /** Extract just the class type name (without level) */
-    private String extractClassName(ItemStack stack) {
+    private static String extractClassName(ItemStack stack) {
         String[] classNames = {"Warrior", "Knight", "Mage", "Dark Wizard", "Assassin", "Ninja",
                 "Archer", "Hunter", "Shaman", "Skyseer"};
         for (Text line : getTooltipLines(stack)) {
@@ -918,12 +913,23 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     private void saveCardOrder() {
         List<String> order = new ArrayList<>();
         for (int i = 0; i < visibleCardCount; i++) {
-            order.add(visCharId[i]);
+            if (!visCharId[i].startsWith(PLACEHOLDER_UUID_PREFIX)) order.add(visCharId[i]);
         }
         ClassSelectionData.setClassCardOrder(order);
     }
 
     public static boolean isClassSelectionScreen(String title) { return CLASS_SELECTION_TITLE.equals(title); }
+
+    public static boolean matchesCrossClassTarget(ItemStack stack, String targetName, int targetLevel) {
+        if (stack == null || stack.isEmpty() || targetName == null || targetName.isEmpty()) return false;
+
+        boolean nameMatch = targetName.equalsIgnoreCase(cleanName(stack.getName().getString()))
+                || targetName.equalsIgnoreCase(extractClassName(stack));
+        if (!nameMatch) return false;
+
+        int level = extractLevel(stack);
+        return targetLevel <= 0 || level <= 0 || Math.abs(level - targetLevel) <= 5;
+    }
 
     /** Convert desired screen pixels to logical UIUtils coordinates */
     private float px(float screenPx) { return screenPx * (float) scaleFactor; }
@@ -1821,16 +1827,10 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             }
             if (origIdx < 0 || origIdx >= charDataList.size()) continue;
 
-            CharIdentity card = charDataList.get(origIdx);
-
             boolean match = false;
             if (targetName != null && !targetName.isEmpty()) {
                 // Name + level matching
-                boolean nameMatch = targetName.equalsIgnoreCase(card.name)
-                        || targetName.equalsIgnoreCase(card.classType);
-                boolean levelMatch = targetLevel <= 0 || card.level <= 0
-                        || Math.abs(card.level - targetLevel) <= 5;
-                match = nameMatch && levelMatch;
+                match = matchesCrossClassTarget(stacks.get(CHARACTER_SLOTS[arrayIdx]), targetName, targetLevel);
             }
 
             if (match) {
@@ -1860,12 +1860,12 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return mx >= sx && mx <= sx + sw && my >= sy && my <= sy + sh;
     }
 
-    private List<Text> getTooltipLines(ItemStack stack) {
+    private static List<Text> getTooltipLines(ItemStack stack) {
         return stack.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player, TooltipType.BASIC);
     }
 
     /** Strip formatting codes, brackets, and Wynncraft resource pack glyphs */
-    private String cleanName(String raw) {
+    private static String cleanName(String raw) {
         String stripped = raw.replaceAll("\u00A7[0-9a-fk-or]", "");
         stripped = stripped.replaceAll("^\\[|\\]$", "");
         // Strip surrogate pairs and Private Use Area characters (Wynncraft glyphs)
@@ -2007,11 +2007,6 @@ public class ClassSelectionOverlay extends WEHandledScreen {
     }
 
     private String getLastHeldWeaponDetail(String charId) {
-        if (lastHeldWeaponDetailCache.containsKey(charId)) {
-            String cached = lastHeldWeaponDetailCache.get(charId);
-            return cached == null || cached.isEmpty() ? "- Weapon: unknown" : cached;
-        }
-
         CharIdentity identity = ClassSelectionData.getCharIdentities().get(charId);
         if (identity != null) {
             ItemStack weapon = CrossClassBankSearch.findLastHeldWeaponForClassSelection(
@@ -2023,12 +2018,10 @@ public class ClassSelectionOverlay extends WEHandledScreen {
             );
             if (weapon != null && !weapon.isEmpty()) {
                 String detail = truncate("- Weapon: " + cleanName(weapon.getName().getString()), 30);
-                lastHeldWeaponDetailCache.put(charId, detail);
                 return detail;
             }
         }
 
-        lastHeldWeaponDetailCache.put(charId, "");
         return "- Weapon: unknown";
     }
 

@@ -27,6 +27,7 @@ public class RaidLootTrackerOverlay {
     private static int yPos = 5;
     private static final int WIDTH = 165;
     private static int effectiveWidth = WIDTH;
+    private static int effectiveHeight;
     private static final int LINE_HEIGHT = 10;
     private static final float TEXT_SCALE = 1.0f;
 
@@ -225,79 +226,6 @@ public class RaidLootTrackerOverlay {
 
         // Compute effective width (background + layout) so long labels/values don't overflow
         effectiveWidth = Math.max(WIDTH, cachedMaxContentWidth(config, compact, selectedFilter));
-        if (config.raidLootTrackerBackground) {
-            int contentHeight = calculateContentHeight(compact, showHiddenLines);
-            int padX = 4;
-            int padY = 3;
-            int bgX = xPos - padX;
-            int bgY = yPos - padY;
-            int bgWidth = effectiveWidth + padX * 2;
-            int bgHeight = contentHeight + padY * 2;
-            int bgColor = 0xCC1a1a1a; // Dark gray with transparency
-            drawBackground(context, bgX, bgY, bgX + bgWidth, bgY + bgHeight, bgColor);
-        }
-
-        int y = yPos;
-
-        // Brand pill + Title
-        MinecraftClient mc2 = MinecraftClient.getInstance();
-        Text pillWithTitle = WynnExtras.addWynnExtrasPrefix(Text.literal("Raid Loot").styled(s -> s.withColor(TITLE_COLOR.asInt())));
-        FontRenderer.getInstance().renderText(
-                context, StyledText.fromComponent(pillWithTitle),
-                xPos, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP,
-                TextShadow.OUTLINE, TEXT_SCALE);
-        if (canEdit) {
-            String editText = editMode ? "[Edit: ON]" : "[Edit]";
-            float editWidth = getTextWidth(editText);
-            drawTextRight(context, editText, xPos + effectiveWidth, y, editMode ? SESSION_COLOR : FILTER_ARROW_COLOR);
-            editButtonBounds = new int[]{(int) (xPos + effectiveWidth - editWidth), y, xPos + effectiveWidth, y + LINE_HEIGHT};
-        } else {
-            editButtonBounds = new int[4];
-        }
-        y += LINE_HEIGHT + 2;
-
-        // Raid selector - nicer design with clickable arrows
-        String modeText = MODES[config.raidLootTrackerMode.ordinal()];
-        CustomColor modeColor = MODE_COLORS[config.raidLootTrackerMode.ordinal()];
-
-        // Left arrow [◀
-        String leftArrowText = "[\u25C0";
-        drawText(context, leftArrowText, xPos, y, FILTER_ARROW_COLOR);
-        float leftArrowWidth = getTextWidth(leftArrowText);
-        leftArrowBounds = new int[]{(int)xPos, y, (int)(xPos + leftArrowWidth), y + LINE_HEIGHT};
-
-        // Filter name
-        drawText(context, " ", xPos + leftArrowWidth, y, FILTER_ARROW_COLOR);
-        float spaceWidth = getTextWidth(" ");
-        float filterStartX = xPos + leftArrowWidth + spaceWidth;
-        drawText(context, selectedFilter, filterStartX, y, FILTER_COLOR);
-        float filterWidth = getTextWidth(selectedFilter);
-        filterNameBounds = new int[]{(int)filterStartX, y, (int)(filterStartX + filterWidth), y + LINE_HEIGHT};
-
-        // Right arrow ▶]
-        String rightArrowText = " \u25B6]";
-        drawText(context, rightArrowText, xPos + leftArrowWidth + spaceWidth + filterWidth, y, FILTER_ARROW_COLOR);
-        float rightArrowWidth = getTextWidth(rightArrowText);
-        rightArrowBounds = new int[]{(int)(xPos + leftArrowWidth + spaceWidth + filterWidth), y,
-                (int)(xPos + leftArrowWidth + spaceWidth + filterWidth + rightArrowWidth), y + LINE_HEIGHT};
-
-        // Mode selector on right with arrows [◀ Session ▶]
-        String modeRightArrow = "\u25B6]";
-        float modeRightArrowWidth = getTextWidth(modeRightArrow);
-        drawTextRight(context, modeRightArrow, xPos + effectiveWidth, y, FILTER_ARROW_COLOR);
-        modeRightArrowBounds = new int[]{(int)(xPos + effectiveWidth - modeRightArrowWidth), y, xPos + effectiveWidth, y + LINE_HEIGHT};
-
-        float modeNameWidth = getTextWidth(modeText);
-        float modeNameEndX = xPos + effectiveWidth - modeRightArrowWidth - getTextWidth(" ");
-        drawTextRight(context, modeText, modeNameEndX, y, modeColor);
-        modeNameBounds = new int[]{(int)(modeNameEndX - modeNameWidth), y, (int)modeNameEndX, y + LINE_HEIGHT};
-
-        String modeLeftArrow = "[\u25C0 ";
-        float modeLeftArrowWidth = getTextWidth(modeLeftArrow);
-        float modeLeftArrowX = modeNameEndX - modeNameWidth;
-        drawTextRight(context, modeLeftArrow, modeLeftArrowX, y, FILTER_ARROW_COLOR);
-        modeLeftArrowBounds = new int[]{(int)(modeLeftArrowX - modeLeftArrowWidth), y, (int)modeLeftArrowX, y + LINE_HEIGHT};
-        y += LINE_HEIGHT + 3;
 
         // Get appropriate data
         RaidLootData.RaidSpecificLoot displayData;
@@ -337,10 +265,102 @@ public class RaidLootTrackerOverlay {
         long remainingAfterLE = remainingAfterStx % 4096;
         long eb = remainingAfterLE / 64;
 
+        int dataY = yPos + LINE_HEIGHT + 2 + LINE_HEIGHT + 3;
+        int contentBottom = renderDataLines(null, config, displayData, completions, compact,
+                showHiddenLines, dataY, stacks, le, eb);
+        effectiveHeight = contentBottom - yPos;
+
+        if (config.raidLootTrackerBackground) {
+            int padX = 4;
+            int padY = 3;
+            int bgX = xPos - padX;
+            int bgY = yPos - padY;
+            int bgWidth = effectiveWidth + padX * 2;
+            int bgHeight = effectiveHeight + padY * 2;
+            int bgColor = 0xCC1a1a1a;
+            drawBackground(context, bgX, bgY, bgX + bgWidth, bgY + bgHeight, bgColor);
+        }
+
+        int renderedDataY = renderHeader(context, config, canEdit, selectedFilter);
+        renderDataLines(context, config, displayData, completions, compact,
+                showHiddenLines, renderedDataY, stacks, le, eb);
+
+        String hoveredLine = getHoveredLine(mouseX, mouseY);
+        int hoveredPowderTier = getPowderTier(hoveredLine);
+        if (hoveredPowderTier >= 0) {
+            drawPowderTooltip(context, displayData, hoveredPowderTier, mouseX, mouseY);
+        } else if (showHiddenLines && !config.automaticAspectScanning && isAspectLine(hoveredLine)) {
+            context.drawTooltip(MinecraftClient.getInstance().textRenderer, List.of(
+                    Text.literal("§cAutomatic aspect scanning is disabled."),
+                    Text.literal("§7Aspect lines only show and update when it's enabled.")
+            ), mouseX, mouseY);
+        }
+    }
+
+    private static int renderHeader(DrawContext context, WynnExtrasConfig config, boolean canEdit,
+                                    String selectedFilter) {
+        int y = yPos;
+        Text pillWithTitle = WynnExtras.addWynnExtrasPrefix(Text.literal("Raid Loot").styled(s -> s.withColor(TITLE_COLOR.asInt())));
+        FontRenderer.getInstance().renderText(
+                context, StyledText.fromComponent(pillWithTitle),
+                xPos, y, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.LEFT, VerticalAlignment.TOP,
+                TextShadow.OUTLINE, TEXT_SCALE);
+        if (canEdit) {
+            String editText = editMode ? "[Edit: ON]" : "[Edit]";
+            float editWidth = getTextWidth(editText);
+            drawTextRight(context, editText, xPos + effectiveWidth, y, editMode ? SESSION_COLOR : FILTER_ARROW_COLOR);
+            editButtonBounds = new int[]{(int) (xPos + effectiveWidth - editWidth), y, xPos + effectiveWidth, y + LINE_HEIGHT};
+        } else {
+            editButtonBounds = new int[4];
+        }
+        y += LINE_HEIGHT + 2;
+
+        String modeText = MODES[config.raidLootTrackerMode.ordinal()];
+        CustomColor modeColor = MODE_COLORS[config.raidLootTrackerMode.ordinal()];
+        String leftArrowText = "[\u25C0";
+        drawText(context, leftArrowText, xPos, y, FILTER_ARROW_COLOR);
+        float leftArrowWidth = getTextWidth(leftArrowText);
+        leftArrowBounds = new int[]{xPos, y, (int) (xPos + leftArrowWidth), y + LINE_HEIGHT};
+
+        drawText(context, " ", xPos + leftArrowWidth, y, FILTER_ARROW_COLOR);
+        float spaceWidth = getTextWidth(" ");
+        float filterStartX = xPos + leftArrowWidth + spaceWidth;
+        drawText(context, selectedFilter, filterStartX, y, FILTER_COLOR);
+        float filterWidth = getTextWidth(selectedFilter);
+        filterNameBounds = new int[]{(int) filterStartX, y, (int) (filterStartX + filterWidth), y + LINE_HEIGHT};
+
+        String rightArrowText = " \u25B6]";
+        drawText(context, rightArrowText, xPos + leftArrowWidth + spaceWidth + filterWidth, y, FILTER_ARROW_COLOR);
+        float rightArrowWidth = getTextWidth(rightArrowText);
+        rightArrowBounds = new int[]{(int) (xPos + leftArrowWidth + spaceWidth + filterWidth), y,
+                (int) (xPos + leftArrowWidth + spaceWidth + filterWidth + rightArrowWidth), y + LINE_HEIGHT};
+
+        String modeRightArrow = "\u25B6]";
+        float modeRightArrowWidth = getTextWidth(modeRightArrow);
+        drawTextRight(context, modeRightArrow, xPos + effectiveWidth, y, FILTER_ARROW_COLOR);
+        modeRightArrowBounds = new int[]{(int) (xPos + effectiveWidth - modeRightArrowWidth), y,
+                xPos + effectiveWidth, y + LINE_HEIGHT};
+
+        float modeNameWidth = getTextWidth(modeText);
+        float modeNameEndX = xPos + effectiveWidth - modeRightArrowWidth - spaceWidth;
+        drawTextRight(context, modeText, modeNameEndX, y, modeColor);
+        modeNameBounds = new int[]{(int) (modeNameEndX - modeNameWidth), y, (int) modeNameEndX, y + LINE_HEIGHT};
+
+        String modeLeftArrow = "[\u25C0 ";
+        float modeLeftArrowWidth = getTextWidth(modeLeftArrow);
+        float modeLeftArrowX = modeNameEndX - modeNameWidth;
+        drawTextRight(context, modeLeftArrow, modeLeftArrowX, y, FILTER_ARROW_COLOR);
+        modeLeftArrowBounds = new int[]{(int) (modeLeftArrowX - modeLeftArrowWidth), y,
+                (int) modeLeftArrowX, y + LINE_HEIGHT};
+        return y + LINE_HEIGHT + 3;
+    }
+
+    private static int renderDataLines(DrawContext context, WynnExtrasConfig config,
+                                       RaidLootData.RaidSpecificLoot displayData, int completions,
+                                       boolean compact, boolean showHiddenLines, int y,
+                                       long stacks, long le, long eb) {
         if (compact) {
-            // Compact mode - just totals
-            String compactEmeraldVal = formatEmeraldsCompact(stacks, le, eb);
-            y = drawCompactLine(context, LINE_EMERALDS, "Ems", compactEmeraldVal, EMERALD_COLOR, y, showHiddenLines);
+            y = drawCompactLine(context, LINE_EMERALDS, "Ems", formatEmeraldsCompact(stacks, le, eb), EMERALD_COLOR, y, showHiddenLines);
             y = drawCompactLine(context, LINE_AMPLIFIERS, "Amps", String.valueOf(displayData.getTotalAmplifiers()), AMPLIFIER_COLOR, y, showHiddenLines);
             y = drawCompactLine(context, LINE_BAGS, "Bags", String.valueOf(displayData.totalBags), BAG_COLOR, y, showHiddenLines);
             y = drawCompactLine(context, LINE_TOMES, "Tomes", String.valueOf(displayData.totalTomes), TOME_COLOR, y, showHiddenLines);
@@ -355,62 +375,50 @@ public class RaidLootTrackerOverlay {
             } else if (showHiddenLines) {
                 y = drawDisabledLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), y);
             }
-            if(config.raidLootTrackerMode != mode.LATEST) drawCompactLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, showHiddenLines);
-        } else {
-            // Full mode
-            String emeraldVal = formatEmeralds(stacks, le, eb);
-            y = drawLine(context, LINE_EMERALDS, "Emeralds", emeraldVal, EMERALD_COLOR, y, showHiddenLines);
-
-            int totalAmps = displayData.getTotalAmplifiers();
-            y = drawLine(context, LINE_AMPLIFIERS, "Amplifiers", String.valueOf(totalAmps), AMPLIFIER_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_AMP_T1, "  Tier I", String.valueOf(displayData.amplifierTier1), AMPLIFIER_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_AMP_T2, "  Tier II", String.valueOf(displayData.amplifierTier2), AMPLIFIER_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_AMP_T3, "  Tier III", String.valueOf(displayData.amplifierTier3), AMPLIFIER_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_AMP_T4, "  Tier IV", String.valueOf(displayData.amplifierTier4), AMPLIFIER_COLOR, y, showHiddenLines);
-
-            y = drawLine(context, LINE_BAGS, "Crafter Bags", String.valueOf(displayData.totalBags), BAG_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_BAGS_STUFFED, "  Stuffed", String.valueOf(displayData.stuffedBags), BAG_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_BAGS_PACKED, "  Packed", String.valueOf(displayData.packedBags), BAG_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_BAGS_VARIED, "  Varied", String.valueOf(displayData.variedBags), BAG_COLOR, y, showHiddenLines);
-
-            y = drawLine(context, LINE_TOMES, "Tomes", String.valueOf(displayData.totalTomes), TOME_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_TOMES_MYTHIC, "  Mythic", String.valueOf(displayData.mythicTomes), TOME_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_TOMES_FABLED, "  Fabled", String.valueOf(displayData.fabledTomes), TOME_COLOR, y, showHiddenLines);
-
-            y = drawLine(context, LINE_CHARMS, "Charms", String.valueOf(displayData.totalCharms), CHARM_COLOR, y, showHiddenLines);
-            y = drawLine(context, LINE_POWDERS, "Powders", String.valueOf(displayData.getTotalPowders()), POWDER_COLOR, y, showHiddenLines);
-            for (int tier = 0; tier < POWDER_TIER_NAMES.length; tier++) {
-                y = drawLine(context, POWDER_TIER_LINES[tier], "  Tier " + POWDER_TIER_NAMES[tier],
-                        String.valueOf(displayData.getPowderTierTotal(tier)), POWDER_COLOR, y, showHiddenLines);
+            if (config.raidLootTrackerMode != mode.LATEST) {
+                y = drawCompactLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, showHiddenLines);
             }
-            y = drawLine(context, LINE_WARDS, "Wards", String.valueOf(displayData.totalWards), WARD_COLOR, y, showHiddenLines);
+            return y;
+        }
 
-            if (config.automaticAspectScanning) {
-                y = drawLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), ASPECT_COLOR, y, showHiddenLines);
-                y = drawLine(context, LINE_ASPECTS_MYTHIC, "  Mythic", String.valueOf(displayData.mythicAspects), ASPECT_COLOR, y, showHiddenLines);
-                y = drawLine(context, LINE_ASPECTS_FABLED, "  Fabled", String.valueOf(displayData.fabledAspects), ASPECT_COLOR, y, showHiddenLines);
-                y = drawLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), ASPECT_COLOR, y, showHiddenLines);
-            } else if (showHiddenLines) {
-                y = drawDisabledLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), y);
-                y = drawDisabledLine(context, LINE_ASPECTS_MYTHIC, "  Mythic", String.valueOf(displayData.mythicAspects), y);
-                y = drawDisabledLine(context, LINE_ASPECTS_FABLED, "  Fabled", String.valueOf(displayData.fabledAspects), y);
-                y = drawDisabledLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), y);
-            }
+        y = drawLine(context, LINE_EMERALDS, "Emeralds", formatEmeralds(stacks, le, eb), EMERALD_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_AMPLIFIERS, "Amplifiers", String.valueOf(displayData.getTotalAmplifiers()), AMPLIFIER_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_AMP_T1, "  Tier I", String.valueOf(displayData.amplifierTier1), AMPLIFIER_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_AMP_T2, "  Tier II", String.valueOf(displayData.amplifierTier2), AMPLIFIER_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_AMP_T3, "  Tier III", String.valueOf(displayData.amplifierTier3), AMPLIFIER_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_AMP_T4, "  Tier IV", String.valueOf(displayData.amplifierTier4), AMPLIFIER_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_BAGS, "Crafter Bags", String.valueOf(displayData.totalBags), BAG_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_BAGS_STUFFED, "  Stuffed", String.valueOf(displayData.stuffedBags), BAG_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_BAGS_PACKED, "  Packed", String.valueOf(displayData.packedBags), BAG_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_BAGS_VARIED, "  Varied", String.valueOf(displayData.variedBags), BAG_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_TOMES, "Tomes", String.valueOf(displayData.totalTomes), TOME_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_TOMES_MYTHIC, "  Mythic", String.valueOf(displayData.mythicTomes), TOME_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_TOMES_FABLED, "  Fabled", String.valueOf(displayData.fabledTomes), TOME_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_CHARMS, "Charms", String.valueOf(displayData.totalCharms), CHARM_COLOR, y, showHiddenLines);
+        y = drawLine(context, LINE_POWDERS, "Powders", String.valueOf(displayData.getTotalPowders()), POWDER_COLOR, y, showHiddenLines);
+        for (int tier = 0; tier < POWDER_TIER_NAMES.length; tier++) {
+            y = drawLine(context, POWDER_TIER_LINES[tier], "  Tier " + POWDER_TIER_NAMES[tier],
+                    String.valueOf(displayData.getPowderTierTotal(tier)), POWDER_COLOR, y, showHiddenLines);
+        }
+        y = drawLine(context, LINE_WARDS, "Wards", String.valueOf(displayData.totalWards), WARD_COLOR, y, showHiddenLines);
 
+        if (config.automaticAspectScanning) {
+            y = drawLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), ASPECT_COLOR, y, showHiddenLines);
+            y = drawLine(context, LINE_ASPECTS_MYTHIC, "  Mythic", String.valueOf(displayData.mythicAspects), ASPECT_COLOR, y, showHiddenLines);
+            y = drawLine(context, LINE_ASPECTS_FABLED, "  Fabled", String.valueOf(displayData.fabledAspects), ASPECT_COLOR, y, showHiddenLines);
+            y = drawLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), ASPECT_COLOR, y, showHiddenLines);
+        } else if (showHiddenLines) {
+            y = drawDisabledLine(context, LINE_ASPECTS, "Aspects", String.valueOf(displayData.mythicAspects + displayData.fabledAspects + displayData.legendaryAspects), y);
+            y = drawDisabledLine(context, LINE_ASPECTS_MYTHIC, "  Mythic", String.valueOf(displayData.mythicAspects), y);
+            y = drawDisabledLine(context, LINE_ASPECTS_FABLED, "  Fabled", String.valueOf(displayData.fabledAspects), y);
+            y = drawDisabledLine(context, LINE_ASPECTS_LEGENDARY, "  Legendary", String.valueOf(displayData.legendaryAspects), y);
+        }
+
+        if (config.raidLootTrackerMode != mode.LATEST && shouldRenderLine(LINE_COMPLETIONS, showHiddenLines)) {
             y += 2;
-            if(config.raidLootTrackerMode != mode.LATEST) drawLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, showHiddenLines);
+            y = drawLine(context, LINE_COMPLETIONS, "Runs", String.valueOf(completions), HEADER_COLOR, y, showHiddenLines);
         }
-
-        String hoveredLine = getHoveredLine(mouseX, mouseY);
-        int hoveredPowderTier = getPowderTier(hoveredLine);
-        if (hoveredPowderTier >= 0) {
-            drawPowderTooltip(context, displayData, hoveredPowderTier, mouseX, mouseY);
-        } else if (showHiddenLines && !config.automaticAspectScanning && isAspectLine(hoveredLine)) {
-            context.drawTooltip(MinecraftClient.getInstance().textRenderer, List.of(
-                    Text.literal("§cAutomatic aspect scanning is disabled."),
-                    Text.literal("§7Aspect lines only show and update when it's enabled.")
-            ), mouseX, mouseY);
-        }
+        return y;
     }
 
 
@@ -420,13 +428,14 @@ public class RaidLootTrackerOverlay {
 
         if (isHidden && !inInventory) return y;
 
-        linePositions.put(lineId, new int[]{y, y + LINE_HEIGHT});
-
-        if (isHidden && inInventory) {
-            drawTextStrikethrough(context, label + ": " + value, xPos, y, HIDDEN_COLOR);
-        } else {
-            drawText(context, label + ":", xPos, y, color);
-            drawTextRight(context, value, xPos + effectiveWidth, y, VALUE_COLOR);
+        if (context != null) {
+            linePositions.put(lineId, new int[]{y, y + LINE_HEIGHT});
+            if (isHidden && inInventory) {
+                drawTextStrikethrough(context, label + ": " + value, xPos, y, HIDDEN_COLOR);
+            } else {
+                drawText(context, label + ":", xPos, y, color);
+                drawTextRight(context, value, xPos + effectiveWidth, y, VALUE_COLOR);
+            }
         }
 
         return y + LINE_HEIGHT;
@@ -437,28 +446,28 @@ public class RaidLootTrackerOverlay {
         boolean isHidden = hiddenLines.contains(lineId);
         if (isHidden && !inInventory) return y;
 
-        linePositions.put(lineId, new int[]{y, y + LINE_HEIGHT});
-
-        if (isHidden && inInventory) {
-            drawTextStrikethrough(context, label + ":" + value, xPos, y, HIDDEN_COLOR);
-        } else {
-            drawText(context, label + ":", xPos, y, color);
-            drawTextRight(context, value, xPos + effectiveWidth, y, VALUE_COLOR);
+        if (context != null) {
+            linePositions.put(lineId, new int[]{y, y + LINE_HEIGHT});
+            if (isHidden && inInventory) {
+                drawTextStrikethrough(context, label + ":" + value, xPos, y, HIDDEN_COLOR);
+            } else {
+                drawText(context, label + ":", xPos, y, color);
+                drawTextRight(context, value, xPos + effectiveWidth, y, VALUE_COLOR);
+            }
         }
 
         return y + LINE_HEIGHT;
     }
 
     private static int drawDisabledLine(DrawContext context, String lineId, String label, String value, int y) {
-        linePositions.put(lineId, new int[]{y, y + LINE_HEIGHT});
-        drawText(context, label + ":", xPos, y, HIDDEN_COLOR);
-        drawTextRight(context, value, xPos + effectiveWidth, y, HIDDEN_COLOR);
+        if (context != null) {
+            linePositions.put(lineId, new int[]{y, y + LINE_HEIGHT});
+            drawText(context, label + ":", xPos, y, HIDDEN_COLOR);
+            drawTextRight(context, value, xPos + effectiveWidth, y, HIDDEN_COLOR);
+        }
         return y + LINE_HEIGHT;
     }
 
-    /** Compute the widest label+value pair needed so the background hugs the content. */
-    // The width calculation walks every loot row and measures text for each one. It only changes
-    // when loot is recorded or the filter/mode changes, so it does not need to run every frame.
     private static int cachedContentWidth = -1;
     private static long cachedContentWidthAt = 0L;
     private static boolean cachedContentWidthCompact;
@@ -482,6 +491,7 @@ public class RaidLootTrackerOverlay {
         return cachedContentWidth;
     }
 
+    /** Compute the widest label+value pair needed so the background hugs the content. */
     private static int calculateMaxContentWidth(WynnExtrasConfig config, boolean compact, String selectedFilter) {
         RaidLootData data = RaidLootConfig.INSTANCE.data;
         RaidLootData.RaidSpecificLoot d;
@@ -563,49 +573,6 @@ public class RaidLootTrackerOverlay {
         return (int) Math.ceil(max);
     }
 
-    private static int calculateContentHeight(boolean compact, boolean inInventory) {
-        // Title row: LINE_HEIGHT + 2
-        // Filter row: LINE_HEIGHT + 3
-        int headerHeight = LINE_HEIGHT + 2 + LINE_HEIGHT + 3;
-        List<String> lines = compact ? List.of(
-                LINE_EMERALDS, LINE_AMPLIFIERS, LINE_BAGS, LINE_TOMES, LINE_CHARMS,
-                LINE_POWDERS_T1, LINE_POWDERS_T2, LINE_POWDERS_T3, LINE_POWDERS_T4,
-                LINE_POWDERS_T5, LINE_POWDERS_T6, LINE_POWDERS_T7,
-                LINE_WARDS, LINE_ASPECTS, LINE_COMPLETIONS
-        ) : List.of(
-                LINE_EMERALDS, LINE_AMPLIFIERS, LINE_AMP_T1, LINE_AMP_T2, LINE_AMP_T3, LINE_AMP_T4,
-                LINE_BAGS, LINE_BAGS_STUFFED, LINE_BAGS_PACKED, LINE_BAGS_VARIED,
-                LINE_TOMES, LINE_TOMES_MYTHIC, LINE_TOMES_FABLED, LINE_CHARMS,
-                LINE_POWDERS, LINE_POWDERS_T1, LINE_POWDERS_T2, LINE_POWDERS_T3, LINE_POWDERS_T4,
-                LINE_POWDERS_T5, LINE_POWDERS_T6, LINE_POWDERS_T7, LINE_WARDS,
-                LINE_ASPECTS, LINE_ASPECTS_MYTHIC, LINE_ASPECTS_FABLED, LINE_ASPECTS_LEGENDARY,
-                LINE_COMPLETIONS
-        );
-
-        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
-        int dataLines = 0;
-        for (String line : lines) {
-            if (line.equals(LINE_COMPLETIONS) && config.raidLootTrackerMode == mode.LATEST) continue;
-            if (isAspectLine(line) && !config.automaticAspectScanning) {
-                if (inInventory) dataLines++;
-                continue;
-            }
-            if (inInventory || !hiddenLines.contains(line)) dataLines++;
-        }
-
-        // +2 for the gap before Runs in full mode
-        int dataHeight = dataLines * LINE_HEIGHT + (compact ? 0 : 2);
-
-        return headerHeight + dataHeight;
-    }
-
-    // Overload for click handling
-    private static int calculateContentHeight(boolean compact) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        boolean canEdit = mc.currentScreen instanceof InventoryScreen || mc.currentScreen instanceof ChatScreen;
-        return calculateContentHeight(compact, canEdit && editMode);
-    }
-
     private static void drawText(DrawContext context, String text, float x, float y, CustomColor color) {
         FontRenderer.getInstance().renderText(
                 context, StyledText.fromString(text),
@@ -629,6 +596,10 @@ public class RaidLootTrackerOverlay {
 
     private static float getTextWidth(String text) {
         return FontRenderer.getInstance().getFont().getWidth(text) * TEXT_SCALE;
+    }
+
+    private static boolean shouldRenderLine(String lineId, boolean showHiddenLines) {
+        return showHiddenLines || !hiddenLines.contains(lineId);
     }
 
     private static String formatEmeralds(long stacks, long le, long eb) {
@@ -706,7 +677,7 @@ public class RaidLootTrackerOverlay {
 
         loadConfig();
         MinecraftClient mc = MinecraftClient.getInstance();
-        int contentHeight = calculateContentHeight(config.raidLootTrackerCompact);
+        int contentHeight = effectiveHeight;
 
         boolean inBounds = mouseX >= xPos - 2 && mouseX <= xPos + effectiveWidth + 2 &&
                 mouseY >= yPos - 2 && mouseY <= yPos + contentHeight + 4;

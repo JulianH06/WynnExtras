@@ -88,6 +88,8 @@ public class WaypointEditMode {
     static String xInput = "0";
     static String yInput = "0";
     static String zInput = "0";
+    static String sizeInput = "1";
+    private static Waypoint newWaypointGeometry = new Waypoint();
     static float packageScroll = 0;
     static float categoryScroll = 0;
     static float waypointScroll = 0;
@@ -146,6 +148,7 @@ public class WaypointEditMode {
         ensureSelectionDefaults();
         if (!enabled) {
             previewPos = initialPreviewPos(mc.player);
+            newWaypointGeometry = new Waypoint();
             selectedWaypoint = null;
             selectedWaypointPackage = null;
             selectedSnapshot = null;
@@ -421,19 +424,35 @@ public class WaypointEditMode {
     }
 
     static void syncCoordinateInputs() {
-        if (focusedCoordinate != 0) xInput = String.valueOf(previewPos.getX());
-        if (focusedCoordinate != 1) yInput = String.valueOf(previewPos.getY());
-        if (focusedCoordinate != 2) zInput = String.valueOf(previewPos.getZ());
+        Waypoint geometry = previewGeometry();
+        if (focusedCoordinate != 0) xInput = Waypoint.formatCoord(previewPos.getX() + geometry.offsetX);
+        if (focusedCoordinate != 1) yInput = Waypoint.formatCoord(previewPos.getY() + geometry.offsetY);
+        if (focusedCoordinate != 2) zInput = Waypoint.formatCoord(previewPos.getZ() + geometry.offsetZ);
+        if (focusedCoordinate != 3) sizeInput = Waypoint.formatCoord(geometry.getSize());
     }
 
     static void applyCoordinateInputs() {
         try {
-            int x = Integer.parseInt(xInput.trim());
-            int y = Integer.parseInt(yInput.trim());
-            int z = Integer.parseInt(zInput.trim());
-            previewPos = new BlockPos(x, y, z);
+            double x = Double.parseDouble(xInput.trim());
+            double y = Double.parseDouble(yInput.trim());
+            double z = Double.parseDouble(zInput.trim());
+            if (Double.isFinite(x) && Double.isFinite(y) && Double.isFinite(z)) {
+                Waypoint geometry = previewGeometry();
+                geometry.setDisplayX(x);
+                geometry.setDisplayY(y);
+                geometry.setDisplayZ(z);
+                previewPos = new BlockPos(geometry.x, geometry.y, geometry.z);
+            }
         } catch (NumberFormatException ignored) {
         }
+        try {
+            float size = Float.parseFloat(sizeInput.trim());
+            if (Float.isFinite(size)) previewGeometry().setSize(size);
+        } catch (NumberFormatException ignored) {}
+    }
+
+    private static Waypoint previewGeometry() {
+        return selectedWaypoint == null ? newWaypointGeometry : selectedWaypoint;
     }
 
     static void movePreviewHorizontal(int key) {
@@ -453,6 +472,10 @@ public class WaypointEditMode {
     static void addWaypoint() {
         ensureSelectionDefaults();
         Waypoint waypoint = new Waypoint(previewPos.getX(), previewPos.getY(), previewPos.getZ());
+        waypoint.offsetX = newWaypointGeometry.offsetX;
+        waypoint.offsetY = newWaypointGeometry.offsetY;
+        waypoint.offsetZ = newWaypointGeometry.offsetZ;
+        waypoint.size = newWaypointGeometry.getSize();
         waypoint.id = UUID.randomUUID().toString();
         waypoint.name = previewName == null || previewName.isBlank() ? "Waypoint" : previewName.trim();
         waypoint.setCategory(activeCategory);
@@ -707,10 +730,8 @@ public class WaypointEditMode {
         return previewVisibility(selectedWaypoint == null ? null : selectedWaypoint.seeThroughOverride, selectedWaypoint != null && selectedWaypoint.seeThrough, activeCategory != null && activeCategory.showSeeThroughByDefault);
     }
 
-    /** The preview keeps the offsets and size of the waypoint being edited, only its block position moves. */
     static Box previewBox() {
-        Waypoint waypoint = selectedWaypoint;
-        if (waypoint == null) return new Box(previewPos);
+        Waypoint waypoint = previewGeometry();
         return Waypoint.boxAt(previewPos.getX(), previewPos.getY(), previewPos.getZ(),
                 waypoint.offsetX, waypoint.offsetY, waypoint.offsetZ, waypoint.getSize());
     }

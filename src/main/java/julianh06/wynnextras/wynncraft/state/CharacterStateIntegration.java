@@ -19,6 +19,8 @@ import java.util.Map;
 
 @WEModule
 public final class CharacterStateIntegration {
+    private static String lastPassiveCharacterInfo;
+
     private String lastCharacterId;
     private boolean inClassSelection;
 
@@ -50,13 +52,6 @@ public final class CharacterStateIntegration {
                 CharacterBankData.INSTANCE.getCharacterNickname(),
                 CharacterBankData.INSTANCE.getCharacterLevel());
         ProfessionOverlay.onCharacterSwap();
-
-        String localName = CharacterState.className().orElse(null);
-        int localLevel = CharacterState.level();
-        if (localName != null && localLevel > 0) {
-            CharacterBankData.INSTANCE.setCharacterInfo(localName, localLevel);
-            CharacterBankData.INSTANCE.save();
-        }
         TickScheduler.runAfterTicks(40, () -> fetchCharacterFromApi(characterId));
     }
 
@@ -83,6 +78,17 @@ public final class CharacterStateIntegration {
                 return;
             }
         }).exceptionally(error -> null);
+    }
+
+    static void savePassiveCharacterInfo(String characterId, String className, int level) {
+        if (characterId == null || className == null || level <= 0) return;
+        if (!characterId.equals(BankOverlay.currentCharacterID)) return;
+
+        String characterInfo = characterId + '\0' + className + '\0' + level;
+        if (characterInfo.equals(lastPassiveCharacterInfo)) return;
+        lastPassiveCharacterInfo = characterInfo;
+        CharacterBankData.INSTANCE.setCharacterInfo(className, level);
+        CharacterBankData.INSTANCE.saveAsyncDebounced();
     }
 
     private static boolean matchesCharacterId(String apiId, String localId) {

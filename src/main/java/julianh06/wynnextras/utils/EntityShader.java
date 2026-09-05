@@ -1,6 +1,7 @@
 package julianh06.wynnextras.utils;
 
 import net.minecraft.client.render.model.BakedQuad;
+import net.minecraft.util.math.ColorHelper;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,7 +20,8 @@ public final class EntityShader {
         int len = Math.max(Math.max(tintLayers == null ? 0 : tintLayers.length, maxTintIndex + 1), 1);
         int[] out = tintLayers == null ? new int[len] : Arrays.copyOf(tintLayers, len);
         for (int i = 0; i < out.length; i++) {
-            out[i] = shader;
+            int color = tintLayers != null && i < tintLayers.length ? tintLayers[i] : -1;
+            out[i] = ColorHelper.mix(color, shader);
         }
         return out;
     }

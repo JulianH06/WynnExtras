@@ -35,7 +35,7 @@ public class TreeData {
             }
             reader.reset();
             return gson.fromJson(reader, TreeData.class);
-        } catch (IOException | JsonParseException e) {
+        } catch (Exception e) {
             WynnExtras.LOGGER.error("[TreeData] Failed to load " + pathToFile + ":");
             e.printStackTrace();
             return null;

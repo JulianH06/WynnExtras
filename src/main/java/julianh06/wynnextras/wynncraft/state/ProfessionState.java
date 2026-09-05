@@ -21,9 +21,10 @@ import java.util.regex.Pattern;
 public final class ProfessionState {
     public record Xp(int current, int max) {}
 
-    private static final Pattern MENU_LEVEL = Pattern.compile("(?i)(armouring|tailoring|weaponsmithing|woodworking|jeweling|alchemism|scribing|cooking|mining|woodcutting|farming|fishing).*?(?:lv\\.?|level)\\D*(\\d{1,3})(?:.*?(\\d{1,3}(?:\\.\\d+)?)%)?");
-    private static final Pattern XP_GAIN = Pattern.compile("(?i)\\+([\\d,.]+)\\s+(armouring|tailoring|weaponsmithing|woodworking|jeweling|alchemism|scribing|cooking|mining|woodcutting|farming|fishing)\\s+(?:xp|experience)");
-    private static final Pattern LEVEL_UP = Pattern.compile("(?i)(armouring|tailoring|weaponsmithing|woodworking|jeweling|alchemism|scribing|cooking|mining|woodcutting|farming|fishing).*?(?:level|lv\\.?)\\D*(\\d{1,3})");
+    private static final Pattern MENU_LEVEL = Pattern.compile("(?i)(?:lv\\.?|level)\\D*(\\d{1,3})\\s+(?:\\S+\\s+)?(armouring|tailoring|weaponsmithing|woodworking|jeweling|alchemism|scribing|cooking|mining|woodcutting|farming|fishing).*?(\\d{1,3}(?:\\.\\d+)?)%");
+    private static final Pattern XP_GAIN = Pattern.compile("(?i)\\+([\\d,.]+)\\s+(?:\\S+\\s+)?(armouring|tailoring|weaponsmithing|woodworking|jeweling|alchemism|scribing|cooking|mining|woodcutting|farming|fishing)\\s+(?:xp|experience).*?([\\d.]+)%");
+    private static final Pattern LEVEL_UP = Pattern.compile("(?i)(?:level|lv\\.?)\\D*(\\d{1,3})\\s+(?:in\\s+)?(?:\\S+\\s+)?(armouring|tailoring|weaponsmithing|woodworking|jeweling|alchemism|scribing|cooking|mining|woodcutting|farming|fishing)");
+    private static final Pattern FORMATTING_CODE = Pattern.compile("§[0-9a-fk-or]");
 
     public static int level(WEProfessionType profession) {
         return WynnExtrasConfig.INSTANCE.professionLevels.getOrDefault(key(profession), 0);
@@ -41,7 +42,9 @@ public final class ProfessionState {
         try {
             MinecraftClient client = MinecraftClient.getInstance();
             if (!(client.currentScreen instanceof HandledScreen<?> screen)) return;
-            for (var slot : screen.getScreenHandler().slots) parseMenuStack(slot.getStack());
+            boolean changed = false;
+            for (var slot : screen.getScreenHandler().slots) changed |= parseMenuStack(slot.getStack());
+            if (changed) WynnExtrasConfig.save();
         } catch (Throwable ignored) {}
     }
 
@@ -55,43 +58,46 @@ public final class ProfessionState {
             if (profession != null && amount > 0) {
                 ProfessionOverlay.onXpGain(profession, amount);
                 String key = key(profession);
-                WynnExtrasConfig.INSTANCE.professionXpCurrent.merge(key, Math.round(amount), Integer::sum);
+                WynnExtrasConfig.INSTANCE.professionXpCurrent.put(key, Math.round(floatValue(gain.group(3))));
+                WynnExtrasConfig.INSTANCE.professionXpMax.put(key, 100);
                 WynnExtrasConfig.save();
             }
         }
         Matcher levelUp = LEVEL_UP.matcher(line);
-        if (levelUp.find()) update(WEProfessionType.fromString(levelUp.group(1)), intValue(levelUp.group(2)), null);
+        if (levelUp.find() && update(WEProfessionType.fromString(levelUp.group(2)), intValue(levelUp.group(1)), 0)) {
+            WynnExtrasConfig.save();
+        }
     }
 
-    private static void parseMenuStack(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) return;
+    private static boolean parseMenuStack(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
         StringBuilder text = new StringBuilder(clean(stack.getName().getString()));
         LoreComponent lore = stack.get(DataComponentTypes.LORE);
         if (lore != null) for (Text line : lore.lines()) text.append(' ').append(clean(line.getString()));
         Matcher matcher = MENU_LEVEL.matcher(text);
-        if (!matcher.find()) return;
-        Integer percent = matcher.group(3) == null ? null : Math.round(floatValue(matcher.group(3)));
-        update(WEProfessionType.fromString(matcher.group(1)), intValue(matcher.group(2)), percent);
+        if (!matcher.find()) return false;
+        int percent = Math.round(floatValue(matcher.group(3)));
+        return update(WEProfessionType.fromString(matcher.group(2)), intValue(matcher.group(1)), percent);
     }
 
-    private static void update(WEProfessionType profession, int level, Integer percent) {
-        if (profession == null || level <= 0) return;
+    private static boolean update(WEProfessionType profession, int level, Integer percent) {
+        if (profession == null || level <= 0) return false;
         String key = key(profession);
         Integer previousLevel = WynnExtrasConfig.INSTANCE.professionLevels.put(key, level);
         boolean changed = previousLevel == null || previousLevel != level;
         if (percent != null) {
             Integer old = WynnExtrasConfig.INSTANCE.professionXpCurrent.put(key, percent);
-            changed |= old == null || old != percent;
+            changed |= old == null || old.intValue() != percent.intValue();
             WynnExtrasConfig.INSTANCE.professionXpMax.put(key, 100);
         }
-        if (changed) WynnExtrasConfig.save();
+        return changed;
     }
 
     private static String key(WEProfessionType profession) {
         return CharacterState.id().orElse("unknown") + ":" + profession.name();
     }
 
-    private static String clean(String value) { return value.replaceAll("§[0-9a-fk-or]", "").trim(); }
+    private static String clean(String value) { return FORMATTING_CODE.matcher(value).replaceAll("").trim(); }
     private static int intValue(String value) { try { return Integer.parseInt(value); } catch (Exception ignored) { return 0; } }
     private static float floatValue(String value) { try { return Float.parseFloat(value.replace(",", "")); } catch (Exception ignored) { return 0; } }
 }

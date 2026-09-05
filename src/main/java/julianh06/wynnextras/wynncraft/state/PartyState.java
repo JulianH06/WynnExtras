@@ -36,10 +36,13 @@ public final class PartyState {
     }
 
     public static void requestRefresh() {
+        long now = System.currentTimeMillis();
+        if (parsing && now - requestStartedAt < 250) return;
         sendCommand("party list");
         MEMBERS.clear();
+        updatedAt = 0;
         parsing = true;
-        requestStartedAt = System.currentTimeMillis();
+        requestStartedAt = now;
     }
 
     public static void sendCommand(String command) {
@@ -57,7 +60,8 @@ public final class PartyState {
         }
         String line = event.message.getString().replaceAll("§[0-9a-fk-or]", "").trim();
         String lower = line.toLowerCase();
-        if (lower.contains("not currently in a party") || lower.contains("you are not in a party")) {
+        if (lower.contains("not currently in a party") || lower.contains("you are not in a party")
+                || lower.contains("you must be in a party to use this")) {
             finish();
             return;
         }
@@ -68,7 +72,7 @@ public final class PartyState {
     }
 
     private static void addNames(String text) {
-        List<String> ignored = new ArrayList<>(List.of("owner", "leader", "member", "members", "online", "offline"));
+        List<String> ignored = new ArrayList<>(List.of("and", "owner", "leader", "member", "members", "online", "offline"));
         Matcher matcher = PLAYER_NAME.matcher(text);
         while (matcher.find()) {
             String name = matcher.group();

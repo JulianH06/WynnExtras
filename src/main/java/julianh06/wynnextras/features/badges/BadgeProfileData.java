@@ -61,8 +61,9 @@ public final class BadgeProfileData {
             if (Files.exists(path)) {
                 localProfile = GSON.fromJson(Files.readString(path), BadgeProfile.class);
             }
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Failed to load badge profile: " + e.getMessage());
+        } catch (Exception e) {
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load badge profile from {}, using defaults.", path, e);
+            localProfile = BadgeProfile.defaultProfile();
         }
         if (localProfile == null) localProfile = BadgeProfile.defaultProfile();
         localProfile.uuid = currentUuid();

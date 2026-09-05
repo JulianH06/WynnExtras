@@ -45,9 +45,10 @@ import java.util.concurrent.TimeUnit;
 @WEModule
 public class WynncraftAuthManager {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    private static final CompletableFuture<HttpClient> HTTP_CLIENT = CompletableFuture.supplyAsync(() ->
+            HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(5))
+                    .build());
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private static final String DEFAULT_OAUTH_CLIENT_ID = "w5NyhNaX9-ZTgCM_uaJgdSGITT_VfGbI";
@@ -226,15 +227,15 @@ public class WynncraftAuthManager {
     }
 
     public static CompletableFuture<HttpResponse<String>> sendWynncraftRequest(HttpRequest request) {
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendRequest(request)
                 .thenApply(response -> {
                     handleWynncraftUnauthorized(response.statusCode());
                     return response;
                 });
     }
 
-    public static HttpClient httpClient() {
-        return HTTP_CLIENT;
+    public static CompletableFuture<HttpResponse<String>> sendRequest(HttpRequest request) {
+        return HTTP_CLIENT.thenCompose(client -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString()));
     }
 
     private static String getBearerToken() {
@@ -362,7 +363,7 @@ public class WynncraftAuthManager {
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendRequest(request)
                 .thenApply(response -> {
                     if (response.statusCode() != 200) {
                         WynnExtras.LOGGER.error("[WynnExtras] OAuth2 token exchange failed: " + response.statusCode() + " " + response.body());
@@ -395,7 +396,7 @@ public class WynncraftAuthManager {
                 .GET()
                 .build();
 
-        return HTTP_CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+        return sendRequest(request)
                 .thenApply(response -> {
                     if (response.statusCode() != 200) {
                         WynnExtras.LOGGER.error("[WynnExtras] OAuth2 identity fetch failed: " + response.statusCode() + " " + response.body());

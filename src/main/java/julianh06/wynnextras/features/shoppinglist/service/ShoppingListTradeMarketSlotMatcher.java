@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.shoppinglist.service;
 
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public final class ShoppingListTradeMarketSlotMatcher {
     private static final Set<String> SEARCH_FILTER_LABELS = Set.of(
@@ -10,6 +11,8 @@ public final class ShoppingListTradeMarketSlotMatcher {
             "search and filter",
             "search filter"
     );
+    private static final Pattern NON_ALPHANUMERIC = Pattern.compile("[^a-z0-9]+");
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
     private ShoppingListTradeMarketSlotMatcher() {}
 
@@ -23,8 +26,8 @@ public final class ShoppingListTradeMarketSlotMatcher {
         cleaned = cleaned.replace("&", " and ");
         cleaned = cleaned.replace("+", " and ");
         cleaned = cleaned.replace("/", " ");
-        cleaned = cleaned.replaceAll("[^a-z0-9]+", " ");
-        cleaned = cleaned.replaceAll("\\s+", " ").trim();
+        cleaned = NON_ALPHANUMERIC.matcher(cleaned).replaceAll(" ");
+        cleaned = WHITESPACE.matcher(cleaned).replaceAll(" ").trim();
         return cleaned;
     }
 }

@@ -75,9 +75,13 @@ public class SpellHiderMappings {
             INSTANCE = new SpellHiderMappings();
             return;
         }
-        Reader reader = new InputStreamReader(input);
-        SaveFormat jsonData = GSON.fromJson(reader, SaveFormat.class);
-        INSTANCE = jsonData.toConfig();
+        try (Reader reader = new InputStreamReader(input)) {
+            SaveFormat jsonData = GSON.fromJson(reader, SaveFormat.class);
+            INSTANCE = jsonData == null ? new SpellHiderMappings() : jsonData.toConfig();
+        } catch (Exception e) {
+            WynnExtras.LOGGER.error("Failed to load bundled spell mappings; spell hider mappings are disabled.", e);
+            INSTANCE = new SpellHiderMappings();
+        }
     }
 
     // basically flips the map so each value stores a list of its keys
@@ -162,8 +166,9 @@ public class SpellHiderMappings {
                     INSTANCE = new SpellHiderMappings();
                 }
             }
-        } catch (IOException e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Failed to load spell mappings: " + e.getMessage());
+        } catch (Exception e) {
+            WynnExtras.LOGGER.error("[WynnExtras] Failed to load spell mappings from {}, using empty mappings.",
+                    MAPPINGS_PATH, e);
             INSTANCE = new SpellHiderMappings();
         }
     }
