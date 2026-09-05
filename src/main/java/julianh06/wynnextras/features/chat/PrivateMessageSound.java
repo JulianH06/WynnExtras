@@ -10,17 +10,8 @@ import net.minecraft.text.TextColor;
 import net.minecraft.util.Identifier;
 import net.neoforged.bus.api.SubscribeEvent;
 
-/**
- * Plays a short sound when another player sends the local player a direct message.
- *
- * <p>Wynncraft colours a direct message with its own tint, which is what separates it from guild
- * or party chat. Both halves of a conversation carry that tint, so the sender is read from in
- * front of the first colon and compared against the local player to keep only the incoming half.
- */
 @WEModule
 public class PrivateMessageSound {
-
-    /** The tint Wynncraft gives direct messages. */
     private static final int PRIVATE_MESSAGE_COLOR = 0xDDCC99;
 
     @SubscribeEvent
@@ -29,9 +20,8 @@ public class PrivateMessageSound {
         if (event.message == null) return;
         if (!isPrivateMessage(event.message)) return;
 
-        String sender = senderOf(event.message.getString());
-        if (sender.isEmpty()) return;
-        if (sender.equalsIgnoreCase(MinecraftUtils.playerName())) return;   // our own outgoing message
+        String recipient = recipientOf(event.message.getString());
+        if (!recipient.equalsIgnoreCase(MinecraftUtils.playerName())) return;
 
         MinecraftUtils.playSoundAmbient(
                 SoundEvent.of(Identifier.of(WynnExtrasConfig.INSTANCE.privateMessageSoundType.getSoundId())),
@@ -44,7 +34,6 @@ public class PrivateMessageSound {
         return color != null && (color.getRgb() & 0xFFFFFF) == PRIVATE_MESSAGE_COLOR;
     }
 
-    /** Colour of the first styled part of the line, which is the one carrying the channel tint. */
     private static TextColor firstColor(Text text) {
         TextColor own = text.getStyle().getColor();
         if (own != null) return own;
@@ -55,12 +44,7 @@ public class PrivateMessageSound {
         return null;
     }
 
-    /**
-     * The plain line reads "&lt;arrow&gt; recipient &lt;badges&gt; sender: message", so the sender is
-     * the last token before the first colon. Rank icons and banner glyphs sit in the private use
-     * area and are dropped.
-     */
-    private static String senderOf(String plain) {
+    private static String recipientOf(String plain) {
         int colon = plain.indexOf(':');
         if (colon <= 0) return "";
 
