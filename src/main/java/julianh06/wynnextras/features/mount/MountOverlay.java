@@ -75,11 +75,12 @@ public class MountOverlay {
 
     public record StatEntry(Integer current, Integer limit, Integer max) {}
 
-    private record MaterialPick(Identifier texture, String name) {}
+    private record MaterialPick(MaterialType type, Identifier texture, String name) {}
 
     private record InsertedMaterial(MaterialType type, int level) {}
 
-    private record CachedPlan(ItemStack saddle, int materialLevel, String inputSignature, List<MaterialPick> picks) {}
+    private record CachedPlan(ItemStack saddle, int materialLevel, String inputSignature,
+                              List<InsertedMaterial> insertedMaterials, List<MaterialPick> picks) {}
 
     public static void render(DrawContext context, int mouseX, int mouseY, float delta) {
         GenericContainerScreen container = getMountFeederScreen();
@@ -289,11 +290,25 @@ public class MountOverlay {
         }
 
         String inputSignature = inputSignature(materialSlots);
+        List<InsertedMaterial> insertedMaterials = new ArrayList<>();
+        for (Slot materialSlot : materialSlots) {
+            InsertedMaterial inserted = identifyMaterial(materialSlot.getStack());
+            if (inserted != null) insertedMaterials.add(inserted);
+        }
         CachedPlan cached = PLAN_CACHE.get(row);
         if (cached != null
                 && cached.materialLevel() == selectedLevels[row]
-                && cached.inputSignature().equals(inputSignature)
-                && ItemStack.areItemsAndComponentsEqual(cached.saddle(), saddle)) return cached.picks();
+                && ItemStack.areItemsAndComponentsEqual(cached.saddle(), saddle)) {
+            if (cached.inputSignature().equals(inputSignature)) return cached.picks();
+
+            List<MaterialPick> remainingPicks = removeNewlyInsertedRecommendations(
+                    cached.picks(), cached.insertedMaterials(), insertedMaterials, selectedLevels[row]);
+            if (remainingPicks != null) {
+                PLAN_CACHE.put(row, new CachedPlan(saddle.copy(), selectedLevels[row], inputSignature,
+                        List.copyOf(insertedMaterials), remainingPicks));
+                return remainingPicks;
+            }
+        }
 
         Map<MountStat, StatEntry> stats = getStats(saddle);
         if (stats.size() != STAT_COUNT) {
@@ -310,11 +325,7 @@ public class MountOverlay {
             int deficit = Math.max(0, entry.max() - entry.limit());
             if (deficit > 0) needed.put(stat, deficit);
         }
-        List<InsertedMaterial> insertedMaterials = new ArrayList<>();
-        for (Slot materialSlot : materialSlots) {
-            InsertedMaterial inserted = identifyMaterial(materialSlot.getStack());
-            if (inserted == null) continue;
-            insertedMaterials.add(inserted);
+        for (InsertedMaterial inserted : insertedMaterials) {
             for (Map.Entry<MountStat, Integer> contribution
                     : MaterialStats.get(inserted.type(), inserted.level()).getStats().entrySet()) {
                 int remaining = needed.getOrDefault(contribution.getKey(), 0) - contribution.getValue();
@@ -337,10 +348,41 @@ public class MountOverlay {
             orderedTypes = orderMaterials(selectedLevels[row], needed, counts);
         }
         List<MaterialPick> picks = orderedTypes.stream()
-                .map(type -> new MaterialPick(type.getTexture(selectedLevels[row]), type.getName(selectedLevels[row])))
+                .map(type -> new MaterialPick(type, type.getTexture(selectedLevels[row]), type.getName(selectedLevels[row])))
                 .toList();
-        PLAN_CACHE.put(row, new CachedPlan(saddle.copy(), selectedLevels[row], inputSignature, picks));
+        PLAN_CACHE.put(row, new CachedPlan(saddle.copy(), selectedLevels[row], inputSignature,
+                List.copyOf(insertedMaterials), picks));
         return picks;
+    }
+
+    private static List<MaterialPick> removeNewlyInsertedRecommendations(
+            List<MaterialPick> recommendations, List<InsertedMaterial> previousInserted,
+            List<InsertedMaterial> currentInserted, int materialLevel) {
+        List<InsertedMaterial> added = new ArrayList<>(currentInserted);
+        for (InsertedMaterial previous : previousInserted) {
+            if (!added.remove(previous)) return null;
+        }
+        if (added.isEmpty()) return null;
+        for (InsertedMaterial inserted : added) {
+            if (inserted.level() != materialLevel) return null;
+        }
+
+        List<MaterialType> remainingTypes = removeInsertedRecommendations(
+                recommendations.stream().map(MaterialPick::type).toList(),
+                added.stream().map(InsertedMaterial::type).toList());
+        if (remainingTypes == null) return null;
+        return remainingTypes.stream()
+                .map(type -> new MaterialPick(type, type.getTexture(materialLevel), type.getName(materialLevel)))
+                .toList();
+    }
+
+    static List<MaterialType> removeInsertedRecommendations(
+            List<MaterialType> recommendations, List<MaterialType> inserted) {
+        List<MaterialType> remaining = new ArrayList<>(recommendations);
+        for (MaterialType type : inserted) {
+            if (!remaining.remove(type)) return null;
+        }
+        return List.copyOf(remaining);
     }
 
     private static String inputSignature(List<Slot> materialSlots) {
