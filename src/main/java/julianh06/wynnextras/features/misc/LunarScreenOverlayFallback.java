@@ -57,7 +57,7 @@ public final class LunarScreenOverlayFallback {
             state.classSelectionOverlay = null;
         }
 
-        MountOverlay.render(context, mouseX, mouseY);
+        MountOverlay.render(context, mouseX, mouseY, delta);
         BankOverlay.updateOverlayType();
 
         if (isBankContainer() || BankOverlay.currentOverlayType != BankOverlayType.NONE) {
@@ -106,6 +106,10 @@ public final class LunarScreenOverlayFallback {
 
         if (state.classSelectionOverlay != null) {
             state.classSelectionOverlay.mouseClicked(mouseX, mouseY, button);
+            return true;
+        }
+
+        if (MountOverlay.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
 

@@ -601,8 +601,15 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.skillpointHelper, v -> config.skillpointHelper = v))
             .add(toggle("Powder combine helper", "Show quick combine buttons in the powder master menu",
                     () -> config.powderCombineHelper, v -> config.powderCombineHelper = v))
-            .add(toggle("Show Mount Helper", "Renders the needed materials to max out a mounts stats in the feeder",
-                    () -> config.showMountHelper, v -> config.showMountHelper = v));
+            .sub("Mount Helper")
+                .add(toggle("Show Mount Helper", "Renders the needed materials to max out a mount's stats in the feeder",
+                        () -> config.showMountHelper, v -> config.showMountHelper = v))
+                .add(visibleWhen(dropdown("Default material level", "Material level selected when opening the mount feeder",
+                                WynnExtrasConfig.MountMaterialLevel.class,
+                                () -> config.mountHelperDefaultMaterialLevel,
+                                v -> config.mountHelperDefaultMaterialLevel = v),
+                        () -> config.showMountHelper))
+            .endSub();
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)

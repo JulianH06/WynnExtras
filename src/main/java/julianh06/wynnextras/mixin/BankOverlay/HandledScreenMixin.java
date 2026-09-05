@@ -142,7 +142,6 @@ public abstract class HandledScreenMixin {
             classSelectionOverlay = null;
         }
 
-        MountOverlay.render(context, mouseX, mouseY);
         // Only create BankOverlay2 for bank-type containers to avoid expensive
         // initialization on every GUI open
         if (isBankScreen == null) {
@@ -252,6 +251,7 @@ public abstract class HandledScreenMixin {
                 && WynncraftMenuService.isCurrentAny(MenuType.ITEM_IDENTIFIER, MenuType.AUGMENT_IDENTIFIER)) {
             ensureIdentifierCaseOpeningOverlay().render(context, mouseX, mouseY, delta);
         }
+        MountOverlay.render(context, mouseX, mouseY, delta);
     }
 
     @Unique
@@ -303,6 +303,7 @@ public abstract class HandledScreenMixin {
             ci.cancel();
             return;
         }
+
         HandledScreen<?> self = (HandledScreen<?>) (Object) this;
         if (self instanceof InventoryScreen) return;
 
@@ -463,6 +464,11 @@ public abstract class HandledScreenMixin {
 
         if (identifierCaseOpeningOverlay != null && identifierCaseOpeningOverlay.isReplacingMenu()) {
             identifierCaseOpeningOverlay.mouseClicked(mouseX, mouseY, button);
+            cir.setReturnValue(true);
+            return;
+        }
+
+        if (MountOverlay.mouseClicked(mouseX, mouseY, button)) {
             cir.setReturnValue(true);
             return;
         }
