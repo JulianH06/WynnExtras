@@ -1,5 +1,4 @@
 plugins {
-	id 'java'
 	id 'fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 	id 'com.gradleup.shadow' version "${shadow_version}"
@@ -51,17 +50,7 @@ fabricApi {
 	}
 }
 
-sourceSets {
-    test {
-        java {
-            srcDirs = ['src/test/java']
-        }
-    }
-}
-
 dependencies {
-	testImplementation 'org.junit.jupiter:junit-jupiter:5.11.0'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 
@@ -88,10 +77,6 @@ dependencies {
 		exclude group: 'org.ow2.asm', module: 'asm'
 		exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
 	}
-}
-
-test {
-    useJUnitPlatform()
 }
 
 processResources {
