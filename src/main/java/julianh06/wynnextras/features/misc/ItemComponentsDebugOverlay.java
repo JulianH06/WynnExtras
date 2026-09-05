@@ -41,9 +41,9 @@ public class ItemComponentsDebugOverlay {
     private static final int SCROLLBAR_WIDTH = 5;
     private static final int RESIZE_GRIP = 12;
     private static final int MAX_RAW_LINE_CHARS = 220;
-    private static final int MAX_LINES = 1_500;
-    private static final int MAX_DETAIL_LINES = 400;
-    private static final int MAX_DETAIL_CHARS = 32_000;
+    private static final int MAX_LINES = 15_000;
+    private static final int MAX_DETAIL_LINES = 4_000;
+    private static final int MAX_DETAIL_CHARS = 320_000;
     private static final Gson PRETTY_GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final ExecutorService DETAIL_SERIALIZER = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "WynnExtras item component serializer");

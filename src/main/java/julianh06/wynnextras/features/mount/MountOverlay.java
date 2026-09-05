@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @WEModule
 public class MountOverlay {
@@ -55,8 +56,13 @@ public class MountOverlay {
     private static final float PREVIEW_ALPHA = 0.55f;
     private static final int STAT_COUNT = MountStat.values().length;
     private static final int MATERIAL_COUNT = MaterialType.values().length;
+    private static final long INVALID_INPUT_DEBOUNCE_MS = 250;
+    private static final Pattern FEEDING_IN_PATTERN = Pattern.compile(
+            "Feeding in\\s+(?:(?<hours>\\d+)h\\s*)?(?:(?<minutes>\\d+)m\\s*)?(?:(?<seconds>\\d+)s)?",
+            Pattern.CASE_INSENSITIVE);
 
     private static final Map<Integer, CachedPlan> PLAN_CACHE = new HashMap<>();
+    private static final Map<Integer, PendingInput> PENDING_INPUTS = new HashMap<>();
     private static final List<Widget> INTERACTIVE_CONTROLS = new ArrayList<>();
     private static Screen activeScreen;
     private static int[] selectedLevels = new int[ROW_SLOTS.length];
@@ -79,8 +85,11 @@ public class MountOverlay {
 
     private record InsertedMaterial(MaterialType type, int level) {}
 
-    private record CachedPlan(ItemStack saddle, int materialLevel, String inputSignature,
-                              List<InsertedMaterial> insertedMaterials, List<MaterialPick> picks) {}
+    private record CachedPlan(String mountSignature, int materialLevel, String inputSignature,
+                              List<InsertedMaterial> insertedMaterials,
+                              List<MaterialPick> fullPlan, List<MaterialPick> picks) {}
+
+    private record PendingInput(String inputSignature, long since) {}
 
     public static void render(DrawContext context, int mouseX, int mouseY, float delta) {
         GenericContainerScreen container = getMountFeederScreen();
@@ -99,7 +108,6 @@ public class MountOverlay {
                 levelsInitialized = true;
                 configuredDefaultLevel = defaultLevel;
             }
-            PLAN_CACHE.clear();
         }
 
         List<Slot> slots = container.getScreenHandler().slots;
@@ -127,10 +135,8 @@ public class MountOverlay {
                 ? targetStatsY + targetStatsHeight
                 : advancedY + CONTROL_HEIGHT;
         int panelHeight = panelBottom + PANEL_VERTICAL_PADDING - panelY;
-        int controlX = panelX + (panelWidth - CONTROL_WIDTH) / 2;
-        int rowControlX = advancedMode
-                ? panelX + (panelWidth - CONTROL_WIDTH - CONTROL_GAP - ROLE_BUTTON_WIDTH) / 2
-                : controlX;
+        int normalPanelX = screen.getX() - PANEL_CONTAINER_GAP - PANEL_WIDTH;
+        int controlX = normalPanelX + (PANEL_WIDTH - CONTROL_WIDTH) / 2;
         new MountHelperPanelWidget(panelX, panelY, panelWidth, panelHeight)
                 .draw(context, mouseX, mouseY, delta, ui);
 
@@ -146,13 +152,13 @@ public class MountOverlay {
                 materialSlots.add(slots.get(ROW_SLOTS[row] + MATERIAL_SLOT_OFFSET + index));
             }
             List<MaterialPick> picks = getPlan(row, saddleSlot, materialSlots);
-            int currentControlX = advancedMode && baseMountRows[row] ? rowControlX : controlX;
-            LevelControlWidget control = new LevelControlWidget(currentControlX, rowY, row);
+            Map<MountStat, StatEntry> stats = getStats(saddleSlot.getStack());
+            LevelControlWidget control = new LevelControlWidget(controlX, rowY, row);
             INTERACTIVE_CONTROLS.add(control);
             control.draw(context, mouseX, mouseY, delta, ui);
             if (advancedMode && baseMountRows[row]) {
                 FeedRoleWidget role = new FeedRoleWidget(
-                        currentControlX + CONTROL_WIDTH + CONTROL_GAP, rowY, row);
+                        controlX - CONTROL_GAP - ROLE_BUTTON_WIDTH, rowY, row);
                 INTERACTIVE_CONTROLS.add(role);
                 role.draw(context, mouseX, mouseY, delta, ui);
             }
@@ -172,11 +178,17 @@ public class MountOverlay {
                 preview.draw(context, mouseX, mouseY, delta, ui);
             }
 
-            if (picks.size() > visibleCount) {
+            List<InsertedMaterial> insertedMaterials = materialSlots.stream()
+                    .map(slot -> identifyMaterial(slot.getStack()))
+                    .filter(inserted -> inserted != null)
+                    .toList();
+            if (stats.size() == STAT_COUNT && (!picks.isEmpty()
+                    || !insertedMaterials.isEmpty() || isFullyFed(stats))) {
                 ExtraMaterialsWidget extra = new ExtraMaterialsWidget(
                         screen.getX() + screen.getBackgroundWidth() + 5,
-                        rowY + 3,
-                        picks.subList(visibleCount, picks.size()));
+                        rowY + 5,
+                        picks.subList(visibleCount, picks.size()),
+                        feedingStatus(saddleSlot.getStack(), stats, insertedMaterials, picks, selectedLevels[row]));
                 extraWidgets.add(extra);
                 extra.draw(context, mouseX, mouseY, delta, ui);
             }
@@ -239,7 +251,6 @@ public class MountOverlay {
 
     private static void clearScreenState() {
         activeScreen = null;
-        PLAN_CACHE.clear();
         INTERACTIVE_CONTROLS.clear();
     }
 
@@ -286,6 +297,7 @@ public class MountOverlay {
         if (saddle == null || saddle.isEmpty()) {
             baseMountRows[row] = false;
             PLAN_CACHE.remove(row);
+            PENDING_INPUTS.remove(row);
             return List.of();
         }
 
@@ -295,28 +307,44 @@ public class MountOverlay {
             InsertedMaterial inserted = identifyMaterial(materialSlot.getStack());
             if (inserted != null) insertedMaterials.add(inserted);
         }
-        CachedPlan cached = PLAN_CACHE.get(row);
-        if (cached != null
-                && cached.materialLevel() == selectedLevels[row]
-                && ItemStack.areItemsAndComponentsEqual(cached.saddle(), saddle)) {
-            if (cached.inputSignature().equals(inputSignature)) return cached.picks();
-
-            List<MaterialPick> remainingPicks = removeNewlyInsertedRecommendations(
-                    cached.picks(), cached.insertedMaterials(), insertedMaterials, selectedLevels[row]);
-            if (remainingPicks != null) {
-                PLAN_CACHE.put(row, new CachedPlan(saddle.copy(), selectedLevels[row], inputSignature,
-                        List.copyOf(insertedMaterials), remainingPicks));
-                return remainingPicks;
-            }
-        }
-
         Map<MountStat, StatEntry> stats = getStats(saddle);
         if (stats.size() != STAT_COUNT) {
             baseMountRows[row] = false;
             PLAN_CACHE.remove(row);
+            PENDING_INPUTS.remove(row);
             return List.of();
         }
         baseMountRows[row] = isBaseMount(stats);
+        String mountSignature = mountSignature(saddle, stats);
+
+        CachedPlan cached = PLAN_CACHE.get(row);
+        if (cached != null
+                && cached.materialLevel() == selectedLevels[row]
+                && cached.mountSignature().equals(mountSignature)) {
+            if (cached.inputSignature().equals(inputSignature)) {
+                PENDING_INPUTS.remove(row);
+                return cached.picks();
+            }
+            if (onlyAddedMaterials(cached.insertedMaterials(), insertedMaterials)) {
+                List<MaterialPick> remainingPicks = removeInsertedRecommendations(
+                        cached.fullPlan(), insertedMaterials, selectedLevels[row]);
+                if (remainingPicks != null) {
+                    PENDING_INPUTS.remove(row);
+                    PLAN_CACHE.put(row, new CachedPlan(mountSignature, selectedLevels[row], inputSignature,
+                            List.copyOf(insertedMaterials), cached.fullPlan(), remainingPicks));
+                    return remainingPicks;
+                }
+            }
+
+            long now = System.currentTimeMillis();
+            PendingInput pending = PENDING_INPUTS.get(row);
+            if (pending == null || !pending.inputSignature().equals(inputSignature)) {
+                PENDING_INPUTS.put(row, new PendingInput(inputSignature, now));
+                return cached.picks();
+            }
+            if (now - pending.since() < INVALID_INPUT_DEBOUNCE_MS) return cached.picks();
+        }
+        PENDING_INPUTS.remove(row);
 
         Map<MountStat, Integer> needed = new EnumMap<>(MountStat.class);
         for (MountStat stat : MountStat.values()) {
@@ -350,26 +378,53 @@ public class MountOverlay {
         List<MaterialPick> picks = orderedTypes.stream()
                 .map(type -> new MaterialPick(type, type.getTexture(selectedLevels[row]), type.getName(selectedLevels[row])))
                 .toList();
-        PLAN_CACHE.put(row, new CachedPlan(saddle.copy(), selectedLevels[row], inputSignature,
-                List.copyOf(insertedMaterials), picks));
+        List<MaterialPick> fullPlan = createFullPlan(picks, insertedMaterials, selectedLevels[row]);
+        PLAN_CACHE.put(row, new CachedPlan(mountSignature, selectedLevels[row], inputSignature,
+                List.copyOf(insertedMaterials), fullPlan, picks));
         return picks;
     }
 
-    private static List<MaterialPick> removeNewlyInsertedRecommendations(
-            List<MaterialPick> recommendations, List<InsertedMaterial> previousInserted,
-            List<InsertedMaterial> currentInserted, int materialLevel) {
-        List<InsertedMaterial> added = new ArrayList<>(currentInserted);
-        for (InsertedMaterial previous : previousInserted) {
-            if (!added.remove(previous)) return null;
+    private static boolean onlyAddedMaterials(List<InsertedMaterial> previous,
+                                              List<InsertedMaterial> current) {
+        if (current.size() <= previous.size()) return false;
+        List<InsertedMaterial> added = new ArrayList<>(current);
+        for (InsertedMaterial material : previous) {
+            if (!added.remove(material)) return false;
         }
-        if (added.isEmpty()) return null;
-        for (InsertedMaterial inserted : added) {
+        return true;
+    }
+
+    private static String mountSignature(ItemStack saddle, Map<MountStat, StatEntry> stats) {
+        StringBuilder signature = new StringBuilder(saddle.getName().getString());
+        for (MountStat stat : MountStat.values()) {
+            StatEntry entry = stats.get(stat);
+            signature.append('|').append(entry.limit()).append('/').append(entry.max());
+        }
+        return signature.toString();
+    }
+
+    private static List<MaterialPick> createFullPlan(List<MaterialPick> remaining,
+                                                     List<InsertedMaterial> insertedMaterials,
+                                                     int materialLevel) {
+        List<MaterialPick> fullPlan = new ArrayList<>(insertedMaterials.size() + remaining.size());
+        for (InsertedMaterial inserted : insertedMaterials) {
+            if (inserted.level() != materialLevel) return remaining;
+            MaterialType type = inserted.type();
+            fullPlan.add(new MaterialPick(type, type.getTexture(materialLevel), type.getName(materialLevel)));
+        }
+        fullPlan.addAll(remaining);
+        return List.copyOf(fullPlan);
+    }
+
+    private static List<MaterialPick> removeInsertedRecommendations(
+            List<MaterialPick> fullPlan, List<InsertedMaterial> insertedMaterials, int materialLevel) {
+        for (InsertedMaterial inserted : insertedMaterials) {
             if (inserted.level() != materialLevel) return null;
         }
 
         List<MaterialType> remainingTypes = removeInsertedRecommendations(
-                recommendations.stream().map(MaterialPick::type).toList(),
-                added.stream().map(InsertedMaterial::type).toList());
+                fullPlan.stream().map(MaterialPick::type).toList(),
+                insertedMaterials.stream().map(InsertedMaterial::type).toList());
         if (remainingTypes == null) return null;
         return remainingTypes.stream()
                 .map(type -> new MaterialPick(type, type.getTexture(materialLevel), type.getName(materialLevel)))
@@ -415,6 +470,104 @@ public class MountOverlay {
         int totalMax = 0;
         for (StatEntry entry : stats.values()) totalMax += entry.max();
         return totalMax == 240;
+    }
+
+    private static boolean isFullyFed(Map<MountStat, StatEntry> stats) {
+        for (StatEntry entry : stats.values()) {
+            if (entry.limit() < entry.max()) return false;
+        }
+        return true;
+    }
+
+    private static String feedingStatus(ItemStack saddle, Map<MountStat, StatEntry> stats,
+                                        List<InsertedMaterial> insertedMaterials,
+                                        List<MaterialPick> picks, int materialLevel) {
+        if (isFullyFed(stats)) return "Ready to breed";
+
+        long seconds = remainingFeedingSeconds(saddle, stats, insertedMaterials, picks, materialLevel);
+        return seconds > 0 ? "Time remaining: " + formatDuration(seconds) : "";
+    }
+
+    private static long remainingFeedingSeconds(ItemStack saddle, Map<MountStat, StatEntry> stats,
+                                                List<InsertedMaterial> insertedMaterials,
+                                                List<MaterialPick> picks, int materialLevel) {
+        Map<MountStat, Integer> limits = new EnumMap<>(MountStat.class);
+        for (MountStat stat : MountStat.values()) limits.put(stat, stats.get(stat).limit());
+
+        Long currentFeedSeconds = getCurrentFeedSeconds(saddle);
+        long seconds = 0;
+        boolean firstMaterial = true;
+        for (InsertedMaterial material : insertedMaterials) {
+            seconds += firstMaterial && currentFeedSeconds != null
+                    ? currentFeedSeconds
+                    : feedingMinutes(limits) * 60;
+            applyMaterial(limits, stats, material.type(), material.level());
+            firstMaterial = false;
+        }
+        for (MaterialPick pick : picks) {
+            seconds += firstMaterial && currentFeedSeconds != null
+                    ? currentFeedSeconds
+                    : feedingMinutes(limits) * 60;
+            applyMaterial(limits, stats, pick.type(), materialLevel);
+            firstMaterial = false;
+        }
+        return seconds;
+    }
+
+    private static Long getCurrentFeedSeconds(ItemStack saddle) {
+        for (Text line : saddle.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player,
+                TooltipType.BASIC)) {
+            Matcher matcher = FEEDING_IN_PATTERN.matcher(line.getString());
+            if (!matcher.find()) continue;
+            long hours = parseTimePart(matcher.group("hours"));
+            long minutes = parseTimePart(matcher.group("minutes"));
+            long seconds = parseTimePart(matcher.group("seconds"));
+            long total = hours * 60 * 60 + minutes * 60 + seconds;
+            if (total > 0) return total;
+        }
+        return null;
+    }
+
+    private static long parseTimePart(String value) {
+        return value == null ? 0 : Long.parseLong(value);
+    }
+
+    private static void applyMaterial(Map<MountStat, Integer> limits, Map<MountStat, StatEntry> stats,
+                                      MaterialType type, int level) {
+        for (Map.Entry<MountStat, Integer> contribution : MaterialStats.get(type, level).getStats().entrySet()) {
+            MountStat stat = contribution.getKey();
+            limits.put(stat, Math.min(stats.get(stat).max(), limits.get(stat) + contribution.getValue()));
+        }
+    }
+
+    private static long feedingMinutes(Map<MountStat, Integer> limits) {
+        int total = limits.values().stream().mapToInt(Integer::intValue).sum();
+        int averageLimit = (total + STAT_COUNT - 1) / STAT_COUNT;
+        if (averageLimit <= 10) return 1;
+        return switch (averageLimit) {
+            case 11, 12 -> 5;
+            case 13 -> 15;
+            case 14 -> 30;
+            case 15 -> 60;
+            case 16 -> 120;
+            case 17 -> 180;
+            case 18 -> 240;
+            case 19 -> 300;
+            default -> 360;
+        };
+    }
+
+    private static String formatDuration(long totalSeconds) {
+        long days = totalSeconds / (24 * 60 * 60);
+        long hours = totalSeconds % (24 * 60 * 60) / (60 * 60);
+        long minutes = totalSeconds % (60 * 60) / 60;
+        long seconds = totalSeconds % 60;
+        List<String> parts = new ArrayList<>();
+        if (days > 0) parts.add(days + " Days");
+        if (hours > 0) parts.add(hours + " Hours");
+        if (minutes > 0) parts.add(minutes + " Minutes");
+        if (seconds > 0) parts.add(seconds + " Seconds");
+        return String.join(" ", parts);
     }
 
     private static List<MaterialType> computeFixedCountPlan(Map<MountStat, StatEntry> stats,
@@ -763,7 +916,11 @@ public class MountOverlay {
 
         @Override
         protected void drawContent(DrawContext context, int mouseX, int mouseY, float delta) {
-            ui.drawVanillaPanel(x, y - 7, width, height + 3, 4, 24, 24, 15, 24);
+            if(!advancedMode) {
+                ui.drawVanillaPanel(x, y - 7, width, height + 3, 4, 24, 24, 15, 24);
+            } else {
+                ui.drawVanillaPanel(x, y - 7, width, height + 3, 4, 65, 24, 15, 104);
+            }
             ui.drawText("§6Mount helper", x + width / 2f, y - 3, CustomColor.fromHexString("FFFFFF"), HorizontalAlignment.CENTER, VerticalAlignment.TOP, 1);
         }
     }
@@ -852,8 +1009,9 @@ public class MountOverlay {
             if (!hovered) return;
             List<Text> lines = List.of(
                     WynnExtras.addWynnExtrasPrefix("§6Advanced 7 + 3 strategy"),
-                    Text.literal("§8As the title already states, this is advanced."),
-                    Text.literal("§8The normal mode is good enough for the average user"),
+                    Text.literal("§8As the title already states, this is an advanced niche strategy."),
+                    Text.literal("§8The average user will not need this"),
+                    Text.literal("Explanation:"),
                     Text.literal("Prepare one fresh mount with 3 materials"),
                     Text.literal("and another with 7, then breed them together."),
                     Text.literal("The first feeds spread points across the selected"),
@@ -924,26 +1082,37 @@ public class MountOverlay {
 
     private static final class ExtraMaterialsWidget extends Widget {
         private final List<MaterialPick> materials;
+        private final String status;
 
-        private ExtraMaterialsWidget(int x, int y, List<MaterialPick> materials) {
-            super(x, y, MinecraftClient.getInstance().textRenderer.getWidth("+" + materials.size()) + 2, 10);
+        private ExtraMaterialsWidget(int x, int y, List<MaterialPick> materials, String status) {
+            super(x, y, MinecraftClient.getInstance().textRenderer.getWidth(displayText(materials.size(), status)) + 2, 10);
             this.materials = List.copyOf(materials);
+            this.status = status;
+        }
+
+        private static String displayText(int materialCount, String status) {
+            if (materialCount == 0) return status;
+            if (status.isEmpty()) return "+" + materialCount;
+            return "+" + materialCount + " | " + status;
         }
 
         @Override
         protected void drawContent(DrawContext context, int mouseX, int mouseY, float delta) {
-            ui.drawText("+" + materials.size(), x, y, CustomColor.fromHexString("FFAA00"), 1);
+            String materialText = materials.isEmpty() ? "" : "§6+" + materials.size();
+            String separator = materials.isEmpty() || status.isEmpty() ? "" : " §7| ";
+            String statusText = status.equals("Ready to breed") ? "§a" + status : "§e" + status;
+            ui.drawText(materialText + separator + statusText, x, y, CustomColor.fromHexString("FFFFFF"), 1);
         }
 
         private void drawTooltip(DrawContext context, int mouseX, int mouseY) {
-            if (!hovered) return;
+            if (!hovered || materials.isEmpty()) return;
             Map<String, Integer> grouped = new LinkedHashMap<>();
             for (MaterialPick material : materials) {
                 grouped.merge(material.name(), 1, Integer::sum);
             }
             List<Text> lines = new ArrayList<>();
             lines.add(WynnExtras.addWynnExtrasPrefix("§6Mount helper"));
-            lines.add(Text.literal("Still needed:"));
+            lines.add(Text.literal("§7Remaining:"));
             grouped.forEach((name, quantity) -> lines.add(Text.literal(quantity + "x " + name)));
             context.drawTooltip(MinecraftClient.getInstance().textRenderer, lines, mouseX, mouseY);
         }
