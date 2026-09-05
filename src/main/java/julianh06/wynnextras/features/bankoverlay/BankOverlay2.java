@@ -542,7 +542,6 @@ public class BankOverlay2 extends WEHandledScreen {
 
         if (currentOverlayType == BankOverlayType.NONE && !bankTypeSwitchInProgress) return;
         if (!WynnExtrasConfig.INSTANCE.toggleBankOverlay) return;
-        // Guard against a stale overlay type firing jumps while the player is walking around.
         if (!(MinecraftClient.getInstance().currentScreen instanceof HandledScreen<?>)) return;
         if (isAnyTextInputFocused()) return;
         if (isReloading || hasHeldItem()) return;
@@ -1722,7 +1721,6 @@ public class BankOverlay2 extends WEHandledScreen {
                 && currentData.getLastPage() >= rankLockedPageCount;
     }
 
-    /** True if the button names exactly this page, so "Page 1" does not match "Page 10". */
     private static boolean buttonNamesPage(ItemStack stack, int pageNumber) {
         if (stack == null || stack.isEmpty()) return false;
         String cleaned = MINECRAFT_FORMATTING_CODE_PATTERN.matcher(stack.getName().getString()).replaceAll("");
@@ -1733,14 +1731,8 @@ public class BankOverlay2 extends WEHandledScreen {
         return after >= cleaned.length() || !Character.isDigit(cleaned.charAt(after));
     }
 
-    /**
-     * The server updates the two page arrows as separate slot packets, so the right arrow can
-     * still be stale while the page content has already arrived. The left arrow is a second
-     * source of truth for the page we are on, which stops the overlay from showing "Loading..."
-     * over items it already has.
-     */
     private static boolean leftButtonConfirmsPage(int pageIndex) {
-        if (pageIndex <= 0) return false;   // page 1 has no previous-page arrow
+        if (pageIndex <= 0) return false;
         return buttonNamesPage(getLeftPageButton(), pageIndex);
     }
 
@@ -5276,11 +5268,6 @@ public class BankOverlay2 extends WEHandledScreen {
             if(mouseButton == 1) return actionType;
 
             long now = System.currentTimeMillis();
-            // Same conditions as canPickupAll: collecting only makes sense onto a slot that
-            // actually holds a matching stack. Without this an ordinary placement onto an empty
-            // slot turned into PICKUP_ALL, which collects instead of placing — so the item could
-            // never be put back. Press and release of one gesture always fall inside the
-            // double-click window on the same slot, so this triggered on every single placement.
             boolean canCollectHere = heldItem != null && heldItem.getItem() != Items.AIR
                     && stack != null && !stack.isEmpty()
                     && ItemStack.areItemsAndComponentsEqual(stack, heldItem);

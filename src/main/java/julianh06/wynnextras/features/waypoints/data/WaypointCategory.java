@@ -14,12 +14,9 @@ public class WaypointCategory {
     public boolean showDistanceByDefault;
     public boolean showSeeThroughByDefault;
 
-    // Waypoint rendering needs an awt Color every frame for every waypoint. The HSB roundtrip is
-    // not free, so the result is kept until the category colour actually changes.
     private transient Color cachedAwtColor;
     private transient int cachedAwtColorSource = Integer.MIN_VALUE;
 
-    /** The category colour as an awt Color, via the same HSB roundtrip the renderer always used. */
     public Color asAwtColor() {
         int rgb = color.asInt();
         if (cachedAwtColor == null || rgb != cachedAwtColorSource) {

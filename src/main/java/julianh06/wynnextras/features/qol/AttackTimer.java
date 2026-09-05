@@ -179,9 +179,6 @@ public class AttackTimer {
         } catch (Exception ignored) {}
     }
 
-    // Reading the scoreboard walks every score holder, so doing it per frame dominates the render
-    // thread. The sidebar only changes about once a second, so the result is cached briefly and
-    // shared between the HUD renderer and the tick handler.
     public static List<String> getUpcomingAttacks() {
         long now = System.currentTimeMillis();
         if (now < upcomingAttacksCacheExpiresAt) return cachedUpcomingAttacks;
@@ -364,7 +361,6 @@ public class AttackTimer {
         long totalSeconds = Math.max(0, remainingMs / 1000L);
         long minutes = totalSeconds / 60L;
         long seconds = totalSeconds % 60L;
-        // Called every frame, so this avoids String.format's parser.
         return (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
     }
 

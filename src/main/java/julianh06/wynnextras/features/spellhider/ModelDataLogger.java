@@ -72,7 +72,6 @@ public class ModelDataLogger {
         return recentHashes;
     }
 
-    /** True when neither logging nor in-world display is active, so per-frame model scanning can be skipped. */
     public static boolean isIdle() {
         return currentState == State.OFF && displayState == DisplayState.OFF;
     }

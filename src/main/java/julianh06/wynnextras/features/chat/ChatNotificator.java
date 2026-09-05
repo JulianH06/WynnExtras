@@ -58,8 +58,6 @@ public class ChatNotificator {
     };
 
     public static void notify(Text message) {
-        // Text.getString() walks the whole component tree, so it is resolved once instead of once
-        // per configured notifier and premade.
         String text = message.getString();
         String lowerText = text.toLowerCase();
 

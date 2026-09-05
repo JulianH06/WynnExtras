@@ -31,9 +31,6 @@ public class WorldRenderUtils {
             .build()
     );
 
-    // Boxes go through the world render's shared immediate buffers using the pipeline above.
-    // Drawing them with an own render pass meant a framebuffer rebind and a GPU fence every
-    // frame, which cost more than the boxes themselves.
     public static final RenderLayer FILLED_BOX_LAYER = RenderLayer.of(
             WynnExtras.MOD_ID + ":filled_box",
             RenderSetup.builder(FILLED_BOX).translucent().build()
@@ -189,8 +186,6 @@ public class WorldRenderUtils {
         TextRenderer textRenderer = client.textRenderer;
         Camera camera = client.gameRenderer.getCamera();
 
-        // Reused instead of allocated: this is called once per waypoint per frame, and the text
-        // renderer consumes the matrix before returning.
         Matrix4f matrix = TEXT_MATRIX.identity();
         Vec3d viewerPos = camera.getCameraPos();
         float adjustedScale = scale * 0.05f;

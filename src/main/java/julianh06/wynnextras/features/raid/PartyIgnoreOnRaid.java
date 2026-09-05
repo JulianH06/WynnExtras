@@ -78,7 +78,6 @@ public class PartyIgnoreOnRaid {
     @SubscribeEvent
     public void onChat(ChatEvent event) {
         String message = event.message.getString();
-        // Both messages contain "ignore list", so the regex work is skipped for everything else.
         if (!message.contains("ignore list")) return;
 
         String raw = FORMAT_CODE.matcher(message).replaceAll("");

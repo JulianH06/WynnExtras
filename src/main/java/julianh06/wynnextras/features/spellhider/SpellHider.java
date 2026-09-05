@@ -88,19 +88,12 @@ public class SpellHider {
             .resolve("spell_modifiers.json");
 
 
-    // first path and hash are added when the game launches as textures are loaded
-    // then when the entity is first seen in-game its model is added based on the path
-    //      and its namespace is added from the hash
-    // that mean we have model -> namespace ability
     private static final Map<Integer, SpellData> byHash = new HashMap<>();
     private static final Map<String, SpellData> byPath = new HashMap<>();
     private static final Map<Integer, SpellData> byModel = new HashMap<>();
     private static final Map<String, Set<SpellData>> byName = new HashMap<>();
     public static final Map<SpellNamespace, SpellModifiers> modifiersMap = new HashMap<>();
 
-    // Custom model data values that have already been registered by ItemModelManagerMixin.
-    // The mixin runs once per item display entity per frame, but the registration it does is
-    // idempotent, so anything already seen can be skipped entirely.
     private static final Set<Integer> registeredModels = new HashSet<>();
 
     public static boolean isModelRegistered(int model) {

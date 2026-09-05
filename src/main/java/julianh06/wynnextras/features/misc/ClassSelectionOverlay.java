@@ -425,21 +425,12 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         return score >= MIN_FUZZY_MATCH_SCORE ? score : 0;
     }
 
-    /** Match current characters to stored identities, returning UUID for each.
-     *  Uses stable ids and exact snapshots first, then fuzzy matching. Any equally-sized
-     *  ambiguous remainder is assigned bijectively so existing cards cannot fall to the end. */
-    /** Ids handed to empty and locked slots. Never written to the identity file. */
     private static final String PLACEHOLDER_UUID_PREFIX = "placeholder-slot-";
 
-    /** An empty or locked slot rather than a real character — those always carry a class. */
     private static boolean isPlaceholderSlot(CharIdentity character) {
         return character == null || character.classType == null || character.classType.trim().isEmpty();
     }
 
-    /**
-     * Drops placeholder entries an earlier build persisted. They can never be matched again, so
-     * they would only pile up as candidates and bloat the saved order.
-     */
     private static boolean pruneStoredPlaceholders(Map<String, CharIdentity> stored) {
         return stored.entrySet().removeIf(entry -> isPlaceholderSlot(entry.getValue()));
     }
@@ -449,7 +440,7 @@ public class ClassSelectionOverlay extends WEHandledScreen {
         if (stored == null) {
             stored = new HashMap<>();
         }
-        // Clear out placeholder identities an earlier build may have accumulated.
+
         if (pruneStoredPlaceholders(stored)) {
             ClassSelectionData.saveCharIdentities();
         }

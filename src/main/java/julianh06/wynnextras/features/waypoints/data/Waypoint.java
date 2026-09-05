@@ -30,13 +30,11 @@ public class Waypoint {
     public String categoryId;
     private transient WaypointCategory category;
 
-    // The renderer draws the name every frame. Text.of allocates and the name rarely changes,
-    // so the component is kept until it does.
     private transient Text nameText;
     private transient String nameTextSource;
 
     //LEGACY
-    public String categoryName;
+    @Deprecated public String categoryName;
 
     public Waypoint() {
         name = "Waypoint";
@@ -73,7 +71,6 @@ public class Waypoint {
         categoryName = "";
     }
 
-    /** The waypoint name as a text component, rebuilt only when the name changes. */
     public Text getNameText() {
         if (nameText == null || !name.equals(nameTextSource)) {
             nameTextSource = name;
@@ -82,17 +79,15 @@ public class Waypoint {
         return nameText;
     }
 
-    /** The rendered size in blocks, clamped so old or broken data can never render an invisible/huge box. */
     public float getSize() {
         if (size <= 0f) return 1f;
         return Math.min(size, MAX_SIZE);
     }
 
     public void setSize(float size) {
-        this.size = Math.max(MIN_SIZE, Math.min(size, MAX_SIZE));
+        this.size = Math.clamp(size, MIN_SIZE, MAX_SIZE);
     }
 
-    /** The displayed coordinate of an axis, block position plus its sub block offset. */
     public double displayX() { return x + offsetX; }
     public double displayY() { return y + offsetY; }
     public double displayZ() { return z + offsetZ; }
@@ -116,7 +111,6 @@ public class Waypoint {
         return boxAt(x, y, z, offsetX, offsetY, offsetZ, getSize());
     }
 
-    /** The box a waypoint at these coordinates renders as. A size of 1 with no offsets is the plain block box. */
     public static Box boxAt(int x, int y, int z, float offsetX, float offsetY, float offsetZ, float size) {
         double half = size / 2.0;
         double centerX = x + 0.5 + offsetX;
@@ -125,7 +119,6 @@ public class Waypoint {
         return new Box(centerX - half, centerY - half, centerZ - half, centerX + half, centerY + half, centerZ + half);
     }
 
-    /** Whole numbers stay whole, everything else is trimmed to three decimals. */
     public static String formatCoord(double value) {
         double rounded = Math.round(value * 1000.0) / 1000.0;
         if (rounded == Math.rint(rounded)) return String.valueOf((long) Math.rint(rounded));
