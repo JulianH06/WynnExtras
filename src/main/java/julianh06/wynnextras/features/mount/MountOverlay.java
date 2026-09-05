@@ -60,6 +60,9 @@ public class MountOverlay {
     private static final Pattern FEEDING_IN_PATTERN = Pattern.compile(
             "Feeding in\\s+(?:(?<hours>\\d+)h\\s*)?(?:(?<minutes>\\d+)m\\s*)?(?:(?<seconds>\\d+)s)?",
             Pattern.CASE_INSENSITIVE);
+    private static final Pattern BREEDING_IN_PATTERN = Pattern.compile(
+            "Breeding in\\s+(?:(?<hours>\\d+)h\\s*)?(?:(?<minutes>\\d+)m\\s*)?(?:(?<seconds>\\d+)s)?",
+            Pattern.CASE_INSENSITIVE);
 
     private static final Map<Integer, CachedPlan> PLAN_CACHE = new HashMap<>();
     private static final Map<Integer, PendingInput> PENDING_INPUTS = new HashMap<>();
@@ -182,13 +185,15 @@ public class MountOverlay {
                     .map(slot -> identifyMaterial(slot.getStack()))
                     .filter(inserted -> inserted != null)
                     .toList();
-            if (stats.size() == STAT_COUNT && (!picks.isEmpty()
-                    || !insertedMaterials.isEmpty() || isFullyFed(stats))) {
+            String status = stats.size() == STAT_COUNT
+                    ? feedingStatus(saddleSlot.getStack(), stats, insertedMaterials, picks, selectedLevels[row])
+                    : "";
+            if (!status.isEmpty()) {
                 ExtraMaterialsWidget extra = new ExtraMaterialsWidget(
                         screen.getX() + screen.getBackgroundWidth() + 5,
                         rowY + 5,
                         picks.subList(visibleCount, picks.size()),
-                        feedingStatus(saddleSlot.getStack(), stats, insertedMaterials, picks, selectedLevels[row]));
+                        status);
                 extraWidgets.add(extra);
                 extra.draw(context, mouseX, mouseY, delta, ui);
             }
@@ -482,6 +487,10 @@ public class MountOverlay {
     private static String feedingStatus(ItemStack saddle, Map<MountStat, StatEntry> stats,
                                         List<InsertedMaterial> insertedMaterials,
                                         List<MaterialPick> picks, int materialLevel) {
+        Long breedingSeconds = getTooltipTimeSeconds(saddle, BREEDING_IN_PATTERN);
+        if (breedingSeconds != null) {
+            return "Breeding: " + formatDuration(breedingSeconds) + " remaining";
+        }
         if (isFullyFed(stats)) return "Ready to breed";
 
         long seconds = remainingFeedingSeconds(saddle, stats, insertedMaterials, picks, materialLevel);
@@ -494,7 +503,7 @@ public class MountOverlay {
         Map<MountStat, Integer> limits = new EnumMap<>(MountStat.class);
         for (MountStat stat : MountStat.values()) limits.put(stat, stats.get(stat).limit());
 
-        Long currentFeedSeconds = getCurrentFeedSeconds(saddle);
+        Long currentFeedSeconds = getTooltipTimeSeconds(saddle, FEEDING_IN_PATTERN);
         long seconds = 0;
         boolean firstMaterial = true;
         for (InsertedMaterial material : insertedMaterials) {
@@ -514,10 +523,10 @@ public class MountOverlay {
         return seconds;
     }
 
-    private static Long getCurrentFeedSeconds(ItemStack saddle) {
+    private static Long getTooltipTimeSeconds(ItemStack saddle, Pattern pattern) {
         for (Text line : saddle.getTooltip(Item.TooltipContext.DEFAULT, MinecraftClient.getInstance().player,
                 TooltipType.BASIC)) {
-            Matcher matcher = FEEDING_IN_PATTERN.matcher(line.getString());
+            Matcher matcher = pattern.matcher(line.getString());
             if (!matcher.find()) continue;
             long hours = parseTimePart(matcher.group("hours"));
             long minutes = parseTimePart(matcher.group("minutes"));
