@@ -77,7 +77,39 @@ public final class IdentifierRollResolver {
 
                 double percentage = (actual.value() - possible.minimum())
                         / (possible.maximum() - possible.minimum()) * 100d;
-                if (isInvertedRoll(entry.getKey(), actual)) percentage = 100d - percentage;
+                sum += Math.clamp(percentage, 0d, 100d);
+                count++;
+            }
+        }
+        return count == 0 ? OptionalDouble.empty() : OptionalDouble.of(sum / count);
+    }
+
+    public static OptionalDouble nearestPossiblePercentage(String itemName, double targetPercentage) {
+        List<WynnDataService.ItemData> items = WynnDataService.getInstance()
+                .findByDisplayName(cleanDisplayName(itemName));
+        if (items.isEmpty()) return OptionalDouble.empty();
+
+        double target = Math.clamp(targetPercentage, 0d, 100d);
+        double sum = 0d;
+        int count = 0;
+        Set<String> countedStats = new HashSet<>();
+        for (Map<String, WynnDataService.StatValue> ranges : rollableRanges(items.getFirst())) {
+            for (Map.Entry<String, WynnDataService.StatValue> entry : ranges.entrySet()) {
+                WynnDataService.StatValue possible = entry.getValue();
+                String statName = normalized(entry.getKey());
+                if (!possible.isRange() || possible.minimum().equals(possible.maximum())
+                        || countedStats.contains(statName)) continue;
+
+                int lowestValue = (int) Math.ceil(Math.min(possible.minimum(), possible.maximum()));
+                int highestValue = (int) Math.floor(Math.max(possible.minimum(), possible.maximum()));
+                if (lowestValue > highestValue) continue;
+                countedStats.add(statName);
+
+                double desiredValue = possible.minimum()
+                        + target / 100d * (possible.maximum() - possible.minimum());
+                int actualValue = Math.clamp((int) Math.round(desiredValue), lowestValue, highestValue);
+                double percentage = (actualValue - possible.minimum())
+                        / (possible.maximum() - possible.minimum()) * 100d;
                 sum += Math.clamp(percentage, 0d, 100d);
                 count++;
             }
@@ -216,12 +248,6 @@ public final class IdentifierRollResolver {
             case "gatheringexperience" -> actualName.equals("gatheringxp");
             default -> false;
         };
-    }
-
-    private static boolean isInvertedRoll(String apiName, ActualStat actual) {
-        String normalizedName = normalized(apiName);
-        if (normalizedName.equals("damagefrommobs")) return true;
-        return normalizedName.contains("spellcost") ^ actual.value() < 0;
     }
 
     private static boolean isBoxEligible(WynnDataService.ItemData item, int minimumLevel, int maximumLevel) {

@@ -20,7 +20,7 @@ import java.util.List;
 @Mixin(targets = "com.wynntils.features.tooltips.ItemStatInfoFeature", remap = false)
 public class ItemStatInfoFeatureMixin {
     @Inject(method = "onTooltipPre", at = @At("RETURN"), remap = false, require = 0)
-    private void captureProcessedTooltip(@Coerce Object event, CallbackInfo ci) {
+    private void appendWeightAnnotations(@Coerce Object event, CallbackInfo ci) {
         ItemStack currentHoveredStack = WynntilsTooltipAdapter.getItemStack(event);
         if (currentHoveredStack == null) return;
         WeightDisplay.setCurrentHoveredStack(currentHoveredStack);
@@ -30,14 +30,7 @@ public class ItemStatInfoFeatureMixin {
             List<Text> tooltips = new ArrayList<>(eventTooltips);
             TradeMarketComparisonPanel.cacheHoveredTooltip(currentHoveredStack, tooltips);
         }
-    }
-
-    @Inject(method = "onTooltipPreFinalize", at = @At("RETURN"), remap = false, require = 0)
-    private void appendWeightAnnotations(@Coerce Object event, CallbackInfo ci) {
-        //this will run if the user has the ItemStatInfoFeature enabled, if they dont then the annotation will be added in WeightDisplay instead
-        ItemStack currentHoveredStack = WeightDisplay.getCurrentHoveredStack();
-        List<Text> eventTooltips = WynntilsTooltipAdapter.getTooltips(event);
-        if (currentHoveredStack == null || eventTooltips.isEmpty()) return;
+        if (eventTooltips.isEmpty()) return;
         if (!WeightDisplay.isTrackedMythic(currentHoveredStack)) return;
         if (WeightDisplay.isUnidentified(currentHoveredStack)) return;
 

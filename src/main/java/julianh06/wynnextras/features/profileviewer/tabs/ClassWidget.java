@@ -6,6 +6,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.data.CharacterData;
 import julianh06.wynnextras.utils.UI.Widget;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
@@ -41,8 +42,6 @@ public class ClassWidget extends Widget {
     CharacterData characterData;
     private final Runnable action;
     private final boolean isAtiveCharacter;
-
-    private static final int MAX_CONTENT_COMPLETION = 1289;
 
     public ClassWidget(CharacterData characterData, boolean isAtiveCharacter) {
         super(0, 0, 0, 0);
@@ -97,8 +96,9 @@ public class ClassWidget extends Widget {
         if (classTexture != null) {
             int level = characterData.getLevel();
             int totalLevel = characterData.getTotalLevel();
+            Integer contentCompletionMax = WynncraftApiHandler.getContentCompletionMax();
             CustomColor levelColor;
-            if (characterData.getContentCompletion() >= MAX_CONTENT_COMPLETION && !WynnExtrasConfig.INSTANCE.removeChroma) {
+            if (contentCompletionMax != null && characterData.getContentCompletion() == contentCompletionMax && !WynnExtrasConfig.INSTANCE.removeChroma) {
                 levelColor = CustomColor.RAINBOW;
             } else {
                 levelColor = CustomColor.fromHexString("FFFFFF");
@@ -108,7 +108,10 @@ public class ClassWidget extends Widget {
             ui.drawText(getClassName(characterData), x + 111, y + 18, levelColor, 2.1f);
             ui.drawText("Level " + level, x + 111, y + 42, levelColor, 2.1f);
             ui.drawText("Total Level " + totalLevel, x + 111, y + 66, levelColor, 2.1f);
-            ui.drawText("Completion " + Math.min(100, characterData.getContentCompletion() * 100 / MAX_CONTENT_COMPLETION) + "%", x + 111, y + 90, levelColor, 2.1f);
+            String completionText = contentCompletionMax == null
+                    ? "Completion loading..."
+                    : "Completion " + Math.min(100, characterData.getContentCompletion() * 100L / contentCompletionMax) + "%";
+            ui.drawText(completionText, x + 111, y + 90, levelColor, 2.1f);
         }
 
         List<String> gamemodes = characterData.getGamemode();

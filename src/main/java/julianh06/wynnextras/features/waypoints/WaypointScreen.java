@@ -55,7 +55,7 @@ public class WaypointScreen extends WEScreen {
     private static final Identifier MOVE_ICON = Identifier.of("wynnextras", "textures/gui/waypointeditmodeui/move_icon.png");
 
     // ==================== LAYOUT ====================
-    private static final int SIDEBAR_WIDTH = 140;
+    private static final int SIDEBAR_WIDTH = 120;
     private static final int HEADER_HEIGHT = 50;
     private static final int FOOTER_HEIGHT = 50;
     private static final int OPTION_HEIGHT = 45;
@@ -136,7 +136,7 @@ public class WaypointScreen extends WEScreen {
         //drawMainPanel(ctx, mouseX, mouseY);
         //drawFooter(ctx, mouseX, mouseY);
 
-        int sideBarWidth = 520;
+        int sideBarWidth = 460;
         int logicalWidth = getLogicalWidth();
         int logicalHeight = getLogicalHeight();
         sideBarWidget.setBounds(0, 0, sideBarWidth, logicalHeight);

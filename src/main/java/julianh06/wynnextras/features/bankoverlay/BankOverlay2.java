@@ -3551,14 +3551,15 @@ public class BankOverlay2 extends WEHandledScreen {
         ensureWynntilsOriginalName(hoveredSlot);
         Optional<WynnItemData> item = asWynnItem(hoveredSlot);
         WeightDisplay.setCurrentHoveredStack(hoveredSlot);
+
+        if (readOnlyViewer) {
+            context.drawItemTooltip(MinecraftClient.getInstance().textRenderer, hoveredSlot, mouseX, mouseY);
+            return;
+        }
+
         TooltipRenderData tooltipData = getTooltipRenderData(hoveredSlot, item);
         hoveredTooltipData = tooltipData;
         TradeMarketComparisonPanel.cacheHoveredTooltip(hoveredSlot, tooltipData.tooltip());
-
-        if (readOnlyViewer) {
-            drawTooltip(MinecraftClient.getInstance().textRenderer, tooltipData.components(), mouseX + 14, mouseY, context);
-            return;
-        }
 
         Slot tooltipSource = getTooltipSourceSlot(screen);
         ensureWynntilsOriginalName(tooltipSource.getStack());

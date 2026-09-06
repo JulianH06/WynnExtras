@@ -114,6 +114,8 @@ public class PV {
     public static void open(String player) {
         currentPlayerData = null;
         currentPlayer = player;
+        WynncraftApiHandler.fetchOfficialQuestCount();
+        WynncraftApiHandler.fetchContentCompletionMax();
 
         // Capture the player this fetch is for. If a later /pv supersedes us,
         // currentPlayer will have changed and we must drop our (stale) result so it

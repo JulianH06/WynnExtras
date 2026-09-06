@@ -540,9 +540,10 @@ public final class IdentifierCaseOpeningOverlay extends WEMenuExtension {
             for (int cardIndex = firstCard; cardIndex < firstCard + visibleCards; cardIndex++) {
                 float cardX = x + cardIndex * CARD_STRIDE - currentOffset;
                 boolean resultCard = cardIndex == resultCardIndex && !resultStack.isEmpty();
-                float roll = resultCard ? resultRoll : randomRoll(cardIndex);
+                String name = cardName(cardIndex, resultCard);
+                float roll = resultCard ? resultRoll : randomRoll(cardIndex, name);
                 drawCard(mouseX, mouseY, cardX, viewportY + 2, viewportHeight - 4,
-                        cardName(cardIndex, resultCard), roll, resultCard, alpha);
+                        name, roll, resultCard, alpha);
             }
             ctx.disableScissor();
 
@@ -609,10 +610,11 @@ public final class IdentifierCaseOpeningOverlay extends WEMenuExtension {
             return names.get(nameIndex);
         }
 
-        private float randomRoll(int index) {
+        private float randomRoll(int index, String itemName) {
             long value = mix(index);
             double uniform = (value >>> 11) * 0x1.0p-53;
-            return (float) (Math.pow(uniform, 2d) * 100d);
+            double target = Math.pow(uniform, 2d) * 100d;
+            return (float) IdentifierRollResolver.nearestPossiblePercentage(itemName, target).orElse(target);
         }
 
         private long mix(long index) {

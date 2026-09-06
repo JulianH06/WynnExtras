@@ -81,7 +81,7 @@ public class TetrisScreen extends Screen {
     }
 
     private void updateBounds() {
-        boardScale = Math.min(this.height / 250f, (this.width - 160) / 100f);
+        boardScale = Math.min(this.height / 250f, this.width / 344f);
         boardScale = Math.max(boardScale, 0.5f);
         boardOffsetX = this.width / 2f - boardScale * 50;
         boardOffsetY = this.height / 2f - boardScale * 100;
@@ -113,6 +113,7 @@ public class TetrisScreen extends Screen {
 
         if (!gameOver) {
             drawHud(context);
+            drawKeybindPanel(context);
         } else {
             drawGameOver(context);
         }
@@ -443,12 +444,12 @@ public class TetrisScreen extends Screen {
         int level = currentLevel();
         long elapsed = System.currentTimeMillis() - sprintStartTime;
 
-        int holdX = fromX - 72, holdY = fromY, holdW = 62, holdH = 70;
+        int holdX = fromX - 72, holdY = fromY, holdW = 62, holdH = 48;
         drawPanel(ctx, holdX, holdY, holdW, holdH, 0xFF0f9bd7); // cyan — I piece
         ctx.drawText(textRenderer, "Hold", holdX + 6, holdY + 5, 0xFFe8dcc8, false);
         if (!holdShape.equals(" ")) drawPiecePreview(ctx, holdShape.charAt(0), holdX + 4, holdY + 18);
 
-        int scoreX = fromX - 72, scoreY = fromY + 78, scoreW = 62, scoreH = 95;
+        int scoreX = fromX - 72, scoreY = fromY + 54, scoreW = 62, scoreH = 95;
         drawPanel(ctx, scoreX, scoreY, scoreW, scoreH, 0xFFcca76f); // gold
         if (sprintMode) {
             ctx.drawText(textRenderer, "Lines", scoreX + 6, scoreY + 5, 0xFFe8dcc8, false);
@@ -482,10 +483,39 @@ public class TetrisScreen extends Screen {
             int textW = textRenderer.getWidth(flashMessage);
             ctx.drawText(textRenderer, flashMessage, fromX + (toX - fromX) / 2 - textW / 2, toY + 8, 0xFFcca76f, true);
         }
+    }
 
-        String hint = keyName(WynnExtrasConfig.INSTANCE.tetrisQuitKey) + ": quit";
-        int hintW = textRenderer.getWidth(hint);
-        ctx.drawText(textRenderer, hint, fromX + (toX - fromX) / 2 - hintW / 2, fromY - 14, 0x559a8b70, false);
+    private void drawKeybindPanel(DrawContext ctx) {
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        int panelX = fromX - 122, panelY = fromY + 155, panelW = 112, panelH = 65;
+        drawPanel(ctx, panelX, panelY, panelW, panelH, 0xFF0872bc);
+
+        drawScaledText(ctx, "Controls", panelX + 5, panelY + 5, panelW - 10, 0.65f, 0xFFe8dcc8);
+        int leftX = panelX + 5;
+        int rightX = panelX + 58;
+        int columnWidth = 49;
+        drawScaledText(ctx, "Left: " + keyNames(config.tetrisMoveLeftKey, config.tetrisMoveLeftAltKey), leftX, panelY + 15, columnWidth, 0.55f, 0xFFcca76f);
+        drawScaledText(ctx, "Right: " + keyNames(config.tetrisMoveRightKey, config.tetrisMoveRightAltKey), rightX, panelY + 15, columnWidth, 0.55f, 0xFFcca76f);
+        drawScaledText(ctx, "Soft: " + keyNames(config.tetrisSoftDropKey, config.tetrisSoftDropAltKey), leftX, panelY + 22, columnWidth, 0.55f, 0xFFcca76f);
+        drawScaledText(ctx, "Hard: " + keyName(config.tetrisHardDropKey), rightX, panelY + 22, columnWidth, 0.55f, 0xFFcca76f);
+        drawScaledText(ctx, "CW: " + keyNames(config.tetrisRotateClockwiseKey, config.tetrisRotateClockwiseAltKey), leftX, panelY + 29, columnWidth, 0.55f, 0xFFcca76f);
+        drawScaledText(ctx, "CCW: " + keyNames(config.tetrisRotateCounterClockwiseKey, config.tetrisRotateCounterClockwiseAltKey), rightX, panelY + 29, columnWidth, 0.55f, 0xFFcca76f);
+        drawScaledText(ctx, "Hold: " + keyNames(config.tetrisHoldKey, config.tetrisHoldAltKey), leftX, panelY + 36, columnWidth, 0.55f, 0xFFcca76f);
+        drawScaledText(ctx, "Start: " + keyName(config.tetrisStartKey), rightX, panelY + 36, columnWidth, 0.55f, 0xFFcca76f);
+        drawScaledText(ctx, "Restart: " + keyName(config.tetrisRestartKey), leftX, panelY + 43, columnWidth, 0.55f, 0xFFcca76f);
+        drawScaledText(ctx, "Mode: " + keyName(config.tetrisToggleModeKey), rightX, panelY + 43, columnWidth, 0.55f, 0xFFcca76f);
+        drawScaledText(ctx, "Quit: " + keyName(config.tetrisQuitKey), leftX, panelY + 50, columnWidth, 0.55f, 0xFFcca76f);
+        drawScaledText(ctx, "Rebind: WE Config > Keybinds > Tetris", leftX, panelY + 58, panelW - 10, 0.55f, 0xFF9a8b70);
+    }
+
+    private void drawScaledText(DrawContext ctx, String text, int x, int y, int maxWidth, float maxScale, int color) {
+        int textWidth = textRenderer.getWidth(text);
+        float scale = textWidth > 0 ? Math.min(maxScale, maxWidth / (float) textWidth) : maxScale;
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().translate(x, y);
+        ctx.getMatrices().scale(scale, scale);
+        ctx.drawText(textRenderer, text, 0, 0, color, false);
+        ctx.getMatrices().popMatrix();
     }
 
     private void drawGameOver(DrawContext ctx) {
@@ -675,6 +705,8 @@ public class TetrisScreen extends Screen {
             case GLFW.GLFW_KEY_ENTER -> "ENTER";
             case GLFW.GLFW_KEY_LEFT_SHIFT -> "LSHIFT";
             case GLFW.GLFW_KEY_RIGHT_SHIFT -> "RSHIFT";
+            case GLFW.GLFW_KEY_LEFT_ALT -> "LALT";
+            case GLFW.GLFW_KEY_RIGHT_ALT -> "RALT";
             case GLFW.GLFW_KEY_LEFT_CONTROL -> "LCTRL";
             case GLFW.GLFW_KEY_RIGHT_CONTROL -> "RCTRL";
             case GLFW.GLFW_KEY_UP -> "UP";
@@ -683,6 +715,10 @@ public class TetrisScreen extends Screen {
             case GLFW.GLFW_KEY_RIGHT -> "RIGHT";
             default -> "KEY_" + key;
         };
+    }
+
+    private static String keyNames(int primary, int alternative) {
+        return keyName(primary) + "/" + keyName(alternative);
     }
 
     @Override

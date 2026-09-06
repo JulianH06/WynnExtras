@@ -7,6 +7,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.features.profileviewer.Searchbar;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
 
@@ -69,14 +70,19 @@ public class QuestsTabWidget extends PVScreen.TabWidget {
 
         String titleString;
         CustomColor textColor;
-        if(quests.size() == 287 && !WynnExtrasConfig.INSTANCE.removeChroma) {
+        Integer totalQuestCount = WynncraftApiHandler.getOfficialQuestCount();
+        if(totalQuestCount != null && quests.size() == totalQuestCount && !WynnExtrasConfig.INSTANCE.removeChroma) {
             textColor = CustomColor.RAINBOW;
         } else {
             textColor = CustomColor.fromHexString("FFFFFF");
         }
-        double value = (quests.size()/287f) * 100;
-        double rounded = Math.floor(value * 10) / 10.0;
-        titleString = "Completed Quests on " + getClassName(selectedCharacter) + ": " + quests.size() + "/287 (" + rounded + "%)";
+        if(totalQuestCount == null) {
+            titleString = "Completed Quests on " + getClassName(selectedCharacter) + ": " + quests.size() + " (loading total...)";
+        } else {
+            double value = Math.min(100, (quests.size() / (double) totalQuestCount) * 100);
+            double rounded = Math.floor(value * 10) / 10.0;
+            titleString = "Completed Quests on " + getClassName(selectedCharacter) + ": " + quests.size() + "/" + totalQuestCount + " (" + rounded + "%)";
+        }
 
         PVScreen.DarkModeToggleWidget.drawImageWithFade(questBackgroundTextureDark, questBackgroundTexture, x + 30, y + 90, 1740, 600, ui);
         PVScreen.DarkModeToggleWidget.drawImageWithFade(questSearchbarTextureDark, questSearchbarTexture, x + 600F, y + height, 1050, 60, ui);

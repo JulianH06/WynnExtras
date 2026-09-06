@@ -41,6 +41,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.Slot;
@@ -355,14 +356,14 @@ public class CraftingHelperOverlay extends WEMenuExtension {
         loadClipboardBtn.isFilling = wbClicking && !wbIsReuse;
         loadClipboardBtn.fillDone = wbClicksDone;
         loadClipboardBtn.fillTotal = wbTotalClicks;
-        loadClipboardBtn.label = "Load from Clipboard";
+        loadClipboardBtn.label = labelWithKeybind("Load from Clipboard", WynnExtrasConfig.INSTANCE.craftingLoadClipboardKey);
 
         reuseLastBtn.setBounds(wbBtnX, wbBtnY + wbBtnH + 2, wbBtnW, wbBtnH);
         reuseLastBtn.isDisabled = wbClicking || !hasLastCraft;
         reuseLastBtn.isFilling = wbClicking && wbIsReuse;
         reuseLastBtn.fillDone = wbClicksDone;
         reuseLastBtn.fillTotal = wbTotalClicks;
-        reuseLastBtn.label = "Reuse Last";
+        reuseLastBtn.label = labelWithKeybind("Reuse Last", WynnExtrasConfig.INSTANCE.craftingReuseLastKey);
 
         autoStartBtn.setBounds(wbBtnX, wbBtnY + 2 * (wbBtnH + 2), wbBtnW, wbBtnH);
         autoStartBtn.label = "Auto Start: " + (WynnExtrasConfig.INSTANCE.craftingAutoStart ? "§aON" : "§cOFF");
@@ -599,6 +600,12 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
     private static boolean matchesKey(int keyCode, int configuredKey) {
         return configuredKey != GLFW.GLFW_KEY_UNKNOWN && keyCode == configuredKey;
+    }
+
+    private static String labelWithKeybind(String label, int configuredKey) {
+        if (configuredKey == GLFW.GLFW_KEY_UNKNOWN) return label;
+        String keyName = InputUtil.Type.KEYSYM.createFromCode(configuredKey).getLocalizedText().getString();
+        return label + " [" + keyName + "]";
     }
 
     private static boolean selectRecipeType(int index) {

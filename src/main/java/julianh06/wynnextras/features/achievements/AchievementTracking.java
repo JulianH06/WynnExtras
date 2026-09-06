@@ -64,12 +64,6 @@ public class AchievementTracking {
     private static final Pattern TERRITORY_TAKEN_CONTROL_PATTERN = Pattern.compile(
             "You have taken control of (?<territory>.+?) from \\[[^]]+]!");
 
-    /**
-     * Raw content-completion value that equals 100%. Kept in sync with
-     * {@code ClassWidget.MAX_CONTENT_COMPLETION}, which the profile viewer uses for the same purpose.
-     */
-    private static final int CONTENT_COMPLETION_MAX = 1289;
-
     /** Wynncraft profession keys, as returned (lowercase) by the player API. */
     private static final List<String> GATHERING_PROFESSIONS = List.of("mining", "woodcutting", "farming", "fishing");
     private static final List<String> CRAFTING_PROFESSIONS = List.of(
@@ -346,22 +340,26 @@ public class AchievementTracking {
         if (username == null || username.isEmpty()) return;
 
         WynncraftApiHandler.fetchPlayerData(username)
-                .thenAccept(data -> MinecraftClient.getInstance().execute(() -> reconcileWithApi(data)))
+                .thenCombine(WynncraftApiHandler.fetchContentCompletionMax(), ApiSyncData::new)
+                .thenAccept(syncData -> MinecraftClient.getInstance().execute(() ->
+                        reconcileWithApi(syncData.playerData(), syncData.contentCompletionMax())))
                 .exceptionally(ex -> {
                     WynnExtras.LOGGER.error("[WynnExtras] Failed to sync raid achievement counts: " + ex.getMessage());
                     return null;
                 });
     }
 
-    private void reconcileWithApi(PlayerData data) {
+    private void reconcileWithApi(PlayerData data, Integer contentCompletionMax) {
         if (achievements == null || data == null) return;
 
         boolean changed = false;
         changed |= reconcileRaids(data);
         changed |= reconcileWars(data);
-        changed |= evaluateCharacterAchievements(data);
+        changed |= evaluateCharacterAchievements(data, contentCompletionMax);
         if (changed) save();
     }
+
+    private record ApiSyncData(PlayerData playerData, Integer contentCompletionMax) {}
 
     /** Reconciles raid completion counts against the API. Returns true if anything changed. */
     private boolean reconcileRaids(PlayerData data) {
@@ -396,7 +394,7 @@ public class AchievementTracking {
      * Evaluates the class-level, content-completion and profession achievements from the per-character
      * data in a single Wynncraft API response. Returns true if any achievement state changed.
      */
-    private boolean evaluateCharacterAchievements(PlayerData data) {
+    private boolean evaluateCharacterAchievements(PlayerData data, Integer contentCompletionMax) {
         Map<String, CharacterData> characters = data.getCharacters();
         if (characters == null || characters.isEmpty()) return false; // stats private / unavailable
 
@@ -416,13 +414,14 @@ public class AchievementTracking {
             if (level >= CLASS_LEVEL_120) classesAt120++;
             if (level >= CLASS_LEVEL_121) classesAt121++;
 
-            if (character.getContentCompletion() >= CONTENT_COMPLETION_MAX) contentComplete = true;
+            boolean hasFullContentCompletion = contentCompletionMax != null
+                    && character.getContentCompletion() == contentCompletionMax;
+            if (hasFullContentCompletion) contentComplete = true;
 
             Map<String, Profession> professions = character.getProfessions();
             if (professions == null) continue;
 
-            if (character.getContentCompletion() >= CONTENT_COMPLETION_MAX
-                    && allProfessionsAtLevel(professions, PROFESSION_LEVEL_MAX)) {
+            if (hasFullContentCompletion && allProfessionsAtLevel(professions, PROFESSION_LEVEL_MAX)) {
                 ultimateCompletionist = true;
             }
             if (character.getLevel() >= CLASS_LEVEL_121

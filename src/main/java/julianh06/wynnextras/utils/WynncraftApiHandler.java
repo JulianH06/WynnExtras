@@ -69,6 +69,14 @@ public class WynncraftApiHandler {
 
     private static CompletableFuture<List<ApiLootPool>> officialLootPoolsFuture;
     private static List<ApiLootPool> officialLootPoolsCache;
+    private static CompletableFuture<Integer> officialQuestCountFuture;
+    private static volatile Integer officialQuestCount;
+    private static volatile long officialQuestCountFetchedAt;
+    private static final long QUEST_COUNT_CACHE_MS = 3_600_000;
+    private static CompletableFuture<Integer> contentCompletionMaxFuture;
+    private static volatile Integer contentCompletionMax;
+    private static volatile long contentCompletionMaxFetchedAt;
+    private static final long CONTENT_COMPLETION_MAX_CACHE_MS = 3_600_000;
 
     public static class ApiLootPool {
         public String name;
@@ -85,6 +93,112 @@ public class WynncraftApiHandler {
         public String tier;
         public boolean shiny;
         public String tooltip;
+    }
+
+    public static synchronized CompletableFuture<Integer> fetchOfficialQuestCount() {
+        if (officialQuestCount != null && System.currentTimeMillis() - officialQuestCountFetchedAt < QUEST_COUNT_CACHE_MS) {
+            return CompletableFuture.completedFuture(officialQuestCount);
+        }
+
+        if (officialQuestCountFuture != null) {
+            return officialQuestCountFuture;
+        }
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.wynncraft.com/v3/map/quests"))
+                .timeout(Duration.ofSeconds(8))
+                .GET()
+                .build();
+
+        officialQuestCountFuture = sendAsync(request)
+                .thenApply(response -> {
+                    if (response.statusCode() != 200) {
+                        WynnExtras.LOGGER.error("Failed to fetch official quest count: " + response.statusCode());
+                        return null;
+                    }
+
+                    try {
+                        JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
+                        int questCount = result.get("quests").getAsInt();
+                        if (questCount <= 0) {
+                            WynnExtras.LOGGER.error("Official quest count was not positive: " + questCount);
+                            return null;
+                        }
+                        officialQuestCount = questCount;
+                        officialQuestCountFetchedAt = System.currentTimeMillis();
+                        return questCount;
+                    } catch (Exception e) {
+                        WynnExtras.LOGGER.error("Failed to parse official quest count", e);
+                        return null;
+                    }
+                })
+                .exceptionally(ex -> {
+                    WynnExtras.LOGGER.error("Failed to fetch official quest count", ex);
+                    return null;
+                })
+                .whenComplete((result, ex) -> {
+                    synchronized (WynncraftApiHandler.class) {
+                        officialQuestCountFuture = null;
+                    }
+                });
+        return officialQuestCountFuture;
+    }
+
+    public static Integer getOfficialQuestCount() {
+        return officialQuestCount;
+    }
+
+    public static synchronized CompletableFuture<Integer> fetchContentCompletionMax() {
+        if (contentCompletionMax != null && System.currentTimeMillis() - contentCompletionMaxFetchedAt < CONTENT_COMPLETION_MAX_CACHE_MS) {
+            return CompletableFuture.completedFuture(contentCompletionMax);
+        }
+
+        if (contentCompletionMaxFuture != null) {
+            return contentCompletionMaxFuture;
+        }
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.wynncraft.com/v3/leaderboards/playerContent?resultLimit=1"))
+                .timeout(Duration.ofSeconds(8))
+                .GET()
+                .build();
+
+        contentCompletionMaxFuture = sendAsync(request)
+                .thenApply(response -> {
+                    if (response.statusCode() != 200) {
+                        WynnExtras.LOGGER.error("Failed to fetch content completion maximum: " + response.statusCode());
+                        return null;
+                    }
+
+                    try {
+                        JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
+                        int maximum = result.getAsJsonObject("1").get("score").getAsInt();
+                        if (maximum <= 0) {
+                            WynnExtras.LOGGER.error("Content completion maximum was not positive: " + maximum);
+                            return null;
+                        }
+                        contentCompletionMax = maximum;
+                        contentCompletionMaxFetchedAt = System.currentTimeMillis();
+                        return maximum;
+                    } catch (Exception e) {
+                        WynnExtras.LOGGER.error("Failed to parse content completion maximum", e);
+                        return null;
+                    }
+                })
+                .exceptionally(ex -> {
+                    WynnExtras.LOGGER.error("Failed to fetch content completion maximum", ex);
+                    return null;
+                })
+                .whenComplete((result, ex) -> {
+                    synchronized (WynncraftApiHandler.class) {
+                        contentCompletionMaxFuture = null;
+                    }
+                });
+        return contentCompletionMaxFuture;
+    }
+
+    public static Integer getContentCompletionMax() {
+        return contentCompletionMax;
     }
 
     public static synchronized CompletableFuture<List<ApiLootPool>> fetchOfficialLootPools(boolean forceRefresh) {
