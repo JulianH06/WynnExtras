@@ -33,7 +33,7 @@ public final class WynnItemParser {
         }
     };
 
-    private static final Pattern LEVEL = Pattern.compile("(?i)(?:combat\\s+)?(?:lv\\.?|level)(?:\\s+min)?\\D{0,6}(\\d{1,3})");
+    private static final Pattern LEVEL = Pattern.compile("(?i)(?:(?:combat\\s+)?(?:lv\\.?|level)(?:\\s+min)?\\D{0,6}(\\d{1,3})|(\\d{1,3})\\s+crafting\\s+level)");
     private static final Pattern DURABILITY = Pattern.compile("(?i)durability\\D*(\\d+)\\s*/\\s*(\\d+)");
     private static final Pattern USES = Pattern.compile("(?i)(?:uses|charges)\\D*(\\d+)(?:\\s*/\\s*\\d+)?");
     private static final Pattern POUCH = Pattern.compile("(?i)(?:emeralds?|value|capacity)\\D*(\\d[\\d,]*)\\s*/\\s*(\\d[\\d,]*)");
@@ -100,10 +100,10 @@ public final class WynnItemParser {
         WynnItemData.Amount durability = amount(DURABILITY, all);
         Integer uses = firstNumber(USES, all);
         WynnItemData.Amount pouch = category == ItemCategory.EMERALD_POUCH ? emeraldPouch(name, lore, all) : null;
-        String profession = profession(lower);
+        List<String> professions = professions(lower);
 
         return Optional.of(new WynnItemData(name, category, gearType, tier, requirements, bonuses,
-                durability, uses, pouch, crafted, unidentified, level, requiredClass, profession, ids, lore));
+                durability, uses, pouch, crafted, unidentified, level, requiredClass, professions, ids, lore));
     }
 
     private static List<String> lore(ItemStack stack) {
@@ -234,12 +234,13 @@ public final class WynnItemParser {
         return GearType.UNKNOWN;
     }
 
-    private static String profession(String text) {
+    private static List<String> professions(String text) {
+        List<String> result = new ArrayList<>();
         for (String profession : List.of("armouring", "tailoring", "weaponsmithing", "woodworking",
                 "jeweling", "alchemism", "scribing", "cooking")) {
-            if (text.contains(profession)) return profession;
+            if (text.contains(profession)) result.add(profession);
         }
-        return null;
+        return result;
     }
 
     private static WynnItemData.Amount amount(Pattern pattern, String text) {
@@ -252,7 +253,8 @@ public final class WynnItemParser {
 
     private static Integer firstNumber(Pattern pattern, String text) {
         Matcher matcher = pattern.matcher(text);
-        return matcher.find() ? number(matcher.group(1)) : null;
+        if (!matcher.find()) return null;
+        return number(matcher.group(1) != null ? matcher.group(1) : matcher.group(2));
     }
 
     private static int number(String value) {

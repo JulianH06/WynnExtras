@@ -33,8 +33,9 @@ public class TradeMarketOverlay {
 
     // Patterns for parsing
     private static final Pattern STATUS_PATTERN = Pattern.compile("(Pending|Fulfilled) - (Sold|Bought) (\\d+)/(\\d+) items?");
+    private static final Pattern PRICE_BREAKDOWN_PATTERN = Pattern.compile("\\(([^()]*)\\)");
     // Parse stx from bracket notation like (5stx ...)
-    private static final Pattern STX_PATTERN = Pattern.compile("\\((\\d+)stx");
+    private static final Pattern STX_PATTERN = Pattern.compile("(\\d+)stx");
     // Parse le from bracket notation like (... 9.60¼²) - number before ¼
     private static final Pattern LE_PATTERN = Pattern.compile("([\\d.]+)¼");
     // Parse eb from bracket notation like (27²½ ...) - number before ²½
@@ -149,6 +150,9 @@ public class TradeMarketOverlay {
 
                 // Look for bracket notation with price
                 if (!loreLine.contains("(") || !loreLine.contains("each")) continue;
+                Matcher priceBreakdownMatcher = PRICE_BREAKDOWN_PATTERN.matcher(loreLine);
+                if (!priceBreakdownMatcher.find()) continue;
+                String priceBreakdown = priceBreakdownMatcher.group(1);
 
                 long stxValue = 0;
                 long leValue = 0;
@@ -156,27 +160,27 @@ public class TradeMarketOverlay {
                 long eValue = 0;
 
                 // Extract stx (1 stx = 262144 emeralds)
-                Matcher stxMatcher = STX_PATTERN.matcher(loreLine);
+                Matcher stxMatcher = STX_PATTERN.matcher(priceBreakdown);
                 if (stxMatcher.find()) {
                     stxValue = Long.parseLong(stxMatcher.group(1)) * 262144;
                 }
 
                 // Extract le (1 le = 4096 emeralds)
-                Matcher leMatcher = LE_PATTERN.matcher(loreLine);
+                Matcher leMatcher = LE_PATTERN.matcher(priceBreakdown);
                 if (leMatcher.find()) {
                     double leAmount = Double.parseDouble(leMatcher.group(1));
                     leValue = (long) (leAmount * 4096);
                 }
 
                 // Extract eb (1 eb = 64 emeralds)
-                Matcher ebMatcher = EB_PATTERN.matcher(loreLine);
+                Matcher ebMatcher = EB_PATTERN.matcher(priceBreakdown);
                 if (ebMatcher.find()) {
                     double ebAmount = Double.parseDouble(ebMatcher.group(1));
                     ebValue = (long) (ebAmount * 64);
                 }
 
                 // Extract raw emeralds
-                Matcher eMatcher = E_PATTERN.matcher(loreLine);
+                Matcher eMatcher = E_PATTERN.matcher(priceBreakdown);
                 if (eMatcher.find()) {
                     eValue = (long) Double.parseDouble(eMatcher.group(1));
                 }

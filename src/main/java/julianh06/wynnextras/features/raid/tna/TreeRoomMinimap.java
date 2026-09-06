@@ -13,6 +13,7 @@ import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.utils.Pair;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
@@ -34,6 +35,7 @@ public class TreeRoomMinimap {
     private static final float MIN_SCALE = 0.3f;
     private static final float MAX_SCALE = 3.0f;
     private static final Texture mapTexture = Texture.WYNN_MAP_TEXTURES;
+    private static final CustomColor fallbackBorderColor = CustomColor.fromHexString("70452F");
     private static final Identifier background = Identifier.of("wynnextras", "textures/treeroomminimap/treeroomminimap.png");
     private static final Identifier heart = Identifier.of("wynnextras", "textures/treeroomminimap/heart.png");
     private static final int grooves = 3;
@@ -221,6 +223,18 @@ public class TreeRoomMinimap {
         // Scale to stay the same.
         float groovesWidth = grooves * width / DEFAULT_SIZE;
         float groovesHeight = grooves * height / DEFAULT_SIZE;
+
+        if (!FabricLoader.getInstance().isModLoaded("wynntils")) {
+            RenderUtils.drawRectBorders(
+                    guiGraphics,
+                    fallbackBorderColor,
+                    renderX + 4 - groovesWidth,
+                    renderY + 4 - groovesHeight,
+                    width - 8 + 2 * groovesWidth,
+                    height - 8 + 2 * groovesHeight,
+                    grooves);
+            return;
+        }
 
         RenderUtils.drawTexturedRect(
             guiGraphics,
@@ -488,5 +502,4 @@ public class TreeRoomMinimap {
 
         return DefaultSkinHelper.getTexture();
     }
-
 }

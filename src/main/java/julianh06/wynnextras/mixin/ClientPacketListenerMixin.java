@@ -3,12 +3,14 @@ package julianh06.wynnextras.mixin;
 import com.llamalad7.mixinextras.sugar.Local;
 import julianh06.wynnextras.event.SetEntityDataEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
+import julianh06.wynnextras.features.chat.ChatManager;
 import julianh06.wynnextras.features.misc.ServerTpsHud;
 import julianh06.wynnextras.wynncraft.state.RaidState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
+import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
@@ -32,6 +34,16 @@ public class ClientPacketListenerMixin {
     @Inject(method = "onTitle", at = @At("TAIL"))
     private void wynnExtras$observeRaidTitle(TitleS2CPacket packet, CallbackInfo ci) {
         RaidState.observeTitle(packet.text());
+    }
+
+    @Inject(
+            method = "onGameMessage",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/network/NetworkThreadUtils;forceMainThread(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/network/PacketApplyBatcher;)V",
+                    shift = At.Shift.AFTER))
+    private void wynnExtras$observeGameMessage(GameMessageS2CPacket packet, CallbackInfo ci) {
+        ChatManager.observeIncomingMessage(packet.content());
     }
 
     @Inject(method = "onInventory", at = @At("TAIL"))

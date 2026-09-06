@@ -2,6 +2,7 @@ package julianh06.wynnextras.config;
 
 import julianh06.wynnextras.config.configoptions.*;
 import static julianh06.wynnextras.config.ConfigTheme.*;
+import julianh06.wynnextras.compat.wynntils.WynntilsCompat;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.core.CurrentVersionData;
 import julianh06.wynnextras.features.achievements.AchievementScreen;
@@ -817,6 +818,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 1, 100, () -> config.tetris20GLevel, v -> config.tetris20GLevel = v),
                         () -> config.tetris20GEnabled))
             .endSub()
+            .add(toggle("Fun item identifier", "Make rolling items more fun",
+                    () -> config.identifierCaseOpening, v -> config.identifierCaseOpening = v))
             .add(toggle("Mount color backgrounds", "Use the mount's primary color as its item background",
                     () -> config.mountPrimaryColorBackground, v -> config.mountPrimaryColorBackground = v))
             .add(toggle("Show Own Nametag", "Render your nametag above your head",
@@ -828,16 +831,16 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                     () -> config.differentGUIScale))
             .add(toggle("Lootpool button in pf menu", "Show a button to quickly access /we lootpool through the pf menu",
                     () -> config.showLootpoolButtonInPartyFinder, v -> config.showLootpoolButtonInPartyFinder = v))
-            .add(toggle("Redirect Wynntils View Stats", "Changes the Wynntils 'View Player Stats' button to open the pv instead of the wynn website",
-                    () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v))
+            .add(visibleWhen(toggle("Redirect Wynntils View Stats", "Changes the Wynntils 'View Player Stats' button to open the pv instead of the wynn website",
+                            () -> config.redirectWynntilsViewStatsToPV, v -> config.redirectWynntilsViewStatsToPV = v),
+                    WynntilsCompat::isLoaded))
             .add(toggle("Skip Front View", "Skip front-facing view in 3rd person",
                     () -> config.removeFrontPersonView, v -> config.removeFrontPersonView = v))
-            .add(toggle("Fun item identifier", "Make rolling items more fun",
-                    () -> config.identifierCaseOpening, v -> config.identifierCaseOpening = v))
             .add(toggle("Financial Advice", "Receive smart financial advise in the Identifier menu",
                     () -> config.sourceOfTruthToggle, v -> config.sourceOfTruthToggle = v))
-            .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
-                    () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
+            .add(visibleWhen(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
+                            () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v),
+                    WynntilsCompat::isLoaded))
             .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
                     () -> config.removeChroma, v -> config.removeChroma = v))
             .add(toggle("Server TPS", "Show the server's current ticks per second on the HUD",
@@ -961,6 +964,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         .excludeFromSearch()
         .add(text("", "All features added in this update. Toggle any of them on or off."))
 
+        .add(toggle("Fun item identifier", "Make rolling items more fun",
+                () -> config.identifierCaseOpening, v -> config.identifierCaseOpening = v))
         .add(toggle("Disable Update Reminder", "Do not show a chat message when a new WynnExtras version is available",
                 () -> config.updateReminderDisabled, v -> config.updateReminderDisabled = v))
         .add(toggle("Powder combine helper", "Show quick combine buttons in the powder master menu",

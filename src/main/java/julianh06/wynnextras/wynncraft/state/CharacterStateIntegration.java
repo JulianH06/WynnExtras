@@ -73,6 +73,7 @@ public final class CharacterStateIntegration {
                     CharacterBankData.INSTANCE.setCharacterInfo(displayName, data.getLevel(), data.getGamemode());
                     CharacterBankData.INSTANCE.save();
                 }
+                ProfessionState.syncFromApi(data);
                 ProfessionOverlay.initOverflowFromApi(characterId, data);
                 TickScheduler.runAfterTicks(60, ProfessionOverlay::fetchLeaderboardForAllProfessions);
                 return;

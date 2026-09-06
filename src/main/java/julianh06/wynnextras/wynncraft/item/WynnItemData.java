@@ -34,7 +34,7 @@ public final class WynnItemData {
     private final boolean unidentified;
     private final Integer level;
     private final CharacterClass requiredClass;
-    private final String profession;
+    private final List<String> professions;
     private final Map<String, Integer> identifications;
     private final List<String> lore;
 
@@ -42,7 +42,7 @@ public final class WynnItemData {
                  Map<SkillPoint, Integer> requirements, Map<SkillPoint, Integer> bonuses,
                  Amount durability, Integer consumableUses, Amount emeraldPouch,
                  boolean crafted, boolean unidentified, Integer level, CharacterClass requiredClass,
-                 String profession, Map<String, Integer> identifications, List<String> lore) {
+                 List<String> professions, Map<String, Integer> identifications, List<String> lore) {
         this.name = name;
         this.category = category;
         this.gearType = gearType;
@@ -56,7 +56,7 @@ public final class WynnItemData {
         this.unidentified = unidentified;
         this.level = level;
         this.requiredClass = requiredClass;
-        this.profession = profession;
+        this.professions = List.copyOf(professions);
         this.identifications = Map.copyOf(identifications);
         this.lore = List.copyOf(lore);
     }
@@ -76,7 +76,7 @@ public final class WynnItemData {
     public boolean unidentified() { return unidentified; }
     public OptionalInt level() { return level == null ? OptionalInt.empty() : OptionalInt.of(level); }
     public CharacterClass requiredClass() { return requiredClass; }
-    public Optional<String> profession() { return Optional.ofNullable(profession); }
+    public List<String> professions() { return professions; }
     public Map<String, Integer> identifications() { return identifications; }
     public List<String> lore() { return lore; }
 

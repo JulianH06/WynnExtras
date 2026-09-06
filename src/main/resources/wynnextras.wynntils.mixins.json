@@ -18,6 +18,7 @@
     "FunctionManagerMixin",
     "ItemStatInfoFeatureMixin",
     "PersonalStorageUtilitiesFeatureMixin",
+    "ProfessionModelMixin",
     "TooltipFittingFeatureMixin",
     "TooltipUtilsMixin"
   ]

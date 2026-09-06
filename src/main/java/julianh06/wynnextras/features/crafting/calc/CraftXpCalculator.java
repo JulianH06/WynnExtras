@@ -114,15 +114,16 @@ public final class CraftXpCalculator {
      * Total XP still needed to reach {@code targetLevel}, given the progress already made inside
      * the current level. Returns -1 when an intermediate level falls outside the covered range.
      */
-    public static long xpBetween(int currentLevel, long xpIntoCurrentLevel, long xpForCurrentLevel, int targetLevel) {
+    public static long xpBetween(int currentLevel, double progressIntoCurrentLevel, int targetLevel) {
         if (targetLevel <= currentLevel || targetLevel > MAX_LEVEL) return 0;
         if (currentLevel < MIN_LEVEL - 1) return -1;
 
-        long total = Math.max(0, xpForCurrentLevel - xpIntoCurrentLevel);
+        double progress = Math.clamp(progressIntoCurrentLevel, 0, 1);
+        double total = xpToReachLevel(currentLevel + 1) * (1 - progress);
         for (int level = currentLevel + 2; level <= targetLevel; level++) {
             total += xpToReachLevel(level);
         }
-        return total;
+        return (long) Math.ceil(total);
     }
 
     /** Base XP for a full craft at the given material band and ingredient level. */

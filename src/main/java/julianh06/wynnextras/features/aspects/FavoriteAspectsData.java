@@ -145,7 +145,8 @@ public class FavoriteAspectsData {
 
     /**
      * Import aspect favorites from Wynntils config
-     * Wynntils stores favorites in {gameDir}/wynntils/config/{uuid}.conf.json under "itemFavoriteFeature.favoriteItems"
+     * Wynntils stores favorites in {gameDir}/wynntils/config/global.conf.json on newer versions
+     * and in {uuid}.conf.json on older versions.
      * @return number of aspects imported
      */
     public int importFromWynntils() {
@@ -160,37 +161,42 @@ public class FavoriteAspectsData {
         // Wynntils config is in {gameDir}/wynntils/config/, not in the config folder
         // getConfigDir() returns {gameDir}/config, so we go up one level
         Path gameDir = FabricLoader.getInstance().getConfigDir().getParent();
-        Path wynntilsConfig = gameDir.resolve("wynntils/config/" + uuid + ".conf.json");
-
-        WynnExtras.LOGGER.info("[WynnExtras] Looking for Wynntils config at: " + wynntilsConfig);
-
-        if (!Files.exists(wynntilsConfig)) {
-            WynnExtras.LOGGER.info("[WynnExtras] Wynntils config not found");
-            return 0;
-        }
+        Path wynntilsConfigDir = gameDir.resolve("wynntils/config");
+        List<Path> wynntilsConfigs = List.of(
+                wynntilsConfigDir.resolve("global.conf.json"),
+                wynntilsConfigDir.resolve(uuid + ".conf.json")
+        );
 
         int imported = 0;
-        try (Reader reader = Files.newBufferedReader(wynntilsConfig)) {
-            JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
+        boolean configFound = false;
+        for (Path wynntilsConfig : wynntilsConfigs) {
+            if (!Files.exists(wynntilsConfig)) continue;
+            configFound = true;
 
-            if (root.has("itemFavoriteFeature.favoriteItems")) {
-                JsonArray favorites = root.getAsJsonArray("itemFavoriteFeature.favoriteItems");
+            try (Reader reader = Files.newBufferedReader(wynntilsConfig)) {
+                JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
 
-                for (JsonElement element : favorites) {
-                    String itemName = element.getAsString();
-                    // Only import aspects
-                    if (isAspect(itemName) && !favoriteAspects.contains(itemName)) {
-                        favoriteAspects.add(itemName);
-                        imported++;
+                if (root.has("itemFavoriteFeature.favoriteItems")) {
+                    JsonArray favorites = root.getAsJsonArray("itemFavoriteFeature.favoriteItems");
+
+                    for (JsonElement element : favorites) {
+                        String itemName = element.getAsString();
+                        if (isAspect(itemName) && favoriteAspects.add(itemName)) {
+                            imported++;
+                        }
                     }
                 }
-
-                if (imported > 0) {
-                    save();
-                }
+            } catch (Exception e) {
+                WynnExtras.LOGGER.error("[WynnExtras] Failed to import Wynntils favorites from {}",
+                        wynntilsConfig, e);
             }
-        } catch (Exception e) {
-            WynnExtras.LOGGER.error("[WynnExtras] Failed to import Wynntils favorites: " + e.getMessage());
+        }
+
+        if (!configFound) {
+            WynnExtras.LOGGER.info("[WynnExtras] Wynntils config not found in {}", wynntilsConfigDir);
+        }
+        if (imported > 0) {
+            save();
         }
 
         return imported;

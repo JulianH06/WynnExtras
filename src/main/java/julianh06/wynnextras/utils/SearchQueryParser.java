@@ -435,13 +435,9 @@ public class SearchQueryParser {
         return item != null && item.requiredClass().name().equalsIgnoreCase(classType);
     }
 
-    /** Matches the profession query against the item's profession metadata.
-     *  Currently only IngredientItem exposes profession types directly via Wynntils.
-     *  Crafted items don't have a simple profession getter, so users can fall back
-     *  to combining `crafted:true` with a text search for the profession name. */
     private static boolean matchesProfession(WynnItemData item, String profession) {
         return item != null && profession != null
-                && item.profession().map(value -> value.contains(profession.toLowerCase())).orElse(false);
+                && item.professions().stream().anyMatch(value -> value.contains(profession.toLowerCase()));
     }
 
     private static boolean matchesType(WynnItemData item, String type) {

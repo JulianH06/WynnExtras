@@ -506,7 +506,8 @@ public class ProfessionOverlay {
         if (line5goal == null && level < CraftXpCalculator.CURVE_MAX_LEVEL) {
             int levelGoal = getLevelGoal(lastProfession);
             if (levelGoal > level) {
-                long xpLeft = CraftXpCalculator.xpBetween(level, xp.current(), xp.max(), levelGoal);
+                double progress = xp.max() > 0 ? xp.current() / xp.max() : 0;
+                long xpLeft = CraftXpCalculator.xpBetween(level, progress, levelGoal);
                 if (xpLeft <= 0) {
                     // Below the covered part of the XP curve there is no data to work from.
                     line5goal = "Goal: Lvl " + levelGoal + " | no XP data below "
@@ -565,10 +566,11 @@ public class ProfessionOverlay {
     }
 
     private static String formatTime(double hours) {
-        if (hours < 1.0 / 60) return "<1m";
-        if (hours < 1) return String.format("%.0fm", hours * 60);
-        if (hours < 24) return String.format("%.1fh", hours);
-        return String.format("%.1fd", hours / 24);
+        long seconds = Math.max(1, Math.round(hours * 3600));
+        if (seconds < 60) return seconds + "s";
+        if (seconds < 3600) return seconds / 60 + "m " + seconds % 60 + "s";
+        if (seconds < 86400) return seconds / 3600 + "h " + seconds % 3600 / 60 + "m";
+        return seconds / 86400 + "d " + seconds % 86400 / 3600 + "h";
     }
 
     private static String formatXp(float xp) {

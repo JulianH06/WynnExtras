@@ -8,11 +8,13 @@ import julianh06.wynnextras.features.crafting.calc.CraftXpCalculator.MaterialTyp
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.WEScreen;
+import julianh06.wynnextras.wynncraft.state.BombState;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class ProfessionCalculatorScreen extends WEScreen {
 
@@ -65,9 +67,7 @@ public class ProfessionCalculatorScreen extends WEScreen {
             MaterialType.MAT_107_110, MaterialType.MAT_110_115, MaterialType.MAT_115_MAX, MaterialType.SKY
     };
     private static final int DEFAULT_MATERIAL_INDEX = 2; // 115-max (least decay near max level)
-    private static final String[] XP_MULTIPLIERS = {"1x", "1.5x", "2x", "2.5x", "3x", "3.5x", "4x", "4.5x", "5x"};
-    private static final double[] XP_MULT_VALUES = {1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0};
-    private static final String[] PROF_SPEED_OPTIONS = {"On", "Off"};
+    private static final String[] TOGGLE_OPTIONS = {"Off", "On"};
     private static final String[] ING_TIER_FILTER_OPTIONS = {"All", "T1 Only", "T2 Only", "T3 Only"};
 
     // All 9 material tier combinations: {mat1_tier, mat2_tier}
@@ -80,13 +80,14 @@ public class ProfessionCalculatorScreen extends WEScreen {
     private CycleButtonWidget professionButton;
     private CycleButtonWidget recipeButton;
     private CycleButtonWidget materialTypeButton;
-    private CycleButtonWidget xpMultButton;
+    private CycleButtonWidget dxpWeekendButton;
+    private CycleButtonWidget txpWeekendButton;
+    private CycleButtonWidget profXpBombButton;
     private CycleButtonWidget profSpeedButton;
     private CycleButtonWidget ingTierFilterButton;
     private TextInputWidget ingredientLevelInput;
-    /** Fraction of the current level already earned, filled in from the live profession data. */
-    private double detectedLevelProgress = 0;
     private TextInputWidget fromLevelInput;
+    private TextInputWidget currentProgressInput;
     private TextInputWidget toLevelInput;
     private TextInputWidget currentOverflowInput;
     private TextInputWidget overflowGoalInput;
@@ -118,19 +119,29 @@ public class ProfessionCalculatorScreen extends WEScreen {
         recipeButton = new CycleButtonWidget("Recipe", RECIPE_NAMES[0], idx -> recalculate());
         materialTypeButton = new CycleButtonWidget("Material", MATERIAL_TYPES, idx -> recalculate());
         materialTypeButton.setSelectedIndexSilent(DEFAULT_MATERIAL_INDEX);
-        xpMultButton = new CycleButtonWidget("XP Bonus", XP_MULTIPLIERS, idx -> recalculate());
-        profSpeedButton = new CycleButtonWidget("Prof Speed", PROF_SPEED_OPTIONS, idx -> recalculate());
+        dxpWeekendButton = new CycleButtonWidget("DXP Weekend", TOGGLE_OPTIONS, idx -> {
+            if (idx == 1) txpWeekendButton.setSelectedIndexSilent(0);
+            recalculate();
+        });
+        txpWeekendButton = new CycleButtonWidget("TXP Weekend", TOGGLE_OPTIONS, idx -> {
+            if (idx == 1) dxpWeekendButton.setSelectedIndexSilent(0);
+            recalculate();
+        });
+        profXpBombButton = new CycleButtonWidget("Prof XP Bomb", TOGGLE_OPTIONS, idx -> recalculate());
+        profSpeedButton = new CycleButtonWidget("Prof Speed Bomb", TOGGLE_OPTIONS, idx -> recalculate());
         ingTierFilterButton = new CycleButtonWidget("Ing Tier", ING_TIER_FILTER_OPTIONS, idx -> {});
 
         ingredientLevelInput = createStyledInput("Ing Level");
         ingredientLevelInput.setInput("100");
         fromLevelInput = createStyledInput("Level (99-132)");
+        currentProgressInput = createStyledInput("0-100");
         toLevelInput = createStyledInput("Level (99-132)");
         toLevelInput.setInput("132");
         currentOverflowInput = createStyledInput("e.g. 200M");
         overflowGoalInput = createStyledInput("e.g. 500M");
         topNInput = createStyledInput("All");
         fromLevelInput.setCharacterFilter(Character::isDigit);
+        currentProgressInput.setCharacterFilter(character -> Character.isDigit(character) || character == '.' || character == ',');
         toLevelInput.setCharacterFilter(Character::isDigit);
         topNInput.setCharacterFilter(Character::isDigit);
         currentOverflowInput.setCharacterFilter(this::isNumberSuffixInputChar);
@@ -148,11 +159,14 @@ public class ProfessionCalculatorScreen extends WEScreen {
         addRootWidget(professionButton);
         addRootWidget(recipeButton);
         addRootWidget(materialTypeButton);
-        addRootWidget(xpMultButton);
+        addRootWidget(dxpWeekendButton);
+        addRootWidget(txpWeekendButton);
+        addRootWidget(profXpBombButton);
         addRootWidget(profSpeedButton);
         addRootWidget(ingTierFilterButton);
         addRootWidget(ingredientLevelInput);
         addRootWidget(fromLevelInput);
+        addRootWidget(currentProgressInput);
         addRootWidget(toLevelInput);
         addRootWidget(currentOverflowInput);
         addRootWidget(overflowGoalInput);
@@ -209,6 +223,14 @@ public class ProfessionCalculatorScreen extends WEScreen {
             }
         }
         detectLevelForSelected();
+        profXpBombButton.setSelectedIndexSilent(hasActiveBomb("PROFESSION_XP") ? 1 : 0);
+        profSpeedButton.setSelectedIndexSilent(hasActiveBomb("PROFESSION_SPEED") ? 1 : 0);
+    }
+
+    private boolean hasActiveBomb(String type) {
+        String currentWorld = BombState.currentWorld();
+        return BombState.bombs().stream().anyMatch(bomb -> bomb.active()
+                && bomb.type().equals(type) && bomb.server().equalsIgnoreCase(currentWorld));
     }
 
     private void detectLevelForSelected() {
@@ -222,10 +244,11 @@ public class ProfessionCalculatorScreen extends WEScreen {
 
         // Progress already made inside the current level, so the estimate does not restart the
         // level from zero every time.
-        detectedLevelProgress = 0;
         ProfessionState.Xp levelXp = ProfessionState.xp(selectedProf);
         if (levelXp != null && levelXp.max() > 0 && level < 132) {
-            detectedLevelProgress = (double) levelXp.current() / levelXp.max();
+            currentProgressInput.setInput(String.format(Locale.US, "%.2f", levelXp.current() / levelXp.max() * 100));
+        } else {
+            currentProgressInput.setInput("0");
         }
 
         if (level >= 132) {
@@ -274,8 +297,19 @@ public class ProfessionCalculatorScreen extends WEScreen {
         catch (NumberFormatException e) { return 100; }
     }
 
-    private double getXpMultiplier() { return XP_MULT_VALUES[xpMultButton.getSelectedIndex()]; }
-    private boolean hasProfSpeed() { return profSpeedButton.getSelectedIndex() == 0; }
+    private double getXpMultiplier() {
+        return 1 + (dxpWeekendButton.getSelectedIndex() == 1 ? 1 : 0)
+                + (txpWeekendButton.getSelectedIndex() == 1 ? 2 : 0)
+                + (profXpBombButton.getSelectedIndex() == 1 ? 1 : 0);
+    }
+    private boolean hasProfSpeed() { return profSpeedButton.getSelectedIndex() == 1; }
+
+    private double getCurrentProgress() {
+        String text = currentProgressInput.getInput().trim().replace(',', '.');
+        if (text.isEmpty()) return 0;
+        try { return Math.clamp(Double.parseDouble(text) / 100, 0, 1); }
+        catch (NumberFormatException e) { return 0; }
+    }
 
     private double parseNumber(String text) {
         text = text.trim().toLowerCase().replace(',', '.');
@@ -324,7 +358,7 @@ public class ProfessionCalculatorScreen extends WEScreen {
 
     private long computeInputHash() {
         long hash = 0;
-        for (TextInputWidget w : new TextInputWidget[]{ingredientLevelInput, fromLevelInput, toLevelInput, currentOverflowInput, overflowGoalInput, topNInput}) {
+        for (TextInputWidget w : new TextInputWidget[]{ingredientLevelInput, fromLevelInput, currentProgressInput, toLevelInput, currentOverflowInput, overflowGoalInput, topNInput}) {
             if (w != null) hash = hash * 31 + w.getInput().hashCode();
         }
         for (int t = 0; t < 3; t++) {
@@ -337,8 +371,9 @@ public class ProfessionCalculatorScreen extends WEScreen {
 
     private void recalculate() {
         if (professionButton == null || recipeButton == null || materialTypeButton == null
-                || xpMultButton == null || profSpeedButton == null || ingredientLevelInput == null
-                || fromLevelInput == null || toLevelInput == null || currentOverflowInput == null
+                || dxpWeekendButton == null || txpWeekendButton == null || profXpBombButton == null
+                || profSpeedButton == null || ingredientLevelInput == null || fromLevelInput == null
+                || currentProgressInput == null || toLevelInput == null || currentOverflowInput == null
                 || overflowGoalInput == null || ingPriceInputs[0] == null) return;
 
         int fromLevel = getFromLevel();
@@ -353,12 +388,8 @@ public class ProfessionCalculatorScreen extends WEScreen {
         // Persist goal to ProfessionOverlay so it shows on the HUD
         WEProfessionType selectedProf = getSelectedProfession();
 
-        // Only credit the in-level progress while the level box still shows the live level —
-        // once it is typed over by hand the estimate should start from a whole level again.
-        double levelProgress = 0;
-        if (selectedProf != null && fromLevel == ProfessionState.level(selectedProf)) {
-            levelProgress = detectedLevelProgress;
-        }
+        // Credit the exact live percentage by default; the field stays editable for manual inputs.
+        double levelProgress = getCurrentProgress();
 
         if (selectedProf != null && fromLevel >= 132) {
             if (overflowGoal > 0) {
@@ -488,51 +519,65 @@ public class ProfessionCalculatorScreen extends WEScreen {
         recipeButton.setBounds(row1X + btnW3 + btnGap, row1Y, btnW3, btnH);
         materialTypeButton.setBounds(row1X + (btnW3 + btnGap) * 2, row1Y, btnW3, btnH);
 
-        // ── Row 2: XP Bonus, Prof Speed, Ing Tier, Top N ──
-        int btnW4 = Math.min(220, (logicalW - 100) / 4);
+        // ── Row 2: XP events and bombs ──
+        int btnW4 = Math.min(300, (logicalW - 100) / 4);
         int row2Width = btnW4 * 4 + btnGap * 3;
         int row2X = (logicalW - row2Width) / 2;
         int row2Y = row1Y + btnH + btnGap;
 
-        xpMultButton.setBounds(row2X, row2Y, btnW4, btnH);
-        profSpeedButton.setBounds(row2X + btnW4 + btnGap, row2Y, btnW4, btnH);
-        ingTierFilterButton.setBounds(row2X + (btnW4 + btnGap) * 2, row2Y, btnW4, btnH);
+        dxpWeekendButton.setBounds(row2X, row2Y, btnW4, btnH);
+        txpWeekendButton.setBounds(row2X + btnW4 + btnGap, row2Y, btnW4, btnH);
+        profXpBombButton.setBounds(row2X + (btnW4 + btnGap) * 2, row2Y, btnW4, btnH);
+        profSpeedButton.setBounds(row2X + (btnW4 + btnGap) * 3, row2Y, btnW4, btnH);
 
-        // Top N input
-        int topNX = row2X + (btnW4 + btnGap) * 3;
-        ui.drawText("\u00a77Top", topNX, row2Y - 1, CustomColor.fromHexString("AAAAAA"), 1.8f);
-        topNInput.setBounds(topNX + 40, row2Y, btnW4 - 40, btnH);
+        ui.drawCenteredText("§7Effective XP: §b" + String.format(Locale.US, "%.0fx", getXpMultiplier())
+                        + " §8(weekend + XP bomb stack additively)",
+                centerX, row2Y + btnH + 7, CustomColor.fromHexString("AAAAAA"), 1.8f);
 
-        // ── Row 3: From [___] To [___] ──
-        int inputW3 = Math.min(300, (logicalW - 120) / 3);
-        int row3Width = inputW3 * 3 + btnGap * 2;
+        // ── Row 3: table filters ──
+        int filterW = Math.min(300, (logicalW - 80) / 2);
+        int row3Width = filterW * 2 + btnGap;
         int row3X = (logicalW - row3Width) / 2;
-        int row3Y = row2Y + btnH + btnGap + labelH;
-        int inputW2 = inputW3; // reused by the overflow row below
+        int row3Y = row2Y + btnH + 30;
+        ingTierFilterButton.setBounds(row3X, row3Y, filterW, btnH);
+        ui.drawText("§7Top results", row3X + filterW + btnGap, row3Y - 1,
+                CustomColor.fromHexString("AAAAAA"), 1.8f);
+        topNInput.setBounds(row3X + filterW + btnGap + 100, row3Y, filterW - 100, btnH);
 
-        ui.drawText("\u00a77Ingredient Level", row3X, row3Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
-        ui.drawText("\u00a77From Level", row3X + inputW3 + btnGap, row3Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
-        ui.drawText("\u00a77To Level", row3X + (inputW3 + btnGap) * 2, row3Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
-        ingredientLevelInput.setBounds(row3X, row3Y, inputW3, btnH);
-        fromLevelInput.setBounds(row3X + inputW3 + btnGap, row3Y, inputW3, btnH);
-        toLevelInput.setBounds(row3X + (inputW3 + btnGap) * 2, row3Y, inputW3, btnH);
-
-        // ── Row 4: Overflow ──
-        int fromLevel = getFromLevel();
-        boolean showCurrentOverflow = fromLevel >= 132;
+        // ── Row 4: levels and exact current progress ──
+        int inputW4 = Math.min(220, (logicalW - 120) / 4);
+        int row4Width = inputW4 * 4 + btnGap * 3;
+        int row4X = (logicalW - row4Width) / 2;
         int row4Y = row3Y + btnH + btnGap + labelH;
 
+        ui.drawText("§7Ingredient Level", row4X, row4Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
+        ui.drawText("§7From Level", row4X + inputW4 + btnGap, row4Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
+        ui.drawText("§7Current Progress %", row4X + (inputW4 + btnGap) * 2, row4Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
+        ui.drawText("§7To Level", row4X + (inputW4 + btnGap) * 3, row4Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
+        ingredientLevelInput.setBounds(row4X, row4Y, inputW4, btnH);
+        fromLevelInput.setBounds(row4X + inputW4 + btnGap, row4Y, inputW4, btnH);
+        currentProgressInput.setBounds(row4X + (inputW4 + btnGap) * 2, row4Y, inputW4, btnH);
+        toLevelInput.setBounds(row4X + (inputW4 + btnGap) * 3, row4Y, inputW4, btnH);
+
+        // ── Row 5: Overflow ──
+        int fromLevel = getFromLevel();
+        boolean showCurrentOverflow = fromLevel >= 132;
+        int row5Y = row4Y + btnH + btnGap + labelH;
+        int inputW2 = Math.min(300, (logicalW - 80) / 2);
+        int row5Width = inputW2 * 2 + btnGap;
+        int row5X = (logicalW - row5Width) / 2;
+
         if (showCurrentOverflow) {
-            ui.drawText("\u00a77Current Overflow", row3X, row4Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
-            ui.drawText("\u00a77Overflow Goal", row3X + inputW2 + btnGap, row4Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
-            currentOverflowInput.setBounds(row3X, row4Y, inputW2, btnH);
-            overflowGoalInput.setBounds(row3X + inputW2 + btnGap, row4Y, inputW2, btnH);
+            ui.drawText("§7Current Overflow", row5X, row5Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
+            ui.drawText("§7Overflow Goal", row5X + inputW2 + btnGap, row5Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
+            currentOverflowInput.setBounds(row5X, row5Y, inputW2, btnH);
+            overflowGoalInput.setBounds(row5X + inputW2 + btnGap, row5Y, inputW2, btnH);
         } else {
             currentOverflowInput.setBounds(-9999, -9999, 0, 0);
             int goalW = Math.min(400, logicalW - 100);
             int goalX = (logicalW - goalW) / 2;
-            ui.drawText("\u00a77Overflow Goal", goalX, row4Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
-            overflowGoalInput.setBounds(goalX, row4Y, goalW, btnH);
+            ui.drawText("§7Overflow Goal", goalX, row5Y - labelH, CustomColor.fromHexString("AAAAAA"), 2f);
+            overflowGoalInput.setBounds(goalX, row5Y, goalW, btnH);
         }
 
         // ── Prices ──
@@ -555,7 +600,7 @@ public class ProfessionCalculatorScreen extends WEScreen {
         };
         TextInputWidget[][] priceRows = {ingPriceInputs, mat1PriceInputs, mat2PriceInputs};
 
-        int priceStartY = row4Y + btnH + btnGap + 2;
+        int priceStartY = row5Y + btnH + btnGap + 2;
         ui.drawCenteredText("\u00a77\u00a7lPrices \u00a78(per item, in eb)", centerX, priceStartY, CustomColor.fromHexString("AAAAAA"), 2.0f);
         priceStartY += 20;
 

@@ -73,9 +73,17 @@ public class TotemTimer {
         if (trimmed.isEmpty()) return new TotemLineInfo("", "");
 
         Matcher matcher = TIME_TOKEN.matcher(trimmed);
-        if (matcher.find()) {
-            String toxoplasmosisText = (trimmed.substring(0, matcher.start()) + " " + trimmed.substring(matcher.end())).trim();
-            return new TotemLineInfo(matcher.group(), cleanToxoplasmosisText(toxoplasmosisText));
+        String timeText = "";
+        int timeStart = -1;
+        int timeEnd = -1;
+        while (matcher.find()) {
+            timeText = matcher.group();
+            timeStart = matcher.start();
+            timeEnd = matcher.end();
+        }
+        if (timeStart >= 0) {
+            String toxoplasmosisText = (trimmed.substring(0, timeStart) + " " + trimmed.substring(timeEnd)).trim();
+            return new TotemLineInfo(timeText, cleanToxoplasmosisText(toxoplasmosisText));
         }
 
         String[] tokens = trimmed.split("\\s+");

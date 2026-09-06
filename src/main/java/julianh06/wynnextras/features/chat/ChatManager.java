@@ -40,11 +40,11 @@ public class ChatManager implements WELoader {
 
     @SubscribeEvent
     public void onChatMessage(ChatEvent event) {
-       handleChatMessage(event);
+       observeIncomingMessage(event.message);
     }
 
-    private static void handleChatMessage(ChatEvent event) {
-       String msg = event.message.getString().toLowerCase();
+    public static void observeIncomingMessage(Text message) {
+       String msg = message.getString().toLowerCase();
 
        boolean containsCancel = msg.contains("cancel") || msg.contains("clear");
        if (currentChannel != ChatChannel.ALL && msg.contains("type") && containsCancel) {

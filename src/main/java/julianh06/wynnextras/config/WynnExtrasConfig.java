@@ -639,8 +639,8 @@ public class WynnExtrasConfig {
     public Map<String, Float> professionOverflowXp = new HashMap<>();
     public Map<String, Float> professionGoals = new HashMap<>();
     public Map<String, Integer> professionLevels = new HashMap<>();
-    public Map<String, Integer> professionXpCurrent = new HashMap<>();
-    public Map<String, Integer> professionXpMax = new HashMap<>();
+    public Map<String, Double> professionXpCurrent = new HashMap<>();
+    public Map<String, Double> professionXpMax = new HashMap<>();
     public Map<String, Integer> professionLevelGoals = new HashMap<>();
 
     // ==================== RADIANT HUD ====================

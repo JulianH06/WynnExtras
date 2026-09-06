@@ -1,9 +1,6 @@
 package julianh06.wynnextras.features.misc;
 
 import julianh06.wynnextras.wynncraft.state.AbilityState;
-import julianh06.wynnextras.utils.MinecraftUtils;
-import julianh06.wynnextras.wynncraft.state.CharacterClass;
-import julianh06.wynnextras.wynncraft.state.CharacterState;
 import julianh06.wynnextras.wynncraft.item.GearType;
 import julianh06.wynnextras.wynncraft.item.WynnItemParser;
 import julianh06.wynnextras.config.WynnExtrasConfig;
@@ -20,7 +17,6 @@ import net.minecraft.client.sound.SoundInstanceListener;
 import net.minecraft.client.sound.WeightedSoundSet;
 import net.minecraft.item.ItemStack;
 
-import java.util.List;
 import java.util.Map;
 
 public class BloodSorrowTimer {
@@ -32,6 +28,7 @@ public class BloodSorrowTimer {
     private static final int SKIP_TICKS_AFTER_SLOT_CHANGE = 10; // ~0.5s
     private static int lastBloodPoolValue = -1;
     private static long soundFiredAt = 0;
+    private static long bloodPoolDroppedAt = 0;
     private static final long TRIGGER_WINDOW_MS = 500;
 
     private static int cachedAcolyteBonus = -1;
@@ -86,14 +83,20 @@ public class BloodSorrowTimer {
         ItemStack held = mc.player.getMainHandStack();
         if (held == null || held.isEmpty()) return false;
         String name = held.getName().getString().replaceAll("§.", "").trim();
-        return name.equals("Resonance");
+        return name.contains("Resonance");
     }
 
     private static void onSound(String path) {
         if (!WynnExtrasConfig.INSTANCE.bloodSorrowTimerEnabled) return;
-        if (!CharacterState.isClass(CharacterClass.SHAMAN)) return;
         if (!path.contains("wither_skeleton.hurt")) return;
         soundFiredAt = System.currentTimeMillis();
+        if (AbilityState.bloodPoolValue().isPresent()) {
+            startTimer();
+            soundFiredAt = 0;
+            bloodPoolDroppedAt = 0;
+        } else {
+            tryStartTimer();
+        }
     }
 
     public static boolean isActive() {
@@ -106,10 +109,19 @@ public class BloodSorrowTimer {
 
     private static void startTimer() {
         long now = System.currentTimeMillis();
-        long duration = (hasResonance() ? 1250 : 5000) + getAcolyteBonus() * (hasResonance() ? 1L : 4L);
+        boolean resonance = hasResonance();
+        long duration = (resonance ? 1250 : 5000) + getAcolyteBonus() * (resonance ? 1L : 4L);
         if (now - lastStartMs <= duration + 100) return;
         lastStartMs = now;
         timerEndMs = now + duration;
+    }
+
+    private static void tryStartTimer() {
+        if (soundFiredAt == 0 || bloodPoolDroppedAt == 0) return;
+        if (Math.abs(soundFiredAt - bloodPoolDroppedAt) > TRIGGER_WINDOW_MS) return;
+        startTimer();
+        soundFiredAt = 0;
+        bloodPoolDroppedAt = 0;
     }
 
     public static void register() {
@@ -125,16 +137,15 @@ public class BloodSorrowTimer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (!WynnExtrasConfig.INSTANCE.bloodSorrowTimerEnabled) return;
             if (client.player == null) return;
-            if (!CharacterState.isClass(CharacterClass.SHAMAN)) return;
 
             int currentValue = AbilityState.bloodPoolValue().orElse(-1);
 
-            if (lastBloodPoolValue >= 0 && currentValue >= 0) {
-                int change = Math.abs(currentValue - lastBloodPoolValue);
-                boolean soundRecent = System.currentTimeMillis() - soundFiredAt < TRIGGER_WINDOW_MS;
-                if (change > 50 && soundRecent) {
-                    startTimer();
-                    soundFiredAt = 0;
+            if (lastBloodPoolValue >= 0) {
+                boolean largeDrop = currentValue >= 0 && lastBloodPoolValue - currentValue > 50;
+                boolean barDisappeared = currentValue < 0 && lastBloodPoolValue > 50;
+                if (largeDrop || barDisappeared) {
+                    bloodPoolDroppedAt = System.currentTimeMillis();
+                    tryStartTimer();
                 }
             }
             lastBloodPoolValue = currentValue;
@@ -167,8 +178,8 @@ public class BloodSorrowTimer {
         if (mc.player == null) return;
         if (mc.options.hudHidden) return;
         ItemStack held = mc.player.getMainHandStack();
-        if (held == null || held.isEmpty()
-                || WynnItemParser.parse(held).map(item -> item.gearType() != GearType.RELIK).orElse(true)) {
+        GearType heldGearType = WynnItemParser.parse(held).map(item -> item.gearType()).orElse(GearType.UNKNOWN);
+        if (held == null || held.isEmpty() || heldGearType != GearType.UNKNOWN && heldGearType != GearType.RELIK) {
             lastStartMs = 0;
             timerEndMs = 0;
             return;
