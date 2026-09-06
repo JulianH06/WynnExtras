@@ -691,7 +691,8 @@ public class AchievementScreen extends WEScreen {
         List<RewardPreview> rewards = new ArrayList<>();
         for (BadgeCatalog.BadgeIcon icon : BadgeCatalog.icons()) {
             if (icon.achievement() != null && achievementId != null && achievementId.equals(icon.achievement().id())) {
-                rewards.add(new RewardPreview(RewardType.ICON, icon.id(), "white", icon.minTier()));
+                String colorId = icon.isCustom() ? BadgeCatalog.ORIGINAL_COLOR_ID : "white";
+                rewards.add(new RewardPreview(RewardType.ICON, icon.id(), colorId, icon.minTier()));
             }
         }
         for (BadgeCatalog.BadgeColor color : BadgeCatalog.colors()) {

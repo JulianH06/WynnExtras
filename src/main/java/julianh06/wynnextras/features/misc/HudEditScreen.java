@@ -169,6 +169,12 @@ public class HudEditScreen extends Screen {
             weeklyWarsEl.topLeft = true;
             elements.add(weeklyWarsEl);
         }
+        if (c.serverTpsEnabled) {
+            HudElement serverTpsEl = new HudElement("serverTps", "TPS: 20.0",
+                    c.serverTpsX, c.serverTpsY, c.serverTpsScale, WynnExtrasConfig.Align.LEFT);
+            serverTpsEl.topLeft = true;
+            elements.add(serverTpsEl);
+        }
         if (c.warDpsEnabled) {
             HudElement warDpsEl = new HudElement("warDps", "War Info: Tower EHP 234K",
                     c.warDpsX, c.warDpsY, 1.0f, WynnExtrasConfig.Align.LEFT);
@@ -795,6 +801,9 @@ public class HudEditScreen extends Screen {
                 }
                 case "weeklyWars" -> {
                     c.weeklyWarCountX = e.x; c.weeklyWarCountY = e.y;
+                }
+                case "serverTps" -> {
+                    c.serverTpsX = e.x; c.serverTpsY = e.y; c.serverTpsScale = e.scale;
                 }
                 case "warDps" -> {
                     c.warDpsX = e.x; c.warDpsY = e.y;

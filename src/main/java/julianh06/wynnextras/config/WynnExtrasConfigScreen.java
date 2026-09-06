@@ -597,10 +597,6 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                         () -> config.tradeMarketOverlayBackground, v -> config.tradeMarketOverlayBackground = v))
                 .add(text("The price summary is movable", "To change its position just drag it where you want"))
             .endSub()
-            .add(toggle("Skill point helper", "Show you your armor in the compass menu and a button to automatically assign skill points",
-                    () -> config.skillpointHelper, v -> config.skillpointHelper = v))
-            .add(toggle("Powder combine helper", "Show quick combine buttons in the powder master menu",
-                    () -> config.powderCombineHelper, v -> config.powderCombineHelper = v))
             .sub("Mount Helper")
                 .add(toggle("Show Mount Helper", "Renders the needed materials to max out a mount's stats in the feeder",
                         () -> config.showMountHelper, v -> config.showMountHelper = v))
@@ -609,7 +605,11 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 () -> config.mountHelperDefaultMaterialLevel,
                                 v -> config.mountHelperDefaultMaterialLevel = v),
                         () -> config.showMountHelper))
-            .endSub();
+            .endSub()
+            .add(toggle("Skill point helper", "Show you your armor in the compass menu and a button to automatically assign skill points",
+                    () -> config.skillpointHelper, v -> config.skillpointHelper = v))
+            .add(toggle("Powder combine helper", "Show quick combine buttons in the powder master menu",
+                    () -> config.powderCombineHelper, v -> config.powderCombineHelper = v));
 
         // ===== CHAT =====
         category("Chat", 0xFFc80069)
@@ -816,6 +816,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(slider("20G Level", "Level where instant gravity starts",
                                 1, 100, () -> config.tetris20GLevel, v -> config.tetris20GLevel = v),
                         () -> config.tetris20GEnabled))
+            .endSub()
             .add(toggle("Mount color backgrounds", "Use the mount's primary color as its item background",
                     () -> config.mountPrimaryColorBackground, v -> config.mountPrimaryColorBackground = v))
             .add(toggle("Show Own Nametag", "Render your nametag above your head",
@@ -838,7 +839,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .add(toggle("Territory Estimates", "Show territory estimates in the Wynntils guild map",
                     () -> config.territoryEstimateToggle, v -> config.territoryEstimateToggle = v))
             .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
-                    () -> config.removeChroma, v -> config.removeChroma = v));
+                    () -> config.removeChroma, v -> config.removeChroma = v))
+            .add(toggle("Server TPS", "Show the server's current ticks per second on the HUD",
+                    () -> config.serverTpsEnabled, v -> config.serverTpsEnabled = v));
 
         // ===== KEYBINDS =====
         category("Keybinds", 0xFF0496C9)
@@ -956,7 +959,135 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
         // ===== NEW =====
         category("New", 0xFF00bad5)
         .excludeFromSearch()
-        .add(text("", "All features added in this update. Toggle any of them on or off."));
+        .add(text("", "All features added in this update. Toggle any of them on or off."))
+
+        .add(toggle("Disable Update Reminder", "Do not show a chat message when a new WynnExtras version is available",
+                () -> config.updateReminderDisabled, v -> config.updateReminderDisabled = v))
+        .add(toggle("Powder combine helper", "Show quick combine buttons in the powder master menu",
+                () -> config.powderCombineHelper, v -> config.powderCombineHelper = v))
+        .add(toggle("Mount color backgrounds", "Use the mount's primary color as its item background",
+                () -> config.mountPrimaryColorBackground, v -> config.mountPrimaryColorBackground = v))
+        .add(toggle("Server TPS", "Show the server's current ticks per second on the HUD",
+                () -> config.serverTpsEnabled, v -> config.serverTpsEnabled = v))
+        .sub("Privacy")
+            .add(button("Privacy policy", "You can find more information here", (x) -> {
+                LinkUtils.openLink("https://wynnextras.com/privacy");
+            }, "Open"))
+            .add(dropdown("Telemetry", "Choose whether usage statistics are sent with your Minecraft UUID, anonymously, or not at all",
+                    WynnExtrasConfig.TelemetryMode.class, () -> config.telemetryMode, v -> config.telemetryMode = v))
+            .add(toggle("Do Not Publish Own Badge", "Hide your WynnExtras badge from other players and stop uploading it",
+                    () -> config.doNotPublishOwnBadge, v -> config.doNotPublishOwnBadge = v))
+            .add(toggle("Do Not Publish Own Aspects", "Hide your personal aspects and stop uploading them",
+                    () -> config.doNotPublishOwnAspects, v -> config.doNotPublishOwnAspects = v))
+            .add(toggle("Do Not Publish Own Achievements", "Stop uploading your achievement progress to the WynnExtras server",
+                    () -> !config.uploadAchievements, v -> config.uploadAchievements = !v))
+            .add(toggle("Do Not Crowdsource Daily Gambits", "Stop sharing discovered gambits with the WynnExtras server",
+                    () -> !config.crowdSourceGambits, v -> config.crowdSourceGambits = !v))
+            .add(toggle("Do Not Fetch Badges", "Stop fetching other players' badges from the WynnExtras server",
+                    () -> config.doNotFetchWynnExtrasBadges, v -> config.doNotFetchWynnExtrasBadges = v))
+            .add(toggle("Do Not Fetch Achievements", "Stop fetching other players' achievements from the WynnExtras server",
+                    () -> config.doNotFetchWynnExtrasAchievements, v -> config.doNotFetchWynnExtrasAchievements = v))
+            .add(toggle("Do Not Fetch Aspects", "Stop fetching player aspects and the aspect leaderboard from the WynnExtras server",
+                    () -> config.doNotFetchWynnExtrasAspects, v -> config.doNotFetchWynnExtrasAspects = v))
+            .add(toggle("Do Not Fetch Gambits", "Stop fetching crowdsourced gambits from the WynnExtras server",
+                    () -> config.doNotFetchWynnExtrasGambits, v -> config.doNotFetchWynnExtrasGambits = v))
+            .add(toggle("Do Not Fetch Profile Titles", "Stop fetching custom profile titles from the WynnExtras server",
+                    () -> config.doNotFetchWynnExtrasProfileTitles, v -> config.doNotFetchWynnExtrasProfileTitles = v))
+            .add(toggle("Do Not Fetch Reset Times", "Stop fetching loot pool, lootrun, and gambit reset times from the WynnExtras server",
+                    () -> config.doNotFetchWynnExtrasResetTimes, v -> config.doNotFetchWynnExtrasResetTimes = v))
+            .add(text("Fetch settings", "Changes apply to future requests. Some data may require a game restart to be fetched again."))
+        .endSub()
+        .sub("Shopping List")
+            .add(toggle("Shopping List", "Show the shopping list on the HUD and in screens like the Trade Market or bank",
+                    () -> config.shoppingListMenuEnabled, v -> config.shoppingListMenuEnabled = v))
+            .add(toggle("Show quick toggle button", "Show the quick toggle button in menus",
+                    () -> config.shoppingListShowQuickToggleButton, v -> config.shoppingListShowQuickToggleButton = v))
+            .add(keybind("Toggle Shopping List", "Toggle the shopping list",
+                    () -> config.shoppingListToggleKey, v -> config.shoppingListToggleKey = v,
+                    DEFAULT_CONFIG.shoppingListToggleKey))
+            .add(toggle("WynnMarketSearch compatibility", "Temporarily suppresses WynnMarketSearch while the shopping list performs Trade Market row searches",
+                    () -> config.shoppingListWynnMarketSearchCompatibility, v -> config.shoppingListWynnMarketSearchCompatibility = v))
+        .sub("Tooltips")
+            .add(toggle("Item Weights", "Show weight scale for mythic items",
+                    () -> config.showWeight, v -> {
+                        config.showWeight = v;
+                        if(!v) config.showScales = true;
+                    }))
+            .add(visibleWhen(toggle("Stat Scales", "Show weights for each stat",
+                            () -> config.showScales, v -> config.showScales = v),
+                    () -> config.showWeight))
+            .add(visibleWhen(dropdown("Scale source", "Select the preferred mythic scale provider",
+                            WynnExtrasConfig.MythicScaleSource.class,
+                            () -> config.mythicScaleSource,
+                            WeightDisplay::setConfiguredScaleSource),
+                    () -> config.showWeight))
+            .add(visibleWhen(toggle("Lock scale source", "Disable switching the scale provider and hide the lines in the tooltip.",
+                            () -> config.lockMythicScaleSource, v -> {
+                                config.lockMythicScaleSource = v;
+                                WeightDisplay.clearCycleInput();
+                            }),
+                    () -> config.showWeight)).
+        endSub()
+        .sub("Mount Helper")
+            .add(toggle("Show Mount Helper", "Renders the needed materials to max out a mount's stats in the feeder",
+                    () -> config.showMountHelper, v -> config.showMountHelper = v))
+            .add(visibleWhen(dropdown("Default material level", "Material level selected when opening the mount feeder",
+                            WynnExtrasConfig.MountMaterialLevel.class,
+                            () -> config.mountHelperDefaultMaterialLevel,
+                            v -> config.mountHelperDefaultMaterialLevel = v),
+                    () -> config.showMountHelper))
+        .endSub()
+        .sub("Notifications")
+            .add(stringListDual("Notifier Words", "Trigger word and display text",
+                    () -> config.notifierWords, v -> config.notifierWords = v, "Words"))
+            .add(sliderF("Duration (ms)", "How long notification shows",
+                    500, 10000, 100, () -> (float) config.textDurationInMs, v -> config.textDurationInMs = v.intValue()))
+            .add(dropdown("Entrance effect", "How the notification enters",
+                    WynnExtrasConfig.NotifierAnimation.class, () -> config.notifierAnimation, v -> config.notifierAnimation = v))
+            .add(visibleWhen(dropdown("Entrance direction", "Direction of the entrance animation",
+                            WynnExtrasConfig.NotifierAnimationDirection.class,
+                            () -> config.notifierEntranceDirection, v -> config.notifierEntranceDirection = v),
+                    () -> config.notifierAnimation != null && config.notifierAnimation.isDirectional()))
+            .add(sliderF("Entrance duration (ms)", "How long the entrance animation takes",
+                    0, 5000, 50, () -> (float) config.notifierFadeInMs, v -> config.notifierFadeInMs = v.intValue()))
+            .add(dropdown("Exit effect", "How the notification exits",
+                    WynnExtrasConfig.NotifierExitAnimation.class, () -> config.notifierExitAnimation, v -> config.notifierExitAnimation = v))
+            .add(visibleWhen(dropdown("Exit direction", "Direction of the exit animation",
+                            WynnExtrasConfig.NotifierAnimationDirection.class,
+                            () -> config.notifierExitDirection, v -> config.notifierExitDirection = v),
+                    () -> config.notifierExitAnimation != null && config.notifierExitAnimation.isDirectional()))
+            .add(sliderF("Exit duration (ms)", "How long the exit animation takes",
+                    0, 5000, 50, () -> (float) config.notifierFadeOutMs, v -> config.notifierFadeOutMs = v.intValue()))
+            .add(dropdown("Text Color", "Notification color",
+                    WynnExtrasConfig.TextColor.class, () -> config.textColor, v -> config.textColor = v))
+            .add(dropdown("Sound", "Notification sound",
+                    WynnExtrasConfig.NotificationSound.class, () -> config.notificationSound, v -> config.notificationSound = v))
+            .add(slider("Volume", "Sound volume",
+                    0, 200, () -> (int)(config.soundVolume), v -> config.soundVolume = v))
+            .add(slider("Pitch", "Sound pitch",
+                    0, 200, () -> (int)(config.soundPitch), v -> config.soundPitch = v))
+            .add(button("Sound Test", "Click the button to test the sound",
+                    v -> MinecraftUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.notificationSound.getSoundId())), config.soundVolume / 100, config.soundPitch / 100), "Test")).endSub()
+        .sub("Direct Messages")
+            .add(toggle("Play Sound On Message", "Play a sound when another player sends you a direct message",
+                    () -> config.privateMessageSound, v -> config.privateMessageSound = v))
+            .add(visibleWhen(dropdown("Sound", "Sound for incoming direct messages",
+                            WynnExtrasConfig.NotificationSound.class, () -> config.privateMessageSoundType, v -> config.privateMessageSoundType = v),
+                    () -> config.privateMessageSound))
+            .add(visibleWhen(slider("Volume", "Sound volume",
+                            0, 200, () -> (int)(config.privateMessageSoundVolume), v -> config.privateMessageSoundVolume = v),
+                    () -> config.privateMessageSound))
+            .add(visibleWhen(slider("Pitch", "Sound pitch",
+                            0, 200, () -> (int)(config.privateMessageSoundPitch), v -> config.privateMessageSoundPitch = v),
+                    () -> config.privateMessageSound))
+            .add(visibleWhen(button("Sound Test", "Click the button to test the sound",
+                            v -> MinecraftUtils.playSoundAmbient(SoundEvent.of(Identifier.of(config.privateMessageSoundType.getSoundId())), config.privateMessageSoundVolume / 100, config.privateMessageSoundPitch / 100), "Test"),
+                    () -> config.privateMessageSound))
+        .endSub()
+        .sub("Waypoints")
+            .add(slider("Max range", "Waypoints and their text are hidden beyond this distance",
+                    1, 1000, () -> config.waypointMaxRange, v -> config.waypointMaxRange = v))
+        .endSub();
     }
 
     // ==================== BUILDER HELPERS ====================

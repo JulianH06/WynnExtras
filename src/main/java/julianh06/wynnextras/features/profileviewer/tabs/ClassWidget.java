@@ -16,6 +16,9 @@ import java.util.List;
 import static julianh06.wynnextras.features.profileviewer.PVScreen.*;
 
 public class ClassWidget extends Widget {
+    private static final int GAMEMODE_ICON_SIZE = 30;
+    private static final int GAMEMODE_TEXTURE_SIZE = 20;
+
     static Identifier classBackgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactive.png");
     static Identifier classBackgroundTextureGold = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundinactivegold.png");
     static Identifier classBackgroundTextureActive = Identifier.of("wynnextras", "textures/gui/profileviewer/classbackgroundactive.png");
@@ -118,31 +121,36 @@ public class ClassWidget extends Widget {
         int k = 0;
         if(gamemodes != null) {
             if(gamemodes.contains("ultimate_ironman")) {
-                ui.drawImage(ultimateIronmanTexture, x + 350, y + 85, 30, 30);
+                drawGamemodeIcon(ultimateIronmanTexture, x + 350, y + 85);
                 k++;
             } else if (gamemodes.contains("ironman")) {
-                ui.drawImage(ironmanTexture, x + 350, y + 85, 30, 30);
+                drawGamemodeIcon(ironmanTexture, x + 350, y + 85);
                 k++;
             }
             if(gamemodes.contains("hunted")) {
-                ui.drawImage(huntedTexture, x - ((k % 2) * 35) + 350, y + 85 - (Math.floorDiv(k, 2) * 35), 30, 30);
+                drawGamemodeIcon(huntedTexture, x - ((k % 2) * 35) + 350, y + 85 - (Math.floorDiv(k, 2) * 35));
                 k++;
             }
             if(gamemodes.contains("hardcore")) {
                 if(characterData.getDeaths() == 0) {
-                    ui.drawImage(hardcoreTexture, x - ((k % 2) * 35) + 350, y + 85 - (Math.floorDiv(k, 2) * 35), 30, 30);
+                    drawGamemodeIcon(hardcoreTexture, x - ((k % 2) * 35) + 350, y + 85 - (Math.floorDiv(k, 2) * 35));
                 } else {
-                    ui.drawImage(hardcoreFailedTexture, x - ((k % 2) * 35) + 350, y + 85 - (Math.floorDiv(k, 2) * 35), 30, 30);
+                    drawGamemodeIcon(hardcoreFailedTexture, x - ((k % 2) * 35) + 350, y + 85 - (Math.floorDiv(k, 2) * 35));
                 }
                 k++;
             }
             if(gamemodes.contains("craftsman")) {
-                ui.drawImage(craftsmanTexture, x - ((k % 2) * 35) + 350, y + 85 - (Math.floorDiv(k, 2) * 35), 30, 30);
+                drawGamemodeIcon(craftsmanTexture, x - ((k % 2) * 35) + 350, y + 85 - (Math.floorDiv(k, 2) * 35));
             }
         }
 
         if(isAtiveCharacter) {
             DarkModeToggleWidget.drawImageWithFade(onlineCircleTextureDark, onlineCircleTexture, x + 6, y + 6, 18, 18, ui);
         }
+    }
+
+    private void drawGamemodeIcon(Identifier texture, float iconX, float iconY) {
+        ui.drawPixelAlignedImage(texture, iconX, iconY, GAMEMODE_ICON_SIZE, GAMEMODE_ICON_SIZE,
+                GAMEMODE_TEXTURE_SIZE, GAMEMODE_TEXTURE_SIZE, PVScreen.currentMatrixScale);
     }
 }

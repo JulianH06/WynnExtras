@@ -28,7 +28,7 @@ public class RadiantHud {
             cachedEntries.clear();
             for (StatusEffectState.Effect effect : StatusEffectState.effects()) {
                 String name = effect.name();
-                if (!name.contains("Radiance") && !name.contains("Radiant")) continue;
+                if (!name.equalsIgnoreCase("Radiance") && !name.equalsIgnoreCase("Radiant")) continue;
 
                 String display = effect.display();
                 int duration = effect.duration();

@@ -45,6 +45,7 @@ public class AchievementTracking {
     private boolean init;
     private static final List<UnlockAnnouncement> pendingUnlockAnnouncements = new ArrayList<>();
     private static int unlockAnnouncementFlushTicks = -1;
+    private static boolean apiResyncRequested;
 
     /**
      * How far our self-counted total may run ahead of the Wynncraft API before we assume our
@@ -103,6 +104,7 @@ public class AchievementTracking {
         achievements = Achievements.createDefaultAchievementSet();
         pendingUnlockAnnouncements.clear();
         unlockAnnouncementFlushTicks = -1;
+        apiResyncRequested = true;
         Achievements.save();
     }
 
@@ -117,6 +119,15 @@ public class AchievementTracking {
             }
         }
         if (achievements == null) return;
+
+        if (apiResyncRequested) {
+            apiResyncRequested = false;
+            raidCountsSynced = false;
+            aspectsSynced = false;
+            syncingAspects = false;
+            nextAspectSyncAt = 0L;
+            nextWarApiSyncAt = 0L;
+        }
 
         checkRichBankAchievement();
         trackWarAchievements();
@@ -521,6 +532,7 @@ public class AchievementTracking {
     /**
      * Dispatches the aspect achievement evaluation once the aspect catalogue has finished loading.
      * Failed player-aspect requests are retried later instead of marking the launch as synced.
+     * A missing aspect record is a valid result and does not need to be retried.
      */
     private boolean trySyncAspectAchievements() {
         if (achievements == null || MinecraftUtils.player() == null) return false;
@@ -546,7 +558,9 @@ public class AchievementTracking {
         WynncraftApiHandler.fetchPlayerAspectData(uuid)
                 .thenAccept(result -> MinecraftClient.getInstance().execute(() -> {
                     syncingAspects = false;
-                    if (applyAspectAchievements(result, snapshot)) {
+                    if (result != null && result.status() == WynncraftApiHandler.FetchStatus.NOT_FOUND) {
+                        aspectsSynced = true;
+                    } else if (applyAspectAchievements(result, snapshot)) {
                         aspectsSynced = true;
                     } else {
                         nextAspectSyncAt = System.currentTimeMillis() + ASPECT_SYNC_RETRY_DELAY_MS;

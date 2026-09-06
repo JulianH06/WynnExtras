@@ -6,7 +6,7 @@ import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.wynncraft.menu.MenuType;
 import julianh06.wynnextras.wynncraft.menu.WynncraftMenuService;
-import julianh06.wynnextras.wynncraft.item.ItemTier;
+import julianh06.wynnextras.wynncraft.item.ItemCategory;
 import julianh06.wynnextras.wynncraft.item.WynnItemData;
 import julianh06.wynnextras.wynncraft.item.WynnItemParser;
 import julianh06.wynnextras.wynncraft.state.PartyState;
@@ -84,6 +84,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static julianh06.wynnextras.utils.ContainerUtils.clickOnSlot;
+import static julianh06.wynnextras.utils.ContainerUtils.clickOnSlotWithoutPrediction;
 import static julianh06.wynnextras.utils.ContainerUtils.shiftClickOnSlot;
 import static julianh06.wynnextras.features.inventory.BankOverlay.*;
 
@@ -5355,8 +5356,17 @@ public class BankOverlay2 extends WEHandledScreen {
             SlotActionType action = determineActionType(button, overlayDoubleClick);
 
             ItemStack oldHeld = heldItem;
+            ItemStack clickedStack = liveHandler.slots.get(slotIndex).getStack();
+            if (button == 1 && action == SlotActionType.PICKUP && liveHandler.getCursorStack().isEmpty()
+                    && asWynnItem(clickedStack).map(item -> item.category() == ItemCategory.EMERALD_POUCH).orElse(false)) {
+                int liveSlotId = liveHandler.slots.get(slotIndex).id;
+                if (!clickOnSlotWithoutPrediction(liveSlotId, liveHandler.syncId, liveHandler.getRevision(), button,
+                        liveHandler.getStacks())) return false;
+                currentOverlayType = BankOverlayType.NONE;
+                resetInteractionBlockers();
+                return true;
+            }
             if (action == SlotActionType.QUICK_MOVE) {
-                ItemStack clickedStack = liveHandler.slots.get(slotIndex).getStack();
                 lastQuickMoved = clickedStack.isEmpty() ? ItemStack.EMPTY : clickedStack.copy();
             }
             heldItem = getHeldItem(slotIndex, action, button);

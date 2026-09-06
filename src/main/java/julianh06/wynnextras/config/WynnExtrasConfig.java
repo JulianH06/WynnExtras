@@ -477,6 +477,10 @@ public class WynnExtrasConfig {
     public int stackDuplicateWindowMinutes = 5;
     public boolean auraPingEnabled = false;
     public String auraPingColor = "FF6F00";
+    public boolean serverTpsEnabled = false;
+    public int serverTpsX = 5;
+    public int serverTpsY = 25;
+    public float serverTpsScale = 1.0f;
     public boolean weeklyWarCountEnabled = false;
     public int weeklyWarCountX = 5;
     public int weeklyWarCountY = 5;

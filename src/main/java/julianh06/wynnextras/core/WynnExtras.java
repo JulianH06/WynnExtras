@@ -32,6 +32,7 @@ import julianh06.wynnextras.features.misc.LunarScreenOverlayFallback;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
 import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.misc.QuickRepair;
+import julianh06.wynnextras.features.misc.ServerTpsHud;
 import julianh06.wynnextras.features.misc.TotemTimer;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.ProfileTitleService;
@@ -207,6 +208,7 @@ public class WynnExtras implements ClientModInitializer {
 		BloodSorrowTimer.register();
 		julianh06.wynnextras.features.misc.CurseTracker.register();
 		julianh06.wynnextras.features.misc.RadiantHud.init();
+		ServerTpsHud.register();
 		julianh06.wynnextras.features.misc.ProfessionOverlay.register();
 		julianh06.wynnextras.features.bankoverlay.BankOverlay2.registerScreenHooks();
 		LunarScreenOverlayFallback.register();

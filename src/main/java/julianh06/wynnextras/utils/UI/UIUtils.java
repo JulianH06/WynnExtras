@@ -368,6 +368,36 @@ public final class UIUtils {
         drawImage(texture, x, y, width, height, 1.0f);
     }
 
+    public void drawPixelAlignedImage(
+            Identifier texture,
+            float x, float y,
+            float width, float height,
+            int textureWidth, int textureHeight,
+            double matrixScale
+    ) {
+        float renderScale = (float) matrixScale;
+        if (renderScale <= 0) return;
+
+        int drawX = Math.round(sx(x) * renderScale);
+        int drawY = Math.round(sy(y) * renderScale);
+        int drawWidth = Math.max(1, Math.round((float) (width / scaleFactor * renderScale)));
+        int drawHeight = Math.max(1, Math.round((float) (height / scaleFactor * renderScale)));
+
+        drawContext.getMatrices().pushMatrix();
+        drawContext.getMatrices().scale(1f / renderScale, 1f / renderScale);
+        RenderUtils.drawTexturedRect(
+                drawContext,
+                texture,
+                CustomColor.NONE,
+                drawX, drawY,
+                drawWidth, drawHeight,
+                0, 0,
+                textureWidth, textureHeight,
+                textureWidth, textureHeight
+        );
+        drawContext.getMatrices().popMatrix();
+    }
+
     private void drawImageExact(
             Identifier texture,
             float x, float y,

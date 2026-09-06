@@ -39,6 +39,28 @@ public final class ContainerUtils {
         click(slot, syncId, revision, hotbarKey, SlotActionType.SWAP, stacks);
     }
 
+    public static boolean clickOnSlotWithoutPrediction(int slot, int syncId, int revision, int mouseButton, List<ItemStack> stacks) {
+        if (MinecraftUtils.mc() == null || stacks == null) return false;
+        if (MinecraftUtils.mc().getNetworkHandler() == null || slot < 0 || slot >= stacks.size()) return false;
+        try {
+            ComponentChangesHash.ComponentHasher hasher = MinecraftUtils.mc().getNetworkHandler().getComponentHasher();
+            Int2ObjectOpenHashMap<ItemStackHash> modifiedStacks = new Int2ObjectOpenHashMap<>();
+            modifiedStacks.put(slot, ItemStackHash.fromItemStack(stacks.get(slot), hasher));
+            MinecraftUtils.mc().getNetworkHandler().sendPacket(new ClickSlotC2SPacket(
+                    syncId,
+                    revision,
+                    (short) slot,
+                    (byte) mouseButton,
+                    SlotActionType.PICKUP,
+                    modifiedStacks,
+                    ItemStackHash.EMPTY
+            ));
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     private static void click(int slot, int syncId, int revision, int button, SlotActionType action, List<ItemStack> stacks) {
         if (MinecraftUtils.mc() == null || stacks == null) return;
         if (MinecraftUtils.mc().getNetworkHandler() == null || slot < 0 || slot >= stacks.size()) return;

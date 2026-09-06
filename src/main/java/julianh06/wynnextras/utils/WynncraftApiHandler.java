@@ -727,12 +727,16 @@ public class WynncraftApiHandler {
     private record PlayerDataFetchResult(int statusCode, PlayerData playerData) {}
 
     public static CompletableFuture<FetchResult> fetchPlayerAspectData(String playerUUID) {
-        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasAspects) {
-            return CompletableFuture.completedFuture(new FetchResult(FetchStatus.DISABLED, null));
-        }
         if (playerUUID == null) {
             MinecraftUtils.sendMessageToClient(Text.of("§cUUID is null!"));
             return CompletableFuture.completedFuture(null);
+        }
+
+        FetchResult localFallback = loadLocalAspectData(playerUUID);
+        if (WynnExtrasConfig.INSTANCE.doNotFetchWynnExtrasAspects) {
+            return CompletableFuture.completedFuture(localFallback != null
+                    ? localFallback
+                    : new FetchResult(FetchStatus.DISABLED, null));
         }
 
         try {
@@ -747,41 +751,85 @@ public class WynncraftApiHandler {
 
                         if (ex != null) {
                             BackendErrorLogger.error("player-aspect-fetch", "Aspect server unreachable: " + ex.getMessage());
-                            return new FetchResult(FetchStatus.SERVER_UNREACHABLE, null);
+                            return fallbackToLocal(localFallback, FetchStatus.SERVER_UNREACHABLE);
                         }
 
                         int code = response.statusCode();
 
                         if (code == 403) {
-                            return new FetchResult(FetchStatus.FORBIDDEN, null);
+                            return fallbackToLocal(localFallback, FetchStatus.FORBIDDEN);
                         }
 
                         if (code == 401) {
-                            return new FetchResult(FetchStatus.UNAUTHORIZED, null);
+                            return fallbackToLocal(localFallback, FetchStatus.UNAUTHORIZED);
+                        }
+
+                        if (code == 404) {
+                            return fallbackToLocal(localFallback, FetchStatus.NOT_FOUND);
                         }
 
                         if (code == 400) {
                             WynnExtras.LOGGER.error("GET ERROR 400: " + response.body());
-                            return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
+                            return fallbackToLocal(localFallback, FetchStatus.UNKNOWN_ERROR);
                         }
 
                         if (code >= 500) {
                             BackendErrorLogger.error("player-aspect-fetch", "GET SERVER ERROR: " + code + " → " + response.body());
-                            return new FetchResult(FetchStatus.SERVER_ERROR, null);
+                            return fallbackToLocal(localFallback, FetchStatus.SERVER_ERROR);
                         }
 
                         if (code != 200) {
                             WynnExtras.LOGGER.error("GET ERROR: " + code + " → " + response.body());
-                            return new FetchResult(FetchStatus.UNKNOWN_ERROR, null);
+                            return fallbackToLocal(localFallback, FetchStatus.UNKNOWN_ERROR);
                         }
 
-                        User user = parsePlayerAspectData(response.body());
-                        return new FetchResult(FetchStatus.OK, user);
+                        try {
+                            User user = parsePlayerAspectData(response.body());
+                            return new FetchResult(FetchStatus.OK, user);
+                        } catch (Exception e) {
+                            BackendErrorLogger.error("player-aspect-fetch", "Invalid aspect server response: " + e.getMessage());
+                            return fallbackToLocal(localFallback, FetchStatus.UNKNOWN_ERROR);
+                        }
                     });
         } catch (Exception e) {
             e.printStackTrace();
-            return CompletableFuture.completedFuture(new FetchResult(FetchStatus.UNKNOWN_ERROR, null));
+            return CompletableFuture.completedFuture(fallbackToLocal(localFallback, FetchStatus.UNKNOWN_ERROR));
         }
+    }
+
+    private static FetchResult loadLocalAspectData(String playerUUID) {
+        if (MinecraftUtils.player() == null
+                || !MinecraftUtils.player().getUuidAsString().equalsIgnoreCase(playerUUID)) {
+            return null;
+        }
+
+        JsonArray storedAspects = LocalAspectStorage.load();
+        if (storedAspects == null || storedAspects.isEmpty()) return null;
+
+        List<Aspect> aspects = new ArrayList<>();
+        for (JsonElement element : storedAspects) {
+            try {
+                JsonObject object = element.getAsJsonObject();
+                Aspect aspect = new Aspect();
+                aspect.setName(object.get("name").getAsString());
+                aspect.setRarity(object.get("rarity").getAsString());
+                aspect.setAmount(object.get("amount").getAsInt());
+                aspects.add(aspect);
+            } catch (Exception e) {
+                WynnExtras.LOGGER.error("Failed to load locally stored aspect: " + e.getMessage());
+            }
+        }
+        if (aspects.isEmpty()) return null;
+
+        User user = new User();
+        user.setUuid(playerUUID);
+        user.setPlayerName(MinecraftUtils.player().getName().getString());
+        user.setAspects(aspects);
+        return new FetchResult(FetchStatus.OK, user);
+    }
+
+    private static FetchResult fallbackToLocal(FetchResult localFallback, FetchStatus remoteStatus) {
+        return localFallback != null ? localFallback : new FetchResult(remoteStatus, null);
     }
 
     public static void processAspects(Map<String, Pair<String, String>> map) {

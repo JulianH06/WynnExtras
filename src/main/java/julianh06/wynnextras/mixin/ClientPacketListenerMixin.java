@@ -3,6 +3,7 @@ package julianh06.wynnextras.mixin;
 import com.llamalad7.mixinextras.sugar.Local;
 import julianh06.wynnextras.event.SetEntityDataEvent;
 import julianh06.wynnextras.features.bankoverlay.BankOverlay2;
+import julianh06.wynnextras.features.misc.ServerTpsHud;
 import julianh06.wynnextras.wynncraft.state.RaidState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
@@ -11,6 +12,7 @@ import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
+import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -22,6 +24,11 @@ import java.util.List;
 
 @Mixin(ClientPlayNetworkHandler.class)
 public class ClientPacketListenerMixin {
+    @Inject(method = "onWorldTimeUpdate", at = @At("TAIL"))
+    private void wynnExtras$measureServerTps(WorldTimeUpdateS2CPacket packet, CallbackInfo ci) {
+        ServerTpsHud.onWorldTimeUpdate();
+    }
+
     @Inject(method = "onTitle", at = @At("TAIL"))
     private void wynnExtras$observeRaidTitle(TitleS2CPacket packet, CallbackInfo ci) {
         RaidState.observeTitle(packet.text());
