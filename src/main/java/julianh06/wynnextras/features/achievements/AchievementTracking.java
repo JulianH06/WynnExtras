@@ -184,6 +184,16 @@ public class AchievementTracking {
         if (unlockSimple("bank.rich", "Rich")) save();
     }
 
+    @SubscribeEvent
+    private void onDrunkness(ChatEvent event) {
+        if (achievements == null) return;
+
+        String message = event.message.getString();
+        if (message.contains(":") || !message.contains("[Drunkness for 120 seconds]")) return;
+
+        if (unlockSimple("misc.get_drunk", "Get drunk")) save();
+    }
+
     /** Records the active tower; the achievement is only granted after the capture message. */
     private void trackWarAchievements() {
         MinecraftClient client = MinecraftClient.getInstance();

@@ -5,6 +5,7 @@ public enum AchievementId {
     ULTIMATE_COMPLETIONIST("content.ultimate_completionist"),
     MAX_LEVEL("class.max_level"),
     RICH("bank.rich"),
+    GET_DRUNK("misc.get_drunk"),
 
     ASPECT_MAX_ALL("aspect.max.all"),
     ASPECT_MAX_ALL_MYTHIC("aspect.max.all.mythic"),

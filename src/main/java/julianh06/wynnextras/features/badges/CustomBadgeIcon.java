@@ -3,7 +3,7 @@ package julianh06.wynnextras.features.badges;
 import julianh06.wynnextras.features.achievements.AchievementId;
 
 public enum CustomBadgeIcon {
-    STEAMHAPPY("steamhappy", "Steamhappy", "steamhappy.png", 64, null, null);
+    STEAMHAPPY("steamhappy", "Steamhappy", "steamhappy.png", 64, AchievementId.GET_DRUNK, null);
 
     private static final int FIRST_CODE_POINT = 0xE100;
 

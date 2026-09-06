@@ -138,6 +138,7 @@ public class Achievements {
         changed |= registerDefault(simple("content.ultimate_completionist", "Ultimate Completionist", "Reach 100% content completion and Level 132 in every profession on one class", false), onlyMissing);
         changed |= registerDefault(simple("class.max_level", "Max Level", "Reach Combat Level 121 and Level 132 in every profession on one class", false), onlyMissing);
         changed |= registerDefault(simple("bank.rich", "Rich", "Fill every slot in a bank page with exactly one stack of Liquid Emeralds", false), onlyMissing);
+        changed |= registerDefault(simple("misc.get_drunk", "Get drunk", "(ingame)", false), onlyMissing);
 
         changed |= registerDefault(tiered("aspect.max.all", "Aspect Completionist", "Max aspects", false, ALL_ASPECT_TARGETS), onlyMissing);
         changed |= registerDefault(tiered("aspect.max.all.mythic", "Mythic Completionist", "Max Mythic aspects", false, MYTHIC_ASPECT_TARGETS), onlyMissing);

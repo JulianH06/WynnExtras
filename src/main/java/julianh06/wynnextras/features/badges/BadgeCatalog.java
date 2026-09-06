@@ -28,7 +28,7 @@ public final class BadgeCatalog {
             new BadgeIcon("heart", "\u2665", "Heart", null, null),
             new BadgeIcon("note", "\u266A", "Note", null, null),
             new BadgeIcon("notes", "\u266B", "Notes", null, null),
-            new BadgeIcon(CustomBadgeIcon.STEAMHAPPY), //TODO: add requirement for this
+            new BadgeIcon(CustomBadgeIcon.STEAMHAPPY),
             new BadgeIcon("worm", "\uD83E\uDEB1", "Worm", AchievementId.RAID_NOTG, 2),
             new BadgeIcon("notg", "\u2737", "Idk what to call this", AchievementId.RAID_NOTG, 3),
             new BadgeIcon("paw", "\uD83D\uDC3E", "Paw", AchievementId.RAID_NOL, 2),
