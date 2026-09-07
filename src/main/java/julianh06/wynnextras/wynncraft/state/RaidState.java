@@ -28,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.OptionalLong;
+import java.util.regex.Pattern;
 
 @WEModule
 public final class RaidState {
@@ -47,6 +48,7 @@ public final class RaidState {
     private static boolean awaitingRaidResume;
     private static int raidResumeTicksRemaining;
     private static final Map<Integer, RaidRoomData> ROOMS = new LinkedHashMap<>();
+    private static final Pattern FORMATTING_CODE = Pattern.compile("§[0-9a-fk-orx]");
 
     public static WERaidKind raidKind() { return raidKind; }
     public static Phase phase() { return phase; }
@@ -305,5 +307,5 @@ public final class RaidState {
         };
     }
 
-    private static String clean(String value) { return value.replaceAll("§[0-9a-fk-orx]", "").trim(); }
+    private static String clean(String value) { return FORMATTING_CODE.matcher(value).replaceAll("").trim(); }
 }

@@ -481,6 +481,10 @@ public class WynnExtrasConfig {
     public int serverTpsX = 5;
     public int serverTpsY = 25;
     public float serverTpsScale = 1.0f;
+    public boolean fpsHudEnabled = false;
+    public int fpsHudX = 5;
+    public int fpsHudY = 35;
+    public float fpsHudScale = 1.0f;
     public boolean weeklyWarCountEnabled = false;
     public int weeklyWarCountX = 5;
     public int weeklyWarCountY = 5;

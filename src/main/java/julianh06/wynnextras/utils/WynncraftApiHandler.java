@@ -534,14 +534,18 @@ public class WynncraftApiHandler {
     }
 
     private static boolean hasAllAspectClasses(List<ApiAspect> aspectList, List<String> classes) {
-        if (aspectList == null || aspectList.isEmpty()) return false;
+        if (aspectList == null) return false;
 
-        Set<String> loadedClasses = aspectList.stream()
-                .map(ApiAspect::getRequiredClass)
-                .filter(Objects::nonNull)
-                .map(String::toLowerCase)
-                .collect(Collectors.toSet());
-        return loadedClasses.containsAll(classes);
+        synchronized (aspectList) {
+            if (aspectList.isEmpty()) return false;
+
+            Set<String> loadedClasses = aspectList.stream()
+                    .map(ApiAspect::getRequiredClass)
+                    .filter(Objects::nonNull)
+                    .map(String::toLowerCase)
+                    .collect(Collectors.toSet());
+            return loadedClasses.containsAll(classes);
+        }
     }
 
     /** Default: silent on lookup failure. Auto-fetchers (GV/ProfessionOverlay/CharacterModelMixin etc.)

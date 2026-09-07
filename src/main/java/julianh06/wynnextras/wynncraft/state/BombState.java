@@ -40,6 +40,8 @@ public final class BombState {
             "(?is)^.*\\b(" + BOMB_NAME + ")\\s+Bomb has expired!.*$");
     private static final Pattern INFO_BAR_BOMB = Pattern.compile(
             "(?i)^(?:Double\\s+)?(" + BOMB_NAME + ")\\s+from\\s+.+?\\s+\\[(\\d+)(m|s)]$");
+    private static final Pattern CLEAN_CODES = Pattern.compile(
+            "§(?:#[0-9a-fA-F]{8}|[0-9a-fk-orA-FK-OR])|\\p{Co}");
     private static final List<Bomb> BOMBS = new ArrayList<>();
 
     public static List<Bomb> bombs() {
@@ -53,15 +55,17 @@ public final class BombState {
     @SubscribeEvent
     public void onChat(ChatEvent event) {
         String line = event.message == null ? "" : event.message.getString();
+        String cleanedLine = clean(line);
+        if (isPlayerChat(cleanedLine)) return;
         String currentWorld = currentWorld();
 
-        ParsedBomb bomb = parseChatBomb(line, currentWorld);
+        ParsedBomb bomb = parseChatBomb(line, cleanedLine, currentWorld);
         if (bomb != null) {
             add(bomb, true);
             return;
         }
 
-        String expiredType = parseExpiredBomb(line);
+        String expiredType = parseExpiredBomb(line, cleanedLine);
         if (expiredType != null && !currentWorld.isEmpty()) remove(expiredType, currentWorld);
     }
 
@@ -82,8 +86,12 @@ public final class BombState {
     }
 
     static ParsedBomb parseChatBomb(String value, String currentWorld) {
-        if (isPlayerChat(value)) return null;
         String line = clean(value);
+        if (isPlayerChat(line)) return null;
+        return parseChatBomb(value, line, currentWorld);
+    }
+
+    private static ParsedBomb parseChatBomb(String value, String line, String currentWorld) {
         Matcher bell = BOMB_BELL.matcher(line);
         if (bell.matches() && hasMarker(value, '\uE01E')) return parsed(bell.group(1), bell.group(2), -1);
 
@@ -93,8 +101,14 @@ public final class BombState {
     }
 
     static String parseExpiredBomb(String value) {
-        if (isPlayerChat(value) || !hasMarker(value, '\uE014')) return null;
-        Matcher matcher = EXPIRED_BOMB.matcher(clean(value));
+        String line = clean(value);
+        if (isPlayerChat(line)) return null;
+        return parseExpiredBomb(value, line);
+    }
+
+    private static String parseExpiredBomb(String value, String line) {
+        if (!hasMarker(value, '\uE014')) return null;
+        Matcher matcher = EXPIRED_BOMB.matcher(line);
         return matcher.matches() ? type(matcher.group(1)) : null;
     }
 
@@ -170,13 +184,11 @@ public final class BombState {
 
     private static String clean(String value) {
         if (value == null) return "";
-        return value.replaceAll("§(?:#[0-9a-fA-F]{8}|[0-9a-fk-orA-FK-OR])", "")
-                .replaceAll("\\p{Co}", "")
-                .trim();
+        return CLEAN_CODES.matcher(value).replaceAll("").trim();
     }
 
     private static boolean isPlayerChat(String value) {
-        return clean(value).contains(": ");
+        return value.contains(": ");
     }
 
     private static boolean hasMarker(String value, char marker) {

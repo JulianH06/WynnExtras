@@ -4,6 +4,7 @@ public class SpellData {
     private final String filePath;
     private final int hash;
     private String FQName = null;
+    private SpellNamespace namespace = null;
     private Integer customModelData = null;
 
     public SpellData(String filePath, int hash) {
@@ -28,12 +29,12 @@ public class SpellData {
     }
 
     public SpellNamespace getNamespace() {
-        if (FQName == null || FQName.isEmpty()) return null;
-        return SpellNamespace.from(FQName);
+        return namespace;
     }
 
     public void setFQName(String FQName) {
         this.FQName = FQName;
+        namespace = FQName == null || FQName.isEmpty() ? null : SpellNamespace.from(FQName);
     }
 
     public void setCustomModelData(Integer customModelData) {

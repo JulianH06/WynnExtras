@@ -38,10 +38,12 @@ public class AspectUtils {
     public static ApiAspect findApiAspectByName(String name) {
         try {
             List<ApiAspect> allAspects = apiAspects;
-            return allAspects.stream()
-                    .filter(a -> a.getName().equals(name))
-                    .findFirst()
-                    .orElse(null);
+            synchronized (allAspects) {
+                return allAspects.stream()
+                        .filter(a -> a.getName().equals(name))
+                        .findFirst()
+                        .orElse(null);
+            }
         } catch (Exception e) {
             return null;
         }

@@ -4,6 +4,7 @@ import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.core.WynnExtras;
 import julianh06.wynnextras.mixin.Accessor.HandledScreenAccessor;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.Widget;
 import julianh06.wynnextras.utils.colors.CustomColor;
@@ -18,6 +19,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.screen.slot.Slot;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -75,6 +77,7 @@ public class MountOverlay {
     private static boolean levelsInitialized;
     private static int configuredDefaultLevel;
     private static boolean advancedMode;
+    private static boolean breedingTimerMode;
 
     private static boolean[] createSelectedStats() {
         boolean[] selected = new boolean[STAT_COUNT];
@@ -142,6 +145,11 @@ public class MountOverlay {
         int controlX = normalPanelX + (PANEL_WIDTH - CONTROL_WIDTH) / 2;
         new MountHelperPanelWidget(panelX, panelY, panelWidth, panelHeight)
                 .draw(context, mouseX, mouseY, delta, ui);
+
+        TimerModeToggleWidget timerToggle = new TimerModeToggleWidget(
+                screen.getX() + screen.getBackgroundWidth() + 5, allY);
+        INTERACTIVE_CONTROLS.add(timerToggle);
+        timerToggle.draw(context, mouseX, mouseY, delta, ui);
 
         LevelControlWidget allControl = new LevelControlWidget(controlX, allY, -1);
         INTERACTIVE_CONTROLS.add(allControl);
@@ -240,7 +248,10 @@ public class MountOverlay {
         GenericContainerScreen container = getMountFeederScreen();
         if (button != 0 || container == null || activeScreen != container) return false;
         for (int i = INTERACTIVE_CONTROLS.size() - 1; i >= 0; i--) {
-            if (INTERACTIVE_CONTROLS.get(i).mouseClicked(mouseX, mouseY, button)) return true;
+            if (INTERACTIVE_CONTROLS.get(i).mouseClicked(mouseX, mouseY, button)) {
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                return true;
+            }
         }
         return false;
     }
@@ -274,6 +285,10 @@ public class MountOverlay {
     private static void toggleAdvancedMode() {
         advancedMode = !advancedMode;
         PLAN_CACHE.clear();
+    }
+
+    private static void toggleTimerMode() {
+        breedingTimerMode = !breedingTimerMode;
     }
 
     private static void toggleFeedRole(int row) {
@@ -323,14 +338,26 @@ public class MountOverlay {
         String mountSignature = mountSignature(saddle, stats);
 
         CachedPlan cached = PLAN_CACHE.get(row);
-        if (cached != null
-                && cached.materialLevel() == selectedLevels[row]
-                && cached.mountSignature().equals(mountSignature)) {
+        if (cached != null && cached.materialLevel() == selectedLevels[row]) {
+            if (cached.inputSignature().equals(inputSignature)
+                    && !insertedMaterials.isEmpty()
+                    && cached.insertedMaterials().equals(insertedMaterials)) {
+                PENDING_INPUTS.remove(row);
+                PLAN_CACHE.put(row, new CachedPlan(mountSignature, selectedLevels[row], inputSignature,
+                        cached.insertedMaterials(), cached.fullPlan(), cached.picks()));
+                return cached.picks();
+            }
+            if (!cached.mountSignature().equals(mountSignature)) {
+                PENDING_INPUTS.remove(row);
+                cached = null;
+            }
+        }
+        if (cached != null) {
             if (cached.inputSignature().equals(inputSignature)) {
                 PENDING_INPUTS.remove(row);
                 return cached.picks();
             }
-            if (onlyAddedMaterials(cached.insertedMaterials(), insertedMaterials)) {
+            if (hasOnlyRecognizedMaterials(materialSlots)) {
                 List<MaterialPick> remainingPicks = removeInsertedRecommendations(
                         cached.fullPlan(), insertedMaterials, selectedLevels[row]);
                 if (remainingPicks != null) {
@@ -389,12 +416,10 @@ public class MountOverlay {
         return picks;
     }
 
-    private static boolean onlyAddedMaterials(List<InsertedMaterial> previous,
-                                              List<InsertedMaterial> current) {
-        if (current.size() <= previous.size()) return false;
-        List<InsertedMaterial> added = new ArrayList<>(current);
-        for (InsertedMaterial material : previous) {
-            if (!added.remove(material)) return false;
+    private static boolean hasOnlyRecognizedMaterials(List<Slot> materialSlots) {
+        for (Slot slot : materialSlots) {
+            ItemStack stack = slot.getStack();
+            if (!isPreviewable(stack) && identifyMaterial(stack) == null) return false;
         }
         return true;
     }
@@ -452,7 +477,12 @@ public class MountOverlay {
             if (stack == null || stack.isEmpty()) {
                 signature.append('|');
             } else {
-                signature.append('|').append(stack.getName().getString()).append(':').append(stack.getCount());
+                InsertedMaterial material = identifyMaterial(stack);
+                if (material != null) {
+                    signature.append('|').append(material.type()).append(':').append(material.level());
+                } else {
+                    signature.append('|').append(stack.getName().getString()).append(':').append(stack.getCount());
+                }
             }
         }
         return signature.toString();
@@ -493,8 +523,15 @@ public class MountOverlay {
         }
         if (isFullyFed(stats)) return "Ready to breed";
 
-        long seconds = remainingFeedingSeconds(saddle, stats, insertedMaterials, picks, materialLevel);
-        return seconds > 0 ? "Time remaining: " + formatDuration(seconds) : "";
+        long seconds = remainingFeedingSeconds(
+                saddle, stats, insertedMaterials, breedingTimerMode ? picks : List.of(), materialLevel);
+        if (breedingTimerMode) {
+            if(insertedMaterials.isEmpty()) {
+                return seconds > 0 ? "Not feeding, remaining time: " + formatDuration(seconds) : "No food queued";
+            }
+            return seconds > 0 ? "Ready to breed in: " + formatDuration(seconds) : "No food queued";
+        }
+        return seconds > 0 ? "Refill in: " + formatDuration(seconds) : "Refill now";
     }
 
     private static long remainingFeedingSeconds(ItemStack saddle, Map<MountStat, StatEntry> stats,
@@ -915,6 +952,27 @@ public class MountOverlay {
         protected void drawContent(DrawContext context, int mouseX, int mouseY, float delta) {
             ui.drawCenteredText(row < 0 ? "All" : String.valueOf(selectedLevels[row]),
                     x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 1);
+        }
+    }
+
+    private static final class TimerModeToggleWidget extends Widget {
+        private TimerModeToggleWidget(int x, int y) {
+            super(x, y, CONTROL_WIDTH, CONTROL_HEIGHT);
+        }
+
+        @Override
+        protected void drawContent(DrawContext context, int mouseX, int mouseY, float delta) {
+            ui.drawButton(x, y, width, height, hovered);
+            ui.drawCenteredText(breedingTimerMode ? "Timer: Breed" : "Timer: Refill",
+                    x + width / 2f, y + height / 2f,
+                    CustomColor.fromHexString(breedingTimerMode ? "55FFFF" : "FFAA00"), 0.75f);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if (button != 0) return false;
+            toggleTimerMode();
+            return true;
         }
     }
 

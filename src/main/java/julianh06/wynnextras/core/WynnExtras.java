@@ -27,6 +27,7 @@ import julianh06.wynnextras.features.chat.ChatNotificator;
 import julianh06.wynnextras.features.loader.SkillPointLoader;
 import julianh06.wynnextras.features.misc.BloodSorrowTimer;
 import julianh06.wynnextras.features.misc.FastRequeue;
+import julianh06.wynnextras.features.misc.FpsHud;
 import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
 import julianh06.wynnextras.features.misc.LunarScreenOverlayFallback;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
@@ -209,6 +210,7 @@ public class WynnExtras implements ClientModInitializer {
 		julianh06.wynnextras.features.misc.CurseTracker.register();
 		julianh06.wynnextras.features.misc.RadiantHud.init();
 		ServerTpsHud.register();
+		FpsHud.register();
 		julianh06.wynnextras.features.misc.ProfessionOverlay.register();
 		julianh06.wynnextras.features.bankoverlay.BankOverlay2.registerScreenHooks();
 		LunarScreenOverlayFallback.register();

@@ -175,6 +175,12 @@ public class HudEditScreen extends Screen {
             serverTpsEl.topLeft = true;
             elements.add(serverTpsEl);
         }
+        if (c.fpsHudEnabled) {
+            HudElement fpsEl = new HudElement("fps", "FPS: 144",
+                    c.fpsHudX, c.fpsHudY, c.fpsHudScale, WynnExtrasConfig.Align.LEFT);
+            fpsEl.topLeft = true;
+            elements.add(fpsEl);
+        }
         if (c.warDpsEnabled) {
             HudElement warDpsEl = new HudElement("warDps", "War Info: Tower EHP 234K",
                     c.warDpsX, c.warDpsY, 1.0f, WynnExtrasConfig.Align.LEFT);
@@ -804,6 +810,9 @@ public class HudEditScreen extends Screen {
                 }
                 case "serverTps" -> {
                     c.serverTpsX = e.x; c.serverTpsY = e.y; c.serverTpsScale = e.scale;
+                }
+                case "fps" -> {
+                    c.fpsHudX = e.x; c.fpsHudY = e.y; c.fpsHudScale = e.scale;
                 }
                 case "warDps" -> {
                     c.warDpsX = e.x; c.warDpsY = e.y;

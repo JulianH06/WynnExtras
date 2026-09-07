@@ -844,7 +844,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
             .add(toggle("Remove chroma", "Removes rainbow text and visuals from the aspect pages and profile viewer",
                     () -> config.removeChroma, v -> config.removeChroma = v))
             .add(toggle("Server TPS", "Show the server's current ticks per second on the HUD",
-                    () -> config.serverTpsEnabled, v -> config.serverTpsEnabled = v));
+                    () -> config.serverTpsEnabled, v -> config.serverTpsEnabled = v))
+            .add(toggle("FPS", "Show the client's current frames per second on the HUD",
+                    () -> config.fpsHudEnabled, v -> config.fpsHudEnabled = v));
 
         // ===== KEYBINDS =====
         category("Keybinds", 0xFF0496C9)
@@ -974,6 +976,8 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 () -> config.mountPrimaryColorBackground, v -> config.mountPrimaryColorBackground = v))
         .add(toggle("Server TPS", "Show the server's current ticks per second on the HUD",
                 () -> config.serverTpsEnabled, v -> config.serverTpsEnabled = v))
+        .add(toggle("FPS", "Show the client's current frames per second on the HUD",
+                () -> config.fpsHudEnabled, v -> config.fpsHudEnabled = v))
         .sub("Privacy")
             .add(button("Privacy policy", "You can find more information here", (x) -> {
                 LinkUtils.openLink("https://wynnextras.com/privacy");

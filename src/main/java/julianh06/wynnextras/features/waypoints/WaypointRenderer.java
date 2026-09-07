@@ -24,27 +24,37 @@ public class WaypointRenderer {
     @SubscribeEvent
     public void onRenderWorld(RenderWorldEvent event) {
         MinecraftClient client = MinecraftClient.getInstance();
-        WEVec playerPos = client.player == null ? null : new WEVec(client.player.getBlockPos().toBottomCenterPos());
+        BlockPos playerPos = client.player == null ? null : client.player.getBlockPos();
+        double maxRangeSquared = (double) WynnExtrasConfig.INSTANCE.waypointMaxRange
+                * WynnExtrasConfig.INSTANCE.waypointMaxRange;
 
         //Extraction phase
         for(WaypointPackage pkg : WaypointData.INSTANCE.packages) {
             if(!pkg.enabled) continue;
             for(Waypoint waypoint : pkg.waypoints) {
                 if(WaypointEditMode.isEditing(waypoint)) continue;
+
+                double centerX = waypoint.displayX() + 0.5;
+                double centerZ = waypoint.displayZ() + 0.5;
+                double textY = waypoint.displayY() + 1.0 + waypoint.getSize() / 2.0;
+                double distanceSquared = 0;
+                if (playerPos != null) {
+                    double dx = centerX - (playerPos.getX() + 0.5);
+                    double dy = textY - playerPos.getY();
+                    double dz = centerZ - (playerPos.getZ() + 0.5);
+                    distanceSquared = dx * dx + dy * dy + dz * dz;
+                    if (distanceSquared > maxRangeSquared) continue;
+                }
+
                 if(isOnBarrier(waypoint)) continue;
 
                 WaypointCategory category = waypoint.getCategory();
                 boolean seeThrough = !waypoint.shouldSeeThrough();
 
                 Box box = waypoint.getRenderBox();
-                double centerX = (box.minX + box.maxX) / 2;
-                double centerZ = (box.minZ + box.maxZ) / 2;
-
                 WEVec pos = new WEVec(centerX, box.maxY + 0.5, centerZ);
-                double distance = playerPos == null ? 0 : pos.distanceTo(playerPos);
-                if (playerPos != null && distance > WynnExtrasConfig.INSTANCE.waypointMaxRange) continue;
                 if(playerPos != null && waypoint.shouldShowDistance()) {
-                    WorldRenderUtils.drawText(event, pos, Text.of((int) distance + "m"), 0.75f, seeThrough);
+                    WorldRenderUtils.drawText(event, pos, Text.of((int) Math.sqrt(distanceSquared) + "m"), 0.75f, seeThrough);
                 }
                 Color color = category != null ? category.asAwtColor() : Color.cyan;
 
