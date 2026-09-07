@@ -52,8 +52,8 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     private static final int CLOSE_BUTTON_SIZE = 14;
     private static final int CLOSE_BUTTON_RIGHT_MARGIN = 5;
     private static final int CLOSE_BUTTON_TOP_MARGIN = 4;
-    private static final int ROW_HEIGHT = 12;
-    private static final int EDIT_BUTTON_SIZE = 10;
+    private static final int ROW_HEIGHT = 14;
+    private static final int EDIT_BUTTON_SIZE = 12;
     private static final int EDITOR_TYPE_Y_OFFSET = 31;
     private static final int EDITOR_NAME_Y_OFFSET = 51;
     private static final int EDITOR_SUGGESTION_Y_OFFSET = 70;
@@ -71,6 +71,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
     private static final float SCROLL_SNAP = 0.02f;
     private static final float TITLE_SCALE = 1.0f;
     private static final float TEXT_SCALE = 0.75f;
+    private static final float ROW_TEXT_SCALE = 1.0f;
     private static final int VANILLA_PANEL_SCALE = 4;
     private static final int VANILLA_PANEL_SIDE_OFFSET = 3;
     private static final int VANILLA_PANEL_BOTTOM_OFFSET = 3;
@@ -1280,15 +1281,15 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
 
             String haveNeed = row.haveCount() + "/" + row.needCount();
             ui.drawText(row.typeLabel(), listX + 3, rowY + 2,
-                    rowTypeTextColor(row.type()), TEXT_SCALE);
-            ui.drawText(trimToWidth(row.displayNameWithTier(), rowContentWidth - 108, TEXT_SCALE),
-                    listX + 37, rowY + 2, rowNameTextColor(row.type()), TEXT_SCALE);
-            ui.drawText(haveNeed, listX + rowContentWidth - 54, rowY + 2, TEXT_DIM, TEXT_SCALE);
+                    rowTypeTextColor(row.type()), ROW_TEXT_SCALE);
+            ui.drawText(trimToWidth(row.displayNameWithTier(), rowContentWidth - 108, ROW_TEXT_SCALE),
+                    listX + 37, rowY + 2, rowNameTextColor(row.type()), ROW_TEXT_SCALE);
+            ui.drawText(haveNeed, listX + rowContentWidth - 54, rowY + 2, TEXT_DIM, ROW_TEXT_SCALE);
             int editX = listX + rowContentWidth - EDIT_BUTTON_SIZE - 2;
             ui.drawVanillaPanelButton(editX, rowY, EDIT_BUTTON_SIZE, EDIT_BUTTON_SIZE,
                     BUTTON_NINE_SLICE_SCALE, BUTTON_CORNER_SIZE, hoveredRow && mouseX >= editX);
             ui.drawCenteredText("✎", editX + EDIT_BUTTON_SIZE / 2f, rowY + EDIT_BUTTON_SIZE / 2f,
-                    CustomColor.fromHexString("FFFFFF"), 0.75f);
+                    CustomColor.fromHexString("FFFFFF"), ROW_TEXT_SCALE);
         }
         drawContext.disableScissor();
 
@@ -2071,7 +2072,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             ui.drawVanillaPanelButton(x, y, width, height, BUTTON_NINE_SLICE_SCALE, BUTTON_CORNER_SIZE, hovered);
             String label = labelSupplier == null ? "" : labelSupplier.get();
-            ui.drawCenteredText(label, x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 0.75f);
+            ui.drawCenteredText(label, x + width / 2f, y + height / 2f, CustomColor.fromHexString("FFFFFF"), 1f);
         }
 
         @Override
@@ -2102,7 +2103,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
         protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
             ui.drawVanillaPanelButton(x, y, width, height, BUTTON_NINE_SLICE_SCALE, BUTTON_CORNER_SIZE, hovered);
             ui.drawCenteredText(outputButtonLabel(), x + width / 2f, y + height / 2f,
-                    CustomColor.fromHexString("FFFFFF"), 0.75f);
+                    CustomColor.fromHexString("FFFFFF"), 1);
         }
 
         @Override
