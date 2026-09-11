@@ -92,11 +92,10 @@ public class GVScreen extends WEScreen {
     public static BannerBlockEntity bannerBlockEntity;
     public static BannerGuiElementState bannerGuiState;
 
-    protected GVScreen(String guild) {
+    protected GVScreen() {
         super(Text.of("guild viewer"));
         openInBrowserButton = null;
         searchBar = null;
-        PVScreen.currentTab = PVScreen.Tab.General;
     }
 
     @Override
@@ -116,7 +115,7 @@ public class GVScreen extends WEScreen {
 
     @Override
     public void updateValues() {
-        int xStart = getLogicalWidth() / 2 - 900/* - (getLogicalWidth() - 1800 < 200 ? 50 : 0)*/;
+        int xStart = getLogicalWidth() / 2 - 900;
         int yStart = getLogicalHeight() / 2 - 375;
         backgroundImageWidget.setBounds(xStart, yStart, 1800, 750);
         darkModeToggleWidget.setBounds(xStart + 1800 - 120, yStart + 750, 120, 60);

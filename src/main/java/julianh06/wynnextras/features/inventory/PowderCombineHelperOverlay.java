@@ -259,7 +259,7 @@ public class PowderCombineHelperOverlay extends WEMenuExtension {
                             setPhase(Phase.WAIT_OUTPUT_COLLECTION, now, 0);
                         }
                     } else {
-                        status = "Waiting for server output...";
+                        status = "Waiting for craft...";
                         if (now - task.phaseStartedAt() > COMBINE_RESULT_TIMEOUT_MS) {
                             failTask("Combined powder output did not arrive");
                         }

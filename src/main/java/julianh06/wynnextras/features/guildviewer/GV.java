@@ -69,7 +69,7 @@ public class GV {
     @SubscribeEvent
     void onTick(TickEvent event) {
         if(inGV) {
-            MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new GVScreen(currentGuild)));
+            MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new GVScreen()));
             inGV = false;
         }
     }

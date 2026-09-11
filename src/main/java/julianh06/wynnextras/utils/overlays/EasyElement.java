@@ -2,6 +2,7 @@ package julianh06.wynnextras.utils.overlays;
 
 import net.minecraft.client.gui.DrawContext;
 
+@Deprecated
 public abstract class EasyElement {
     protected int x;
     protected int y;

@@ -21,6 +21,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+@Deprecated
 public class EasyTextInput extends EasyElement{
     protected boolean isActive = false;
     protected CustomColor color = CustomColor.fromHexString("FFFFFF");

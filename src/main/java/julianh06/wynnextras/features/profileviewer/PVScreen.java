@@ -259,7 +259,7 @@ public class PVScreen extends WEScreen {
         darkModeToggleWidget.setBounds(xStart + 1800 - 120, yStart + 750, 120, 60);
         int totalWidth = 24;
         for(TabButtonWidget tabButtonWidget : tabButtonWidgets) {
-            int signWidth = drawDynamicNameSign(drawContext, tabButtonWidget.tab.toString(), xStart + totalWidth, yStart - 56);
+            int signWidth = drawDynamicNameSign(tabButtonWidget.tab.toString(), xStart + totalWidth, yStart - 56);
             //24; //+ totalXOffset + (float) signWidth / 2
             tabButtonWidget.setBounds(xStart + totalWidth, yStart - 54, signWidth, 55);
             tabButtonWidget.setTextOffset(signWidth / 2, 17);
@@ -746,7 +746,7 @@ public class PVScreen extends WEScreen {
         }
     }
 
-    public int drawDynamicNameSign(DrawContext context, String input, int x, int y) {
+    public int drawDynamicNameSign(String input, int x, int y) {
         TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
         int strWidth = textRenderer.getWidth(input) + 10;
         int strMidWidth = strWidth - 15;

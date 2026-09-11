@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import julianh06.wynnextras.features.leaderboardviewer.LV;
 import julianh06.wynnextras.wynncraft.state.BombState;
 import julianh06.wynnextras.wynncraft.state.CharacterState;
 import julianh06.wynnextras.utils.enums.WEProfessionType;
@@ -240,6 +241,14 @@ public class CommandLoader implements WELoader {
                                                 return 1;
                                             })
                             )
+            );
+
+            dispatcher.register(
+                    ClientCommandManager.literal("lv")
+                            .executes(ctx -> {
+                                LV.open();
+                                return 1;
+                            })
             );
 
             dispatcher.register(
