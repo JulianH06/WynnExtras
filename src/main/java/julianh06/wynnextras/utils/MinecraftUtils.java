@@ -50,16 +50,6 @@ public class MinecraftUtils {
         return localWorldOrNull() != null;
     }
 
-    public static boolean isOnWynncraft() {
-        MinecraftClient client = mc();
-        if (client.player == null || client.world == null || client.getCurrentServerEntry() == null) return false;
-        String address = client.getCurrentServerEntry().address;
-        int portSeparator = address.indexOf(':');
-        if (portSeparator >= 0) address = address.substring(0, portSeparator);
-        String host = address.toLowerCase(java.util.Locale.ROOT);
-        return host.equals("wynncraft.com") || host.endsWith(".wynncraft.com");
-    }
-
     public static boolean isControlDown() {
         long window = mc().getWindow().getHandle();
         return GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS

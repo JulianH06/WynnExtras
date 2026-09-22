@@ -43,7 +43,6 @@ public abstract class ChatClickMixin {
                 return;
             }
             if (!WynnExtrasConfig.INSTANCE.chatClickPV) return;
-            if (!MinecraftUtils.isOnWynncraft()) return;
 
             String username = null;
             String guildTag = null;

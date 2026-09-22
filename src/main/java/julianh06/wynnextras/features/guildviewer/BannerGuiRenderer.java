@@ -23,7 +23,7 @@ public class BannerGuiRenderer extends SpecialGuiElementRenderer<BannerGuiElemen
     protected void render(BannerGuiElementState state, MatrixStack matrixStack) {
         MinecraftClient.getInstance().gameRenderer.getDiffuseLighting().setShaderLights(DiffuseLighting.Type.ENTITY_IN_UI);
         matrixStack.translate(0.0F, 0.0F, 0.0F);
-        matrixStack.multiply(new Quaternionf().rotateY(-0.5f));
+        matrixStack.multiply(new Quaternionf().rotateY(state.yRotation()));
         RenderDispatcher renderDispatcher = MinecraftClient.getInstance().gameRenderer.getEntityRenderDispatcher();
         OrderedRenderCommandQueueImpl orderedRenderCommandQueueImpl = renderDispatcher.getQueue();
 
@@ -46,7 +46,7 @@ public class BannerGuiRenderer extends SpecialGuiElementRenderer<BannerGuiElemen
                 15728880,
                 OverlayTexture.DEFAULT_UV,
                 state.flag(),
-                time / 100f,
+                state.waving() ? time / 100f : 0f,
                 ModelBaker.BANNER_BASE,
                 true,
                 state.baseColor(),

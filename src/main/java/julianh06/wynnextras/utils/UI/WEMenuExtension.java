@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Base class for overlays that extend (rather than replace) a vanilla HandledScreen.
- * Renders proportionally alongside the vanilla GUI — scales naturally with GUI scale.
+ * Renders proportionally alongside the vanilla GUI - scales naturally with GUI scale.
  * Use WEHandledScreen for full overlays that replace the vanilla GUI.
  */
 public abstract class WEMenuExtension {

@@ -1,71 +1,69 @@
 package julianh06.wynnextras.features.leaderboardviewer;
 
-import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class TypeWidget extends Widget {
     private final LVScreen.Type type;
     private final List<CategoryWidget> categoryWidgets = new ArrayList<>();
+    private final List<LeaderboardButtonWidget> leaderboardButtonWidgets = new ArrayList<>();
+    private final LeaderboardButtonListWidget leaderboardButtonListWidget = new LeaderboardButtonListWidget();
+    private final LeaderboardListWidget leaderboardListWidget = new LeaderboardListWidget(this);
     private CategoryWidget activeCategory;
+    private LeaderboardDefinition activeLeaderboardGroup;
     private LeaderboardDefinition activeLeaderboard;
     private List<LeaderboardEntry> leaderboardEntries = List.of();
     private boolean leaderboardLoading;
     private Throwable leaderboardError;
     private long requestGeneration;
-
-    static Identifier tabLeft = Identifier.of("wynnextras", "textures/gui/profileviewer/tableft.png");
-    static Identifier tabMid = Identifier.of("wynnextras", "textures/gui/profileviewer/tabmid.png");
-    static Identifier tagRight = Identifier.of("wynnextras", "textures/gui/profileviewer/tabright.png");
-
-    static Identifier tabLeftDark = Identifier.of("wynnextras", "textures/gui/profileviewer/tableft_dark.png");
-    static Identifier tabMidDark = Identifier.of("wynnextras", "textures/gui/profileviewer/tabmid_dark.png");
-    static Identifier tagRightDark = Identifier.of("wynnextras", "textures/gui/profileviewer/tabright_dark.png");
+    private Map<String, GuildSeason> guildSeasons = Map.of();
+    private String ownPlayerName;
+    private String ownGuildName;
+    private String ownGuildPrefix;
 
     public TypeWidget(LVScreen.Type type, List<LeaderboardCategory> categories) {
         super(0, 0, 0, 0);
         this.type = type;
+        addChild(leaderboardButtonListWidget);
+        addChild(leaderboardListWidget);
+        setCategories(categories);
+    }
+
+    public void setCategories(List<LeaderboardCategory> categories) {
+        State state = snapshotState();
+        for (CategoryWidget categoryWidget : categoryWidgets) removeChild(categoryWidget);
+        categoryWidgets.clear();
         for (LeaderboardCategory category : categories) {
-            categoryWidgets.add(new CategoryWidget(category, this::selectCategory));
+            CategoryWidget categoryWidget = new CategoryWidget(category, this::selectCategory);
+            categoryWidgets.add(categoryWidget);
+            addChild(categoryWidget);
         }
-        if (!categoryWidgets.isEmpty()) selectCategory(categoryWidgets.getFirst());
+        activeCategory = null;
+        if (categoryWidgets.isEmpty()) return;
+        restoreState(state);
+    }
+
+    @Override
+    protected void updateValues() {
+        int totalWidth = 0;
+        int xStart = x + 22;
+        for (CategoryWidget categoryWidget : categoryWidgets) {
+            int signWidth = categoryWidget.getPreferredWidth();
+            categoryWidget.setBounds(xStart + totalWidth, y - 56, signWidth, 55);
+            totalWidth += signWidth + 12;
+        }
+        leaderboardButtonListWidget.setBounds(x + 12, y + 12, 570, height - 24);
+        leaderboardListWidget.setBounds(x + 600, y + 10, width - 612, height - 20);
+        updateCurrentSeasonIndicators();
     }
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
-        int totalWidth = 0;
-        int xStart = x + 22;
-        for (CategoryWidget categoryWidget : categoryWidgets) {
-            int signWidth = drawDynamicNameSign(categoryWidget.getName(), xStart + totalWidth, y - 56);
-            categoryWidget.setBounds(xStart + totalWidth, y - 56, signWidth, 55);
-            categoryWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
-            totalWidth += signWidth + 12;
-
-            if (categoryWidget == activeCategory) {
-                int currentY = y + 10;
-                for (LeaderboardDefinition leaderboard : categoryWidget.getCategory().leaderboards()) {
-                    ui.drawVanillaPanelButton(x + 10, currentY, 570, 38, 9, 2, hovered);
-                    ui.drawCenteredText(leaderboard.displayName(), x + 285, currentY + 20);
-                    currentY += 48;
-                }
-            }
-        }
-    }
-
-    @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        for (CategoryWidget categoryWidget : categoryWidgets) {
-            if (categoryWidget.isHovered()) {
-                return categoryWidget.mouseClicked(mx, my, button);
-            }
-        }
-        return super.mouseClicked(mx, my, button);
     }
 
     private void selectCategory(CategoryWidget categoryWidget) {
@@ -73,16 +71,38 @@ public class TypeWidget extends Widget {
         if (activeCategory != null) activeCategory.setActive(false);
         activeCategory = categoryWidget;
         activeCategory.setActive(true);
+        activeLeaderboardGroup = null;
         activeLeaderboard = null;
         leaderboardEntries = List.of();
         leaderboardLoading = false;
         leaderboardError = null;
         requestGeneration++;
+        leaderboardListWidget.resetPage();
+        rebuildLeaderboardButtons();
     }
 
     public void selectLeaderboard(LeaderboardDefinition leaderboard) {
+        if (leaderboard.hasVariants()) {
+            activeLeaderboardGroup = leaderboard;
+            selectLeaderboardVariant(leaderboard.variants().getFirst());
+            return;
+        }
+        activeLeaderboardGroup = null;
+        fetchLeaderboard(leaderboard, true);
+    }
+
+    void selectLeaderboardVariant(LeaderboardDefinition leaderboard) {
+        fetchLeaderboard(leaderboard, true);
+    }
+
+    private void fetchLeaderboard(LeaderboardDefinition leaderboard, boolean resetPage) {
+        for (LeaderboardButtonWidget buttonWidget : leaderboardButtonWidgets) {
+            buttonWidget.setActive(buttonWidget.getLeaderboard().equals(leaderboard)
+                    || buttonWidget.getLeaderboard().equals(activeLeaderboardGroup));
+        }
         activeLeaderboard = leaderboard;
-        leaderboardEntries = List.of();
+        if (resetPage) leaderboardListWidget.resetPage();
+        if (resetPage) leaderboardEntries = List.of();
         leaderboardError = null;
         leaderboardLoading = true;
         long generation = ++requestGeneration;
@@ -99,6 +119,33 @@ public class TypeWidget extends Widget {
                 }));
     }
 
+    public boolean reloadLeaderboard() {
+        if (activeLeaderboard == null || leaderboardLoading) return false;
+        LeaderboardService.invalidateLeaderboard(activeLeaderboard.id());
+        fetchLeaderboard(activeLeaderboard, false);
+        return true;
+    }
+
+    public boolean selectLeaderboardById(String id) {
+        for (CategoryWidget categoryWidget : categoryWidgets) {
+            for (LeaderboardDefinition leaderboard : categoryWidget.getCategory().leaderboards()) {
+                if (id.equals(leaderboard.id())) {
+                    selectCategory(categoryWidget);
+                    selectLeaderboard(leaderboard);
+                    return true;
+                }
+                for (LeaderboardDefinition variant : leaderboard.variants()) {
+                    if (!id.equals(variant.id())) continue;
+                    selectCategory(categoryWidget);
+                    activeLeaderboardGroup = leaderboard;
+                    selectLeaderboardVariant(variant);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public LVScreen.Type getType() {
         return type;
     }
@@ -109,6 +156,10 @@ public class TypeWidget extends Widget {
 
     public LeaderboardDefinition getActiveLeaderboard() {
         return activeLeaderboard;
+    }
+
+    public LeaderboardDefinition getActiveLeaderboardGroup() {
+        return activeLeaderboardGroup;
     }
 
     public List<LeaderboardEntry> getLeaderboardEntries() {
@@ -123,18 +174,79 @@ public class TypeWidget extends Widget {
         return leaderboardError;
     }
 
-    public int drawDynamicNameSign(String input, int x, int y) {
-        TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
-        int strWidth = textRenderer.getWidth(input) + 10;
-        int strMidWidth = strWidth - 15;
-        int amount = Math.max(0, Math.ceilDiv(strMidWidth, 10));
-        PVScreen.DarkModeToggleWidget.drawImageWithFade(tabLeftDark, tabLeft, x, y, 30, 60, ui);
+    public void setGuildSeasons(Map<String, GuildSeason> guildSeasons) {
+        this.guildSeasons = guildSeasons;
+        updateCurrentSeasonIndicators();
+    }
 
-        for (int i = 0; i < amount; i++) {
-            PVScreen.DarkModeToggleWidget.drawImageWithFade(tabMidDark, tabMid, x + 30 * (i + 1), y, 30, 60, ui);
+    public GuildSeason getActiveGuildSeason() {
+        return activeLeaderboard == null || activeLeaderboard.id() == null
+                ? null : guildSeasons.get(activeLeaderboard.id());
+    }
+
+    public void setOwnIdentity(String playerName, String guildName, String guildPrefix) {
+        ownPlayerName = playerName;
+        ownGuildName = guildName;
+        ownGuildPrefix = guildPrefix;
+        leaderboardListWidget.rebuildCurrentPage();
+    }
+
+    public boolean isOwnEntry(LeaderboardEntry entry) {
+        if (type == LVScreen.Type.Guild) {
+            return equalsIgnoreCase(entry.name(), ownGuildName)
+                    || equalsIgnoreCase(entry.prefix(), ownGuildPrefix);
         }
+        return equalsIgnoreCase(entry.name(), ownPlayerName);
+    }
 
-        PVScreen.DarkModeToggleWidget.drawImageWithFade(tagRightDark, tagRight, x + 30 * (amount + 1), y, 30, 60, ui);
-        return 60 + amount * 30;
+    private static boolean equalsIgnoreCase(String first, String second) {
+        return first != null && second != null && !first.isBlank() && first.equalsIgnoreCase(second);
+    }
+
+    public State snapshotState() {
+        return new State(
+                activeCategory == null ? null : activeCategory.getName(),
+                activeLeaderboard == null ? null : activeLeaderboard.id(),
+                leaderboardListWidget.getCurrentPage(),
+                leaderboardButtonListWidget.getTargetOffset(),
+                leaderboardButtonListWidget.getActualOffset());
+    }
+
+    public void restoreState(State state) {
+        if (categoryWidgets.isEmpty()) return;
+        CategoryWidget categoryToSelect = categoryWidgets.stream()
+                .filter(category -> category.getName().equals(state.categoryName()))
+                .findFirst()
+                .orElse(categoryWidgets.getFirst());
+        selectCategory(categoryToSelect);
+        if (state.leaderboardId() != null) selectLeaderboardById(state.leaderboardId());
+        leaderboardListWidget.restorePage(state.page());
+        leaderboardButtonListWidget.restoreScroll(state.targetOffset(), state.actualOffset());
+    }
+
+    private void rebuildLeaderboardButtons() {
+        for (LeaderboardButtonWidget buttonWidget : leaderboardButtonWidgets) {
+            leaderboardButtonListWidget.removeButton(buttonWidget);
+        }
+        leaderboardButtonWidgets.clear();
+        for (LeaderboardDefinition leaderboard : activeCategory.getCategory().leaderboards()) {
+            LeaderboardButtonWidget buttonWidget = new LeaderboardButtonWidget(leaderboard, this::selectLeaderboard);
+            leaderboardButtonWidgets.add(buttonWidget);
+            leaderboardButtonListWidget.addButton(buttonWidget);
+        }
+        leaderboardButtonListWidget.resetScroll();
+        updateCurrentSeasonIndicators();
+    }
+
+    private void updateCurrentSeasonIndicators() {
+        for (LeaderboardButtonWidget button : leaderboardButtonWidgets) {
+            String id = button.getLeaderboard().id();
+            GuildSeason season = id == null ? null : guildSeasons.get(id);
+            button.setCurrentSeason(season != null && season.isActive());
+        }
+    }
+
+    public record State(String categoryName, String leaderboardId, int page,
+                        float targetOffset, float actualOffset) {
     }
 }

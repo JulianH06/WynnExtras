@@ -225,7 +225,6 @@ public class BankOverlay {
 
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null || client.player == null) return;
-        if (!MinecraftUtils.isOnWynncraft()) return;
         boolean syncedCharacterId = syncCurrentCharacterId();
         if (!syncedCharacterId && !hasValidCurrentCharacterId()) return;
 

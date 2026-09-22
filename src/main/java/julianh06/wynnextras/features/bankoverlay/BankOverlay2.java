@@ -2212,7 +2212,6 @@ public class BankOverlay2 extends WEHandledScreen {
     public static void saveCurrentPlayerInventorySnapshot() {
         boolean syncedCharacterId = BankOverlay.syncCurrentCharacterId();
         if (!syncedCharacterId && !BankOverlay.hasValidCurrentCharacterId()) return;
-        if (!MinecraftUtils.isOnWynncraft()) return;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc == null || mc.player == null) return;

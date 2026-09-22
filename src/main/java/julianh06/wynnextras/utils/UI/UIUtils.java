@@ -445,11 +445,35 @@ public final class UIUtils {
 
     public void drawVanillaPanelButton(float x, float y, float width, float height, int scale, int cornerPixels,
                                        boolean hovered, float alpha) {
-        ContainerButtonColors colors = getContainerButtonColors();
+        drawVanillaPanelButton(x, y, width, height, scale, cornerPixels, hovered,
+                getContainerButtonColors(), alpha);
+    }
+
+    public void drawVanillaPanelButtonFade(float x, float y, float width, float height, int scale,
+                                           int cornerPixels, boolean hovered) {
+        float fade = PVScreen.DarkModeToggleWidget.fade;
+        drawVanillaPanelButton(x, y, width, height, scale, cornerPixels, hovered,
+                getContainerButtonColors(), 1f - fade);
+        drawVanillaPanelButton(x, y, width, height, scale, cornerPixels, hovered,
+                DARK_CONTAINER_BUTTON_COLORS, fade);
+    }
+
+    public void drawFixedVanillaPanelButtonFade(float x, float y, float width, float height, int scale,
+                                                int cornerPixels, boolean hovered) {
+        float fade = PVScreen.DarkModeToggleWidget.fade;
+        drawVanillaPanelButton(x, y, width, height, scale, cornerPixels, hovered,
+                LIGHT_CONTAINER_BUTTON_COLORS, 1f - fade);
+        drawVanillaPanelButton(x, y, width, height, scale, cornerPixels, hovered,
+                DARK_CONTAINER_BUTTON_COLORS, fade);
+    }
+
+    private void drawVanillaPanelButton(float x, float y, float width, float height, int scale, int cornerPixels,
+                                        boolean hovered, ContainerButtonColors colors, float alpha) {
+        if (alpha <= 0.001f) return;
         CustomColor border = (hovered ? colors.hoverBorder() : colors.topBorder()).withAlpha(alpha);
         CustomColor fill = colors.fill().withAlpha(alpha);
         CustomColor highlight = colors.highlight().withAlpha(alpha);
-        CustomColor bottom = colors.bottom().withAlpha(alpha);
+        CustomColor bottom = colors.fill().withAlpha(alpha);
         float pixel = scale / 5f;
         int corner = Math.max(1, cornerPixels);
         float cornerSize = corner * pixel;
@@ -793,6 +817,18 @@ public final class UIUtils {
     private static CustomColor cachedPanelBg = null;
     private static CustomColor cachedPanelBorder = null;
     private static ContainerButtonColors cachedContainerButtonColors = null;
+    private static final ContainerButtonColors DARK_CONTAINER_BUTTON_COLORS = new ContainerButtonColors(
+            CustomColor.fromHexString("444448"),
+            CustomColor.fromHexString("202022"),
+            CustomColor.fromHexString("0E0F0F"),
+            CustomColor.fromHexString("3D3D3F"),
+            CustomColor.fromHexString("6A6A71"));
+    private static final ContainerButtonColors LIGHT_CONTAINER_BUTTON_COLORS = new ContainerButtonColors(
+            CustomColor.fromHexString("CCA76F"),
+            CustomColor.fromHexString("4F342C"),
+            CustomColor.fromHexString("BC865B"),
+            CustomColor.fromHexString("D8B47F"),
+            CustomColor.fromHexString("F0D5AC"));
 
     public static void clearSeparatorCache() {
         cachedSepNormal = null;

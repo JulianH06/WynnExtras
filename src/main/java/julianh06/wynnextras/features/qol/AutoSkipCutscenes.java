@@ -11,13 +11,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 
-/**
- * Auto-skips Wynncraft cutscenes that prompt "Swap Hands to skip".
- *
- * Watches the boss-bar HUD for the trigger text and sends a SWAP_ITEM_WITH_OFFHAND
- * action every 4 ticks while it's visible — server interprets it as the player
- * pressing the offhand-swap key, so the cutscene advances without input.
- */
 public class AutoSkipCutscenes {
     private static final String TRIGGER = "swap hands to";
     private static final int INTERVAL_TICKS = 4;

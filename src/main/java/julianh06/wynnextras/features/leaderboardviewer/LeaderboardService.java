@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.leaderboardviewer;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import julianh06.wynnextras.core.WynnExtras;
@@ -23,18 +24,66 @@ import java.util.regex.Pattern;
 public final class LeaderboardService {
     private static final Pattern VALID_ID = Pattern.compile("[A-Za-z0-9]+");
     private static final long CACHE_DURATION_MS = 60 * 1000;
+    private static final long TYPE_CACHE_DURATION_MS = 10 * 60 * 1000;
     private static final CompletableFuture<HttpClient> HTTP_CLIENT = CompletableFuture.supplyAsync(() ->
             HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(5))
                     .build());
     private static final Map<RequestKey, CacheEntry> CACHE = new HashMap<>();
     private static final Map<RequestKey, CompletableFuture<List<LeaderboardEntry>>> PENDING_REQUESTS = new HashMap<>();
+    private static List<String> cachedTypes;
+    private static long typesFetchedAt;
+    private static CompletableFuture<List<String>> pendingTypesRequest;
 
     private LeaderboardService() {
     }
 
     public static CompletableFuture<List<LeaderboardEntry>> fetchLeaderboard(String id) {
         return fetchLeaderboard(id, 100);
+    }
+
+    public static synchronized void invalidateLeaderboard(String id) {
+        if (id == null) return;
+        CACHE.keySet().removeIf(key -> key.id().equals(id));
+    }
+
+    public static synchronized CompletableFuture<List<String>> fetchLeaderboardTypes() {
+        if (cachedTypes != null && System.currentTimeMillis() - typesFetchedAt < TYPE_CACHE_DURATION_MS) {
+            return CompletableFuture.completedFuture(cachedTypes);
+        }
+        if (pendingTypesRequest != null) return pendingTypesRequest;
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.wynncraft.com/v3/leaderboards/types"))
+                .timeout(Duration.ofSeconds(8))
+                .GET()
+                .build();
+
+        pendingTypesRequest = HTTP_CLIENT
+                .thenCompose(client -> client.sendAsync(request, HttpResponse.BodyHandlers.ofString()))
+                .thenApply(response -> {
+                    if (response.statusCode() != 200) {
+                        throw new CompletionException(new IOException(
+                                "Leaderboard types request failed with HTTP " + response.statusCode()));
+                    }
+                    JsonArray responseArray = JsonParser.parseString(response.body()).getAsJsonArray();
+                    List<String> types = new ArrayList<>();
+                    for (JsonElement element : responseArray) types.add(element.getAsString());
+                    return List.copyOf(types);
+                });
+
+        pendingTypesRequest.whenComplete((types, error) -> {
+            synchronized (LeaderboardService.class) {
+                pendingTypesRequest = null;
+                if (error == null) {
+                    cachedTypes = types;
+                    typesFetchedAt = System.currentTimeMillis();
+                } else {
+                    WynnExtras.LOGGER.error("Failed to fetch leaderboard types", error);
+                }
+            }
+        });
+        return pendingTypesRequest;
     }
 
     public static synchronized CompletableFuture<List<LeaderboardEntry>> fetchLeaderboard(String id, int limit) {

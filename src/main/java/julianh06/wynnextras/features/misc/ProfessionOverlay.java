@@ -380,7 +380,6 @@ public class ProfessionOverlay {
     private static void doRender(DrawContext ctx) {
         WynnExtrasConfig c = WynnExtrasConfig.INSTANCE;
         if (!c.professionOverlayEnabled) return;
-        if (!MinecraftUtils.isOnWynncraft()) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null) return;
         if (lastProfession == null) return;

@@ -156,7 +156,7 @@ public class RaidSessionTracker {
         sessions.add(s);
         if (MinecraftUtils.player() != null) {
             String suffix = sessions.size() > 1 ? " (#" + sessions.size() + ")" : "";
-            String state = s.armed ? "started" : "armed — starts on first raid entry";
+            String state = s.armed ? "started" : "armed - starts on first raid entry";
             MinecraftUtils.sendMessageToClient(Text.literal("§e[Session] §fNew session " + state + suffix));
         }
     }
@@ -204,7 +204,7 @@ public class RaidSessionTracker {
     public static String getStatsString() {
         Session s = primarySession();
         if (s == null) return null;
-        if (!s.armed) return "Session armed — waiting for first raid";
+        if (!s.armed) return "Session armed - waiting for first raid";
         long elapsed = s.getElapsedMs();
         double hours = elapsed / 3_600_000.0;
         double runsPerHour = hours > 0.001 ? s.raidCount / hours : 0;

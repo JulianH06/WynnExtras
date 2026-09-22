@@ -18,7 +18,9 @@ public record BannerGuiElementState(
         int y2,
         @Nullable ScreenRect scissorArea,
         @Nullable ScreenRect bounds,
-        float scale
+        float scale,
+        float yRotation,
+        boolean waving
 ) implements SpecialGuiElementRenderState {
     public BannerGuiElementState(
             BannerFlagBlockModel bannerFlagBlockModel,
@@ -31,6 +33,40 @@ public record BannerGuiElementState(
             @Nullable ScreenRect scissorArea,
             float scale
     ) {
-        this(bannerFlagBlockModel, color, bannerPatterns, x1, y1, x2, y2, scissorArea, SpecialGuiElementRenderState.createBounds(x1, y1, x2, y2, scissorArea), scale);
+        this(bannerFlagBlockModel, color, bannerPatterns, x1, y1, x2, y2, scissorArea,
+                SpecialGuiElementRenderState.createBounds(x1, y1, x2, y2, scissorArea), scale, -0.5f, true);
+    }
+
+    public BannerGuiElementState(
+            BannerFlagBlockModel bannerFlagBlockModel,
+            DyeColor color,
+            BannerPatternsComponent bannerPatterns,
+            int x1,
+            int y1,
+            int x2,
+            int y2,
+            @Nullable ScreenRect scissorArea,
+            float scale,
+            float yRotation
+    ) {
+        this(bannerFlagBlockModel, color, bannerPatterns, x1, y1, x2, y2, scissorArea,
+                SpecialGuiElementRenderState.createBounds(x1, y1, x2, y2, scissorArea), scale, yRotation, true);
+    }
+
+    public BannerGuiElementState(
+            BannerFlagBlockModel bannerFlagBlockModel,
+            DyeColor color,
+            BannerPatternsComponent bannerPatterns,
+            int x1,
+            int y1,
+            int x2,
+            int y2,
+            @Nullable ScreenRect scissorArea,
+            float scale,
+            float yRotation,
+            boolean waving
+    ) {
+        this(bannerFlagBlockModel, color, bannerPatterns, x1, y1, x2, y2, scissorArea,
+                SpecialGuiElementRenderState.createBounds(x1, y1, x2, y2, scissorArea), scale, yRotation, waving);
     }
 }

@@ -802,13 +802,13 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(slider("Max range", "Waypoints and their text are hidden beyond this distance",
                         1, 1000, () -> config.waypointMaxRange, v -> config.waypointMaxRange = v))
             .sub("Tetris")
-                .add(slider("DAS", "Delayed Auto Shift (ms) — delay before repeated movement begins",
+                .add(slider("DAS", "Delayed Auto Shift (ms) - delay before repeated movement begins",
                         0, 300, () -> config.tetrisDAS, v -> config.tetrisDAS = v))
-                .add(slider("ARR", "Auto Repeat Rate (ms) — speed of repeated moves, 0 = instant",
+                .add(slider("ARR", "Auto Repeat Rate (ms) - speed of repeated moves, 0 = instant",
                         0, 100, () -> config.tetrisARR, v -> config.tetrisARR = v))
                 .add(slider("SDF Delay", "Soft Drop delay (ms) before fast-fall kicks in",
                         0, 300, () -> config.tetrisSDFDelay, v -> config.tetrisSDFDelay = v))
-                .add(slider("SDF", "Soft Drop Factor (ms) — soft drop repeat speed, 0 = instant",
+                .add(slider("SDF", "Soft Drop Factor (ms) - soft drop repeat speed, 0 = instant",
                         0, 100, () -> config.tetrisSDF, v -> config.tetrisSDF = v))
                 .add(toggle("Remove background blur", "Hide the background blur in the Tetris menu",
                         () -> config.hideTetrisBackgroundBlur, v -> config.hideTetrisBackgroundBlur = v))

@@ -2,12 +2,18 @@ package julianh06.wynnextras.features.profileviewer.tabs;
 
 import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.config.WynnExtrasConfig;
+import julianh06.wynnextras.features.leaderboardviewer.LV;
 import julianh06.wynnextras.features.profileviewer.PV;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class RankingsTabWidget extends PVScreen.TabWidget {
@@ -33,9 +39,41 @@ public class RankingsTabWidget extends PVScreen.TabWidget {
     static Identifier rankingBackgroundWideTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackgroundwide.png");
     static Identifier rankingBackgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackground_dark.png");
     static Identifier rankingBackgroundWideTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/rankingbackgroundwide_dark.png");
+    private final List<RankingLinkWidget> rankingLinks = new ArrayList<>();
 
     public RankingsTabWidget() {
         super(0, 0, 0, 0);
+        for (int i = 0; i <= 18; i++) {
+            if (i == 15) continue;
+            String globalId = getGlobalLeaderboardId(i);
+            if (globalId == null) continue;
+            RankingLinkWidget globalLink = new RankingLinkWidget(i, globalId, false);
+            rankingLinks.add(globalLink);
+            addChild(globalLink);
+            if (i >= 16) {
+                RankingLinkWidget soloLink = new RankingLinkWidget(i, getSoloLeaderboardId(i), true);
+                rankingLinks.add(soloLink);
+                addChild(soloLink);
+            }
+        }
+    }
+
+    @Override
+    protected void updateValues() {
+        boolean rankingsVisible = PV.currentPlayerData != null
+                && PV.currentPlayerData.getRanking() != null
+                && !PV.currentPlayerData.getRanking().isEmpty();
+        for (RankingLinkWidget link : rankingLinks) {
+            link.setVisible(rankingsVisible);
+            int cardX = getCardX(link.index);
+            int cardY = y + 30 + 138 * Math.floorDiv(link.index, 4);
+            int cardWidth = link.index < 12 ? 420 : 567;
+            if (link.index >= 16) {
+                link.setBounds(cardX, cardY + (link.solo ? 68 : 8), cardWidth, link.solo ? 50 : 60);
+            } else {
+                link.setBounds(cardX, cardY, cardWidth, 126);
+            }
+        }
     }
 
     @Override
@@ -179,6 +217,69 @@ public class RankingsTabWidget extends PVScreen.TabWidget {
                 ui.drawText("#" + globalPlacementString, xPos + 111f, yPos + 51f, textColor);
                 ui.drawText("Solo #" + soloPlacementString, xPos + 111f, yPos + 81f, textColor);
             }
+        }
+    }
+
+    private int getCardX(int index) {
+        int cardX = x + 30 + 435 * (index % 4);
+        if (index < 12) return cardX;
+        if (index < 16) return cardX + 144 * (index % 3);
+        return cardX + 144 * ((index - 1) % 3);
+    }
+
+    private static String getGlobalLeaderboardId(int index) {
+        return switch (index) {
+            case 0 -> "fishingLevel";
+            case 1 -> "woodcuttingLevel";
+            case 2 -> "miningLevel";
+            case 3 -> "farmingLevel";
+            case 4 -> "scribingLevel";
+            case 5 -> "jewelingLevel";
+            case 6 -> "alchemismLevel";
+            case 7 -> "cookingLevel";
+            case 8 -> "weaponsmithingLevel";
+            case 9 -> "tailoringLevel";
+            case 10 -> "woodworkingLevel";
+            case 11 -> "armouringLevel";
+            case 12 -> "warsCompletion";
+            case 13 -> "playerContent";
+            case 14 -> "globalPlayerContent";
+            case 16 -> "combatGlobalLevel";
+            case 17 -> "totalGlobalLevel";
+            case 18 -> "professionsGlobalLevel";
+            default -> null;
+        };
+    }
+
+    private static String getSoloLeaderboardId(int index) {
+        return switch (index) {
+            case 16 -> "combatSoloLevel";
+            case 17 -> "totalSoloLevel";
+            case 18 -> "professionsSoloLevel";
+            default -> null;
+        };
+    }
+
+    private static class RankingLinkWidget extends Widget {
+        private final int index;
+        private final String leaderboardId;
+        private final boolean solo;
+
+        private RankingLinkWidget(int index, String leaderboardId, boolean solo) {
+            this.index = index;
+            this.leaderboardId = leaderboardId;
+            this.solo = solo;
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+            LV.open(leaderboardId);
+            return true;
         }
     }
 }

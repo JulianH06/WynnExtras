@@ -317,7 +317,6 @@ public class BadgeService {
 
     @SubscribeEvent
     public void onTick(TickEvent event) {
-        if (!MinecraftUtils.isOnWynncraft()) return;
         handleTick();
     }
 

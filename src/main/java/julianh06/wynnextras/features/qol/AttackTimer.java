@@ -163,7 +163,7 @@ public class AttackTimer {
                 String terr = ws.group("terr").trim();
                 captureQueuedAttack(terr, Integer.parseInt(ws.group("minutes")) * 60L);
 
-                // "The war for X will start in N minutes" — auto-broadcast our cached defense
+                // "The war for X will start in N minutes" - auto-broadcast our cached defense
                 if (WynnExtrasConfig.INSTANCE.attackTimerAutoBroadcast) {
                     if (terr.equals(lastSelfLookupTerritory)
                             && System.currentTimeMillis() - lastSelfLookupAt < 5000) {
