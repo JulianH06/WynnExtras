@@ -40,6 +40,12 @@ import java.util.concurrent.TimeUnit;
 
 public class CommandLoader implements WELoader {
     private static final ScheduledExecutorService SCHEDULER = Executors.newSingleThreadScheduledExecutor();
+    private static final Command HUD_EDIT_COMMAND = new Command(
+            "gui", "", ctx -> {
+                MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new HudEditScreen()));
+                return 1;
+            }, List.of("hud")
+    );
 
     public CommandLoader() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
@@ -70,8 +76,8 @@ public class CommandLoader implements WELoader {
 
             for (Command cmd : Command.COMMAND_LIST) {
                 if ((cmd instanceof SubCommand)) continue;
-                base = base.then(buildCommandTree(cmd));
-                alias = alias.then(buildCommandTree(cmd));
+                addCommandTrees(base, cmd);
+                addCommandTrees(alias, cmd);
             }
 
             var bombshare = ClientCommandManager.literal("bombshare")
@@ -313,14 +319,6 @@ public class CommandLoader implements WELoader {
                                                     }))
                                     )
                             )
-                            .then(ClientCommandManager.literal("gui")
-                                    .executes(ctx -> {
-                                        MinecraftClient.getInstance().send(() -> {
-                                            MinecraftClient.getInstance().setScreen(new HudEditScreen());
-                                        });
-                                        return 1;
-                                    })
-                            )
                             .then(ClientCommandManager.literal("tetris")
                                     .executes(ctx -> {
                                         TetrisScreen.open();
@@ -459,13 +457,20 @@ public class CommandLoader implements WELoader {
         });
     }
 
-    private LiteralArgumentBuilder<FabricClientCommandSource> buildCommandTree(Command cmd) {
-        LiteralArgumentBuilder<FabricClientCommandSource> root = ClientCommandManager.literal(cmd.getName());
+    private void addCommandTrees(ArgumentBuilder<FabricClientCommandSource, ?> parent, Command cmd) {
+        parent.then(buildCommandTree(cmd, cmd.getName()));
+        for (String alias : cmd.getAliases()) {
+            parent.then(buildCommandTree(cmd, alias));
+        }
+    }
+
+    private LiteralArgumentBuilder<FabricClientCommandSource> buildCommandTree(Command cmd, String name) {
+        LiteralArgumentBuilder<FabricClientCommandSource> root = ClientCommandManager.literal(name);
 
         ArgumentBuilder<FabricClientCommandSource, ?> current = root;
 
         for (Command sub : cmd.getSubCommands()) {
-            if (sub != null) current = current.then(buildCommandTree(sub));
+            if (sub != null) addCommandTrees(current, sub);
         }
 
         ArgumentBuilder<FabricClientCommandSource, ?> args = chainArguments(cmd.getArguments(), cmd);

@@ -15,20 +15,31 @@ public class Command {
 
     private final String description;
 
+    private final List<String> aliases = new ArrayList<>();
+
     private final Function<CommandContext<FabricClientCommandSource>, Integer> onExecute;
 
     private final List<Command> subCommands = new ArrayList<>();
 
     private final List<ArgumentBuilder<FabricClientCommandSource, ?>> arguments = new ArrayList<>();
 
-    public Command(String name, String description, Function<CommandContext<FabricClientCommandSource>, Integer> onExecute, List<Command> subCommands, List<ArgumentBuilder<FabricClientCommandSource, ?>> args) {
+    public Command(String name, String description, Function<CommandContext<FabricClientCommandSource>, Integer> onExecute, List<Command> subCommands, List<ArgumentBuilder<FabricClientCommandSource, ?>> args, List<String> aliases) {
         this.name = name;
         this.description = description;
         this.onExecute = onExecute;
         if(subCommands != null) this.subCommands.addAll(subCommands);
         if(args != null) arguments.addAll(args);
+        if(aliases != null) this.aliases.addAll(aliases);
 
         COMMAND_LIST.add(this);
+    }
+
+    public Command(String name, String description, Function<CommandContext<FabricClientCommandSource>, Integer> onExecute, List<Command> subCommands, List<ArgumentBuilder<FabricClientCommandSource, ?>> args) {
+        this(name, description, onExecute, subCommands, args, null);
+    }
+
+    public Command(String name, String description, Function<CommandContext<FabricClientCommandSource>, Integer> onExecute, List<String> aliases) {
+        this(name, description, onExecute, null, null, aliases);
     }
 
     public Command(String name, String description, Function<CommandContext<FabricClientCommandSource>, Integer> onExecute) {
@@ -45,6 +56,10 @@ public class Command {
 
     public List<Command> getSubCommands() {
         return subCommands;
+    }
+
+    public List<String> getAliases() {
+        return aliases;
     }
 
     public List<ArgumentBuilder<FabricClientCommandSource, ?>> getArguments() {

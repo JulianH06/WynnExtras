@@ -17,6 +17,10 @@ import net.minecraft.client.sound.WeightedSoundSet;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.sound.SoundEvent;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Style;
+import net.minecraft.text.StyleSpriteSource;
+import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Box;
@@ -27,11 +31,58 @@ import java.util.regex.Pattern;
 
 public class TotemTimer {
     private static int lastSelectedSlot = -1;
-    private static final Pattern TIME_TOKEN = Pattern.compile("~?\\d+(?:\\.\\d+)?s", Pattern.CASE_INSENSITIVE);
-    private static final Pattern TOXOPLASMOSIS_VALUE = Pattern.compile("\\d+(?:\\.\\d+)?[kKmMbB]?");
+    private static final Style EFFECT_ICON_STYLE = Style.EMPTY.withFont(
+            new StyleSpriteSource.Font(Identifier.of("minecraft", "common")));
+    private static final Pattern EFFECT_VALUE = Pattern.compile(
+            "([^\\p{L}\\p{N}\\s.+~'\\-])\\ufe0f?\\s*(~?\\d+(?:\\.\\d+)?(?:[kKmMbB]|s)?)",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern REGENERATION_VALUE = Pattern.compile("\\+(\\d+)\\u2764/s");
 
-    public record TotemInfo(String owner, String timeText, String toxoplasmosisText, boolean estimated) {}
-    private record TotemLineInfo(String timeText, String toxoplasmosisText) {}
+    private enum TotemEffect {
+        REGENERATION(WynnExtrasConfig.TOTEM_TIMER_EFFECT_REGENERATION, Set.of("\u2764")),
+        ELDRITCH_TRANSFUSION(WynnExtrasConfig.TOTEM_TIMER_EFFECT_ELDRITCH_TRANSFUSION, Set.of("\ue020")),
+        TOXOPLASMOSIS(WynnExtrasConfig.TOTEM_TIMER_EFFECT_TOXOPLASMOSIS, Set.of("\ue011")),
+        INVIGORATING_WAVE(WynnExtrasConfig.TOTEM_TIMER_EFFECT_INVIGORATING_WAVE, Set.of("\ue013")),
+        DURATION(WynnExtrasConfig.TOTEM_TIMER_EFFECT_DURATION, Set.of("\ue01f"));
+
+        private final String configId;
+        private final Set<String> icons;
+
+        TotemEffect(String configId, Set<String> icons) {
+            this.configId = configId;
+            this.icons = icons;
+        }
+
+        private static TotemEffect fromIcon(String icon) {
+            for (TotemEffect effect : values()) {
+                if (effect.icons.contains(icon)) return effect;
+            }
+            return null;
+        }
+
+        private static TotemEffect fromConfigId(String configId) {
+            for (TotemEffect effect : values()) {
+                if (effect.configId.equals(configId)) return effect;
+            }
+            return null;
+        }
+
+        private String icon() {
+            return icons.iterator().next();
+        }
+    }
+
+    public record TotemInfo(String owner, Map<String, String> effectTexts, boolean estimated) {
+        public String timeText() {
+            return effectTexts.getOrDefault(WynnExtrasConfig.TOTEM_TIMER_EFFECT_DURATION, "");
+        }
+    }
+    private record TotemLineInfo(Map<String, String> effectTexts) {
+        private String timeText() {
+            return effectTexts.getOrDefault(WynnExtrasConfig.TOTEM_TIMER_EFFECT_DURATION, "");
+        }
+    }
+    private record EffectValue(String icon, String value, TotemEffect effect) {}
 
     private static boolean isRelik(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
@@ -48,15 +99,22 @@ public class TotemTimer {
         }
     }
 
-    private static String cleanToxoplasmosisText(String text) {
-        if (text == null || text.isBlank()) return "";
-
-        Matcher matcher = TOXOPLASMOSIS_VALUE.matcher(text);
-        String value = "";
+    private static List<EffectValue> parseEffectValues(String line) {
+        List<EffectValue> values = new ArrayList<>();
+        Matcher matcher = EFFECT_VALUE.matcher(line);
         while (matcher.find()) {
-            value = matcher.group();
+            String icon = matcher.group(1);
+            String value = matcher.group(2);
+            TotemEffect effect = TotemEffect.fromIcon(icon);
+            values.add(new EffectValue(icon, value, effect));
         }
-        return value.isEmpty() ? "" : "\u2620 " + value;
+        Matcher regenerationMatcher = REGENERATION_VALUE.matcher(line);
+        if (regenerationMatcher.find()) {
+            String icon = "\u2764";
+            String value = regenerationMatcher.group(1);
+            values.add(new EffectValue(icon, value, TotemEffect.REGENERATION));
+        }
+        return values;
     }
 
     private static int timeColor(String timeText) {
@@ -70,24 +128,19 @@ public class TotemTimer {
 
     private static TotemLineInfo parseTotemLine(String line) {
         String trimmed = line == null ? "" : line.trim();
-        if (trimmed.isEmpty()) return new TotemLineInfo("", "");
+        if (trimmed.isEmpty()) return new TotemLineInfo(Map.of());
 
-        Matcher matcher = TIME_TOKEN.matcher(trimmed);
-        String timeText = "";
-        int timeStart = -1;
-        int timeEnd = -1;
-        while (matcher.find()) {
-            timeText = matcher.group();
-            timeStart = matcher.start();
-            timeEnd = matcher.end();
+        Map<String, String> effectTexts = new HashMap<>();
+        for (EffectValue effectValue : parseEffectValues(trimmed)) {
+            if (effectValue.effect() == null) continue;
+            String text = switch (effectValue.effect()) {
+                case REGENERATION -> "+" + effectValue.value() + "\u2764/s";
+                case DURATION -> effectValue.value();
+                default -> effectValue.icon() + " " + effectValue.value();
+            };
+            effectTexts.put(effectValue.effect().configId, text);
         }
-        if (timeStart >= 0) {
-            String toxoplasmosisText = (trimmed.substring(0, timeStart) + " " + trimmed.substring(timeEnd)).trim();
-            return new TotemLineInfo(timeText, cleanToxoplasmosisText(toxoplasmosisText));
-        }
-
-        String[] tokens = trimmed.split("\\s+");
-        return new TotemLineInfo(tokens[tokens.length - 1], "");
+        return new TotemLineInfo(effectTexts);
     }
 
     private static final List<TotemInfo> totems = new ArrayList<>();
@@ -95,7 +148,7 @@ public class TotemTimer {
 
     // Out-of-render estimation: owner -> {lastKnownSeconds, lastUpdateTick}
     private static final Map<String, float[]> estimatedTotems = new HashMap<>();
-    private static final Map<String, String> estimatedTotemToxoplasmosis = new HashMap<>();
+    private static final Map<String, Map<String, String>> estimatedTotemEffects = new HashMap<>();
     private static final List<String> lastFoundKeys = new ArrayList<>();
     private static final Set<UUID> lastVisibleTotems = new HashSet<>();
     private static final Set<UUID> invalidatedTotems = new HashSet<>();
@@ -103,6 +156,48 @@ public class TotemTimer {
 
     public static List<TotemInfo> getTotems() {
         return totems;
+    }
+
+    public static String getEffectDisplay(TotemInfo totem) {
+        return getEffectDisplayText(totem).getString();
+    }
+
+    public static Text getEffectDisplayText(TotemInfo totem) {
+        MutableText result = Text.empty();
+        boolean first = true;
+        for (String effectId : WynnExtrasConfig.INSTANCE.totemTimerActiveEffects) {
+            String value = totem.effectTexts().get(effectId);
+            if (value == null || value.isBlank()) continue;
+
+            if (!first) result.append(" ");
+            first = false;
+
+            TotemEffect effect = TotemEffect.fromConfigId(effectId);
+            if (effect == null || effect == TotemEffect.DURATION || effect == TotemEffect.REGENERATION) {
+                result.append(value.trim());
+                continue;
+            }
+
+            String icon = effect.icon();
+            String effectValue = value.trim();
+            if (effectValue.startsWith(icon)) effectValue = effectValue.substring(icon.length()).trim();
+            result.append(Text.literal(icon).setStyle(EFFECT_ICON_STYLE));
+            if (!effectValue.isEmpty()) result.append(" " + effectValue);
+        }
+        return result;
+    }
+
+    public static String getHudLine(TotemInfo totem) {
+        return getHudText(totem).getString();
+    }
+
+    public static Text getHudText(TotemInfo totem) {
+        WynnExtrasConfig config = WynnExtrasConfig.INSTANCE;
+        Text effectDisplay = getEffectDisplayText(totem);
+        if (effectDisplay.getString().isEmpty()) return Text.empty();
+        if (config.totemTimerOwnOnly && config.totemTimerTimeOnly) return effectDisplay;
+        if (config.totemTimerOwnOnly) return Text.literal("Totem: ").append(effectDisplay);
+        return Text.literal(totem.owner() + "'s Totem: ").append(effectDisplay);
     }
 
     public static boolean isWarningActive() {
@@ -129,7 +224,7 @@ public class TotemTimer {
                     ItemStack newStack = client.player.getInventory().getStack(currentSlot);
                     if (isRelik(prevStack) && isRelik(newStack)) {
                         estimatedTotems.clear();
-                        estimatedTotemToxoplasmosis.clear();
+                        estimatedTotemEffects.clear();
                         invalidatedTotems.addAll(lastVisibleTotems);
                     }
                 }
@@ -195,8 +290,7 @@ public class TotemTimer {
 
                 if (c.totemTimerOwnOnly && playerName != null && !owner.equals(playerName)) continue;
 
-                String timeText = "";
-                String toxoplasmosisText = "";
+                Map<String, String> effectTexts = Map.of();
                 String[] lines = text.split("\n");
                 // Scan lines starting after the header line so a prepended banner is skipped.
                 boolean pastHeader = false;
@@ -208,14 +302,15 @@ public class TotemTimer {
                     }
                     if (pastHeader && !l.isEmpty()) {
                         TotemLineInfo lineInfo = parseTotemLine(l);
-                        timeText = lineInfo.timeText();
-                        toxoplasmosisText = lineInfo.toxoplasmosisText();
+                        effectTexts = lineInfo.effectTexts();
                         break;
                     }
                 }
+                String timeText = effectTexts.getOrDefault(WynnExtrasConfig.TOTEM_TIMER_EFFECT_DURATION, "");
                 if (timeText.isEmpty()) {
                     double tx = tde.getX(), ty = tde.getY(), tz = tde.getZ();
                     double bestDist2 = Double.MAX_VALUE;
+                    String closestText = null;
                     for (DisplayEntity.TextDisplayEntity other : allTdes) {
                         if (other == tde) continue;
                         String otherRaw = Formatting.strip(other.getText().getString());
@@ -224,10 +319,13 @@ public class TotemTimer {
                         double dist2 = dx * dx + dy * dy + dz * dz;
                         if (dist2 <= 4.0 && dist2 < bestDist2) {
                             bestDist2 = dist2;
-                            TotemLineInfo lineInfo = parseTotemLine(otherRaw.trim());
-                            timeText = lineInfo.timeText();
-                            toxoplasmosisText = lineInfo.toxoplasmosisText();
+                            closestText = otherRaw.trim();
                         }
+                    }
+                    if (closestText != null) {
+                        TotemLineInfo lineInfo = parseTotemLine(closestText);
+                        effectTexts = lineInfo.effectTexts();
+                        timeText = lineInfo.timeText();
                     }
                 }
 
@@ -240,10 +338,10 @@ public class TotemTimer {
                 boolean invalidated = invalidatedTotems.contains(entityId);
                 if (secs > 0 && !invalidated) {
                     estimatedTotems.put(key, new float[]{ secs, tickCounter });
-                    estimatedTotemToxoplasmosis.put(key, toxoplasmosisText);
+                    estimatedTotemEffects.put(key, new HashMap<>(effectTexts));
                 }
 
-                totems.add(new TotemInfo(owner, timeText, toxoplasmosisText, false));
+                totems.add(new TotemInfo(owner, Map.copyOf(effectTexts), false));
             }
 
             invalidatedTotems.retainAll(visibleTotems);
@@ -269,12 +367,26 @@ public class TotemTimer {
                         continue;
                     }
 
-                    String estTimeText = String.format("~%.0fs", estimatedSecs);
-                    totems.add(new TotemInfo(owner, estTimeText, estimatedTotemToxoplasmosis.getOrDefault(key, ""), true));
+                    Map<String, String> effectTexts = new HashMap<>(estimatedTotemEffects.getOrDefault(key, Map.of()));
+                    effectTexts.put(WynnExtrasConfig.TOTEM_TIMER_EFFECT_DURATION,
+                            String.format("~%.0fs", estimatedSecs));
+
+                    String invigoratingWave = effectTexts.get(WynnExtrasConfig.TOTEM_TIMER_EFFECT_INVIGORATING_WAVE);
+                    if (invigoratingWave != null) {
+                        float effectSeconds = parseSeconds(invigoratingWave) - (ticksElapsed / 20.0f);
+                        if (effectSeconds <= 0) {
+                            effectTexts.remove(WynnExtrasConfig.TOTEM_TIMER_EFFECT_INVIGORATING_WAVE);
+                        } else {
+                            effectTexts.put(WynnExtrasConfig.TOTEM_TIMER_EFFECT_INVIGORATING_WAVE,
+                                    "\ue013 ~" + (int) Math.ceil(effectSeconds) + "s");
+                        }
+                    }
+
+                    totems.add(new TotemInfo(owner, Map.copyOf(effectTexts), true));
                 }
                 for (String key : toRemove) {
                     estimatedTotems.remove(key);
-                    estimatedTotemToxoplasmosis.remove(key);
+                    estimatedTotemEffects.remove(key);
                 }
             }
 
@@ -307,15 +419,8 @@ public class TotemTimer {
             int baseY = c.totemTimerY;
             int i = 0;
             for (TotemInfo t : totems) {
-                String timeDisplay = t.timeText().trim();
-                if (timeDisplay.isEmpty()) timeDisplay = "?";
-                if (c.totemTimerShowToxoplasmosis && !t.toxoplasmosisText().isBlank()) {
-                    timeDisplay += " " + t.toxoplasmosisText().trim();
-                }
-
-                String line = (c.totemTimerOwnOnly && c.totemTimerTimeOnly) ? timeDisplay
-                        : (c.totemTimerOwnOnly ? ("Totem: " + timeDisplay)
-                        : (t.owner() + "'s Totem: " + timeDisplay));
+                Text line = getHudText(t);
+                if (line.getString().isEmpty()) continue;
 
                 Integer override = WynnExtrasConfig.INSTANCE.hudColorOverrides.get("totem");
                 boolean useSolid = c.totemTimerSolidColor && override != null;
