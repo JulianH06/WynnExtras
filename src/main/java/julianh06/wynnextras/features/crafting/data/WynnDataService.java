@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -142,7 +143,7 @@ public final class WynnDataService {
 
     private static final URI RECIPES_URI = URI.create("https://api.wynncraft.com/v3/item/recipe/database?full_result");
     private static final URI ITEMS_URI = URI.create("https://api.wynncraft.com/v3/item/database?fullResult");
-    private static final URI INGREDIENT_MAP_URI = URI.create("https://raw.githubusercontent.com/wynnbuilder-beta/wynnbuilder-beta.github.io/master/data/baseline/maps/ing_map.json");
+    private static final URI INGREDIENT_MAP_URI = URI.create("https://wynnbuilder.github.io/data/baseline/compressed/ingreds_compress.json");
     private static final URI WYNNBUILDER_RECIPES_URI = URI.create("https://raw.githubusercontent.com/wynnbuilder-beta/wynnbuilder-beta.github.io/master/data/baseline/recipes_clean.json");
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
     private static final int CACHE_SCHEMA_VERSION = 1;
@@ -427,8 +428,8 @@ public final class WynnDataService {
                                           String wynnBuilderRecipesJson) {
         Map<String, Integer> ingredientIds = parseIdMap(ingredientMapJson, "ingredient");
         Map<String, Integer> recipeIds = parseWynnBuilderRecipeIds(wynnBuilderRecipesJson);
-        validateUniqueIds(ingredientIds, "ingredient");
-        validateUniqueIds(recipeIds, "recipe");
+        removeInvalidIds(ingredientIds, "ingredient");
+        removeInvalidIds(recipeIds, "recipe");
 
         JsonElement itemRoot = JsonParser.parseString(itemsJson);
         if (!itemRoot.isJsonArray() || itemRoot.getAsJsonArray().isEmpty()) {
@@ -441,10 +442,12 @@ public final class WynnDataService {
         for (Map.Entry<String, IngredientInfo> entry : ingredientCatalog.byInternalName().entrySet()) {
             Integer id = ingredientIds.get(entry.getKey());
             if (id == null) {
-                throw new IllegalStateException("Missing WynnBuilder ingredient ID for " + entry.getKey());
+                WynnExtras.LOGGER.warn("Skipping WynnBuilder mapping for ingredient without an ID: " + entry.getKey());
+                continue;
             }
             if (id >= 4000) {
-                throw new IllegalStateException("WynnBuilder ingredient ID overlaps synthetic IDs: " + id);
+                WynnExtras.LOGGER.warn("Skipping WynnBuilder ingredient ID that overlaps synthetic IDs: " + id);
+                continue;
             }
             ingredientNamesById.put(id, entry.getValue().name());
         }
@@ -456,39 +459,56 @@ public final class WynnDataService {
             throw new IllegalStateException("Wynncraft recipe response is not a non-empty array");
         }
         for (JsonElement element : root.getAsJsonArray()) {
-            JsonObject object = requiredObject(element, "recipe");
-            String internalName = requiredString(object, "internalName");
-            String mappingName = toWynnBuilderRecipeName(internalName);
-            Integer id = recipeIds.get(mappingName);
-            if (id == null) throw new IllegalStateException("Missing WynnBuilder recipe ID for " + mappingName);
+            try {
+                JsonObject object = requiredObject(element, "recipe");
+                String internalName = requiredString(object, "internalName");
+                String mappingName = toWynnBuilderRecipeName(internalName);
+                Integer id = recipeIds.get(mappingName);
 
-            CraftableType type = parseCraftableType(requiredString(object, "type"));
-            WEProfessionType profession = parseProfession(requiredString(object, "skill"));
-            Vector2i level = range(object, "level", 1);
-            Vector2i durability = type.isConsumable() ? optionalRange(object, "durability", 1000)
-                    : range(object, "durability", 1000);
-            Vector2i healthOrDamage = rangeOrZero(object, "healthOrDamage", 1);
-            Vector2i duration = type.isConsumable() ? range(object, "duration", 1)
-                    : optionalRange(object, "duration", 1);
-            Vector2i basicDuration = type.isConsumable() ? range(object, "basicDuration", 1)
-                    : optionalRange(object, "basicDuration", 1);
-            List<Material> materials = parseMaterials(object);
-            if (materials.size() != 2) throw new IllegalStateException(mappingName + " does not have exactly two materials");
+                CraftableType type = parseCraftableType(requiredString(object, "type"));
+                WEProfessionType profession = parseProfession(requiredString(object, "skill"));
+                Vector2i level = range(object, "level", 1);
+                Vector2i durability = type.isConsumable() ? optionalRange(object, "durability", 1000)
+                        : range(object, "durability", 1000);
+                Vector2i healthOrDamage = rangeOrZero(object, "healthOrDamage", 1);
+                Vector2i duration = type.isConsumable() ? range(object, "duration", 1)
+                        : optionalRange(object, "duration", 1);
+                Vector2i basicDuration = type.isConsumable() ? range(object, "basicDuration", 1)
+                        : optionalRange(object, "basicDuration", 1);
+                List<Material> materials = parseMaterials(object);
+                if (materials.size() != 2) {
+                    throw new IllegalStateException(mappingName + " does not have exactly two materials");
+                }
 
-            RecipeData recipe = new RecipeData(type, profession, materials, healthOrDamage, durability,
-                    duration, basicDuration, level, mappingName, id);
-            RecipeData duplicateRecipe = recipesByType.computeIfAbsent(type, ignored -> new HashMap<>())
-                    .put(levelKey(level.x, level.y), recipe);
-            if (duplicateRecipe != null) {
-                throw new IllegalStateException("Duplicate Wynncraft recipe for " + type + " " + levelKey(level.x, level.y));
-            }
-            if (recipesById.put(id, recipe) != null) {
-                throw new IllegalStateException("Duplicate WynnBuilder recipe ID " + id);
+                String key = levelKey(level.x, level.y);
+                Map<String, RecipeData> recipesForType = recipesByType.get(type);
+                if (recipesForType != null && recipesForType.containsKey(key)) {
+                    throw new IllegalStateException("Duplicate Wynncraft recipe for " + type + " " + key);
+                }
+                if (id != null && recipesById.containsKey(id)) {
+                    throw new IllegalStateException("Duplicate WynnBuilder recipe ID " + id);
+                }
+
+                RecipeData recipe = new RecipeData(type, profession, materials, healthOrDamage, durability,
+                        duration, basicDuration, level, mappingName, id == null ? -1 : id);
+                if (recipesForType == null) {
+                    recipesForType = new HashMap<>();
+                    recipesByType.put(type, recipesForType);
+                }
+                recipesForType.put(key, recipe);
+                if (id == null) {
+                    WynnExtras.LOGGER.warn("WynnBuilder import unavailable for recipe without an ID: " + mappingName);
+                } else {
+                    recipesById.put(id, recipe);
+                }
+            } catch (RuntimeException ex) {
+                WynnExtras.LOGGER.warn("Skipping invalid Wynncraft recipe: " + rootMessage(ex));
             }
         }
+        if (recipesByType.isEmpty()) throw new IllegalStateException("Wynncraft API returned no usable recipes");
         if (recipesById.size() != recipeIds.size()) {
-            throw new IllegalStateException("Recipe API/map mismatch: API resolved " + recipesById.size()
-                    + " of " + recipeIds.size() + " WynnBuilder recipes");
+            WynnExtras.LOGGER.warn("Recipe API/map mismatch: API resolved " + recipesById.size()
+                    + " of " + recipeIds.size() + " WynnBuilder recipes; keeping the recipes that could be resolved");
         }
 
         return new WynnDataSnapshot(itemCatalog.items(), itemCatalog.byDisplayName(), itemCatalog.byInternalName(),
@@ -507,12 +527,17 @@ public final class WynnDataService {
         Map<String, List<ItemData>> byDisplayName = new HashMap<>();
         Map<String, List<ItemData>> byInternalName = new HashMap<>();
         for (JsonElement element : root) {
-            JsonObject object = requiredObject(element, "item");
-            ItemData item = parseItem(object);
-            items.add(item);
-            byDisplayName.computeIfAbsent(normalizeName(item.displayName()), ignored -> new ArrayList<>()).add(item);
-            byInternalName.computeIfAbsent(normalizeName(item.internalName()), ignored -> new ArrayList<>()).add(item);
+            try {
+                JsonObject object = requiredObject(element, "item");
+                ItemData item = parseItem(object);
+                items.add(item);
+                byDisplayName.computeIfAbsent(normalizeName(item.displayName()), ignored -> new ArrayList<>()).add(item);
+                byInternalName.computeIfAbsent(normalizeName(item.internalName()), ignored -> new ArrayList<>()).add(item);
+            } catch (RuntimeException ex) {
+                WynnExtras.LOGGER.warn("Skipping invalid Wynncraft item: " + rootMessage(ex));
+            }
         }
+        if (items.isEmpty()) throw new IllegalStateException("Wynncraft API returned no usable items");
         return new ItemCatalog(List.copyOf(items), immutableListMap(byDisplayName), immutableListMap(byInternalName));
     }
 
@@ -531,62 +556,69 @@ public final class WynnDataService {
         Map<String, IngredientInfo> byDisplayName = new HashMap<>();
         Map<String, IngredientInfo> byInternalName = new HashMap<>();
         for (JsonElement element : root) {
-            JsonObject object = requiredObject(element, "item");
-            if (!"ingredient".equals(optionalString(object, "type"))) continue;
-            String name = requiredString(object, "displayName");
-            String internalName = requiredString(object, "internalName");
-            JsonObject requirements = requiredObject(object.get("requirements"), name + ".requirements");
-            int level = requiredInt(requirements, "level");
-            List<WEProfessionType> professions = new ArrayList<>();
-            for (JsonElement skill : requiredArray(requirements, "skills")) {
-                professions.add(parseProfession(skill.getAsString()));
-            }
-
-            List<Pair<StatType, RangedValue>> identifications = new ArrayList<>();
-            JsonElement identificationsElement = object.get("identifications");
-            if (identificationsElement != null && !identificationsElement.isJsonNull()) {
-                JsonObject ids = requiredObject(identificationsElement, name + ".identifications");
-                for (Map.Entry<String, JsonElement> entry : ids.entrySet()) {
-                    StatType statType = StatType.fromApiName(entry.getKey());
-                    if (statType == null) throw new IllegalStateException("Unknown Wynncraft identification " + entry.getKey());
-                    JsonObject range = requiredObject(entry.getValue(), name + "." + entry.getKey());
-                    identifications.add(new Pair<>(statType,
-                            RangedValue.of(requiredInt(range, "min"), requiredInt(range, "max"))));
+            try {
+                JsonObject object = requiredObject(element, "item");
+                if (!"ingredient".equals(optionalString(object, "type"))) continue;
+                IngredientInfo ingredient = parseIngredient(object);
+                String internalName = ingredient.internalName().orElseThrow();
+                if (byDisplayName.containsKey(ingredient.name()) || byInternalName.containsKey(internalName)) {
+                    throw new IllegalStateException("Duplicate ingredient " + ingredient.name());
                 }
-            }
-
-            JsonObject position = requiredObject(object.get("ingredientPositionModifiers"), name + ".positionModifiers");
-            Map<IngredientPosition, Integer> positionModifiers = new EnumMap<>(IngredientPosition.class);
-            positionModifiers.put(IngredientPosition.LEFT, requiredInt(position, "left"));
-            positionModifiers.put(IngredientPosition.RIGHT, requiredInt(position, "right"));
-            positionModifiers.put(IngredientPosition.ABOVE, requiredInt(position, "above"));
-            positionModifiers.put(IngredientPosition.UNDER, requiredInt(position, "under"));
-            positionModifiers.put(IngredientPosition.TOUCHING, requiredInt(position, "touching"));
-            positionModifiers.put(IngredientPosition.NOT_TOUCHING, requiredInt(position, "notTouching"));
-
-            JsonObject itemOnly = requiredObject(object.get("itemOnlyIDs"), name + ".itemOnlyIDs");
-            List<Pair<Skill, Integer>> skillRequirements = List.of(
-                    new Pair<>(Skill.STRENGTH, requiredInt(itemOnly, "strengthRequirement")),
-                    new Pair<>(Skill.DEXTERITY, requiredInt(itemOnly, "dexterityRequirement")),
-                    new Pair<>(Skill.INTELLIGENCE, requiredInt(itemOnly, "intelligenceRequirement")),
-                    new Pair<>(Skill.DEFENCE, requiredInt(itemOnly, "defenceRequirement")),
-                    new Pair<>(Skill.AGILITY, requiredInt(itemOnly, "agilityRequirement"))
-            );
-            JsonObject consumable = requiredObject(object.get("consumableOnlyIDs"), name + ".consumableOnlyIDs");
-            int tier = parseTier(requiredString(object, "tier"));
-            IngredientInfo ingredient = new IngredientInfo(name, tier, level, Optional.of(internalName),
-                    null, List.copyOf(professions), skillRequirements, Map.copyOf(positionModifiers), List.of(),
-                    requiredInt(consumable, "duration"), requiredInt(consumable, "charges"),
-                    requiredInt(itemOnly, "durabilityModifier") / 1000, List.copyOf(identifications));
-            if (byDisplayName.put(name, ingredient) != null) {
-                throw new IllegalStateException("Duplicate ingredient display name " + name);
-            }
-            if (byInternalName.put(internalName, ingredient) != null) {
-                throw new IllegalStateException("Duplicate ingredient internal name " + internalName);
+                byDisplayName.put(ingredient.name(), ingredient);
+                byInternalName.put(internalName, ingredient);
+            } catch (RuntimeException ex) {
+                WynnExtras.LOGGER.warn("Skipping invalid Wynncraft ingredient: " + rootMessage(ex));
             }
         }
         if (byDisplayName.isEmpty()) throw new IllegalStateException("Wynncraft API returned no ingredients");
         return new IngredientCatalog(Map.copyOf(byDisplayName), Map.copyOf(byInternalName));
+    }
+
+    private static IngredientInfo parseIngredient(JsonObject object) {
+        String name = requiredString(object, "displayName");
+        String internalName = requiredString(object, "internalName");
+        JsonObject requirements = requiredObject(object.get("requirements"), name + ".requirements");
+        int level = requiredInt(requirements, "level");
+        List<WEProfessionType> professions = new ArrayList<>();
+        for (JsonElement skill : requiredArray(requirements, "skills")) {
+            professions.add(parseProfession(skill.getAsString()));
+        }
+
+        List<Pair<StatType, RangedValue>> identifications = new ArrayList<>();
+        JsonElement identificationsElement = object.get("identifications");
+        if (identificationsElement != null && !identificationsElement.isJsonNull()) {
+            JsonObject ids = requiredObject(identificationsElement, name + ".identifications");
+            for (Map.Entry<String, JsonElement> entry : ids.entrySet()) {
+                StatType statType = StatType.fromApiName(entry.getKey());
+                if (statType == null) throw new IllegalStateException("Unknown Wynncraft identification " + entry.getKey());
+                JsonObject range = requiredObject(entry.getValue(), name + "." + entry.getKey());
+                identifications.add(new Pair<>(statType,
+                        RangedValue.of(requiredInt(range, "min"), requiredInt(range, "max"))));
+            }
+        }
+
+        JsonObject position = requiredObject(object.get("ingredientPositionModifiers"), name + ".positionModifiers");
+        Map<IngredientPosition, Integer> positionModifiers = new EnumMap<>(IngredientPosition.class);
+        positionModifiers.put(IngredientPosition.LEFT, requiredInt(position, "left"));
+        positionModifiers.put(IngredientPosition.RIGHT, requiredInt(position, "right"));
+        positionModifiers.put(IngredientPosition.ABOVE, requiredInt(position, "above"));
+        positionModifiers.put(IngredientPosition.UNDER, requiredInt(position, "under"));
+        positionModifiers.put(IngredientPosition.TOUCHING, requiredInt(position, "touching"));
+        positionModifiers.put(IngredientPosition.NOT_TOUCHING, requiredInt(position, "notTouching"));
+
+        JsonObject itemOnly = requiredObject(object.get("itemOnlyIDs"), name + ".itemOnlyIDs");
+        List<Pair<Skill, Integer>> skillRequirements = List.of(
+                new Pair<>(Skill.STRENGTH, requiredInt(itemOnly, "strengthRequirement")),
+                new Pair<>(Skill.DEXTERITY, requiredInt(itemOnly, "dexterityRequirement")),
+                new Pair<>(Skill.INTELLIGENCE, requiredInt(itemOnly, "intelligenceRequirement")),
+                new Pair<>(Skill.DEFENCE, requiredInt(itemOnly, "defenceRequirement")),
+                new Pair<>(Skill.AGILITY, requiredInt(itemOnly, "agilityRequirement"))
+        );
+        JsonObject consumable = requiredObject(object.get("consumableOnlyIDs"), name + ".consumableOnlyIDs");
+        return new IngredientInfo(name, parseTier(requiredString(object, "tier")), level, Optional.of(internalName),
+                null, List.copyOf(professions), skillRequirements, Map.copyOf(positionModifiers), List.of(),
+                requiredInt(consumable, "duration"), requiredInt(consumable, "charges"),
+                requiredInt(itemOnly, "durabilityModifier") / 1000, List.copyOf(identifications));
     }
 
     private static List<Material> parseMaterials(JsonObject recipe) {
@@ -600,13 +632,30 @@ public final class WynnDataService {
 
     private static Map<String, Integer> parseIdMap(String json, String description) {
         JsonElement root = JsonParser.parseString(json);
-        if (!root.isJsonObject() || root.getAsJsonObject().isEmpty()) {
-            throw new IllegalStateException("WynnBuilder " + description + " map is empty");
-        }
         Map<String, Integer> result = new HashMap<>();
-        for (Map.Entry<String, JsonElement> entry : root.getAsJsonObject().entrySet()) {
-            result.put(entry.getKey(), entry.getValue().getAsInt());
+        if (root.isJsonObject()) {
+            for (Map.Entry<String, JsonElement> entry : root.getAsJsonObject().entrySet()) {
+                try {
+                    result.put(entry.getKey(), entry.getValue().getAsInt());
+                } catch (RuntimeException ex) {
+                    WynnExtras.LOGGER.warn("Skipping invalid WynnBuilder " + description + " mapping for "
+                            + entry.getKey() + ": " + rootMessage(ex));
+                }
+            }
+        } else if (root.isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray()) {
+                try {
+                    JsonObject ingredient = requiredObject(element, "WynnBuilder ingredient");
+                    String name = requiredString(ingredient, "name");
+                    if (result.putIfAbsent(name, requiredInt(ingredient, "id")) != null) {
+                        WynnExtras.LOGGER.warn("Skipping duplicate WynnBuilder ingredient name " + name);
+                    }
+                } catch (RuntimeException ex) {
+                    WynnExtras.LOGGER.warn("Skipping invalid WynnBuilder ingredient mapping: " + rootMessage(ex));
+                }
+            }
         }
+        if (result.isEmpty()) throw new IllegalStateException("WynnBuilder " + description + " map is empty");
         return result;
     }
 
@@ -614,10 +663,14 @@ public final class WynnDataService {
         JsonObject root = requiredObject(JsonParser.parseString(json), "WynnBuilder recipes");
         Map<String, Integer> result = new HashMap<>();
         for (JsonElement element : requiredArray(root, "recipes")) {
-            JsonObject recipe = requiredObject(element, "WynnBuilder recipe");
-            String name = requiredString(recipe, "name");
-            if (result.put(name, requiredInt(recipe, "id")) != null) {
-                throw new IllegalStateException("Duplicate WynnBuilder recipe name " + name);
+            try {
+                JsonObject recipe = requiredObject(element, "WynnBuilder recipe");
+                String name = requiredString(recipe, "name");
+                if (result.putIfAbsent(name, requiredInt(recipe, "id")) != null) {
+                    WynnExtras.LOGGER.warn("Skipping duplicate WynnBuilder recipe name " + name);
+                }
+            } catch (RuntimeException ex) {
+                WynnExtras.LOGGER.warn("Skipping invalid WynnBuilder recipe mapping: " + rootMessage(ex));
             }
         }
         if (result.isEmpty()) throw new IllegalStateException("WynnBuilder recipe list is empty");
@@ -790,19 +843,25 @@ public final class WynnDataService {
                 || !element.getAsJsonPrimitive().isNumber() ? null : element.getAsDouble();
     }
 
-    private static void validateUniqueIds(Map<String, Integer> ids, String description) {
+    private static void removeInvalidIds(Map<String, Integer> ids, String description) {
         Map<Integer, String> namesById = new HashMap<>();
+        Set<String> invalidNames = new HashSet<>();
         for (Map.Entry<String, Integer> entry : ids.entrySet()) {
             Integer id = entry.getValue();
             if (id == null || id < 0) {
-                throw new IllegalStateException("Invalid WynnBuilder " + description + " ID for " + entry.getKey());
+                WynnExtras.LOGGER.warn("Ignoring invalid WynnBuilder " + description + " ID for " + entry.getKey());
+                invalidNames.add(entry.getKey());
+                continue;
             }
             String duplicate = namesById.put(id, entry.getKey());
             if (duplicate != null) {
-                throw new IllegalStateException("Duplicate WynnBuilder " + description + " ID " + id
+                WynnExtras.LOGGER.warn("Ignoring duplicate WynnBuilder " + description + " ID " + id
                         + " for " + duplicate + " and " + entry.getKey());
+                invalidNames.add(duplicate);
+                invalidNames.add(entry.getKey());
             }
         }
+        invalidNames.forEach(ids::remove);
     }
 
     private static String normalizeName(String name) {
