@@ -1,0 +1,163 @@
+WynnExtras build planner, imported from WynnQOL on 2026-09-18.
+
+The planner's packages, resources, cache/save paths and command registration
+were adapted to WynnExtras. No standalone WynnQOL mod entrypoint is included.
+Historical WynnQOL attribution and source revisions are retained below.
+
+WynnQOL
+
+This project is licensed under the GNU General Public License version 3.
+See LICENSE for the complete terms.
+
+Ability-tree textures and portions of the texture-selection design are
+adapted from WynnExtras:
+https://github.com/JulianH06/WynnExtras
+
+Upstream revision:
+cb37aa6e1529d4dc25c8f84ca443f5653331631b
+
+WynnExtras is licensed under GPL-3.0. The imported work was modified on
+2026-08-14 for WynnQOL's independent ability-tree data and interaction
+model. WynnQOL is not presented as an official WynnExtras build.
+
+The automatic skill-point assignment and equip-order behavior is adapted
+from WynnBuilder's GPL-3.0 implementation:
+https://github.com/wynnbuilder/wynnbuilder.github.io
+
+The adapted implementation was added on 2026-08-17 and rewritten in Java
+for WynnQOL's item model and user interface. WynnQOL is not presented as
+an official WynnBuilder build.
+
+The tree clipboard codec was adapted on 2026-09-14 from WynnBuilder's
+GPL-3.0 encodeAtree/decodeAtree and BitVector implementation:
+https://wynnbuilder.github.io/js/builder/build_encode_decode.js
+https://wynnbuilder.github.io/js/utils.js
+It uses the existing bundled 2.2.3.0 ability-tree data. The Java adapter
+maps WynnBuilder ability names to Wynncraft API IDs and validates pasted
+selections before replacing the current tree.
+Tree-code test fixtures contain reduced public Wynncraft ability API
+responses from https://api.wynncraft.com/v3/ability/tree/{class} and
+https://api.wynncraft.com/v3/ability/map/{class}. Expected hash/selection
+pairs were generated with WynnBuilder's original JavaScript codec.
+
+The spell definitions and damage-calculation behavior are adapted from
+WynnBuilder data version 2.2.3.0 and source revision
+696b1f00ef3ef4f5e331a15dc19202eda632c1c3. The data and evaluator were
+adapted on 2026-08-19 for WynnQOL's Java build planner and updated to
+data version 2.2.3.0 on 2026-08-19.
+
+The packaged tome database and tome category/slot definitions are adapted
+from WynnBuilder's GPL-3.0 tome database version 13:
+https://wynnbuilder.github.io/data/baseline/tomes.json
+
+The Tome icon is adapted from WynnBuilder's GPL-3.0
+`media/items/common.png` sprite sheet.
+
+The imported database was modified on 2026-08-20 for WynnQOL's Java data
+model and tome selector. The source JSON has SHA-256
+23570C36AF004656C622DFAD0DBABB3945BF72DB29A230C1BA2D04F28FADE7DB.
+
+The packaged aspect database, five-slot selection rules, tier behavior,
+and ability-effect integration are adapted from WynnBuilder data version
+2.2.3.0 and its GPL-3.0 builder implementation:
+https://wynnbuilder.github.io/data/2.2.3.0/aspects.json
+
+The class aspect icon sprite sheet is adapted from WynnBuilder's
+GPL-3.0 `media/items/aspects.png` asset.
+
+The imported aspect data was modified on 2026-08-23 for WynnQOL's Java
+data model, saved builds, selector UI, and damage evaluator. The source
+JSON has SHA-256
+7D22C2D09CE67C85E35038DA7BFEDA6899747ABD8586EE11FC1BB69743727ECD.
+
+Crafted-item code decoding, ingredient-effectiveness calculations, and
+crafted skill/powder rules were adapted on 2026-09-14 from WynnBuilder's
+GPL-3.0 WynnCrafter implementation:
+https://wynnbuilder.github.io/js/craft.js
+https://wynnbuilder.github.io/js/build_utils.js
+https://wynnbuilder.github.io/js/powders.js
+https://wynnbuilder.github.io/js/skillpoints.js
+https://wynnbuilder.github.io/js/load_ing.js
+
+The bundled crafting database uses ingredient-loader revision 54, fetched
+on 2026-09-14 from:
+https://wynnbuilder.github.io/data/baseline/compressed/ingreds_compress.json
+https://wynnbuilder.github.io/data/baseline/compressed/recipes_compress.json
+Ingredient metadata not needed for calculation was omitted. Crafting
+oracle fixtures were generated using the original upstream JavaScript.
+The Java planner supports legacy v1 and bit-packed v2 equipment codes,
+using maximum rolls at full durability; consumables are not equipment.
+
+Accessory recipe conversion was adapted from WynnBuilder's
+js/builder/builder_graph.js implementation on 2026-09-14. Ingredients,
+material tiers and level range are preserved; the target recipe is
+re-encoded and recalculated rather than merely renaming the item.
+
+The equipment fallback artwork in textures/gui/equipment.png is
+WynnBuilder's GPL-3.0 media/items/new.png sprite sheet (1440 x 120):
+https://github.com/wynnbuilder/wynnbuilder.github.io
+Retrieved on 2026-09-14 from revision
+63413958aa810ce7c58b419ab8dfcbb2051d9cde.
+
+Item parsing fixtures are reduced public Wynncraft API responses from
+https://api.wynncraft.com/v3/item/database?fullResult (2026-09-14).
+Masterwork variants use their distinct internal names while retaining
+the API's actual identification ranges, base damage, requirements and
+icons. Major ID descriptions are displayed; their special effects are
+not simulated by the planner.
+
+The bundled ingredient and recipe revision 54 and tome content were
+compared with the current WynnBuilder datasets on 2026-09-14 and were
+unchanged (current tome-loader revision 17).
+
+Item inspection uses a compact WynnBuilder-style card with a centered
+name/icon, maximum-roll identifications, powder slots, lore and rarity.
+The live Wynncraft API supplies lore and trade restrictions. The card
+retains scrolling for long items and the crafted/major-ID limitations.
+
+WynnCrafter's native editor was added on 2026-09-14 after reviewing the
+upstream crafter/index.html, js/crafter.js and js/craft.js. It supports
+the six-slot ingredient layout, recipe types and levels, material tiers,
+weapon attack speeds, ingredient effectiveness, and compatible CR codes
+and links. Consumable preview includes duration, charges and basic
+healing; consumables are not treated as equipment or applied to builds.
+The ingredient resource retains tier and consumableIDs metadata for this
+editor. Ingredient/recipe calculations and encoding use the same shared
+engine as the planner. Drafts are stored separately in crafter-draft.json.
+
+The WynnCrafter page layout was refined on 2026-09-14 to show separate
+controls, recipe-effectiveness cells, a crafted-item result card and six
+ingredient cards. Narrow screens stack the sections; the entire page
+scrolls. Copy Hash, Copy Short and Copy Long respectively export the CR
+code, recipe link and link with the six-slot ingredient list.
+
+WynnAtlas's native item/ingredient browser was added on 2026-09-14 after
+reviewing WynnBuilder's items/index.html and ingredients/index.html.
+It provides name/effect search, type/profession, rarity/tier and level
+filters, sorting and paged cards, using the existing Wynncraft item and
+WynnBuilder ingredient sources.
+
+The native Atlas forms were refined on 2026-09-15 with equipment icons,
+profession toggles, multi-select rarity/stars and All/None controls.
+Selections within a type or tier group are ORed; separate groups and
+numeric/string filters are ANDed. Numeric bounds are inclusive, with
+blank bounds unbounded. Identification filters use maximum rolls; absent
+stats count as zero. Excluded filters reject nonzero values, including
+negative values. String filters use case-insensitive substring matching.
+Numeric rows can be reordered and sorted independently, in row-priority
+order. Search jumps to paged result cards; Reset clears the current form.
+The layout stacks on narrow screens and scrolls without hiding controls.
+Legacy Atlas selections and level intervals are migrated in memory and
+saved with the tab; named builds and other tool tabs remain untouched.
+These are native basic search controls, not the advanced expression
+language from the website.
+
+Crafter material labels and quantities are white, with yellow tier stars
+and orange brackets. Both material labels and their tier buttons share
+one row; long labels scale to fit their allotted space on narrow screens.
+
+WynnBuilder, WynnAtlas and WynnCrafter share a typed, ID-bound workspace.
+The + control chooses a tool for each new tab. tool-workspace.json copies
+existing builder tabs and the previous standalone crafter draft without
+modifying builder-workspace.json, crafter-draft.json or named saved builds.
+Each tool saves by its own stable tab ID, including during screen changes.
