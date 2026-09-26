@@ -275,6 +275,22 @@ public class WynnExtrasConfig {
             CLASS_SELECTION_LINE_LAST_HELD_WEAPON);
     public static final Map<String, String> CLASS_SELECTION_LINE_NAMES = createClassSelectionLineNames();
 
+    public static final String TOTEM_TIMER_EFFECT_DURATION = "duration";
+    public static final String TOTEM_TIMER_EFFECT_TOXOPLASMOSIS = "toxoplasmosis";
+    public static final String TOTEM_TIMER_EFFECT_REGENERATION = "regeneration";
+    public static final String TOTEM_TIMER_EFFECT_ELDRITCH_TRANSFUSION = "eldritch_transfusion";
+    public static final String TOTEM_TIMER_EFFECT_INVIGORATING_WAVE = "invigorating_wave";
+    public static final List<String> TOTEM_TIMER_BASE_EFFECT_IDS = List.of(
+            TOTEM_TIMER_EFFECT_DURATION,
+            TOTEM_TIMER_EFFECT_TOXOPLASMOSIS);
+    public static final List<String> TOTEM_TIMER_EFFECT_IDS = List.of(
+            TOTEM_TIMER_EFFECT_DURATION,
+            TOTEM_TIMER_EFFECT_TOXOPLASMOSIS,
+            TOTEM_TIMER_EFFECT_REGENERATION,
+            TOTEM_TIMER_EFFECT_ELDRITCH_TRANSFUSION,
+            TOTEM_TIMER_EFFECT_INVIGORATING_WAVE);
+    public static final Map<String, String> TOTEM_TIMER_EFFECT_NAMES = createTotemTimerEffectNames();
+
     private static final Path CONFIG_PATH = FabricLoader.getInstance()
             .getConfigDir()
             .resolve("wynnextras")
@@ -600,7 +616,11 @@ public class WynnExtrasConfig {
     public int totemTimerWarningThreshold = 2;
     public boolean totemTimerEstimate = true;
     public boolean totemTimerTimeOnly = false;
-    public boolean totemTimerShowToxoplasmosis = false;
+    public List<String> totemTimerActiveEffects = new ArrayList<>(TOTEM_TIMER_BASE_EFFECT_IDS);
+    public List<String> totemTimerAvailableEffects = new ArrayList<>(List.of(
+            TOTEM_TIMER_EFFECT_REGENERATION,
+            TOTEM_TIMER_EFFECT_ELDRITCH_TRANSFUSION,
+            TOTEM_TIMER_EFFECT_INVIGORATING_WAVE));
     public boolean totemTimerSolidColor = false;
     public int totemTimerX = -1;
     public int totemTimerY = 40;
@@ -913,6 +933,7 @@ public class WynnExtrasConfig {
         INSTANCE.syncAttackTimerColors();
         INSTANCE.syncTetrisSettings();
         INSTANCE.syncClassSelectionLines();
+        INSTANCE.syncTotemTimerEffects();
         INSTANCE.syncShoppingListPositions();
         if (INSTANCE.mythicScaleSource == null) INSTANCE.mythicScaleSource = MythicScaleSource.WYNNPOOL;
         if (INSTANCE.classSelectionContentProgressStyle == null) {
@@ -1017,6 +1038,46 @@ public class WynnExtrasConfig {
         names.put(CLASS_SELECTION_LINE_CONTENT_PROGRESS, "Content Progress");
         names.put(CLASS_SELECTION_LINE_LAST_HELD_WEAPON, "Last Held Weapon");
         return Collections.unmodifiableMap(names);
+    }
+
+    private static Map<String, String> createTotemTimerEffectNames() {
+        LinkedHashMap<String, String> names = new LinkedHashMap<>();
+        names.put(TOTEM_TIMER_EFFECT_DURATION, "Totem Time");
+        names.put(TOTEM_TIMER_EFFECT_TOXOPLASMOSIS, "Toxoplasmosis");
+        names.put(TOTEM_TIMER_EFFECT_REGENERATION, "Regeneration");
+        names.put(TOTEM_TIMER_EFFECT_ELDRITCH_TRANSFUSION, "Eldritch Transfusion");
+        names.put(TOTEM_TIMER_EFFECT_INVIGORATING_WAVE, "Invigorating Wave");
+        return Collections.unmodifiableMap(names);
+    }
+
+    public void syncTotemTimerEffects() {
+        if (totemTimerActiveEffects == null && totemTimerAvailableEffects == null) {
+            totemTimerActiveEffects = new ArrayList<>(TOTEM_TIMER_BASE_EFFECT_IDS);
+            totemTimerAvailableEffects = new ArrayList<>();
+        }
+        if (totemTimerActiveEffects == null) totemTimerActiveEffects = new ArrayList<>();
+        if (totemTimerAvailableEffects == null) totemTimerAvailableEffects = new ArrayList<>();
+
+        totemTimerActiveEffects = sanitizeTotemTimerEffectList(totemTimerActiveEffects, new HashSet<>());
+        Set<String> activeIds = new HashSet<>(totemTimerActiveEffects);
+        totemTimerAvailableEffects = sanitizeTotemTimerEffectList(totemTimerAvailableEffects, activeIds);
+
+        Set<String> configuredIds = new HashSet<>(totemTimerActiveEffects);
+        configuredIds.addAll(totemTimerAvailableEffects);
+        for (String id : TOTEM_TIMER_EFFECT_IDS) {
+            if (!configuredIds.contains(id)) totemTimerAvailableEffects.add(id);
+        }
+    }
+
+    private List<String> sanitizeTotemTimerEffectList(List<String> effects, Set<String> excludedIds) {
+        List<String> result = new ArrayList<>();
+        Set<String> seen = new HashSet<>(excludedIds);
+        for (String id : effects) {
+            if (!TOTEM_TIMER_EFFECT_IDS.contains(id) || seen.contains(id)) continue;
+            result.add(id);
+            seen.add(id);
+        }
+        return result;
     }
 
     public void syncClassSelectionLines() {

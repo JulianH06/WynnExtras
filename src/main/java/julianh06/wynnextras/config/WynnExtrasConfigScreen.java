@@ -336,8 +336,7 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 .add(visibleWhen(toggle("Minimalistic Timer", "Show only the time, without the totem label",
                                 () -> config.totemTimerTimeOnly, v -> config.totemTimerTimeOnly = v),
                         () -> config.totemTimerEnabled && config.totemTimerOwnOnly))
-                .add(visibleWhen(toggle("Toxoplasmosis", "Show the toxoplasmosis value in the totem timer",
-                                () -> config.totemTimerShowToxoplasmosis, v -> config.totemTimerShowToxoplasmosis = v),
+                .add(visibleWhen(totemTimerEffects("Displayed Effects", "Choose which totem values are shown and in which order"),
                         () -> config.totemTimerEnabled))
                 .add(visibleWhen(toggle("Warning Text", "Show RECAST TOTEM! on screen when low (movable in Edit Gui)",
                                 () -> config.totemTimerWarningText, v -> config.totemTimerWarningText = v),
@@ -1200,6 +1199,29 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                 () -> WynnExtrasConfig.CLASS_SELECTION_LINE_NAMES,
                 "Active lines",
                 "Available lines");
+    }
+
+    private ConfigOption totemTimerEffects(String name, String desc) {
+        return new LineListOption(name, desc,
+                () -> {
+                    config.syncTotemTimerEffects();
+                    return config.totemTimerActiveEffects;
+                },
+                v -> {
+                    config.totemTimerActiveEffects = v;
+                    config.syncTotemTimerEffects();
+                },
+                () -> {
+                    config.syncTotemTimerEffects();
+                    return config.totemTimerAvailableEffects;
+                },
+                v -> {
+                    config.totemTimerAvailableEffects = v;
+                    config.syncTotemTimerEffects();
+                },
+                () -> WynnExtrasConfig.TOTEM_TIMER_EFFECT_NAMES,
+                "Active effects",
+                "Available effects");
     }
 
     private List<String> visibleClassSelectionLines(List<String> lines) {

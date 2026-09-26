@@ -108,6 +108,8 @@ public class AchievementScreen extends WEScreen {
     private SpecialFilterMode imageIconFilter = SESSION_STATE.imageIconFilter;
     private UnlockFilterMode colorUnlockFilter = SESSION_STATE.colorUnlockFilter;
     private SpecialFilterMode fadeColorFilter = SESSION_STATE.fadeColorFilter;
+    private boolean hideMaxedAchievements = SESSION_STATE.hideMaxedAchievements;
+    private MaxedFilterButtonWidget maxedFilterButton;
     private String initialBadgeIconId;
     private String initialBadgeColorId;
     private boolean handledClose;
@@ -181,6 +183,7 @@ public class AchievementScreen extends WEScreen {
         if (achievementsTabButton == null) {
             achievementsTabButton = new TabButtonWidget(Tab.ACHIEVEMENTS, 25, 58, 180, 34, "Achievements");
             badgesTabButton = new TabButtonWidget(Tab.BADGES, 215, 58, 180, 34, "Badges");
+            maxedFilterButton = new MaxedFilterButtonWidget(405, 58, 180, 34);
             achievementScrollBarWidget = new AchievementScrollBarWidget();
             iconScrollBarWidget = new HorizontalBadgeScrollBarWidget(HorizontalScrollTarget.ICONS);
             colorScrollBarWidget = new HorizontalBadgeScrollBarWidget(HorizontalScrollTarget.COLORS);
@@ -201,6 +204,7 @@ public class AchievementScreen extends WEScreen {
 
         registerRootWidget(achievementsTabButton);
         registerRootWidget(badgesTabButton);
+        registerRootWidget(maxedFilterButton);
         for (CategoryHeaderWidget widget : categoryHeaderWidgets.values()) registerRootWidget(widget);
         registerRootWidget(achievementScrollBarWidget);
         registerRootWidget(iconSearchBar());
@@ -217,6 +221,7 @@ public class AchievementScreen extends WEScreen {
     }
 
     private void hideDynamicWidgets() {
+        maxedFilterButton.setVisible(false);
         for (CategoryHeaderWidget widget : categoryHeaderWidgets.values()) widget.setVisible(false);
         achievementScrollBarWidget.setVisible(false);
         iconSearchBar.setVisible(false);
@@ -263,6 +268,8 @@ public class AchievementScreen extends WEScreen {
         drawText("Track progress and choose the badge shown after your name.", 25, 40, TEXT_DIM);
         if (tab == Tab.BADGES) {
             drawBadgeHeaderPreview(ctx);
+        } else {
+            maxedFilterButton.setVisible(true);
         }
     }
 
@@ -283,7 +290,15 @@ public class AchievementScreen extends WEScreen {
         int viewportBottom = achievementViewportBottom();
 
         enableLogicalScissor(ctx, x, ACHIEVEMENT_VIEWPORT_TOP, width, achievementViewportHeight());
+        boolean anyVisible = false;
         for (AchievementCategory category : categories) {
+            List<Achievement> visibleAchievements = category.achievements();
+            if (hideMaxedAchievements) {
+                visibleAchievements = visibleAchievements.stream().filter(achievement -> !achievement.isUnlocked()).toList();
+                if (visibleAchievements.isEmpty()) continue;
+            }
+            anyVisible = true;
+
             if (intersectsAchievementViewport(y, headerH)) {
                 CategoryHeaderWidget widget = categoryHeaderWidgets.get(category.key());
                 if (widget != null) {
@@ -294,7 +309,7 @@ public class AchievementScreen extends WEScreen {
             y += headerH + 5;
             if (!category.expanded()) continue;
 
-            for (Achievement achievement : category.achievements()) {
+            for (Achievement achievement : visibleAchievements) {
                 if (y + rowH > ACHIEVEMENT_VIEWPORT_TOP && y < viewportBottom) {
                     drawAchievementRow(ctx, mouseX, mouseY, x + 8, y, width - 8, rowH, achievement);
                 }
@@ -302,6 +317,10 @@ public class AchievementScreen extends WEScreen {
             }
         }
         ctx.disableScissor();
+
+        if (!anyVisible) {
+            drawCenteredText("Everything is maxed!", x + width / 2f, ACHIEVEMENT_VIEWPORT_TOP + 20, TEXT_DIM);
+        }
 
         updateMaxScroll(y + Math.round(scroll) - ACHIEVEMENT_VIEWPORT_TOP);
         if (maxAchievementScroll > 0) {
@@ -552,6 +571,7 @@ public class AchievementScreen extends WEScreen {
         SESSION_STATE.imageIconFilter = imageIconFilter;
         SESSION_STATE.colorUnlockFilter = colorUnlockFilter;
         SESSION_STATE.fadeColorFilter = fadeColorFilter;
+        SESSION_STATE.hideMaxedAchievements = hideMaxedAchievements;
     }
 
     private List<Achievement> allAchievements() {
@@ -1101,6 +1121,30 @@ public class AchievementScreen extends WEScreen {
         }
     }
 
+    private class MaxedFilterButtonWidget extends LogicalWidget {
+        private MaxedFilterButtonWidget(int x, int y, int width, int height) {
+            super(x, y, width, height);
+        }
+
+        @Override
+        protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+            drawRect(x, y, width, height, hovered ? PARCHMENT_HOVER : PARCHMENT);
+            drawRect(x, y, width, 2, hideMaxedAchievements ? GOLD : GREEN);
+            drawRect(x, y + height - 3, width, 3, BORDER);
+            drawCenteredText(hideMaxedAchievements ? "Show: Not Maxed" : "Show: All", x + width / 2f, y + 12, TEXT_MAIN);
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if (button != 0 && button != 1) return false;
+            hideMaxedAchievements = !hideMaxedAchievements;
+            targetScroll = 0;
+            scroll = 0;
+            playClick();
+            return true;
+        }
+    }
+
     private class CategoryHeaderWidget extends LogicalWidget {
         private AchievementCategory category;
 
@@ -1418,6 +1462,7 @@ public class AchievementScreen extends WEScreen {
         private SpecialFilterMode imageIconFilter = SpecialFilterMode.ALL;
         private UnlockFilterMode colorUnlockFilter = UnlockFilterMode.ALL;
         private SpecialFilterMode fadeColorFilter = SpecialFilterMode.ALL;
+        private boolean hideMaxedAchievements;
     }
 
     private record AchievementCategory(String key, List<Achievement> achievements) {

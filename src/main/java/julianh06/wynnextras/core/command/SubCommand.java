@@ -8,7 +8,15 @@ import java.util.List;
 import java.util.function.Function;
 
 public class SubCommand extends Command{
+    public SubCommand(String name, String description, Function<CommandContext<FabricClientCommandSource>, Integer> onExecute, List<Command> subCommands, List<ArgumentBuilder<FabricClientCommandSource, ?>> args, List<String> aliases) {
+        super(name, description, onExecute, subCommands, args, aliases);
+    }
+
     public SubCommand(String name, String description, Function<CommandContext<FabricClientCommandSource>, Integer> onExecute, List<Command> subCommands, List<ArgumentBuilder<FabricClientCommandSource, ?>> args) {
         super(name, description, onExecute, subCommands, args);
+    }
+
+    public SubCommand(String name, String description, Function<CommandContext<FabricClientCommandSource>, Integer> onExecute, List<String> aliases) {
+        super(name, description, onExecute, aliases);
     }
 }

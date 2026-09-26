@@ -76,10 +76,10 @@ public final class WynnExtrasCommands {
             null
     );
 
-    private static final Command GUI = new Command("gui", context -> {
+    private static final Command GUI = new Command("gui", "", context -> {
         MinecraftClient.getInstance().send(() -> MinecraftClient.getInstance().setScreen(new HudEditScreen()));
         return 1;
-    });
+    }, List.of("hud"));
 
     private static final Command TETRIS = new Command("tetris", context -> {
         TetrisScreen.open();

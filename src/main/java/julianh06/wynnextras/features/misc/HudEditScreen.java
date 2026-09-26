@@ -13,14 +13,16 @@ import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class HudEditScreen extends Screen {
     private double focusedMouseX, focusedMouseY;
 
     private static class HudElement {
         final String id;
-        final String preview;
+        final Text preview;
         final int defaultColor;
         int x, y, w;
         int customH = -1; // -1 = use default H
@@ -35,10 +37,14 @@ public class HudEditScreen extends Screen {
         WynnExtrasConfig.Align alignment;
 
         HudElement(String id, String preview, int x, int y, float scale, WynnExtrasConfig.Align alignment) {
-            this(id, preview, x, y, scale, alignment, 0xFFFFFFFF);
+            this(id, Text.literal(preview), x, y, scale, alignment, 0xFFFFFFFF);
         }
 
         HudElement(String id, String preview, int x, int y, float scale, WynnExtrasConfig.Align alignment, int defaultColor) {
+            this(id, Text.literal(preview), x, y, scale, alignment, defaultColor);
+        }
+
+        HudElement(String id, Text preview, int x, int y, float scale, WynnExtrasConfig.Align alignment, int defaultColor) {
             this.id = id;
             this.preview = preview;
             this.x = x;
@@ -94,13 +100,21 @@ public class HudEditScreen extends Screen {
                     c.provokeTimerX, c.provokeTimerY, c.provokeTimerScale, c.provokeTimerAlignment, provokeColor));
         }
         if (c.totemTimerEnabled) {
-            String totemText = "PlayerName's Totem: 38s";
+            Map<String, String> previewEffects = new HashMap<>();
+            previewEffects.put(WynnExtrasConfig.TOTEM_TIMER_EFFECT_DURATION, "38s");
+            previewEffects.put(WynnExtrasConfig.TOTEM_TIMER_EFFECT_TOXOPLASMOSIS, "\ue011 1.6k");
+            previewEffects.put(WynnExtrasConfig.TOTEM_TIMER_EFFECT_REGENERATION, "+120\u2764/s");
+            previewEffects.put(WynnExtrasConfig.TOTEM_TIMER_EFFECT_ELDRITCH_TRANSFUSION, "\ue020 2");
+            previewEffects.put(WynnExtrasConfig.TOTEM_TIMER_EFFECT_INVIGORATING_WAVE, "\ue013 3s");
+            TotemTimer.TotemInfo previewTotem = new TotemTimer.TotemInfo("PlayerName", previewEffects, false);
+            Text totemText = TotemTimer.getHudText(previewTotem);
             int totemColor = 0xFF44FF44;
             List<TotemTimer.TotemInfo> totems = TotemTimer.getTotems();
             if (!totems.isEmpty()) {
-                TotemTimer.TotemInfo t = totems.get(0);
-                totemText = t.owner() + "'s Totem: " + t.timeText();
+                Text liveText = TotemTimer.getHudText(totems.get(0));
+                if (!liveText.getString().isEmpty()) totemText = liveText;
             }
+            if (totemText.getString().isEmpty()) totemText = Text.literal("Totem timer: no effects selected");
             elements.add(new HudElement("totem", totemText,
                     c.totemTimerX, c.totemTimerY, c.totemTimerScale, c.totemTimerAlignment, totemColor));
         }
