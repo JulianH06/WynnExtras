@@ -9,10 +9,12 @@ import julianh06.wynnextras.features.inventory.BankOverlay;
 import julianh06.wynnextras.features.inventory.BankOverlayType;
 import julianh06.wynnextras.features.inventory.PowderCombineHelperOverlay;
 import julianh06.wynnextras.features.mount.MountOverlay;
+import julianh06.wynnextras.features.qol.GuildAttackOverlay;
 import julianh06.wynnextras.utils.LunarCompat;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
@@ -33,7 +35,7 @@ public final class LunarScreenOverlayFallback {
             ScreenKeyboardEvents.allowKeyPress(screen).register((s, input) ->
                     !keyPressed(screen, input.key(), input.scancode(), input.modifiers()));
             ScreenMouseEvents.allowMouseClick(screen).register((s, click) ->
-                    !mouseClicked(screen, click.x(), click.y(), click.button()));
+                    !mouseClicked(screen, click));
             ScreenMouseEvents.allowMouseRelease(screen).register((s, click) ->
                     !mouseReleased(screen, click.x(), click.y(), click.button()));
             ScreenMouseEvents.allowMouseDrag(screen).register((s, click, deltaX, deltaY) ->
@@ -45,6 +47,15 @@ public final class LunarScreenOverlayFallback {
     private static void render(Screen screen, HandledScreen<?> handledScreen, DrawContext context, int mouseX, int mouseY, float delta) {
         if (!shouldRender(screen)) return;
         State state = state(screen);
+
+        GuildAttackOverlay.renderVanillaToggleButton(context, handledScreen);
+        if (WynnExtrasConfig.INSTANCE.guildAttackOverlayEnabled && GuildAttackOverlay.isGuildAttackScreen(handledScreen)) {
+            if (state.guildAttackOverlay == null) state.guildAttackOverlay = new GuildAttackOverlay(handledScreen);
+            state.guildAttackOverlay.render(context, mouseX, mouseY, delta);
+            return;
+        } else {
+            state.guildAttackOverlay = null;
+        }
 
         if (WynnExtrasConfig.INSTANCE.customClassSelectionEnabled && ClassSelectionOverlay.isClassSelectionScreen(screen.getTitle().getString())) {
             if (state.classSelectionOverlay == null) {
@@ -100,9 +111,18 @@ public final class LunarScreenOverlayFallback {
         }
     }
 
-    private static boolean mouseClicked(Screen screen, double mouseX, double mouseY, int button) {
+    private static boolean mouseClicked(Screen screen, Click click) {
         if (!shouldRender(screen)) return false;
         State state = state(screen);
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
+
+        if (GuildAttackOverlay.handleVanillaToggleClick(mouseX, mouseY, (HandledScreen<?>) screen)) return true;
+        if (state.guildAttackOverlay != null) {
+            state.guildAttackOverlay.mouseClicked(click);
+            return true;
+        }
 
         if (state.classSelectionOverlay != null) {
             state.classSelectionOverlay.mouseClicked(mouseX, mouseY, button);
@@ -152,6 +172,8 @@ public final class LunarScreenOverlayFallback {
         if (!shouldRender(screen)) return false;
         State state = state(screen);
 
+        if (state.guildAttackOverlay != null) return true;
+
         if (state.classSelectionOverlay != null) {
             state.classSelectionOverlay.onMouseReleased(mouseX, mouseY, button);
             return true;
@@ -172,6 +194,8 @@ public final class LunarScreenOverlayFallback {
     private static boolean mouseDragged(Screen screen, double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (!shouldRender(screen)) return false;
         State state = state(screen);
+
+        if (state.guildAttackOverlay != null) return true;
 
         if (state.classSelectionOverlay != null) {
             state.classSelectionOverlay.onMouseDragged(mouseX, mouseY, button, deltaX, deltaY);
@@ -201,5 +225,6 @@ public final class LunarScreenOverlayFallback {
         private CraftingHelperOverlay craftingHelperOverlay;
         private PowderCombineHelperOverlay powderCombineHelperOverlay;
         private CompassMenuOverlay compassMenuOverlay;
+        private GuildAttackOverlay guildAttackOverlay;
     }
 }

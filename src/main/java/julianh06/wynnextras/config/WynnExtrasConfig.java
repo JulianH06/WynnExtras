@@ -508,6 +508,7 @@ public class WynnExtrasConfig {
     public boolean warDpsEnabled = false;
     public int warDpsX = 5;
     public int warDpsY = 50;
+    public boolean guildAttackOverlayEnabled = false;
     public boolean attackTimerMenuEnabled = false;
     public boolean attackTimerAutoBroadcast = false;
     public int attackTimerX = 5;

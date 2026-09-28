@@ -435,7 +435,9 @@ public class WynnExtrasConfigScreen extends Screen implements ConfigScreenContex
                                 () -> config.attackTimerVeryHighDefenseColor, v -> config.attackTimerVeryHighDefenseColor = v,
                                 DEFAULT_CONFIG.attackTimerVeryHighDefenseColor, DEFAULT_CONFIG.attackTimerVeryHighDefenseColor),
                         () -> config.attackTimerMenuEnabled))
-                .sub("Wars / Territory")
+            .sub("Wars / Territory")
+                .add(toggle("Guild Attack Overlay", "Replace the guild attack menu with a screen where you see everything relevant at once",
+                        () -> config.guildAttackOverlayEnabled, v -> config.guildAttackOverlayEnabled = v))
                 .add(toggle("Weekly War Count", "Show number of wars in last 7 days on HUD",
                         () -> config.weeklyWarCountEnabled, v -> config.weeklyWarCountEnabled = v))
                 .add(toggle("War DPS Info", "Show tower EHP, DPS, team DPS, and ETA during wars",

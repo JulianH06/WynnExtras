@@ -20,6 +20,7 @@ import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
 import julianh06.wynnextras.features.misc.ProfessionOverlay;
 import julianh06.wynnextras.features.misc.QuickRepair;
 import julianh06.wynnextras.features.mount.MountOverlay;
+import julianh06.wynnextras.features.qol.GuildAttackOverlay;
 import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListScreenContext;
 import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListMenuExtension;
 import julianh06.wynnextras.features.shoppinglist.ui.ShoppingListMenuLauncherButton;
@@ -85,6 +86,8 @@ public abstract class HandledScreenMixin {
 
     @Unique private QuickRepair quickRepairOverlay;
 
+    @Unique private GuildAttackOverlay guildAttackOverlay;
+
     @Unique private ShoppingListMenuExtension shoppingListMenuExtension;
     @Unique private ShoppingListMenuLauncherButton shoppingListMenuLauncherButton;
     @Unique private boolean shoppingListRenderedThisFrame = false;
@@ -106,18 +109,25 @@ public abstract class HandledScreenMixin {
     private void renderInventory(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         shoppingListRenderedThisFrame = false;
         LunarCompat.recordHandledScreenMixinRender((HandledScreen<?>) (Object) this);
+        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
+
         // Encounter Selection Overlay (must render FIRST and cancel vanilla render so chest UI is fully hidden)
-        {
-            HandledScreen<?> encSelf = (HandledScreen<?>) (Object) this;
-            if (julianh06.wynnextras.features.qol.EncounterOverlay.isReadyToRender(encSelf)) {
-                julianh06.wynnextras.features.qol.EncounterOverlay.render(context, encSelf, mouseX, mouseY);
-                ProfessionOverlay.renderOnScreen(context);
-                ci.cancel();
-                return;
-            }
-            // Tick the settle state regardless (for non-ready cases).
-            julianh06.wynnextras.features.qol.EncounterOverlay.tickSettle(encSelf);
+        if (julianh06.wynnextras.features.qol.EncounterOverlay.isReadyToRender(self)) {
+            julianh06.wynnextras.features.qol.EncounterOverlay.render(context, self, mouseX, mouseY);
+            ProfessionOverlay.renderOnScreen(context);
+            ci.cancel();
+            return;
         }
+        // Tick the settle state regardless (for non-ready cases).
+        julianh06.wynnextras.features.qol.EncounterOverlay.tickSettle(self);
+
+        if (WynnExtrasConfig.INSTANCE.guildAttackOverlayEnabled && GuildAttackOverlay.isGuildAttackScreen(self)) {
+            if (guildAttackOverlay == null) guildAttackOverlay = new GuildAttackOverlay(self);
+            guildAttackOverlay.render(context, mouseX, mouseY, delta);
+            ci.cancel();
+            return;
+        }
+
         if (identifierCaseOpeningOverlay != null && identifierCaseOpeningOverlay.shouldHideVanilla()) {
             identifierCaseOpeningOverlay.render(context, mouseX, mouseY, delta);
             ci.cancel();
@@ -125,7 +135,6 @@ public abstract class HandledScreenMixin {
         }
         // Class Selection Overlay
         if (WynnExtrasConfig.INSTANCE.customClassSelectionEnabled) {
-            HandledScreen<?> self = (HandledScreen<?>) (Object) this;
             String title = self.getTitle().getString();
             if (ClassSelectionOverlay.isClassSelectionScreen(title)) {
                 if (classSelectionOverlay == null || classSelectionOverlay.getMode() != ClassSelectionOverlay.ScreenMode.CLASS_SELECTION) {
@@ -211,6 +220,7 @@ public abstract class HandledScreenMixin {
         // Vanilla mode toggle button for class selection
         HandledScreen<?> self = (HandledScreen<?>) (Object) this;
         ClassSelectionOverlay.renderVanillaToggleButton(context, self);
+        GuildAttackOverlay.renderVanillaToggleButton(context, self);
         // Trade Market Overlay (Your Trades value display)
         TradeMarketOverlay.renderOnScreen(context);
 
@@ -458,6 +468,8 @@ public abstract class HandledScreenMixin {
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClick(Click click, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
+        if (GuildAttackOverlay.isForwardingSlotClick()) return;
+
         double mouseX = click.x();
         double mouseY = click.y();
         int button = click.button();
@@ -473,13 +485,24 @@ public abstract class HandledScreenMixin {
             return;
         }
 
+        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
+        if (GuildAttackOverlay.handleVanillaToggleClick(mouseX, mouseY, self)) {
+            cir.setReturnValue(true);
+            return;
+        }
+        if (WynnExtrasConfig.INSTANCE.guildAttackOverlayEnabled && GuildAttackOverlay.isGuildAttackScreen(self)) {
+            if (guildAttackOverlay == null) guildAttackOverlay = new GuildAttackOverlay(self);
+            guildAttackOverlay.mouseClicked(click);
+            cir.setReturnValue(true);
+            return;
+        }
+
         if (!((Object) this instanceof InventoryScreen) && ItemComponentsDebugOverlay.mouseClicked(mouseX, mouseY, button)) {
             cir.setReturnValue(true);
             return;
         }
 
         // Encounter Selection overlay (intercept before anything else so vanilla slots aren't touched)
-        HandledScreen<?> self = (HandledScreen<?>) (Object) this;
         ShoppingListTradeMarketPurchaseService.handleAmountSlotClick(self, focusedSlot, button);
         if (julianh06.wynnextras.features.qol.EncounterOverlay.handleClick(mouseX, mouseY, self)) {
             cir.setReturnValue(true);

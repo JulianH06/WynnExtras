@@ -414,7 +414,15 @@ public class AttackTimer {
 
     private record QueuedDefense(String territory, String defense, long startsAt, boolean used) {}
 
+    public static void renderInScreen(DrawContext ctx) {
+        renderContent(ctx);
+    }
+
     private static void render(DrawContext ctx, RenderTickCounter tickCounter) {
+        renderContent(ctx);
+    }
+
+    private static void renderContent(DrawContext ctx) {
         if (!WynnExtrasConfig.INSTANCE.attackTimerMenuEnabled) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player == null || mc.options.hudHidden) return;
