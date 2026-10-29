@@ -795,14 +795,14 @@ public final class AbilityTreeScreen extends PlannerScreen {
     @Override
     public void tick() {
         super.tick();
-        if (++workspaceTicks % 40 == 0 && parent instanceof WynnBuilderScreen builder) {
+        if (++workspaceTicks % 40 == 0 && parent instanceof BuilderScreen builder) {
             builder.saveWorkspace();
         }
     }
 
     @Override
     public void removed() {
-        if (parent instanceof WynnBuilderScreen builder) {
+        if (parent instanceof BuilderScreen builder) {
             builder.saveWorkspace();
         }
         super.removed();

@@ -49,7 +49,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
-public final class WynnCrafterScreen extends PlannerScreen {
+public final class CrafterScreen extends PlannerScreen {
     private final Screen parent;
     private final String toolTabId;
     private final ToolWorkspaceManager workspace = ToolWorkspaceManager.getInstance();
@@ -95,11 +95,11 @@ public final class WynnCrafterScreen extends PlannerScreen {
     private static final int CONTROLS_HEIGHT = 330;
     private static final float CARD_SCALE = 1.15F;
 
-    public WynnCrafterScreen(Screen parent) {
+    public CrafterScreen(Screen parent) {
         this(parent, ToolWorkspaceManager.getInstance().add(ToolWorkspaceManager.Type.CRAFTER));
     }
 
-    WynnCrafterScreen(Screen parent, String toolTabId) {
+    CrafterScreen(Screen parent, String toolTabId) {
         super(Text.literal("Crafter"));
         this.parent = parent;
         this.toolTabId = toolTabId;
@@ -262,7 +262,7 @@ public final class WynnCrafterScreen extends PlannerScreen {
         } catch (IllegalArgumentException exception) {
             error = exception.getMessage();
         } catch (IllegalStateException exception) {
-            PlannerLog.LOGGER.error("Could not calculate WynnCrafter preview.", exception);
+            PlannerLog.LOGGER.error("Could not calculate Crafter preview.", exception);
             error = "Crafting data could not be loaded. See the log.";
         }
     }
@@ -507,7 +507,7 @@ public final class WynnCrafterScreen extends PlannerScreen {
     }
 
     private void drawMaterialIcon(String name, int x, int y, int size) {
-        ItemStack stack = materialIcons.computeIfAbsent(name, WynnCrafterScreen::materialIcon);
+        ItemStack stack = materialIcons.computeIfAbsent(name, CrafterScreen::materialIcon);
         ui.pushMatrix();
         try {
             ui.translate(x, y);

@@ -63,7 +63,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
-public final class WynnBuilderScreen extends PlannerScreen {
+public final class BuilderScreen extends PlannerScreen {
     private static final Identifier EQUIPMENT_TEXTURE = Identifier.of("wynnextras", "textures/gui/buildplanner/equipment.png");
     private static final int MARGIN = 8;
     private static final int GAP = 8;
@@ -223,11 +223,11 @@ public final class WynnBuilderScreen extends PlannerScreen {
     private boolean detailed;
     private String boostSection = "Ability Boosts";
 
-    public WynnBuilderScreen(Screen parent) {
+    public BuilderScreen(Screen parent) {
         this(parent, WorkspaceTabs.builderId());
     }
 
-    WynnBuilderScreen(Screen parent, String toolTabId) {
+    BuilderScreen(Screen parent, String toolTabId) {
         super(Text.literal("Builder"));
         this.parent = parent;
         this.toolTabId = toolTabId;
@@ -2325,7 +2325,7 @@ public final class WynnBuilderScreen extends PlannerScreen {
 
     private final class PickerOverlay extends Widget {
         private PickerOverlay() {
-            super(0, 0, WynnBuilderScreen.this.width * 2, WynnBuilderScreen.this.height * 2);
+            super(0, 0, BuilderScreen.this.width * 2, BuilderScreen.this.height * 2);
             setUiScaleFactor(1.0);
         }
 

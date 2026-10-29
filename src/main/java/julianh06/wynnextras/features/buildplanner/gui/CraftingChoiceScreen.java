@@ -120,7 +120,7 @@ final class CraftingChoiceScreen extends PlannerScreen {
     private void drawIngredientIcon(julianh06.wynnextras.utils.UI.UIUtils ui, Ingredient ingredient,
             int x, int y, int size) {
         ItemStack stack = ingredientIcons.computeIfAbsent(ingredient.id(),
-                ignored -> WynnCrafterScreen.ingredientIcon(ingredient));
+                ignored -> CrafterScreen.ingredientIcon(ingredient));
         ui.pushMatrix();
         try {
             ui.translate(x, y);
@@ -129,7 +129,7 @@ final class CraftingChoiceScreen extends PlannerScreen {
         } catch (RuntimeException exception) {
             PlannerLog.LOGGER.warn("Could not render ingredient picker icon for {} ({}).",
                     ingredient.name(), ingredient.id(), exception);
-            ItemStack fallback = WynnCrafterScreen.ingredientFallback(ingredient);
+            ItemStack fallback = CrafterScreen.ingredientFallback(ingredient);
             ingredientIcons.put(ingredient.id(), fallback);
             ui.drawItem(fallback, 0, 0);
         } finally {

@@ -10,7 +10,7 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
 final class CraftedItemScreen extends PlannerScreen {
-    private final WynnBuilderScreen parent;
+    private final BuilderScreen parent;
     private final String slotType;
     private final String slotId;
     private final Consumer<WynnItem> equip;
@@ -23,7 +23,7 @@ final class CraftedItemScreen extends PlannerScreen {
     private int panelWidth;
     private int panelHeight;
 
-    CraftedItemScreen(WynnBuilderScreen parent, String slotType, String slotId, WynnItem current, Consumer<WynnItem> equip) {
+    CraftedItemScreen(BuilderScreen parent, String slotType, String slotId, WynnItem current, Consumer<WynnItem> equip) {
         super(Text.literal("Crafted Item"));
         this.parent = parent;
         this.slotType = slotType;
@@ -51,7 +51,7 @@ final class CraftedItemScreen extends PlannerScreen {
         int buttonWidth = (panelWidth - 46) / 4;
         addDrawableChild(new ThemedButton(left + 14, footer, buttonWidth, 20, Text.literal("Cancel"), this::close));
         addDrawableChild(new ThemedButton(left + 20 + buttonWidth, footer, buttonWidth, 20,
-                Text.literal("WynnCrafter"), () -> WorkspaceTabs.openCrafter(parent, slotId, preview)));
+                Text.literal("Crafter"), () -> WorkspaceTabs.openCrafter(parent, slotId, preview)));
         copyButton = addDrawableChild(new ThemedButton(left + 26 + buttonWidth * 2, footer, buttonWidth, 20,
                 Text.literal("Copy Code"), () -> client.keyboard.setClipboard(preview.craftedCode())));
         equipButton = addDrawableChild(new ThemedButton(left + 32 + buttonWidth * 3, footer, buttonWidth, 20,

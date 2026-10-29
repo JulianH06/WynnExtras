@@ -10,14 +10,14 @@ final class SaveBuildScreen extends PlannerScreen {
     private static final int PANEL_WIDTH = 300;
     private static final int PANEL_HEIGHT = 154;
 
-    private final WynnBuilderScreen parent;
+    private final BuilderScreen parent;
     private CharacterClass selectedClass;
     private TextFieldWidget nameField;
     private ThemedButton classButton;
     private ThemedButton saveButton;
     private String status = "";
 
-    SaveBuildScreen(WynnBuilderScreen parent, CharacterClass defaultClass) {
+    SaveBuildScreen(BuilderScreen parent, CharacterClass defaultClass) {
         super(Text.literal("Save Build"));
         this.parent = parent;
         this.selectedClass = defaultClass;

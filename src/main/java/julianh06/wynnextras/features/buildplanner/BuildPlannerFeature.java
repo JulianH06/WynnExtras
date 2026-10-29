@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.buildplanner;
 
 import julianh06.wynnextras.annotations.WEModule;
 import julianh06.wynnextras.core.command.Command;
+import julianh06.wynnextras.features.buildplanner.config.ToolWorkspaceManager;
 import julianh06.wynnextras.features.buildplanner.data.ItemDatabase;
 import julianh06.wynnextras.wynncraft.state.CharacterClass;
 import julianh06.wynnextras.features.buildplanner.data.AbilityTreeDatabase;
@@ -25,8 +26,9 @@ public final class BuildPlannerFeature {
         return thread;
     });
 
-    private static final Command COMMAND = new Command(
-            "wynnbuilder", context -> openAfterChat(() -> open(null)));
+    private static final Command BUILDER_COMMAND = command("builder", ToolWorkspaceManager.Type.BUILDER);
+    private static final Command CRAFTER_COMMAND = command("crafter", ToolWorkspaceManager.Type.CRAFTER);
+    private static final Command ATLAS_COMMAND = command("atlas", ToolWorkspaceManager.Type.ATLAS);
 
     public BuildPlannerFeature() {
         ClientLifecycleEvents.CLIENT_STARTED.register(client ->
@@ -38,9 +40,18 @@ public final class BuildPlannerFeature {
         return 1;
     }
 
+    private static Command command(String name, ToolWorkspaceManager.Type type) {
+        return new Command(name, context -> openAfterChat(() -> open(null, type)));
+    }
+
     public static void open(Screen parent) {
         loadPlannerData();
         MinecraftClient.getInstance().setScreen(WorkspaceTabs.open(parent));
+    }
+
+    private static void open(Screen parent, ToolWorkspaceManager.Type type) {
+        loadPlannerData();
+        MinecraftClient.getInstance().setScreen(WorkspaceTabs.open(parent, type));
     }
 
     private static void loadPlannerData() {

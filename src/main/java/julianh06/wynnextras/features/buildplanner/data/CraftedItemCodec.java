@@ -46,7 +46,7 @@ public final class CraftedItemCodec {
                 craft.ingredients().stream().mapToInt(Integer::intValue).toArray(),
                 new int[]{craft.material1() - 1, craft.material2() - 1}, craft.speed());
         if ("consumable".equals(result.type())) {
-            throw new IllegalArgumentException("Consumables can be previewed in WynnCrafter, but cannot be equipped");
+            throw new IllegalArgumentException("Consumables can be previewed in Crafter, but cannot be equipped");
         }
         if (CACHE.size() >= 128) {
             CACHE.remove(CACHE.keySet().iterator().next());

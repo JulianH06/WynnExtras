@@ -19,7 +19,7 @@ final class SavedBuildsScreen extends PlannerScreen {
     private static final int PANEL_WIDTH = 430;
     private static final int ROW_HEIGHT = 25;
 
-    private final WynnBuilderScreen parent;
+    private final BuilderScreen parent;
     private final List<ThemedButton> rowButtons = new ArrayList<>();
     private List<SavedBuild> visibleBuilds = List.of();
     private CharacterClass filter;
@@ -28,7 +28,7 @@ final class SavedBuildsScreen extends PlannerScreen {
     private int scrollOffset;
     private String status = "";
 
-    SavedBuildsScreen(WynnBuilderScreen parent) {
+    SavedBuildsScreen(BuilderScreen parent) {
         super(Text.literal("Saved Builds"));
         this.parent = parent;
     }

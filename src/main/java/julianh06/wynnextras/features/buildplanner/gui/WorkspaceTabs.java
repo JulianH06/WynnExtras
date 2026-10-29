@@ -31,10 +31,15 @@ public final class WorkspaceTabs {
         var tab = workspace.activeTab();
         if (tab == null) return new EmptyWorkspaceScreen(parent, workspace.activeType());
         return switch (tab.type()) {
-            case BUILDER -> new WynnBuilderScreen(parent, tab.id());
-            case CRAFTER -> new WynnCrafterScreen(parent, tab.id());
-            case ATLAS -> new WynnAtlasScreen(parent, tab.id());
+            case BUILDER -> new BuilderScreen(parent, tab.id());
+            case CRAFTER -> new CrafterScreen(parent, tab.id());
+            case ATLAS -> new AtlasScreen(parent, tab.id());
         };
+    }
+
+    public static Screen open(Screen parent, ToolWorkspaceManager.Type type) {
+        ToolWorkspaceManager.getInstance().showType(type);
+        return open(parent);
     }
 
     static String builderId() {
@@ -43,7 +48,7 @@ public final class WorkspaceTabs {
         return builder == null ? workspace.add(ToolWorkspaceManager.Type.BUILDER) : builder.id();
     }
 
-    static void openCrafter(WynnBuilderScreen source, String slot, WynnItem current) {
+    static void openCrafter(BuilderScreen source, String slot, WynnItem current) {
         var workspace = ToolWorkspaceManager.getInstance();
         String id = workspace.add(ToolWorkspaceManager.Type.CRAFTER);
         String type = slot.startsWith("RING_") ? "ring"
@@ -61,7 +66,7 @@ public final class WorkspaceTabs {
             throw new IllegalStateException("The destination build was closed. Copy this craft into another build.");
         }
         workspace.select(target.buildId());
-        WynnBuilderScreen builder = new WynnBuilderScreen(parent, target.buildId());
+        BuilderScreen builder = new BuilderScreen(parent, target.buildId());
         MinecraftClient.getInstance().setScreen(builder);
         builder.equipFromTool(target.slot(), item);
     }
@@ -289,7 +294,7 @@ public final class WorkspaceTabs {
     }
 
     static String toolName(ToolWorkspaceManager.Type type) {
-        return switch (type) { case BUILDER -> "WynnBuilder"; case CRAFTER -> "WynnCrafter"; case ATLAS -> "WynnAtlas"; };
+        return switch (type) { case BUILDER -> "Builder"; case CRAFTER -> "Crafter"; case ATLAS -> "Atlas"; };
     }
 
     private static String shortToolName(ToolWorkspaceManager.Type type) {

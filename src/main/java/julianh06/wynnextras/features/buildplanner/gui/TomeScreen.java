@@ -45,7 +45,7 @@ public final class TomeScreen extends PlannerScreen {
     private static final Identifier TOME_ICONS =
             Identifier.of("wynnextras", "textures/gui/buildplanner/tomes.png");
 
-    private final WynnBuilderScreen parent;
+    private final BuilderScreen parent;
     private Slot selectingTome;
     private String selectingAspectSlot;
     private TextFieldWidget searchField;
@@ -54,7 +54,7 @@ public final class TomeScreen extends PlannerScreen {
     private int workspaceTicks;
     private final SmoothScroll resultScroll = new SmoothScroll();
 
-    TomeScreen(WynnBuilderScreen parent) {
+    TomeScreen(BuilderScreen parent) {
         super(Text.literal("Tomes & Aspects"));
         this.parent = parent;
     }

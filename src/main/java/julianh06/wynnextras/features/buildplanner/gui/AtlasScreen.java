@@ -25,7 +25,7 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
-final class WynnAtlasScreen extends PlannerScreen {
+final class AtlasScreen extends PlannerScreen {
     private static final int BODY_TOP = 89;
     private static final List<String> PROFESSIONS = List.of("ARMOURING", "TAILORING", "WEAPONSMITHING",
             "WOODWORKING", "JEWELING", "COOKING", "ALCHEMISM", "SCRIBING");
@@ -58,7 +58,7 @@ final class WynnAtlasScreen extends PlannerScreen {
     private ThemedButton use;
     private TextFieldWidget tabNameField;
 
-    WynnAtlasScreen(Screen parent, String tabId) {
+    AtlasScreen(Screen parent, String tabId) {
         super(Text.literal("Atlas"));
         this.parent = parent;
         this.tabId = tabId;
@@ -80,7 +80,7 @@ final class WynnAtlasScreen extends PlannerScreen {
         fixed(new ThemedButton(14, 60, 115, 20,
                 Text.literal(state.ingredients() ? "Item Searching" : "Ingredient Searching"),
                 () -> { state = AtlasState.defaults(!state.ingredients()); rebuild(true); }));
-        fixed(new ThemedButton(width - 130, 60, 116, 20, Text.literal("WynnAtlas"), () -> scroll.jump(0)));
+        fixed(new ThemedButton(width - 130, 60, 116, 20, Text.literal("Atlas"), () -> scroll.jump(0)));
         int leftHeight = state.ingredients() ? 278 : 204;
         var preliminary = AtlasPageLayout.arrange(width, leftHeight, 0);
         int rowHeight = preliminary.columnWidth() >= 360 ? 25 : 46;
