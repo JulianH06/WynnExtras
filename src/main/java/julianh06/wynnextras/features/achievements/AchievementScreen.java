@@ -2,7 +2,6 @@ package julianh06.wynnextras.features.achievements;
 
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.colors.CustomColor;
-import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.badges.BadgeCatalog;
 import julianh06.wynnextras.features.badges.BadgeProfile;
 import julianh06.wynnextras.features.badges.BadgeProfileData;
@@ -812,7 +811,7 @@ public class AchievementScreen extends WEScreen {
 
     private float smoothScroll(float current, float target, float tickDelta) {
         float diff = target - current;
-        if (Math.abs(diff) < SCROLL_SNAP || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) return target;
+        if (Math.abs(diff) < SCROLL_SNAP) return target;
         return current + diff * SCROLL_SPEED * tickDelta;
     }
 

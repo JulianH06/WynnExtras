@@ -138,7 +138,7 @@ public class LootrunLootPoolPage extends PageWidget {
         float snapValue = 0.5f;
         float speed = 0.3f;
         float hDiff = hScrollTarget - hScrollOffset;
-        if (Math.abs(hDiff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) hScrollOffset = hScrollTarget;
+        if (Math.abs(hDiff) < snapValue) hScrollOffset = hScrollTarget;
         else hScrollOffset += hDiff * speed * tickDelta;
 
         int widgetY = 175;
@@ -429,7 +429,7 @@ public class LootrunLootPoolPage extends PageWidget {
                 float snapValue = 0.5f;
                 float speed = 0.3f;
                 float diff = (targetOffset - actualOffset);
-                if(Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffset = targetOffset;
+                if(Math.abs(diff) < snapValue) actualOffset = targetOffset;
                 else actualOffset += diff * speed * tickDelta;
 
                 float contentTopPadding = 80f;

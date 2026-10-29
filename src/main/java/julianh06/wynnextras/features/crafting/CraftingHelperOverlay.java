@@ -1289,7 +1289,7 @@ public class CraftingHelperOverlay extends WEMenuExtension {
 
             float speed = 0.3f;
             float diff = (targetOffset - actualOffset);
-            if (Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle)
+            if (Math.abs(diff) < snapValue)
                 actualOffset = targetOffset;
             else actualOffset += diff * speed * tickDelta;
 

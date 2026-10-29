@@ -6,6 +6,7 @@ import julianh06.wynnextras.features.waypoints.data.WaypointCategory;
 import julianh06.wynnextras.features.waypoints.data.WaypointData;
 import julianh06.wynnextras.features.waypoints.data.WaypointPackage;
 import julianh06.wynnextras.utils.UI.ColorPickerWidget;
+import julianh06.wynnextras.utils.UI.SmoothScroll;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.UIUtils;
@@ -2027,12 +2028,11 @@ public class WaypointEditModeUI extends WEScreen {
 
         float target = dropdownTargetScroll(dropdown);
         float actual = dropdownScroll(dropdown);
-        float diff = target - actual;
-        if (Math.abs(diff) < 0.5f || !WynnExtrasConfig.INSTANCE.smoothScrollToggle || isDropdownScrollbarDragging(dropdown)) {
+        if (isDropdownScrollbarDragging(dropdown)) {
             setDropdownActualScroll(dropdown, target);
             return;
         }
-        setDropdownActualScroll(dropdown, actual + diff * 0.3f * tickDelta);
+        setDropdownActualScroll(dropdown, SmoothScroll.interpolate(actual, target, tickDelta));
     }
 
     private void setDropdownActualScroll(Dropdown dropdown, float value) {

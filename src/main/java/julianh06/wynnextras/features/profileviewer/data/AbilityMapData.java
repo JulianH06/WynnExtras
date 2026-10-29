@@ -50,6 +50,7 @@ public class AbilityMapData {
             public Object icon; // String or Icon
             public int page;
             public String id; // only for abilities
+            public List<List<String>> paths; // connector endpoint pairs
         }
     }
 

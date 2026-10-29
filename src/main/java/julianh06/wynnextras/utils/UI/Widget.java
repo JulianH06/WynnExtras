@@ -22,6 +22,7 @@ public abstract class Widget {
     protected Consumer<Widget> onBlurCallback = null;
 
     protected UIUtils ui;
+    private double uiScaleFactor = Double.NaN;
 
     public Widget(int x, int y, int width, int height) { setBounds(x, y, width, height); }
     public Widget() { setBounds(0, 0, 0, 0); }
@@ -46,6 +47,14 @@ public abstract class Widget {
     public int getY() { return y; }
     public int getWidth() { return width; }
     public int getHeight() { return height; }
+
+    public void setUiScaleFactor(double uiScaleFactor) {
+        this.uiScaleFactor = uiScaleFactor;
+    }
+
+    double uiScaleFactor(double fallback) {
+        return Double.isNaN(uiScaleFactor) ? fallback : uiScaleFactor;
+    }
 
     public boolean isVisible() { return visible; }
     public void setVisible(boolean visible) { this.visible = visible; }

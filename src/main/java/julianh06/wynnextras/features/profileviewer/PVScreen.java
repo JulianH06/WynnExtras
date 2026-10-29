@@ -350,7 +350,7 @@ public class PVScreen extends WEScreen {
         float snapValue = 0.5f;
         float speed = 0.3f;
         float diff = targetScrollOffset - actualScrollOffset;
-        if (Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle || scrollbarHeld) {
+        if (Math.abs(diff) < snapValue || scrollbarHeld) {
             actualScrollOffset = targetScrollOffset;
         } else {
             actualScrollOffset += diff * speed * delta;

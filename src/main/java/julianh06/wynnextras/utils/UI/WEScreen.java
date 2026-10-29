@@ -130,8 +130,10 @@ public abstract class WEScreen extends Screen {
         drawContent(context, mx, my, delta);
 
         for (Widget w : rootWidgets) {
+            ui.updateContext(context, w.uiScaleFactor(scaleFactor), xStart, yStart);
             w.draw(context, mx, my, delta, ui);
         }
+        ui.updateContext(context, scaleFactor, xStart, yStart);
 
         drawForeground(context, mx, my, delta);
 
@@ -173,7 +175,7 @@ public abstract class WEScreen extends Screen {
         }
 
         setFocusedWidget(null);
-        return super.mouseClicked(click, doubleClick);
+        return super.mouseClicked(new Click(mouseX, mouseY, click.buttonInfo()), doubleClick);
     }
 
     @Override public boolean mouseReleased(Click click) {
@@ -184,7 +186,7 @@ public abstract class WEScreen extends Screen {
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             if (rootWidgets.get(i).mouseReleased(mouseX, mouseY, button)) return true;
         }
-        return super.mouseReleased(click);
+        return super.mouseReleased(new Click(mouseX, mouseY, click.buttonInfo()));
     }
 
 
@@ -195,12 +197,25 @@ public abstract class WEScreen extends Screen {
         int button = click.button();
 
         if(ui == null) return false;
-        if (focusedWidget != null && focusedWidget.mouseDragged(mouseX, mouseY, button, dx, dy)) return true;
+        double logicalDx = dx / matrixScale;
+        double logicalDy = dy / matrixScale;
+        if (focusedWidget != null && focusedWidget.mouseDragged(mouseX, mouseY, button, logicalDx, logicalDy)) return true;
         for (int i = rootWidgets.size() - 1; i >= 0; i--) {
             Widget w = rootWidgets.get(i);
-            if (w.mouseDragged(mouseX, mouseY, button, dx, dy)) return true;
+            if (w.mouseDragged(mouseX, mouseY, button, logicalDx, logicalDy)) return true;
         }
-        return super.mouseDragged(click, dx, dy);
+        return super.mouseDragged(new Click(mouseX, mouseY, click.buttonInfo()), logicalDx, logicalDy);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        double logicalX = mouseX / matrixScale;
+        double logicalY = mouseY / matrixScale;
+        double amount = verticalAmount != 0 ? verticalAmount : horizontalAmount;
+        for (int i = rootWidgets.size() - 1; i >= 0; i--) {
+            if (rootWidgets.get(i).mouseScrolled(logicalX, logicalY, amount)) return true;
+        }
+        return super.mouseScrolled(logicalX, logicalY, horizontalAmount, verticalAmount);
     }
 
 

@@ -5,6 +5,7 @@ import julianh06.wynnextras.features.crafting.model.*;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.features.crafting.data.CraftableType;
 import julianh06.wynnextras.features.crafting.data.WynnDataService;
+import julianh06.wynnextras.wynncraft.item.WynncraftPowders;
 import julianh06.wynnextras.utils.CraftingUtils;
 import org.joml.Vector2d;
 import org.joml.Vector2i;
@@ -224,7 +225,7 @@ public class Recipe {
 
         for (IngredientInfo ingredient : ingredients) {
             if (ingredient == null) continue;
-            WynnDataService.PowderData powder = WynnDataService.getInstance().getPowder(ingredient.name());
+            WynncraftPowders.Powder powder = WynnDataService.getInstance().getPowder(ingredient.name());
             if (powder == null) continue;
             if (conversions[powder.element()] == 0) order.add(powder.element());
             conversions[powder.element()] += powder.conversion() / 200.0;

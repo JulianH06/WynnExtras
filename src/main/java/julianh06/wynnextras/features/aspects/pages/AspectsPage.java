@@ -920,7 +920,7 @@ public class AspectsPage extends PageWidget {
             float snapValue = 0.5f;
             float speed = 0.3f;
             float diff = (targetOffset - actualOffset);
-            if(Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffset = targetOffset;
+            if(Math.abs(diff) < snapValue) actualOffset = targetOffset;
             else actualOffset += diff * speed * tickDelta;
 
             int aspectY = y + 80 - (int) actualOffset;

@@ -26,6 +26,7 @@ public class TextInputWidget extends Widget {
     protected int selectionAnchor = 0;
     protected int horizontalTextOffset = 0;
     protected boolean wrapText = false;
+    protected boolean centered = false;
     protected int wrappedLineGap = 3;
     protected boolean draggingSelection = false;
 
@@ -43,6 +44,7 @@ public class TextInputWidget extends Widget {
     protected float textScale;
     protected int maxLength = -1;
     protected Predicate<Character> characterFilter = character -> true;
+    protected Predicate<String> inputPredicate = value -> true;
     protected Consumer<String> onChange = null;
     protected String disabledTooltip = "This field cannot be changed.";
 
@@ -77,7 +79,10 @@ public class TextInputWidget extends Widget {
         int textHeight = (int) Math.ceil(Math.max(height, font.fontHeight * textScale));
 
         if (input.isEmpty() && !isFocused()) {
-            ui.drawText(placeholder, textX, textY, placeholderColor, textScale);
+            int placeholderX = centered
+                    ? textX + Math.max(0, textWidth - textWidth(placeholder)) / 2
+                    : textX;
+            ui.drawText(placeholder, placeholderX, textY, placeholderColor, textScale);
         } else if (wrapText) {
             clampCursorAndSelection();
             horizontalTextOffset = 0;
@@ -86,16 +91,17 @@ public class TextInputWidget extends Widget {
             clampCursorAndSelection();
             ensureCursorVisible(textWidth);
             ctx.enableScissor((int) ui.sx(textX), (int) ui.sy(y), (int) ui.sx(textX + textWidth), (int) ui.sy(y + textHeight));
+            int alignedTextX = alignedTextX(textX, textWidth);
 
             int selectionStart = getSelectionStart();
             int selectionEnd = getSelectionEnd();
             if (isFocused() && selectionStart != selectionEnd) {
-                int startX = textX + textWidth(input.substring(0, selectionStart)) - horizontalTextOffset;
-                int endX = textX + textWidth(input.substring(0, selectionEnd)) - horizontalTextOffset;
+                int startX = alignedTextX + textWidth(input.substring(0, selectionStart)) - horizontalTextOffset;
+                int endX = alignedTextX + textWidth(input.substring(0, selectionEnd)) - horizontalTextOffset;
                 ui.drawRect(startX, y + 3, Math.max(1, endX - startX), Math.max(1, height - 6), selectionColor);
             }
 
-            drawInputText(ctx, input, textX - horizontalTextOffset, textY);
+            drawInputText(ctx, input, alignedTextX - horizontalTextOffset, textY);
 
             long now = System.currentTimeMillis();
             if (now - lastBlink > 500) {
@@ -104,7 +110,7 @@ public class TextInputWidget extends Widget {
             }
 
             if ((blinkToggle || input.isEmpty()) && isFocused()) {
-                int cursorX = textX + textWidth(input.substring(0, cursorPos)) - horizontalTextOffset;
+                int cursorX = alignedTextX + textWidth(input.substring(0, cursorPos)) - horizontalTextOffset;
                 cursorX = Math.clamp(cursorX, textX + 1, textX + textWidth - 1);
                 ui.drawLine(cursorX, textY - 2 * textScale, cursorX, textY + 10 * textScale, Math.max(1f, 0.75f * textScale), cursorColor);
             }
@@ -359,6 +365,10 @@ public class TextInputWidget extends Widget {
         this.wrapText = wrapText;
         horizontalTextOffset = 0;
     }
+    public void setCentered(boolean centered) {
+        this.centered = centered;
+        horizontalTextOffset = 0;
+    }
     public void setMaxLength(int maxLength) {
         this.maxLength = maxLength;
         if (maxLength >= 0 && input.length() > maxLength) {
@@ -379,6 +389,9 @@ public class TextInputWidget extends Widget {
             notifyChanged();
         }
     }
+    public void setInputPredicate(Predicate<String> inputPredicate) {
+        this.inputPredicate = inputPredicate == null ? value -> true : inputPredicate;
+    }
     public void setOnChange(Consumer<String> onChange) { this.onChange = onChange; }
     public void setDisabledTooltip(String disabledTooltip) { this.disabledTooltip = disabledTooltip; }
 
@@ -391,7 +404,9 @@ public class TextInputWidget extends Widget {
         int available = maxLength < 0 ? clean.length() : maxLength - (input.length() - (selectionEnd - selectionStart));
         if (available <= 0) return;
         if (clean.length() > available) clean = clean.substring(0, available);
-        input = input.substring(0, selectionStart) + clean + input.substring(selectionEnd);
+        String changed = input.substring(0, selectionStart) + clean + input.substring(selectionEnd);
+        if (!inputPredicate.test(changed)) return;
+        input = changed;
         cursorPos = selectionStart + clean.length();
         selectionAnchor = cursorPos;
         ensureCursorVisible(Math.max(0, width - textXOffset * 2));
@@ -461,8 +476,9 @@ public class TextInputWidget extends Widget {
 
     protected int getCursorIndexAt(double mouseX, double mouseY) {
         if (wrapText) return getWrappedCursorIndexAt(mouseX, mouseY);
+        int availableWidth = Math.max(0, width - textXOffset * 2);
         int logicalMouseX = (int) Math.round((mouseX - ui.getXStart()) * ui.getScaleFactor());
-        int localTextX = logicalMouseX - (x + textXOffset) + horizontalTextOffset;
+        int localTextX = logicalMouseX - alignedTextX(x + textXOffset, availableWidth) + horizontalTextOffset;
         if (localTextX <= 0) return 0;
         for (int i = 1; i <= input.length(); i++) {
             int previousWidth = textWidth(input.substring(0, i - 1));
@@ -470,6 +486,11 @@ public class TextInputWidget extends Widget {
             if (localTextX < previousWidth + (currentWidth - previousWidth) / 2) return i - 1;
         }
         return input.length();
+    }
+
+    private int alignedTextX(int textX, int availableWidth) {
+        if (!centered || horizontalTextOffset > 0) return textX;
+        return textX + Math.max(0, availableWidth - textWidth(input)) / 2;
     }
 
     protected void ensureCursorVisible(int textWidth) {

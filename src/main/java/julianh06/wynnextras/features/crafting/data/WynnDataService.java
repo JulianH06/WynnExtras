@@ -9,6 +9,7 @@ import com.google.gson.GsonBuilder;
 import julianh06.wynnextras.features.crafting.model.*;
 import julianh06.wynnextras.utils.Pair;
 import julianh06.wynnextras.utils.enums.WEProfessionType;
+import julianh06.wynnextras.wynncraft.item.WynncraftPowders;
 import julianh06.wynnextras.core.WynnExtras;
 import net.fabricmc.loader.api.FabricLoader;
 import org.joml.Vector2i;
@@ -43,13 +44,14 @@ public final class WynnDataService {
     }
 
     public record Material(String item, int amount) {}
-    public record PowderData(int element, int tier, int damageMinimum, int damageMaximum,
-                             int conversion, int defencePlus, int defenceMinus) {}
-
     public record StatValue(Double minimum, Double raw, Double maximum, Double value) {
         public boolean isRange() {
             return minimum != null && maximum != null;
         }
+    }
+
+    public record ItemIconData(String id, String model, int customModelData) {
+        private static final ItemIconData EMPTY = new ItemIconData("", "", 0);
     }
 
     public record ItemData(
@@ -64,12 +66,20 @@ public final class WynnDataService {
             Integer powderSlots,
             Map<String, String> requirements,
             Map<String, StatValue> baseStats,
-            Map<String, StatValue> identifications
+            Map<String, StatValue> identifications,
+            Map<String, String> majorIds,
+            String lore,
+            String emblem,
+            ItemIconData icon
     ) {
         public ItemData {
             requirements = Map.copyOf(requirements);
             baseStats = Map.copyOf(baseStats);
             identifications = Map.copyOf(identifications);
+            majorIds = Map.copyOf(majorIds);
+            lore = lore == null ? "" : lore;
+            emblem = emblem == null ? "" : emblem;
+            icon = icon == null ? ItemIconData.EMPTY : icon;
         }
     }
 
@@ -149,20 +159,6 @@ public final class WynnDataService {
     private static final Gson CACHE_GSON = new GsonBuilder().create();
     // WynnBuilder synthesizes these IDs in js/load_ing.js; no JSON mapping exists.
     private static final int FIRST_POWDER_INGREDIENT_ID = 4001;
-    private static final int POWDER_ELEMENTS = 5;
-    private static final int POWDER_TIERS = 7;
-    private static final String[] POWDER_ELEMENT_NAMES = {"Earth", "Thunder", "Water", "Fire", "Air"};
-    private static final String[] POWDER_TIER_NAMES = {"I", "II", "III", "IV", "V", "VI", "VII"};
-    private static final int[] POWDER_DURABILITY = {-35, -52, -70, -91, -112, -133, -154};
-    private static final int[] POWDER_REQUIREMENT = {0, 0, 10, 20, 28, 36, 44};
-    // The API has no powder records. These are WynnBuilder's current crafted-powder protocol values.
-    private static final int[][] POWDER_STATS = {
-            {4,5,17,2,1}, {6,7,21,5,2}, {7,9,25,9,3}, {8,9,31,14,4}, {9,11,38,22,7}, {11,12,46,29,7}, {12,14,52,37,12},
-            {1,8,9,2,1}, {1,12,11,4,1}, {2,14,13,8,2}, {2,15,17,13,3}, {3,17,22,20,5}, {4,19,28,28,6}, {5,21,32,36,11},
-            {3,4,13,3,1}, {5,6,15,6,1}, {6,8,17,11,3}, {7,8,21,16,4}, {8,10,26,23,6}, {10,13,32,32,10}, {11,15,38,40,15},
-            {2,5,14,3,1}, {4,7,16,6,1}, {5,9,19,10,2}, {6,9,24,15,3}, {7,11,30,22,5}, {9,14,37,31,9}, {10,16,44,39,14},
-            {2,6,11,3,1}, {3,9,14,6,2}, {4,11,17,10,3}, {5,11,22,16,5}, {7,12,28,23,7}, {8,15,35,30,8}, {9,17,42,38,13}
-    };
     private static final WynnDataService INSTANCE = new WynnDataService();
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -174,6 +170,7 @@ public final class WynnDataService {
     private volatile WynnDataSnapshot data;
     private volatile List<String> ingredientNames = List.of();
     private CompletableFuture<WynnDataSnapshot> initialization;
+    private CompletableFuture<List<ItemData>> itemInitialization;
 
     private WynnDataService() {}
 
@@ -197,7 +194,8 @@ public final class WynnDataService {
         }
 
         CompletableFuture<String> recipes = fetch("Wynncraft recipes", RECIPES_URI);
-        CompletableFuture<String> items = fetch("Wynncraft items", ITEMS_URI);
+        CompletableFuture<ParsedItems> items = fetch("Wynncraft items", ITEMS_URI).thenApply(WynnDataService::parseItemPayload);
+        itemInitialization = items.thenApply(parsed -> parsed.catalog().items());
         CompletableFuture<String> ingredientMap = fetch("WynnBuilder ingredient map", INGREDIENT_MAP_URI);
         CompletableFuture<String> wynnBuilderRecipes = fetch("WynnBuilder recipes", WYNNBUILDER_RECIPES_URI);
 
@@ -222,7 +220,7 @@ public final class WynnDataService {
                             CACHE_SCHEMA_VERSION,
                             System.currentTimeMillis(),
                             recipes.join(),
-                            items.join(),
+                            items.join().json(),
                             ingredientMap.join(),
                             wynnBuilderRecipes.join()));
                     WynnExtras.LOGGER.info("Loaded " + loaded.items().size() + " items, "
@@ -231,6 +229,11 @@ public final class WynnDataService {
                     return loaded;
                 });
         return initialization;
+    }
+
+    public synchronized CompletableFuture<List<ItemData>> initializeItems() {
+        if (itemInitialization == null) initialize();
+        return itemInitialization;
     }
 
     private void setLoadedData(WynnDataSnapshot loaded) {
@@ -360,12 +363,8 @@ public final class WynnDataService {
         return ingredient != null ? ingredient : createPowderIngredient(name);
     }
 
-    public PowderData getPowder(String name) {
-        int index = powderIndex(name);
-        if (index < 0) return null;
-        int[] stats = POWDER_STATS[index];
-        return new PowderData(index / POWDER_TIERS, index % POWDER_TIERS + 1,
-                stats[0], stats[1], stats[2], stats[3], stats[4]);
+    public WynncraftPowders.Powder getPowder(String name) {
+        return WynncraftPowders.fromName(name);
     }
 
     public String getIngredientNameByWynnBuilderId(int id) {
@@ -374,9 +373,8 @@ public final class WynnDataService {
         String name = current.ingredientNamesByWynnBuilderId().get(id);
         if (name != null) return name;
         int powderIndex = id - FIRST_POWDER_INGREDIENT_ID;
-        if (powderIndex < 0 || powderIndex >= POWDER_ELEMENTS * POWDER_TIERS) return null;
-        return POWDER_ELEMENT_NAMES[powderIndex / POWDER_TIERS] + " Powder "
-                + POWDER_TIER_NAMES[powderIndex % POWDER_TIERS];
+        WynncraftPowders.Powder powder = WynncraftPowders.fromId(powderIndex);
+        return powder == null ? null : powder.name();
     }
 
     public List<String> getIngredientNames() {
@@ -386,9 +384,9 @@ public final class WynnDataService {
     private static List<String> buildIngredientNames(WynnDataSnapshot loaded) {
         if (loaded == null) return List.of();
         List<String> names = new ArrayList<>(loaded.ingredientsByName().keySet());
-        for (int element = 0; element < POWDER_ELEMENTS; element++) {
-            for (String tier : POWDER_TIER_NAMES) {
-                names.add(POWDER_ELEMENT_NAMES[element] + " Powder " + tier);
+        for (int element = 0; element < WynncraftPowders.ELEMENT_COUNT; element++) {
+            for (int tier = 1; tier <= WynncraftPowders.TIER_COUNT; tier++) {
+                names.add(WynncraftPowders.get(element, tier).name());
             }
         }
         return names.stream()
@@ -425,26 +423,29 @@ public final class WynnDataService {
 
     static WynnDataSnapshot buildSnapshot(String recipesJson, String itemsJson, String ingredientMapJson,
                                           String wynnBuilderRecipesJson) {
+        return buildSnapshot(recipesJson, parseItemPayload(itemsJson), ingredientMapJson, wynnBuilderRecipesJson);
+    }
+
+    private static WynnDataSnapshot buildSnapshot(String recipesJson, ParsedItems parsedItems,
+            String ingredientMapJson, String wynnBuilderRecipesJson) {
         Map<String, Integer> ingredientIds = parseIdMap(ingredientMapJson, "ingredient");
         Map<String, Integer> recipeIds = parseWynnBuilderRecipeIds(wynnBuilderRecipesJson);
         validateUniqueIds(ingredientIds, "ingredient");
         validateUniqueIds(recipeIds, "recipe");
-
-        JsonElement itemRoot = JsonParser.parseString(itemsJson);
-        if (!itemRoot.isJsonArray() || itemRoot.getAsJsonArray().isEmpty()) {
-            throw new IllegalStateException("Wynncraft item response is not a non-empty array");
-        }
-        JsonArray itemArray = itemRoot.getAsJsonArray();
-        ItemCatalog itemCatalog = parseItems(itemArray);
+        JsonArray itemArray = parsedItems.root();
+        ItemCatalog itemCatalog = parsedItems.catalog();
         IngredientCatalog ingredientCatalog = parseIngredients(itemArray);
         Map<Integer, String> ingredientNamesById = new HashMap<>();
         for (Map.Entry<String, IngredientInfo> entry : ingredientCatalog.byInternalName().entrySet()) {
             Integer id = ingredientIds.get(entry.getKey());
             if (id == null) {
-                throw new IllegalStateException("Missing WynnBuilder ingredient ID for " + entry.getKey());
+                WynnExtras.LOGGER.warn("Skipping unmapped Wynncraft ingredient {}.", entry.getKey());
+                continue;
             }
             if (id >= 4000) {
-                throw new IllegalStateException("WynnBuilder ingredient ID overlaps synthetic IDs: " + id);
+                WynnExtras.LOGGER.warn("Skipping Wynncraft ingredient {} with reserved WynnBuilder ID {}.",
+                        entry.getKey(), id);
+                continue;
             }
             ingredientNamesById.put(id, entry.getValue().name());
         }
@@ -456,39 +457,45 @@ public final class WynnDataService {
             throw new IllegalStateException("Wynncraft recipe response is not a non-empty array");
         }
         for (JsonElement element : root.getAsJsonArray()) {
-            JsonObject object = requiredObject(element, "recipe");
-            String internalName = requiredString(object, "internalName");
-            String mappingName = toWynnBuilderRecipeName(internalName);
-            Integer id = recipeIds.get(mappingName);
-            if (id == null) throw new IllegalStateException("Missing WynnBuilder recipe ID for " + mappingName);
+            try {
+                JsonObject object = requiredObject(element, "recipe");
+                String internalName = requiredString(object, "internalName");
+                String mappingName = toWynnBuilderRecipeName(internalName);
+                Integer id = recipeIds.get(mappingName);
+                if (id == null) {
+                    WynnExtras.LOGGER.warn("Skipping unmapped Wynncraft recipe {}.", mappingName);
+                    continue;
+                }
 
-            CraftableType type = parseCraftableType(requiredString(object, "type"));
-            WEProfessionType profession = parseProfession(requiredString(object, "skill"));
-            Vector2i level = range(object, "level", 1);
-            Vector2i durability = type.isConsumable() ? optionalRange(object, "durability", 1000)
-                    : range(object, "durability", 1000);
-            Vector2i healthOrDamage = rangeOrZero(object, "healthOrDamage", 1);
-            Vector2i duration = type.isConsumable() ? range(object, "duration", 1)
-                    : optionalRange(object, "duration", 1);
-            Vector2i basicDuration = type.isConsumable() ? range(object, "basicDuration", 1)
-                    : optionalRange(object, "basicDuration", 1);
-            List<Material> materials = parseMaterials(object);
-            if (materials.size() != 2) throw new IllegalStateException(mappingName + " does not have exactly two materials");
+                CraftableType type = parseCraftableType(requiredString(object, "type"));
+                WEProfessionType profession = parseProfession(requiredString(object, "skill"));
+                Vector2i level = range(object, "level", 1);
+                Vector2i durability = type.isConsumable() ? optionalRange(object, "durability", 1000)
+                        : range(object, "durability", 1000);
+                Vector2i healthOrDamage = rangeOrZero(object, "healthOrDamage", 1);
+                Vector2i duration = type.isConsumable() ? range(object, "duration", 1)
+                        : optionalRange(object, "duration", 1);
+                Vector2i basicDuration = type.isConsumable() ? range(object, "basicDuration", 1)
+                        : optionalRange(object, "basicDuration", 1);
+                List<Material> materials = parseMaterials(object);
+                if (materials.size() != 2) throw new IllegalStateException(mappingName + " does not have exactly two materials");
 
-            RecipeData recipe = new RecipeData(type, profession, materials, healthOrDamage, durability,
-                    duration, basicDuration, level, mappingName, id);
-            RecipeData duplicateRecipe = recipesByType.computeIfAbsent(type, ignored -> new HashMap<>())
-                    .put(levelKey(level.x, level.y), recipe);
-            if (duplicateRecipe != null) {
-                throw new IllegalStateException("Duplicate Wynncraft recipe for " + type + " " + levelKey(level.x, level.y));
-            }
-            if (recipesById.put(id, recipe) != null) {
-                throw new IllegalStateException("Duplicate WynnBuilder recipe ID " + id);
+                RecipeData recipe = new RecipeData(type, profession, materials, healthOrDamage, durability,
+                        duration, basicDuration, level, mappingName, id);
+                RecipeData duplicateRecipe = recipesByType.computeIfAbsent(type, ignored -> new HashMap<>())
+                        .putIfAbsent(levelKey(level.x, level.y), recipe);
+                if (duplicateRecipe != null) throw new IllegalStateException("Duplicate Wynncraft recipe for " + type);
+                if (recipesById.putIfAbsent(id, recipe) != null) {
+                    recipesByType.get(type).remove(levelKey(level.x, level.y), recipe);
+                    throw new IllegalStateException("Duplicate WynnBuilder recipe ID " + id);
+                }
+            } catch (RuntimeException exception) {
+                WynnExtras.LOGGER.warn("Skipping malformed Wynncraft recipe entry.", exception);
             }
         }
         if (recipesById.size() != recipeIds.size()) {
-            throw new IllegalStateException("Recipe API/map mismatch: API resolved " + recipesById.size()
-                    + " of " + recipeIds.size() + " WynnBuilder recipes");
+            WynnExtras.LOGGER.warn("Recipe API/map mismatch: resolved {} of {} WynnBuilder recipes.",
+                    recipesById.size(), recipeIds.size());
         }
 
         return new WynnDataSnapshot(itemCatalog.items(), itemCatalog.byDisplayName(), itemCatalog.byInternalName(),
@@ -499,19 +506,34 @@ public final class WynnDataService {
     private record ItemCatalog(List<ItemData> items, Map<String, List<ItemData>> byDisplayName,
                                Map<String, List<ItemData>> byInternalName) {}
 
+    private record ParsedItems(String json, JsonArray root, ItemCatalog catalog) {}
+
     private record IngredientCatalog(Map<String, IngredientInfo> byDisplayName,
                                      Map<String, IngredientInfo> byInternalName) {}
+
+    private static ParsedItems parseItemPayload(String json) {
+        JsonElement root = JsonParser.parseString(json);
+        if (!root.isJsonArray() || root.getAsJsonArray().isEmpty()) {
+            throw new IllegalStateException("Wynncraft item response is not a non-empty array");
+        }
+        JsonArray items = root.getAsJsonArray();
+        return new ParsedItems(json, items, parseItems(items));
+    }
 
     private static ItemCatalog parseItems(JsonArray root) {
         List<ItemData> items = new ArrayList<>();
         Map<String, List<ItemData>> byDisplayName = new HashMap<>();
         Map<String, List<ItemData>> byInternalName = new HashMap<>();
         for (JsonElement element : root) {
-            JsonObject object = requiredObject(element, "item");
-            ItemData item = parseItem(object);
-            items.add(item);
-            byDisplayName.computeIfAbsent(normalizeName(item.displayName()), ignored -> new ArrayList<>()).add(item);
-            byInternalName.computeIfAbsent(normalizeName(item.internalName()), ignored -> new ArrayList<>()).add(item);
+            try {
+                JsonObject object = requiredObject(element, "item");
+                ItemData item = parseItem(object);
+                items.add(item);
+                byDisplayName.computeIfAbsent(normalizeName(item.displayName()), ignored -> new ArrayList<>()).add(item);
+                byInternalName.computeIfAbsent(normalizeName(item.internalName()), ignored -> new ArrayList<>()).add(item);
+            } catch (RuntimeException exception) {
+                WynnExtras.LOGGER.warn("Skipping malformed Wynncraft item entry.", exception);
+            }
         }
         return new ItemCatalog(List.copyOf(items), immutableListMap(byDisplayName), immutableListMap(byInternalName));
     }
@@ -524,13 +546,16 @@ public final class WynnDataService {
                 optionalString(object, "restriction"), optionalString(object, "dropRestriction"),
                 optionalString(object, "attackSpeed"), optionalInt(object, "powderSlots"),
                 parseScalarMap(object.get("requirements")), parseStatMap(object.get("base")),
-                parseStatMap(object.get("identifications")));
+                parseStatMap(object.get("identifications")), parseTextMap(object.get("majorIds")),
+                cleanItemText(optionalString(object, "lore")), optionalString(object, "emblem"),
+                parseItemIcon(object.get("icon")));
     }
 
     private static IngredientCatalog parseIngredients(JsonArray root) {
         Map<String, IngredientInfo> byDisplayName = new HashMap<>();
         Map<String, IngredientInfo> byInternalName = new HashMap<>();
         for (JsonElement element : root) {
+            try {
             JsonObject object = requiredObject(element, "item");
             if (!"ingredient".equals(optionalString(object, "type"))) continue;
             String name = requiredString(object, "displayName");
@@ -578,11 +603,16 @@ public final class WynnDataService {
                     null, List.copyOf(professions), skillRequirements, Map.copyOf(positionModifiers), List.of(),
                     requiredInt(consumable, "duration"), requiredInt(consumable, "charges"),
                     requiredInt(itemOnly, "durabilityModifier") / 1000, List.copyOf(identifications));
-            if (byDisplayName.put(name, ingredient) != null) {
+            if (byDisplayName.containsKey(name)) {
                 throw new IllegalStateException("Duplicate ingredient display name " + name);
             }
-            if (byInternalName.put(internalName, ingredient) != null) {
+            if (byInternalName.containsKey(internalName)) {
                 throw new IllegalStateException("Duplicate ingredient internal name " + internalName);
+            }
+            byDisplayName.put(name, ingredient);
+            byInternalName.put(internalName, ingredient);
+            } catch (RuntimeException exception) {
+                WynnExtras.LOGGER.warn("Skipping malformed Wynncraft ingredient entry.", exception);
             }
         }
         if (byDisplayName.isEmpty()) throw new IllegalStateException("Wynncraft API returned no ingredients");
@@ -664,13 +694,11 @@ public final class WynnDataService {
     }
 
     private static IngredientInfo createPowderIngredient(String name) {
-        int index = powderIndex(name);
-        if (index < 0) return null;
-        int element = index / POWDER_TIERS;
-        int tier = index % POWDER_TIERS;
+        WynncraftPowders.Powder powder = WynncraftPowders.fromName(name);
+        if (powder == null) return null;
         List<Pair<Skill, Integer>> requirements = new ArrayList<>();
         for (Skill skill : Skill.values()) {
-            requirements.add(new Pair<>(skill, skill.ordinal() == element ? POWDER_REQUIREMENT[tier] : 0));
+            requirements.add(new Pair<>(skill, skill.ordinal() == powder.element() ? powder.requirement() : 0));
         }
         Map<IngredientPosition, Integer> positions = new EnumMap<>(IngredientPosition.class);
         for (IngredientPosition position : IngredientPosition.values()) positions.put(position, 0);
@@ -678,19 +706,7 @@ public final class WynnDataService {
                 List.of(WEProfessionType.ARMOURING, WEProfessionType.TAILORING, WEProfessionType.WEAPONSMITHING,
                         WEProfessionType.WOODWORKING, WEProfessionType.JEWELING),
                 List.copyOf(requirements), Map.copyOf(positions), List.of(), 0, 0,
-                POWDER_DURABILITY[tier], List.of());
-    }
-
-    private static int powderIndex(String name) {
-        if (name == null) return -1;
-        for (int element = 0; element < POWDER_ELEMENT_NAMES.length; element++) {
-            for (int tier = 0; tier < POWDER_TIER_NAMES.length; tier++) {
-                if ((POWDER_ELEMENT_NAMES[element] + " Powder " + POWDER_TIER_NAMES[tier]).equals(name)) {
-                    return element * POWDER_TIERS + tier;
-                }
-            }
-        }
-        return -1;
+                (int) powder.durability(), List.of());
     }
 
     private static Vector2i range(JsonObject parent, String field, int divisor) {
@@ -755,6 +771,48 @@ public final class WynnDataService {
             if (value != null && value.isJsonPrimitive()) result.put(entry.getKey(), value.getAsString());
         }
         return Map.copyOf(result);
+    }
+
+    private static Map<String, String> parseTextMap(JsonElement element) {
+        if (element == null || element.isJsonNull()) return Map.of();
+        JsonObject object = requiredObject(element, "text map");
+        Map<String, String> result = new HashMap<>();
+        for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
+            if (entry.getValue().isJsonPrimitive()) {
+                result.put(entry.getKey(), cleanItemText(entry.getValue().getAsString()));
+            }
+        }
+        return Map.copyOf(result);
+    }
+
+    private static ItemIconData parseItemIcon(JsonElement element) {
+        if (element == null || !element.isJsonObject()) return ItemIconData.EMPTY;
+        JsonElement valueElement = element.getAsJsonObject().get("value");
+        if (valueElement == null || !valueElement.isJsonObject()) return ItemIconData.EMPTY;
+        JsonObject value = valueElement.getAsJsonObject();
+        int customModelData = 0;
+        JsonElement modelDataElement = value.get("customModelData");
+        if (modelDataElement != null && modelDataElement.isJsonObject()) {
+            JsonElement rangeDispatch = modelDataElement.getAsJsonObject().get("rangeDispatch");
+            if (rangeDispatch != null && rangeDispatch.isJsonArray() && !rangeDispatch.getAsJsonArray().isEmpty()) {
+                customModelData = rangeDispatch.getAsJsonArray().get(0).getAsInt();
+            }
+        }
+        return new ItemIconData(orEmpty(optionalString(value, "id")),
+                orEmpty(optionalString(value, "name")), customModelData);
+    }
+
+    private static String cleanItemText(String value) {
+        return orEmpty(value).replaceAll("(?i)<br\\s*/?>|</p>", "\n")
+                .replaceAll("<[^>]*>", "")
+                .replace("&nbsp;", " ").replace("&emsp;", " ")
+                .replace("&lt;", "<").replace("&gt;", ">")
+                .replace("&quot;", "\"").replace("&#39;", "'").replace("&apos;", "'")
+                .replace("&amp;", "&").trim();
+    }
+
+    private static String orEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private static Map<String, StatValue> parseStatMap(JsonElement element) {

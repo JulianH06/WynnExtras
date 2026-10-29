@@ -9,14 +9,22 @@ import julianh06.wynnextras.utils.render.TextShadow;
 import julianh06.wynnextras.utils.render.VerticalAlignment;
 import julianh06.wynnextras.features.profileviewer.PVScreen;
 import julianh06.wynnextras.mixin.Invoker.NativeImageInvoker;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.texture.NativeImage;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.tooltip.TooltipData;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.joml.Vector2f;
 
 import java.awt.*;
+import java.util.List;
+import java.util.Optional;
 
 public final class UIUtils {
     Identifier buttontl = Identifier.of("wynnextras", "textures/general/button/cornertl.png");
@@ -125,6 +133,107 @@ public final class UIUtils {
 
     public void drawRect(float x, float y, float width, float heigt) {
         this.drawRect(x, y, width, heigt, CustomColor.fromHexString("FFFFFF"));
+    }
+
+    public void fill(float x1, float y1, float x2, float y2, int color) {
+        drawContext.fill(Math.round(sx(x1)), Math.round(sy(y1)),
+                Math.round(sx(x2)), Math.round(sy(y2)), color);
+    }
+
+    public void drawTextWithShadow(TextRenderer renderer, String text, int x, int y, int color) {
+        drawContext.drawTextWithShadow(renderer, text, Math.round(sx(x)), Math.round(sy(y)), color);
+    }
+
+    public void drawTextWithShadow(TextRenderer renderer, Text text, int x, int y, int color) {
+        drawContext.drawTextWithShadow(renderer, text, Math.round(sx(x)), Math.round(sy(y)), color);
+    }
+
+    public void drawTextWithShadow(TextRenderer renderer, OrderedText text, int x, int y, int color) {
+        drawContext.drawTextWithShadow(renderer, text, Math.round(sx(x)), Math.round(sy(y)), color);
+    }
+
+    public void drawCenteredTextWithShadow(TextRenderer renderer, String text, int centerX, int y, int color) {
+        drawContext.drawCenteredTextWithShadow(renderer, text,
+                Math.round(sx(centerX)), Math.round(sy(y)), color);
+    }
+
+    public void drawCenteredTextWithShadow(TextRenderer renderer, Text text, int centerX, int y, int color) {
+        drawContext.drawCenteredTextWithShadow(renderer, text,
+                Math.round(sx(centerX)), Math.round(sy(y)), color);
+    }
+
+    public void drawCenteredTextWithShadow(TextRenderer renderer, OrderedText text, int centerX, int y, int color) {
+        drawContext.drawTextWithShadow(renderer, text,
+                Math.round(sx(centerX)) - renderer.getWidth(text) / 2, Math.round(sy(y)), color);
+    }
+
+    public void drawText(TextRenderer renderer, String text, int x, int y, int color, boolean shadow) {
+        drawContext.drawText(renderer, text, Math.round(sx(x)), Math.round(sy(y)), color, shadow);
+    }
+
+    public void drawText(TextRenderer renderer, Text text, int x, int y, int color, boolean shadow) {
+        drawContext.drawText(renderer, text, Math.round(sx(x)), Math.round(sy(y)), color, shadow);
+    }
+
+    public void drawText(TextRenderer renderer, OrderedText text, int x, int y, int color, boolean shadow) {
+        drawContext.drawText(renderer, text, Math.round(sx(x)), Math.round(sy(y)), color, shadow);
+    }
+
+    public void enableScissor(int x1, int y1, int x2, int y2) {
+        drawContext.enableScissor(Math.round(sx(x1)), Math.round(sy(y1)),
+                Math.round(sx(x2)), Math.round(sy(y2)));
+    }
+
+    public void disableScissor() {
+        drawContext.disableScissor();
+    }
+
+    public void drawTexture(
+            RenderPipeline pipeline, Identifier texture, int x, int y, float u, float v,
+            int width, int height, int regionWidth, int regionHeight, int textureWidth, int textureHeight
+    ) {
+        drawContext.drawTexture(pipeline, texture, Math.round(sx(x)), Math.round(sy(y)), u, v,
+                sw(width), sh(height), regionWidth, regionHeight, textureWidth, textureHeight);
+    }
+
+    public void drawItem(ItemStack stack, int x, int y) {
+        drawContext.drawItem(stack, Math.round(sx(x)), Math.round(sy(y)));
+    }
+
+    public void pushMatrix() {
+        drawContext.getMatrices().pushMatrix();
+    }
+
+    public void popMatrix() {
+        drawContext.getMatrices().popMatrix();
+    }
+
+    public void translate(float x, float y) {
+        drawContext.getMatrices().translate(sx(x), sy(y));
+    }
+
+    public void scale(float x, float y) {
+        drawContext.getMatrices().scale(x, y);
+    }
+
+    public void drawTooltip(TextRenderer renderer, Text text, int x, int y) {
+        Vector2f position = tooltipPosition(x, y);
+        drawContext.drawTooltip(renderer, text, Math.round(position.x), Math.round(position.y));
+    }
+
+    public void drawTooltip(TextRenderer renderer, List<Text> lines, int x, int y) {
+        Vector2f position = tooltipPosition(x, y);
+        drawContext.drawTooltip(renderer, lines, Math.round(position.x), Math.round(position.y));
+    }
+
+    public void drawTooltip(TextRenderer renderer, List<Text> lines, Identifier style, int x, int y) {
+        Vector2f position = tooltipPosition(x, y);
+        drawContext.drawTooltip(renderer, lines, Optional.empty(),
+                Math.round(position.x), Math.round(position.y), style);
+    }
+
+    private Vector2f tooltipPosition(int x, int y) {
+        return drawContext.getMatrices().transformPosition(sx(x), sy(y), new Vector2f());
     }
 
     public void drawRectBorders(float x, float y, float width, float height, CustomColor color) {

@@ -4,6 +4,7 @@ import com.google.gson.*;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.List;
 
 public class NodeDeserializer implements JsonDeserializer<AbilityMapData.Node> {
     @Override
@@ -36,6 +37,19 @@ public class NodeDeserializer implements JsonDeserializer<AbilityMapData.Node> {
             // id (only for ability)
             if (metaObj.has("id") && metaObj.get("id").isJsonPrimitive()) {
                 meta.id = metaObj.get("id").getAsString();
+            }
+
+            if (metaObj.has("paths") && metaObj.get("paths").isJsonArray()) {
+                meta.paths = new ArrayList<>();
+                for (JsonElement rawPath : metaObj.getAsJsonArray("paths")) {
+                    if (!rawPath.isJsonArray()) continue;
+                    List<String> path = new ArrayList<>();
+                    for (JsonElement endpoint : rawPath.getAsJsonArray()) {
+                        if (endpoint.isJsonPrimitive()) path.add(endpoint.getAsString());
+                    }
+                    if (!path.isEmpty()) meta.paths.add(List.copyOf(path));
+                }
+                meta.paths = List.copyOf(meta.paths);
             }
 
             // icon can be string or object

@@ -148,7 +148,7 @@ public class RaidItemsPage extends PageWidget {
         }
 
         float hDiff = hScrollTarget - hScrollOffset;
-        if (Math.abs(hDiff) < 0.5f || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) hScrollOffset = hScrollTarget;
+        if (Math.abs(hDiff) < 0.5f) hScrollOffset = hScrollTarget;
         else hScrollOffset += hDiff * 0.3f * tickDelta;
 
         int widgetY = 175;
@@ -353,7 +353,7 @@ public class RaidItemsPage extends PageWidget {
             );
 
             float diff = targetOffset - actualOffset;
-            if (Math.abs(diff) < 0.5f || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffset = targetOffset;
+            if (Math.abs(diff) < 0.5f) actualOffset = targetOffset;
             else actualOffset += diff * 0.3f * tickDelta;
 
             float contentStartTextY = listTop + 25f;

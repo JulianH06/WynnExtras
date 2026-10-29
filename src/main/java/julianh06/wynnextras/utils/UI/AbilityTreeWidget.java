@@ -11,6 +11,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 import static julianh06.wynnextras.utils.WynncraftApiHandler.parseStyledHtml;
 
@@ -114,8 +115,8 @@ public class AbilityTreeWidget extends Widget {
 
     private int scrollOffset;
 
-    public static AbilityMapData.Node currentHoveredNode = null;
-    public static boolean loaded = false;
+    private AbilityMapData.Node currentHoveredNode;
+    private boolean loaded;
 
     public AbilityMapData classTree;
     public AbilityMapData playerTree;
@@ -125,6 +126,8 @@ public class AbilityTreeWidget extends Widget {
     private final List<NodeWidget> nodeWidgets = new ArrayList<>();
 
     private String searchInput = "";
+    private Set<String> selectedIds;
+    private Consumer<String> nodeClickListener;
 
     int botLimit;
 
@@ -159,6 +162,26 @@ public class AbilityTreeWidget extends Widget {
 
     public void setPlayerTree(AbilityMapData playerTree) {
         this.playerTree = playerTree;
+        this.selectedIds = null;
+        refreshState();
+    }
+
+    public void setSelectedIds(Set<String> selectedIds) {
+        Set<String> copy = selectedIds == null ? null : Set.copyOf(selectedIds);
+        if (Objects.equals(this.selectedIds, copy)) return;
+        this.selectedIds = copy;
+        refreshState();
+    }
+
+    public void setNodeClickListener(Consumer<String> listener) {
+        this.nodeClickListener = listener;
+    }
+
+    public void setViewport(int x, int y, int width, int height, int botLimit) {
+        if (this.x == x && this.y == y && this.width == width && this.height == height
+                && this.botLimit == botLimit) return;
+        setBounds(x, y, width, height);
+        this.botLimit = botLimit;
         refreshState();
     }
 
@@ -190,12 +213,12 @@ public class AbilityTreeWidget extends Widget {
             if (loadedClass != null) this.classTree = loadedClass;
         }
 
-        if (this.classTree == null || this.playerTree == null) {
+        if (this.classTree == null || (this.playerTree == null && this.selectedIds == null)) {
             loaded = false;
             return;
         }
 
-        state.prepare(this.classTree, this.playerTree);
+        state.prepare(this.classTree, this.playerTree, this.selectedIds);
         for (AbilityMapData.Node n : state.abilities) {
             NodeWidget w = new NodeWidget(x, y, n, botLimit, scrollOffset);
             w.parent = this;
@@ -227,7 +250,10 @@ public class AbilityTreeWidget extends Widget {
 
     @Override
     protected void drawContent(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        currentHoveredNode = null;
         if (!loaded || state.classTree == null) return;
+
+        drawPageDividers();
 
         for (AbilityMapData.Node node : state.connectors) {
             int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
@@ -244,6 +270,22 @@ public class AbilityTreeWidget extends Widget {
                 nodeWidgets.add(w);
                 children.add(w);
             }
+        }
+    }
+
+    private void drawPageDividers() {
+        int page = 0;
+        for (List<AbilityMapData.Node> nodes : state.classTree.pages.values()) {
+            int yStart = nodes.stream()
+                    .mapToInt(node -> y + 75 + node.coordinates.y * 75 - scrollOffset)
+                    .max().orElse(y);
+            page++;
+            if (page >= state.classTree.pages.size() || yStart + 75 <= y || yStart + 75 >= y + botLimit) {
+                continue;
+            }
+            ui.drawImage(pageLineTexture, x + 1000, yStart + 75, 730, 32);
+            ui.drawText(String.valueOf(page + 1), x + 1000, yStart + 110,
+                    CustomColor.fromHexString("434654"));
         }
     }
 
@@ -465,44 +507,40 @@ public class AbilityTreeWidget extends Widget {
             connectors.clear();
         }
 
-        void prepare(AbilityMapData classTree, AbilityMapData playerTree) {
+        void prepare(AbilityMapData classTree, AbilityMapData playerTree, Set<String> selectedIds) {
             this.classTree = classTree;
             this.playerTree = playerTree;
-            for (List<AbilityMapData.Node> nodes : this.playerTree.pages.values()) {
-                for (AbilityMapData.Node node : nodes) {
-                    if (node.meta != null) {
-                        if ("ability".equals(node.type) && node.meta.id != null) {
-                            unlockedIds.add(node.meta.id);
-                        } else if ("connector".equals(node.type)) {
-                            connectorCoordinates.add(new Pair<>(node.coordinates.x, node.coordinates.y));
+            if (selectedIds != null) {
+                unlockedIds.addAll(selectedIds);
+            } else {
+                for (List<AbilityMapData.Node> nodes : this.playerTree.pages.values()) {
+                    for (AbilityMapData.Node node : nodes) {
+                        if (node.meta != null) {
+                            if ("ability".equals(node.type) && node.meta.id != null) {
+                                unlockedIds.add(node.meta.id);
+                            } else if ("connector".equals(node.type)) {
+                                connectorCoordinates.add(new Pair<>(node.coordinates.x, node.coordinates.y));
+                            }
                         }
                     }
                 }
             }
-            int i = 0;
             for (List<AbilityMapData.Node> nodes : this.classTree.pages.values()) {
-                int yStart = Integer.MIN_VALUE;
                 for (AbilityMapData.Node node : nodes) {
-                    yStart = Math.max(yStart, y + 75 + node.coordinates.y * 75 - scrollOffset);
                     if (node.meta != null) {
                         if ("ability".equals(node.type) && node.meta.id != null) {
                             node.unlocked = unlockedIds.contains(node.meta.id);
                         } else {
                             Pair<Integer, Integer> coords = new Pair<>(node.coordinates.x, node.coordinates.y);
-                            node.unlocked = connectorCoordinates.contains(coords);
+                            node.unlocked = selectedIds == null
+                                    ? connectorCoordinates.contains(coords)
+                                    : node.meta.paths != null && node.meta.paths.stream().anyMatch(path ->
+                                            path.size() >= 2 && unlockedIds.contains(path.get(0))
+                                                    && unlockedIds.contains(path.get(1)));
                         }
                     }
                     if ("ability".equals(node.type)) abilities.add(node);
                     else connectors.add(node);
-                }
-                i++;
-                if(ui == null) return;
-                if(i < this.classTree.pages.size() && yStart + 75 > y && yStart + 75 < y + botLimit) {
-                    ui.drawImage(pageLineTexture, x + 1000, yStart + 75, 730, 32);
-                    if(i == 1 && yStart - 400 > y && yStart - 400 < y + botLimit) {
-                        ui.drawText(String.valueOf(i), x + 1000, yStart - 400, CustomColor.fromHexString("434654"));
-                    }
-                    ui.drawText(String.valueOf(i + 1), x + 1000, yStart + 110, CustomColor.fromHexString("434654"));
                 }
             }
         }
@@ -564,9 +602,19 @@ public class AbilityTreeWidget extends Widget {
                     ui.drawImage(overlay, xStart, yStart - 25, 125, 125);
                 }
                 if(contains(mouseX, mouseY) && mouseY < ui.sy(y + botLimit + 25) && mouseY > ui.sy(y + 100)) {
-                    currentHoveredNode = node;
+                    if (parent instanceof AbilityTreeWidget tree) tree.currentHoveredNode = node;
                 }
             }
+        }
+
+        @Override
+        protected boolean onClick(int button) {
+            if (button != 0 || node.meta == null || node.meta.id == null
+                    || !(parent instanceof AbilityTreeWidget tree) || tree.nodeClickListener == null) {
+                return false;
+            }
+            tree.nodeClickListener.accept(node.meta.id);
+            return true;
         }
     }
 }

@@ -1300,7 +1300,7 @@ public class ShoppingListMenuExtension extends WEMenuExtension {
 
     private float smoothScroll(float current, float target, float delta) {
         float diff = target - current;
-        if (Math.abs(diff) < SCROLL_SNAP || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) {
+        if (Math.abs(diff) < SCROLL_SNAP) {
             return target;
         }
         return current + diff * Math.min(1f, SCROLL_SPEED * Math.max(0f, delta));

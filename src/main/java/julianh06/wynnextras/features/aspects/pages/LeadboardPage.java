@@ -2,7 +2,6 @@ package julianh06.wynnextras.features.aspects.pages;
 
 import julianh06.wynnextras.utils.colors.CustomColor;
 import julianh06.wynnextras.utils.MinecraftUtils;
-import julianh06.wynnextras.config.WynnExtrasConfig;
 import julianh06.wynnextras.features.aspects.AspectScreen;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
 import julianh06.wynnextras.features.profileviewer.data.LeaderboardEntry;
@@ -85,7 +84,7 @@ public class LeadboardPage extends PageWidget {
         float snapValue = 0.5f;
         float speed = 0.3f;
         float diff = targetOffset - actualOffset;
-        if(Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffset = targetOffset;
+        if(Math.abs(diff) < snapValue) actualOffset = targetOffset;
         else actualOffset += diff * speed * tickDelta;
 
         int startY = listTop - (int) actualOffset;

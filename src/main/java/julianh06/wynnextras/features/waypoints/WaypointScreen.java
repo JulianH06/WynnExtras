@@ -15,6 +15,7 @@ import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.WEScreen;
 import julianh06.wynnextras.utils.UI.Widget;
+import julianh06.wynnextras.utils.UI.SmoothScroll;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -261,9 +262,7 @@ public class WaypointScreen extends WEScreen {
             int listHeight = Math.max(0, listEndY - packageY);
             float maxScroll = Math.max(0, packageWidgets.size() * (packageHeight + spacing) - spacing - listHeight);
             packageScrollTarget = MathHelper.clamp(packageScrollTarget, 0, maxScroll);
-            float diff = packageScrollTarget - packageScrollOffset;
-            if (Math.abs(diff) < 0.5f || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) packageScrollOffset = packageScrollTarget;
-            else packageScrollOffset += diff * 0.3f * tickDelta;
+            packageScrollOffset = SmoothScroll.interpolate(packageScrollOffset, packageScrollTarget, tickDelta);
 
             packageOverMouseIndex = -1;
             packageUnderMouseIndex = -1;
@@ -1077,10 +1076,10 @@ public class WaypointScreen extends WEScreen {
                     snapValue = 0.75f;
                 }
 
-                float speed = 0.3f;
-                float diff = (targetOffsets.getOrDefault(ScrollType.Waypoints, 0f) - actualOffsets.getOrDefault(ScrollType.Waypoints, 0f));
-                if (Math.abs(diff) < snapValue || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffsets.put(ScrollType.Waypoints, targetOffsets.getOrDefault(ScrollType.Waypoints, 0f));
-                else actualOffsets.put(ScrollType.Waypoints, actualOffsets.getOrDefault(ScrollType.Waypoints, 0f) + diff * speed * tickDelta);
+                float target = targetOffsets.getOrDefault(ScrollType.Waypoints, 0f);
+                float actual = actualOffsets.getOrDefault(ScrollType.Waypoints, 0f);
+                actualOffsets.put(ScrollType.Waypoints,
+                        SmoothScroll.interpolate(actual, target, tickDelta, snapValue));
 
                 float currentY = y + 10 - actualOffsets.getOrDefault(ScrollType.Waypoints, 0f);
 
@@ -1632,9 +1631,8 @@ public class WaypointScreen extends WEScreen {
                 float currentTarget = Math.clamp(targetOffsets.getOrDefault(ScrollType.Categories, 0f), 0f, maxOffset);
                 targetOffsets.put(ScrollType.Categories, currentTarget);
                 float currentActual = actualOffsets.getOrDefault(ScrollType.Categories, 0f);
-                float diff = currentTarget - currentActual;
-                if (Math.abs(diff) < 0.5f || !WynnExtrasConfig.INSTANCE.smoothScrollToggle) actualOffsets.put(ScrollType.Categories, currentTarget);
-                else actualOffsets.put(ScrollType.Categories, currentActual + diff * 0.3f * tickDelta);
+                actualOffsets.put(ScrollType.Categories,
+                        SmoothScroll.interpolate(currentActual, currentTarget, tickDelta));
 
                 if(mainAreaWidget != null) {
                     scrollBar.setBounds(

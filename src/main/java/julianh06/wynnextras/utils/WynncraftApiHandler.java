@@ -77,6 +77,8 @@ public class WynncraftApiHandler {
     private static volatile Integer contentCompletionMax;
     private static volatile long contentCompletionMaxFetchedAt;
     private static final long CONTENT_COMPLETION_MAX_CACHE_MS = 3_600_000;
+    private static final Map<String, CompletableFuture<JsonObject>> CLASS_ABILITY_MAPS = new HashMap<>();
+    private static final Map<String, CompletableFuture<JsonObject>> CLASS_ABILITY_TREES = new HashMap<>();
 
     public static class ApiLootPool {
         public String name;
@@ -1239,25 +1241,38 @@ public class WynncraftApiHandler {
     }
 
     public static CompletableFuture<AbilityMapData> fetchClassAbilityMap(String className) {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.wynncraft.com/v3/ability/map/" + className))
-                .GET()
-                .build();
-
-        return sendAsync(request)
-                .thenApply(HttpResponse::body)
-                .thenApply(WynncraftApiHandler::parseAbilityMapData);
+        return fetchClassAbilityMapJson(className)
+                .thenApply(json -> parseAbilityMapData(json.toString()));
     }
 
     public static CompletableFuture<AbilityTreeData> fetchClassAbilityTree(String className) {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.wynncraft.com/v3/ability/tree/" + className))
-                .GET()
-                .build();
+        return fetchClassAbilityTreeJson(className)
+                .thenApply(json -> parseAbilityTreeData(json.toString()));
+    }
 
-        return sendAsync(request)
-                .thenApply(HttpResponse::body)
-                .thenApply(WynncraftApiHandler::parseAbilityTreeData);
+    public static synchronized CompletableFuture<JsonObject> fetchClassAbilityMapJson(String className) {
+        return CLASS_ABILITY_MAPS.computeIfAbsent(className,
+                ignored -> fetchClassAbilityJson("map", className));
+    }
+
+    public static synchronized CompletableFuture<JsonObject> fetchClassAbilityTreeJson(String className) {
+        return CLASS_ABILITY_TREES.computeIfAbsent(className,
+                ignored -> fetchClassAbilityJson("tree", className));
+    }
+
+    private static CompletableFuture<JsonObject> fetchClassAbilityJson(String type, String className) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.wynncraft.com/v3/ability/" + type + "/" + className))
+                .GET().build();
+        return sendAsync(request).thenApply(response -> {
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IllegalStateException("Wynncraft ability " + type + " returned HTTP "
+                        + response.statusCode());
+            }
+            JsonElement json = JsonParser.parseString(response.body());
+            if (!json.isJsonObject()) throw new IllegalStateException("Wynncraft ability response is not an object");
+            return json.getAsJsonObject();
+        });
     }
 
     private static PlayerData parsePlayerData(String json) {
