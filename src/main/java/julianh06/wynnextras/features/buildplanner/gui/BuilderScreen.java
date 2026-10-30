@@ -88,6 +88,7 @@ public final class BuilderScreen extends PlannerScreen {
     private static final int GAP = 8;
     private static final int CONTENT_TOP = 58;
     private static final int PANEL_TOP_INSET = 6;
+    private static final int VIEW_SWITCH_OFFSET = 24;
     private static final int ITEM_ROW_HEIGHT = 48;
     private static final int ITEM_INFO_WIDTH = 106;
     private static final int SKILL_CARD_HEIGHT = 82;
@@ -248,7 +249,6 @@ public final class BuilderScreen extends PlannerScreen {
     private Widget pickerOverlay;
     private PlannerPickerList<WynnItem> pickerList;
     private ClassSelectorWidget classSelector;
-    private ThemedButton abilityTreeButton;
     private ThemedButton abilityTreeWarningDismissButton;
     private AbilityTreeWidget abilityTreeWidget;
     private Widget abilityPresetOverlayWidget;
@@ -295,6 +295,11 @@ public final class BuilderScreen extends PlannerScreen {
     @Override
     protected boolean shouldRenderBlur() {
         return false;
+    }
+
+    @Override
+    protected int getMinLogicalHeight() {
+        return (int) Math.round(720 * scaleFactor);
     }
 
     @Override
@@ -347,7 +352,6 @@ public final class BuilderScreen extends PlannerScreen {
         }
         dynamicLabels.clear();
         searchField = null;
-        abilityTreeButton = null;
 
         if (pendingBuild != null) {
             buildTabWidgets(layout());
@@ -488,11 +492,22 @@ public final class BuilderScreen extends PlannerScreen {
                             Text.literal("using the Browser button in the bottom right."))));
         }
 
+        AbilityTreeLayout treeLayout = abilityTreeLayout(layout);
+        int viewSwitchX = abilityTreeVisible ? treeLayout.treeLeft() + 4 : layout.middleX + 4;
+        int viewSwitchWidth = abilityTreeVisible ? treeLayout.treeWidth() - 8 : layout.middleWidth - 8;
+        int viewSwitchY = layout.equipmentTop + PANEL_TOP_INSET;
+        addDynamic(new ThemedButton(
+                viewSwitchX, viewSwitchY, viewSwitchWidth, 20,
+                Text.literal(abilityTreeVisible
+                        ? "Switch to Stats & Damage"
+                        : "Switch to Ability Tree"),
+                () -> setAbilityTreeVisible(!abilityTreeVisible)));
+
         if (!abilityTreeVisible) {
             int summaryButtonGap = 4;
             int summaryButtonWidth = (layout.middleWidth - 8 - summaryButtonGap) / 2;
             addDynamic(new ThemedButton(
-                    layout.middleX + 4, layout.equipmentTop + PANEL_TOP_INSET,
+                    layout.middleX + 4, layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET,
                     summaryButtonWidth, 20,
                     Text.literal("Summary"), () -> {
                         detailed = false;
@@ -500,7 +515,7 @@ public final class BuilderScreen extends PlannerScreen {
                     }));
             addDynamic(new ThemedButton(
                     layout.middleX + 4 + summaryButtonWidth + summaryButtonGap,
-                    layout.equipmentTop + PANEL_TOP_INSET,
+                    layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET,
                     summaryButtonWidth, 20, Text.literal("Detailed"), () -> {
                         detailed = true;
                         summaryScroll.jump(0.0F);
@@ -527,21 +542,16 @@ public final class BuilderScreen extends PlannerScreen {
                 Text.literal("Done"), this::close));
 
         int boostButtonY = layout.boostTop + 5;
-        int boostButtonWidth = (layout.leftWidth - 20) / 3;
-        addDynamic(new ThemedButton(MARGIN + 5, boostButtonY, boostButtonWidth, 20,
-                Text.literal("Ability Boosts"), () -> { }));
-        addDynamic(new ThemedButton(MARGIN + 10 + boostButtonWidth, boostButtonY, boostButtonWidth, 20,
-                Text.literal("Powder Specials"), () -> boostSection = "Powder Specials"));
-        addDynamic(new ThemedButton(MARGIN + 15 + boostButtonWidth * 2, boostButtonY, boostButtonWidth, 20,
-                Text.literal("Raid Buffs"), () -> boostSection = "Raid Buffs"));
-        int secondRowY = boostButtonY + 24;
-        addDynamic(new ThemedButton(MARGIN + 5, secondRowY, boostButtonWidth, 20,
-                Text.literal("Tomes & Aspects"), () -> client.setScreen(new TomeScreen(this))));
-        abilityTreeButton = new ThemedButton(
-                MARGIN + 10 + boostButtonWidth, secondRowY, boostButtonWidth, 20,
-                Text.literal(abilityTreeVisible ? "Stats & Damage" : "Ability Tree"),
-                this::toggleAbilityTree);
-        addDynamic(abilityTreeButton);
+        int boostButtonGap = 4;
+        int boostButtonWidth = (layout.leftWidth - 10 - boostButtonGap * 3) / 4;
+        addBoostButton(0, boostButtonY, boostButtonWidth, boostButtonGap,
+                "Tomes & Aspects", () -> client.setScreen(new TomeScreen(this)));
+        addBoostButton(1, boostButtonY, boostButtonWidth, boostButtonGap,
+                "Ability Boosts", () -> boostSection = "Ability Boosts");
+        addBoostButton(2, boostButtonY, boostButtonWidth, boostButtonGap,
+                "Powder Specials", () -> boostSection = "Powder Specials");
+        addBoostButton(3, boostButtonY, boostButtonWidth, boostButtonGap,
+                "Raid Buffs", () -> boostSection = "Raid Buffs");
         if (abilityTreeVisible) {
             buildAbilityTreeWidgets(layout);
         } else {
@@ -766,8 +776,23 @@ public final class BuilderScreen extends PlannerScreen {
         return equipped.get(pickerSlot);
     }
 
-    private void toggleAbilityTree() {
-        abilityTreeVisible = !abilityTreeVisible;
+    private void addBoostButton(
+            int index,
+            int y,
+            int width,
+            int gap,
+            String label,
+            Runnable action
+    ) {
+        addDynamic(new ThemedButton(
+                MARGIN + 5 + index * (width + gap), y, width, 20,
+                Text.literal(fitText(label, width - 8)), action)
+                .setHoverText(Text.literal(label)));
+    }
+
+    private void setAbilityTreeVisible(boolean visible) {
+        if (abilityTreeVisible == visible) return;
+        abilityTreeVisible = visible;
         abilityTreeVisibleSession = abilityTreeVisible;
         abilityPresetOverlay = AbilityPresetOverlay.NONE;
         if (abilityTreeVisible) {
@@ -783,7 +808,7 @@ public final class BuilderScreen extends PlannerScreen {
 
         AbilityTreeLayout treeLayout = abilityTreeLayout(layout);
         int toolbarX = treeLayout.treeLeft() + 4;
-        int toolbarY = layout.equipmentTop + PANEL_TOP_INSET;
+        int toolbarY = layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET;
         int toolbarWidth = treeLayout.treeWidth() - 8;
         int gap = 4;
         int buttonWidth = (toolbarWidth - gap * 2) / 3;
@@ -1630,7 +1655,8 @@ public final class BuilderScreen extends PlannerScreen {
             return true;
         }
         if (logicalX >= layout.middleX && logicalX < layout.middleX + layout.middleWidth
-                && logicalY >= layout.equipmentTop + 30 && logicalY < this.height - MARGIN - 28) {
+                && logicalY >= layout.equipmentTop + 30 + VIEW_SWITCH_OFFSET
+                && logicalY < this.height - MARGIN - 28) {
             summaryScroll.move(
                     (float) -Math.signum(verticalAmount) * 18.0F,
                     0.0F,
@@ -1638,7 +1664,8 @@ public final class BuilderScreen extends PlannerScreen {
             return true;
         }
         if (logicalX >= layout.rightX && logicalX < layout.rightX + layout.rightWidth
-                && logicalY >= MARGIN && logicalY < this.height - MARGIN - 28) {
+                && logicalY >= MARGIN
+                && logicalY < this.height - MARGIN - 28) {
             damageScroll.move(
                     (float) -Math.signum(verticalAmount) * 24.0F,
                     0.0F,
@@ -2440,7 +2467,7 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private int abilityTreeTop(Layout layout) {
-        return layout.equipmentTop + PANEL_TOP_INSET + 47;
+        return layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET + 47;
     }
 
     private int abilityTreeBottom(Layout layout) {
@@ -2773,10 +2800,10 @@ public final class BuilderScreen extends PlannerScreen {
     private void renderSummary(DrawContext context, Layout layout, BuildCalculator.Result stats,
             int mouseX, int mouseY, float delta) {
         int x = layout.middleX + 12;
-        int viewportTop = layout.equipmentTop + 32;
+        int viewportTop = layout.equipmentTop + 32 + VIEW_SWITCH_OFFSET;
         int viewportBottom = this.height - MARGIN - 28;
         int visibleScroll = Math.round(summaryScroll.update(delta));
-        int y = layout.equipmentTop + 38 - visibleScroll;
+        int y = layout.equipmentTop + 38 + VIEW_SWITCH_OFFSET - visibleScroll;
         int valueX = layout.middleX + layout.middleWidth - 12;
         Map<String, Integer> ids = stats.ids();
 
